@@ -107,14 +107,20 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - Run the ADTC local profiler on every commit, not just once at the end.
 - Target Best African Use Case explicitly: multi-country exams + multilingual + shared-laptop mode.
 
-## 10. The Story
+## 10. Similar Products
+- [Learning Equity](https://learningequality.org/)
+- Khan Academy
+- Brilliant
+- Opennote.com
+
+## 11. The Story
 - Cambridge: got a C despite being Best in Nigeria.
 - Cambridge: a classmate wouldn't employ me.
 - HCI coursework as proof of TARL.
 - UDO as proof of TARL.
 - The live shared-laptop demo (Sec 7/9) as the moment judges remember.
 
-## 11. Team Study Shelf
+## 12. Team Study Shelf
 - [Sebastian Raschka — local coding agents](https://magazine.sebastianraschka.com/p/using-local-coding-agents)
 - [Ahmad Osman — Latent Space](https://www.latent.space/p/ahmad-osman-local-ai?utm_source=post-email-title&publication_id=1084089&post_id=204360411&utm_campaign=email-post-title&isFreemail=true&r=8pqpb&triedRedirect=true&utm_medium=email)
 - [awesome-local-ai](https://github.com/msb-msb/awesome-local-ai)
