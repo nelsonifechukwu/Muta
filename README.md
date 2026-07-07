@@ -65,6 +65,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
   - Personas: Teacher / Friend / Professor / Exam-mode(minimal hints) / [Clicky](https://heyclicky.com)
 - Scientific reasoning (physics/chem/bio) uses the same subgoal method, not a separate one.
 - **AI Laboratory:** offline physics sims, graphing, coding experiments. [Cartesian.app](https://cartesian.app) is a concrete existence proof — an offline interactive DSA book with code playback + embedded Python, running on hardware close to the ADTC spec. Also: [Opennote.com](https://opennote.com).
+- Gamefied learning: Flashcards, Quizzes, whatever method the user wants, they can describe and get. 
 
 ## 5. Exam-Prep Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
@@ -85,7 +86,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - Teacher dashboard: class progress, assignment generation, flag struggling students.
 - Deployment: one click, single flash drive, phone-to-laptop, multi-OS (Linux/Windows/macOS).
 - Mechanism: llama.cpp server + LAN discovery (phone just needs a browser); AppImage + portable build; offline signed-patch updates.
-- Shared discussions [and catalogue of resources](https://cdn.sanity.io/images/4cwcet86/production/b10c325c051b0a91583bf2e764e1b04c8512f99a-1646x918.png?w=3840&q=70&auto=format) on devices on the same network (LAN, Internet or bluetooth).
+- Shared discussions, [catalogue of resources](https://cdn.sanity.io/images/4cwcet86/production/b10c325c051b0a91583bf2e764e1b04c8512f99a-1646x918.png?w=3840&q=70&auto=format), and competitive quizzes w/mates on devices on the same network (LAN, Internet or Bluetooth).
 
 ## 8. Evaluation & Business
 - Metrics: learning (before/after, retention, problem-solving), AI (latency, TPS, RAM, battery, temp), education (engagement, completion rate).
