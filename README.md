@@ -85,6 +85,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - Teacher dashboard: class progress, assignment generation, flag struggling students.
 - Deployment: one click, single flash drive, phone-to-laptop, multi-OS (Linux/Windows/macOS).
 - Mechanism: llama.cpp server + LAN discovery (phone just needs a browser); AppImage + portable build; offline signed-patch updates.
+- Shared discussions ([and catalogue of resources]([url](https://cdn.sanity.io/images/4cwcet86/production/b10c325c051b0a91583bf2e764e1b04c8512f99a-1646x918.png?w=3840&q=70&auto=format))) on devices on the same network (LAN, Internet or bluetooth).
 
 ## 8. Evaluation & Business
 - Metrics: learning (before/after, retention, problem-solving), AI (latency, TPS, RAM, battery, temp), education (engagement, completion rate).
