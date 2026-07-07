@@ -1,6 +1,6 @@
 # ADTC 2026 — Math & Scientific Reasoning (Education)
 
-Offline, adaptive AI tutor for math and scientific reasoning, running on the 8 GB ADTC laptop. Brilliant's interactivity + Khan Academy's curriculum breadth + Encarta/Britannica's self-containedness — no server required. Groups below follow dependency order: each rests on the one above it.
+Offline, adaptive AI tutor for math and scientific reasoning, running on the 8 GB ADTC laptop. [Brilliant](http://brilliant.org)'s interactivity + Khan Academy's curriculum breadth + Encarta/Britannica's self-containedness — no server required. Groups below follow dependency order: each rests on the one above it.
 
 ```
 Constraint → Model → Inference → Correctness/Safety → Pedagogy
