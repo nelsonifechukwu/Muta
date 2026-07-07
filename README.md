@@ -43,6 +43,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - KV-cache quantization (biggest hidden RAM cost), `mmap` model loading, cap thread count to avoid the −10 thermal penalty.
 - See [bitnet.cpp](https://github.com/microsoft/BitNet)
 - Must be multi-modal.
+- Switch between f4 and f16 to get best mixed results without triggering throttling.
 
 ## 3. Correctness & Safety
 - Route arithmetic/algebra/calculus through **SymPy/NumPy** — cheapest hallucination fix available.
