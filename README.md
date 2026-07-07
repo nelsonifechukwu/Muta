@@ -41,6 +41,8 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
   [IIT Delhi CUDA book](https://www.cse.iitd.ac.in/~rijurekha/col730_2022/cudabook.pdf) ·
   [GEMM-on-GPU tutorial](https://salykova.github.io/gemm-gpu) (has a CPU-side companion).
 - KV-cache quantization (biggest hidden RAM cost), `mmap` model loading, cap thread count to avoid the −10 thermal penalty.
+- See [bitnet.cpp](https://github.com/microsoft/BitNet)
+- Must be multi-modal.
 
 ## 3. Correctness & Safety
 - Route arithmetic/algebra/calculus through **SymPy/NumPy** — cheapest hallucination fix available.
