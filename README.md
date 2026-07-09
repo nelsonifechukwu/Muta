@@ -116,8 +116,9 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 ## 10. Similar Products
 - [Learning Equity](https://learningequality.org/)
 - Khan Academy
-- Brilliant
-- Opennote.com
+- [Brilliant](brilliant.org)
+- [Opennote.com](https://withmarble.com/)
+- [Marble](https://withmarble.com/)
 
 ## 11. The Story
 - Cambridge: got a C despite being Best in Nigeria.
