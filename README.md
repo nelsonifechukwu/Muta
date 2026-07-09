@@ -26,6 +26,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - Refs: [Hugging Face docs](https://huggingface.co/docs), [QWEN0.6B from scratch](https://github.com/emmanuelalo52/QWEN0.6B), [linas.substack GLM guide](https://linas.substack.com/p/glm-52-local-ai-guide).
 - Udutech's ~5hrs GPU credit = training only; model gets quantized down before deployment (Section 2).
 - Consider: train a draft model alongside the full model → speculative decoding (Sec 2) + standalone fast "hint mode."
+- Allow option to select models (and even use a cloud model.)
 
 ## 2. Inference & Optimization
 - Format: GGUF/GGML, llama.cpp. Follow [ggerganov](https://x.com/ggerganov?lang=en), incl. [tip](https://x.com/ggerganov/status/2039752638384709661?s=20) + [tip](https://x.com/ggerganov/status/2039804601810001921?s=20).
