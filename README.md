@@ -42,7 +42,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
   [GEMM-on-GPU tutorial](https://salykova.github.io/gemm-gpu) (has a CPU-side companion).
 - KV-cache quantization (biggest hidden RAM cost), `mmap` model loading, cap thread count to avoid the −10 thermal penalty.
 - See [bitnet.cpp](https://github.com/microsoft/BitNet)
-- Must be multi-modal.
+- Must be multi-modal (and can even respond in whatever format to the student. see [audio](https://github.com/pwilkin/thinksound.cpp).
 - Switch between f4 and f16 to get best mixed results without triggering throttling.
 
 ## 3. Correctness & Safety
@@ -66,7 +66,8 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
   - Personas: Teacher / Friend / Professor / Exam-mode(minimal hints) / [Clicky](https://heyclicky.com)
 - Scientific reasoning (physics/chem/bio) uses the same subgoal method, not a separate one.
 - **AI Laboratory:** offline physics sims, graphing, coding experiments. [Cartesian.app](https://cartesian.app) is a concrete existence proof — an offline interactive DSA book with code playback + embedded Python, running on hardware close to the ADTC spec. Also: [Opennote.com](https://opennote.com).
-- Gamefied learning: Flashcards, Quizzes, whatever method the user wants, they can describe and get. 
+- Gamefied learning: Flashcards, Quizzes, whatever method the user wants, they can describe and get.
+- How'd the blind use this (especially with audio/braille feature.)
 
 ## 5. Exam-Prep Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
