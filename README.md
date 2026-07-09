@@ -18,6 +18,8 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - $P_{\text{thermal}}$: −10 if >85°C or throttled
 - **Implication:** small quantized model + retrieval + verified tool-calls beats a large model squeezed on.
 
+---- See https://github.com/addyosmani/agent-skills for Setup ----
+
 ## 1. Model Layer
 - Candidates to bake off: Qwen3 (0.6B–4B), Phi-4-mini, DeepSeek-R1 distills, Gemma small, [Liquid AI](http://liquidai.com) LFMs — score on accuracy/GB, not raw accuracy.
 - Fine-tune with **Unsloth**; corpus = WASSCE/JAMB/KCSE past questions + worked solutions + Socratic dialogue transcripts.
