@@ -71,11 +71,12 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - Gamefied learning: Flashcards, Quizzes, whatever method the user wants, they can describe and get.
 - How'd the blind use this (especially with audio/braille feature.)
 
-## 5. Exam-Prep Layer (Africa)
+## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
 - Question generator: WASSCE-style items + worked solution + difficulty + examiner marking scheme.
 - Past-question tutor: offline database of past exams + explanations + common mistakes.
 - Adaptive exam mode: diagnoses weak spot (e.g. "chain rule") → concrete 7-day improvement plan.
+- Skills/concept training mode: same generator and diagnostic engine, but organized by topic or concept instead of exam calendar, for students building foundational skills outside an active exam cycle.
 
 ## 6. Interface
 - Adaptive UI ("I don't like the way I look, change me"): theme, avatar, personality, difficulty, explanation style, language, pace. Refs: [Claude Dispatch](https://www.oneusefulthing.org/p/claude-dispatch-and-the-power-of), YC [Dynamic Software Interfaces](https://www.ycombinator.com/rfs#:~:text=Dynamic%20Software%20Interfaces).
