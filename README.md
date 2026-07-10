@@ -43,6 +43,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
   [Modal GPU glossary](https://modal.com/gpu-glossary) ·
   [IIT Delhi CUDA book](https://www.cse.iitd.ac.in/~rijurekha/col730_2022/cudabook.pdf) ·
   [GEMM-on-GPU tutorial](https://salykova.github.io/gemm-gpu) (has a CPU-side companion).
+- [z_ml](https://x.com/zml_ai/status/2074770878458417195)
 - KV-cache quantization (biggest hidden RAM cost), `mmap` model loading, cap thread count to avoid the −10 thermal penalty.
 - See [bitnet.cpp](https://github.com/microsoft/BitNet)
 - Must be multi-modal (and can even respond in whatever format to the student. see [audio](https://github.com/pwilkin/thinksound.cpp).
