@@ -48,6 +48,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - Must be multi-modal (and can even respond in whatever format to the student. see [audio](https://github.com/pwilkin/thinksound.cpp).
 - Switch between f4 and f16 to get best mixed results without triggering throttling.
 - Run these models on phones, see bigger competition, [Africa AI X-Prize](https://africaaixprize.org/#challenge). Other companies include: [cactuscompute.com](cactuscompute.com), [trymirai.com](trymirai.com)
+- Run on Bare android/Nokia touch light
 
 ## 3. Correctness & Safety
 - Route arithmetic/algebra/calculus through **SymPy/NumPy** — cheapest hallucination fix available.
