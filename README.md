@@ -24,10 +24,8 @@ $$
 - $S_{\text{acc}}$ (50%) — tutoring quality → Section 3
 
 $$
-S_{\text{perf}} = 100 \times \frac{\mathrm{TPS}_{\mathrm{act}}}{\mathrm{TPS}_{\mathrm{max}}}
+S_{\text{perf}} = 100 \times \frac{\mathrm{TPS}_{\mathrm{act}}}{\mathrm{TPS}_{\mathrm{max}}}, where $TPS_{max} \approx 15$ (provisional).
 $$
-
-where $TPS_{max} \approx 15$ (provisional)..
 
 $$
 S_{\text{eff}} = 100 \times \frac{7\mathrm{GB} - \mathrm{Peak\ RAM}}{7\mathrm{GB}}
