@@ -137,5 +137,11 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - [awesome-local-ai](https://github.com/msb-msb/awesome-local-ai)
 - Kernel worklogs from Section 2
 
+## Extra features
+- Misconception detector
+- Mastery map. A visual graph showing mastered topics, weak topics, prerequisites missing, next best lesson
+- Let teachers inject their own notes and test materials into the system
+- Handwritten equation OCR as an input feature
+
 ## Next Step
 Sections 0–3 = non-negotiable MVP. Thin slice of 4–7 (1–2 modes, 1 exam, bare interface, shared-laptop demo) tells the full story by 25 Aug. 7 (full) and 8 mostly post-competition.
