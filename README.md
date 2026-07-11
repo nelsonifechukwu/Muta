@@ -9,6 +9,11 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 (Team Study Shelf runs alongside all of the above.)
 ```
 
+## **Process**
+ - (RLHF) Fine-tune (Train on 10 years WAEC, JAMB, and other African exams) -> Post-training quantisation -> [quantisation aware training](https://github.com/mit-han-lab/llm-awq) -> inference engine -> Run benchmark on questions (WAEC)
+
+ - Read tons of papers on optimisation for LLMs on edge, else you wouldn’t figure things like [this](https://github.com/mit-han-lab/llm-awq) even w/ai. Browse references in papers, too
+
 ## 0. Constraint
 - Hardware: i5 (10th–12th gen) / Ryzen 5 (3000–5000), 8 GB DDR4, integrated graphics only, 256 GB SSD, Ubuntu 22.04 — no GPU at deployment.
 - $S_{\text{total}} = 0.50\,S_{\text{acc}} + 0.30\,S_{\text{perf}} + 0.20\,S_{\text{eff}} - P_{\text{thermal}}$
@@ -17,6 +22,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - $S_{\text{eff}} = 100 \times \dfrac{7\text{GB} - \text{Peak RAM}}{7\text{GB}}$ — e.g. peak RAM 4GB→3GB raises $S_{\text{eff}}$ from 42.9 to 57.1
 - $P_{\text{thermal}}$: −10 if >85°C or throttled
 - **Implication:** small quantized model + retrieval + verified tool-calls beats a large model squeezed on.
+- Energy consumption as a metric.
 
 ## --- See https://github.com/addyosmani/agent-skills for Setup ---
 
@@ -50,7 +56,8 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - Must be multi-modal (and can even respond in whatever format to the student. see [audio](https://github.com/pwilkin/thinksound.cpp).
 - Switch between f4 and f16 to get best mixed results without triggering throttling.
 - Run these models on phones, see bigger competition, [Africa AI X-Prize](https://africaaixprize.org/#challenge). Other companies include: [cactuscompute.com](cactuscompute.com), [trymirai.com](trymirai.com)
-- Run on Bare android/Nokia touch light
+- Run on Bare Android/Nokia touch light
+- Swing between CPU, GPU, and cloud (if it notices that GPU and Cloud are available for better responses).
 
 ## 3. Correctness & Safety
 - Route arithmetic/algebra/calculus through **SymPy/NumPy** — cheapest hallucination fix available.
@@ -130,6 +137,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 - HCI coursework as proof of TARL.
 - UDO as proof of TARL.
 - The live shared-laptop demo (Sec 7/9) as the moment judges remember.
+- Life presentation show energy consumption since we loaded it till the end and as everyone in the room was using it
 
 ## 12. Team Study Shelf
 - [Sebastian Raschka — local coding agents](https://magazine.sebastianraschka.com/p/using-local-coding-agents)
