@@ -16,13 +16,14 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 
 ## 0. Constraint
 - Hardware: i5 (10th–12th gen) / Ryzen 5 (3000–5000), 8 GB DDR4, integrated graphics only, 256 GB SSD, Ubuntu 22.04 — no GPU at deployment.
-- $S_{\text{total}} = 0.50\,S_{\text{acc}} + 0.30\,S_{\text{perf}} + 0.20\,S_{\text{eff}} - P_{\text{thermal}}$
-- $S_{\text{acc}}$ (50%) — tutoring quality → Section 3
-- $S_{\text{perf}} = 100 \times \dfrac{\text{TPS}_{\text{act}}}{\text{TPS}_{\text{max}}}$, $\text{TPS}_{\text{max}} \approx 15$ (provisional)
-- $S_{\text{eff}} = 100 \times \dfrac{7\text{GB} - \text{Peak RAM}}{7\text{GB}}$ — e.g. peak RAM 4GB→3GB raises $S_{\text{eff}}$ from 42.9 to 57.1
-- $P_{\text{thermal}}$: −10 if >85°C or throttled
-- **Implication:** small quantized model + retrieval + verified tool-calls beats a large model squeezed on.
-- Energy consumption as a metric.
+- $$S_{\text{total}} = 0.50\,S_{\text{acc}} + 0.30\,S_{\text{perf}} + 0.20\,S_{\text{eff}} - P_{\text{thermal}}$$
+- $$S_{\text{acc}} \; (50\%)$$ — tutoring quality → Section 3
+- $$S_{\text{perf}} = 100 \times \frac{\mathrm{TPS}_{\text{act}}}{\mathrm{TPS}_{\text{max}}}, \qquad \mathrm{TPS}_{\text{max}} \approx 15 \; \text{(provisional)}$$
+- $$S_{\text{eff}} = 100 \times \frac{7\,\mathrm{GB} - \text{Peak RAM}}{7\,\mathrm{GB}}$$
+  - Example: Peak RAM decreases from **4 GB** to **3 GB**, raising $$S_{\text{eff}}$$ from **42.9** to **57.1**.
+- $$P_{\text{thermal}}$$: **−10** if CPU temperature exceeds **85°C** or thermal throttling occurs.
+- **Implication:** A small quantized model combined with retrieval and verified tool calls outperforms a larger model constrained by limited hardware.
+- Energy consumption is also included as an evaluation metric.
 
 ## --- See https://github.com/addyosmani/agent-skills for Setup ---
 
