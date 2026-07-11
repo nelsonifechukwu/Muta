@@ -10,7 +10,7 @@ Constraint → Model → Inference → Correctness/Safety → Pedagogy
 ```
 
 ## **Process**
- - (RLHF) Fine-tune (Train on 10 years WAEC, JAMB, and other African exams) -> Post-training quantisation -> [quantisation aware training](https://github.com/mit-han-lab/llm-awq) -> inference engine -> Run benchmark on questions (WAEC)
+ - Load model locally -> (RLHF) Fine-tune (Train on 10 years WAEC, JAMB, and other African exams) -> Post-training quantisation -> [quantisation aware training](https://github.com/mit-han-lab/llm-awq) -> inference engine -> Run benchmark on questions (WAEC)
 
  - Read tons of papers on optimisation for LLMs on edge, else you wouldn’t figure things like [this](https://github.com/mit-han-lab/llm-awq) even w/ai. Browse references in papers, too
 
