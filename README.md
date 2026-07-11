@@ -27,7 +27,7 @@ $$
 S_{\text{perf}} = 100 \times \frac{\mathrm{TPS}_{\mathrm{act}}}{\mathrm{TPS}_{\mathrm{max}}}
 $$
 
-where $ \mathrm{TPS}_{\mathrm{max}} \approx 15 $ (provisional).
+where $TPS_{max} \approx 15$ (provisional)..
 
 $$
 S_{\text{eff}} = 100 \times \frac{7\mathrm{GB} - \mathrm{Peak\ RAM}}{7\mathrm{GB}}
