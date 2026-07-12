@@ -167,6 +167,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Mastery map. A visual graph showing mastered topics, weak topics, prerequisites missing, next best lesson
 - Let teachers inject their own notes and test materials into the system
 - Handwritten equation OCR as an input feature
+- [Agents](https://x.com/0xCarnagee/status/2075983721841225885?s=20)--which can help the learners build things as they learn.
 
 ## Next Step
 Sections 0–3 = non-negotiable MVP. Thin slice of 4–7 (1–2 modes, 1 exam, bare interface, shared-laptop demo) tells the full story by 25 Aug. 7 (full) and 8 mostly post-competition.
