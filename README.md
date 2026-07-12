@@ -153,6 +153,8 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - UDO as proof of TARL.
 - The live shared-laptop demo (Sec 7/9) as the moment judges remember.
 - Life presentation show energy consumption since we loaded it till the end and as everyone in the room was using it
+- Present like [this](https://youtu.be/YgF98vyn2fY)
+- Do a survey on how many people (black vs. white) feel left behind...? We're slowly beginning slaves to those with higher knowledge. Which is the final call--when we outsource out thinking to them.
 
 ## 12. Team Study Shelf
 - [Sebastian Raschka — local coding agents](https://magazine.sebastianraschka.com/p/using-local-coding-agents)
