@@ -96,7 +96,8 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Scientific reasoning (physics/chem/bio) uses the same subgoal method, not a separate one.
 - **AI Laboratory:** offline physics sims, graphing, coding experiments. [Cartesian.app](https://cartesian.app) is a concrete existence proof — an offline interactive DSA book with code playback + embedded Python, running on hardware close to the ADTC spec. Also: [Opennote.com](https://opennote.com).
 - Gamefied learning: Flashcards, Quizzes, whatever method the user wants, they can describe and get.
-- How'd the blind use this (especially with audio/braille feature.)
+- How'd the blind use this (especially with the audio/braille feature)
+- The product can be personalised (like Hey Siri--whatever name the learner wants to call it.)
 
 ## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
@@ -147,6 +148,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - [Marble](https://withmarble.com/)
 
 ## 11. The Story
+- Get feedback from the student -- they input their email once they use it, and then, we prompt them in their email, or as in-app notifications (remember, they may not have internet access.)
 - Cambridge: got a C despite being Best in Nigeria.
 - Cambridge: a classmate wouldn't employ me.
 - HCI coursework as proof of TARL.
