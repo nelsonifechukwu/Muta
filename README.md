@@ -171,5 +171,13 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Handwritten equation OCR as an input feature
 - [Agents](https://x.com/0xCarnagee/status/2075983721841225885?s=20)--which can help the learners build things as they learn.
 
+## A Four-Step Guide to AI-Assisted Codebase Work
+- Step 1: Have the model study before it writes. Before generating any code, have Claude read the existing codebase (or spec, if starting fresh) and produce a plan — an explicit guide describing what needs to happen and why. Skipping this step means the model starts pattern-matching too early, before it understands the constraints it's working within.
+- Step 2: Externalize the tribal knowledge.
+Identify what only lives in developers' heads — ownership rules, lifetimes, invariants, "why this weird workaround exists" — and force the model to write it down explicitly, structured (a table or spreadsheet works well). This step matters because implementation agents in Step 3 can't ask a human clarifying questions mid-task; if the knowledge isn't written down first, it gets guessed at, and guesses compound into bugs.
+- Step 3: Parallelize the implementation, but partition the work cleanly.
+Split the codebase into independent units (files, modules, worktrees) and assign parallel agents to each. This works only because Step 2 already resolved the cross-cutting knowledge — parallel agents can't coordinate with each other in real time, so ambiguity between units has to be eliminated before they start, not discovered after.
+- Step 4: Pair every writer with an adversarial reviewer.
+Assign each implementer agent one or more separate reviewer agents, in isolated context windows, whose only job is to assume the output is wrong and try to find why. This is the step that catches what Step 3 introduces: parallel agents move fast but don't self-correct, so the review layer has to be structurally separate — not the same context, and not optimistic by default — or errors just get rubber-stamped.
 ## Next Step
 Sections 0–3 = non-negotiable MVP. Thin slice of 4–7 (1–2 modes, 1 exam, bare interface, shared-laptop demo) tells the full story by 25 Aug. 7 (full) and 8 mostly post-competition.
