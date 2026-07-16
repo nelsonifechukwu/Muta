@@ -72,13 +72,19 @@ The directory partition is the lane partition (parallel work with no real-time c
 
 ## Commands
 
+**`./run.sh` is the front door** — one command from a clean clone to a conversation. Docker by
+default (provisions image + weights + engine, then chats); `--native` for the fast host loop on
+a Mac; `--serve` for the HTTP app instead of the REPL; `-- <args>` passes through to the REPL
+(e.g. `-- --conversation <id>`). `RUN.md` documents it and the by-hand equivalents. The Makefile
+below stays the per-task developer surface.
+
 `make help` lists everything. Working today (Python ≥3.10; `make install` sets up an editable install):
 
 - `make dev` — run the assembled app (`uvicorn orchestrator.main:app --reload`, port 8000). Public surface at `/v1`, interactive docs at `/docs`. Sub-apps can also run standalone in split mode.
 - `make contract` — regenerate `contracts/openapi.yaml` from the Pydantic models. Run it whenever the contract changes; commit the result.
 - `make test` — pytest (contract smoke tests live in `contracts/tests/`). `make lint` / `make fmt` — ruff.
 - `make contract-test` — schemathesis property-fuzzes a running server (`make dev` first) against `/openapi.json`.
-- `make build` — build the `linux/amd64` dev image from `docker/dev.Dockerfile` (`FROM --platform=linux/amd64 ubuntu:22.04`).
+- `make build` — build the `linux/amd64` dev image from `docker/dev.Dockerfile`. Two stages: stage 1 compiles llama.cpp (pinned `b10035`) with `GGML_AVX2=ON GGML_AVX512=OFF GGML_NATIVE=OFF LLAMA_CURL=OFF`, then **asserts** x86-64 ELF and greps the disassembly for AVX-512 mnemonics — the build fails rather than letting an illegal-instruction fault become a disqualification on the target. Stage 2 ships only the binaries (`llama-server`, `llama-bench`) next to the app, so no compiler reaches the final image. Weights are mounted, never baked. `docker/entrypoint.sh` runs the two-process topology and starts the gateway even when the engine is absent (503 by design, not a boot failure); an explicit command overrides the app (`docker run muta-dev python3.10 -m pytest`).
 - `make model` — download the default GGUF (Qwen3-0.6B Q4_K_M) into `models/`.
 - `make serve` — launch `llama-server` on `127.0.0.1:8080` against the resolved model (needs `brew install llama.cpp` or a container build).
 - `make chat` — interactive multi-turn REPL against the runtime (auto-starts a server if none is up). Full stack: `make serve` + `make dev`, then `POST /v1/chat` with a `conversation_id` for memory. Conversations persist in `data/muta.sqlite3`.
