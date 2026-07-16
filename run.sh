@@ -108,7 +108,9 @@ run_docker() {
 
     if [ "$FORCE_BUILD" = 1 ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
         info "building $IMAGE (linux/amd64; compiles llama.cpp — slow the first time)"
-        docker buildx build --platform=linux/amd64 -f docker/dev.Dockerfile -t "$IMAGE" .
+        docker buildx build --platform=linux/amd64 -f docker/dev.Dockerfile \
+            --build-arg MUTA_GIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
+            -t "$IMAGE" .
     fi
 
     # The image is linux/amd64. On Apple silicon that's QEMU, and inference crawls.

@@ -73,6 +73,14 @@ RUN python3.10 -m pip install --no-cache-dir --upgrade pip \
 COPY --from=engine /src/build/bin/llama-server /app/runtime/build/bin/
 COPY --from=engine /src/build/bin/llama-bench  /app/runtime/build/bin/
 
+# Build-time provenance. .dockerignore excludes .git and this image has no git binary, so a
+# benchmark run inside the container cannot discover its own commit — and the 9-11 Aug report
+# numbers come from exactly here. A number without provenance is unusable in the report
+# (ROADMAP 16 Jul), so inject it rather than shipping .git.
+#   docker buildx build --build-arg MUTA_GIT_SHA=$(git rev-parse HEAD) ...
+ARG MUTA_GIT_SHA=unknown
+ENV MUTA_GIT_SHA=${MUTA_GIT_SHA}
+
 # Weights are provisioned, never baked: a 378 MB layer would bloat every push, and
 # .dockerignore already excludes models/*.gguf. Mount -v ./models:/app/models.
 ENV MUTA_RT_MODEL_DIR=/app/models \

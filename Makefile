@@ -3,6 +3,9 @@
 .DEFAULT_GOAL := help
 PY ?= python3
 IMAGE ?= muta-dev:latest
+# Baked into the image: the container has no .git, and a benchmark number without provenance
+# is unusable in the report (ROADMAP 16 Jul).
+GIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 
 .PHONY: help install dev test lint fmt contract contract-test build smoke bench profile package
 
@@ -32,7 +35,8 @@ contract-test: ## Property-fuzz a running server against the contract (needs `ma
 	schemathesis run http://127.0.0.1:8000/openapi.json --checks all
 
 build: ## Build the linux/amd64 dev image
-	docker buildx build --platform=linux/amd64 -f docker/dev.Dockerfile -t $(IMAGE) .
+	docker buildx build --platform=linux/amd64 -f docker/dev.Dockerfile \
+		--build-arg MUTA_GIT_SHA=$(GIT_SHA) -t $(IMAGE) .
 
 model: ## Download the default GGUF (Qwen3-0.6B Q4_K_M) into models/
 	$(PY) -c "from runtime.config import RuntimeConfig; from runtime.models import download_from_hf; download_from_hf(RuntimeConfig())"
