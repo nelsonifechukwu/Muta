@@ -19,6 +19,15 @@ ACTION=chat
 FORCE_BUILD=0
 ARGS=()
 
+# `COPY . .` copies the working tree, not HEAD — so an image built from an uncommitted tree
+# must not claim to be that commit. A wrong SHA is worse than no SHA in a benchmark report.
+git_sha() {
+    local sha dirty=""
+    sha=$(git rev-parse HEAD 2>/dev/null) || { echo unknown; return; }
+    [ -n "$(git status --porcelain 2>/dev/null)" ] && dirty="-dirty"
+    echo "${sha}${dirty}"
+}
+
 bold() { printf '\033[1m%s\033[0m\n' "$*"; }
 info() { printf '\033[36m▸\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m!\033[0m %s\n' "$*" >&2; }
@@ -109,7 +118,7 @@ run_docker() {
     if [ "$FORCE_BUILD" = 1 ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
         info "building $IMAGE (linux/amd64; compiles llama.cpp — slow the first time)"
         docker buildx build --platform=linux/amd64 -f docker/dev.Dockerfile \
-            --build-arg MUTA_GIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
+            --build-arg MUTA_GIT_SHA="$(git_sha)" \
             -t "$IMAGE" .
     fi
 

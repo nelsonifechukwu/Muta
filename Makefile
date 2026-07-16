@@ -4,8 +4,10 @@
 PY ?= python3
 IMAGE ?= muta-dev:latest
 # Baked into the image: the container has no .git, and a benchmark number without provenance
-# is unusable in the report (ROADMAP 16 Jul).
-GIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+# is unusable in the report (ROADMAP 16 Jul). The -dirty suffix is load-bearing: `COPY . .`
+# copies the WORKING TREE, so a build from an uncommitted tree would otherwise tag the image
+# with a commit that does not describe the code inside it.
+GIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)$(shell test -z "$$(git status --porcelain 2>/dev/null)" || echo -dirty)
 
 .PHONY: help install dev test lint fmt contract contract-test build smoke bench profile package
 
