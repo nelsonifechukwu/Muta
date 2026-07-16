@@ -163,6 +163,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - [Ahmad Osman — Latent Space](https://www.latent.space/p/ahmad-osman-local-ai?utm_source=post-email-title&publication_id=1084089&post_id=204360411&utm_campaign=email-post-title&isFreemail=true&r=8pqpb&triedRedirect=true&utm_medium=email)
 - [awesome-local-ai](https://github.com/msb-msb/awesome-local-ai)
 - Kernel worklogs from Section 2
+- [AI Inference Resources](https://github.com/aerlabsAI/ai-inference-resources)
 
 ## Extra features
 - Misconception detector
