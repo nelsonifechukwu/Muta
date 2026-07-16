@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "muta"
+version = "0.1.0"
+description = "ADTC 2026 — offline adaptive math & science tutor (backend + /v1 API contract)."
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "huggingface_hub>=0.24",  # runtime model provisioning (folder default, HF fallback)
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "schemathesis>=3.30",
+]
+
+# One distribution, two import packages: the frozen contract and the app that serves it.
+# Everything collapses into a single process at deploy (ROADMAP A.2) — hence one workspace,
+# not five packages.
+[tool.hatch.build.targets.wheel]
+packages = ["contracts", "orchestrator", "runtime"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+extend-select = ["I"]  # import sorting
+
+[tool.pytest.ini_options]
+# Tests live next to the code they cover (lane-owned), so discover across the packages.
+testpaths = ["contracts", "orchestrator", "runtime", "bench"]
+python_files = ["test_*.py"]
+addopts = "-q"

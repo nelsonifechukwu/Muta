@@ -28,6 +28,37 @@ $$
 $P_{\text{thermal}} = -10$ if package temperature exceeds 85 °C or thermal throttling is flagged.
 Hard failure conditions (not point deductions): OOM kill, sandbox execution crash, illegal-instruction fault.
 
+### What $S_{\text{acc}}$ actually measures (README line 24)
+
+The README reads the 50% term as **"tutoring quality → Section 3"**, not as answer accuracy — and that reading is almost certainly right, because ADTC's published scoring describes accuracy and quality as *multiple-choice benchmarks **plus qualitative evaluation***. **This has a large strategic consequence that is easy to miss: the pedagogy work in Phase 4 feeds the 50%-weighted term, not merely the 10-point African Use Case bonus.** A model that answers correctly but tutors badly loses points on the heaviest term in the function.
+
+Two things follow. First, `eval.py` (18 Jul) must measure more than final-answer correctness — a Socratic response that never states the answer is *correct behaviour* and would score zero under exact-match, so the harness needs a mode-aware rubric alongside the accuracy track. Second, the README's pointer to **Section 3** is the claim that tutoring quality is won by SymPy routing, RAG grounding, self-consistency, and safety — the correctness machinery, not the prose. Confirm the qualitative component's exact form in the 14 Jul rules digest; it determines how much of Phase 4 is scored rather than merely demonstrated.
+
+### The README's dependency order (README lines 6–9)
+
+Every phase below is sequenced against this chain. Each group rests on the one above it; nothing is built before the thing it depends on exists.
+
+```
+Constraint → Model → Inference → Correctness/Safety → Pedagogy
+   → Exam Prep → Interface → Collaboration/Distribution
+   → Evaluation/Business → Competition Strategy → Story
+(Team Study Shelf runs alongside all of the above.)
+```
+
+### The three product bars (README line 3)
+
+The README sets three standards to hit simultaneously, and they are design constraints rather than marketing: **Brilliant's / Marble's interactivity**, **Khan Academy's curriculum breadth**, and **Encarta/Britannica's self-containedness — no server required**. The third is the hardest and the most distinctive: self-containedness means the product is complete in itself on a flash drive, with no network, no account, and no degradation when offline. Every architecture decision in §1 serves it. Judge each feature against all three: an interactive canvas that needs a CDN fails the third bar; a tutor that only covers one topic fails the second.
+
+### The central thesis (README line 38)
+
+> **A small quantized model combined with retrieval and verified tool calls beats a large model squeezed onto constrained hardware.**
+
+This is the project's load-bearing claim, and the roadmap is an argument for it. It is why SymPy routing (25 Jul) precedes every other correctness task, why RAG (27 Jul) is scored on whether it earns its RAM, and why the bake-off (19–22 Jul) ranks on accuracy-per-GB rather than accuracy. If the thesis is right, the report's ablation table (31 Jul) proves it: model-alone versus model+retrieval+verified-tools, measured in points. **The ablation table is the thesis under test** — it is the one artifact that could falsify the whole design, which is exactly why it is worth building.
+
+### Worked example from the README (line 34)
+
+Peak RAM reduction from **4 GB → 3 GB** raises $S_{\text{eff}}$ from **42.9 → 57.1** — a 14.2-point swing on the efficiency term, worth 2.84 points of $S_{\text{total}}$ at the 20% weight. This is the README's own illustration of why one gigabyte matters, and it generalises into the exchange rate below.
+
 ### The exchange rate — the most-used number in this project
 
 Differentiating the scoring function gives the marginal value of each resource. Every optimization decision is checked against these three constants.
@@ -107,6 +138,73 @@ Derived from the exchange rate, not from taste. The phases execute this order.
 
 ---
 
+---
+
+## Architecture
+
+### A.1 Deployment form — native portable application
+
+Docker is the **development** environment, not the deployment target. On the target machine there is no daemon, no compose, no VM: the container's `linux/amd64` contents are extracted into a native portable build (AppImage or portable directory) that launches zero-shot from a flash drive. The reasoning, worth recording because the report scores rejected alternatives:
+
+- **VM — rejected.** 1–2 GB of the 7 GB budget consumed before the model loads, at 2.86 pts/GB, plus boot friction that kills the plug-and-run demo.
+- **Container at deployment — rejected.** Requires the Docker daemon pre-installed on a machine that will not have it; "install Docker first" is not zero-shot.
+- **Container in development — adopted.** Reproducible, `linux/amd64` from day one so the binaries inside are already x86-64 ELF, and CI-buildable. The 9 Aug step is extraction and verification, not a rebuild.
+
+### A.2 Service architecture — logical microservices, collapsed process topology
+
+**Build backend-first, contract-first, headless.** The backend is a container exposing HTTP endpoints any frontend can connect to; the browser UI is the first client, not a privileged one. Everything the product does is reachable by `curl` before a single pixel exists.
+
+**Four things this buys that the project needs anyway:**
+- **The 50%-weighted term gets validated headless.** $S_{\text{acc}}$ is tutoring quality; if it is only testable through a UI, it is only testable late. `eval.py` hits the same endpoints the UI will.
+- **The classroom demo stops being special.** Thirty phones are thirty API clients. Shared-laptop mode is not a feature to build — it is what an HTTP server already is.
+- **OpenClaw (README §6) becomes a client, not an integration.** WhatsApp/Telegram → the same `/v1/chat`.
+- **A slipping UI stops being fatal.** A demoable backend with a bare client beats a beautiful client with no backend.
+
+**The decomposition (logical boundaries):**
+
+| Service | Owns | Why it is its own boundary |
+|---|---|---|
+| `inference` | `llama-server`, GGUF, KV cache, speculation | Already a separate process with an HTTP API — the boundary exists whether or not we draw it |
+| `math` | SymPy routing, verification, units | Must be sandboxed and timeout-bounded; a hang here cannot take the gateway with it |
+| `retrieval` | FAISS index, embedder, context assembly | The one service with a real memory footprint of its own |
+| `pedagogy` | Curriculum DAG, learning twin, modes, personas | Pure logic + SQLite; changes daily, so benefits most from isolation |
+| `exam` | Question generator, marking schemes, WAEC-Bench | Independently testable against known-good items |
+| `gateway` | Contract surface, routing, static UI | The only service any client addresses |
+
+**The deploy-time decision.** Docker is rejected at deployment (A.1), so nothing orchestrates N processes on the target — a supervisor would have to launch, health-check and restart them, and **a crash in any one service is a sandbox execution crash: disqualification, not a deduction.** Each Python service also costs an interpreter plus framework, roughly **60–100 MB RSS**; five is ~300–500 MB ≈ **1.4 points of $S_{\text{eff}}$**, with no shared memory between them.
+
+So: **separate services in dev, mounted sub-applications in one process at deploy.** FastAPI's `app.mount()` makes the collapse a config change, not a refactor. Each service is developed, tested and adversarially reviewed independently against its own contract; at ship time they co-locate. **The HTTP contract is what buys frontend independence — not the process count.** Target topology on the target machine: **two processes**, `llama-server` and the mounted gateway.
+
+This is also the Four-Step method (14 Jul) in structural form: the service boundaries *are* Step 3's clean partition, and the frozen OpenAPI contract is the Step 2 tribal knowledge that lets parallel lanes work without real-time coordination.
+
+### A.3 The stack
+
+```mermaid
+flowchart TB
+    subgraph FD["Flash drive — plug & run, zero install"]
+        AI["AppImage / portable directory"]
+    end
+    AI --> OS["Ubuntu 22.04 — native (no VM, no Docker daemon)"]
+    OS --> ENG["llama-server (x86-64, AVX2)<br/>GGUF + quantized KV + speculation"]
+    ENG <--> GW["Gateway (FastAPI)<br/>mounted sub-apps: math · retrieval · pedagogy · exam"]
+    GW <--> API["/v1/ OpenAPI contract"]
+    API --> B1["Browser — localhost"]
+    API -. LAN .-> B2["30 student phones — browser, no install"]
+    API -. LAN .-> B3["CLI · curl · eval.py"]
+    API -. post-comp .-> B4["OpenClaw → WhatsApp/Telegram"]
+    GW --> SYM["SymPy — verified math"]
+    GW --> RAG["FAISS — past papers, formula sheets"]
+    GW --> DB["SQLite — learning twins"]
+```
+
+Read it in dependency order: flash drive carries a portable app → runs natively on Ubuntu → `llama-server` hosts the model behind localhost HTTP → the gateway does the product work (tool routing, retrieval, persona assembly, mastery) → **every client speaks only `/v1/`**. The model is a component inside the system, never the system.
+
+### A.4 Mac → x86 discipline
+
+Model files, corpus, RAG index, all Python, all frontend and all config port cleanly — none care about CPU architecture. The container is built `linux/amd64` from 14 Jul so the compiled binaries are already correct for the target. Benchmarks are the one thing that does not port: **every number in the report comes from the target box (9–11 Aug), never the Mac.**
+
+---
+
 # PHASE 1 — Foundation, Instrumentation & Free Optimizations
 ### Tue 14 Jul – Sat 18 Jul (5 days)
 
@@ -143,7 +241,23 @@ Derived from the exchange rate, not from taste. The phases execute this order.
 
 * **[All]** Work through the agent-skills setup referenced in the README before tooling decisions harden — it is the project's nominated dev-environment baseline. [addyosmani/agent-skills: https://github.com/addyosmani/agent-skills]
 
-* **[All]** Assign lanes, set a daily 15-minute standup, create `/bench/optimization-log.md` with columns: date, change, before, after, ΔTPS, ΔRAM, ΔAcc, Δ$S_{\text{total}}$, verdict.
+* **[Lane A]** **Start the continuous paper-reading habit today, not in Phase 7 — the README is explicit that this is how you find things you would not otherwise figure out, even with AI.** Its own example is AWQ: you do not stumble onto activation-aware quantization by prompting; you find it by reading edge-optimization papers and **chasing their references**, because the citation graph is the map. Budget ~45 minutes daily per systems-lane member, log each paper in `/docs/reading-log.md` with one line on whether it is actionable here, and treat reference lists as the primary artifact rather than the abstracts. The 28–30 Jul innovation window is only as good as what this habit surfaces before it — everything adopted there was found by someone reading. [llm-awq (the README's own example): https://github.com/mit-han-lab/llm-awq · AWQ (arXiv:2306.00978): https://arxiv.org/abs/2306.00978 · arXiv cs.LG recent: https://arxiv.org/list/cs.LG/recent · Connected Papers: https://www.connectedpapers.com/ · Semantic Scholar: https://www.semanticscholar.org/ · Papers with Code — model compression: https://paperswithcode.com/task/model-compression · Kernel & systems study shelf, Appendix A]
+
+* **[Lane A]** Schedule the **kernel study shelf** (README §2) as real reading rather than a bookmark list: one worklog per week for the systems lane, starting with the **CPU-side companion** of the salykova GEMM tutorial, since the deployment target has no GPU. The README's own justification is that the methodology — tiling, memory hierarchies, why a kernel is bandwidth-bound — transfers to CPU AVX2 even with no GPU to deploy on, and it is the intellectual grounding for both the 30% throughput term and the Sprint 3 build-your-own-engine track. [Kernel & systems study shelf, Appendix A · salykova GEMM (CPU companion): https://salykova.github.io/gemm-gpu · siboehm CUDA MMM worklog: https://siboehm.com/articles/22/CUDA-MMM · GPU Puzzles: https://github.com/srush/GPU-Puzzles · Modal GPU glossary: https://modal.com/gpu-glossary · Everything I learned about local LLMs: https://nullprogram.com/blog/2024/11/10/]
+
+* **[All]** **Adopt the README's Four-Step Guide to AI-Assisted Codebase Work as the team's standing engineering protocol (README lines 174–181), and record it in `/docs/working-method.md`.** Two of the four steps this roadmap already implements without having named them; two are genuinely absent and need building.
+
+  **Step 1 — have the model study before it writes.** Before generating code for any task, the model reads the existing code (or the spec) and produces an explicit plan describing what must happen and why. Skipping it means pattern-matching starts before the constraints are understood. *Status: this roadmap is that artifact at project level; at task level it is not yet a habit.* **Make it one:** every task above 50 lines of code opens with a written plan committed to `/docs/plans/` before implementation, reviewed by one other lane. The cost is minutes; the failure it prevents is a day.
+
+  **Step 2 — externalize the tribal knowledge.** Force the ownership rules, lifetimes, invariants and "why this weird workaround exists" out of developers' heads and into explicit structured form, because implementation agents cannot ask clarifying questions mid-task and unwritten knowledge gets guessed at, with guesses compounding into bugs. *Status: already deeply implemented and worth recognising as such* — `/docs/build-flags.md` (why AVX2, not AVX-512), `/docs/rules-digest.md`, `/runtime/VERSIONS.md`, `/bench/PROTOCOL.md`, `/docs/quant-types.md`, `/docs/model-decision.md`, `/docs/smoke-fixture.md`, `/docs/frontier-log.md`, `/docs/native-extraction-plan.md`, `/docs/target-day-runbook.md`. Each exists precisely because the reasoning behind a decision is worthless in someone's head. **Keep the discipline:** no decision is made in a standup and left there.
+
+  **Step 3 — parallelize, but partition cleanly.** Split into independent units and assign parallel agents, which works *only* because Step 2 resolved the cross-cutting knowledge first — parallel agents cannot coordinate in real time, so ambiguity must be eliminated before they start, not discovered after. *Status: this is exactly what Lane A / Lane B / Lane C are*, and the roadmap's directory partition (`/runtime`, `/orchestrator`, `/ui`, `/corpus`, `/bench`) is the clean boundary the step requires. **Strengthen it:** give each lane its own git worktree so parallel work never contends on the same tree, and treat the API contract (19 Jul) and the corpus schema (16 Jul) as the two cross-cutting artifacts that must be frozen before parallel work begins — they are the ambiguity that would otherwise be discovered late.
+
+  **Step 4 — pair every writer with an adversarial reviewer.** Each implementer gets a separate reviewer in an *isolated context window* whose only job is to assume the output is wrong and find why. Parallel agents move fast and do not self-correct, so the review layer must be structurally separate — not the same context, not optimistic by default — or errors get rubber-stamped. **Status: entirely absent from this roadmap, and it is the gap that matters most**, because Phases 1–3 are exactly the "parallel agents moving fast" condition the step is designed to catch. **Build it:** every implementation task gets a reviewer from a different lane, in a fresh context, briefed adversarially. Apply it hardest where a silent bug is most expensive — `score.py` (a wrong compass misdirects a month), `profile.py` (a wrong number invalidates the report), the Paper 2 rubric grader (an unvalidated grader is a random number generator), and the memory guard (a failure here is disqualification, not a deduction).
+
+  [README lines 174–181 · Git worktrees: https://git-scm.com/docs/git-worktree · Sebastian Raschka on local coding agents: https://magazine.sebastianraschka.com/p/using-local-coding-agents · addyosmani/agent-skills: https://github.com/addyosmani/agent-skills]
+
+* **[All]** Assign lanes, set a daily 15-minute standup, create `/bench/optimization-log.md` with columns: date, change, before, after, ΔTPS, ΔRAM, ΔAcc, Δ$S_{\text{total}}$, verdict. **Add the standing review rule from Step 4: no task is marked done until an adversarial reviewer from another lane has tried to break it and failed.**
 
 ---
 
@@ -180,6 +294,10 @@ Derived from the exchange rate, not from taste. The phases execute this order.
 * **[Lane B]** Build `/corpus/ingest.py`: PDF → text with math-aware handling. Test on 20 sample pages; measure how many equations survive intact. Fall back to OCR for scans. [pdfplumber: https://github.com/jsvine/pdfplumber · PyMuPDF: https://pymupdf.readthedocs.io/en/latest/ · Nougat: https://github.com/facebookresearch/nougat · Tesseract: https://github.com/tesseract-ocr/tesseract]
 
 * **[Lane B]** Define `/corpus/schema.json`: `{exam_board, year, subject, question_number, question_text, options[], correct_answer, worked_solution, topic_tags[], difficulty, marking_scheme}`. **`subject` must accommodate physics/chemistry/biology from day one**, not just mathematics — the competition domain is Math *and* Scientific Reasoning, and retrofitting a subject axis into a populated corpus is far more expensive than reserving it now. Every downstream consumer — fine-tune, RAG, generator, eval set — reads this one schema. [JSON Schema: https://json-schema.org/learn/getting-started-step-by-step]
+
+* **[Lane C + All]** **Freeze the API contract today — before any UI and before any service is written.** This is the single cross-cutting artifact that lets the three lanes work in parallel without coordinating in real time (Four-Step Step 2/3, 14 Jul), and it is the surface every future frontend binds to. Write it as an **OpenAPI 3.1 spec** in `/docs/api/openapi.yaml`, generated from Pydantic models so the spec and the code cannot drift. Minimum surface: `POST /chat` (mode, message, student_id, language, persona) · `POST /diagnose` · `POST /generate_question` · `GET /mastery/{student_id}` · `POST /verify` (SymPy) · `GET /health` · `GET /ready`. Version it (`/v1/`) from the first commit — the cost is a path segment now and a migration later. **Nothing downstream may bypass the contract**: the UI, the phones, `eval.py`, the CLI and any future client all speak only this. [OpenAPI 3.1: https://spec.openapis.org/oas/latest.html · FastAPI auto-generates the spec from Pydantic: https://fastapi.tiangolo.com/features/#automatic-docs · Pydantic: https://docs.pydantic.dev/latest/ · API versioning practice: https://fastapi.tiangolo.com/tutorial/bigger-applications/]
+
+* **[Lane B]** Write **contract tests** against the OpenAPI spec that run in CI on every push. They are what make the boundaries real rather than aspirational — a service that quietly changes a response shape breaks a lane that cannot see it. Pair with `schemathesis`, which generates test cases directly from the spec and finds the edge cases nobody wrote down. [schemathesis: https://schemathesis.readthedocs.io/ · Pact (consumer-driven contracts, if the client count grows): https://docs.pact.io/ · GitHub Actions from 18 Jul]
 
 * **[Lane C]** Draft the curriculum prerequisite DAG. **Build the full spine the README specifies — algebra → quadratics → calculus → differential equations → physics → ML — but populate only the MVP slice** (arithmetic → algebra basics → linear equations → quadratics → functions → limits → derivatives → chain rule → integration → integration by parts). The upper nodes exist as stubs so the "this is the gradient that trains modern AI" moment (30 Jul) has a real graph path to trace, and so the post-competition expansion is an addition rather than a redesign. Encode as node/edge JSON with topic IDs matching `topic_tags`. [TaRL — group by learning level, not age/grade: https://www.povertyactionlab.org/evidence-effect/teaching-at-the-right-level · TaRL Africa: https://teachingattherightlevel.org/ · Pratham: https://www.pratham.org/about/teaching-at-the-right-level/ · NetworkX DAG algorithms: https://networkx.org/documentation/stable/reference/algorithms/dag.html]
 
@@ -237,7 +355,9 @@ Derived from the exchange rate, not from taste. The phases execute this order.
 
 * **[Lane B]** Write `/bench/eval.py`: run a model over a validation set, extract the final answer, compare to ground truth. Handle multiple-choice extraction and numeric/symbolic equivalence separately. Emit accuracy, KL divergence vs F16, and flip rate. [SymPy equivalence: https://docs.sympy.org/latest/modules/simplify/simplify.html · Answer-extraction conventions — CoT (arXiv:2201.11903): https://arxiv.org/abs/2201.11903]
 
-* **[Lane C]** Build the UI shell: chat transcript, input box, streaming token rendering from the SSE stream. Function before styling. [llama-server streaming: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md · SSE: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events]
+* **[Lane B]** **Prove the backend headless before the UI exists — the discipline that makes "any frontend can connect" true rather than claimed.** Ship a `curl`-only walkthrough in `/docs/api/EXAMPLES.md` covering every endpoint, and a thin CLI client (`bench/cli.py`) that drives a full tutoring exchange from the terminal. Two payoffs: it forces the contract to be complete rather than UI-shaped, and it gives Lane B a way to validate $S_{\text{acc}}$ without waiting on Lane C. **Acceptance test for the whole backend: a person with only the OpenAPI spec and `curl` can run a complete Socratic tutoring session.** If they cannot, the contract has a hole the UI would have silently papered over. [OpenAPI spec from 16 Jul · FastAPI interactive docs at `/docs` and `/redoc`: https://fastapi.tiangolo.com/features/#automatic-docs · httpie as a friendlier curl: https://httpie.io/]
+
+* **[Lane C]** Build the UI shell **as the first client of the frozen contract, not as the product** — chat transcript, input box, streaming token rendering from the SSE stream. It binds only to `/v1/` endpoints; if it needs something the contract lacks, the contract changes first and the spec is regenerated. Function before styling. [llama-server streaming: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md · SSE: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events]
 
 * **[Lane C]** Prototype offline math rendering: KaTeX bundled locally (no CDN — deployment has no internet), inline and display equations. Test with the integration-by-parts example. [KaTeX: https://katex.org/docs/browser · auto-render: https://katex.org/docs/autorender · MathJax fallback: https://docs.mathjax.org/en/latest/]
 
@@ -271,7 +391,7 @@ Derived from the exchange rate, not from taste. The phases execute this order.
 
 * **[Lane A]** Extend `/bench/run_bakeoff.py` to iterate the candidate × quantization matrix **with the Phase 1 free optimizations enabled** (n-gram speculation, prompt caching, `mmap`, capped threads), invoking eval + profile per cell and emitting one table: model, quant, size_gb, accuracy, KL-div, mean_output_tokens, tps, peak_ram, temp, $S_{\text{total}}$.
 
-* **[Lane C]** Build the orchestrator skeleton (FastAPI): request → route → `llama-server` → response. Define the internal API contract: `/chat` (mode, message, student_id), `/diagnose`, `/generate_question`, `/health`. [FastAPI: https://fastapi.tiangolo.com/ · httpx async: https://www.python-httpx.org/async/ · Pydantic: https://docs.pydantic.dev/latest/]
+* **[Lane C]** Build the orchestrator **as the gateway service implementing the contract frozen on 16 Jul** — request → route → service → response. Structure it from the first commit as **mountable sub-applications** (`math`, `retrieval`, `pedagogy`, `exam`), each in its own module with its own router, tests and owner lane. In dev they can run as separate processes behind the gateway; at deploy they mount into one process (Architecture A.2). Writing it this way now costs nothing and makes the deploy-time collapse a config change rather than a refactor during the week that has no room for one. [FastAPI sub-applications and `app.mount()`: https://fastapi.tiangolo.com/advanced/sub-applications/ · Bigger applications / APIRouter: https://fastapi.tiangolo.com/tutorial/bigger-applications/ · httpx async: https://www.python-httpx.org/async/ · Pydantic: https://docs.pydantic.dev/latest/ · Service decomposition table, Architecture A.2]
 
 ---
 
@@ -342,9 +462,22 @@ Derived from the exchange rate, not from taste. The phases execute this order.
 ## Fri 24 Jul
 **Tasks and Resources**
 
+* **[Lane A]** **Instantiate the README's before/after report table (README lines 131–138) in `/bench/optimization-log.md` now, and fill a row the day each optimization lands** — the README specifies the report *is* a running benchmark log, not a retrospective write-up. The four named rows are the minimum; add a row per optimization actually attempted, each scored through `score.py`:
+
+| Optimization | Before | After |
+|---|---|---|
+| FP16 → INT4 quantization | baseline RAM | reduced RAM |
+| KV-cache quantization | baseline latency | reduced latency |
+| Speculative decoding | baseline tokens/sec | increased tokens/sec |
+| Model pruning | baseline size | reduced size |
+
+Extend with the rows this roadmap adds beyond the README's four: n-gram speculation (17 Jul), prompt caching (17 Jul), `mmap` (17 Jul), thread cap (17 Jul), Unsloth Dynamic 2.0 (18 Jul), adaptive precision (25 Jul), context trim (26 Jul), plus any frontier item adopted 28–30 Jul. [README §9 · `/bench/score.py` · ADTC report template: https://adtc-2026.devpost.com/]
+
 * **[Lane A]** Establish the locked model's full baseline: TPS, peak RAM/PSS, TTFT, mean latency, at the chosen context, **with all Phase 1 optimizations on**. Write it into `/bench/optimization-log.md` as the Phase 3 reference row. Run `llama-bench` alongside and **record the profile-vs-llama-bench gap** — the orchestration overhead, in points. [/bench/profile.py · llama-bench: https://github.com/ggml-org/llama.cpp/tree/master/tools/llama-bench]
 
 * **[Lane B]** Prepare the fine-tune dataset: convert schema records into instruction/response pairs in two flavours — exam-format answering with marking-scheme-shaped output, and Socratic dialogue turns. Mask loss on user turns so the model trains only on assistant outputs; Unsloth's guidance reports completions-only training adds roughly a percentage point, notably for multi-turn conversational fine-tunes. [Unsloth datasets guide: https://unsloth.ai/docs/get-started/fine-tuning-llms-guide · `train_on_responses_only` and LoRA hyperparameters: https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide · Chat templating: https://huggingface.co/docs/transformers/main/en/chat_templating · Unsloth synthetic-dataset notebook (auto-parses PDFs into QA pairs): https://unsloth.ai/docs]
+
+* **[Lane B]** **Source the Socratic dialogue transcripts — the README names them as a third of the fine-tune corpus, and unlike past questions and worked solutions, they do not exist anywhere.** Past papers contain problems and answers; no exam board publishes tutoring dialogue. So this component must be manufactured, and how it is manufactured determines whether the fine-tune teaches tutoring or teaches mimicry. Three sources, best first: **(a) synthesize from worked solutions** — take each solution's subgoal decomposition and invert it into an elicit → probe → hint → reveal exchange, which grounds every dialogue in a verified solution path rather than invention; **(b) transcribe real tutoring** from the team's own HCI coursework and UDO sessions, which is the highest-quality signal available and doubles as the TARL provenance the story leans on (§11); **(c) generate with a larger model and filter**, keeping only dialogues whose final answer SymPy verifies and whose intermediate steps match the marking scheme. **Never fine-tune on unverified generated dialogue** — a plausible-sounding wrong hint is exactly the failure a tutor cannot have. Target a few thousand turns; quality dominates volume at LoRA scale. [Corpus schema from 16 Jul · Subgoal method from 26 Jul · SymPy verification from 25 Jul · Unsloth synthetic-dataset notebook: https://unsloth.ai/docs · Self-Instruct (arXiv:2212.10560): https://arxiv.org/abs/2212.10560 · AfriMed-QA's human-sourced-plus-quality-control design (arXiv:2411.15640): https://arxiv.org/abs/2411.15640]
 
 * **[Lane B]** Reserve GPU compute: confirm the Udutech credits (~5 h) or a Colab/Kaggle GPU. LoRA on a ≤4B model at 2048 context fits a single session comfortably. [Unsloth notebooks: https://unsloth.ai/docs · Backends (NVIDIA, Intel, CPU, macOS now listed): https://unsloth.ai/docs · Qwen3.5 fine-tuning guide: https://unsloth.ai/docs/models/qwen3.5/fine-tune · Kaggle GPU quota: https://www.kaggle.com/docs/notebooks]
 
@@ -473,7 +606,9 @@ Each subgoal named, solved, verified through SymPy, composed. [SymPy integrate: 
 
 * **[All]** **Innovation window close-out.** Walk `/docs/frontier-log.md`. Every frontier item is now either adopted with numbers or parked with a written reason. **Nothing experimental is attempted after today.** Anything still uncertain is parked — this is the entire point of running the window 13 days out rather than 4.
 
-* **[Lane C]** Implement the "inspire first" opening for one flagship concept: the derivative introduced through a speedometer in a moving car, then connected forward to the gradient that trains modern AI. One rehearsed moment that demonstrates the philosophy. [Veritasium as the reference standard: https://www.youtube.com/@veritasium · README.md Section 4]
+* **[Lane C]** Implement the "inspire first" opening for one flagship concept: the derivative introduced through a speedometer in a moving car, then connected forward to the gradient that trains modern AI. One rehearsed moment that demonstrates the philosophy. **Hold the README's framing while building it: new tools are not the answer, and AI should create curiosity rather than replace it.** That is a design test with teeth — if a feature answers a question the student had not yet thought to ask, it is building curiosity; if it answers the question so completely that the student stops wondering, it is replacing it. Socratic gating (25 Jul) is this principle in mechanism form. Never open with "derivative = rate of change." [README §4 · Veritasium: https://www.youtube.com/@veritasium]
+
+* **[Lane B]** Encode the README's Feynman exemplar as the reference test case for the misconception detector: the student says *"a derivative is just dividing"*, and the AI probes rather than corrects — *"what happens as the denominator shrinks?"* This is the whole method in one exchange: the misconception is not contradicted, it is walked toward its own edge until the student sees it. Use it as the acceptance test — if the detector responds to that input with a correction rather than a probe, the mode is not built. [README §4 · Misconception detector, this day · Feynman technique: https://fs.blog/feynman-technique/] [Veritasium as the reference standard: https://www.youtube.com/@veritasium · README.md Section 4]
 
 ---
 
@@ -537,7 +672,7 @@ Each subgoal named, solved, verified through SymPy, composed. [SymPy integrate: 
 
 * **[Lane C]** **Implement flashcards and quiz generation as first-class gamified modes**, driven by the existing question generator and the learning twin's weak nodes. Flashcards are the cheapest possible spaced-repetition surface and the README names them directly; drive scheduling from a standard SM-2-style interval rather than inventing one. [Question generator from 24 Jul · Learning twin from 21 Jul · SM-2 / spaced repetition algorithm: https://super-memory.com/english/ol/sm2.htm · FSRS (modern open scheduler): https://github.com/open-spaced-repetition/fsrs4anki]
 
-* **[Lane C]** Implement the adaptive-UI toggles: language, difficulty, explanation style, persona, theme. Keep the surface small — visible proof of the "change me" concept without the full dynamic-interface system. [Claude Dispatch: https://www.oneusefulthing.org/p/claude-dispatch-and-the-power-of · YC RFS — Dynamic Software Interfaces: https://www.ycombinator.com/rfs]
+* **[Lane C]** Implement the adaptive-UI toggles. **The README names seven knobs and all seven are cheap, so ship all seven: theme, avatar, personality, difficulty, explanation style, language, pace.** Three were previously scoped out and should not have been — **avatar** (a chosen character or image, which with the naming hook below is what makes the tutor *someone* rather than *something*), **personality** (distinct from persona: warmth and register, not pedagogical method), and **pace** (how fast new material arrives, which is the learner-facing control over the same variable the learning twin tracks internally, and therefore the one knob that closes the loop between the TARL model and the student's own sense of it). Keep the surface small in *depth* — a few options each, not a design system — while covering the full breadth the README asks for. [README §6 · Claude Dispatch: https://www.oneusefulthing.org/p/claude-dispatch-and-the-power-of · YC RFS — Dynamic Software Interfaces: https://www.ycombinator.com/rfs · Learning twin from 21 Jul (pace) · Naming hook, this day] [Claude Dispatch: https://www.oneusefulthing.org/p/claude-dispatch-and-the-power-of · YC RFS — Dynamic Software Interfaces: https://www.ycombinator.com/rfs]
 
 * **[Lane C]** Implement the interactive canvas stub: plot a function, show a tangent at a draggable point, connect it to the derivative lesson. Doubles as the AI Laboratory surface. [JSXGraph (strong for interactive geometry): https://jsxgraph.org/docs/ · function-plot: https://mauriciopoppe.github.io/function-plot/ · Plotly.js: https://plotly.com/javascript/ · Desmos as UX reference: https://www.desmos.com/calculator]
 
@@ -558,7 +693,7 @@ Each subgoal named, solved, verified through SymPy, composed. [SymPy integrate: 
 
 * **[Lane C]** **Implement skills/concept training mode** — the same generator and diagnostic engine as exam mode, but organised by topic rather than exam calendar, for students building foundations outside an active exam cycle. This is a routing and navigation change over existing components, not new machinery, and it is the mode that makes the product useful to the majority of students who are not sitting an exam this term. [Question generator from 24 Jul · Diagnostic flow from 22 Jul · Curriculum DAG from 16 Jul] [SQLite: https://www.sqlite.org/docs.html · Mastery map from 23 Jul]
 
-* **[Lane C]** Implement competitive quiz mode over LAN: multiple students on the same question set, live leaderboard. The engagement moment in the classroom demo. [FastAPI WebSockets: https://fastapi.tiangolo.com/advanced/websockets/]
+* **[Lane C]** Implement competitive quiz mode over LAN: multiple students on the same question set, live leaderboard. The engagement moment in the classroom demo. **The README specifies three transports — LAN, Internet, or Bluetooth.** LAN ships now; build the transport behind an interface so Internet (for students in different places, when connectivity exists) and Bluetooth (Sprint 4, for classrooms with no WiFi at all) are added implementations rather than rewrites. The Internet path is the one that lets a WAEC candidate compete with a friend across town — worth an hour of abstraction now. [FastAPI WebSockets: https://fastapi.tiangolo.com/advanced/websockets/ · Transport abstraction · README §7] [FastAPI WebSockets: https://fastapi.tiangolo.com/advanced/websockets/]
 
 * **[Lane B]** Assemble the final shipping RAG index: prune to highest-value content, measure size on disk and in RAM, confirm it fits alongside the model. [FAISS index factory: https://github.com/facebookresearch/faiss/wiki/The-index-factory]
 
@@ -568,6 +703,8 @@ Each subgoal named, solved, verified through SymPy, composed. [SymPy integrate: 
 **Tasks and Resources**
 
 * **[Lane A]** **Clean-room test — the closest rehearsal of 9 Aug available before the hardware exists:** run the portable build inside a bare container with no build tools and no network: `docker run --rm --network none -v $(pwd)/dist:/app ubuntu:22.04 /app/run.sh`. [Docker `--network none`: https://docs.docker.com/engine/network/drivers/none/ · AppImage: https://docs.appimage.org/]
+
+* **[Lane A]** **Test phone-to-laptop deployment — the README names it as a distribution path alongside the flash drive, and it is the one that scales without hardware.** A student's phone carries the bundle and installs it onto a classroom laptop over USB or local transfer, which matters because phones are the device African students actually own, while flash drives must be bought and handed out. Verify the bundle survives the round trip (Android storage → laptop → run), that no permissions or filesystem quirks corrupt the executable bit, and that the transfer is feasible at the bundle's size. If it works, the distribution story stops depending on anyone shipping physical media. [Bundle from this day · Android USB file transfer / MTP: https://developer.android.com/develop/connectivity/usb · Zero-shot test from 9 Aug · README §7]
 
 * **[Lane A]** Measure the flash-drive constraint: total bundle size (binary + model + corpus + RAG index + UI) and cold-start time reading from USB rather than SSD. USB read speed sets the model-load time the judges watch, and it interacts with `mmap` — demand-paging from slow media behaves differently from SSD. [mmap behaviour from 17 Jul · USB 3.0 throughput: https://en.wikipedia.org/wiki/USB_3.0]
 
@@ -586,7 +723,7 @@ Each subgoal named, solved, verified through SymPy, composed. [SymPy integrate: 
 
 * **[Lane C]** Implement the feedback loop: optional email entry, in-app notification queue that works offline and syncs when connectivity appears. [README.md Section 11 · SQLite queue from 21 Jul]
 
-* **[Lane C]** Run the access-gap survey the README calls for, and let it inform the pitch's framing. Keep the instrument narrow and answerable — who has reliable access to AI tutoring tools, who does not, and what that costs them — and report what the responses actually say. A small, honestly-reported sample from the 5 Aug user testers and their schools is more defensible in a pitch than a broad claim, and it grounds the "left behind" argument in data the team collected rather than assertion. [Survey design basics: https://www.pewresearch.org/writing-survey-questions/ · Pair with the 5 Aug user test cohort] [README.md Section 11 · SQLite queue from 21 Jul]
+* **[Lane C]** Run the access-gap survey the README calls for, and let it inform the pitch's framing. **Keep the README's underlying argument in view while designing it:** the concern is not merely unequal access to tools but dependency — *"we're slowly becoming slaves to those with higher knowledge; the final call is when we outsource our thinking to them."* That argument is what makes this product's inspire-first, Socratic-gated, curiosity-building design a *response* rather than a feature list: a tutor that hands over answers deepens exactly the dependency the survey is measuring. The philosophy and the pedagogy are the same claim. Design questions that can distinguish access from dependency, since they need different remedies. Keep the instrument narrow and answerable — who has reliable access to AI tutoring tools, who does not, and what that costs them — and report what the responses actually say. A small, honestly-reported sample from the 5 Aug user testers and their schools is more defensible in a pitch than a broad claim, and it grounds the "left behind" argument in data the team collected rather than assertion. [Survey design basics: https://www.pewresearch.org/writing-survey-questions/ · Pair with the 5 Aug user test cohort] [README.md Section 11 · SQLite queue from 21 Jul]
 
 * **[Lane B]** Fix the top three issues from the user test. Anything larger goes to the post-competition backlog.
 
@@ -797,6 +934,8 @@ Each subgoal named, solved, verified through SymPy, composed. [SymPy integrate: 
 * **[Lane A]** Ship **multi-OS deployment: Windows and macOS** alongside Linux. The orchestrator and UI are already portable; the work is packaging per platform and re-testing the zero-shot story on each. [PyInstaller (Windows/macOS): https://pyinstaller.org/en/stable/ · Tauri (if a native shell is wanted): https://tauri.app/ · llama.cpp Windows build: https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md · macOS code signing / notarization: https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution · Windows SmartScreen and code signing: https://learn.microsoft.com/en-us/windows/win32/seccrypto/cryptography-tools]
 
 * **[Lane C]** Implement **real-peer learning mode** — the multi-student version of the 29 Jul peer simulation. Two or more students work the same problem, see each other's reasoning, and the AI moderates rather than answers. [Peer simulation from 29 Jul · FastAPI WebSockets: https://fastapi.tiangolo.com/advanced/websockets/ · CRDTs for conflict-free shared state on flaky links: https://github.com/yjs/yjs · Automerge: https://automerge.org/]
+
+* **[Lane A]** Implement sync of **models, lessons and progress** when internet appears — the README lists all three, and *model* sync is the one with teeth. It means a deployed flash drive is not frozen at its ship date: a better quantization, a new fine-tune, or a fixed tokenizer can reach a classroom that sees connectivity once a term. This is the same delta-and-signature machinery as offline signed-patch updates below, applied to weights rather than code, and it is what turns a one-time artifact into a product. Design for interrupted transfers — a sync that must complete in one session will never complete. [Signed-patch updates, this sprint · Resumable transfer / HTTP range requests: https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests · bsdiff binary deltas: https://www.daemonology.net/bsdiff/ · rsync algorithm: https://rsync.samba.org/tech_report/]
 
 * **[Lane A]** **Optimize network packets for spotty local links** as the README specifies. The MVP assumed a healthy LAN; a real classroom does not have one. Work: message compression, delta-encoding of the transcript, aggressive client-side buffering, resumable streams, and degradation to text-only under loss. [MessagePack: https://msgpack.org/ · CBOR: https://cbor.io/ · WebSocket permessage-deflate: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism · QUIC/HTTP-3 for lossy links: https://datatracker.ietf.org/doc/html/rfc9000 · Delta encoding: https://en.wikipedia.org/wiki/Delta_encoding]
 
@@ -1068,6 +1207,9 @@ Every README section mapped to where it is handled. Status is one of: **MVP** (s
 | Item | Status | Where |
 |---|---|---|
 | 8 GB / AVX2 / CPU-only / Ubuntu 22.04 target | MVP | Operating Parameters; 14 Jul build flags |
+| Dependency-order chain (lines 6–9) | MVP | Operating Parameters — phases sequenced against it |
+| **Central thesis (line 38): small+retrieval+verified-tools beats large** | MVP | Operating Parameters; **the 31 Jul ablation table is the thesis under test** |
+| 4 GB → 3 GB = 42.9 → 57.1 worked example (line 34) | MVP | Operating Parameters, feeding the exchange rate |
 | Scoring formulas + exchange rate | MVP | Operating Parameters; `score.py` 14 Jul |
 | Thermal penalty −10 | MVP | 17 Jul thread sweep; 6 Aug watchdog; 10 Aug sustained run |
 | Energy as evaluation metric | MVP | 10 Aug energy measurement; demo close |
@@ -1182,7 +1324,7 @@ Every README section mapped to where it is handled. Status is one of: **MVP** (s
 | Item | Status | Where |
 |---|---|---|
 | Live demo — judges connect phones | MVP | 6 Aug script; 11 Aug rehearsal |
-| Before/after benchmark table | MVP | Built continuously from 14 Jul |
+| **Report = running before/after benchmark log (table, lines 131–138)** | MVP | **Table instantiated 24 Jul in `/bench/optimization-log.md`; a row filled the day each optimization lands** |
 | ADTC profiler on every commit | MVP | 16 Jul `make profile` |
 | Target Best African Use Case explicitly | MVP | 6 Aug dedicated report section |
 
@@ -1203,6 +1345,14 @@ Every README section mapped to where it is handled. Status is one of: **MVP** (s
 | Energy consumption shown across the whole session | MVP | 10 Aug measurement; demo close |
 | Present like [reference video] | MVP | Product & UX references; 11 Aug rehearsal |
 | **Access-gap survey ("who feels left behind")** | Thin slice | **5 Aug — narrow instrument, honest reporting, paired with the user-test cohort** |
+
+## README — A Four-Step Guide to AI-Assisted Codebase Work (lines 174–181)
+| Item | Status | Where |
+|---|---|---|
+| Step 1 — model studies before it writes (plan first) | **MVP** | 14 Jul protocol; `/docs/plans/` per task >50 LOC |
+| Step 2 — externalize tribal knowledge | **MVP — already deeply implemented** | The entire `/docs/` discipline: build-flags, rules-digest, VERSIONS, PROTOCOL, quant-types, model-decision, smoke-fixture, frontier-log, native-extraction-plan, target-day-runbook |
+| Step 3 — parallelize with clean partition | **MVP — already implemented as Lane A/B/C** | 14 Jul lanes + directory partition; strengthened with per-lane git worktrees; API contract (19 Jul) and corpus schema (16 Jul) frozen as the cross-cutting artifacts |
+| Step 4 — adversarial reviewer, isolated context | **MVP — was the largest gap** | 14 Jul standing rule: no task done until a reviewer from another lane tries to break it. Applied hardest to `score.py`, `profile.py`, the Paper 2 rubric grader, the memory guard |
 
 ## README §12 — Team Study Shelf
 | Item | Status | Where |

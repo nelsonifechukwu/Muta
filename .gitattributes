@@ -1,0 +1,5 @@
+# Large binary artifacts tracked with Git LFS (ROADMAP 14 Jul).
+# Model weights, embedding indexes — never let these bloat the code tree.
+*.gguf  filter=lfs diff=lfs merge=lfs -text
+*.bin   filter=lfs diff=lfs merge=lfs -text
+*.faiss filter=lfs diff=lfs merge=lfs -text

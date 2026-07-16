@@ -1,0 +1,506 @@
+openapi: 3.1.0
+info:
+  title: Muta — Offline Adaptive Tutor
+  description: ADTC 2026. The only public surface is the versioned /v1 contract; every client — browser,
+    phones, eval.py, CLI — speaks only /v1.
+  version: 0.1.0
+paths:
+  /v1/health:
+    get:
+      tags:
+      - ops
+      summary: Health
+      operationId: health_v1_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /v1/ready:
+    get:
+      tags:
+      - ops
+      summary: Ready
+      operationId: ready_v1_ready_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+  /v1/chat:
+    post:
+      tags:
+      - tutor
+      summary: Chat
+      description: 'Multi-turn tutoring turn. Memory is keyed by `conversation_id`; omit it to start a
+
+        new thread. The mode selects the system prompt (ROADMAP 18 Jul, stable-prefix design).'
+      operationId: chat_v1_chat_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/diagnose:
+    post:
+      tags:
+      - tutor
+      summary: Diagnose
+      operationId: diagnose_v1_diagnose_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnoseRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnoseResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/generate_question:
+    post:
+      tags:
+      - exam
+      summary: Generate Question
+      operationId: generate_question_v1_generate_question_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateQuestionRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateQuestionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/mastery/{student_id}:
+    get:
+      tags:
+      - tutor
+      summary: Mastery
+      operationId: mastery_v1_mastery__student_id__get
+      parameters:
+      - name: student_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Student Id
+      - name: subject
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Subject'
+          default: math
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasteryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/verify:
+    post:
+      tags:
+      - math
+      summary: Verify
+      operationId: verify_v1_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    ChatRequest:
+      properties:
+        student_id:
+          type: string
+          title: Student Id
+          description: Stable per-learner id; keys the learning twin.
+        message:
+          type: string
+          title: Message
+        conversation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Conversation Id
+          description: Omit to start a new thread; pass to continue one (multi-turn memory).
+        mode:
+          $ref: '#/components/schemas/TutoringMode'
+          default: socratic
+        persona:
+          $ref: '#/components/schemas/Persona'
+          default: teacher
+        subject:
+          $ref: '#/components/schemas/Subject'
+          default: math
+        language:
+          type: string
+          title: Language
+          description: 'BCP-47-ish tag: en, fr, ha, yo, ig, sw, ar, am, zu.'
+          default: en
+        stream:
+          type: boolean
+          title: Stream
+          description: When true the server replies with an SSE token stream instead.
+          default: false
+      type: object
+      required:
+      - student_id
+      - message
+      title: ChatRequest
+    ChatResponse:
+      properties:
+        student_id:
+          type: string
+          title: Student Id
+        conversation_id:
+          type: string
+          title: Conversation Id
+          description: Pass back in the next request to continue the thread.
+        mode:
+          $ref: '#/components/schemas/TutoringMode'
+        reply:
+          type: string
+          title: Reply
+        verified:
+          type: boolean
+          title: Verified
+          description: Whether math in the reply was checked by the `math` service.
+          default: false
+        citations:
+          items:
+            type: string
+          type: array
+          title: Citations
+          description: RAG source references.
+      type: object
+      required:
+      - student_id
+      - conversation_id
+      - mode
+      - reply
+      title: ChatResponse
+    DiagnoseRequest:
+      properties:
+        student_id:
+          type: string
+          title: Student Id
+        subject:
+          $ref: '#/components/schemas/Subject'
+          default: math
+        topic:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Topic
+          description: Optional focus; otherwise diagnose broadly.
+      type: object
+      required:
+      - student_id
+      title: DiagnoseRequest
+    DiagnoseResponse:
+      properties:
+        student_id:
+          type: string
+          title: Student Id
+        weak_topics:
+          items:
+            type: string
+          type: array
+          title: Weak Topics
+        plan:
+          items:
+            type: string
+          type: array
+          title: Plan
+          description: Concrete next steps (e.g. 7-day).
+      type: object
+      required:
+      - student_id
+      title: DiagnoseResponse
+    GenerateQuestionRequest:
+      properties:
+        subject:
+          $ref: '#/components/schemas/Subject'
+          default: math
+        topic:
+          type: string
+          title: Topic
+        difficulty:
+          type: integer
+          maximum: 5.0
+          minimum: 1.0
+          title: Difficulty
+          default: 3
+        exam_board:
+          type: string
+          title: Exam Board
+          default: WAEC
+        count:
+          type: integer
+          maximum: 20.0
+          minimum: 1.0
+          title: Count
+          default: 1
+      type: object
+      required:
+      - topic
+      title: GenerateQuestionRequest
+    GenerateQuestionResponse:
+      properties:
+        questions:
+          items:
+            $ref: '#/components/schemas/GeneratedQuestion'
+          type: array
+          title: Questions
+      type: object
+      title: GenerateQuestionResponse
+    GeneratedQuestion:
+      properties:
+        question_text:
+          type: string
+          title: Question Text
+        options:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Options
+          description: Present for objective (Paper 1) items.
+        correct_answer:
+          type: string
+          title: Correct Answer
+        worked_solution:
+          type: string
+          title: Worked Solution
+        marking_scheme:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Marking Scheme
+          description: Method + answer marks (Paper 2).
+        topic_tags:
+          items:
+            type: string
+          type: array
+          title: Topic Tags
+        difficulty:
+          type: integer
+          maximum: 5.0
+          minimum: 1.0
+          title: Difficulty
+          default: 3
+      type: object
+      required:
+      - question_text
+      - correct_answer
+      - worked_solution
+      title: GeneratedQuestion
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HealthResponse:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+          default: ok
+        service:
+          type: string
+          title: Service
+      type: object
+      required:
+      - service
+      title: HealthResponse
+    MasteryResponse:
+      properties:
+        student_id:
+          type: string
+          title: Student Id
+        subject:
+          $ref: '#/components/schemas/Subject'
+        mastery:
+          additionalProperties:
+            type: number
+          type: object
+          title: Mastery
+          description: topic_id -> mastery in [0, 1] on the curriculum DAG.
+        next_topic:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Topic
+          description: Next-best lesson given prerequisites.
+      type: object
+      required:
+      - student_id
+      - subject
+      title: MasteryResponse
+    Persona:
+      type: string
+      enum:
+      - teacher
+      - friend
+      - professor
+      - exam
+      title: Persona
+    ReadyResponse:
+      properties:
+        ready:
+          type: boolean
+          title: Ready
+        checks:
+          additionalProperties:
+            type: boolean
+          type: object
+          title: Checks
+          description: Per-dependency readiness (llama-server, sub-apps).
+      type: object
+      required:
+      - ready
+      title: ReadyResponse
+    Subject:
+      type: string
+      enum:
+      - math
+      - physics
+      - chemistry
+      - biology
+      title: Subject
+    TutoringMode:
+      type: string
+      enum:
+      - socratic
+      - subgoal
+      title: TutoringMode
+      description: The two MVP tutoring modes (ROADMAP 14 Jul scope).
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    VerifyRequest:
+      properties:
+        expression:
+          type: string
+          title: Expression
+          description: A claim/step to check, e.g. 'd/dx(x^2) == 2*x'.
+        context:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Context
+          description: Optional assumptions/variable domains.
+      type: object
+      required:
+      - expression
+      title: VerifyRequest
+    VerifyResponse:
+      properties:
+        verified:
+          type: boolean
+          title: Verified
+        normalized:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Normalized
+          description: Canonical form the checker computed.
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+          description: Why it failed, when it did.
+      type: object
+      required:
+      - verified
+      title: VerifyResponse
