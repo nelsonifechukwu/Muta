@@ -71,7 +71,7 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
         raise HTTPException(
             status_code=503,
-            detail="inference engine unreachable — start llama-server (see runtime/README.md)",
+            detail="inference engine unreachable — start llama-server (see RUN.md)",
         ) from e
     return ChatResponse(
         student_id=req.student_id,

@@ -40,7 +40,9 @@ Examples:
   ./run.sh --native                         # ...without emulation (much faster on a Mac)
   ./run.sh --serve                          # HTTP app; then curl localhost:8000/v1/chat
   ./run.sh -- --conversation <id>           # resume a stored thread
-  ./run.sh --native -- --mode direct        # a tutor that just answers
+  ./run.sh --native -- --mode subgoal       # break the problem into sub-goals
+
+Modes are socratic (default) and subgoal — the two prompts in orchestrator/prompts/.
 
 Conversations persist in data/muta.sqlite3 and survive restarts either way.
 EOF

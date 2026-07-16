@@ -40,8 +40,8 @@ model: ## Download the default GGUF (Qwen3-0.6B Q4_K_M) into models/
 serve: ## Launch the llama.cpp inference server (resolves model: folder, else HF)
 	$(PY) -m runtime.server
 
-chat: ## Interactive multi-turn REPL (starts a server if none is running)
-	$(PY) -m runtime.cli
+chat: ## Interactive multi-turn REPL. Args: make chat ARGS="--conversation <id>"
+	$(PY) -m runtime.cli $(ARGS)
 
 # --- Phase-1+ targets (not yet implemented — see ROADMAP.md) ---
 smoke: ## [TODO 17 Jul] docker run -> server -> health -> prompt -> profiler JSON

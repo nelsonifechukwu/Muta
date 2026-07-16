@@ -57,7 +57,7 @@ provisioned anyway). Mount it:
 mkdir -p models data
 make model                              # first time only: fetch the GGUF into models/
 
-docker run --rm -it \
+docker run --rm -it --platform=linux/amd64 \
   -p 8000:8000 \
   -v "$(pwd)/models:/app/models" \
   -v "$(pwd)/data:/app/data" \
@@ -65,6 +65,9 @@ docker run --rm -it \
 ```
 
 Then in another terminal, jump to [Talk to it](#3-talk-to-it).
+
+Pass `--platform=linux/amd64` explicitly on an ARM host, or Docker prints a mismatch warning
+on every run.
 
 Mounting `data/` is what makes conversations outlive the container. Drop it and every
 `docker run` starts amnesiac.
@@ -74,9 +77,14 @@ on your laptop, impossible on the target. Provisioning it up front is the honest
 
 ### Useful variations
 
-Any command you pass wins over the app, so the image doubles as the toolbox:
+Any command you pass overrides the app, so the image doubles as the toolbox:
 
 ```bash
+# chat, which is what ./run.sh runs for you
+docker run --rm -it --platform=linux/amd64 \
+  -v "$(pwd)/models:/app/models" -v "$(pwd)/data:/app/data" \
+  muta-dev:latest python3.10 -m runtime.cli
+
 # gateway only — no engine, no weights needed. /v1/chat returns 503 by design.
 docker run --rm -it -p 8000:8000 -e MUTA_NO_ENGINE=1 muta-dev:latest
 
@@ -84,16 +92,20 @@ docker run --rm -it -p 8000:8000 -e MUTA_NO_ENGINE=1 muta-dev:latest
 docker run --rm muta-dev:latest python3.10 -m pytest
 
 # poke around
-docker run --rm -it --entrypoint bash muta-dev:latest
+docker run --rm -it muta-dev:latest bash
 
-# the engine's own benchmark (the ceiling this stack is measured against)
-docker run --rm -v "$(pwd)/models:/app/models" --entrypoint /app/runtime/build/bin/llama-bench \
-  muta-dev:latest -m /app/models/Qwen3-0.6B-Q4_K_M.gguf
+# the engine's own benchmark (the ceiling this stack is measured against).
+# Emulated on a Mac, so the numbers are noise — this is a smoke test here, not a measurement.
+docker run --rm -v "$(pwd)/models:/app/models" muta-dev:latest \
+  /app/runtime/build/bin/llama-bench -m /app/models/Qwen3-0.6B-Q4_K_M.gguf
 ```
 
 ---
 
 ## 2. Native (fastest dev loop)
+
+`./run.sh --native` does all of this for you — creates the venv, installs deps on first run,
+and starts chatting. By hand:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -101,10 +113,10 @@ make install
 make model                    # fetch the GGUF into models/
 ```
 
-You also need a `llama-server` binary. `find_binary()` looks in this order:
-`MUTA_RT_LLAMA_SERVER_BIN` → `runtime/build/bin/` → `PATH`. Either grab a
-[prebuilt release](https://github.com/ggml-org/llama.cpp/releases) and unpack it into
-`runtime/build/bin/`, or `brew install llama.cpp`.
+You also need a `llama-server` binary; unlike Docker, native mode won't build one.
+`find_binary()` looks in this order: `MUTA_RT_LLAMA_SERVER_BIN` → `runtime/build/bin/` →
+`PATH`. Either grab a [prebuilt release](https://github.com/ggml-org/llama.cpp/releases)
+(pin: `b10035`) and unpack it into `runtime/build/bin/`, or `brew install llama.cpp`.
 
 **Keep the venv activated.** The Makefile defaults to `PY ?= python3`, so without it you get
 a confusing `ModuleNotFoundError: pydantic_settings`. Or override: `make PY=.venv/bin/python <target>`.
@@ -120,8 +132,12 @@ to `data/llama-server.log` so they don't shred your terminal. `exit` or Ctrl-D q
 prints the conversation id on the way out:
 
 ```bash
-make chat -- --conversation <id>     # resume that thread in a fresh process
+make chat ARGS="--conversation <id>"     # resume that thread in a fresh process
+./run.sh --native -- --conversation <id> # same thing
 ```
+
+Note the `ARGS=` form: `make chat -- --conversation <id>` looks plausible but silently drops
+the arguments, because make reads them as goals rather than passing them through.
 
 Resuming is the bit worth trying — it's what proves persistence is real and not in-memory.
 
@@ -166,12 +182,28 @@ curl -s localhost:8000/v1/chat -H 'content-type: application/json' -d '{
 
 Interactive docs: <http://127.0.0.1:8000/docs>.
 
+### The fields, and what they accept
+
+Anything else is a 422 — the contract is enforced, not advisory. Source of truth:
+`contracts/models.py`.
+
+| Field | Values | |
+|---|---|---|
+| `student_id` | any string | **required**; keys the learning twin |
+| `message` | any string | **required** |
+| `conversation_id` | id from a previous reply | omit to start a new thread |
+| `mode` | `socratic`, `subgoal` | default `socratic`; backed by `orchestrator/prompts/*.md` |
+| `persona` | `teacher`, `friend`, `professor`, `exam` | default `teacher` |
+| `subject` | `math`, `physics`, `chemistry`, `biology` | default `math` |
+| `language` | e.g. `en` | default `en` |
+
 ### Two things that look broken but aren't
 
 - **The tutor won't just tell you the answer.** Default mode is `socratic` and its prompt
-  forbids stating answers outright. Pass `"mode": "direct"` if you want a straight response.
-  (Qwen3-0.6B follows this only loosely — it sometimes blurts the answer anyway. That's the
-  model being small, and it's what the bake-off on 19-22 Jul is for.)
+  forbids stating answers outright. There is deliberately no "just answer me" mode — the
+  alternative is `subgoal`, which decomposes the problem rather than solving it. (Qwen3-0.6B
+  follows either only loosely and sometimes blurts the answer anyway. That's the model being
+  small, and it's what the bake-off on 19-22 Jul is for.)
 - **`"verified": false` on every reply.** Hardcoded until answers route through the
   `math`/SymPy service. It is not lying to you yet.
 
