@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 import logging
 
+import httpx
+
 from runtime.chat import ChatEngine
 from runtime.client import InferenceClient
 from runtime.config import RuntimeConfig
@@ -45,30 +47,47 @@ def main() -> int:
 
     conversation_id = args.conversation
     print(f"\nMuta · {cfg.model_alias} · mode={args.mode} · db={cfg.db_path}")
-    print("Type your message; blank line or 'exit' to quit.\n")
+    print("Type your message; 'exit' or Ctrl-D to quit.\n")
     try:
         while True:
             try:
                 message = input("you> ").strip()
             except EOFError:
+                print()
                 break
-            if message.lower() in {"", "exit", "quit"}:
+            except KeyboardInterrupt:
+                # Ctrl-C abandons the half-typed line, not the session.
+                print("\n(use 'exit' or Ctrl-D to quit)")
+                continue
+            # A blank line re-prompts. It must never quit: a stray Enter pressed while a
+            # reply streams is buffered by the tty and would otherwise end the session —
+            # and take the engine down with it — on the next prompt.
+            if not message:
+                continue
+            if message.lower() in {"exit", "quit"}:
                 break
 
             print("tutor> ", end="", flush=True)
-            if args.no_stream:
-                result = engine.chat(
-                    args.student, message, conversation_id=conversation_id, mode=args.mode
-                )
-                conversation_id = result.conversation_id
-                print(result.reply)
-            else:
-                conversation_id, tokens = engine.stream_chat(
-                    args.student, message, conversation_id=conversation_id, mode=args.mode
-                )
-                for delta in tokens:
-                    print(delta, end="", flush=True)
-                print()
+            try:
+                if args.no_stream:
+                    result = engine.chat(
+                        args.student, message, conversation_id=conversation_id, mode=args.mode
+                    )
+                    conversation_id = result.conversation_id
+                    print(result.reply)
+                else:
+                    conversation_id, tokens = engine.stream_chat(
+                        args.student, message, conversation_id=conversation_id, mode=args.mode
+                    )
+                    for delta in tokens:
+                        print(delta, end="", flush=True)
+                    print()
+            except KeyboardInterrupt:
+                # Ctrl-C stops the reply being generated, not the session.
+                print("\n(reply interrupted)")
+            except httpx.HTTPError as e:
+                # A transient engine failure must not end the session and lose the thread.
+                print(f"\n[engine error: {type(e).__name__}] — conversation kept; try again.")
     finally:
         print(f"\nconversation id: {conversation_id}  (resume with --conversation {conversation_id})")
         store.close()

@@ -36,7 +36,7 @@ P_thermal = 10   if package temp > 85 °C or throttling flagged
 - **Develop** on MacBook Pro M2 (ARM) **inside Docker built `--platform=linux/amd64`** from day one, so binaries are already x86-64 ELF. **Deploy** by extracting the container to a native portable build (AppImage / portable dir) on a flash drive — no Docker daemon, no VM, no install on the target.
 - **Never build with `-mavx512`.** AVX2 is the baseline (`-DGGML_AVX2=ON -DGGML_AVX512=OFF`, `GGML_NATIVE=OFF`) with runtime feature detection for wider ISA. Much of the target field (Zen 3, 12th-gen consumer Intel) faults on AVX-512 = a hard failure.
 - **All benchmark numbers in the report come from the x86 target box (9–11 Aug), never the Mac.** Everything else (model files, corpus, RAG index, Python, frontend, config) ports cleanly and is architecture-independent.
-- Measure **peak RAM as PSS** (from `/proc/[pid]/smaps_rollup`, because `mmap` makes RSS misleading) across the **whole process tree** — `llama-server` + gateway + Python + FAISS + embedder all count against the same 7 GB. Watch `--cache-ram` (defaults to 8 GiB, an instant OOM on this budget — cap it explicitly).
+- **Peak RAM is scored as RSS, not PSS** — verified from the official profiler's source (`docs/rules-digest.md`; `memory.py` sums `psutil` RSS over `[root] + root.children(recursive=True)`, and never reads `smaps_rollup`). The roadmap's `mmap`-makes-RSS-misleading reasoning is technically right but scores nothing: since RSS ≥ PSS under `mmap`, reporting PSS would inflate `S_eff` in the flattering direction, on the term the design optimizes. **Optimise and report RSS; keep PSS for diagnosis only.** `bench/score.py` names the parameter `peak_rss_gb` so the unit-of-record is at the call site. Measure across the **whole process tree** — `llama-server` + gateway + Python + FAISS + embedder all count against the same 7 GB. Watch `--cache-ram` (defaults to 8 GiB, an instant OOM on this budget — cap it explicitly).
 
 ## Architecture
 
@@ -72,13 +72,19 @@ The directory partition is the lane partition (parallel work with no real-time c
 
 ## Commands
 
+**`./run.sh` is the front door** — one command from a clean clone to a conversation. Docker by
+default (provisions image + weights + engine, then chats); `--native` for the fast host loop on
+a Mac; `--serve` for the HTTP app instead of the REPL; `-- <args>` passes through to the REPL
+(e.g. `-- --conversation <id>`). `RUN.md` documents it and the by-hand equivalents. The Makefile
+below stays the per-task developer surface.
+
 `make help` lists everything. Working today (Python ≥3.10; `make install` sets up an editable install):
 
 - `make dev` — run the assembled app (`uvicorn orchestrator.main:app --reload`, port 8000). Public surface at `/v1`, interactive docs at `/docs`. Sub-apps can also run standalone in split mode.
 - `make contract` — regenerate `contracts/openapi.yaml` from the Pydantic models. Run it whenever the contract changes; commit the result.
 - `make test` — pytest (contract smoke tests live in `contracts/tests/`). `make lint` / `make fmt` — ruff.
 - `make contract-test` — schemathesis property-fuzzes a running server (`make dev` first) against `/openapi.json`.
-- `make build` — build the `linux/amd64` dev image from `docker/dev.Dockerfile` (`FROM --platform=linux/amd64 ubuntu:22.04`).
+- `make build` — build the `linux/amd64` dev image from `docker/dev.Dockerfile`. Two stages: stage 1 compiles llama.cpp (pinned `b10035`) with `GGML_AVX2=ON GGML_AVX512=OFF GGML_NATIVE=OFF LLAMA_CURL=OFF`, then **asserts** x86-64 ELF and greps the disassembly for AVX-512 mnemonics — the build fails rather than letting an illegal-instruction fault become a disqualification on the target. Stage 2 ships only the binaries (`llama-server`, `llama-bench`) next to the app, so no compiler reaches the final image. Weights are mounted, never baked. `docker/entrypoint.sh` runs the two-process topology and starts the gateway even when the engine is absent (503 by design, not a boot failure); an explicit command overrides the app (`docker run muta-dev python3.10 -m pytest`).
 - `make model` — download the default GGUF (Qwen3-0.6B Q4_K_M) into `models/`.
 - `make serve` — launch `llama-server` on `127.0.0.1:8080` against the resolved model (needs `brew install llama.cpp` or a container build).
 - `make chat` — interactive multi-turn REPL against the runtime (auto-starts a server if none is up). Full stack: `make serve` + `make dev`, then `POST /v1/chat` with a `conversation_id` for memory. Conversations persist in `data/muta.sqlite3`.
