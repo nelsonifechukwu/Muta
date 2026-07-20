@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from runtime.client import InferenceClient, Message
+from runtime.client import Generation, InferenceClient, Message
 from runtime.memory import ConversationStore
 
 DEFAULT_SYSTEM_PROMPT = (
@@ -24,6 +24,9 @@ DEFAULT_SYSTEM_PROMPT = (
 class ChatResult:
     conversation_id: str
     reply: str
+    # Present for non-streaming turns; bench/profile.py reads TPS from here. Optional so the
+    # streaming path and existing callers are unaffected.
+    generation: Generation | None = None
 
 
 class ChatEngine:
@@ -73,9 +76,9 @@ class ChatEngine:
         )
         messages = self._assemble(cid, system_prompt, message)
         self.store.add_message(cid, "user", message)
-        reply = self.client.chat(messages, **params)
-        self.store.add_message(cid, "assistant", reply)
-        return ChatResult(conversation_id=cid, reply=reply)
+        generation = self.client.chat_with_timings(messages, **params)
+        self.store.add_message(cid, "assistant", generation.text)
+        return ChatResult(conversation_id=cid, reply=generation.text, generation=generation)
 
     def stream_chat(
         self,

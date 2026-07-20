@@ -14,12 +14,17 @@ Target topology on the deploy machine: two processes — `llama-server` and this
 
 from __future__ import annotations
 
+import contextlib
+import os
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from orchestrator.bench_metrics import PIDFILE
+from orchestrator.bench_metrics import app as bench_app
 from orchestrator.exam.app import app as exam_app
 from orchestrator.gateway.routes import router as gateway_router
 from orchestrator.math.app import app as math_app
@@ -28,6 +33,30 @@ from orchestrator.retrieval.app import app as retrieval_app
 
 API_PREFIX = "/v1"
 
+
+@contextlib.asynccontextmanager
+async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Write the pidfile that bench/monitor.py attaches by.
+
+    On the lifespan hook rather than at import, because import happens BEFORE the socket is
+    bound: a second instance that loses the race for the port would otherwise clobber the
+    running instance's pidfile and then delete it on the way out. Uvicorn runs lifespan
+    startup only after a successful bind.
+
+    Failure to write is never fatal — this is telemetry convenience, and the monitor falls
+    back to probing the port.
+    """
+    with contextlib.suppress(OSError):
+        PIDFILE.parent.mkdir(parents=True, exist_ok=True)
+        PIDFILE.write_text(f"{os.getpid()}\n")
+    try:
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            if PIDFILE.is_file() and PIDFILE.read_text().strip() == str(os.getpid()):
+                PIDFILE.unlink()
+
+
 app = FastAPI(
     title="Muta — Offline Adaptive Tutor",
     version="0.1.0",
@@ -35,6 +64,7 @@ app = FastAPI(
         "ADTC 2026. The only public surface is the versioned /v1 contract; every client "
         "— browser, phones, eval.py, CLI — speaks only /v1."
     ),
+    lifespan=_lifespan,
 )
 
 # Public contract: the ONLY surface clients address.
@@ -45,6 +75,9 @@ app.mount("/internal/math", math_app)
 app.mount("/internal/retrieval", retrieval_app)
 app.mount("/internal/pedagogy", pedagogy_app)
 app.mount("/internal/exam", exam_app)
+app.mount("/internal/bench", bench_app)
+
+
 
 
 @app.get("/", include_in_schema=False)

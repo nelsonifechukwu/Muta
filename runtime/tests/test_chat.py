@@ -3,18 +3,33 @@
 from __future__ import annotations
 
 from runtime.chat import ChatEngine
+from runtime.client import Generation
 from runtime.memory import ConversationStore
 
 
 class FakeClient:
-    """Records the messages it was handed and returns a canned reply."""
+    """Records the messages it was handed and returns a canned reply.
+
+    Mirrors InferenceClient: `chat_with_timings` is the real method and `chat` delegates,
+    so the double cannot drift from the interface ChatEngine actually calls.
+    """
 
     def __init__(self) -> None:
         self.seen: list[list[dict]] = []
 
-    def chat(self, messages, **params) -> str:
+    def chat_with_timings(self, messages, **params) -> Generation:
         self.seen.append(messages)
-        return f"reply-{len(self.seen)}"
+        return Generation(
+            text=f"reply-{len(self.seen)}",
+            prompt_tokens=1,
+            completion_tokens=2,
+            elapsed_s=0.01,
+            tokens_per_second=200.0,
+            from_wall_clock=True,
+        )
+
+    def chat(self, messages, **params) -> str:
+        return self.chat_with_timings(messages, **params).text
 
 
 def _engine(**kw) -> tuple[ChatEngine, FakeClient, ConversationStore]:

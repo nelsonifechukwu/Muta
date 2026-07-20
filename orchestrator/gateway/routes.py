@@ -25,6 +25,7 @@ from contracts.models import (
     VerifyRequest,
     VerifyResponse,
 )
+from orchestrator import bench_metrics
 from orchestrator.gateway.deps import get_engine, load_prompt
 from runtime.chat import ChatEngine
 
@@ -73,6 +74,9 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             status_code=503,
             detail="inference engine unreachable — start llama-server (see RUN.md)",
         ) from e
+    # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
+    if result.generation is not None:
+        bench_metrics.record(result.generation)
     return ChatResponse(
         student_id=req.student_id,
         conversation_id=result.conversation_id,
