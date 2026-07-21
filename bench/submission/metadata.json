@@ -2,7 +2,7 @@
   "team_id": "muta",
   "domain": "math_scientific_reasoning",
   "language_scope": ["en"],
-  "african_alpha_claim": false,
+  "african_alpha_claim": true,
   "budget_laptop_claim": true,
   "submitter": {
     "name": "iitimii",

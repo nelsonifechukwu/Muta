@@ -20,7 +20,7 @@ class RuntimeConfig(BaseSettings):
     # "local": use a GGUF already in model_dir. "hf": download from hf_repo/hf_file.
     # Either way resolution yields a *local* path — the deploy target is offline.
     model_source: Literal["local", "hf"] = "local"
-    model_dir: Path = Path("models")
+    model_dir: Path = Path("models/Qwen3-0.6B")
     model_file: str = "Qwen3-0.6B-Q4_K_M.gguf"
     hf_repo: str = "unsloth/Qwen3-0.6B-GGUF"
     hf_file: str = "Qwen3-0.6B-Q4_K_M.gguf"
