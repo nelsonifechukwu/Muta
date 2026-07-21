@@ -23,6 +23,8 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.6",
     "schemathesis>=3.30",
+    "rich>=13",  # bench/monitor.py HUD only — dev tooling, never ships to the target
+    "textual>=0.60",  # bench/tui.py terminal client — dev tooling, never ships to the target
 ]
 
 # One distribution, two import packages: the frozen contract and the app that serves it.
@@ -42,4 +44,8 @@ extend-select = ["I"]  # import sorting
 # Tests live next to the code they cover (lane-owned), so discover across the packages.
 testpaths = ["contracts", "orchestrator", "runtime", "bench"]
 python_files = ["test_*.py"]
-addopts = "-q"
+# Integration tests create a venv / hit the network; opt in with `pytest -m integration`.
+addopts = "-q -m 'not integration'"
+markers = [
+    "integration: creates the profiler venv or hits the network; deselected by default",
+]

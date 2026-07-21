@@ -1,0 +1,34 @@
+{
+  "team_id": "muta",
+  "domain": "math_scientific_reasoning",
+  "language_scope": ["en"],
+  "african_alpha_claim": true,
+  "budget_laptop_claim": true,
+  "submitter": {
+    "name": "iitimii",
+    "email": "nelson.ifechukwu@gmail.com",
+    "github_handle": "iitimii"
+  },
+  "cross_disciplinary_pairing": {
+    "discipline": "education",
+    "load_bearing": true,
+    "description": "Adaptive Socratic tutoring for secondary-school mathematics and scientific reasoning, designed for offline classroom use on a shared 8 GB laptop."
+  },
+  "test_prompts": [
+    {
+      "prompt_id": "tp_001",
+      "prompt": "A trader buys 24 identical crates for 18000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working."
+    },
+    {
+      "prompt_id": "tp_002",
+      "prompt": "A student says that if a number is divisible by 4 it must also be divisible by 8. Guide them to discover why this is false, without stating the counterexample yourself."
+    }
+  ],
+  "model": {
+    "name": "Qwen3-0.6B-Q4_K_M",
+    "runtime": "llama.cpp",
+    "quantization": "GGUF Q4_K_M",
+    "parameters_estimate": "0.6B",
+    "packaging": "binary_bundle"
+  }
+}

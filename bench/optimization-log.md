@@ -59,3 +59,20 @@ throughput by running **`llama-bench` against the GGUF** — it never invokes ou
 still worth doing for felt latency — log it, but score it honestly as 0). Optimizations that
 move the scored number are the ones touching the **model, quantization, KV cache, threads and
 engine flags**.
+
+## Autonomous runs (`make profile`)
+
+Appended automatically, one row per run. Two paths because they fail differently: the profiler
+path is the number the audit reproduces; the product path is where an OOM kill — a
+disqualification, not a deduction — would show up. Rows marked `dev_host_provisional` came
+from the ARM dev box and are **not report-grade** (CLAUDE.md: benchmark numbers come from the
+x86 target box).
+
+Accuracy is held at an assumed constant (`ASSUMED_ACCURACY` in [`autotest.py`](autotest.py)),
+so only the `S_perf` and `S_eff` movement in these rows is meaningful. `tps_max` is the
+provisional 15.0; every row is rescorable from `bench/.artifacts/runs.jsonl` once the cohort
+value is known.
+
+| date | git sha | host | prof tok/s | prof RAM GB | prof S_total | prod tok/s | prod RAM GB | prod S_total |
+|---|---|---|---|---|---|---|---|---|
+| 2026-07-20 | 1f1244f9212033b8dafa7fdd2f1d147160cded45-dirty | dev_host_provisional | 18.1 | 0.58 | 73.4 | 18.1 | 0.52 | 73.5 |

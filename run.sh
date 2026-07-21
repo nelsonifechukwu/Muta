@@ -4,6 +4,7 @@
 #   ./run.sh                  chat, in Docker (default)
 #   ./run.sh --native         chat, on the host
 #   ./run.sh --serve          run the HTTP app instead of a REPL
+#   ./run.sh --tui            chat TUI with a live metrics panel (host)
 #   ./run.sh --help           everything else
 #
 # Docker is the default because it's linux/amd64 — the shape that actually ships. Everything
@@ -40,6 +41,7 @@ Usage: ./run.sh [options] [-- <extra args for the chat REPL>]
   (no options)      chat in Docker                                [default]
   --native          chat on the host, using .venv
   --serve           run the HTTP app (gateway :8000) instead of the REPL
+  --tui             chat TUI + live metrics panel (host; boots the app for you)
   --build           rebuild the image before running
   --image NAME      image tag (default: muta-dev:latest)
   --help            this
@@ -48,6 +50,7 @@ Examples:
   ./run.sh                                  # start chatting
   ./run.sh --native                         # ...without emulation (much faster on a Mac)
   ./run.sh --serve                          # HTTP app; then curl localhost:8000/v1/chat
+  ./run.sh --tui                            # interactive TUI with tok/s + RAM on screen
   ./run.sh -- --conversation <id>           # resume a stored thread
   ./run.sh --native -- --mode subgoal       # break the problem into sub-goals
 
@@ -62,6 +65,7 @@ while [ $# -gt 0 ]; do
         --native)  MODE=native ;;
         --docker)  MODE=docker ;;
         --serve)   ACTION=serve ;;
+        --tui)     ACTION=tui; MODE=native ;;
         --chat)    ACTION=chat ;;
         --build)   FORCE_BUILD=1 ;;
         --image)   IMAGE="$2"; shift ;;
@@ -105,7 +109,50 @@ run_native() {
         info "gateway on http://127.0.0.1:8000  (docs at /docs)"
         exec .venv/bin/python -m uvicorn orchestrator.main:app --port 8000
     fi
+    if [ "$ACTION" = tui ]; then
+        run_tui
+        return
+    fi
     exec .venv/bin/python -m runtime.cli "${ARGS[@]+"${ARGS[@]}"}"
+}
+
+# ---------------------------------------------------------------------------
+# TUI — boot the engine + gateway, run the terminal client, tear it all down.
+# The TUI attaches to host PIDs to sample RAM honestly, so it is native-only.
+# ---------------------------------------------------------------------------
+run_tui() {
+    local engine_pid="" gateway_pid="" started_engine=0 started_gateway=0
+
+    cleanup_tui() {
+        [ "$started_gateway" = 1 ] && kill "$gateway_pid" 2>/dev/null || true
+        [ "$started_engine" = 1 ] && kill "$engine_pid" 2>/dev/null || true
+    }
+    trap cleanup_tui EXIT INT TERM
+
+    if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1; then
+        info "starting llama-server on :8080"
+        .venv/bin/python -m runtime.server >data/llama-server.log 2>&1 &
+        engine_pid=$!
+        started_engine=1
+    fi
+    if ! curl -sf http://127.0.0.1:8000/v1/health >/dev/null 2>&1; then
+        info "starting gateway on :8000"
+        .venv/bin/python -m uvicorn orchestrator.main:app --port 8000 >data/gateway.log 2>&1 &
+        gateway_pid=$!
+        started_gateway=1
+    fi
+
+    info "waiting for the engine to load the model…"
+    local i
+    for i in $(seq 1 120); do
+        if curl -sf http://127.0.0.1:8000/v1/ready 2>/dev/null | grep -q '"ready":true'; then
+            break
+        fi
+        [ "$i" = 120 ] && die "app did not become ready in time — see data/gateway.log and data/llama-server.log"
+        sleep 1
+    done
+
+    .venv/bin/python -m bench.tui
 }
 
 # ---------------------------------------------------------------------------

@@ -234,3 +234,7 @@ models/.cache/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
+# isolated venv for the official ADTC profiler (GPL-3.0, never vendored)
+bench/.venv-profiler/
+# generated measurement artifacts: submission.json, runs.jsonl, synthesized submission dir
+bench/.artifacts/

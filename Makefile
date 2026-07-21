@@ -9,7 +9,7 @@ IMAGE ?= muta-dev:latest
 # with a commit that does not describe the code inside it.
 GIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)$(shell test -z "$$(git status --porcelain 2>/dev/null)" || echo -dirty)
 
-.PHONY: help install dev test lint fmt contract contract-test build smoke bench profile package
+.PHONY: help install dev test lint fmt contract contract-test build smoke bench profile monitor tui package
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -53,11 +53,17 @@ chat: ## Interactive multi-turn REPL. Args: make chat ARGS="--conversation <id>"
 smoke: ## [TODO 17 Jul] docker run -> server -> health -> prompt -> profiler JSON
 	@echo "not implemented — see ROADMAP.md (Fri 17 Jul, 'make smoke')"
 
-bench: ## [TODO 16 Jul] profile.py (end-to-end) + llama-bench (engine ceiling)
-	@echo "not implemented — see ROADMAP.md (Thu 16 Jul, bench/profile.py)"
+bench: ## Product-path pass against a running app (fast loop). Args: ARGS="--pid <n>"
+	$(PY) -m bench.profile $(ARGS)
 
-profile: ## [TODO 16 Jul] wire in the official ADTC local profiler
-	@echo "not implemented — see ROADMAP.md (Thu 16 Jul, 'make profile')"
+profile: ## Autonomous: official profiler + product path, both scored. Args: ARGS="--skip-product"
+	$(PY) -m bench.autotest $(ARGS)
+
+monitor: ## Live scored-metrics HUD against a running app. Args: ARGS="--pid <n>"
+	$(PY) -m bench.monitor $(ARGS)
+
+tui: ## Chat TUI with a live metrics panel (needs a running app: ./run.sh --serve)
+	$(PY) -m bench.tui $(ARGS)
 
 package: ## [TODO 9 Aug] extract container -> native portable build (AppImage)
 	@echo "not implemented — see docs/native-extraction-plan.md"
