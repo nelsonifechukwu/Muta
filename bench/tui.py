@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 
 import httpx
 from rich.text import Text
@@ -62,6 +63,10 @@ class MutaTUI(App):
         self.messages: list[tuple[str, str]] = []
         self.streaming = ""
         self.live_tps = 0.0
+        # Live decode-rate state, updated as tokens arrive so the panel climbs during
+        # generation rather than sitting at 0 until the reply finishes.
+        self._stream_t0 = 0.0
+        self._stream_tokens = 0
         self._busy = False
         self._mem = TreeSampler()
         self._therm = ThermalSampler()
@@ -149,6 +154,24 @@ class MutaTUI(App):
         self.query_one("#log", Static).update(self._render_transcript())
         self.query_one("#transcript", VerticalScroll).scroll_end(animate=False)
 
+    def _begin_stream(self) -> None:
+        self._stream_t0 = 0.0
+        self._stream_tokens = 0
+
+    def _record_token(self, now: float) -> None:
+        """Update the live decode rate as one token arrives.
+
+        Rate is over the decode window (first token to now), so it excludes time-to-first-token
+        and reads close to the engine's own generation rate. Stays 0 until the second token —
+        a rate needs an interval — which is why the panel shows 0 during prefill, not a lie.
+        """
+        if self._stream_tokens == 0:
+            self._stream_t0 = now
+        self._stream_tokens += 1
+        elapsed = now - self._stream_t0
+        if self._stream_tokens > 1 and elapsed > 0:
+            self.live_tps = (self._stream_tokens - 1) / elapsed
+
     # --- interaction ----------------------------------------------------------------------
     def on_input_submitted(self, event: Input.Submitted) -> None:
         message = event.value.strip()
@@ -166,6 +189,7 @@ class MutaTUI(App):
     @work(exclusive=True)
     async def _stream_reply(self, message: str) -> None:
         self._busy = True
+        self._begin_stream()
         prompt = self.query_one("#prompt", Input)
         prompt.disabled = True
         payload = {"student_id": "tui", "message": message}
@@ -183,6 +207,9 @@ class MutaTUI(App):
                             continue
                         event = json.loads(line[6:])
                         if "delta" in event:
+                            # Update the live rate per token so the panel climbs during
+                            # generation instead of sitting at 0 until the reply finishes.
+                            self._record_token(time.monotonic())
                             self.streaming += event["delta"]
                             self._refresh_transcript()
                         elif event.get("error"):
@@ -190,7 +217,9 @@ class MutaTUI(App):
                             self._refresh_transcript()
                         elif event.get("done"):
                             self.conversation_id = event.get("conversation_id")
-                            self.live_tps = float(event.get("tokens_per_second") or 0.0)
+                            final = float(event.get("tokens_per_second") or 0.0)
+                            if final > 0:
+                                self.live_tps = final
         except httpx.HTTPError as e:
             self.streaming += f"\n[connection error: {type(e).__name__} — is the app running?]"
 

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import os
 
+import pytest
+
 from bench import tui
 
 
@@ -57,6 +59,34 @@ def test_over_budget_is_called_out_in_the_panel(monkeypatch):
     monkeypatch.setattr(app._mem, "report", lambda: _Huge())
     monkeypatch.setattr(app._mem, "latest_rss_mb", lambda: 9000.0)
     assert "OVER BUDGET" in app._render_metrics().plain
+
+
+def test_live_tps_climbs_as_tokens_arrive():
+    """Regression: TPS must update DURING streaming, not stay 0 until the reply finishes."""
+    app = _app()
+    app._begin_stream()
+
+    app._record_token(100.0)  # first token: a rate needs an interval, so still 0
+    assert app.live_tps == 0.0
+
+    app._record_token(100.5)  # 2 tokens, 0.5s window -> (2-1)/0.5 = 2.0 t/s
+    assert app.live_tps == pytest.approx(2.0)
+
+    app._record_token(101.0)  # 3 tokens, 1.0s window -> (3-1)/1.0 = 2.0 t/s
+    assert app.live_tps == pytest.approx(2.0)
+
+
+def test_begin_stream_resets_the_rate_window():
+    app = _app()
+    app._begin_stream()
+    app._record_token(50.0)
+    app._record_token(50.25)
+    assert app.live_tps > 0
+    # A new turn must not carry the previous turn's token count into its rate.
+    app._begin_stream()
+    assert app._stream_tokens == 0
+    app._record_token(200.0)
+    assert app.live_tps > 0  # unchanged until the 2nd token; not NaN/exploding
 
 
 def test_build_app_errors_clearly_when_no_app_is_running(monkeypatch):
