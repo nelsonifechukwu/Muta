@@ -14,6 +14,7 @@ the engine, and drops you into a conversation. Runs in Docker by default, becaus
 ./run.sh                          # chat, in Docker                      [default]
 ./run.sh --native                 # chat, on the host (much faster on a Mac)
 ./run.sh --serve                  # the HTTP app on :8000, instead of a REPL
+./run.sh --tui                    # chat TUI with a live tok/s + RAM panel (host)
 ./run.sh -- --conversation <id>   # resume a stored thread
 ./run.sh --help                   # the rest
 ```
@@ -150,6 +151,37 @@ make serve      # llama-server on :8080
 make dev        # gateway on :8000, auto-reload
 ```
 
+### TUI — chat with a live metrics panel
+
+```bash
+./run.sh --tui
+```
+
+A terminal app: type at the bottom, the reply streams into the transcript, and a side panel
+shows **tokens/sec, RAM (now and peak), and the two scored terms** (`S_perf`, `S_eff`) updating
+live. `./run.sh --tui` boots the engine + gateway for you, waits for `/v1/ready`, runs the TUI,
+and tears the app back down on exit. If the app is already up, attach directly with `make tui`.
+
+It is a `/v1` client, not an embedded engine, and it samples the gateway + engine tree
+**externally by PID** — so the RAM it shows is the real deployed footprint, and the TUI's own
+memory never inflates the number. Streaming rides an internal, non-schema route
+(`/v1/chat/stream`); the frozen `/v1` contract is untouched.
+
+### Measuring it
+
+```bash
+make monitor    # live scored-metrics HUD against a running app (a lighter, read-only TUI)
+make bench      # product-path pass: throughput + peak RSS through /v1/chat, once
+make profile    # autonomous: the official ADTC profiler + the product path, both scored
+```
+
+`make profile` is the real one. It bootstraps the pinned official profiler in an isolated venv,
+runs it against the GGUF (the number the audit reproduces), also runs the product path (the one
+that can OOM), scores both through `bench/score.py`, and appends a row to
+`bench/optimization-log.md`. On a Mac every number is stamped `dev_host_provisional` — report
+figures come from the x86 box. See `docs/rules-digest.md` for what the profiler actually
+measures and why.
+
 ---
 
 ## 3. Talk to it
@@ -234,7 +266,7 @@ Every knob is a `MUTA_RT_*` env var (or a `.env` file). Full list with defaults:
 
 | Variable | Default | Notes |
 |---|---|---|
-| `MUTA_RT_MODEL_DIR` | `models` | `/app/models` in the container |
+| `MUTA_RT_MODEL_DIR` | `models/Qwen3-0.6B` | `/app/models` in the container |
 | `MUTA_RT_MODEL_FILE` | `Qwen3-0.6B-Q4_K_M.gguf` | |
 | `MUTA_RT_MODEL_SOURCE` | `local` | `hf` to force a download |
 | `MUTA_RT_AUTO_DOWNLOAD` | `true` | set `false` to rehearse offline |
@@ -275,10 +307,11 @@ still in SQLite; resume with `--conversation <id>`.
 
 - `/v1/diagnose`, `/v1/generate_question`, `/v1/mastery`, `/v1/verify` → **501**. Each echoes
   its ROADMAP reference rather than failing silently.
-- `make smoke`, `make bench`, `make profile`, `make package` → stubs that print their
-  ROADMAP date.
-- `bench/`, `corpus/`, `ui/`, `docs/` → empty. Notably **`bench/score.py` doesn't exist**;
-  the ROADMAP calls it the compass and warns a bug there misdirects a month.
+- `make smoke`, `make package` → still stubs that print their ROADMAP date.
+  (`make bench`, `make profile`, `make monitor`, `make tui` are **live** — see [Native](#2-native-fastest-dev-loop).)
+- `corpus/`, `ui/` → still empty. `bench/` is now real (`score.py`, `sampler.py`,
+  `profile.py`, `autotest.py`, `monitor.py`, `tui.py`, and the profiler integration under
+  `bench/adtc/`).
 - **`--cache-ram` is unset**, so llama-server defaults to 8 GiB. On a 7 GB budget that's an
   OOM — and an OOM kill is disqualification. Harmless on a dev box with RAM to spare; must be
   capped explicitly before the target run.
