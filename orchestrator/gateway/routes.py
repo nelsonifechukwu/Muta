@@ -99,10 +99,11 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
     so a local dev client can render tokens as they arrive; the blocking `/chat` remains the
     one contract surface. Same prompt/persona wiring as `/chat`, so tutoring behaviour matches.
 
-    Emits Server-Sent Events: one `{"delta": "..."}` per token, then a final
+    Emits Server-Sent Events: `{"reasoning": "..."}` for Qwen3 thinking tokens and
+    `{"delta": "..."}` for answer tokens, then a final
     `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
     """
-    cid, tokens = engine.stream_chat(
+    cid, events = engine.stream_events_chat(
         student_id=req.student_id,
         message=req.message,
         conversation_id=req.conversation_id,
@@ -117,13 +118,14 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
         n = 0
         t_first = t_last = 0.0
         try:
-            for delta in tokens:
+            for kind, text in events:
                 now = time.monotonic()
                 if n == 0:
                     t_first = now
                 t_last = now
-                n += 1
-                yield f"data: {json.dumps({'delta': delta})}\n\n"
+                n += 1  # reasoning and content both count: the engine decodes both
+                key = "reasoning" if kind == "reasoning" else "delta"
+                yield f"data: {json.dumps({key: text})}\n\n"
         except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
             yield f"data: {json.dumps({'error': 'inference engine unreachable'})}\n\n"
             return

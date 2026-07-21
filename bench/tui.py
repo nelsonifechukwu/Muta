@@ -62,6 +62,7 @@ class MutaTUI(App):
         self.conversation_id: str | None = None
         self.messages: list[tuple[str, str]] = []
         self.streaming = ""
+        self.thinking = ""  # Qwen3 chain of thought for the in-flight reply (ephemeral)
         self.live_tps = 0.0
         # Live decode-rate state, updated as tokens arrive so the panel climbs during
         # generation rather than sitting at 0 until the reply finishes.
@@ -104,6 +105,12 @@ class MutaTUI(App):
         if self.streaming:
             text.append("muta ", style="bold green")
             text.append(self.streaming + "▍\n")
+        elif self.thinking:
+            # Still reasoning, no answer yet — show the thinking dimmed. It collapses the moment
+            # the answer starts, so the model never looks frozen during a long think phase.
+            text.append("muta ", style="bold green")
+            text.append("thinking… ", style="dim italic")
+            text.append(self.thinking + "▍\n", style="dim italic")
         return text
 
     def _render_metrics(self) -> Text:
@@ -157,6 +164,7 @@ class MutaTUI(App):
     def _begin_stream(self) -> None:
         self._stream_t0 = 0.0
         self._stream_tokens = 0
+        self.thinking = ""
 
     def _record_token(self, now: float) -> None:
         """Update the live decode rate as one token arrives.
@@ -206,7 +214,13 @@ class MutaTUI(App):
                         if not line.startswith("data: "):
                             continue
                         event = json.loads(line[6:])
-                        if "delta" in event:
+                        if "reasoning" in event:
+                            # Thinking tokens are decoded too, so they count toward the live
+                            # rate — otherwise TPS reads 0 through the whole think phase.
+                            self._record_token(time.monotonic())
+                            self.thinking += event["reasoning"]
+                            self._refresh_transcript()
+                        elif "delta" in event:
                             # Update the live rate per token so the panel climbs during
                             # generation instead of sitting at 0 until the reply finishes.
                             self._record_token(time.monotonic())
@@ -223,8 +237,10 @@ class MutaTUI(App):
         except httpx.HTTPError as e:
             self.streaming += f"\n[connection error: {type(e).__name__} — is the app running?]"
 
-        self.messages.append(("muta", self.streaming))
+        # Persist the answer only; the chain of thought is ephemeral and collapses now.
+        self.messages.append(("muta", self.streaming or "(no answer returned)"))
         self.streaming = ""
+        self.thinking = ""
         self._refresh_transcript()
         self._busy = False
         prompt.disabled = False

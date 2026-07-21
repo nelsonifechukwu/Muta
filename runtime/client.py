@@ -96,7 +96,23 @@ class InferenceClient:
         )
 
     def stream(self, messages: list[Message], **params) -> Iterator[str]:
-        """Streaming completion → yields content deltas as they arrive (SSE)."""
+        """Streaming completion → yields answer-content deltas as they arrive (SSE).
+
+        Reasoning tokens (Qwen3 thinking) are dropped here so existing callers keep getting
+        just the answer. Use `stream_events` to see the thinking too.
+        """
+        for kind, text in self.stream_events(messages, **params):
+            if kind == "content":
+                yield text
+
+    def stream_events(self, messages: list[Message], **params) -> Iterator[tuple[str, str]]:
+        """Streaming completion → yields ('reasoning' | 'content', text) chunks.
+
+        With Qwen3 thinking on (`--jinja` + `enable_thinking`), llama-server streams the chain
+        of thought in a separate `reasoning_content` delta field. A consumer that reads only
+        `content` sees nothing during the think phase and appears to hang — so this surfaces
+        both, tagged, and the caller decides how to render each.
+        """
         url = f"{self.base_url}/v1/chat/completions"
         with httpx.stream(
             "POST", url, json=self._payload(messages, True, **params), timeout=self.timeout
@@ -109,8 +125,12 @@ class InferenceClient:
                 if data.strip() == "[DONE]":
                     break
                 try:
-                    delta = json.loads(data)["choices"][0]["delta"].get("content")
+                    delta = json.loads(data)["choices"][0]["delta"]
                 except (json.JSONDecodeError, KeyError, IndexError):
                     continue
-                if delta:
-                    yield delta
+                reasoning = delta.get("reasoning_content")
+                if reasoning:
+                    yield "reasoning", reasoning
+                content = delta.get("content")
+                if content:
+                    yield "content", content

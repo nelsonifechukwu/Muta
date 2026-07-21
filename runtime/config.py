@@ -37,8 +37,11 @@ class RuntimeConfig(BaseSettings):
     n_ctx: int = 4096
     n_threads: int | None = None  # None -> let llama.cpp choose
     n_gpu_layers: int = 0  # CPU-only target; raise for faster local dev on a GPU box
-    # Qwen3 is a hybrid-reasoning model; keep thinking OFF for concise tutoring by default.
-    enable_thinking: bool = False
+    # Qwen3 is a hybrid-reasoning model. Thinking ON trades tokens/latency for reasoning
+    # quality — honoured by llama-server via --jinja (server.py). Set MUTA_RT_ENABLE_THINKING
+    # to override. Scoring note: this costs S_perf (slower, more tokens) — verify the accuracy
+    # gain is worth it on the target box before trusting it for the report.
+    enable_thinking: bool = True
     extra_server_args: list[str] = Field(default_factory=list)
     startup_timeout_s: float = 120.0
 

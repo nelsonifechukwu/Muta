@@ -49,6 +49,22 @@ def test_transcript_renders_both_roles_and_the_streaming_cursor():
     assert "▍" in text  # the live cursor while a reply streams
 
 
+def test_thinking_is_shown_dimmed_until_the_answer_arrives():
+    app = _app()
+    # Reasoning has started, no answer content yet -> a "thinking…" block, not a frozen screen.
+    app.thinking = "let me work through this"
+    app.streaming = ""
+    text = app._render_transcript().plain
+    assert "thinking…" in text
+    assert "let me work through this" in text
+
+    # Once the answer starts, the thinking collapses and the answer shows.
+    app.streaming = "The answer is 132."
+    text = app._render_transcript().plain
+    assert "thinking…" not in text
+    assert "The answer is 132." in text
+
+
 def test_over_budget_is_called_out_in_the_panel(monkeypatch):
     app = _app()
 

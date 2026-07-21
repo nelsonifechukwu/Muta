@@ -110,3 +110,37 @@ class ChatEngine:
             self.store.add_message(cid, "assistant", "".join(chunks))
 
         return cid, _gen()
+
+    def stream_events_chat(
+        self,
+        student_id: str,
+        message: str,
+        *,
+        conversation_id: str | None = None,
+        system_prompt: str | None = None,
+        mode: str | None = None,
+        persona: str | None = None,
+        subject: str | None = None,
+        language: str | None = None,
+        **params,
+    ) -> tuple[str, Iterator[tuple[str, str]]]:
+        """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
+        can render Qwen3 thinking as it happens. Only the answer content is persisted — the
+        chain of thought is ephemeral, matching the non-streaming path which stores `content`.
+        Callers must drain the iterator for the reply to be saved."""
+        cid = self._open(
+            student_id, conversation_id,
+            mode=mode, persona=persona, subject=subject, language=language,
+        )
+        messages = self._assemble(cid, system_prompt, message)
+        self.store.add_message(cid, "user", message)
+
+        def _gen() -> Iterator[tuple[str, str]]:
+            chunks: list[str] = []
+            for kind, text in self.client.stream_events(messages, **params):
+                if kind == "content":
+                    chunks.append(text)
+                yield kind, text
+            self.store.add_message(cid, "assistant", "".join(chunks))
+
+        return cid, _gen()
