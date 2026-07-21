@@ -9,7 +9,7 @@ IMAGE ?= muta-dev:latest
 # with a commit that does not describe the code inside it.
 GIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)$(shell test -z "$$(git status --porcelain 2>/dev/null)" || echo -dirty)
 
-.PHONY: help install dev test lint fmt contract contract-test build smoke bench profile monitor package
+.PHONY: help install dev test lint fmt contract contract-test build smoke bench profile monitor tui package
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -61,6 +61,9 @@ profile: ## Autonomous: official profiler + product path, both scored. Args: ARG
 
 monitor: ## Live scored-metrics HUD against a running app. Args: ARGS="--pid <n>"
 	$(PY) -m bench.monitor $(ARGS)
+
+tui: ## Chat TUI with a live metrics panel (needs a running app: ./run.sh --serve)
+	$(PY) -m bench.tui $(ARGS)
 
 package: ## [TODO 9 Aug] extract container -> native portable build (AppImage)
 	@echo "not implemented — see docs/native-extraction-plan.md"

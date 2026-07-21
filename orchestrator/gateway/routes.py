@@ -8,8 +8,12 @@ already complete and correct even though the behaviour is not built yet.
 
 from __future__ import annotations
 
+import json
+import time
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 
 from contracts.models import (
     ChatRequest,
@@ -28,6 +32,7 @@ from contracts.models import (
 from orchestrator import bench_metrics
 from orchestrator.gateway.deps import get_engine, load_prompt
 from runtime.chat import ChatEngine
+from runtime.client import Generation
 
 router = APIRouter()
 
@@ -83,6 +88,74 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
         mode=req.mode,
         reply=result.reply,
     )
+
+
+@router.post("/chat/stream", include_in_schema=False)
+def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> StreamingResponse:
+    """Token-streaming twin of `/chat`, for the terminal TUI (bench/tui.py).
+
+    Deliberately `include_in_schema=False`: it is NOT part of the frozen `/v1` contract, so
+    `contracts/openapi.yaml` stays byte-identical and no client may bind to it. It exists only
+    so a local dev client can render tokens as they arrive; the blocking `/chat` remains the
+    one contract surface. Same prompt/persona wiring as `/chat`, so tutoring behaviour matches.
+
+    Emits Server-Sent Events: one `{"delta": "..."}` per token, then a final
+    `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
+    """
+    cid, tokens = engine.stream_chat(
+        student_id=req.student_id,
+        message=req.message,
+        conversation_id=req.conversation_id,
+        system_prompt=load_prompt(req.mode.value),
+        mode=req.mode.value,
+        persona=req.persona.value,
+        subject=req.subject.value,
+        language=req.language,
+    )
+
+    def _sse():
+        n = 0
+        t_first = t_last = 0.0
+        try:
+            for delta in tokens:
+                now = time.monotonic()
+                if n == 0:
+                    t_first = now
+                t_last = now
+                n += 1
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
+            yield f"data: {json.dumps({'error': 'inference engine unreachable'})}\n\n"
+            return
+        # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
+        # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
+        # reads close to the engine's own generation rate rather than being dragged down by a
+        # short reply's startup. Still wall-clock (from_wall_clock=True); the engine-true rate
+        # is what `/chat` records. Feed the shared window so `make monitor` stays live too.
+        elapsed = t_last - t_first
+        rate = (n - 1) / elapsed if n > 1 and elapsed > 0 else 0.0
+        if rate > 0:
+            bench_metrics.record(
+                Generation(
+                    text="",
+                    prompt_tokens=0,
+                    completion_tokens=n,
+                    elapsed_s=elapsed,
+                    tokens_per_second=rate,
+                    from_wall_clock=True,
+                )
+            )
+        yield "data: " + json.dumps(
+            {
+                "done": True,
+                "conversation_id": cid,
+                "completion_tokens": n,
+                "elapsed_s": round(elapsed, 3),
+                "tokens_per_second": round(rate, 2),
+            }
+        ) + "\n\n"
+
+    return StreamingResponse(_sse(), media_type="text/event-stream")
 
 
 @router.post("/diagnose", response_model=DiagnoseResponse, tags=["tutor"])

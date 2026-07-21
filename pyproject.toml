@@ -24,6 +24,7 @@ dev = [
     "ruff>=0.6",
     "schemathesis>=3.30",
     "rich>=13",  # bench/monitor.py HUD only — dev tooling, never ships to the target
+    "textual>=0.60",  # bench/tui.py terminal client — dev tooling, never ships to the target
 ]
 
 # One distribution, two import packages: the frozen contract and the app that serves it.
