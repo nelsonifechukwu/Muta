@@ -146,6 +146,12 @@ paths:
       tags:
       - math
       summary: Verify
+      description: 'Check a claim of the form `lhs == rhs` (or `lhs = rhs`) in the SymPy sandbox.
+
+
+        The single-expression shape this endpoint has always had; `/tutor/verify` is the
+
+        two-sided form the tool loop uses.'
       operationId: verify_v1_verify_post
       requestBody:
         content:
@@ -166,8 +172,293 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/tutor/chat:
+    post:
+      tags:
+      - tutor
+      summary: Tutor Chat
+      description: 'One tutoring turn, admission-controlled (§8.2) and ladder-aware (§5.3).
+
+
+        Set `stream: false` for this JSON shape; `stream: true` (the default) is served by
+
+        `/tutor/chat/stream`, which speaks SSE. Both take the same body.'
+      operationId: tutor_chat_v1_tutor_chat_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatTurn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutorReply'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/tutor/chat/stream:
+    post:
+      tags:
+      - tutor
+      summary: Tutor Chat Stream
+      description: 'Token-streaming twin of `/tutor/chat` (§7.2: the tutoring turn is SSE).
+
+
+        Events: `{"reasoning": …}` while the model thinks, `{"delta": …}` per answer token, then
+
+        a final `{"done": true, …}`. Time-to-first-token is the number a student feels (SC-3:
+
+        < 2.5 s), so the stream starts before the answer is finished, not after.'
+      operationId: tutor_chat_stream_v1_tutor_chat_stream_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatTurn'
+        required: true
+      responses:
+        '200':
+          description: SSE token stream
+          content:
+            application/json:
+              schema: {}
+            text/event-stream: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/tutor/vision:
+    post:
+      tags:
+      - tutor
+      summary: Tutor Vision
+      description: 'Photo of handwritten work → transcription (S2).
+
+
+        Two refusals, both friendly: the image guard (too big, wrong format) and the ladder
+
+        (no memory for a vision instance). Neither is an error — the student is told to type the
+
+        problem instead, and the tutor keeps working.'
+      operationId: tutor_vision_v1_tutor_vision_post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_tutor_vision_v1_tutor_vision_post'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionReply'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/tutor/verify:
+    post:
+      tags:
+      - math
+      summary: Tutor Verify
+      description: 'Candidate vs expected, via SymPy in the sandbox (§7.5).
+
+
+        `checked=False` means no verdict was possible (no answer found, sandbox down) — the
+
+        caller must not report that as "wrong".'
+      operationId: tutor_verify_v1_tutor_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerCheckRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerCheckResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/tutor/render:
+    post:
+      tags:
+      - tutor
+      summary: Tutor Render
+      description: 'Model-emitted plotting code → SVG, sandboxed (§7.5, S5). A failure returns `ok=False`
+
+        with the error, never a broken image.'
+      operationId: tutor_render_v1_tutor_render_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenderRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/session/{session_id}/suspend:
+    post:
+      tags:
+      - ops
+      summary: Session Suspend
+      description: Persist a session's KV and free its slot (§8.3).
+      operationId: session_suspend_v1_session__session_id__suspend_post
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionActionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/session/{session_id}/resume:
+    post:
+      tags:
+      - ops
+      summary: Session Resume
+      description: Bind a slot for a session, restoring its snapshot when one survives.
+      operationId: session_resume_v1_session__session_id__resume_post
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionActionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/metrics:
+    get:
+      tags:
+      - ops
+      summary: Metrics
+      description: 'Local health panel data (§12). All local: no exporter, no network, no dashboards.'
+      operationId: metrics_v1_metrics_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
 components:
   schemas:
+    AnswerCheckRequest:
+      properties:
+        candidate:
+          type: string
+          title: Candidate
+          description: The answer to check — bare, boxed, or inside prose.
+        expected:
+          type: string
+          title: Expected
+        tolerance:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Tolerance
+          description: Relative tolerance; 0 = exact.
+          default: 0.0
+      type: object
+      required:
+      - candidate
+      - expected
+      title: AnswerCheckRequest
+    AnswerCheckResponse:
+      properties:
+        verified:
+          type: boolean
+          title: Verified
+        checked:
+          type: boolean
+          title: Checked
+          description: False when no verdict was possible — not the same as wrong.
+        normalized_candidate:
+          type: string
+          title: Normalized Candidate
+          default: ''
+        normalized_expected:
+          type: string
+          title: Normalized Expected
+          default: ''
+        detail:
+          type: string
+          title: Detail
+          default: ''
+      type: object
+      required:
+      - verified
+      - checked
+      title: AnswerCheckResponse
+    Body_tutor_vision_v1_tutor_vision_post:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        image:
+          type: string
+          contentMediaType: application/octet-stream
+          title: Image
+      type: object
+      required:
+      - session_id
+      - image
+      title: Body_tutor_vision_v1_tutor_vision_post
     ChatRequest:
       properties:
         student_id:
@@ -239,6 +530,42 @@ components:
       - mode
       - reply
       title: ChatResponse
+    ChatTurn:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+          description: One student's tutoring session; keys slot + twin.
+        text:
+          type: string
+          maxLength: 4096
+          title: Text
+          description: 'Input cap per turn (S12: prompt-bomb guard).'
+        mode:
+          $ref: '#/components/schemas/TutorMode'
+          default: dialogue
+        lang:
+          type: string
+          title: Lang
+          default: en
+        student_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Student Id
+          description: Defaults to session_id when omitted.
+        stream:
+          type: boolean
+          title: Stream
+          description: Kept for client symmetry. Token streaming has its own path — POST /v1/tutor/chat/stream
+            (text/event-stream) — because one operation cannot honestly declare two response media types
+            in the schema.
+          default: false
+      type: object
+      required:
+      - session_id
+      - text
+      title: ChatTurn
     DiagnoseRequest:
       properties:
         student_id:
@@ -426,6 +753,68 @@ components:
       required:
       - ready
       title: ReadyResponse
+    RenderRequest:
+      properties:
+        kind:
+          type: string
+          enum:
+          - matplotlib
+          - svg
+          title: Kind
+          default: matplotlib
+        code:
+          type: string
+          maxLength: 8192
+          title: Code
+      type: object
+      required:
+      - code
+      title: RenderRequest
+    RenderResponse:
+      properties:
+        svg:
+          type: string
+          title: Svg
+          default: ''
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        error:
+          type: string
+          title: Error
+          default: ''
+        fallback_text:
+          type: string
+          title: Fallback Text
+          description: Description to show when rendering failed (S5).
+          default: ''
+      type: object
+      title: RenderResponse
+    SessionActionResponse:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        action:
+          type: string
+          enum:
+          - suspend
+          - resume
+          title: Action
+        ok:
+          type: boolean
+          title: Ok
+        detail:
+          type: string
+          title: Detail
+          default: ''
+      type: object
+      required:
+      - session_id
+      - action
+      - ok
+      title: SessionActionResponse
     Subject:
       type: string
       enum:
@@ -434,6 +823,78 @@ components:
       - chemistry
       - biology
       title: Subject
+    SystemStatus:
+      properties:
+        degradation:
+          additionalProperties: true
+          type: object
+          title: Degradation
+        sessions:
+          additionalProperties: true
+          type: object
+          title: Sessions
+        vision:
+          additionalProperties: true
+          type: object
+          title: Vision
+        engine:
+          additionalProperties: true
+          type: object
+          title: Engine
+      type: object
+      title: SystemStatus
+      description: '`/v1/metrics` — the local health panel''s data (TDD §12). All local, no exporter.'
+    TutorMode:
+      type: string
+      enum:
+      - dialogue
+      - solution
+      - marking
+      - hint
+      title: TutorMode
+      description: 'TDD Appendix D. `dialogue` and `solution` differ in sampling (§6.5), `marking` also
+        in
+
+        grammar, `hint` also in which model answers (§7.6).'
+    TutorReply:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        reply:
+          type: string
+          title: Reply
+        mode:
+          $ref: '#/components/schemas/TutorMode'
+        verified:
+          type: boolean
+          title: Verified
+          default: false
+        citations:
+          items:
+            type: string
+          type: array
+          title: Citations
+        queued:
+          type: boolean
+          title: Queued
+          description: True when the turn waited for a slot (§8.2).
+          default: false
+        queue_position:
+          type: integer
+          title: Queue Position
+          default: 0
+        degradation_level:
+          type: string
+          title: Degradation Level
+          description: Ladder level at the time of the turn (§5.3).
+          default: L0
+      type: object
+      required:
+      - session_id
+      - reply
+      - mode
+      title: TutorReply
     TutoringMode:
       type: string
       enum:
@@ -504,3 +965,31 @@ components:
       required:
       - verified
       title: VerifyResponse
+    VisionReply:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        transcription:
+          type: string
+          title: Transcription
+          description: What the model read from the image.
+          default: ''
+        analysis:
+          type: string
+          title: Analysis
+          default: ''
+        accepted:
+          type: boolean
+          title: Accepted
+          description: False when the image guard or the ladder refused.
+          default: true
+        detail:
+          type: string
+          title: Detail
+          description: Why it was refused, in words a student can act on.
+          default: ''
+      type: object
+      required:
+      - session_id
+      title: VisionReply

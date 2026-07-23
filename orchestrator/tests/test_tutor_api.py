@@ -1,0 +1,257 @@
+"""The §7.2 surface, end to end through the app (TDD §7.2, T6, T14).
+
+Engine and vision manager are faked; sessions, ladder, image guard, verifier and renderer are
+real. What is being checked is the wiring that decides whether a student gets an answer, a
+queue position, or an honest refusal — the paths a judge actually walks.
+"""
+
+from __future__ import annotations
+
+import io
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+
+from orchestrator.gateway import deps
+from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
+from orchestrator.gateway.sessions import SessionManager
+from orchestrator.main import app
+from runtime.chat import ChatResult
+from runtime.vision import VisionManager
+
+client = TestClient(app)
+
+
+class FakeEngine:
+    def __init__(self, reply: str = "Let's factorise.", raises: Exception | None = None) -> None:
+        self.reply = reply
+        self.raises = raises
+        self.calls: list[dict] = []
+
+    def chat(self, **kwargs) -> ChatResult:
+        if self.raises:
+            raise self.raises
+        self.calls.append(kwargs)
+        return ChatResult(conversation_id=kwargs.get("conversation_id") or "conv-1", reply=self.reply)
+
+    def stream_events_chat(self, **kwargs):
+        self.calls.append(kwargs)
+        cid = kwargs.get("conversation_id") or "conv-1"
+        return cid, iter([("reasoning", "hmm"), ("content", "x = "), ("content", "2")])
+
+
+@pytest.fixture
+def wired():
+    """Override the gateway's singletons; hand the test the objects it may poke."""
+    engine = FakeEngine()
+    ladder = DegradationLadder(free_probe=lambda: 8 * GiB, reserve_bytes=0, poll_seconds=0.0)
+    sessions = SessionManager(slots_count=2, accepts_new_sessions=lambda: ladder.evaluate().accepts_new_sessions)
+    vision = VisionManager(admit=lambda: ladder.evaluate().vision_allowed)
+
+    app.dependency_overrides[deps.get_engine] = lambda: engine
+    app.dependency_overrides[deps.get_ladder] = lambda: ladder
+    app.dependency_overrides[deps.get_sessions] = lambda: sessions
+    app.dependency_overrides[deps.get_vision] = lambda: vision
+    yield engine, ladder, sessions, vision
+    app.dependency_overrides.clear()
+
+
+def turn(session_id: str = "s1", **kw) -> dict:
+    return {"session_id": session_id, "text": "Solve x^2 = 9", **kw}
+
+
+# --- chat ---------------------------------------------------------------------------------
+
+
+def test_a_tutoring_turn_answers_and_reports_the_ladder_level(wired):
+    body = client.post("/v1/tutor/chat", json=turn()).json()
+    assert body["reply"] == "Let's factorise."
+    assert body["mode"] == "dialogue" and body["degradation_level"] == "L0"
+    assert body["queued"] is False
+
+
+def test_the_mode_selects_the_sampling_profile(wired):
+    engine, *_ = wired
+    client.post("/v1/tutor/chat", json=turn(mode="dialogue"))
+    client.post("/v1/tutor/chat", json=turn(session_id="s2", mode="solution"))
+    assert engine.calls[0]["temperature"] == 0.7  # tutor-dialogue
+    assert engine.calls[1]["temperature"] == 0.3  # worked-solution
+
+
+def test_marking_mode_gets_a_grammar_instead_of_a_500(wired):
+    """The marking profile demands structured output; without a default schema this path
+    raises inside `params()` and "mark this paper" becomes a server error."""
+    engine, *_ = wired
+    client.post("/v1/tutor/chat", json=turn(mode="marking"))
+    call = engine.calls[-1]
+    assert call["temperature"] == 0.0 and call["seed"] == 4242
+    assert call["response_format"]["json_schema"]["name"] == "marking_result"
+
+
+def test_input_is_capped_per_turn(wired):
+    """S12 prompt bomb: 4 KiB of text per turn, rejected by the contract not by the model."""
+    r = client.post("/v1/tutor/chat", json=turn(text="x" * 5000))
+    assert r.status_code == 422
+
+
+def test_l3_refuses_new_sessions_with_a_message_not_an_error_page(wired):
+    _, ladder, *_ = wired
+    ladder.free_probe = lambda: int(0.3 * GiB)
+    assert ladder.evaluate().level is Level.L3
+
+    # Fill both slots, then a third student arrives.
+    client.post("/v1/tutor/chat", json=turn("a"))
+    client.post("/v1/tutor/chat", json=turn("b"))
+    r = client.post("/v1/tutor/chat", json=turn("c"))
+    assert r.status_code == 503
+    assert "capacity" in r.json()["detail"] or "students" in r.json()["detail"]
+
+
+def test_engine_down_is_a_503_not_a_stack_trace(wired):
+    engine, *_ = wired
+    engine.raises = httpx.ConnectError("no server")
+    r = client.post("/v1/tutor/chat", json=turn())
+    assert r.status_code == 503 and "unreachable" in r.json()["detail"]
+
+
+def test_the_slot_is_released_even_when_the_engine_fails(wired):
+    """Otherwise one dead turn leaks a lane and the classroom loses a slot per crash."""
+    engine, _, sessions, _ = wired
+    engine.raises = httpx.ConnectError("no server")
+    client.post("/v1/tutor/chat", json=turn("a"))
+    slot = sessions.slot_for("a")
+    assert slot is not None and slot.busy is False
+
+
+def test_streaming_turn_emits_reasoning_then_deltas_then_done(wired):
+    with client.stream("POST", "/v1/tutor/chat/stream", json=turn()) as response:
+        assert response.headers["content-type"].startswith("text/event-stream")
+        events = [line for line in response.iter_lines() if line.startswith("data: ")]
+    assert '"reasoning"' in events[0]
+    assert '"delta"' in events[1]
+    assert '"done": true' in events[-1] and '"ttft_s"' in events[-1]
+
+
+# --- vision -------------------------------------------------------------------------------
+
+
+def png_bytes(size=(60, 40)) -> bytes:
+    Image = pytest.importorskip("PIL.Image", reason="Pillow ships in the bundle")
+    buffer = io.BytesIO()
+    Image.new("RGB", size, "white").save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def test_an_oversized_photo_is_declined_kindly_not_500(wired):
+    body = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("huge.jpg", b"\xff\xd8\xff" + b"0" * (9 * 1024 * 1024), "image/jpeg")},
+    ).json()
+    assert body["accepted"] is False and "MB" in body["detail"]
+
+
+def test_a_non_image_is_declined(wired):
+    body = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("notes.pdf", b"%PDF-1.7", "application/pdf")},
+    ).json()
+    assert body["accepted"] is False and "JPEG" in body["detail"]
+
+
+def test_vision_denied_by_the_ladder_tells_the_student_to_type_it(wired):
+    """S2 fallback. The tutor keeps working; only the camera path is unavailable."""
+    _, ladder, _, vision = wired
+    ladder.free_probe = lambda: int(1.0 * GiB)  # L1: no new vision spawns
+    body = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("work.png", png_bytes(), "image/png")},
+    ).json()
+    assert body["accepted"] is False and "type the problem" in body["detail"]
+
+
+def test_a_valid_photo_reaches_the_vision_manager(wired, monkeypatch):
+    _, _, _, vision = wired
+    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
+    r = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("work.png", png_bytes((2000, 1500)), "image/png")},
+    )
+    # The completion call itself is not wired yet, and says so rather than faking a result.
+    assert r.status_code == 501
+    assert "1280x960" in r.json()["detail"], "the guard must have downscaled it first"
+
+
+# --- tools --------------------------------------------------------------------------------
+
+
+def test_answer_check_endpoint(wired):
+    body = client.post(
+        "/v1/tutor/verify", json={"candidate": r"\boxed{4}", "expected": "2+2"}
+    ).json()
+    assert body["verified"] is True and body["checked"] is True
+
+
+def test_answer_check_distinguishes_unchecked_from_wrong(wired):
+    body = client.post(
+        "/v1/tutor/verify", json={"candidate": "What do you think?", "expected": "4"}
+    ).json()
+    assert body["verified"] is False and body["checked"] is False
+
+
+def test_render_endpoint_returns_svg(wired):
+    pytest.importorskip("matplotlib")
+    body = client.post(
+        "/v1/tutor/render", json={"kind": "matplotlib", "code": "ax.plot([0,1],[0,1])"}
+    ).json()
+    assert body["ok"] is True and "</svg>" in body["svg"]
+
+
+def test_render_failure_is_not_a_broken_image(wired):
+    pytest.importorskip("matplotlib")
+    body = client.post("/v1/tutor/render", json={"code": "import os"}).json()
+    assert body["ok"] is False and body["svg"] == "" and "not allowed" in body["error"]
+
+
+# --- sessions and metrics -----------------------------------------------------------------
+
+
+def test_suspend_and_resume_round_trip(wired):
+    client.post("/v1/tutor/chat", json=turn("ada"))
+    suspended = client.post("/v1/session/ada/suspend").json()
+    assert suspended["ok"] is True and suspended["action"] == "suspend"
+
+    resumed = client.post("/v1/session/ada/resume").json()
+    assert resumed["ok"] is True and resumed["action"] == "resume"
+
+
+def test_suspending_an_unknown_session_is_reported_not_faked(wired):
+    body = client.post("/v1/session/nobody/suspend").json()
+    assert body["ok"] is False and "held no slot" in body["detail"]
+
+
+def test_metrics_reports_ladder_sessions_and_vision(wired):
+    client.post("/v1/tutor/chat", json=turn("ada"))
+    body = client.get("/v1/metrics").json()
+    assert body["degradation"]["level"] == "L0"
+    assert body["sessions"]["slots"][0]["session"] == "ada"
+    assert body["vision"]["running"] is False
+
+
+def test_the_new_surface_is_in_the_contract():
+    paths = app.openapi()["paths"]
+    for path in (
+        "/v1/tutor/chat",
+        "/v1/tutor/chat/stream",
+        "/v1/tutor/vision",
+        "/v1/tutor/verify",
+        "/v1/tutor/render",
+        "/v1/session/{session_id}/suspend",
+        "/v1/session/{session_id}/resume",
+        "/v1/metrics",
+    ):
+        assert path in paths, f"contract is missing {path}"

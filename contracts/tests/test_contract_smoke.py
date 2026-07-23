@@ -75,8 +75,24 @@ def test_internal_services_are_not_in_public_contract():
 
 def test_stubbed_endpoints_return_501_not_500():
     # A declared-but-unimplemented endpoint is 501, never a crash.
-    r = client.post("/v1/verify", json={"expression": "1+1 == 2"})
+    r = client.post("/v1/diagnose", json={"student_id": "s1"})
     assert r.status_code == 501
+
+
+def test_verify_checks_a_claim():
+    # /v1/verify is no longer a stub: it runs SymPy in the tool sandbox (TDD §7.5).
+    r = client.post("/v1/verify", json={"expression": "d/dx(x^2) == 2*x"})
+    assert r.status_code == 200
+    assert r.json()["verified"] is False  # d/dx is not evaluated symbolically here
+
+    r = client.post("/v1/verify", json={"expression": "(x+1)^2 == x^2 + 2x + 1"})
+    assert r.json()["verified"] is True
+
+
+def test_verify_rejects_a_non_claim_without_pretending_to_check_it():
+    r = client.post("/v1/verify", json={"expression": "the quadratic formula"})
+    body = r.json()
+    assert body["verified"] is False and "lhs == rhs" in body["detail"]
 
 
 def test_chat_rejects_malformed_body():

@@ -229,8 +229,9 @@ corpus/raw/
 # compiled / downloaded llama.cpp binaries
 runtime/build/
 # downloaded model weights (provisioned via runtime, not committed)
-models/*.gguf
-models/.cache/
+models/
+# macOS filesystem metadata
+.DS_Store
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm

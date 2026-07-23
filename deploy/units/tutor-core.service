@@ -1,0 +1,34 @@
+# CORE-TEXT — the resident reasoner (TDD §6.2, §10.4).
+#
+# WatchdogSec is deliberately NOT set: llama-server does not implement sd_notify, so a
+# watchdog here would kill a healthy server every 30 s. The liveness check lives in the
+# gateway (health poll + `systemctl restart` fallback, TDD §10.4 / S11) where it can
+# distinguish "busy prefilling a long prompt" from "dead".
+[Unit]
+Description=Tutor CORE-TEXT (llama-server)
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=exec
+Slice=tutor.slice
+WorkingDirectory=@ROOT@/gw
+EnvironmentFile=@ROOT@/etc/profile.env
+Environment=TUTOR_ROOT=@ROOT@
+ExecStart=@ROOT@/gw/venv/bin/python -m runtime.profiles exec core
+Restart=on-failure
+RestartSec=2
+
+# The cap that matters: weights (mmap, first-toucher) + KV + compute buffers (TDD §5.1).
+# MemoryHigh trails MemoryMax by 10% so reclaim pressure arrives before the OOM killer does.
+MemoryMax=4300M
+MemoryHigh=3900M
+CPUWeight=800
+OOMPolicy=continue
+
+# Loopback only; the gateway is the sole LAN-exposed surface (TDD §13).
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=@ROOT@/data

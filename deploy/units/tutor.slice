@@ -1,0 +1,10 @@
+# Every tutor process lives under one slice, so the whole app has a single accountable
+# envelope (TDD §5.1: 7.0 GiB) rather than four unrelated caps that happen to sum correctly.
+[Unit]
+Description=Offline tutor — resource slice
+Before=slices.target
+
+[Slice]
+MemoryMax=7000M
+MemoryHigh=6600M
+CPUWeight=1000

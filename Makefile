@@ -9,7 +9,8 @@ IMAGE ?= muta-dev:latest
 # with a commit that does not describe the code inside it.
 GIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)$(shell test -z "$$(git status --porcelain 2>/dev/null)" || echo -dirty)
 
-.PHONY: help install dev test lint fmt contract contract-test build smoke bench profile monitor tui package
+.PHONY: help install dev test lint fmt contract contract-test build smoke bench profile monitor tui package \
+	profiles core-cmd kv-budget engine fetch-models manifest stage selftest index audio
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -49,6 +50,37 @@ serve: ## Launch the llama.cpp inference server (resolves model: folder, else HF
 chat: ## Interactive multi-turn REPL. Args: make chat ARGS="--conversation <id>"
 	$(PY) -m runtime.cli $(ARGS)
 
+# --- Deploy bundle (TDD §10, §11) ---
+profiles: ## Show the serving profile + thread allocation for THIS box (TDD §6.2/§6.4)
+	$(PY) -m runtime.profiles table
+
+core-cmd: ## Print the exact llama-server invocation for a profile. Args: PROFILE=solo-demo
+	PROFILE=$(PROFILE) $(PY) -m runtime.profiles print core
+
+kv-budget: ## Regenerate the KV/slot budget table from a GGUF's own metadata (TDD T5)
+	$(PY) -m runtime.kvmath $(MODEL) --markdown docs/kv-budget.md
+
+engine: ## Build inference engine variant A from the pinned tree (TDD T1)
+	deploy/build.sh
+
+fetch-models: ## Download models by exact revision + write MANIFEST.json (TDD T2, build machine only)
+	deploy/fetch_models.sh $(ARGS)
+
+manifest: ## Verify a bundle against its manifest. Args: ROOT=dist
+	$(PY) -m bundle.manifest verify --root $(or $(ROOT),dist)
+
+stage: ## USB -> local disk with dual hash verify (TDD §10.3). Args: SRC=/media/usb/tutor
+	deploy/stage.sh --src $(SRC) --dst $(or $(DST),/opt/tutor)
+
+selftest: ## Clean-room self test against a staged bundle (TDD T16)
+	deploy/selftest.sh --root $(or $(ROOT),/opt/tutor)
+
+index: ## Build the RAG index from a chunked corpus (TDD T11). Args: CORPUS=... OUT=index/
+	$(PY) -m orchestrator.retrieval.index build --corpus $(CORPUS) --out $(or $(OUT),index)
+
+audio: ## Run the ASR/TTS websocket service (TDD §6.6)
+	$(PY) -m orchestrator.audio.service
+
 # --- Phase-1+ targets (not yet implemented — see ROADMAP.md) ---
 smoke: ## [TODO 17 Jul] docker run -> server -> health -> prompt -> profiler JSON
 	@echo "not implemented — see ROADMAP.md (Fri 17 Jul, 'make smoke')"
@@ -65,5 +97,5 @@ monitor: ## Live scored-metrics HUD against a running app. Args: ARGS="--pid <n>
 tui: ## Chat TUI with a live metrics panel (needs a running app: ./run.sh --serve)
 	$(PY) -m bench.tui $(ARGS)
 
-package: ## [TODO 9 Aug] extract container -> native portable build (AppImage)
-	@echo "not implemented — see docs/native-extraction-plan.md"
+package: ## Assemble dist/ in the §10.1 shape and rehearse it in a clean room (TDD T16)
+	deploy/package.sh $(ARGS)

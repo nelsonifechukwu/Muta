@@ -16,6 +16,14 @@ dependencies = [
     "pyyaml>=6.0",
     "huggingface_hub>=0.24",  # runtime model provisioning (folder default, HF fallback)
     "psutil>=5.9",  # bench/: RSS + process-tree sampling, matching the official profiler
+    "python-multipart>=0.0.9",  # /v1/tutor/vision multipart upload (TDD §7.2)
+    # Deterministic tools (TDD §7.5). These run inside the sandbox subprocess, not in the
+    # gateway, so their footprint is charged to the 300 MiB tool pool rather than to the
+    # gateway's 600 MiB cap — but they must be in the bundle, hence core dependencies.
+    "sympy>=1.12",  # answer verification
+    "numpy>=1.26",  # renderer + flat index
+    "matplotlib>=3.8",  # diagram rendering (Agg only, no display)
+    "pillow>=10.0",  # image guard: downscale, EXIF strip (TDD §4.2)
 ]
 
 [project.optional-dependencies]
@@ -31,7 +39,7 @@ dev = [
 # Everything collapses into a single process at deploy (ROADMAP A.2) — hence one workspace,
 # not five packages.
 [tool.hatch.build.targets.wheel]
-packages = ["bench", "contracts", "orchestrator", "runtime"]
+packages = ["bench", "bundle", "contracts", "orchestrator", "runtime"]
 
 [tool.ruff]
 line-length = 100
@@ -42,7 +50,7 @@ extend-select = ["I"]  # import sorting
 
 [tool.pytest.ini_options]
 # Tests live next to the code they cover (lane-owned), so discover across the packages.
-testpaths = ["contracts", "orchestrator", "runtime", "bench"]
+testpaths = ["contracts", "orchestrator", "runtime", "bench", "bundle"]
 python_files = ["test_*.py"]
 # Integration tests create a venv / hit the network; opt in with `pytest -m integration`.
 addopts = "-q -m 'not integration'"

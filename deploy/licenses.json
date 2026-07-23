@@ -1,0 +1,16 @@
+{
+  "_comment": "Bundle path (or prefix) -> SPDX id. Redistribution policy is Apache-2.0/MIT only (TDD §13); `bundle.manifest build` refuses anything outside bundle.manifest.ALLOWED_LICENSES, so an incompatible artifact is caught at packaging time rather than by a judge. Verify each tag against the exact repo at download — model cards do change license between revisions.",
+  "bin": "MIT",
+  "bin/llama-server": "MIT",
+  "bin/llama-server-core": "MIT",
+  "bin/llama-bench": "MIT",
+  "bin/sherpa-asr": "Apache-2.0",
+  "bin/sherpa-tts": "Apache-2.0",
+  "models/core": "Apache-2.0",
+  "models/draft": "Apache-2.0",
+  "models/adapters": "Apache-2.0",
+  "models/embed": "MIT",
+  "models/asr": "Apache-2.0",
+  "models/tts": "Apache-2.0",
+  "index": "unlicensed-local"
+}

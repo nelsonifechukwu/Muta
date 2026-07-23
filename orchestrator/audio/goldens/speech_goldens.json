@@ -1,0 +1,305 @@
+{
+  "_comment": "60-expression math-to-speech golden set (TDD T9 acceptance). These are what a student HEARS, so they were reviewed by reading them aloud: 'two the square root of two' and 'twelve see em' are the failures this file exists to prevent. Phrasing is British/Nigerian classroom English, matching the WAEC audience.",
+  "cases": [
+    {
+      "input": "x^2",
+      "speech": "x squared",
+      "note": "power notation"
+    },
+    {
+      "input": "x^3",
+      "speech": "x cubed",
+      "note": "cube"
+    },
+    {
+      "input": "x^{10}",
+      "speech": "x to the power of ten",
+      "note": "braced exponent"
+    },
+    {
+      "input": "x^{-2}",
+      "speech": "x to the power of minus two",
+      "note": "negative index"
+    },
+    {
+      "input": "2x + 3",
+      "speech": "two x plus three",
+      "note": "implicit multiplication must be spoken apart"
+    },
+    {
+      "input": "\\frac{1}{2}",
+      "speech": "one half",
+      "note": "idiomatic fraction"
+    },
+    {
+      "input": "\\frac{3}{4}",
+      "speech": "three quarters",
+      "note": "idiomatic fraction"
+    },
+    {
+      "input": "\\frac{2}{3}",
+      "speech": "two thirds",
+      "note": "idiomatic fraction"
+    },
+    {
+      "input": "\\frac{x+1}{x-1}",
+      "speech": "x plus one over x minus one",
+      "note": "algebraic fraction"
+    },
+    {
+      "input": "\\frac{3x}{2}",
+      "speech": "three x over two",
+      "note": "the TDD's own example (7.7)"
+    },
+    {
+      "input": "\\sqrt{16}",
+      "speech": "the square root of sixteen",
+      "note": "surd"
+    },
+    {
+      "input": "\\sqrt{x+1}",
+      "speech": "the square root of x plus one",
+      "note": "surd over an expression"
+    },
+    {
+      "input": "\\sqrt[3]{27}",
+      "speech": "the cube root of twenty seven",
+      "note": "cube root"
+    },
+    {
+      "input": "2\\sqrt{2}",
+      "speech": "two times the square root of two",
+      "note": "coefficient in front of a root needs an explicit 'times'"
+    },
+    {
+      "input": "\\pi",
+      "speech": "pi",
+      "note": "greek"
+    },
+    {
+      "input": "2\\pi r",
+      "speech": "two pi r",
+      "note": "circumference"
+    },
+    {
+      "input": "\\pi r^2",
+      "speech": "pi r squared",
+      "note": "area"
+    },
+    {
+      "input": "\\theta",
+      "speech": "theta",
+      "note": "greek"
+    },
+    {
+      "input": "\\sin(x)",
+      "speech": "sine of x",
+      "note": "function application"
+    },
+    {
+      "input": "\\cos(2x)",
+      "speech": "cosine of two x",
+      "note": "function of a product"
+    },
+    {
+      "input": "\\tan(\\theta)",
+      "speech": "tangent of theta",
+      "note": "function of a greek letter"
+    },
+    {
+      "input": "\\sin^2(x) + \\cos^2(x) = 1",
+      "speech": "sine squared x plus cosine squared x equals one",
+      "note": "trig identity"
+    },
+    {
+      "input": "\\log_{2}(8)",
+      "speech": "log base two of eight",
+      "note": "log base"
+    },
+    {
+      "input": "\\ln(x)",
+      "speech": "the natural log of x",
+      "note": "natural log"
+    },
+    {
+      "input": "e^{2x}",
+      "speech": "e to the power of two x",
+      "note": "exponential"
+    },
+    {
+      "input": "90°",
+      "speech": "ninety degrees",
+      "note": "degree symbol"
+    },
+    {
+      "input": "45 degrees",
+      "speech": "forty five degrees",
+      "note": "the word already"
+    },
+    {
+      "input": "12 cm",
+      "speech": "twelve centimetres",
+      "note": "unit must never be spelled out"
+    },
+    {
+      "input": "3.5 kg",
+      "speech": "three point five kilograms",
+      "note": "decimal with a unit"
+    },
+    {
+      "input": "250 ml",
+      "speech": "two hundred and fifty millilitres",
+      "note": "hundreds with 'and'"
+    },
+    {
+      "input": "9.8 m",
+      "speech": "nine point eight metres",
+      "note": "acceleration due to gravity"
+    },
+    {
+      "input": "100 N",
+      "speech": "one hundred newtons",
+      "note": "newtons"
+    },
+    {
+      "input": "x = 5",
+      "speech": "x equals five",
+      "note": "relation"
+    },
+    {
+      "input": "x \\neq 0",
+      "speech": "x is not equal to zero",
+      "note": "relation"
+    },
+    {
+      "input": "x \\leq 3",
+      "speech": "x is less than or equal to three",
+      "note": "relation"
+    },
+    {
+      "input": "y \\geq -2",
+      "speech": "y is greater than or equal to minus two",
+      "note": "relation with a negative"
+    },
+    {
+      "input": "3.14 \\approx \\pi",
+      "speech": "three point one four is approximately pi",
+      "note": "approximation"
+    },
+    {
+      "input": "a \\times b",
+      "speech": "a times b",
+      "note": "times"
+    },
+    {
+      "input": "a \\div b",
+      "speech": "a divided by b",
+      "note": "division"
+    },
+    {
+      "input": "a \\cdot b",
+      "speech": "a times b",
+      "note": "dot notation"
+    },
+    {
+      "input": "5 \\pm 2",
+      "speech": "five plus or minus two",
+      "note": "plus or minus"
+    },
+    {
+      "input": "x > 0",
+      "speech": "x is greater than zero",
+      "note": "strict inequality"
+    },
+    {
+      "input": "x < 10",
+      "speech": "x is less than ten",
+      "note": "strict inequality"
+    },
+    {
+      "input": "-7",
+      "speech": "negative seven",
+      "note": "unary minus reads as 'negative'"
+    },
+    {
+      "input": "a - b",
+      "speech": "a minus b",
+      "note": "binary minus reads as 'minus'"
+    },
+    {
+      "input": "2x^2 - 3x + 1 = 0",
+      "speech": "two x squared minus three x plus one equals zero",
+      "note": "a whole quadratic"
+    },
+    {
+      "input": "\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
+      "speech": "negative b plus or minus the square root of b squared minus four ac over two a",
+      "note": "the quadratic formula: nested root inside a fraction"
+    },
+    {
+      "input": "\\sum x",
+      "speech": "the sum of x",
+      "note": "summation"
+    },
+    {
+      "input": "\\int f(x) dx",
+      "speech": "the integral of f of x dx",
+      "note": "integral"
+    },
+    {
+      "input": "\\Delta y",
+      "speech": "delta y",
+      "note": "delta"
+    },
+    {
+      "input": "50%",
+      "speech": "fifty percent",
+      "note": "percent"
+    },
+    {
+      "input": "\\infty",
+      "speech": "infinity",
+      "note": "infinity"
+    },
+    {
+      "input": "1000",
+      "speech": "one thousand",
+      "note": "round thousand"
+    },
+    {
+      "input": "2026",
+      "speech": "two thousand and twenty six",
+      "note": "thousands with 'and'"
+    },
+    {
+      "input": "0.75",
+      "speech": "zero point seven five",
+      "note": "decimal"
+    },
+    {
+      "input": "(x+2)(x-3)",
+      "speech": "x plus two times x minus three",
+      "note": "adjacent brackets are a product"
+    },
+    {
+      "input": "\\frac{1}{4} + \\frac{1}{4}",
+      "speech": "one quarter plus one quarter",
+      "note": "two fractions"
+    },
+    {
+      "input": "Solve $x^2 = 9$.",
+      "speech": "Solve x squared equals nine.",
+      "note": "prose with a delimited math segment"
+    },
+    {
+      "input": "The area is $\\pi r^2$ square units.",
+      "speech": "The area is pi r squared square units.",
+      "note": "math inside a sentence"
+    },
+    {
+      "input": "f(x) = 3x + 2",
+      "speech": "f of x equals three x plus two",
+      "note": "function definition reads as 'f of x'"
+    }
+  ]
+}

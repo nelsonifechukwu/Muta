@@ -1,0 +1,214 @@
+"""CORE-VISION lifecycle — spawn on demand, kill on idle (TDD §6.3, §7.1, D7, S2).
+
+Why a second server rather than one instance with `--mmproj` always loaded: on current
+mainline, loading an mmproj sets the multimodal capability flag on *every* slot, which
+disables slot save/restore, context shift and prompt-cache reuse — the three mechanisms the
+classroom server is built on (upstream #21133). So text serving and vision serving are
+separate processes over the *same weight file*; the OS page cache shares the read-only
+weight pages, making the marginal cost mmproj + this instance's KV, not a second copy of the
+weights.
+
+D7 resolved it as a gateway-managed subprocess under `systemd-run --scope -p MemoryMax=…`,
+with llama-swap and llama-server router mode documented as alternatives. The escape hatch is
+explicit in the TDD: if this manager exceeds 200 LoC or three bugs, switch. That budget is
+why there is no queueing, no restart backoff and no warm pool here — spawn, health-check,
+reap.
+"""
+
+from __future__ import annotations
+
+import logging
+import shutil
+import subprocess
+import time
+from dataclasses import dataclass, field
+from typing import Callable
+
+import httpx
+
+from runtime.profiles import (
+    BundlePaths,
+    Invocation,
+    ServingProfile,
+    core_vision_command,
+    get_profile,
+)
+
+log = logging.getLogger("muta.runtime.vision")
+
+#: TDD §6.3: TTL-kill after 120 s idle; cold spawn budget ≤ 6 s from page-cache-warm weights.
+IDLE_TTL_SECONDS = 120.0
+SPAWN_BUDGET_SECONDS = 6.0
+STARTUP_TIMEOUT_SECONDS = 60.0
+
+#: §5.1 — the vision instance's marginal cap. Enforced by systemd where available so a
+#: runaway vision job is bounded by the kernel rather than by our own good intentions.
+MEMORY_MAX = "1100M"
+CPU_WEIGHT = "500"
+
+
+class VisionDenied(RuntimeError):
+    """Spawn refused — by the degradation ladder, or because nothing is staged to spawn."""
+
+
+@dataclass
+class VisionManager:
+    paths: BundlePaths = field(default_factory=BundlePaths.from_env)
+    profile: ServingProfile = field(default_factory=get_profile)
+    ttl_seconds: float = IDLE_TTL_SECONDS
+    #: Returns True when a vision spawn is allowed. Wired to the degradation ladder (§5.3):
+    #: at L1 and above new spawns are denied and vision requests queue.
+    admit: Callable[[], bool] = lambda: True
+    clock: Callable[[], float] = time.monotonic
+
+    process: subprocess.Popen | None = field(default=None, init=False)
+    # None = never used. Not 0.0: a monotonic clock legitimately reads 0, and treating that
+    # as "never touched" made an idle instance immortal.
+    last_used: float | None = field(default=None, init=False)
+    spawns: int = field(default=0, init=False)
+
+    # --- state ------------------------------------------------------------------------
+    @property
+    def running(self) -> bool:
+        return self.process is not None and self.process.poll() is None
+
+    @property
+    def base_url(self) -> str:
+        from runtime.profiles import port
+
+        return f"http://127.0.0.1:{port('VISION', 8082)}"
+
+    def idle_seconds(self) -> float:
+        return self.clock() - self.last_used if self.last_used is not None else 0.0
+
+    # --- lifecycle --------------------------------------------------------------------
+    def ensure(self) -> str:
+        """Return a ready base URL, spawning the instance if needed.
+
+        Raises `VisionDenied` when the ladder says no — the caller turns that into S2's
+        honest fallback ("type the problem for now"), never into an error page.
+        """
+        if self.running:
+            self.touch()
+            return self.base_url
+        if not self.admit():
+            raise VisionDenied(
+                "vision is unavailable right now (memory pressure) — "
+                "type the problem and I'll work through it with you"
+            )
+        self._spawn()
+        self.touch()
+        return self.base_url
+
+    def _spawn(self) -> None:
+        try:
+            invocation = core_vision_command(self.paths, self.profile)
+        except (FileNotFoundError, RuntimeError) as e:
+            raise VisionDenied(f"vision model not staged: {e}") from e
+
+        argv = _wrap_with_scope(invocation)
+        log.info("spawning CORE-VISION: %s", " ".join(argv))
+        started = self.clock()
+        self.process = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.spawns += 1
+        self._wait_until_ready(started)
+
+    def _wait_until_ready(self, started: float) -> None:
+        deadline = started + STARTUP_TIMEOUT_SECONDS
+        while self.clock() < deadline:
+            if self.process is not None and self.process.poll() is not None:
+                code = self.process.returncode
+                self.process = None
+                raise VisionDenied(f"vision server exited during startup (code {code})")
+            if self._healthy():
+                elapsed = self.clock() - started
+                if elapsed > SPAWN_BUDGET_SECONDS:
+                    # Not fatal, but the student is staring at "reading your work…" for that
+                    # long — worth seeing in the logs when the demo feels slow.
+                    log.warning("vision spawn took %.1fs (budget %.0fs)", elapsed, SPAWN_BUDGET_SECONDS)
+                log.info("CORE-VISION ready in %.1fs", elapsed)
+                return
+            time.sleep(0.25)
+        self.stop()
+        raise VisionDenied("vision server did not become ready in time")
+
+    def _healthy(self) -> bool:
+        try:
+            return httpx.get(f"{self.base_url}/health", timeout=1.0).status_code == 200
+        except httpx.HTTPError:
+            return False
+
+    def touch(self) -> None:
+        self.last_used = self.clock()
+
+    def reap_if_idle(self) -> bool:
+        """TTL reaper tick. Returns True when it killed the instance.
+
+        Called on a timer by the gateway: the 1.1 GiB this frees is the headroom the
+        degradation ladder spends (§5.3), so holding an idle vision server is not free even
+        when nothing is asking for memory yet.
+        """
+        if not self.running:
+            return False
+        if self.idle_seconds() < self.ttl_seconds:
+            return False
+        log.info("reaping idle CORE-VISION after %.0fs", self.idle_seconds())
+        self.stop()
+        return True
+
+    def stop(self) -> None:
+        process, self.process = self.process, None
+        if process is None or process.poll() is not None:
+            return
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+    def status(self) -> dict:
+        return {
+            "running": self.running,
+            "url": self.base_url if self.running else None,
+            "idle_seconds": round(self.idle_seconds(), 1) if self.running else None,
+            "ttl_seconds": self.ttl_seconds,
+            "spawns": self.spawns,
+        }
+
+
+def _wrap_with_scope(invocation: Invocation) -> list[str]:
+    """`systemd-run --scope` where it exists (the target), plain exec where it does not (dev).
+
+    The cap is the point: without it, a vision instance that mis-sizes its KV takes the core
+    server down with it, and an OOM kill is a disqualification rather than a slow answer.
+    """
+    if shutil.which("systemd-run") is None:
+        log.info("systemd-run absent — spawning vision without a cgroup cap (dev only)")
+        return invocation.argv
+    return [
+        "systemd-run",
+        "--scope",
+        "--quiet",
+        "--unit", "tutor-core-vision",
+        "-p", f"MemoryMax={MEMORY_MAX}",
+        "-p", f"MemoryHigh={int(int(MEMORY_MAX.rstrip('M')) * 0.9)}M",
+        "-p", f"CPUWeight={CPU_WEIGHT}",
+        "-p", "Slice=tutor.slice",
+        *invocation.argv,
+    ]
+
+
+def ffmpeg_frames_command(source: str, out_pattern: str, *, fps: int = 1, frames: int = 8) -> list[str]:
+    """Video → at most 8 frames at 1 fps, longest side ≤ 1280 (TDD §6.3, S4).
+
+    The cap is a context budget, not a quality choice: image tokens scale with resolution and
+    frame count, and one careless clip would eat a whole slot's context.
+    """
+    return [
+        "ffmpeg",
+        "-i", source,
+        "-vf", f"fps={fps},scale='min(1280,iw)':-2",
+        "-frames:v", str(frames),
+        "-y",
+        out_pattern,
+    ]
