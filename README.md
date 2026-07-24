@@ -98,6 +98,9 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Gamefied learning: Flashcards, Quizzes, whatever method the user wants, they can describe and get.
 - How'd the blind use this (especially with the audio/braille feature)
 - The product can be personalised (like Hey Siri--whatever name the learner wants to call it.)
+- Look at clicky and the way it runs background tasks for you. Not only education, but education that empowers you too.
+- the applicaiton should consistently learn about its primary user and refine too.
+- This app will extend to UDO features...Not only science, but a personal educational companion.
 
 ## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
