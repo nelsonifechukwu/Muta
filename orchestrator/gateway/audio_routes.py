@@ -175,7 +175,11 @@ async def audio_voice(ws: WebSocket) -> None:
     async def speak(sentence: str) -> None:
         if not stack.tts.available or cancel.is_set():
             return
-        spoken = to_speech(sentence)
+        # to_speech returns SpokenSentence objects ("x^2" → "x squared"); the synthesizer
+        # wants plain text.
+        spoken = " ".join(p.text for p in to_speech(sentence)).strip()
+        if not spoken:
+            return
         chunks = await run_in_threadpool(lambda: list(stack.tts.synthesize(spoken)))
         if not chunks or cancel.is_set():
             return

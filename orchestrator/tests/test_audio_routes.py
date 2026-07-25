@@ -39,6 +39,16 @@ def test_voice_ws_reports_asr_unavailable_and_closes(null_audio):
         assert "type your question" in msg["fallback"]
 
 
+def test_mathspeech_seam_yields_plain_text():
+    # The voice loop hands to_speech output to the synthesizer, which wants str —
+    # regression for feeding it the SpokenSentence list directly (live TypeError).
+    from orchestrator.audio.mathspeech import to_speech
+
+    spoken = " ".join(p.text for p in to_speech("x^2 + 5x + 6 = 0. Factor it."))
+    assert isinstance(spoken, str)
+    assert spoken
+
+
 def test_split_sentences():
     done, rest = _split_sentences("First point. Second one! And then")
     assert done == ["First point.", "Second one!"]
