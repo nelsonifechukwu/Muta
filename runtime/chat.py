@@ -27,6 +27,8 @@ class ChatResult:
     # Present for non-streaming turns; bench/profile.py reads TPS from here. Optional so the
     # streaming path and existing callers are unaffected.
     generation: Generation | None = None
+    # Row id of the persisted user turn — attachment linking keys on it.
+    user_message_id: int | None = None
 
 
 class ChatEngine:
@@ -68,17 +70,23 @@ class ChatEngine:
         persona: str | None = None,
         subject: str | None = None,
         language: str | None = None,
+        title: str | None = None,
         **params,
     ) -> ChatResult:
         cid = self._open(
             student_id, conversation_id,
-            mode=mode, persona=persona, subject=subject, language=language,
+            mode=mode, persona=persona, subject=subject, language=language, title=title,
         )
         messages = self._assemble(cid, system_prompt, message)
-        self.store.add_message(cid, "user", message)
+        user_message_id = self.store.add_message(cid, "user", message)
         generation = self.client.chat_with_timings(messages, **params)
         self.store.add_message(cid, "assistant", generation.text)
-        return ChatResult(conversation_id=cid, reply=generation.text, generation=generation)
+        return ChatResult(
+            conversation_id=cid,
+            reply=generation.text,
+            generation=generation,
+            user_message_id=user_message_id,
+        )
 
     def stream_chat(
         self,
@@ -91,16 +99,17 @@ class ChatEngine:
         persona: str | None = None,
         subject: str | None = None,
         language: str | None = None,
+        title: str | None = None,
         **params,
-    ) -> tuple[str, Iterator[str]]:
-        """Returns (conversation_id, token iterator). The full reply is persisted once the
-        iterator is exhausted, so callers must drain it."""
+    ) -> tuple[str, int, Iterator[str]]:
+        """Returns (conversation_id, user_message_id, token iterator). The reply is persisted
+        when the iterator finishes — including early close/error (partial persist)."""
         cid = self._open(
             student_id, conversation_id,
-            mode=mode, persona=persona, subject=subject, language=language,
+            mode=mode, persona=persona, subject=subject, language=language, title=title,
         )
         messages = self._assemble(cid, system_prompt, message)
-        self.store.add_message(cid, "user", message)
+        user_message_id = self.store.add_message(cid, "user", message)
 
         def _gen() -> Iterator[str]:
             chunks: list[str] = []
@@ -115,7 +124,7 @@ class ChatEngine:
                 if chunks:
                     self.store.add_message(cid, "assistant", "".join(chunks))
 
-        return cid, _gen()
+        return cid, user_message_id, _gen()
 
     def stream_events_chat(
         self,
@@ -128,18 +137,18 @@ class ChatEngine:
         persona: str | None = None,
         subject: str | None = None,
         language: str | None = None,
+        title: str | None = None,
         **params,
-    ) -> tuple[str, Iterator[tuple[str, str]]]:
+    ) -> tuple[str, int, Iterator[tuple[str, str]]]:
         """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
         can render Qwen3 thinking as it happens. Only the answer content is persisted — the
-        chain of thought is ephemeral, matching the non-streaming path which stores `content`.
-        Callers must drain the iterator for the reply to be saved."""
+        chain of thought is ephemeral, matching the non-streaming path which stores `content`."""
         cid = self._open(
             student_id, conversation_id,
-            mode=mode, persona=persona, subject=subject, language=language,
+            mode=mode, persona=persona, subject=subject, language=language, title=title,
         )
         messages = self._assemble(cid, system_prompt, message)
-        self.store.add_message(cid, "user", message)
+        user_message_id = self.store.add_message(cid, "user", message)
 
         def _gen() -> Iterator[tuple[str, str]]:
             chunks: list[str] = []
@@ -153,4 +162,4 @@ class ChatEngine:
                 if chunks:
                     self.store.add_message(cid, "assistant", "".join(chunks))
 
-        return cid, _gen()
+        return cid, user_message_id, _gen()

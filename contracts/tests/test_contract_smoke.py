@@ -17,11 +17,55 @@ from runtime.chat import ChatResult
 client = TestClient(app)
 
 
+class _FakeStore:
+    """Duck-types the ConversationStore surface the conversation routes touch."""
+
+    def __init__(self) -> None:
+        self.conversations = {
+            "conv-123": {
+                "id": "conv-123",
+                "student_id": "s1",
+                "title": "hello",
+                "mode": "socratic",
+                "created_at": "2026-07-25T00:00:00+00:00",
+                "updated_at": "2026-07-25T00:00:00+00:00",
+            }
+        }
+        self.deleted: list[str] = []
+
+    def list_conversations(self, student_id):
+        return [c for c in self.conversations.values() if c["student_id"] == student_id]
+
+    def get_conversation(self, cid):
+        return self.conversations.get(cid)
+
+    def delete_conversation(self, cid):
+        self.deleted.append(cid)
+
+    def list_messages(self, cid):
+        return [
+            {
+                "id": 1,
+                "role": "user",
+                "content": "hi",
+                "created_at": "2026-07-25T00:00:00+00:00",
+                "attachments": [{"id": 7, "kind": "image", "mime": "image/png"}],
+            }
+        ]
+
+    def get_attachment(self, aid):
+        return None  # the smoke test exercises the 404 path
+
+    def link_attachment(self, aid, cid, message_id):
+        pass
+
+
 class _FakeEngine:
     """Stands in for the ChatEngine so /chat is testable without a llama-server."""
 
     def __init__(self, raises: Exception | None = None) -> None:
         self._raises = raises
+        self.store = _FakeStore()
 
     def chat(self, **kwargs) -> ChatResult:
         if self._raises:
@@ -41,6 +85,11 @@ PUBLIC_PATHS = [
     "/v1/health",
     "/v1/ready",
     "/v1/chat",
+    "/v1/chat/stream",
+    "/v1/conversations",
+    "/v1/conversations/{conversation_id}/messages",
+    "/v1/conversations/{conversation_id}",
+    "/v1/attachments/{attachment_id}",
     "/v1/diagnose",
     "/v1/generate_question",
     "/v1/mastery/{student_id}",
@@ -114,3 +163,41 @@ def test_chat_returns_503_when_inference_unreachable(override_engine):
     override_engine(_FakeEngine(raises=httpx.ConnectError("no server")))
     r = client.post("/v1/chat", json={"student_id": "s1", "message": "hi"})
     assert r.status_code == 503
+
+
+def test_conversations_lists_a_students_threads(override_engine):
+    override_engine(_FakeEngine())
+    r = client.get("/v1/conversations", params={"student_id": "s1"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["conversations"][0]["id"] == "conv-123"
+    assert body["conversations"][0]["title"] == "hello"
+
+
+def test_conversation_messages_include_attachment_refs(override_engine):
+    override_engine(_FakeEngine())
+    r = client.get("/v1/conversations/conv-123/messages")
+    assert r.status_code == 200
+    msg = r.json()["messages"][0]
+    assert msg["attachments"] == [{"id": 7, "kind": "image", "mime": "image/png"}]
+
+
+def test_conversation_messages_404_for_unknown_thread(override_engine):
+    override_engine(_FakeEngine())
+    r = client.get("/v1/conversations/nope/messages")
+    assert r.status_code == 404
+
+
+def test_conversation_delete(override_engine):
+    engine = _FakeEngine()
+    override_engine(engine)
+    r = client.delete("/v1/conversations/conv-123")
+    assert r.status_code == 200
+    assert r.json() == {"id": "conv-123", "deleted": True}
+    assert engine.store.deleted == ["conv-123"]
+
+
+def test_attachment_404_for_unknown_id(override_engine):
+    override_engine(_FakeEngine())
+    r = client.get("/v1/attachments/999")
+    assert r.status_code == 404

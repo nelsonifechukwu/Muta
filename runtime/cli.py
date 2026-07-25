@@ -76,7 +76,7 @@ def main() -> int:
                     conversation_id = result.conversation_id
                     print(result.reply)
                 else:
-                    conversation_id, tokens = engine.stream_chat(
+                    conversation_id, _msg_id, tokens = engine.stream_chat(
                         args.student, message, conversation_id=conversation_id, mode=args.mode
                     )
                     for delta in tokens:

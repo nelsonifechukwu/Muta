@@ -65,6 +65,10 @@ class ChatRequest(BaseModel):
     stream: bool = Field(
         False, description="When true the server replies with an SSE token stream instead."
     )
+    attachment_ids: list[int] = Field(
+        default_factory=list,
+        description="Previously-uploaded attachments to link to this message.",
+    )
 
 
 class ChatResponse(BaseModel):
@@ -193,6 +197,9 @@ class VisionReply(BaseModel):
     analysis: str = ""
     accepted: bool = Field(True, description="False when the image guard or the ladder refused.")
     detail: str = Field("", description="Why it was refused, in words a student can act on.")
+    attachment_id: int | None = Field(
+        None, description="Stored image attachment; pass in ChatRequest.attachment_ids."
+    )
 
 
 class AnswerCheckRequest(BaseModel):
@@ -235,3 +242,48 @@ class SystemStatus(BaseModel):
     sessions: dict = Field(default_factory=dict)
     vision: dict = Field(default_factory=dict)
     engine: dict = Field(default_factory=dict)
+
+
+# --- conversations & attachments (web UI surface; additive) ----------------------------
+
+
+class AttachmentRef(BaseModel):
+    id: int
+    kind: Literal["image", "audio"]
+    mime: str
+
+
+class MessageOut(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: str
+    attachments: list[AttachmentRef] = Field(default_factory=list)
+
+
+class ConversationOut(BaseModel):
+    id: str
+    student_id: str
+    title: str | None = None
+    mode: str | None = None
+    created_at: str
+    updated_at: str
+
+
+class ConversationList(BaseModel):
+    conversations: list[ConversationOut] = Field(default_factory=list)
+
+
+class MessageList(BaseModel):
+    conversation_id: str
+    messages: list[MessageOut] = Field(default_factory=list)
+
+
+class ConversationDeleted(BaseModel):
+    id: str
+    deleted: bool = True
+
+
+class TranscribeResponse(BaseModel):
+    text: str = Field(description="What the ASR heard; empty when nothing was recognised.")
+    attachment_id: int | None = Field(None, description="Stored copy of the uploaded audio.")

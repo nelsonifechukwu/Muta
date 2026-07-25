@@ -7,7 +7,11 @@ __pycache__/
 .venv/
 venv/
 data/
-models/*.gguf
+# Weights never enter the build context: they are provisioned onto the host and volume-
+# mounted at runtime (./models:/app/models). Without this the context carries ~13 GB.
+models
+bench/.venv-profiler/
+bench/.artifacts/
 runtime/build/
 ui/node_modules/
 ui/dist/

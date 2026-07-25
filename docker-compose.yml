@@ -1,0 +1,85 @@
+# Muta — 3-container topology: db → backend (llama-server + gateway) → frontend (nginx).
+# `./run.sh` is the front door; this file is the source of truth for the wiring.
+# All services are linux/amd64 — the shape that matches the compiled engine.
+
+services:
+  db:
+    image: postgres:16-alpine
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: muta
+      POSTGRES_PASSWORD: muta
+      POSTGRES_DB: muta
+    volumes:
+      - muta-pgdata:/var/lib/postgresql/data
+    ports:
+      # Published for host-side dev/tests (runtime/tests use MUTA_TEST_DB_URL against it).
+      # 15432 not 5432 so a host Postgres never collides.
+      - "127.0.0.1:15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U muta -d muta"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    platform: linux/amd64
+    # tini as PID 1: reaps orphaned engine/vision grandchildren and forwards signals.
+    init: true
+    # LlamaServer.stop() waits up to 10s before SIGKILL; give the whole shutdown room.
+    stop_grace_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Direct curl/debug access; the frontend proxies /v1 for the browser.
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    environment:
+      MUTA_RT_AUTOSTART: "1"
+      MUTA_RT_DB_URL: postgresql://muta:muta@db:5432/muta
+      MUTA_RT_MODEL_DIR: /app/models/core
+      MUTA_RT_MODEL_FILE: Qwen3.5-4B-Q4_K_M.gguf
+      MUTA_RT_MODEL_ALIAS: qwen3.5-4b
+      # Weights are provisioned by run.sh (scripts/fetch_models.py); the gateway must never
+      # surprise-download 2.6 GB itself.
+      MUTA_RT_AUTO_DOWNLOAD: "0"
+      MUTA_RT_DRAFT_MODEL: /app/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf
+      # Model load can take minutes under emulation; generous is free.
+      MUTA_RT_STARTUP_TIMEOUT_S: "900"
+      MUTA_RT_REQUEST_TIMEOUT_S: "600"
+      TUTOR_ROOT: /app
+      # Provisioning runs `docker compose run backend python3.10 scripts/fetch_models.py`;
+      # keeping the HF cache inside the mount makes it persistent and resumable.
+      HF_HOME: /app/models/.cache/huggingface
+    healthcheck:
+      # /v1/ready is HTTP 200 even when degraded, so grep the body, not the status.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/v1/ready | grep -q '\"ready\":true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    platform: linux/amd64
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  muta-pgdata:

@@ -23,6 +23,11 @@ paths:
       tags:
       - ops
       summary: Ready
+      description: 'Probes engine + db directly from config, never through `get_engine()` — readiness
+
+        must report a down dependency, not hang constructing a store against it. Always HTTP
+
+        200; the compose healthcheck greps the body for `"ready":true`.'
       operationId: ready_v1_ready_get
       responses:
         '200':
@@ -53,6 +58,143 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/chat/stream:
+    post:
+      tags:
+      - tutor
+      summary: Chat Stream
+      description: 'Token-streaming twin of `/chat` — the browser UI''s primary path.
+
+
+        Emits Server-Sent Events: `{"reasoning": "..."}` for Qwen3 thinking tokens and
+
+        `{"delta": "..."}` for answer tokens, then a final
+
+        `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.'
+      operationId: chat_stream_v1_chat_stream_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+        required: true
+      responses:
+        '200':
+          description: SSE token stream
+          content:
+            application/json:
+              schema: {}
+            text/event-stream: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/conversations:
+    get:
+      tags:
+      - conversations
+      summary: Conversations
+      description: A student's threads, most recently active first — the UI sidebar.
+      operationId: conversations_v1_conversations_get
+      parameters:
+      - name: student_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Student Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationList'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/conversations/{conversation_id}/messages:
+    get:
+      tags:
+      - conversations
+      summary: Conversation Messages
+      description: Full history with attachment refs — how the UI reloads a thread after a restart.
+      operationId: conversation_messages_v1_conversations__conversation_id__messages_get
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Conversation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/conversations/{conversation_id}:
+    delete:
+      tags:
+      - conversations
+      summary: Conversation Delete
+      operationId: conversation_delete_v1_conversations__conversation_id__delete
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Conversation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDeleted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/attachments/{attachment_id}:
+    get:
+      tags:
+      - conversations
+      summary: Attachment
+      operationId: attachment_v1_attachments__attachment_id__get
+      parameters:
+      - name: attachment_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Attachment Id
+      responses:
+        '200':
+          description: Raw bytes
+          content:
+            application/octet-stream: {}
         '422':
           description: Validation Error
           content:
@@ -445,6 +587,26 @@ components:
       - verified
       - checked
       title: AnswerCheckResponse
+    AttachmentRef:
+      properties:
+        id:
+          type: integer
+          title: Id
+        kind:
+          type: string
+          enum:
+          - image
+          - audio
+          title: Kind
+        mime:
+          type: string
+          title: Mime
+      type: object
+      required:
+      - id
+      - kind
+      - mime
+      title: AttachmentRef
     Body_tutor_vision_v1_tutor_vision_post:
       properties:
         session_id:
@@ -454,6 +616,11 @@ components:
           type: string
           contentMediaType: application/octet-stream
           title: Image
+        conversation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Conversation Id
       type: object
       required:
       - session_id
@@ -493,6 +660,12 @@ components:
           title: Stream
           description: When true the server replies with an SSE token stream instead.
           default: false
+        attachment_ids:
+          items:
+            type: integer
+          type: array
+          title: Attachment Ids
+          description: Previously-uploaded attachments to link to this message.
       type: object
       required:
       - student_id
@@ -566,6 +739,59 @@ components:
       - session_id
       - text
       title: ChatTurn
+    ConversationDeleted:
+      properties:
+        id:
+          type: string
+          title: Id
+        deleted:
+          type: boolean
+          title: Deleted
+          default: true
+      type: object
+      required:
+      - id
+      title: ConversationDeleted
+    ConversationList:
+      properties:
+        conversations:
+          items:
+            $ref: '#/components/schemas/ConversationOut'
+          type: array
+          title: Conversations
+      type: object
+      title: ConversationList
+    ConversationOut:
+      properties:
+        id:
+          type: string
+          title: Id
+        student_id:
+          type: string
+          title: Student Id
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
+        mode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Mode
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - id
+      - student_id
+      - created_at
+      - updated_at
+      title: ConversationOut
     DiagnoseRequest:
       properties:
         student_id:
@@ -730,6 +956,46 @@ components:
       - student_id
       - subject
       title: MasteryResponse
+    MessageList:
+      properties:
+        conversation_id:
+          type: string
+          title: Conversation Id
+        messages:
+          items:
+            $ref: '#/components/schemas/MessageOut'
+          type: array
+          title: Messages
+      type: object
+      required:
+      - conversation_id
+      title: MessageList
+    MessageOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        role:
+          type: string
+          title: Role
+        content:
+          type: string
+          title: Content
+        created_at:
+          type: string
+          title: Created At
+        attachments:
+          items:
+            $ref: '#/components/schemas/AttachmentRef'
+          type: array
+          title: Attachments
+      type: object
+      required:
+      - id
+      - role
+      - content
+      - created_at
+      title: MessageOut
     Persona:
       type: string
       enum:
@@ -989,6 +1255,12 @@ components:
           title: Detail
           description: Why it was refused, in words a student can act on.
           default: ''
+        attachment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Attachment Id
+          description: Stored image attachment; pass in ChatRequest.attachment_ids.
       type: object
       required:
       - session_id

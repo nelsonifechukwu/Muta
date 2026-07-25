@@ -15,20 +15,26 @@ import time
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
 from contracts.models import (
     AnswerCheckRequest,
     AnswerCheckResponse,
+    AttachmentRef,
     ChatRequest,
     ChatResponse,
     ChatTurn,
+    ConversationDeleted,
+    ConversationList,
+    ConversationOut,
     DiagnoseRequest,
     DiagnoseResponse,
     GenerateQuestionRequest,
     GenerateQuestionResponse,
     HealthResponse,
     MasteryResponse,
+    MessageList,
+    MessageOut,
     ReadyResponse,
     RenderRequest,
     RenderResponse,
@@ -66,6 +72,9 @@ from runtime.vision import VisionDenied, VisionManager
 from runtime.vision_client import VisionClient, VisionResponseError
 
 router = APIRouter()
+
+# SSE through a proxy: no caching, and tell nginx not to buffer the stream.
+_SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
 
 def _todo(what: str) -> HTTPException:
@@ -109,6 +118,16 @@ def _db_up(dsn: str) -> bool:
         return False
 
 
+def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: int | None) -> None:
+    """Bind previously-uploaded attachments to the persisted user turn. Unknown ids are a
+    no-op UPDATE, not an error — the message must never fail over a stale attachment ref."""
+    for aid in ids:
+        try:
+            engine.store.link_attachment(aid, cid, message_id)
+        except Exception:  # noqa: BLE001 — linking is best-effort metadata
+            continue
+
+
 @router.post("/chat", response_model=ChatResponse, tags=["tutor"])
 def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResponse:
     """Multi-turn tutoring turn. Memory is keyed by `conversation_id`; omit it to start a
@@ -123,12 +142,15 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             persona=req.persona.value,
             subject=req.subject.value,
             language=req.language,
+            title=req.message[:80],
         )
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
         raise HTTPException(
             status_code=503,
             detail="inference engine unreachable — start llama-server (see RUN.md)",
         ) from e
+    if req.attachment_ids:
+        _link_attachments(engine, req.attachment_ids, result.conversation_id, result.user_message_id)
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
     if result.generation is not None:
         bench_metrics.record(result.generation)
@@ -140,20 +162,19 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
     )
 
 
-@router.post("/chat/stream", include_in_schema=False)
+@router.post(
+    "/chat/stream",
+    tags=["tutor"],
+    responses={200: {"content": {"text/event-stream": {}}, "description": "SSE token stream"}},
+)
 def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> StreamingResponse:
-    """Token-streaming twin of `/chat`, for the terminal TUI (bench/tui.py).
-
-    Deliberately `include_in_schema=False`: it is NOT part of the frozen `/v1` contract, so
-    `contracts/openapi.yaml` stays byte-identical and no client may bind to it. It exists only
-    so a local dev client can render tokens as they arrive; the blocking `/chat` remains the
-    one contract surface. Same prompt/persona wiring as `/chat`, so tutoring behaviour matches.
+    """Token-streaming twin of `/chat` — the browser UI's primary path.
 
     Emits Server-Sent Events: `{"reasoning": "..."}` for Qwen3 thinking tokens and
     `{"delta": "..."}` for answer tokens, then a final
     `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
     """
-    cid, events = engine.stream_events_chat(
+    cid, user_message_id, events = engine.stream_events_chat(
         student_id=req.student_id,
         message=req.message,
         conversation_id=req.conversation_id,
@@ -162,7 +183,10 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
         persona=req.persona.value,
         subject=req.subject.value,
         language=req.language,
+        title=req.message[:80],
     )
+    if req.attachment_ids:
+        _link_attachments(engine, req.attachment_ids, cid, user_message_id)
 
     def _sse():
         n = 0
@@ -207,7 +231,76 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
             }
         ) + "\n\n"
 
-    return StreamingResponse(_sse(), media_type="text/event-stream")
+    return StreamingResponse(_sse(), media_type="text/event-stream", headers=_SSE_HEADERS)
+
+
+@router.get("/conversations", response_model=ConversationList, tags=["conversations"])
+def conversations(student_id: str, engine: ChatEngine = Depends(get_engine)) -> ConversationList:
+    """A student's threads, most recently active first — the UI sidebar."""
+    rows = engine.store.list_conversations(student_id)
+    return ConversationList(
+        conversations=[
+            ConversationOut(
+                id=r["id"],
+                student_id=r["student_id"],
+                title=r.get("title"),
+                mode=r.get("mode"),
+                created_at=r["created_at"],
+                updated_at=r["updated_at"],
+            )
+            for r in rows
+        ]
+    )
+
+
+@router.get(
+    "/conversations/{conversation_id}/messages",
+    response_model=MessageList,
+    tags=["conversations"],
+)
+def conversation_messages(
+    conversation_id: str, engine: ChatEngine = Depends(get_engine)
+) -> MessageList:
+    """Full history with attachment refs — how the UI reloads a thread after a restart."""
+    if engine.store.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="unknown conversation")
+    rows = engine.store.list_messages(conversation_id)
+    return MessageList(
+        conversation_id=conversation_id,
+        messages=[
+            MessageOut(
+                id=m["id"],
+                role=m["role"],
+                content=m["content"],
+                created_at=m["created_at"],
+                attachments=[AttachmentRef(**a) for a in m["attachments"]],
+            )
+            for m in rows
+        ],
+    )
+
+
+@router.delete(
+    "/conversations/{conversation_id}", response_model=ConversationDeleted, tags=["conversations"]
+)
+def conversation_delete(
+    conversation_id: str, engine: ChatEngine = Depends(get_engine)
+) -> ConversationDeleted:
+    engine.store.delete_conversation(conversation_id)
+    return ConversationDeleted(id=conversation_id)
+
+
+@router.get(
+    "/attachments/{attachment_id}",
+    tags=["conversations"],
+    response_class=Response,
+    responses={200: {"content": {"application/octet-stream": {}}, "description": "Raw bytes"}},
+)
+def attachment(attachment_id: int, engine: ChatEngine = Depends(get_engine)) -> Response:
+    row = engine.store.get_attachment(attachment_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="unknown attachment")
+    return Response(content=bytes(row["data"]), media_type=row["mime"])
 
 
 @router.post("/diagnose", response_model=DiagnoseResponse, tags=["tutor"])
@@ -324,7 +417,7 @@ def tutor_chat_stream(
     if decision.admission is Admission.REFUSED:
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
-    cid, events = engine.stream_events_chat(
+    cid, _user_message_id, events = engine.stream_events_chat(
         student_id=turn.student_id or turn.session_id,
         message=turn.text,
         conversation_id=turn.session_id,
@@ -360,14 +453,19 @@ def tutor_chat_stream(
             }
         ) + "\n\n"
 
-    return StreamingResponse(_sse(), media_type="text/event-stream")
+    return StreamingResponse(_sse(), media_type="text/event-stream", headers=_SSE_HEADERS)
+
+
+_IMAGE_MIME = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
 
 
 @router.post("/tutor/vision", response_model=VisionReply, tags=["tutor"])
 async def tutor_vision(
     session_id: str = Form(...),
     image: UploadFile = File(...),
+    conversation_id: str | None = Form(None),
     vision: VisionManager = Depends(get_vision),
+    engine: ChatEngine = Depends(get_engine),
 ) -> VisionReply:
     """Photo of handwritten work → transcription (S2).
 
@@ -381,6 +479,20 @@ async def tutor_vision(
     except ImageRejected as e:
         return VisionReply(session_id=session_id, accepted=False, detail=str(e))
 
+    # Persist the (guard-normalised) image so the thread's history can re-render it. Storage
+    # failure must not block tutoring — the transcription path continues without an id.
+    attachment_id: int | None = None
+    try:
+        attachment_id = await run_in_threadpool(
+            engine.store.add_attachment,
+            "image",
+            _IMAGE_MIME.get(prepared.format, "application/octet-stream"),
+            prepared.data,
+            conversation_id=conversation_id,
+        )
+    except Exception:  # noqa: BLE001 — best-effort persistence
+        attachment_id = None
+
     # Both `ensure()` (polls, may sleep up to 60s on a cold spawn) and `transcribe()` (a blocking
     # httpx.post, up to 120s) are synchronous. This handler is async, so run them in the
     # threadpool — otherwise one vision request freezes the single event loop and stalls every
@@ -388,7 +500,9 @@ async def tutor_vision(
     try:
         base_url = await run_in_threadpool(vision.ensure)  # spawns CORE-VISION if needed
     except VisionDenied as e:
-        return VisionReply(session_id=session_id, accepted=False, detail=str(e))
+        return VisionReply(
+            session_id=session_id, accepted=False, detail=str(e), attachment_id=attachment_id
+        )
 
     # The vision instance is stateless and TTL-killable by design: it returns a transcription,
     # and the *text* session carries the conversation (§6.3, S2). A transport failure OR a
@@ -402,8 +516,14 @@ async def tutor_vision(
             session_id=session_id,
             accepted=False,
             detail="the image reader didn't respond — type the problem and I'll work through it",
+            attachment_id=attachment_id,
         )
-    return VisionReply(session_id=session_id, transcription=transcription, accepted=True)
+    return VisionReply(
+        session_id=session_id,
+        transcription=transcription,
+        accepted=True,
+        attachment_id=attachment_id,
+    )
 
 
 @router.post("/tutor/verify", response_model=AnswerCheckResponse, tags=["math"])

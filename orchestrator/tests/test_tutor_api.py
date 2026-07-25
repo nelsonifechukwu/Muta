@@ -38,7 +38,7 @@ class FakeEngine:
     def stream_events_chat(self, **kwargs):
         self.calls.append(kwargs)
         cid = kwargs.get("conversation_id") or "conv-1"
-        return cid, iter([("reasoning", "hmm"), ("content", "x = "), ("content", "2")])
+        return cid, 1, iter([("reasoning", "hmm"), ("content", "x = "), ("content", "2")])
 
 
 @pytest.fixture
