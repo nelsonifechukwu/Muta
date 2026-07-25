@@ -2,9 +2,83 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Muta</title>
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <p>Muta UI placeholder — replaced by the chat client (plan T7).</p>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="sidebar-head">
+        <span class="brand">Muta</span>
+        <button id="new-chat" class="ghost" title="New chat">+ New chat</button>
+      </div>
+      <nav id="conversation-list" aria-label="Conversations"></nav>
+      <div class="sidebar-foot">offline tutor · Qwen3.5-4B</div>
+    </aside>
+
+    <main id="main">
+      <div id="chat-scroll">
+        <div id="chat-column">
+          <div id="empty-state">
+            <h1>What are we working on?</h1>
+            <p>Ask a maths or science question, drop in a photo of your working, or hold the
+              mic and just say it.</p>
+          </div>
+          <div id="messages"></div>
+        </div>
+      </div>
+
+      <div id="composer-wrap">
+        <div id="telemetry" class="telemetry" hidden>
+          <span id="t-ram" title="Current RSS of the backend process tree">RAM —</span>
+          <span class="dot">·</span>
+          <span id="t-peak" title="Peak RSS since backend start">peak —</span>
+          <span class="dot">·</span>
+          <span id="t-temp" title="CPU package temperature">— °C</span>
+          <span class="dot">·</span>
+          <span id="t-throttle" title="Thermal throttling">throttle —</span>
+          <span class="dot">·</span>
+          <span id="t-tps" title="Tokens per second (this conversation)">— tok/s</span>
+        </div>
+
+        <div id="composer">
+          <div id="attachment-chips"></div>
+          <textarea id="input" rows="1"
+            placeholder="Ask anything — Enter to send, Shift+Enter for a new line"></textarea>
+          <div id="composer-buttons">
+            <div class="left">
+              <button id="btn-image" class="icon" title="Attach an image (or drag one in)">
+                <svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm-3.5 8 4.5-6 3.5 4.5 2.5-3L20 19H5z"/></svg>
+              </button>
+              <button id="btn-audio" class="icon" title="Attach an audio file (or drag one in)">
+                <svg viewBox="0 0 24 24"><path d="M9 18V6l12-3v12.5a3.5 3.5 0 1 1-2-3.16V7.6L11 9.9v9.6A3.5 3.5 0 1 1 9 18z"/></svg>
+              </button>
+              <button id="btn-mic" class="icon" title="Talk to the tutor (voice loop)">
+                <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg>
+              </button>
+            </div>
+            <button id="btn-send" class="send" title="Send">
+              <svg viewBox="0 0 24 24"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="fineprint">Muta runs entirely on this machine. Answers can be wrong — check the working.</div>
+      </div>
+    </main>
+  </div>
+
+  <div id="drop-overlay" hidden><div>Drop an image or audio file to add it</div></div>
+  <div id="toast" hidden></div>
+  <input type="file" id="file-image" accept="image/jpeg,image/png,image/webp" hidden>
+  <input type="file" id="file-audio" accept="audio/*" hidden>
+
+  <script src="/vendor/katex/katex.min.js"></script>
+  <script src="/vendor/katex/contrib/auto-render.min.js"></script>
+  <script src="/vendor/marked.min.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script src="/app.js"></script>
+  <script src="/audio.js"></script>
 </body>
 </html>
