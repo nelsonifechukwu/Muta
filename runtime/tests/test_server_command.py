@@ -27,20 +27,20 @@ def test_build_command_emits_draft_flags_when_draft_model_exists(tmp_path):
     draft.touch()
     cfg, model = _cfg(tmp_path, draft_model=draft)
     cmd = LlamaServer(cfg).build_command(model)
-    assert cmd[cmd.index("--model-draft") + 1] == str(draft)
-    assert cmd[cmd.index("--draft-max") + 1] == "8"
-    assert cmd[cmd.index("--draft-min") + 1] == "1"
-    assert cmd[cmd.index("--draft-p-min") + 1] == "0.75"
+    assert cmd[cmd.index("--spec-draft-model") + 1] == str(draft)
+    assert cmd[cmd.index("--spec-draft-n-max") + 1] == "8"
+    assert cmd[cmd.index("--spec-draft-n-min") + 1] == "1"
+    assert cmd[cmd.index("--spec-draft-p-min") + 1] == "0.75"
 
 
 def test_build_command_omits_draft_flags_when_unset(tmp_path):
     cfg, model = _cfg(tmp_path)
     cmd = LlamaServer(cfg).build_command(model)
-    assert "--model-draft" not in cmd
+    assert "--spec-draft-model" not in cmd
 
 
 def test_build_command_omits_draft_flags_when_draft_file_missing(tmp_path):
     cfg, model = _cfg(tmp_path, draft_model=tmp_path / "missing.gguf")
     cmd = LlamaServer(cfg).build_command(model)
-    assert "--model-draft" not in cmd
-    assert "--draft-max" not in cmd
+    assert "--spec-draft-model" not in cmd
+    assert "--spec-draft-n-max" not in cmd

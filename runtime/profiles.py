@@ -343,10 +343,10 @@ def _speculation_flags(paths: BundlePaths, plan: ThreadPlan, notes: list[str]) -
         return []
     notes.append("D2-b active: re-run the -ub sweep, speculation multiplies verify-batch work")
     return [
-        "--model-draft", str(draft),
-        "--draft-max", "8",
-        "--draft-min", "1",
-        "--draft-p-min", "0.75",
+        "--spec-draft-model", str(draft),
+        "--spec-draft-n-max", "8",
+        "--spec-draft-n-min", "1",
+        "--spec-draft-p-min", "0.75",
         "--threads-draft", str(max(1, plan.core_threads // 2)),
     ]
 

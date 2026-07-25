@@ -126,21 +126,21 @@ def test_no_mlock_in_classroom_and_mlock_in_solo_demo(bundle):
 
 
 def test_speculation_is_off_by_default(bundle):
-    assert "--model-draft" not in core_text_command(bundle).argv
+    assert "--spec-draft-model" not in core_text_command(bundle).argv
 
 
 def test_speculation_b_adds_draft_flags(bundle, monkeypatch):
     monkeypatch.setenv("TUTOR_SPECULATION", "b")
     inv = core_text_command(bundle)
-    assert flag_value(inv.argv, "--draft-max") == "8"
-    assert flag_value(inv.argv, "--model-draft").endswith("draft-q4_k_m.gguf")
+    assert flag_value(inv.argv, "--spec-draft-n-max") == "8"
+    assert flag_value(inv.argv, "--spec-draft-model").endswith("draft-q4_k_m.gguf")
 
 
 def test_speculation_b_degrades_to_none_when_no_draft_model_is_staged(bundle, monkeypatch):
     monkeypatch.setenv("TUTOR_SPECULATION", "b")
     (bundle.root / "models" / "draft" / "draft-q4_k_m.gguf").unlink()
     inv = core_text_command(bundle)
-    assert "--model-draft" not in inv.argv
+    assert "--spec-draft-model" not in inv.argv
     assert any("falling back to D2-c" in n for n in inv.notes)
 
 

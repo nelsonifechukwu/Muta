@@ -71,12 +71,13 @@ class LlamaServer:
             cmd += ["--threads", str(cfg.n_threads)]
         if cfg.draft_model and Path(cfg.draft_model).is_file():
             # Speculative decoding: zero quality change by construction (draft proposes,
-            # core verifies). Flags mirror runtime/profiles.py:_speculation_flags.
+            # core verifies). Spellings are the b10035 ones — the old --draft-max/--draft-min
+            # were REMOVED upstream and hard-fail the server at startup.
             cmd += [
-                "--model-draft", str(cfg.draft_model),
-                "--draft-max", str(cfg.draft_max),
-                "--draft-min", str(cfg.draft_min),
-                "--draft-p-min", "0.75",
+                "--spec-draft-model", str(cfg.draft_model),
+                "--spec-draft-n-max", str(cfg.draft_max),
+                "--spec-draft-n-min", str(cfg.draft_min),
+                "--spec-draft-p-min", "0.75",
             ]
         cmd += cfg.extra_server_args
         return cmd
