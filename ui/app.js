@@ -363,24 +363,46 @@ $("#file-audio").addEventListener("change", (e) => {
 });
 
 // Drag & drop for both kinds.
-let dragDepth = 0;
-window.addEventListener("dragenter", (e) => {
-  e.preventDefault();
-  dragDepth++;
+//
+// Driven by a `dragover` heartbeat rather than balanced dragenter/dragleave counting:
+// browsers do not guarantee a final dragleave when a drag ends outside the window or is
+// cancelled, and one lost event strands a full-screen overlay over the whole app. dragover
+// fires continuously while a file drag is over the page and simply stops when it ends —
+// however it ends — so the hint always heals itself.
+const DRAG_HEARTBEAT_MS = 900;
+let dragTimer = null;
+
+function draggingFiles(e) {
+  const types = e.dataTransfer && e.dataTransfer.types;
+  // Dragging selected text also fires these events; only a file drag is ours.
+  return types ? Array.prototype.indexOf.call(types, "Files") >= 0 : false;
+}
+
+function showDropHint() {
   $("#drop-overlay").hidden = false;
+  clearTimeout(dragTimer);
+  dragTimer = setTimeout(hideDropHint, DRAG_HEARTBEAT_MS);
+}
+
+function hideDropHint() {
+  clearTimeout(dragTimer);
+  dragTimer = null;
+  $("#drop-overlay").hidden = true;
+}
+
+window.addEventListener("dragover", (e) => {
+  if (!draggingFiles(e)) return;
+  e.preventDefault(); // required, or the drop event never fires
+  showDropHint();
 });
-window.addEventListener("dragleave", (e) => {
-  e.preventDefault();
-  if (--dragDepth <= 0) {
-    dragDepth = 0;
-    $("#drop-overlay").hidden = true;
-  }
+window.addEventListener("dragend", hideDropHint);
+window.addEventListener("blur", hideDropHint);
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") hideDropHint();
 });
-window.addEventListener("dragover", (e) => e.preventDefault());
 window.addEventListener("drop", (e) => {
   e.preventDefault();
-  dragDepth = 0;
-  $("#drop-overlay").hidden = true;
+  hideDropHint();
   for (const file of e.dataTransfer.files) {
     if (file.type.startsWith("image/")) addImage(file);
     else if (file.type.startsWith("audio/")) addAudio(file);

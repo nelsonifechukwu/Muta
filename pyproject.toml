@@ -52,7 +52,7 @@ extend-select = ["I"]  # import sorting
 
 [tool.pytest.ini_options]
 # Tests live next to the code they cover (lane-owned), so discover across the packages.
-testpaths = ["contracts", "orchestrator", "runtime", "bench", "scripts"]
+testpaths = ["contracts", "orchestrator", "runtime", "bench", "scripts", "ui"]
 python_files = ["test_*.py"]
 # Integration tests create a venv / hit the network; opt in with `pytest -m integration`.
 addopts = "-q -m 'not integration'"

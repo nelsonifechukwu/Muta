@@ -151,6 +151,9 @@ details.thinking .thought { white-space: pre-wrap; margin-top: 6px; }
   padding: 3px 10px; margin: 0 6px;
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
+/* An author `display:` outranks the UA's `[hidden] { display: none }` (author origin beats
+   UA), so anything that declares display must restore the hidden attribute by hand. */
+#telemetry[hidden] { display: none; }
 .telemetry .dot { opacity: 0.5; }
 .telemetry .hot { color: var(--danger); font-weight: 600; }
 
@@ -202,7 +205,12 @@ button.send svg { width: 16px; height: 16px; fill: currentColor; }
   position: fixed; inset: 0; z-index: 40;
   background: rgba(250, 249, 245, 0.9);
   display: flex; align-items: center; justify-content: center;
+  /* A hint, never a target. Covering the viewport, it would otherwise swallow every click
+     in the app and perturb the drag events it exists to react to. */
+  pointer-events: none;
+  user-select: none;
 }
+#drop-overlay[hidden] { display: none; }
 #drop-overlay > div {
   border: 2px dashed var(--accent-strong); border-radius: 16px;
   padding: 40px 60px; font-family: var(--serif); font-size: 1.3rem; color: var(--accent);
