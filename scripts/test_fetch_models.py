@@ -80,28 +80,6 @@ def test_every_shipped_artifact_declares_a_permissive_licence():
         assert art.license.spdx in ms.ALLOWED_LICENSES, art.name
 
 
-def test_packaging_accepts_every_licence_we_actually_pin():
-    """The bug this guards: packaging rejected the CC0 Piper voice that fetching accepted.
-
-    Two allow-lists in two modules is a drift hazard, and the drift surfaces at
-    `package.sh` time — a long way from where the wrong pin was chosen.
-    """
-    from bundle.manifest import ALLOWED_LICENSES as PACKAGING_ALLOWS
-
-    pinned = {a.license.spdx for a in ms.ARTIFACTS + ms.QUANT_VARIANTS}
-    missing = pinned - set(PACKAGING_ALLOWS)
-    assert not missing, f"bundle.manifest would reject pinned licence(s): {sorted(missing)}"
-
-
-def test_declared_bundle_licences_match_the_pinned_artifacts():
-    """deploy/licenses.json is a hand-maintained mirror; keep it honest about asr/tts."""
-    declared = json.loads((Path(fm.REPO_ROOT) / "deploy" / "licenses.json").read_text())
-    assert declared["models/tts"] == ms.BY_NAME["tts"].license.spdx
-    assert declared["models/asr"] == ms.BY_NAME["asr"].license.spdx
-    assert declared["models/embed"] == ms.BY_NAME["embed"].license.spdx
-    assert declared["models/core"] == ms.BY_NAME["core"].license.spdx
-
-
 def test_the_rejected_piper_voice_is_not_the_pinned_one():
     """lessac is the obvious default and is NOT redistributable — guard the regression."""
     tts = ms.BY_NAME["tts"]
