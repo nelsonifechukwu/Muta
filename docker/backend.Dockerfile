@@ -64,6 +64,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+# Flaky networks turn one failed index fetch into "no versions found" — retry hard.
+ENV PIP_RETRIES=10 \
+    PIP_DEFAULT_TIMEOUT=60
 # Dependency layer keyed on pyproject.toml alone, so a source edit doesn't re-resolve and
 # re-download every wheel. sherpa-onnx is wheels-only on purpose: an sdist build would need
 # a C++ toolchain this stage deliberately lacks — fail loudly instead of compiling for an hour.
