@@ -2,116 +2,130 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Which branch you are on matters
+
+- **`main`** — the ADTC 2026 competition build: one container, two processes, SQLite,
+  flash-drive deploy tooling. `README.md` + `ROADMAP.md` are its plan of record.
+- **`dev` (this branch)** — a **long-lived alternative architecture**: a conventional
+  3-container web app (Postgres + backend + nginx frontend). It is *not* destined for merge
+  into `main`. The plan that built it: `docs/plans/2026-07-25-three-container-architecture.md`.
+
+The competition heritage still explains many invariants (AVX2-only engine build, pinned
+model provenance, degradation-not-errors, mode-aware tutoring), but the deploy story on
+this branch is `docker compose`, not a flash drive. Historical docs under `docs/` that
+mention `deploy/`, `bundle/` or the TUI describe `main`.
+
 ## What this is
 
-An **offline, adaptive AI tutor for math and scientific reasoning** built for the ADTC 2026 competition (deadline **Wed 12 Aug 2026**). It must run on an **8 GB, CPU-only** laptop (Ubuntu 22.04, integrated graphics, no GPU) delivered from a flash drive with **zero install and no network**. The design bet: a small quantized model + retrieval + verified tool calls beats a large model squeezed onto constrained hardware.
+An **offline, adaptive AI tutor for math and scientific reasoning**, re-architected on
+this branch as three containers, all `--platform=linux/amd64`, orchestrated by
+`docker-compose.yml`:
 
-**Current state: skeleton + working inference layer.** `README.md` and `ROADMAP.md` hold the plan (source of truth). A runnable backend exists and passes its tests: `pyproject.toml` (one workspace), `contracts/` (the frozen `/v1` Pydantic contract + generated `openapi.yaml`), `orchestrator/` (a `gateway` router plus `math`/`retrieval`/`pedagogy`/`exam` sub-apps that `main.py` assembles into one process), a `Makefile`, and `docker/dev.Dockerfile`. **`runtime/` is now real**: model provisioning (local folder default, Hugging Face fallback), a `llama-server` supervisor + HTTP client (the llama.cpp engine), and multi-turn chat with SQLite persistence (`ConversationStore` + `ChatEngine`) — wired into `/v1/chat`. Default model: Qwen3-0.6B Q4_K_M (`unsloth/Qwen3-0.6B-GGUF`). The math/retrieval/pedagogy/exam endpoints and the other gateway routes are still stubbed `501`. Still empty placeholders: `bench/`, `corpus/`, `model-development/`, `ui/`, `docs/`. When writing new code, follow the layout and naming the roadmap prescribes (below) — this is a Step 3 "clean partition" (see Working method), so files landing in the right place with the right names is load-bearing.
+| Container | Runs | Port |
+|---|---|---|
+| `db` | Postgres 16 — conversations, messages, attachments (BYTEA), user settings (JSONB); named volume `muta-pgdata` | 127.0.0.1:15432 |
+| `backend` | FastAPI gateway (uvicorn); its lifespan supervises `llama-server` as a child (`MUTA_RT_AUTOSTART=1`); vision = second, TTL-reaped llama-server; audio = sherpa-onnx in-process | 8000 |
+| `frontend` | nginx: static vanilla-JS chat UI + same-origin `/v1` reverse proxy (SSE unbuffered, WS upgrade) | 3000 |
 
-**Source of truth is `ROADMAP.md`** (a day-by-day build plan, ~1400 lines) and `README.md`. Read the relevant ROADMAP day/phase before implementing a task — it already contains the plan, the rationale, and the reference links for most work. Do not re-derive decisions the roadmap has already made (e.g. why AVX2 not AVX-512, why temporal corpus splits, why services collapse at deploy).
+**`./run.sh` is the front door**: build (cached) → provision models → `compose up --wait`
+(db → backend → frontend, healthcheck-gated) → print `http://localhost:3000`. `RUN.md`
+documents it and every curl equivalent.
 
-## The scoring function is the compass
+Working end-to-end: streamed chat (SSE; Qwen3.5 thinking rendered as a collapsible block),
+conversation persistence + sidebar (Postgres), image → transcription → tutoring
+(`/v1/tutor/vision`, image stored as an attachment), uploaded-audio transcription
+(`/v1/audio/transcribe`: ffmpeg → Moonshine), the full voice loop (`WS /v1/audio/voice`:
+Silero VAD endpoint → Moonshine → LLM stream → per-sentence Piper TTS auto-played,
+barge-in supported), and live per-conversation telemetry
+(`/v1/conversations/{id}/telemetry[/stream]`: process-tree RSS, peak, CPU temp, throttle
+flag, tok/s — `null` → "—" in the UI when unmeasurable, e.g. Docker on macOS).
+The math/pedagogy/exam sub-app endpoints remain `501` stubs, as on main.
 
-Every technical decision is judged against the competition score, not taste:
+## Models (pinned, verified, mounted — never baked)
 
-```
-S_total = 0.50·S_acc + 0.30·S_perf + 0.20·S_eff − P_thermal
-S_perf  = 100 · min(TPS_actual / 15, 1.0)          # TPS_max ≈ 15, provisional
-S_eff   = 100 · (7 − PeakRAM_GB) / 7               # 7 GB budget
-P_thermal = 10   if package temp > 85 °C or throttling flagged
-```
+Provisioning is `scripts/fetch_models.py` (+ `model_specs.py`, `verify_models.py`): exact
+HF revisions in `models/pins.lock.json`, sha256 verified twice, licences captured into
+`models/LICENSES/`. A full fetch **requires `--mmproj-precision f16`** (no first-party
+Q8_0 projector exists — `docs/model-provenance.md`) and `--with-draft` for the
+speculation draft. `run.sh` invokes exactly that inside the backend image when files are
+missing; downloads are resumable and hash-skipped when present.
 
-**Exchange rate** (the most-used numbers in the project — check every optimization against them):
-- **+2.00 pts** per tok/s · **−2.86 pts** per GB of peak RAM · **+0.50 pts** per accuracy point.
-- So **1 GB RAM saved = 1.43 tok/s = 5.7 accuracy points.**
-- Break-even for any RAM-spending optimization: `ΔTPS ≥ 1.43 × ΔRAM_GB`. A 1 GB draft model must return ≥ 1.43 tok/s or it is net-negative.
-- Zero-RAM-cost speedups (n-gram/prompt-lookup speculation, prompt caching) are strictly dominant → they are Phase 1 work, done before anything that costs RAM.
+The roster: core `models/core/Qwen3.5-4B-Q4_K_M.gguf` + `mmproj-F16.gguf` (vision),
+Moonshine tiny int8 (ASR), `models/asr/silero_vad.onnx` (VAD — underscore; the dash name
+never existed on disk), Piper `en_US-joe-medium` at its native **22050 Hz** (CC0 — lessac
+is NOT redistributable), bge-small (embeddings), draft **Qwen3.5-0.8B** wired into
+llama-server as `--model-draft` (there is no Qwen3.5-0.6B; 0.8B is the smallest
+first-party GGUF).
 
-**Hard failures are disqualification, not deductions:** OOM kill, sandbox/execution crash, illegal-instruction fault. `S_acc` = *tutoring quality* (the 50% term), not just final-answer correctness — a correct Socratic response may never state the answer, so evaluation must be mode-aware, never plain exact-match.
+## Architecture rules that still bind
 
-**One governing fact:** CPU autoregressive decode is **memory-bandwidth bound, not compute bound**. Shrinking bytes-moved-per-token (weight + KV quantization) buys more than faster arithmetic. More threads stop helping once bandwidth saturates but keep producing heat — so the thread cap is a scoring decision (avoid the −10 thermal cliff), not a performance one. RAM is a linear dial; temperature is a wall.
+- **Contract-first.** The `/v1` surface is generated from `contracts/models.py`
+  (`make contract` → `contracts/openapi.yaml`; never hand-edit; commit the result).
+  Changes are **additive-only**. Every client — UI, curl, tests — speaks `/v1`; the
+  browser reaches it through the nginx proxy, so there is deliberately **no CORS anywhere**.
+- **Engine build discipline is unchanged**: llama.cpp pinned `b10035`,
+  `GGML_AVX2=ON GGML_AVX512=OFF GGML_NATIVE=OFF`; `docker/backend.Dockerfile` *asserts*
+  x86-64 ELF and greps the disassembly for AVX-512 mnemonics — the build fails rather than
+  shipping an illegal-instruction fault.
+- **Sub-app mounting** (`orchestrator/main.py`): the gateway router owns `/v1`;
+  math/retrieval/pedagogy/exam/bench stay mounted under `/internal/*`, absent from the
+  public schema (a contract test enforces it).
+- **Degradation, not errors**: engine down → 503 with instructions; vision refused by the
+  ladder → friendly `accepted:false`; ASR/TTS absent → explicit text-only message;
+  telemetry unmeasurable → `null`; a dropped stream persists the partial assistant reply.
+  A student-facing crash is the one failure that is never acceptable.
+- **The flags are the memory budget**: context/slot/thread numbers live in
+  `runtime/profiles.py` (vision command, `BundlePaths` — `TUTOR_ROOT=/app` in the
+  container) and `RuntimeConfig` (`MUTA_RT_*`) — nowhere else.
 
-## Dev → deploy discipline (do not violate)
+## Layout (what changed vs main)
 
-- **Develop** on MacBook Pro M2 (ARM) **inside Docker built `--platform=linux/amd64`** from day one, so binaries are already x86-64 ELF. **Deploy** by extracting the container to a native portable build (AppImage / portable dir) on a flash drive — no Docker daemon, no VM, no install on the target.
-- **Never build with `-mavx512`.** AVX2 is the baseline (`-DGGML_AVX2=ON -DGGML_AVX512=OFF`, `GGML_NATIVE=OFF`) with runtime feature detection for wider ISA. Much of the target field (Zen 3, 12th-gen consumer Intel) faults on AVX-512 = a hard failure.
-- **All benchmark numbers in the report come from the x86 target box (9–11 Aug), never the Mac.** Everything else (model files, corpus, RAG index, Python, frontend, config) ports cleanly and is architecture-independent.
-- **Peak RAM is scored as RSS, not PSS** — verified from the official profiler's source (`docs/rules-digest.md`; `memory.py` sums `psutil` RSS over `[root] + root.children(recursive=True)`, and never reads `smaps_rollup`). The roadmap's `mmap`-makes-RSS-misleading reasoning is technically right but scores nothing: since RSS ≥ PSS under `mmap`, reporting PSS would inflate `S_eff` in the flattering direction, on the term the design optimizes. **Optimise and report RSS; keep PSS for diagnosis only.** `bench/score.py` names the parameter `peak_rss_gb` so the unit-of-record is at the call site. Measure across the **whole process tree** — `llama-server` + gateway + Python + FAISS + embedder all count against the same 7 GB. Watch `--cache-ram` (defaults to 8 GiB, an instant OOM on this budget — cap it explicitly).
-
-## Architecture
-
-**Backend-first, contract-first, headless.** The backend is a container exposing HTTP; the browser UI is the *first client, not a privileged one*. Everything is reachable by `curl` before a pixel exists — this is what makes "any frontend can connect", the 30-phone classroom demo (30 API clients over LAN), and headless `S_acc` evaluation fall out for free.
-
-**Logical microservices, collapsed process topology.** Six logical services are developed / tested / adversarially-reviewed independently against their own contract, then **co-located into one FastAPI process at deploy via `app.mount()`** (running N supervised processes on the target would make any single crash a disqualifying execution crash, and each Python service costs ~60–100 MB RSS):
-
-| Service | Owns |
-|---|---|
-| `inference` | `llama-server`, GGUF, KV cache, speculation (already its own process w/ HTTP API) |
-| `math` | SymPy routing, verification, units — sandboxed & timeout-bounded |
-| `retrieval` | FAISS index, embedder, context assembly |
-| `pedagogy` | curriculum DAG, learning twin, tutoring modes, personas (+ SQLite) |
-| `exam` | question generator, marking schemes, WAEC-Bench |
-| `gateway` | contract surface, routing, static UI — the only service clients address |
-
-**Target topology on the deploy machine: two processes** — `llama-server` and the mounted gateway.
-
-**The `/v1/` OpenAPI contract is the one cross-cutting artifact.** Its source of truth is the Pydantic models in `contracts/models.py`; `contracts/openapi.yaml` is *generated* from the assembled app via `make contract` (`python -m contracts.openapi`), so spec and code cannot drift — never hand-edit the YAML. The surface is versioned (`/v1`) from the first commit. **Nothing downstream may bypass it** — UI, phones, `eval.py`, CLI, and future clients all speak only `/v1/`, importing shapes from `contracts`. Freezing this contract (and the corpus schema) is what lets the three lanes work in parallel; treat both as frozen before parallel work depends on them.
-
-## Repository layout ↔ team lanes
-
-The directory partition is the lane partition (parallel work with no real-time coordination). Note: the ROADMAP writes paths with a leading slash (`/bench`); these are repo-relative (`bench/`).
-
-- **`contracts/`** — the frozen `/v1` contract, shared by every lane. `models.py` (Pydantic, source of truth), generated `openapi.yaml`, and `tests/` (contract smoke tests). Import shapes from here; regenerate the YAML with `make contract`.
-- **`runtime/`** — *Lane A (Systems/Runtime).* The inference layer + llama.cpp build. `config.py` (`RuntimeConfig`, `MUTA_RT_*` env), `models.py` (`resolve_model` — local-first, HF fallback, always yields a local GGUF because deploy is offline), `server.py` (`LlamaServer` supervisor; finds the binary via `MUTA_RT_LLAMA_SERVER_BIN` → `runtime/build/bin` → PATH), `client.py` (`InferenceClient` → llama-server `/v1/chat/completions`, blocking + streaming), `memory.py` (`ConversationStore`, SQLite), `chat.py` (`ChatEngine`, the multi-turn loop — system prompt injected by the caller, no pedagogy of its own), `cli.py` (`make chat`), `run.sh`, `VERSIONS.md` (pin llama.cpp SHA / base-image digest before 9 Aug). The `llama-server` binary is **not vendored** — `brew install llama.cpp` for dev, container build into `runtime/build/bin` for the target.
-- **`bench/`** — *Lane B (ML/Correctness).* `score.py` (scoring function — a bug here misdirects a month; keep `test_score.py` green), `profile.py` (end-to-end measurement; also cross-checked against `llama-bench`), `eval.py` (accuracy + KL-divergence vs F16 + flip rate), `run_bakeoff.py`, `optimization-log.md` (before/after row per change), `PROTOCOL.md`, `waec/` (WAEC-Bench + `METHODOLOGY.md`).
-- **`corpus/`** — *Lane B.* `ingest.py` (math-aware PDF→text), `schema.json` (the single schema every downstream consumer reads — `subject` must accommodate physics/chem/bio, not just math), `sources.md`.
-- **`orchestrator/`** — *Lane C / gateway.* The one deployable app. `main.py` assembles it (includes the gateway `/v1` router, `app.mount()`s the sub-apps under `/internal/*`, serves the UI); `gateway/` holds the public router (`routes.py`) + a standalone app; `math/`, `retrieval/`, `pedagogy/`, `exam/` are the sub-apps (each a full FastAPI app runnable standalone via `uvicorn orchestrator.<svc>.app:app`); `_common.py` is the service factory; `config.py` carries the `mounted`/`split` topology; `prompts/` holds persona prompts. Design prompts with a **stable shared prefix first, per-student text last** so the prompt cache hits (prompt architecture is a performance decision).
-- **`ui/`** — *Lane C.* Browser client — first consumer of the `/v1/` contract, not the product. Offline KaTeX (no CDN). Built output at `ui/dist/` is auto-served at `/ui` when present.
-- **`docs/`** — externalized tribal knowledge (see below). `docs/api/EXAMPLES.md` holds the curl walkthrough (the OpenAPI spec itself lives in `contracts/`); decision docs include `build-flags.md`, `rules-digest.md`, `quant-types.md`, `smoke-fixture.md`, `model-decision.md`, `native-extraction-plan.md`, `target-day-runbook.md`, `plans/`.
-- **`models/`, `model-development/`** — model artifacts and fine-tuning work (Unsloth); GGUFs/indexes tracked via Git LFS (`.gitattributes`). *Suggested (not yet done): rename `model-development/` → `training/` and keep artifacts vs training code separate.*
-- **`bundle/`, `deploy/`** — *added by `TDD.md` (§10, §11).* `bundle/` is the flash-drive artifact's logic in Python (so it is testable): `manifest.py` (sha256 of every shipped binary/model, verified twice — before and after the copy; a mismatch names the file and refuses to start), `stage.py` (USB → local disk; never serve weights from USB, C-4), `versions.lock` parsing, `layout.py` (the §10.1 shape). `deploy/` is the thin declarative half: `versions.lock` (pins; empty value = gate still open), `build.sh` (variant A + the AVX-512 assertion), `fetch_models.sh`, `stage.sh`, `install.sh`, `selftest.sh`, `package.sh`, `units/*.service` (`MemoryMax` per §5.1, earlyoom, zram), `etc/profile.env` (one file switches classroom ↔ solo-demo), `etc/audio.yaml`.
-
-Modules the TDD adds inside the existing lanes: `runtime/profiles.py` (**the only place a context size, slot count or thread count may be written down** — the flags *are* the memory budget), `runtime/gguf.py` + `runtime/kvmath.py` (the §5.2 slot table, derived from the shipped file's own metadata), `runtime/vision.py` (CORE-VISION spawn/TTL/deny), `runtime/slots.py` (KV save/restore + LRU reaper); `orchestrator/gateway/` gains `sampling.py` (§6.5), `prompt_layout.py` (§7.3 — RAG chunks are stable-sorted, *not* relevance-sorted, and there is a test that fails if someone "fixes" it), `ladder.py` (§5.3 degradation), `sessions.py` (§8.2 admission), `images.py` (§4.2 guard); `orchestrator/tools/` (sandboxed SymPy verifier, Matplotlib renderer, tool loop); `orchestrator/audio/` (math-to-speech + ASR/TTS websockets); `orchestrator/pedagogy/twin.py`. Status of every TDD task: `docs/plans/tdd-implementation-status.md`; open gates: `docs/multimodal-decision.md`.
+- `docker-compose.yml`, `docker/backend.Dockerfile`, `docker/frontend.Dockerfile`,
+  `docker/nginx.conf` — the stack. `run.sh` — the front door.
+- `ui/` — static chat client (`index.html`, `styles.css`, `app.js`, `audio.js`,
+  `worklet.js`). KaTeX/marked/DOMPurify vendored **at frontend-image build** (pinned
+  versions; no CDN at runtime). Claude-style theme: `#faf9f5` page, serif prose, centered
+  48rem column, warm terracotta accents.
+- `runtime/memory.py` — **Postgres** ConversationStore (psycopg3 + pool; same public API
+  plus `list_messages`/attachments/settings/`ping`; message ordering still by serial id;
+  ISO-8601 TEXT timestamps). DSN via `MUTA_RT_DB_URL`; `db_path`/SQLite is gone.
+- `runtime/config.py`/`server.py` — draft-model speculation flags, `request_timeout_s`,
+  `autostart`. `runtime/chat.py` — streams persist partial replies on early close; stream
+  methods return `(conversation_id, user_message_id, iterator)`.
+- `orchestrator/telemetry.py` — bounded TelemetryHub (1 Hz tree-RSS/temp sampler thread,
+  per-conversation tok/s). Reuses `bench/sampler.py`'s extracted
+  `family()`/`family_rss_bytes()`/`read_temp_c()` — the tree-walk exists once.
+- `orchestrator/gateway/audio_routes.py` — `/v1/audio/transcribe` + `WS /v1/audio/voice`.
+  Audio config of record: `orchestrator/audio/audio.yaml` (paths resolve against
+  `TUTOR_ROOT`).
+- `orchestrator/gateway/routes.py` — conversation surface for the UI:
+  `GET /v1/conversations`, `GET/DELETE /v1/conversations/{id}[...]`,
+  `GET /v1/attachments/{id}`, telemetry routes; `/v1/chat/stream` is in the contract.
+- **Deleted on this branch**: `runtime/cli.py` (REPL), `bench/tui.py` (TUI), `bundle/`,
+  `deploy/` (systemd/flash-drive tooling), `docker/dev.Dockerfile` + `entrypoint.sh`.
 
 ## Commands
 
-**`./run.sh` is the front door** — one command from a clean clone to a conversation. Docker by
-default (provisions image + weights + engine, then chats); `--native` for the fast host loop on
-a Mac; `--serve` for the HTTP app instead of the REPL; `-- <args>` passes through to the REPL
-(e.g. `-- --conversation <id>`). `RUN.md` documents it and the by-hand equivalents. The Makefile
-below stays the per-task developer surface.
+`make help` lists everything (Python ≥3.10; `make install` for an editable install).
 
-`make help` lists everything. Working today (Python ≥3.10; `make install` sets up an editable install):
-
-- `make dev` — run the assembled app (`uvicorn orchestrator.main:app --reload`, port 8000). Public surface at `/v1`, interactive docs at `/docs`. Sub-apps can also run standalone in split mode.
-- `make contract` — regenerate `contracts/openapi.yaml` from the Pydantic models. Run it whenever the contract changes; commit the result.
-- `make test` — pytest (contract smoke tests live in `contracts/tests/`). `make lint` / `make fmt` — ruff.
-- `make contract-test` — schemathesis property-fuzzes a running server (`make dev` first) against `/openapi.json`.
-- `make build` — build the `linux/amd64` dev image from `docker/dev.Dockerfile`. Two stages: stage 1 compiles llama.cpp (pinned `b10035`) with `GGML_AVX2=ON GGML_AVX512=OFF GGML_NATIVE=OFF LLAMA_CURL=OFF`, then **asserts** x86-64 ELF and greps the disassembly for AVX-512 mnemonics — the build fails rather than letting an illegal-instruction fault become a disqualification on the target. Stage 2 ships only the binaries (`llama-server`, `llama-bench`) next to the app, so no compiler reaches the final image. Weights are mounted, never baked. `docker/entrypoint.sh` runs the two-process topology and starts the gateway even when the engine is absent (503 by design, not a boot failure); an explicit command overrides the app (`docker run muta-dev python3.10 -m pytest`).
-- `make model` — download the default *dev* GGUF (Qwen3-0.6B Q4_K_M) into `models/`.
-- `make fetch-models` — **the competition bundle** (TDD T2, build machine only): resolves every artifact against the live HF API, pins commit SHAs into `models/pins.lock.json`, verifies sha256 twice (post-download and post-copy), captures licences into `models/LICENSES/`, writes `models/MANIFEST.json`. Start with `ARGS=--dry-run` — it prints the resolution plan and doubles as the licence audit. Tier B artifacts are resolved and recorded but fetch only behind `--with-draft` / `--with-kokoro` / `--with-multilingual-asr`; `--quant-variants` pulls the D1 bake-off set. It **refuses to substitute** a near-miss for an artifact it cannot resolve — see `docs/model-provenance.md` for the three findings that changed the plan (the §4.2 Q8_0 projector does not exist; the default Piper voice is not redistributable; the canonical VAD repo has no licence).
-- `make verify-models` — acceptance checks for the fetched bundle: hashes still match, resident tier ≤ 3.3 GiB (**currently fails at 3.41 GiB — see above**), licences permissive, core loads under `llama-cli`, embed returns a correct-width vector, sherpa-onnx instantiates ASR/VAD/TTS, and `bench/kv_metadata.json` is regenerated from the shipped GGUF for the §5.2 slot table. `ARGS=--strict` turns "tooling absent" skips into failures (use on the build machine / CI).
-- `make serve` — launch `llama-server` on `127.0.0.1:8080` against the resolved model (needs `brew install llama.cpp` or a container build).
-- `make chat` — interactive multi-turn REPL against the runtime (auto-starts a server if none is up). Full stack: `make serve` + `make dev`, then `POST /v1/chat` with a `conversation_id` for memory. Conversations persist in `data/muta.sqlite3`.
-
-Stubbed until Phase 1 — each echoes its ROADMAP reference rather than failing silently:
-
-- `make smoke` — `docker run` → server → health → test prompt → profiler JSON. The loop every later change is validated against.
-- `make bench` — `profile.py` (end-to-end) + `llama-bench` (engine ceiling) to the same JSONL; the gap between them is this stack's own overhead.
-- `make profile` — wires in the official ADTC local profiler as a third measurement path.
-- `make package` — extract the container to a native portable build (per `docs/native-extraction-plan.md`).
-
-CI (to add): contract tests + `make build` on push, publishing the image to GHCR.
-
-Base image: `FROM --platform=linux/amd64 ubuntu:22.04`. Confirm ELF x86-64 output with `file`; confirm buildx emulation with `docker buildx ls`.
+- `./run.sh` / `make up` / `make down` — the stack. `./run.sh logs` to follow.
+- `make dev` — gateway on the host with reload (fast edit loop; reaches the compose `db`
+  at `127.0.0.1:15432` via `MUTA_RT_DB_URL`'s default). `make serve` — host llama-server.
+- `make test` — pytest. Store tests need the compose db (`docker compose up -d db`) and
+  **skip cleanly when it's down**. `make lint` / `make fmt` — ruff.
+- `make contract` — regenerate `contracts/openapi.yaml`; commit the result.
+- `make fetch-models` / `make verify-models` — the provisioning path (RUN.md has the exact
+  flags `run.sh` uses).
+- `make smoke` — ready + proxied-health probe against a running stack.
 
 ## Working method (the standing engineering protocol)
 
-The README's "Four-Step Guide" (README lines 174–181) is the team's protocol, and much of the ROADMAP's structure encodes it:
-
-1. **Study before writing.** Read the relevant code/spec/ROADMAP day and write an explicit plan (to `docs/plans/`) before implementing anything non-trivial.
-2. **Externalize tribal knowledge into `docs/`.** Every non-obvious decision (a "why", an invariant, a rejected alternative) is written down structured, because parallel implementers cannot ask clarifying questions mid-task. No decision is made in a standup and left there.
-3. **Partition cleanly** — the lane/directory boundaries above; freeze the API contract and corpus schema before parallel work depends on them.
-4. **Pair every writer with an adversarial reviewer** in a fresh, separate context whose only job is to assume the output is wrong and find why. Apply hardest where a silent bug is most expensive: `score.py`, `profile.py`, the Paper 2 rubric grader, and the memory guard. **No task is done until an adversarial reviewer from another lane has tried to break it and failed.**
-
-**Standing rule:** every optimization is recorded as a before/after row in `bench/optimization-log.md` *the day it lands*, scored through `score.py`. The report's ablation table is built continuously, not at the end.
+1. **Study before writing.** Read the relevant plan/docs first; plans live in `docs/plans/`.
+2. **Externalize tribal knowledge into `docs/`** — every non-obvious decision (a "why", an
+   invariant, a rejected alternative) is written down (`docs/model-provenance.md` is the
+   canonical example).
+3. **Partition cleanly** — the `/v1` contract is the seam; regenerate, never hand-edit.
+4. **Pair every writer with an adversarial reviewer** in a fresh context whose only job is
+   to assume the output is wrong and find why. Apply hardest where a silent bug is most
+   expensive: the Postgres store's ordering semantics, stream partial-persist, the voice
+   WS loop, and compose health/ordering.

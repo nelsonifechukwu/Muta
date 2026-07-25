@@ -1,4 +1,4 @@
-# Running Muta
+# Running Muta (dev branch — the 3-container stack)
 
 ## Start here
 
@@ -6,347 +6,165 @@
 ./run.sh
 ```
 
-That's it. It builds the image if it's missing, fetches the weights if they're missing, boots
-the engine, and drops you into a conversation. Runs in Docker by default, because that's
-`linux/amd64` — the shape that actually ships.
+That's it. It builds the three images if they're missing, downloads the model roster into
+`./models` if it's missing (~4 GB, resumable), starts **db → backend → frontend** in
+dependency order, waits for health, and prints the UI URL:
+
+- **Chat UI:** http://localhost:3000
+- **API:** http://localhost:8000/v1 (interactive docs at http://localhost:8000/docs)
 
 ```bash
-./run.sh                          # chat, in Docker                      [default]
-./run.sh --native                 # chat, on the host (much faster on a Mac)
-./run.sh --serve                  # the HTTP app on :8000, instead of a REPL
-./run.sh --tui                    # chat TUI with a live tok/s + RAM panel (host)
-./run.sh -- --conversation <id>   # resume a stored thread
-./run.sh --help                   # the rest
+./run.sh            # bring the stack up                                [default]
+./run.sh down       # stop it (conversations survive — see Persistence)
+./run.sh logs       # follow all three containers' logs
+./run.sh --build    # force a clean image rebuild first
 ```
 
-First run in Docker is slow — it compiles llama.cpp and pulls ~378 MB of weights. Both are
-cached, so every run after is quick. Conversations persist in `data/muta.sqlite3` and survive
-restarts, container rebuilds, and `--rm`.
+> **First run is slow.** The backend image compiles llama.cpp (pinned `b10035`,
+> AVX2-only — the same engine discipline as `main`) and the model download is ~4 GB.
+> Every later run starts in seconds.
 
-> **One caveat, and it matters.** The image is `linux/amd64`. On an ARM Mac it runs under QEMU
-> emulation, so tokens/sec in the container is **much slower than real and meaningless as a
-> measurement** — that's emulation overhead, not the model. `./run.sh --native` is the
-> responsive way to chat on a Mac. Per the ROADMAP, every number in the report comes from the
-> x86 target box (9-11 Aug); trust neither path here for benchmarks.
+> **Apple silicon:** everything runs under x86 emulation. In Docker Desktop settings,
+> enable **"Use Rosetta for x86_64/amd64 emulation"** and give Docker **≥ 12 GB memory** —
+> the core model tree is ~3.3 GB and an image question spawns a second ~3.3 GB vision
+> instance (weights pages are shared, its KV is not). Token speed under emulation is not
+> meaningful; correctness is.
 
-The rest of this document is what `./run.sh` does for you, for when you need to do it by hand.
+## The three containers
 
----
+| Container | Image | What it runs | Port |
+|---|---|---|---|
+| `db` | `postgres:16-alpine` | conversations, messages, attachments, user settings | 127.0.0.1:15432 (host tests) |
+| `backend` | `docker/backend.Dockerfile` | FastAPI gateway (uvicorn) which supervises `llama-server` as a child; vision spawns a second, TTL-reaped llama-server on demand | 8000 |
+| `frontend` | `docker/frontend.Dockerfile` | nginx serving the static UI and proxying `/v1` (same origin ⇒ no CORS; SSE unbuffered; WebSocket upgrade) | 3000 |
 
-## 1. Docker
+Startup ordering is enforced with healthchecks: `db` must accept connections before
+`backend` starts; `backend` is *healthy* only once `/v1/ready` reports
+`{"ready":true}` — gateway up, **model loaded**, database reachable — and only then does
+`frontend` start.
 
-### Build
+## Models
+
+Provisioning goes through `scripts/fetch_models.py` (the pinned-revision, sha256-verified
+path). `./run.sh` runs it for you inside the backend image when anything is missing:
 
 ```bash
-make build          # docker buildx build --platform=linux/amd64 -f docker/dev.Dockerfile -t muta-dev:latest .
+docker compose run --rm --no-deps backend \
+    python3.10 scripts/fetch_models.py --with-draft --mmproj-precision f16
 ```
 
-This compiles llama.cpp from source (pinned to `b10035`, see `runtime/VERSIONS.md`) with the
-AVX2 baseline and AVX-512 **off**, then asserts both facts before the image is allowed to
-exist. On an ARM Mac the compile is emulated and takes a while — it's cached afterwards.
+- `--mmproj-precision f16` is required: no first-party Q8_0 vision projector exists
+  (`docs/model-provenance.md`), and the fetcher refuses to guess.
+- `--with-draft` fetches the speculative-decoding draft. **Note:** the draft is
+  **Qwen3.5-0.8B** — there is no 0.6B in the Qwen3.5 family; 0.8B is the smallest
+  first-party GGUF and is what `models/pins.lock.json` pins.
 
-Why those flags matter: much of the target field (Zen 3, 12th-gen consumer Intel) faults on
-AVX-512, and an illegal-instruction fault is a **hard failure — disqualification, not a
-deduction**. `GGML_NATIVE=OFF` stops cmake from tuning the build to whatever CPU built it.
+The roster (all under `./models`, volume-mounted into the backend, never baked):
 
-### Run
+| Role | File |
+|---|---|
+| Core LLM | `models/core/Qwen3.5-4B-Q4_K_M.gguf` |
+| Vision projector | `models/core/mmproj-F16.gguf` |
+| ASR | `models/asr/moonshine-tiny-en-int8/` |
+| VAD | `models/asr/silero_vad.onnx` |
+| TTS | `models/tts/piper/en_US-joe-medium.onnx` (CC0) |
+| RAG embeddings | `models/embed/bge-small-en-v1.5-q8_0.gguf` |
+| Speculation draft | `models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` |
 
-The model is **not** baked into the image (a 378 MB layer on every push, for a file that's
-provisioned anyway). Mount it:
+`make verify-models` re-checks hashes, licences and load smoke.
 
-```bash
-mkdir -p models data
-make model                              # first time only: fetch the GGUF into models/
+## Talk to it
 
-docker run --rm -it --platform=linux/amd64 \
-  -p 8000:8000 \
-  -v "$(pwd)/models:/app/models" \
-  -v "$(pwd)/data:/app/data" \
-  muta-dev:latest
-```
-
-Then in another terminal, jump to [Talk to it](#3-talk-to-it).
-
-Pass `--platform=linux/amd64` explicitly on an ARM host, or Docker prints a mismatch warning
-on every run.
-
-Mounting `data/` is what makes conversations outlive the container. Drop it and every
-`docker run` starts amnesiac.
-
-If `models/` is empty the engine tries to fetch the GGUF itself, which needs network — fine
-on your laptop, impossible on the target. Provisioning it up front is the honest rehearsal.
-
-### Useful variations
-
-Any command you pass overrides the app, so the image doubles as the toolbox:
-
-```bash
-# chat, which is what ./run.sh runs for you
-docker run --rm -it --platform=linux/amd64 \
-  -v "$(pwd)/models:/app/models" -v "$(pwd)/data:/app/data" \
-  muta-dev:latest python3.10 -m runtime.cli
-
-# gateway only — no engine, no weights needed. /v1/chat returns 503 by design.
-docker run --rm -it -p 8000:8000 -e MUTA_NO_ENGINE=1 muta-dev:latest
-
-# tests inside the image
-docker run --rm muta-dev:latest python3.10 -m pytest
-
-# poke around
-docker run --rm -it muta-dev:latest bash
-
-# the engine's own benchmark (the ceiling this stack is measured against).
-# Emulated on a Mac, so the numbers are noise — this is a smoke test here, not a measurement.
-docker run --rm -v "$(pwd)/models:/app/models" muta-dev:latest \
-  /app/runtime/build/bin/llama-bench -m /app/models/Qwen3-0.6B-Q4_K_M.gguf
-```
-
----
-
-## 2. Native (fastest dev loop)
-
-`./run.sh --native` does all of this for you — creates the venv, installs deps on first run,
-and starts chatting. By hand:
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-make install
-make model                    # fetch the GGUF into models/
-```
-
-You also need a `llama-server` binary; unlike Docker, native mode won't build one.
-`find_binary()` looks in this order: `MUTA_RT_LLAMA_SERVER_BIN` → `runtime/build/bin/` →
-`PATH`. Either grab a [prebuilt release](https://github.com/ggml-org/llama.cpp/releases)
-(pin: `b10035`) and unpack it into `runtime/build/bin/`, or `brew install llama.cpp`.
-
-**Keep the venv activated.** The Makefile defaults to `PY ?= python3`, so without it you get
-a confusing `ModuleNotFoundError: pydantic_settings`. Or override: `make PY=.venv/bin/python <target>`.
-
-### Interactive chat
-
-```bash
-make chat
-```
-
-Starts an engine if none is running, then streams a multi-turn conversation. Engine logs go
-to `data/llama-server.log` so they don't shred your terminal. `exit` or Ctrl-D quits, and it
-prints the conversation id on the way out:
-
-```bash
-make chat ARGS="--conversation <id>"     # resume that thread in a fresh process
-./run.sh --native -- --conversation <id> # same thing
-```
-
-Note the `ARGS=` form: `make chat -- --conversation <id>` looks plausible but silently drops
-the arguments, because make reads them as goals rather than passing them through.
-
-Resuming is the bit worth trying — it's what proves persistence is real and not in-memory.
-
-### Full stack
-
-Two terminals, venv active in both:
-
-```bash
-make serve      # llama-server on :8080
-make dev        # gateway on :8000, auto-reload
-```
-
-### TUI — chat with a live metrics panel
-
-```bash
-./run.sh --tui
-```
-
-A terminal app: type at the bottom, the reply streams into the transcript, and a side panel
-shows **tokens/sec, RAM (now and peak), and the two scored terms** (`S_perf`, `S_eff`) updating
-live. `./run.sh --tui` boots the engine + gateway for you, waits for `/v1/ready`, runs the TUI,
-and tears the app back down on exit. If the app is already up, attach directly with `make tui`.
-
-It is a `/v1` client, not an embedded engine, and it samples the gateway + engine tree
-**externally by PID** — so the RAM it shows is the real deployed footprint, and the TUI's own
-memory never inflates the number. Streaming rides an internal, non-schema route
-(`/v1/chat/stream`); the frozen `/v1` contract is untouched.
-
-**Images — `/img <path> [question]`.** Type `/img ~/work.jpg what did I get wrong?` to hand the
-tutor a photo of your working. The TUI posts it to `/v1/tutor/vision`, which spawns an ephemeral
-vision server (CORE-VISION, on `:8082`), **transcribes** the page, shows you the `read:` result,
-then feeds that text into a normal tutoring turn — *transcribe → tutor*, so the reply streams
-and the metrics panel behaves exactly as for a typed question. Omit the trailing text and it
-asks the tutor to help with the work generally. The image is downscaled, EXIF-stripped, and
-size/format-guarded at the gateway before the model ever sees it; a bad path, an oversized
-photo, or memory pressure comes back as a friendly line in the transcript, never a crash.
-
-> **Vision needs the full model bundle, not the dev default.** The quick-start `make model` only
-> fetches the 378 MB text GGUF. The vision path needs the core 4B weights **and** the `mmproj`
-> projector — run `make fetch-models` (build machine; see the README/`docs/model-provenance.md`).
-> Without them, `/img` returns the friendly "vision model not staged" refusal. CORE-VISION is
-> spawned on demand and TTL-reaped after 120 s idle, so it only costs RAM (~1.1 GiB) during and
-> just after a vision turn.
-
-### Measuring it
-
-```bash
-make monitor    # live scored-metrics HUD against a running app (a lighter, read-only TUI)
-make bench      # product-path pass: throughput + peak RSS through /v1/chat, once
-make profile    # autonomous: the official ADTC profiler + the product path, both scored
-```
-
-`make profile` is the real one. It bootstraps the pinned official profiler in an isolated venv,
-runs it against the GGUF (the number the audit reproduces), also runs the product path (the one
-that can OOM), scores both through `bench/score.py`, and appends a row to
-`bench/optimization-log.md`. On a Mac every number is stamped `dev_host_provisional` — report
-figures come from the x86 box. See `docs/rules-digest.md` for what the profiler actually
-measures and why.
-
----
-
-## 3. Talk to it
-
-Everything is reachable by `curl` before a pixel exists — that's the point of the
-backend-first design, and it's what makes the 30-phone classroom demo and headless
-evaluation fall out for free.
+Everything the UI does goes through `/v1` — so everything works from `curl` too
+(directly on :8000, or through the proxy on :3000).
 
 ```bash
 curl -s localhost:8000/v1/ready
-# {"ready":true,"checks":{"gateway":true,"inference":true}}
-```
+# {"ready":true,"checks":{"gateway":true,"inference":true,"db":true}}
 
-```bash
+# Blocking turn:
 curl -s localhost:8000/v1/chat -H 'content-type: application/json' -d '{
   "student_id": "ada",
   "message": "I keep getting quadratic equations wrong"
 }'
-```
+# → carries conversation_id; pass it back to continue the thread
 
-The response carries a `conversation_id`. Pass it back to continue the thread:
-
-```bash
-curl -s localhost:8000/v1/chat -H 'content-type: application/json' -d '{
-  "student_id": "ada",
-  "conversation_id": "<id from last response>",
-  "message": "so what do I do first?"
+# Streaming turn (SSE):
+curl -N -s localhost:8000/v1/chat/stream -H 'content-type: application/json' -d '{
+  "student_id": "ada", "message": "Factorise x^2 + 5x + 6"
 }'
+# data: {"reasoning": "..."}   ← Qwen3.5 thinking
+# data: {"delta": "..."}       ← answer tokens
+# data: {"done": true, "conversation_id": "...", "tokens_per_second": ...}
+
+# Photo of handwritten work (multipart):
+curl -s localhost:8000/v1/tutor/vision -F session_id=ada -F image=@work.jpg
+# {"session_id":"ada","transcription":"∫ x² dx = ...","accepted":true,"attachment_id":3,...}
+
+# Uploaded audio → text (503 with a friendly message if ASR is unavailable):
+curl -s localhost:8000/v1/audio/transcribe -F audio=@question.m4a
+
+# History (how the UI reloads a thread):
+curl -s "localhost:8000/v1/conversations?student_id=ada"
+curl -s  localhost:8000/v1/conversations/<id>/messages
+
+# Live telemetry (the UI strip): one-shot or 1 Hz SSE
+curl -s  localhost:8000/v1/conversations/<id>/telemetry
+curl -N -s localhost:8000/v1/conversations/<id>/telemetry/stream
+# {"rss_gb":3.21,"peak_rss_gb":3.4,"cpu_temp_c":null,"throttled":null,
+#  "tokens_per_second":4.2,"generating":true}
 ```
 
-Interactive docs: <http://127.0.0.1:8000/docs>.
+`cpu_temp_c`/`throttled` are `null` wherever the host exposes no sensors (always the case
+for Docker on macOS — the UI shows "—"); on a Linux host with hwmon they're real.
 
-### Sending a photo (multipart)
+The voice loop is a WebSocket (`WS /v1/audio/voice`): the browser streams 16 kHz PCM, the
+backend runs Silero VAD → when you stop talking it transcribes with Moonshine, streams the
+LLM reply, synthesizes each sentence with Piper, and the browser auto-plays it — no click.
+The mic needs a secure context: **http://localhost:3000 works, a LAN IP does not.**
 
-`/v1/tutor/vision` takes a `multipart/form-data` upload and returns a transcription — the same
-path the TUI's `/img` uses. It always answers 200 with `accepted`; a rejected image (too big,
-wrong format, or memory pressure) carries `accepted:false` and a `detail` you can show a student,
-never an error page.
+## Persistence
 
-```bash
-curl -s localhost:8000/v1/tutor/vision \
-  -F session_id=ada \
-  -F image=@work.jpg
-# {"session_id":"ada","transcription":"∫ x^2 dx = ...","analysis":"","accepted":true,"detail":""}
-```
+Conversations, messages and attachments live in Postgres, in the named volume
+`muta-pgdata`. `./run.sh down` / `docker compose down` **keeps** them;
+`docker compose down -v` is the only thing that deletes them.
 
-Feed the `transcription` back into `/v1/chat` as the `message` to tutor from it. Needs the vision
-bundle staged (`make fetch-models`); see the TUI note in [Native](#2-native-fastest-dev-loop).
+Host-side tests reach the same db on `127.0.0.1:15432`
+(`MUTA_TEST_DB_URL` overrides; store tests skip cleanly when it's down).
 
-### The fields, and what they accept
+## Configuration
 
-Anything else is a 422 — the contract is enforced, not advisory. Source of truth:
-`contracts/models.py`.
+Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 
-| Field | Values | |
+| Variable | Default (compose) | Meaning |
 |---|---|---|
-| `student_id` | any string | **required**; keys the learning twin |
-| `message` | any string | **required** |
-| `conversation_id` | id from a previous reply | omit to start a new thread |
-| `mode` | `socratic`, `subgoal` | default `socratic`; backed by `orchestrator/prompts/*.md` |
-| `persona` | `teacher`, `friend`, `professor`, `exam` | default `teacher` |
-| `subject` | `math`, `physics`, `chemistry`, `biology` | default `math` |
-| `language` | e.g. `en` | default `en` |
+| `MUTA_RT_DB_URL` | `postgresql://muta:muta@db:5432/muta` | Postgres DSN |
+| `MUTA_RT_MODEL_DIR` / `_FILE` | `/app/models/core` / `Qwen3.5-4B-Q4_K_M.gguf` | core GGUF |
+| `MUTA_RT_DRAFT_MODEL` | `/app/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` | speculative draft (skipped if absent) |
+| `MUTA_RT_AUTOSTART` | `1` | gateway lifespan starts/supervises llama-server |
+| `MUTA_RT_STARTUP_TIMEOUT_S` | `900` | model-load allowance (emulation is slow) |
+| `MUTA_RT_REQUEST_TIMEOUT_S` | `600` | per-request client timeout |
+| `TUTOR_ROOT` | `/app` | root for vision/audio model paths |
 
-### Two things that look broken but aren't
+## Troubleshooting
 
-- **The tutor won't just tell you the answer.** Default mode is `socratic` and its prompt
-  forbids stating answers outright. There is deliberately no "just answer me" mode — the
-  alternative is `subgoal`, which decomposes the problem rather than solving it. (Qwen3-0.6B
-  follows either only loosely and sometimes blurts the answer anyway. That's the model being
-  small, and it's what the bake-off on 19-22 Jul is for.)
-- **`"verified": false` on every reply.** Hardcoded until answers route through the
-  `math`/SymPy service. It is not lying to you yet.
+- **`docker compose ps` shows backend `starting` for minutes** — normal on first boot and
+  under emulation: it's loading 2.6 GB of weights. `./run.sh logs` and watch
+  `data/logs/llama-server.log` lines appear.
+- **Stack never becomes healthy** — `docker compose logs backend --tail 50`. The usual
+  causes: Docker memory too low (raise to ≥ 12 GB) or a half-downloaded model
+  (rerun `./run.sh`; downloads resume and verify by sha256).
+- **Voice button does nothing** — you're not on `localhost` (mic requires a secure
+  context), or ASR is degraded: `curl -s localhost:8000/v1/audio/transcribe -F audio=@x.wav`
+  explains itself.
+- **Vision replies `accepted:false`** — the degradation ladder refused to spawn the second
+  model instance (not enough free memory). Give Docker more memory; text tutoring keeps
+  working regardless.
+- **Wipe everything** — `docker compose down -v && docker image prune` and delete
+  `./models` if you want the downloads gone too.
 
----
+## What the Makefile is for
 
-## 4. What's actually running
-
-Two processes, which is the target topology:
-
-```
-llama-server  :8080   the engine — GGUF, KV cache (its own process, HTTP API)
-gateway       :8000   the /v1 contract + math, retrieval, pedagogy, exam mounted in
-```
-
-The four sub-apps are developed and reviewed standalone (`uvicorn orchestrator.<svc>.app:app`)
-but `app.mount()` into the gateway at deploy. Running them as separate processes would cost
-60-100 MB RSS each against a **7 GB budget**, and would turn any single crash into a
-disqualifying execution crash.
-
-Only `:8000` is published. The engine stays on loopback.
-
----
-
-## 5. Configuration
-
-Every knob is a `MUTA_RT_*` env var (or a `.env` file). Full list with defaults:
-`runtime/config.py`. The ones you'll actually reach for:
-
-| Variable | Default | Notes |
-|---|---|---|
-| `MUTA_RT_MODEL_DIR` | `models/Qwen3-0.6B` | `/app/models` in the container |
-| `MUTA_RT_MODEL_FILE` | `Qwen3-0.6B-Q4_K_M.gguf` | |
-| `MUTA_RT_MODEL_SOURCE` | `local` | `hf` to force a download |
-| `MUTA_RT_AUTO_DOWNLOAD` | `true` | set `false` to rehearse offline |
-| `MUTA_RT_LLAMA_SERVER_BIN` | *(search)* | overrides binary lookup |
-| `MUTA_RT_N_CTX` | `4096` | context window |
-| `MUTA_RT_N_THREADS` | *(auto)* | **a scoring decision, not a perf one** — more threads stop helping once memory bandwidth saturates but keep making heat, and >85 °C is a flat −10 |
-| `MUTA_RT_ENABLE_THINKING` | `false` | Qwen3 hybrid reasoning; on = slower, more tokens |
-| `MUTA_RT_DB_PATH` | `data/muta.sqlite3` | conversations live here |
-| `MUTA_RT_MAX_HISTORY_MESSAGES` | `20` | history trim, excludes system prompt |
-
-Resolution is **local-first, HF-fallback, always yielding a local path** — because the
-deploy target has no network. llama-server's own `-hf` puller is deliberately compiled out.
-
----
-
-## 6. Troubleshooting
-
-**`/v1/chat` returns 503** — the engine isn't up. That's the designed answer, not a bug.
-Check `curl localhost:8000/v1/ready`; in Docker read the `[entrypoint]` lines; natively make
-sure `make serve` is running and check `data/llama-server.log`.
-
-**`ModuleNotFoundError: pydantic_settings`** — venv isn't active. `source .venv/bin/activate`.
-
-**`llama-server not found`** — see [Native](#2-native-fastest-dev-loop). Doesn't happen in
-Docker; the image builds its own.
-
-**Chat exits on its own** — fixed. A blank line used to quit, so a stray Enter pressed while
-a reply streamed would end the session. Blank lines now re-prompt. Your old conversations are
-still in SQLite; resume with `--conversation <id>`.
-
-**Container is glacial on a Mac** — expected, see the warning at the top. Use native.
-
-**Port in use** — `MUTA_RT_SERVER_PORT=8081 make serve`, or `-p 8001:8000` for the gateway.
-
----
-
-## 7. What doesn't work yet
-
-- `/v1/diagnose`, `/v1/generate_question`, `/v1/mastery`, `/v1/verify` → **501**. Each echoes
-  its ROADMAP reference rather than failing silently.
-- `make smoke`, `make package` → still stubs that print their ROADMAP date.
-  (`make bench`, `make profile`, `make monitor`, `make tui` are **live** — see [Native](#2-native-fastest-dev-loop).)
-- `corpus/`, `ui/` → still empty. `bench/` is now real (`score.py`, `sampler.py`,
-  `profile.py`, `autotest.py`, `monitor.py`, `tui.py`, and the profiler integration under
-  `bench/adtc/`).
-- **`--cache-ram` is unset**, so llama-server defaults to 8 GiB. On a 7 GB budget that's an
-  OOM — and an OOM kill is disqualification. Harmless on a dev box with RAM to spare; must be
-  capped explicitly before the target run.
-- The container keeps a ~40 MB Python supervisor alive just to hold the engine subprocess
-  (~0.11 pts of `S_eff`). The 9 Aug native extraction should launch `llama-server` directly.
+`make help` lists everything. The stack lives behind `./run.sh` / `make up` / `make down`;
+`make dev` runs the gateway on the host against the compose db for a fast edit loop;
+`make test` / `make lint` / `make contract` are the per-task developer surface.
