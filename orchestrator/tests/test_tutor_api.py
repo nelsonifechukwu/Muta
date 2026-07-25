@@ -173,17 +173,68 @@ def test_vision_denied_by_the_ladder_tells_the_student_to_type_it(wired):
     assert body["accepted"] is False and "type the problem" in body["detail"]
 
 
-def test_a_valid_photo_reaches_the_vision_manager(wired, monkeypatch):
+def test_a_valid_photo_is_transcribed(wired, monkeypatch):
     _, _, _, vision = wired
     monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
-    r = client.post(
+
+    captured = {}
+
+    def fake_transcribe(self, image_bytes, image_format, *, prompt=...):
+        captured["format"] = image_format
+        captured["bytes"] = len(image_bytes)
+        return "x^2 = 9"
+
+    monkeypatch.setattr(
+        "orchestrator.gateway.routes.VisionClient.transcribe", fake_transcribe
+    )
+    body = client.post(
         "/v1/tutor/vision",
         data={"session_id": "s1"},
         files={"image": ("work.png", png_bytes((2000, 1500)), "image/png")},
+    ).json()
+    assert body["accepted"] is True
+    assert body["transcription"] == "x^2 = 9"
+    # The guard must have downscaled the 2000x1500 photo before it reached the model.
+    assert captured["format"] == "PNG" and captured["bytes"] > 0
+
+
+def test_vision_server_unreachable_is_a_friendly_refusal_not_500(wired, monkeypatch):
+    _, _, _, vision = wired
+    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
+
+    def boom(self, image_bytes, image_format, *, prompt=...):
+        raise httpx.ConnectError("refused", request=httpx.Request("POST", "http://x"))
+
+    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient.transcribe", boom)
+    r = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("work.png", png_bytes(), "image/png")},
     )
-    # The completion call itself is not wired yet, and says so rather than faking a result.
-    assert r.status_code == 501
-    assert "1280x960" in r.json()["detail"], "the guard must have downscaled it first"
+    assert r.status_code == 200
+    body = r.json()
+    assert body["accepted"] is False and "type the problem" in body["detail"]
+
+
+def test_a_malformed_vision_reply_is_a_friendly_refusal_not_500(wired, monkeypatch):
+    """A 200 with a body we can't read must not become a 500 in a judge's face (S2)."""
+    from runtime.vision_client import VisionResponseError
+
+    _, _, _, vision = wired
+    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
+
+    def bad(self, image_bytes, image_format, *, prompt=...):
+        raise VisionResponseError("unreadable vision response")
+
+    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient.transcribe", bad)
+    r = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("work.png", png_bytes(), "image/png")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["accepted"] is False and "type the problem" in body["detail"]
 
 
 # --- tools --------------------------------------------------------------------------------

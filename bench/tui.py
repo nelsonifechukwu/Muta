@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 import time
+from pathlib import Path
 
 import httpx
 from rich.text import Text
@@ -34,6 +36,29 @@ from bench.sampler import ThermalSampler, TreeSampler
 from bench.score import PROVISIONAL_TPS_MAX, RAM_BUDGET_GB, score
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+
+DEFAULT_IMAGE_QUESTION = "Here is a photo of my work — help me with it."
+
+
+def parse_image_command(line: str) -> tuple[str, str | None] | None:
+    """Parse `/img <path> [question]`. Returns (path, question|None), or None if not /img.
+
+    Pure so it is unit-testable without a Textual app. `shlex` handles a quoted path that
+    contains spaces; the rest of the tokens (if any) become the tutoring question.
+    """
+    stripped = line.strip()
+    if not (stripped == "/img" or stripped.startswith("/img ")):
+        return None
+    rest = stripped[len("/img"):].strip()
+    if not rest:
+        return None
+    try:
+        parts = shlex.split(rest)
+    except ValueError:
+        parts = rest.split()
+    if not parts:
+        return None
+    return parts[0], (" ".join(parts[1:]) or None)
 
 
 class MetricsPanel(Static):
@@ -189,6 +214,11 @@ class MutaTUI(App):
             self.exit()
             return
         event.input.value = ""
+        attach = parse_image_command(message)
+        if attach is not None:
+            path, question = attach
+            self._attach_image(path, question)
+            return
         self.messages.append(("you", message))
         self.streaming = ""
         self._refresh_transcript()
@@ -245,6 +275,70 @@ class MutaTUI(App):
         self._busy = False
         prompt.disabled = False
         prompt.focus()
+
+    @work(exclusive=True)
+    async def _attach_image(self, path: str, question: str | None) -> None:
+        """Send an image to /tutor/vision, show the transcription, then tutor from it."""
+        self._busy = True
+        prompt = self.query_one("#prompt", Input)
+        prompt.disabled = True
+        transcription = ""
+        try:
+            file_path = Path(path).expanduser()
+            self.messages.append(("you", f"[image: {file_path.name}]"))
+            self._refresh_transcript()
+            try:
+                raw = file_path.read_bytes()
+            except OSError as e:
+                self.messages.append(
+                    ("muta", f"couldn't read that file ({e.strerror or e}). "
+                             "check the path and try again.")
+                )
+                self._refresh_transcript()
+                return
+
+            suffix = file_path.suffix.lower()
+            mime = (
+                "image/jpeg" if suffix in {".jpg", ".jpeg"}
+                else "image/webp" if suffix == ".webp"
+                else "image/png"
+            )
+            try:
+                async with httpx.AsyncClient(timeout=300.0) as vclient:
+                    resp = await vclient.post(
+                        f"{self.base_url}/v1/tutor/vision",
+                        data={"session_id": "tui"},
+                        files={"image": (file_path.name, raw, mime)},
+                    )
+                    resp.raise_for_status()
+                    reply = resp.json()
+            except httpx.HTTPError as e:
+                self.messages.append(
+                    ("muta", f"[vision error: {type(e).__name__} — is the app running?]")
+                )
+                self._refresh_transcript()
+                return
+
+            if not reply.get("accepted", False):
+                self.messages.append(("muta", reply.get("detail") or "that image couldn't be used."))
+                self._refresh_transcript()
+                return
+
+            transcription = reply.get("transcription", "")
+            self.messages.append(("muta", f"read:\n{transcription}"))
+            self._refresh_transcript()
+        finally:
+            self._busy = False
+            prompt.disabled = False
+            prompt.focus()
+
+        # Now tutor from the transcription as an ordinary text turn (transcribe -> tutor).
+        follow_up = question or DEFAULT_IMAGE_QUESTION
+        combined = f"{transcription}\n\n{follow_up}" if transcription else follow_up
+        self.messages.append(("you", follow_up))
+        self.streaming = ""
+        self._refresh_transcript()
+        self._stream_reply(combined)
 
     def on_unmount(self) -> None:
         self._mem.stop()

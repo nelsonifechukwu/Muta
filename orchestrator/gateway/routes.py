@@ -14,6 +14,7 @@ import time
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 
 from contracts.models import (
@@ -61,6 +62,7 @@ from runtime.chat import ChatEngine
 from runtime.client import Generation
 from runtime.slots import SlotError
 from runtime.vision import VisionDenied, VisionManager
+from runtime.vision_client import VisionClient, VisionResponseError
 
 router = APIRouter()
 
@@ -359,22 +361,29 @@ async def tutor_vision(
     except ImageRejected as e:
         return VisionReply(session_id=session_id, accepted=False, detail=str(e))
 
+    # Both `ensure()` (polls, may sleep up to 60s on a cold spawn) and `transcribe()` (a blocking
+    # httpx.post, up to 120s) are synchronous. This handler is async, so run them in the
+    # threadpool — otherwise one vision request freezes the single event loop and stalls every
+    # other phone in the classroom mid-stream.
     try:
-        vision.ensure()
+        base_url = await run_in_threadpool(vision.ensure)  # spawns CORE-VISION if needed
     except VisionDenied as e:
         return VisionReply(session_id=session_id, accepted=False, detail=str(e))
 
     # The vision instance is stateless and TTL-killable by design: it returns a transcription,
-    # and the *text* session carries the conversation (§6.3, S2). Wiring the mtmd completion
-    # call is Lane C's next step; the guard, the spawn and the fallbacks are what this
-    # endpoint owes the rest of the system.
-    raise HTTPException(
-        status_code=501,
-        detail=(
-            f"image accepted ({prepared.width}x{prepared.height}, {prepared.bytes} bytes) and "
-            "CORE-VISION is up; the mtmd completion call is not wired yet"
-        ),
-    )
+    # and the *text* session carries the conversation (§6.3, S2). A transport failure OR a
+    # malformed-but-200 reply is S2's honest fallback, never a 500 in a non-technical judge's face.
+    try:
+        transcription = await run_in_threadpool(
+            VisionClient(base_url).transcribe, prepared.data, prepared.format
+        )
+    except (httpx.HTTPError, VisionResponseError):
+        return VisionReply(
+            session_id=session_id,
+            accepted=False,
+            detail="the image reader didn't respond — type the problem and I'll work through it",
+        )
+    return VisionReply(session_id=session_id, transcription=transcription, accepted=True)
 
 
 @router.post("/tutor/verify", response_model=AnswerCheckResponse, tags=["math"])
