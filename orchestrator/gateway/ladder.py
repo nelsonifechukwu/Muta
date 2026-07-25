@@ -18,6 +18,7 @@ permanently degraded.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -34,8 +35,11 @@ L2_THRESHOLD = int(0.8 * GiB)
 L3_THRESHOLD = int(0.5 * GiB)
 #: The floor subtracted from MemAvailable before anything is called "free".
 RESERVE_BYTES = 300 * MiB
-#: §5.1 — CORE-TEXT's cap; L4 triggers 100 MiB below it.
-CORE_CAP_BYTES = 4300 * MiB
+#: §5.1 — CORE-TEXT's cap; L4 triggers 100 MiB below it. Overridable because the right cap
+#: is a property of the box: 4300 MiB encodes the competition 7 GB budget, while the dev
+#: compose stack loads core + speculation draft (~4.2 GiB tree under emulation) and sizes
+#: the cap for its own VM via MUTA_CORE_CAP_MIB.
+CORE_CAP_BYTES = int(os.environ.get("MUTA_CORE_CAP_MIB", "4300")) * MiB
 L4_MARGIN_BYTES = 100 * MiB
 POLL_SECONDS = 2.0
 

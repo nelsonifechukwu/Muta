@@ -46,6 +46,19 @@ services:
       MUTA_RT_MODEL_DIR: /app/models/core
       MUTA_RT_MODEL_FILE: Qwen3.5-4B-Q4_K_M.gguf
       MUTA_RT_MODEL_ALIAS: qwen3.5-4b
+      # ctx 2048 keeps core+draft RSS under the ladder's 4300 MiB core cap — at 4096 the
+      # tree hits L4 and vision spawns are refused. Thinking off: on CPU/emulation the
+      # reasoning phase alone can run minutes before the first answer token.
+      MUTA_RT_N_CTX: "2048"
+      MUTA_RT_ENABLE_THINKING: "0"
+      # Smaller batch/ubatch shrink the compute buffers (~hundreds of MiB) and q8_0 K-cache
+      # halves that side of the KV — together they keep the core+draft tree comfortably
+      # below the 4300 MiB ladder cap so vision spawns stay admitted.
+      MUTA_RT_EXTRA_SERVER_ARGS: '["-b","512","-ub","128","--cache-type-k","q8_0"]'
+      # Core + the speculation draft measure ~4.2 GiB under emulation; the default 4300 MiB
+      # cap (main's 7 GB competition budget) would pin the ladder at L4 and refuse vision.
+      # This VM has 8 GiB: core 4.2 + vision ~1.1 + gateway/db/nginx still leave headroom.
+      MUTA_CORE_CAP_MIB: "5400"
       # Weights are provisioned by run.sh (scripts/fetch_models.py); the gateway must never
       # surprise-download 2.6 GB itself.
       MUTA_RT_AUTO_DOWNLOAD: "0"
