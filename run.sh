@@ -57,7 +57,15 @@ if [ "$NO_CACHE" = 1 ]; then
     docker compose build --no-cache
 else
     info "building images (cached; the first build compiles llama.cpp and is slow)"
-    docker compose build
+    if ! docker compose build; then
+        # A flaky network can fail even a fully-cached build (base-image re-resolution).
+        # Existing local images are a better outcome than no stack at all.
+        if docker image inspect muta-backend:latest muta-frontend:latest >/dev/null 2>&1; then
+            warn "image build failed (network?) — continuing with the existing local images"
+        else
+            die "image build failed and no local images exist — check the network and rerun"
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------
