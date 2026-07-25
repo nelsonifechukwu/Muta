@@ -167,6 +167,22 @@ It is a `/v1` client, not an embedded engine, and it samples the gateway + engin
 memory never inflates the number. Streaming rides an internal, non-schema route
 (`/v1/chat/stream`); the frozen `/v1` contract is untouched.
 
+**Images — `/img <path> [question]`.** Type `/img ~/work.jpg what did I get wrong?` to hand the
+tutor a photo of your working. The TUI posts it to `/v1/tutor/vision`, which spawns an ephemeral
+vision server (CORE-VISION, on `:8082`), **transcribes** the page, shows you the `read:` result,
+then feeds that text into a normal tutoring turn — *transcribe → tutor*, so the reply streams
+and the metrics panel behaves exactly as for a typed question. Omit the trailing text and it
+asks the tutor to help with the work generally. The image is downscaled, EXIF-stripped, and
+size/format-guarded at the gateway before the model ever sees it; a bad path, an oversized
+photo, or memory pressure comes back as a friendly line in the transcript, never a crash.
+
+> **Vision needs the full model bundle, not the dev default.** The quick-start `make model` only
+> fetches the 378 MB text GGUF. The vision path needs the core 4B weights **and** the `mmproj`
+> projector — run `make fetch-models` (build machine; see the README/`docs/model-provenance.md`).
+> Without them, `/img` returns the friendly "vision model not staged" refusal. CORE-VISION is
+> spawned on demand and TTL-reaped after 120 s idle, so it only costs RAM (~1.1 GiB) during and
+> just after a vision turn.
+
 ### Measuring it
 
 ```bash
@@ -213,6 +229,23 @@ curl -s localhost:8000/v1/chat -H 'content-type: application/json' -d '{
 ```
 
 Interactive docs: <http://127.0.0.1:8000/docs>.
+
+### Sending a photo (multipart)
+
+`/v1/tutor/vision` takes a `multipart/form-data` upload and returns a transcription — the same
+path the TUI's `/img` uses. It always answers 200 with `accepted`; a rejected image (too big,
+wrong format, or memory pressure) carries `accepted:false` and a `detail` you can show a student,
+never an error page.
+
+```bash
+curl -s localhost:8000/v1/tutor/vision \
+  -F session_id=ada \
+  -F image=@work.jpg
+# {"session_id":"ada","transcription":"∫ x^2 dx = ...","analysis":"","accepted":true,"detail":""}
+```
+
+Feed the `transcription` back into `/v1/chat` as the `message` to tutor from it. Needs the vision
+bundle staged (`make fetch-models`); see the TUI note in [Native](#2-native-fastest-dev-loop).
 
 ### The fields, and what they accept
 
