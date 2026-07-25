@@ -49,7 +49,8 @@ services:
       # Weights are provisioned by run.sh (scripts/fetch_models.py); the gateway must never
       # surprise-download 2.6 GB itself.
       MUTA_RT_AUTO_DOWNLOAD: "0"
-      MUTA_RT_DRAFT_MODEL: /app/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf
+      # Speculation draft: the small dev GGUF (make model). Skipped silently when absent.
+      MUTA_RT_DRAFT_MODEL: /app/models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf
       # Model load can take minutes under emulation; generous is free.
       MUTA_RT_STARTUP_TIMEOUT_S: "900"
       MUTA_RT_REQUEST_TIMEOUT_S: "600"

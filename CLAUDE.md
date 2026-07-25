@@ -53,9 +53,11 @@ missing; downloads are resumable and hash-skipped when present.
 The roster: core `models/core/Qwen3.5-4B-Q4_K_M.gguf` + `mmproj-F16.gguf` (vision),
 Moonshine tiny int8 (ASR), `models/asr/silero_vad.onnx` (VAD — underscore; the dash name
 never existed on disk), Piper `en_US-joe-medium` at its native **22050 Hz** (CC0 — lessac
-is NOT redistributable), bge-small (embeddings), draft **Qwen3.5-0.8B** wired into
-llama-server as `--model-draft` (there is no Qwen3.5-0.6B; 0.8B is the smallest
-first-party GGUF).
+is NOT redistributable), bge-small (embeddings). The speculation draft is the small dev GGUF
+`models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf` (`make model`), wired in as
+`--model-draft` and skipped when absent. (The pinned tier-B Qwen3.5-0.8B remains
+available via `--with-draft` for anyone who wants a same-family draft; note there
+is no Qwen3.5-0.6B.)
 
 ## Architecture rules that still bind
 

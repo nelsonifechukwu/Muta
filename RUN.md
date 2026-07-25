@@ -55,9 +55,10 @@ docker compose run --rm --no-deps backend \
 
 - `--mmproj-precision f16` is required: no first-party Q8_0 vision projector exists
   (`docs/model-provenance.md`), and the fetcher refuses to guess.
-- `--with-draft` fetches the speculative-decoding draft. **Note:** the draft is
-  **Qwen3.5-0.8B** — there is no 0.6B in the Qwen3.5 family; 0.8B is the smallest
-  first-party GGUF and is what `models/pins.lock.json` pins.
+- The speculative-decoding **draft** is the small dev GGUF, `models/Qwen3-0.6B/`
+  (fetch with `make model`). It's optional: when absent the engine simply runs
+  without speculation. (`--with-draft` can still fetch the pinned tier-B
+  Qwen3.5-0.8B if you want that instead — point `MUTA_RT_DRAFT_MODEL` at it.)
 
 The roster (all under `./models`, volume-mounted into the backend, never baked):
 
@@ -69,7 +70,7 @@ The roster (all under `./models`, volume-mounted into the backend, never baked):
 | VAD | `models/asr/silero_vad.onnx` |
 | TTS | `models/tts/piper/en_US-joe-medium.onnx` (CC0) |
 | RAG embeddings | `models/embed/bge-small-en-v1.5-q8_0.gguf` |
-| Speculation draft | `models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` |
+| Speculation draft (optional) | `models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf` |
 
 `make verify-models` re-checks hashes, licences and load smoke.
 
@@ -140,7 +141,7 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 |---|---|---|
 | `MUTA_RT_DB_URL` | `postgresql://muta:muta@db:5432/muta` | Postgres DSN |
 | `MUTA_RT_MODEL_DIR` / `_FILE` | `/app/models/core` / `Qwen3.5-4B-Q4_K_M.gguf` | core GGUF |
-| `MUTA_RT_DRAFT_MODEL` | `/app/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` | speculative draft (skipped if absent) |
+| `MUTA_RT_DRAFT_MODEL` | `/app/models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf` | speculative draft (skipped if absent) |
 | `MUTA_RT_AUTOSTART` | `1` | gateway lifespan starts/supervises llama-server |
 | `MUTA_RT_STARTUP_TIMEOUT_S` | `900` | model-load allowance (emulation is slow) |
 | `MUTA_RT_REQUEST_TIMEOUT_S` | `600` | per-request client timeout |

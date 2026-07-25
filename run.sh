@@ -71,7 +71,7 @@ required_models=(
     "models/tts/piper/en_US-joe-medium.onnx"
     "models/embed/bge-small-en-v1.5-q8_0.gguf"
 )
-DRAFT="models/draft/Qwen3.5-0.8B-Q4_K_M.gguf"
+DRAFT="models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf"
 missing=0
 for f in "${required_models[@]}"; do
     [ -e "$f" ] || { missing=1; break; }
@@ -86,9 +86,7 @@ if [ "$missing" = 1 ]; then
 elif [ ! -e "$DRAFT" ]; then
     # The draft only speeds decoding up — the stack runs without it, so its absence must
     # never block a boot. build_command skips --model-draft when the file is missing.
-    warn "speculation draft absent ($DRAFT) — running without it. Fetch later with:"
-    warn "  docker compose run --rm --no-deps backend \\"
-    warn "      python3.10 scripts/fetch_models.py --only draft --with-draft --mmproj-precision f16"
+    warn "speculation draft absent ($DRAFT) — running without it. Fetch it with: make model"
 else
     info "models already provisioned"
 fi
