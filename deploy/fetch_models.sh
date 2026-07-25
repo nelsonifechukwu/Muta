@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# SUPERSEDED by scripts/fetch_models.sh — that is the T2 implementation (`make fetch-models`).
+# It resolves every artifact against the live Hub API, pins commit SHAs in
+# models/pins.lock.json, verifies sha256 twice, captures licences, and covers asr/vad/tts/
+# embed as well as core. This script remains only for the `--fixture` dev path (Qwen3-0.6B)
+# and the deploy/versions.lock convention; consolidate the two before the bundle freeze.
+#
 # Download every model file by EXACT revision, then write MANIFEST.json (TDD T2, §11.2).
 #
 #   deploy/fetch_models.sh [--dest dist/models] [--fixture]

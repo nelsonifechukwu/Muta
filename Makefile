@@ -10,7 +10,7 @@ IMAGE ?= muta-dev:latest
 GIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)$(shell test -z "$$(git status --porcelain 2>/dev/null)" || echo -dirty)
 
 .PHONY: help install dev test lint fmt contract contract-test build smoke bench profile monitor tui package \
-	profiles core-cmd kv-budget engine fetch-models manifest stage selftest index audio
+	profiles core-cmd kv-budget engine fetch-models verify-models manifest stage selftest index audio
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -64,7 +64,10 @@ engine: ## Build inference engine variant A from the pinned tree (TDD T1)
 	deploy/build.sh
 
 fetch-models: ## Download models by exact revision + write MANIFEST.json (TDD T2, build machine only)
-	deploy/fetch_models.sh $(ARGS)
+	scripts/fetch_models.sh $(ARGS)
+
+verify-models: ## Acceptance checks for the fetched bundle: hashes, budget, licences, load smoke (TDD T2)
+	scripts/verify_models.sh $(ARGS)
 
 manifest: ## Verify a bundle against its manifest. Args: ROOT=dist
 	$(PY) -m bundle.manifest verify --root $(or $(ROOT),dist)

@@ -66,6 +66,18 @@ to local disk (C-4): mlocking pages that are being read from USB is the worst of
    still exist and still work — the TUI and `bench/` bind to them. Contract rule is
    additive-only from 1 Aug; this landed before that.
 
+5. **The vision projector is F16, not the Q8_0 of §4.2 — because a Q8_0 does not exist.**
+   No first-party publisher ships one (Qwen, unsloth, bartowski and lmstudio-community all
+   publish BF16/F16/F32 only); every Q8_0 mmproj on the Hub belongs to an abliterated or
+   roleplay *derivative*, i.e. a different model. `scripts/fetch_models.sh` refuses to
+   substitute silently — `--mmproj-precision f16` is a recorded acknowledgement. The cost
+   is **+0.13 GiB on the resident tier, which lands it at 3.41 GiB against a 3.3 GiB cap**,
+   and `verify_models.sh` fails on that rather than absorbing it. This is the one number in
+   §4 that a measurement made *worse* rather than better. Cheapest fix is to quantize
+   `mmproj-F16.gguf` ourselves with `llama-quantize` (no licence or provenance risk,
+   recovers ~0.3 GiB); it is not done, and it is not T2's job. Full reasoning and the
+   rejected candidates: `docs/model-provenance.md`.
+
 ---
 
 ## Still open, and honest about it

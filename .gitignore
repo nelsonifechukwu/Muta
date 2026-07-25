@@ -229,7 +229,14 @@ corpus/raw/
 # compiled / downloaded llama.cpp binaries
 runtime/build/
 # downloaded model weights (provisioned via runtime, not committed)
-models/
+# (contents, not the directory: git cannot re-include a path inside an excluded directory)
+models/*
+# ...but the provenance record IS the deliverable: the pins are what make a rebuild
+# reproducible, and the licences are what make the bundle redistributable (TDD §10.2,
+# §13). Weights are regenerable from these three; these are not regenerable from weights.
+!models/MANIFEST.json
+!models/pins.lock.json
+!models/LICENSES/
 # macOS filesystem metadata
 .DS_Store
 *.sqlite3

@@ -24,7 +24,15 @@ MANIFEST_VERSION = 1
 
 #: Licenses we are allowed to redistribute (TDD §13). `build` refuses anything else, so an
 #: incompatible artifact is caught at packaging time rather than by a judge.
-ALLOWED_LICENSES = frozenset({"Apache-2.0", "MIT", "BSD-3-Clause", "CC-BY-4.0", "unlicensed-local"})
+#: Keep in step with scripts/model_specs.py:ALLOWED_LICENSES — that module pins the shipped
+#: model artifacts, this one enforces the same policy at packaging time. A licence accepted
+#: there but missing here rejects the bundle during `package.sh`, a long way from where the
+#: choice was made; scripts/test_fetch_models.py asserts the two agree. CC0-1.0 is present
+#: because the pinned Piper voice (en_US-joe-medium) is a public-domain dedication — strictly
+#: more permissive than MIT. See docs/model-provenance.md.
+ALLOWED_LICENSES = frozenset(
+    {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0", "CC-BY-4.0", "unlicensed-local"}
+)
 
 
 def sha256_file(path: Path, *, block: int = _BLOCK) -> str:
