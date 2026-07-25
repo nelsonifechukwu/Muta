@@ -104,10 +104,16 @@ class ChatEngine:
 
         def _gen() -> Iterator[str]:
             chunks: list[str] = []
-            for delta in self.client.stream(messages, **params):
-                chunks.append(delta)
-                yield delta
-            self.store.add_message(cid, "assistant", "".join(chunks))
+            try:
+                for delta in self.client.stream(messages, **params):
+                    chunks.append(delta)
+                    yield delta
+            finally:
+                # Persist whatever was generated even when the consumer disconnects or the
+                # engine dies mid-stream — losing the assistant half of a turn corrupts the
+                # replayed history for every later turn. An empty reply stores nothing.
+                if chunks:
+                    self.store.add_message(cid, "assistant", "".join(chunks))
 
         return cid, _gen()
 
@@ -137,10 +143,14 @@ class ChatEngine:
 
         def _gen() -> Iterator[tuple[str, str]]:
             chunks: list[str] = []
-            for kind, text in self.client.stream_events(messages, **params):
-                if kind == "content":
-                    chunks.append(text)
-                yield kind, text
-            self.store.add_message(cid, "assistant", "".join(chunks))
+            try:
+                for kind, text in self.client.stream_events(messages, **params):
+                    if kind == "content":
+                        chunks.append(text)
+                    yield kind, text
+            finally:
+                # Same partial-persist rule as stream_chat; reasoning stays ephemeral.
+                if chunks:
+                    self.store.add_message(cid, "assistant", "".join(chunks))
 
         return cid, _gen()

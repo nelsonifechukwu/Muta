@@ -69,6 +69,15 @@ class LlamaServer:
         ]
         if cfg.n_threads is not None:
             cmd += ["--threads", str(cfg.n_threads)]
+        if cfg.draft_model and Path(cfg.draft_model).is_file():
+            # Speculative decoding: zero quality change by construction (draft proposes,
+            # core verifies). Flags mirror runtime/profiles.py:_speculation_flags.
+            cmd += [
+                "--model-draft", str(cfg.draft_model),
+                "--draft-max", str(cfg.draft_max),
+                "--draft-min", str(cfg.draft_min),
+                "--draft-p-min", "0.75",
+            ]
         cmd += cfg.extra_server_args
         return cmd
 

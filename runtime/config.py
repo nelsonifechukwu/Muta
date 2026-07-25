@@ -44,8 +44,19 @@ class RuntimeConfig(BaseSettings):
     enable_thinking: bool = True
     extra_server_args: list[str] = Field(default_factory=list)
     startup_timeout_s: float = 120.0
+    # Per-request client timeout against llama-server. Applies between chunks on streams;
+    # generous values are for emulated/dev boxes where time-to-first-token can be long.
+    request_timeout_s: float = 120.0
+    # When set (and the file exists), llama-server runs with speculative decoding against
+    # this draft GGUF. Flags mirror runtime/profiles.py:_speculation_flags.
+    draft_model: Path | None = None
+    draft_max: int = 8
+    draft_min: int = 1
+    # Container mode: the gateway lifespan starts/supervises llama-server itself.
+    autostart: bool = False
 
     # --- Persistent memory ------------------------------------------------------------
+    db_url: str = "postgresql://muta:muta@127.0.0.1:15432/muta"
     db_path: Path = Path("data/muta.sqlite3")
     max_history_messages: int = 20  # multi-turn context window trim (excludes system)
 

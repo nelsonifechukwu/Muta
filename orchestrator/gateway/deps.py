@@ -44,7 +44,10 @@ def load_prompt(mode: str) -> str:
 def get_engine() -> ChatEngine:
     cfg = RuntimeConfig()
     client = InferenceClient(
-        cfg.base_url, model=cfg.model_alias, enable_thinking=cfg.enable_thinking
+        cfg.base_url,
+        model=cfg.model_alias,
+        enable_thinking=cfg.enable_thinking,
+        timeout=cfg.request_timeout_s,
     )
     store = ConversationStore(cfg.db_path)
     return ChatEngine(client, store, max_history_messages=cfg.max_history_messages)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from runtime.chat import ChatEngine
 from runtime.client import Generation
 from runtime.memory import ConversationStore
@@ -90,3 +92,68 @@ def test_system_prompt_override_is_used():
     engine, client, _ = _engine()
     engine.chat("s1", "hi", system_prompt="BE TERSE")
     assert client.seen[0][0] == {"role": "system", "content": "BE TERSE"}
+
+
+class StreamingFakeClient(FakeClient):
+    """Streams canned deltas; optionally dies mid-stream like a crashed engine."""
+
+    def __init__(self, deltas: list[str], explode_after: int | None = None) -> None:
+        super().__init__()
+        self.deltas = deltas
+        self.explode_after = explode_after
+
+    def stream(self, messages, **params):
+        self.seen.append(messages)
+        for i, delta in enumerate(self.deltas):
+            if self.explode_after is not None and i == self.explode_after:
+                raise RuntimeError("engine died mid-stream")
+            yield delta
+
+    def stream_events(self, messages, **params):
+        for delta in self.stream(messages, **params):
+            yield "content", delta
+
+
+def _stream_engine(deltas, **kw) -> tuple[ChatEngine, ConversationStore]:
+    client = StreamingFakeClient(deltas, **kw)
+    store = ConversationStore(":memory:")
+    return ChatEngine(client, store), store
+
+
+def test_stream_chat_persists_full_reply_exactly_once_when_drained():
+    engine, store = _stream_engine(["Hel", "lo"])
+    cid, gen = engine.stream_chat("s1", "hi")
+    assert "".join(gen) == "Hello"
+    msgs = store.get_messages(cid)
+    assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "Hello")]
+
+
+def test_stream_chat_persists_partial_reply_when_consumer_abandons():
+    engine, store = _stream_engine(["Hel", "lo", " world"])
+    cid, gen = engine.stream_chat("s1", "hi")
+    assert next(gen) == "Hel"
+    assert next(gen) == "lo"
+    gen.close()  # browser Stop button / disconnect
+    msgs = store.get_messages(cid)
+    assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "Hello")]
+
+
+def test_stream_events_chat_persists_partial_reply_on_midstream_error():
+    engine, store = _stream_engine(["a", "b", "c"], explode_after=2)
+    cid, gen = engine.stream_events_chat("s1", "hi")
+    got: list[str] = []
+    with pytest.raises(RuntimeError):
+        for _kind, text in gen:
+            got.append(text)
+    assert got == ["a", "b"]
+    msgs = store.get_messages(cid)
+    assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "ab")]
+
+
+def test_stream_chat_skips_empty_assistant_message_when_nothing_streamed():
+    engine, store = _stream_engine(["x"], explode_after=0)
+    cid, gen = engine.stream_chat("s1", "hi")
+    with pytest.raises(RuntimeError):
+        next(gen)
+    msgs = store.get_messages(cid)
+    assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi")]
