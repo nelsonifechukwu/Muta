@@ -216,6 +216,27 @@ def test_vision_server_unreachable_is_a_friendly_refusal_not_500(wired, monkeypa
     assert body["accepted"] is False and "type the problem" in body["detail"]
 
 
+def test_a_malformed_vision_reply_is_a_friendly_refusal_not_500(wired, monkeypatch):
+    """A 200 with a body we can't read must not become a 500 in a judge's face (S2)."""
+    from runtime.vision_client import VisionResponseError
+
+    _, _, _, vision = wired
+    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
+
+    def bad(self, image_bytes, image_format, *, prompt=...):
+        raise VisionResponseError("unreadable vision response")
+
+    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient.transcribe", bad)
+    r = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("work.png", png_bytes(), "image/png")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["accepted"] is False and "type the problem" in body["detail"]
+
+
 # --- tools --------------------------------------------------------------------------------
 
 

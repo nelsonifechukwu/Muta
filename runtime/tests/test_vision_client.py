@@ -10,7 +10,11 @@ import base64
 import httpx
 import pytest
 
-from runtime.vision_client import DEFAULT_TRANSCRIBE_PROMPT, VisionClient
+from runtime.vision_client import (
+    DEFAULT_TRANSCRIBE_PROMPT,
+    VisionClient,
+    VisionResponseError,
+)
 
 
 def _capture(monkeypatch, payload: dict) -> dict:
@@ -53,6 +57,12 @@ def test_default_prompt_is_used_when_none_given(monkeypatch):
     assert seen["json"]["messages"][0]["content"][0]["text"] == DEFAULT_TRANSCRIBE_PROMPT
 
 
+def test_thinking_is_disabled_for_the_transcription(monkeypatch):
+    seen = _capture(monkeypatch, {"choices": [{"message": {"content": "ok"}}]})
+    VisionClient("http://127.0.0.1:8082").transcribe(b"x", "PNG")
+    assert seen["json"]["chat_template_kwargs"] == {"enable_thinking": False}
+
+
 def test_transport_error_propagates(monkeypatch):
     def boom(url, **kwargs):
         raise httpx.ConnectError("refused", request=httpx.Request("POST", url))
@@ -60,3 +70,25 @@ def test_transport_error_propagates(monkeypatch):
     monkeypatch.setattr(httpx, "post", boom)
     with pytest.raises(httpx.HTTPError):
         VisionClient("http://127.0.0.1:8082").transcribe(b"x", "PNG")
+
+
+def test_a_malformed_200_body_raises_vision_response_error_not_keyerror(monkeypatch):
+    # 200 OK but an error-shaped body (no `choices`). Must be a typed error the route catches,
+    # never a bare KeyError that escapes to a 500.
+    _capture(monkeypatch, {"error": "no slot free"})
+    with pytest.raises(VisionResponseError):
+        VisionClient("http://127.0.0.1:8082").transcribe(b"x", "PNG")
+
+
+def test_null_content_becomes_empty_string_not_none(monkeypatch):
+    # A null content would fail VisionReply.transcription: str validation -> 500. Coerce to "".
+    _capture(monkeypatch, {"choices": [{"message": {"content": None}}]})
+    assert VisionClient("http://127.0.0.1:8082").transcribe(b"x", "PNG") == ""
+
+
+def test_content_array_is_flattened_to_text(monkeypatch):
+    _capture(
+        monkeypatch,
+        {"choices": [{"message": {"content": [{"type": "text", "text": "x^2"}, {"type": "text", "text": " = 9"}]}}]},
+    )
+    assert VisionClient("http://127.0.0.1:8082").transcribe(b"x", "PNG") == "x^2 = 9"

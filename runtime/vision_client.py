@@ -9,6 +9,7 @@ stays string-only, so nothing on the resident-server path has to reason about im
 from __future__ import annotations
 
 import base64
+import json
 
 import httpx
 
@@ -21,6 +22,14 @@ DEFAULT_TRANSCRIBE_PROMPT = (
 
 #: PreparedImage.format -> data-URI MIME type.
 _MIME = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
+
+
+class VisionResponseError(RuntimeError):
+    """CORE-VISION answered (2xx) with a body we can't read as a transcription.
+
+    Separate from `httpx.HTTPError` so the caller can turn *both* transport failures and
+    malformed-but-200 replies into S2's friendly "type the problem" fallback — never a 500.
+    """
 
 
 class VisionClient:
@@ -59,9 +68,20 @@ class VisionClient:
             "stream": False,
             # Deterministic: a transcription is a reading, not a creative act.
             "temperature": 0.0,
+            # Reading the page needs no chain of thought; thinking is on by default for these
+            # Qwen3 weights, and here it would only add latency (and cost) to an OCR call.
+            "chat_template_kwargs": {"enable_thinking": False},
         }
         r = httpx.post(
             f"{self.base_url}/v1/chat/completions", json=payload, timeout=self.timeout
         )
         r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
+        try:
+            content = r.json()["choices"][0]["message"]["content"]
+        except (json.JSONDecodeError, KeyError, IndexError, TypeError) as e:
+            raise VisionResponseError(f"unreadable vision response: {e}") from e
+        # llama-server normally returns a plain string; be defensive about a content-array or a
+        # null (a refusal/empty read) so neither becomes a 500 or a Pydantic validation error.
+        if isinstance(content, list):
+            content = "".join(p.get("text", "") for p in content if isinstance(p, dict))
+        return content or ""
