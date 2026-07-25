@@ -452,15 +452,21 @@ def tutor_chat_stream(
     if decision.admission is Admission.REFUSED:
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
-    cid, _user_message_id, events = engine.stream_events_chat(
-        student_id=turn.student_id or turn.session_id,
-        message=turn.text,
-        conversation_id=turn.session_id,
-        system_prompt=load_prompt(_prompt_for(turn.mode)),
-        mode=turn.mode.value,
-        language=turn.lang,
-        **params_for_mode(turn.mode.value),
-    )
+    try:
+        cid, _user_message_id, events = engine.stream_events_chat(
+            student_id=turn.student_id or turn.session_id,
+            message=turn.text,
+            conversation_id=turn.session_id,
+            system_prompt=load_prompt(_prompt_for(turn.mode)),
+            mode=turn.mode.value,
+            language=turn.lang,
+            **params_for_mode(turn.mode.value),
+        )
+    except Exception:
+        # The generator's finally releases the slot only once streaming starts; a failure
+        # before that (store down, bad prompt) must not consume a decode lane forever.
+        sessions.release(turn.session_id)
+        raise
 
     def _sse():
         started = time.monotonic()

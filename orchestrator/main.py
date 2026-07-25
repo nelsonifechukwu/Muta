@@ -105,6 +105,8 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     finally:
         if reaper_task is not None:
             reaper_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await reaper_task
         if cfg.autostart:
             with contextlib.suppress(Exception):
                 get_vision().stop()

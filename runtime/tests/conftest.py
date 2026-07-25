@@ -33,14 +33,17 @@ def _test_dsn() -> str | None:
         return _dsn_cache  # type: ignore[return-value]
     try:
         import psycopg
-        from psycopg import conninfo
+        from psycopg import conninfo, errors
 
         with psycopg.connect(ADMIN_DSN, autocommit=True, connect_timeout=2) as conn:
             row = conn.execute(
                 "SELECT 1 FROM pg_database WHERE datname = %s", (TEST_DB,)
             ).fetchone()
             if row is None:
-                conn.execute(f'CREATE DATABASE "{TEST_DB}"')
+                try:
+                    conn.execute(f'CREATE DATABASE "{TEST_DB}"')
+                except errors.DuplicateDatabase:
+                    pass  # another test session won the race — the database exists, use it
         _dsn_cache = conninfo.make_conninfo(ADMIN_DSN, dbname=TEST_DB)
     except Exception:  # noqa: BLE001 — any failure here means "no postgres": skip, don't error
         _dsn_cache = None

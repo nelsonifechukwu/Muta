@@ -87,7 +87,7 @@ async def audio_transcribe(
 ) -> TranscribeResponse:
     """Uploaded audio → text. 503 when ASR is unavailable (the UI tells the student to
     type instead), 422 when ffmpeg can't decode the file."""
-    stack = get_audio()
+    stack = await run_in_threadpool(get_audio)  # first call loads ONNX models
     if not stack.asr.available:
         raise HTTPException(
             status_code=503,
@@ -138,7 +138,8 @@ def _split_sentences(buf: str) -> tuple[list[str], str]:
 @router.websocket("/audio/voice")
 async def audio_voice(ws: WebSocket) -> None:
     await ws.accept()
-    stack = get_audio()
+    # First-connection engine loads (ONNX models) must not stall the event loop.
+    stack = await run_in_threadpool(get_audio)
     if not stack.asr.available:
         await ws.send_json(
             {"type": "error", "reason": "asr-unavailable", "fallback": "type your question"}
@@ -146,10 +147,12 @@ async def audio_voice(ws: WebSocket) -> None:
         await ws.close()
         return
 
-    # Handshake.
+    # Handshake. A malformed or binary first frame closes politely, never a traceback.
     try:
         start = json.loads(await ws.receive_text())
-    except (WebSocketDisconnect, json.JSONDecodeError):
+    except WebSocketDisconnect:
+        return
+    except Exception:  # noqa: BLE001 — includes binary-first KeyError and bad JSON
         with contextlib.suppress(Exception):
             await ws.close()
         return
@@ -157,12 +160,15 @@ async def audio_voice(ws: WebSocket) -> None:
     mode = start.get("mode") or "socratic"
     state = {"conversation_id": start.get("conversation_id")}
 
-    vad = SileroVad(stack.config)
+    vad = await run_in_threadpool(SileroVad, stack.config)
     endpointer = Endpointer(
         trailing_silence_seconds=stack.config.asr.vad.trailing_silence_seconds,
         max_utterance_seconds=stack.config.asr.vad.max_utterance_seconds,
     )
     buffer = bytearray()
+    # Silence never pops a VAD segment, so an open quiet mic would grow this forever.
+    # Keep only the trailing max-utterance window — the most any endpoint can consume.
+    max_buffer_bytes = int(stack.config.asr.vad.max_utterance_seconds * SAMPLE_RATE * 2)
     cancel = asyncio.Event()
     respond_task: asyncio.Task | None = None
 
@@ -180,6 +186,22 @@ async def audio_voice(ws: WebSocket) -> None:
 
     async def respond(utterance) -> None:
         """utterance: float32 samples (VAD segment) or int16 PCM bytes (fallback path)."""
+        try:
+            await _respond_inner(utterance)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 — a failed turn must be visible, not silent
+            log.exception("voice turn failed")
+            with contextlib.suppress(Exception):
+                await ws.send_json(
+                    {
+                        "type": "error",
+                        "reason": "voice-turn-failed",
+                        "fallback": "type your question",
+                    }
+                )
+
+    async def _respond_inner(utterance) -> None:
         if isinstance(utterance, (bytes, bytearray)):
             text = await run_in_threadpool(stack.asr.transcribe_pcm, bytes(utterance))
         else:
@@ -188,14 +210,19 @@ async def audio_voice(ws: WebSocket) -> None:
             await ws.send_json({"type": "done", "heard": False})
             return
 
-        engine = get_engine()
-        cid, _mid, events = engine.stream_events_chat(
-            student_id=student_id,
-            message=text,
-            conversation_id=state["conversation_id"],
-            system_prompt=load_prompt(mode),
-            mode=mode,
-            title=text[:80],
+        # get_engine's first call constructs the Postgres store (can wait on the pool) and
+        # stream_events_chat does several store round-trips before returning — threadpool
+        # both so one cold voice request can't freeze every other client.
+        engine = await run_in_threadpool(get_engine)
+        cid, _mid, events = await run_in_threadpool(
+            lambda: engine.stream_events_chat(
+                student_id=student_id,
+                message=text,
+                conversation_id=state["conversation_id"],
+                system_prompt=load_prompt(mode),
+                mode=mode,
+                title=text[:80],
+            )
         )
         state["conversation_id"] = cid
         await ws.send_json({"type": "transcript", "text": text, "conversation_id": cid})
@@ -222,8 +249,12 @@ async def audio_voice(ws: WebSocket) -> None:
             hub.end(cid)
         await ws.send_json({"type": "done"})
 
-    def _endpoint(utterance) -> None:
+    async def _endpoint(utterance) -> None:
         nonlocal respond_task
+        if respond_task is not None and not respond_task.done():
+            respond_task.cancel()
+            with contextlib.suppress(BaseException):
+                await respond_task
         cancel.clear()
         respond_task = asyncio.create_task(respond(utterance))
 
@@ -232,18 +263,24 @@ async def audio_voice(ws: WebSocket) -> None:
             msg = await ws.receive()
             if msg["type"] == "websocket.disconnect":
                 break
-            busy = respond_task is not None and not respond_task.done()
+            # After a barge the old task may still be winding down — treat as not busy so
+            # the student's next words aren't eaten.
+            busy = (
+                respond_task is not None and not respond_task.done() and not cancel.is_set()
+            )
             frame = msg.get("bytes")
             if frame is not None:
                 if busy:
                     continue  # half-duplex: mic frames during a reply are dropped
                 buffer.extend(frame)
+                if len(buffer) > max_buffer_bytes:
+                    del buffer[: len(buffer) - max_buffer_bytes]
                 if vad.available:
-                    vad.accept(frame)
+                    await run_in_threadpool(vad.accept, bytes(frame))
                     segment = vad.pop_segment()
                     if segment is not None:
                         buffer.clear()
-                        _endpoint(segment)
+                        await _endpoint(segment)
                 else:
                     seconds = len(frame) / 2 / SAMPLE_RATE
                     if endpointer.accept(seconds, is_speech=_rms_loud(frame)):
@@ -252,7 +289,7 @@ async def audio_voice(ws: WebSocket) -> None:
                         buffer.clear()
                         endpointer.reset()
                         if had_speech:
-                            _endpoint(utt)
+                            await _endpoint(utt)
             elif msg.get("text"):
                 try:
                     data = json.loads(msg["text"])
@@ -266,7 +303,7 @@ async def audio_voice(ws: WebSocket) -> None:
                     buffer.clear()
                     endpointer.reset()
                     if segment is not None or len(utt):
-                        _endpoint(utt)
+                        await _endpoint(utt)
                 elif kind == "barge":
                     cancel.set()
     except WebSocketDisconnect:
@@ -275,5 +312,9 @@ async def audio_voice(ws: WebSocket) -> None:
         cancel.set()
         if respond_task is not None:
             respond_task.cancel()
-            with contextlib.suppress(BaseException):
+            try:
                 await respond_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:  # noqa: BLE001
+                log.exception("voice respond task failed during teardown")

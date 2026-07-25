@@ -59,10 +59,12 @@ services:
       HF_HOME: /app/models/.cache/huggingface
     healthcheck:
       # /v1/ready is HTTP 200 even when degraded, so grep the body, not the status.
+      # Window (start_period + retries×interval ≈ 900s) must cover
+      # MUTA_RT_STARTUP_TIMEOUT_S — a first 4B load under emulation can take 10+ min.
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/v1/ready | grep -q '\"ready\":true'"]
       interval: 10s
       timeout: 5s
-      retries: 30
+      retries: 60
       start_period: 300s
 
   frontend:

@@ -69,11 +69,11 @@ WORKDIR /app
 # a C++ toolchain this stage deliberately lacks — fail loudly instead of compiling for an hour.
 COPY pyproject.toml /app/pyproject.toml
 RUN python3.10 -m pip install --no-cache-dir --upgrade pip \
+    && python3.10 -m pip install --no-cache-dir --only-binary=:all: "sherpa-onnx>=1.10" \
     && python3.10 -m pip install --no-cache-dir tomli \
     && python3.10 -c "import tomli; d = tomli.load(open('pyproject.toml','rb'))['project']; \
 print('\n'.join(d['dependencies'] + d['optional-dependencies']['dev']))" > /tmp/reqs.txt \
-    && python3.10 -m pip install --no-cache-dir -r /tmp/reqs.txt \
-    && python3.10 -m pip install --no-cache-dir --only-binary=:all: "sherpa-onnx>=1.10"
+    && python3.10 -m pip install --no-cache-dir -r /tmp/reqs.txt
 COPY . .
 RUN python3.10 -m pip install --no-cache-dir --no-deps -e ".[dev]"
 

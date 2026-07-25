@@ -26,6 +26,9 @@ RATE_WINDOW_S = 2.0
 THROTTLE_TEMP_C = 85.0
 # Drop a conversation's tick history after this much silence.
 TICKS_IDLE_TTL_S = 300.0
+# Stop trying to read the temperature only after this many consecutive misses — a single
+# `sensors -u` timeout under load on a real Linux box must not null the metric forever.
+TEMP_MISS_LIMIT = 3
 
 
 class TelemetryHub:
@@ -37,7 +40,9 @@ class TelemetryHub:
         self._temp_c: float | None = None
         # Sticky miss: inside the backend container `sensors -u` exists but reads nothing on
         # a macOS VM — don't pay a subprocess every second forever for a permanent None.
+        # Latches only after TEMP_MISS_LIMIT consecutive misses (transients don't count).
         self._temp_unavailable = False
+        self._temp_misses = 0
         self._ticks: dict[str, deque[tuple[float, int]]] = {}
         self._generating: set[str] = set()
         self._thread: threading.Thread | None = None
@@ -70,7 +75,11 @@ class TelemetryHub:
             except Exception:  # noqa: BLE001 — telemetry must never take the service down
                 temp = None
             if temp is None:
-                self._temp_unavailable = True
+                self._temp_misses += 1
+                if self._temp_misses >= TEMP_MISS_LIMIT:
+                    self._temp_unavailable = True
+            else:
+                self._temp_misses = 0
         with self._lock:
             if rss:
                 self._rss_bytes = rss

@@ -197,12 +197,13 @@ function openTelemetry(cid) {
 
 function closeTelemetry(afterMs = 4000) {
   clearTimeout(telemetryCloseTimer);
-  telemetryCloseTimer = setTimeout(() => {
-    if (telemetrySource) {
-      telemetrySource.close();
-      telemetrySource = null;
-    }
-  }, afterMs);
+  const source = telemetrySource; // capture: a later openTelemetry must not be killed by us
+  const close = () => {
+    if (source) source.close();
+    if (telemetrySource === source) telemetrySource = null;
+  };
+  if (afterMs === 0) close();
+  else telemetryCloseTimer = setTimeout(close, afterMs);
 }
 
 // ---------------------------------------------------------------------------
@@ -472,10 +473,10 @@ async function pumpSse(res, assistant) {
           conversationId = ev.conversation_id || conversationId;
           assistant.finalize();
         }
-        if (!telemetryOpened && (ev.reasoning || ev.delta)) {
-          // The conversation id is only certain at `done` for brand-new threads, but for
-          // existing ones we can watch live from the first token.
-          if (conversationId) openTelemetry(conversationId);
+        if (!telemetryOpened && (ev.reasoning || ev.delta) && conversationId) {
+          // Existing threads watch live from the first token; brand-new ones learn their
+          // id at `done` and are opened by the post-stream branch below.
+          openTelemetry(conversationId);
           telemetryOpened = true;
         }
       }

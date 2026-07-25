@@ -23,6 +23,7 @@
   let active = false; // voice mode on
   let replying = false; // server is generating/speaking
   let micMuted = false; // drop capture while TTS plays
+  let suppressTts = false; // after a barge: ignore stale TTS until the next turn
   let pending = new Int16Array(0);
   let playhead = 0;
   let activeSources = [];
@@ -32,20 +33,22 @@
 
   // --- capture pipeline ---------------------------------------------------
 
+  let resamplePos = 0; // fractional read position carried across worklet blocks
+
   function downsampleTo16k(float32, fromRate) {
     const ratio = fromRate / TARGET_RATE;
-    const outLen = Math.floor(float32.length / ratio);
-    const out = new Int16Array(outLen);
-    for (let i = 0; i < outLen; i++) {
-      const idx = i * ratio;
-      const lo = Math.floor(idx);
-      const hi = Math.min(lo + 1, float32.length - 1);
-      const frac = idx - lo;
-      let s = float32[lo] * (1 - frac) + float32[hi] * frac;
+    const out = [];
+    let pos = resamplePos;
+    while (pos < float32.length - 1) {
+      const lo = Math.floor(pos);
+      const frac = pos - lo;
+      let s = float32[lo] * (1 - frac) + float32[lo + 1] * frac;
       s = Math.max(-1, Math.min(1, s));
-      out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      out.push(s < 0 ? s * 0x8000 : s * 0x7fff);
+      pos += ratio;
     }
-    return out;
+    resamplePos = Math.max(0, pos - float32.length);
+    return Int16Array.from(out);
   }
 
   function onCapture(float32) {
@@ -62,6 +65,7 @@
   }
 
   async function startCapture() {
+    resamplePos = 0;
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     await audioCtx.resume();
@@ -186,7 +190,7 @@
 
   function onWsMessage(ev) {
     if (ev.data instanceof ArrayBuffer) {
-      playPcm(ev.data);
+      if (!suppressTts) playPcm(ev.data); // stale sentence after a barge: drop it
       return;
     }
     let msg;
@@ -200,6 +204,7 @@
         stopVoice(msg.fallback ? `Voice unavailable — ${msg.fallback}.` : "Voice unavailable.");
         break;
       case "transcript":
+        suppressTts = false; // a new turn: play its speech
         chat.setConversationId(msg.conversation_id);
         chat.addUserMessage(msg.text, [{ kind: "audio" }]);
         assistant = chat.beginAssistantMessage();
@@ -216,6 +221,7 @@
         if (assistant) assistant.pushDelta(msg.text);
         break;
       case "tts_start":
+        if (suppressTts) break; // barged: don't re-mute the mic we just freed
         ttsRate = msg.sample_rate || ttsRate;
         micMuted = true;
         setStatus("Speaking…");
@@ -230,6 +236,7 @@
         }
         assistant = null;
         replying = false;
+        suppressTts = false;
         chat.setGenerating(false);
         chat.closeTelemetry();
         maybeResumeListening();
@@ -265,6 +272,7 @@
 
   function barge() {
     // Interrupt: stop local playback, tell the server to abandon the reply, keep listening.
+    suppressTts = true; // sentences already synthesized keep arriving — ignore them
     stopPlayback();
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "barge" }));
     if (assistant) {

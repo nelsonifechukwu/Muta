@@ -84,9 +84,15 @@ class ConversationStore:
             kwargs={"row_factory": dict_row},
             open=False,
         )
-        self._pool.open(wait=True, timeout=_OPEN_TIMEOUT_S)
-        with self._pool.connection() as conn:
-            conn.execute(_SCHEMA)
+        try:
+            self._pool.open(wait=True, timeout=_OPEN_TIMEOUT_S)
+            with self._pool.connection() as conn:
+                conn.execute(_SCHEMA)
+        except Exception:
+            # A half-constructed store has no owner to close it — every retry against a
+            # down db would otherwise leak a pool and its reconnect worker thread.
+            self._pool.close()
+            raise
 
     def ping(self) -> bool:
         try:
