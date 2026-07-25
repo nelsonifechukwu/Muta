@@ -34,14 +34,13 @@ class FakeClient:
         return self.chat_with_timings(messages, **params).text
 
 
-def _engine(**kw) -> tuple[ChatEngine, FakeClient, ConversationStore]:
+def _engine(store: ConversationStore, **kw) -> tuple[ChatEngine, FakeClient, ConversationStore]:
     client = FakeClient()
-    store = ConversationStore(":memory:")
     return ChatEngine(client, store, **kw), client, store
 
 
-def test_first_turn_creates_conversation_and_persists_both_sides():
-    engine, client, store = _engine()
+def test_first_turn_creates_conversation_and_persists_both_sides(store):
+    engine, client, store = _engine(store)
     result = engine.chat("s1", "what is a derivative?")
 
     assert result.reply == "reply-1"
@@ -55,8 +54,8 @@ def test_first_turn_creates_conversation_and_persists_both_sides():
     assert client.seen[0][-1] == {"role": "user", "content": "what is a derivative?"}
 
 
-def test_second_turn_replays_prior_history():
-    engine, client, store = _engine()
+def test_second_turn_replays_prior_history(store):
+    engine, client, store = _engine(store)
     first = engine.chat("s1", "turn one")
     engine.chat("s1", "turn two", conversation_id=first.conversation_id)
 
@@ -68,15 +67,15 @@ def test_second_turn_replays_prior_history():
     assert second_call[-1]["content"] == "turn two"
 
 
-def test_conversation_id_is_stable_across_turns():
-    engine, _, _ = _engine()
+def test_conversation_id_is_stable_across_turns(store):
+    engine, _, _ = _engine(store)
     a = engine.chat("s1", "one")
     b = engine.chat("s1", "two", conversation_id=a.conversation_id)
     assert a.conversation_id == b.conversation_id
 
 
-def test_history_is_trimmed_to_max():
-    engine, client, _ = _engine(max_history_messages=2)
+def test_history_is_trimmed_to_max(store):
+    engine, client, _ = _engine(store, max_history_messages=2)
     first = engine.chat("s1", "m0")
     cid = first.conversation_id
     for i in range(1, 4):
@@ -88,8 +87,8 @@ def test_history_is_trimmed_to_max():
     assert len(last_call) <= 1 + 2 + 1
 
 
-def test_system_prompt_override_is_used():
-    engine, client, _ = _engine()
+def test_system_prompt_override_is_used(store):
+    engine, client, _ = _engine(store)
     engine.chat("s1", "hi", system_prompt="BE TERSE")
     assert client.seen[0][0] == {"role": "system", "content": "BE TERSE"}
 
@@ -114,22 +113,21 @@ class StreamingFakeClient(FakeClient):
             yield "content", delta
 
 
-def _stream_engine(deltas, **kw) -> tuple[ChatEngine, ConversationStore]:
+def _stream_engine(store, deltas, **kw) -> tuple[ChatEngine, ConversationStore]:
     client = StreamingFakeClient(deltas, **kw)
-    store = ConversationStore(":memory:")
     return ChatEngine(client, store), store
 
 
-def test_stream_chat_persists_full_reply_exactly_once_when_drained():
-    engine, store = _stream_engine(["Hel", "lo"])
+def test_stream_chat_persists_full_reply_exactly_once_when_drained(store):
+    engine, store = _stream_engine(store, ["Hel", "lo"])
     cid, gen = engine.stream_chat("s1", "hi")
     assert "".join(gen) == "Hello"
     msgs = store.get_messages(cid)
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "Hello")]
 
 
-def test_stream_chat_persists_partial_reply_when_consumer_abandons():
-    engine, store = _stream_engine(["Hel", "lo", " world"])
+def test_stream_chat_persists_partial_reply_when_consumer_abandons(store):
+    engine, store = _stream_engine(store, ["Hel", "lo", " world"])
     cid, gen = engine.stream_chat("s1", "hi")
     assert next(gen) == "Hel"
     assert next(gen) == "lo"
@@ -138,8 +136,8 @@ def test_stream_chat_persists_partial_reply_when_consumer_abandons():
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "Hello")]
 
 
-def test_stream_events_chat_persists_partial_reply_on_midstream_error():
-    engine, store = _stream_engine(["a", "b", "c"], explode_after=2)
+def test_stream_events_chat_persists_partial_reply_on_midstream_error(store):
+    engine, store = _stream_engine(store, ["a", "b", "c"], explode_after=2)
     cid, gen = engine.stream_events_chat("s1", "hi")
     got: list[str] = []
     with pytest.raises(RuntimeError):
@@ -150,8 +148,8 @@ def test_stream_events_chat_persists_partial_reply_on_midstream_error():
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "ab")]
 
 
-def test_stream_chat_skips_empty_assistant_message_when_nothing_streamed():
-    engine, store = _stream_engine(["x"], explode_after=0)
+def test_stream_chat_skips_empty_assistant_message_when_nothing_streamed(store):
+    engine, store = _stream_engine(store, ["x"], explode_after=0)
     cid, gen = engine.stream_chat("s1", "hi")
     with pytest.raises(RuntimeError):
         next(gen)

@@ -38,7 +38,7 @@ def main() -> int:
     server = LlamaServer(cfg)
     # Engine logs go to a file so they don't clutter the conversation.
     _, managed = server.ensure(log_file="data/llama-server.log")
-    store = ConversationStore(cfg.db_path)
+    store = ConversationStore(cfg.db_url)
     engine = ChatEngine(
         InferenceClient(cfg.base_url, model=cfg.model_alias, enable_thinking=cfg.enable_thinking),
         store,
@@ -46,7 +46,7 @@ def main() -> int:
     )
 
     conversation_id = args.conversation
-    print(f"\nMuta · {cfg.model_alias} · mode={args.mode} · db={cfg.db_path}")
+    print(f"\nMuta · {cfg.model_alias} · mode={args.mode} · db={cfg.db_url}")
     print("Type your message; 'exit' or Ctrl-D to quit.\n")
     try:
         while True:

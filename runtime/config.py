@@ -56,8 +56,9 @@ class RuntimeConfig(BaseSettings):
     autostart: bool = False
 
     # --- Persistent memory ------------------------------------------------------------
+    # Postgres DSN. Default points at the compose `db` service as published on the host
+    # (127.0.0.1:15432); inside the backend container compose overrides it to db:5432.
     db_url: str = "postgresql://muta:muta@127.0.0.1:15432/muta"
-    db_path: Path = Path("data/muta.sqlite3")
     max_history_messages: int = 20  # multi-turn context window trim (excludes system)
 
     @property

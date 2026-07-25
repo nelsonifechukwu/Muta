@@ -49,7 +49,7 @@ def get_engine() -> ChatEngine:
         enable_thinking=cfg.enable_thinking,
         timeout=cfg.request_timeout_s,
     )
-    store = ConversationStore(cfg.db_path)
+    store = ConversationStore(cfg.db_url)
     return ChatEngine(client, store, max_history_messages=cfg.max_history_messages)
 
 
