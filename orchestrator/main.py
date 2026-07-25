@@ -14,8 +14,11 @@ Target topology on the deploy machine: two processes — `llama-server` and this
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import logging
 import os
+import threading
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -26,32 +29,84 @@ from fastapi.staticfiles import StaticFiles
 from orchestrator.bench_metrics import PIDFILE
 from orchestrator.bench_metrics import app as bench_app
 from orchestrator.exam.app import app as exam_app
+from orchestrator.gateway.deps import get_vision
 from orchestrator.gateway.routes import router as gateway_router
 from orchestrator.math.app import app as math_app
 from orchestrator.pedagogy.app import app as pedagogy_app
 from orchestrator.retrieval.app import app as retrieval_app
+from runtime.config import RuntimeConfig
+from runtime.server import LlamaServer
 
 API_PREFIX = "/v1"
+VISION_REAP_INTERVAL_S = 30.0
+
+log = logging.getLogger("muta.orchestrator.main")
+
+
+def _start_engine_thread(server: LlamaServer, log_file: Path) -> threading.Thread:
+    """Start llama-server from a daemon thread, not inline: the model load can take minutes
+    on an emulated box, and a raise inside lifespan would crash-loop the container. The
+    gateway binds immediately; `/v1/ready` reports `inference:false` until the engine is up.
+    """
+
+    def _run() -> None:
+        try:
+            server.ensure(log_file=log_file)
+        except Exception:  # noqa: BLE001 — startup failure is a degraded state, not a crash
+            log.exception("llama-server failed to start; /v1/ready stays false")
+
+    thread = threading.Thread(target=_run, name="engine-supervisor", daemon=True)
+    thread.start()
+    return thread
+
+
+async def _vision_reaper() -> None:
+    """Tick the CORE-VISION idle reaper: without it the ~3.3 GB ephemeral vision instance
+    lives forever after the first image."""
+    while True:
+        await asyncio.sleep(VISION_REAP_INTERVAL_S)
+        with contextlib.suppress(Exception):
+            get_vision().reap_if_idle()
 
 
 @contextlib.asynccontextmanager
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Write the pidfile that bench/monitor.py attaches by.
+    """Pidfile for bench/monitor.py, plus (when MUTA_RT_AUTOSTART=1, i.e. in the backend
+    container) engine supervision and the vision idle reaper.
 
-    On the lifespan hook rather than at import, because import happens BEFORE the socket is
-    bound: a second instance that loses the race for the port would otherwise clobber the
-    running instance's pidfile and then delete it on the way out. Uvicorn runs lifespan
-    startup only after a successful bind.
-
-    Failure to write is never fatal — this is telemetry convenience, and the monitor falls
-    back to probing the port.
+    Pidfile on the lifespan hook rather than at import, because import happens BEFORE the
+    socket is bound: a second instance that loses the race for the port would otherwise
+    clobber the running instance's pidfile and then delete it on the way out. Failure to
+    write is never fatal.
     """
     with contextlib.suppress(OSError):
         PIDFILE.parent.mkdir(parents=True, exist_ok=True)
         PIDFILE.write_text(f"{os.getpid()}\n")
+
+    cfg = RuntimeConfig()
+    engine_server: LlamaServer | None = None
+    reaper_task: asyncio.Task | None = None
+    if cfg.autostart:
+        root = Path(os.environ.get("TUTOR_ROOT", "/opt/tutor"))
+        for sub in ("data/logs", "data/kv-slots"):
+            # CORE-VISION's --log-file dies at startup if data/logs is missing.
+            with contextlib.suppress(OSError):
+                (root / sub).mkdir(parents=True, exist_ok=True)
+        engine_server = LlamaServer(cfg)
+        _start_engine_thread(engine_server, root / "data" / "logs" / "llama-server.log")
+        reaper_task = asyncio.create_task(_vision_reaper())
+
     try:
         yield
     finally:
+        if reaper_task is not None:
+            reaper_task.cancel()
+        if cfg.autostart:
+            with contextlib.suppress(Exception):
+                get_vision().stop()
+        if engine_server is not None:
+            with contextlib.suppress(Exception):
+                engine_server.stop()  # no-op when we only attached to an external engine
         with contextlib.suppress(OSError):
             if PIDFILE.is_file() and PIDFILE.read_text().strip() == str(os.getpid()):
                 PIDFILE.unlink()

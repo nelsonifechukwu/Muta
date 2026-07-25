@@ -60,6 +60,7 @@ from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
 from runtime.chat import ChatEngine
 from runtime.client import Generation
+from runtime.config import RuntimeConfig
 from runtime.slots import SlotError
 from runtime.vision import VisionDenied, VisionManager
 from runtime.vision_client import VisionClient, VisionResponseError
@@ -77,15 +78,34 @@ def health() -> HealthResponse:
 
 
 @router.get("/ready", response_model=ReadyResponse, tags=["ops"])
-def ready(engine: ChatEngine = Depends(get_engine)) -> ReadyResponse:
-    checks = {"gateway": True, "inference": _inference_up(engine)}
+def ready() -> ReadyResponse:
+    """Probes engine + db directly from config, never through `get_engine()` — readiness
+    must report a down dependency, not hang constructing a store against it. Always HTTP
+    200; the compose healthcheck greps the body for `"ready":true`."""
+    cfg = RuntimeConfig()
+    checks = {
+        "gateway": True,
+        "inference": _url_up(f"{cfg.base_url}/health"),
+        "db": _db_up(cfg.db_url),
+    }
     return ReadyResponse(ready=all(checks.values()), checks=checks)
 
 
-def _inference_up(engine: ChatEngine) -> bool:
+def _url_up(url: str) -> bool:
     try:
-        return httpx.get(f"{engine.client.base_url}/health", timeout=2.0).status_code == 200
+        return httpx.get(url, timeout=2.0).status_code == 200
     except httpx.HTTPError:
+        return False
+
+
+def _db_up(dsn: str) -> bool:
+    try:
+        import psycopg
+
+        with psycopg.connect(dsn, connect_timeout=2) as conn:
+            conn.execute("SELECT 1")
+        return True
+    except Exception:  # noqa: BLE001 — any failure means "not ready", never a crash
         return False
 
 
