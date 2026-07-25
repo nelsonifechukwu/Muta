@@ -65,6 +65,85 @@ class ThermalReport:
     throttled: bool
 
 
+def family(pids: int | Iterable[int]) -> dict[int, psutil.Process]:
+    """`[root] + children(recursive=True)` per root, de-duplicated by PID.
+
+    Shared by TreeSampler (bench runs) and orchestrator/telemetry.py (the live hub) so the
+    tree-walk definition — the thing the score depends on — exists exactly once."""
+    root_pids = [pids] if isinstance(pids, int) else [p for p in pids if p]
+    out: dict[int, psutil.Process] = {}
+    for pid in root_pids:
+        try:
+            root = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            continue
+        try:
+            procs = [root] + root.children(recursive=True)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        for proc in procs:
+            if proc.is_running():
+                out[proc.pid] = proc
+    return out
+
+
+def family_rss_bytes(pids: int | Iterable[int]) -> int:
+    """Whole-tree RSS right now; 0 when nothing is measurable. Never raises."""
+    total = 0
+    for proc in family(pids).values():
+        try:
+            total += proc.memory_info().rss
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return total
+
+
+def read_temp_c() -> float | None:
+    """CPU package/core temperature in °C, or None when unmeasurable (e.g. Docker on macOS:
+    no hwmon in the VM). psutil first, `sensors -u` as fallback — same hint matching as the
+    upstream profiler."""
+    if hasattr(psutil, "sensors_temperatures"):
+        try:
+            temps = psutil.sensors_temperatures() or {}
+            fallback: float | None = None
+            for entries in temps.values():
+                for entry in entries:
+                    if not entry.current or entry.current <= 0:
+                        continue
+                    label = (entry.label or "").lower()
+                    if any(h in label for h in _CORE_HINTS):
+                        return float(entry.current)
+                    if fallback is None:
+                        fallback = float(entry.current)
+            if fallback is not None:
+                return fallback
+        except (AttributeError, OSError):
+            pass
+    if shutil.which("sensors"):
+        try:
+            out = subprocess.check_output(["sensors", "-u"], text=True, timeout=2)
+        except (subprocess.SubprocessError, OSError):
+            return None
+        fallback_value: float | None = None
+        block_is_core = False
+        for line in out.splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("+") and ":" not in stripped:
+                block_is_core = any(h in stripped.lower() for h in _CORE_HINTS)
+            if "_input:" in line:
+                try:
+                    value = float(line.split(":", 1)[1].strip())
+                except ValueError:
+                    continue
+                if value > 0:
+                    if block_is_core:
+                        return value
+                    if fallback_value is None:
+                        fallback_value = value
+        return fallback_value
+    return None
+
+
 def summarize(samples: list[Sample]) -> MemoryReport:
     """Port of upstream MemorySampler.report(). Cross-checked in test_sampler.py."""
     if not samples:
@@ -182,46 +261,7 @@ class ThermalSampler:
         self._thread: threading.Thread | None = None
 
     def _read_temp(self) -> float | None:
-        if hasattr(psutil, "sensors_temperatures"):
-            try:
-                temps = psutil.sensors_temperatures() or {}
-                fallback: float | None = None
-                for entries in temps.values():
-                    for entry in entries:
-                        if not entry.current or entry.current <= 0:
-                            continue
-                        label = (entry.label or "").lower()
-                        if any(h in label for h in _CORE_HINTS):
-                            return float(entry.current)
-                        if fallback is None:
-                            fallback = float(entry.current)
-                if fallback is not None:
-                    return fallback
-            except (AttributeError, OSError):
-                pass
-        if shutil.which("sensors"):
-            try:
-                out = subprocess.check_output(["sensors", "-u"], text=True, timeout=2)
-            except (subprocess.SubprocessError, OSError):
-                return None
-            fallback_value: float | None = None
-            block_is_core = False
-            for line in out.splitlines():
-                stripped = line.strip()
-                if stripped and not stripped.startswith("+") and ":" not in stripped:
-                    block_is_core = any(h in stripped.lower() for h in _CORE_HINTS)
-                if "_input:" in line:
-                    try:
-                        value = float(line.split(":", 1)[1].strip())
-                    except ValueError:
-                        continue
-                    if value > 0:
-                        if block_is_core:
-                            return value
-                        if fallback_value is None:
-                            fallback_value = value
-            return fallback_value
-        return None
+        return read_temp_c()
 
     def _poll(self) -> None:
         psutil.cpu_percent(interval=None)  # prime; the first call returns a meaningless 0.0

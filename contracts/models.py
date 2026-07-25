@@ -287,3 +287,19 @@ class ConversationDeleted(BaseModel):
 class TranscribeResponse(BaseModel):
     text: str = Field(description="What the ASR heard; empty when nothing was recognised.")
     attachment_id: int | None = Field(None, description="Stored copy of the uploaded audio.")
+
+
+class TelemetrySnapshot(BaseModel):
+    """Per-conversation live telemetry. Unmeasurable metrics are null (the UI shows —),
+    never an error: Docker-on-macOS has no CPU temperature, for example."""
+
+    rss_gb: float = Field(description="Current RSS of the whole backend process tree.")
+    peak_rss_gb: float = Field(description="Peak tree RSS since the backend started.")
+    cpu_temp_c: float | None = Field(None, description="CPU package temp; null if unreadable.")
+    throttled: bool | None = Field(
+        None, description="temp > 85 °C; null when the temperature is unreadable."
+    )
+    tokens_per_second: float | None = Field(
+        None, description="Rolling decode rate of this conversation's active generation."
+    )
+    generating: bool = False

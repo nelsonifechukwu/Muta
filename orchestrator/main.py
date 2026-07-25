@@ -34,6 +34,7 @@ from orchestrator.gateway.routes import router as gateway_router
 from orchestrator.math.app import app as math_app
 from orchestrator.pedagogy.app import app as pedagogy_app
 from orchestrator.retrieval.app import app as retrieval_app
+from orchestrator.telemetry import get_hub
 from runtime.config import RuntimeConfig
 from runtime.server import LlamaServer
 
@@ -82,6 +83,8 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     with contextlib.suppress(OSError):
         PIDFILE.parent.mkdir(parents=True, exist_ok=True)
         PIDFILE.write_text(f"{os.getpid()}\n")
+
+    get_hub().start()  # 1 Hz RSS/temp sampling for /v1/conversations/{id}/telemetry
 
     cfg = RuntimeConfig()
     engine_server: LlamaServer | None = None

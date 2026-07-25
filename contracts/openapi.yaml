@@ -151,6 +151,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/conversations/{conversation_id}/telemetry:
+    get:
+      tags:
+      - ops
+      summary: Conversation Telemetry
+      description: One-shot telemetry snapshot (curl-able twin of the SSE stream below).
+      operationId: conversation_telemetry_v1_conversations__conversation_id__telemetry_get
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Conversation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetrySnapshot'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/conversations/{conversation_id}/telemetry/stream:
+    get:
+      tags:
+      - ops
+      summary: Conversation Telemetry Stream
+      description: '1 Hz telemetry SSE. Async generator on purpose: a sync generator would pin a
+
+        threadpool thread per open strip. GET, so the browser''s native EventSource works.'
+      operationId: conversation_telemetry_stream_v1_conversations__conversation_id__telemetry_stream_get
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Conversation Id
+      responses:
+        '200':
+          description: 1 Hz SSE telemetry
+          content:
+            application/json:
+              schema: {}
+            text/event-stream: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/conversations/{conversation_id}:
     delete:
       tags:
@@ -1110,6 +1166,46 @@ components:
       type: object
       title: SystemStatus
       description: '`/v1/metrics` — the local health panel''s data (TDD §12). All local, no exporter.'
+    TelemetrySnapshot:
+      properties:
+        rss_gb:
+          type: number
+          title: Rss Gb
+          description: Current RSS of the whole backend process tree.
+        peak_rss_gb:
+          type: number
+          title: Peak Rss Gb
+          description: Peak tree RSS since the backend started.
+        cpu_temp_c:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Cpu Temp C
+          description: CPU package temp; null if unreadable.
+        throttled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Throttled
+          description: temp > 85 °C; null when the temperature is unreadable.
+        tokens_per_second:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Tokens Per Second
+          description: Rolling decode rate of this conversation's active generation.
+        generating:
+          type: boolean
+          title: Generating
+          default: false
+      type: object
+      required:
+      - rss_gb
+      - peak_rss_gb
+      title: TelemetrySnapshot
+      description: 'Per-conversation live telemetry. Unmeasurable metrics are null (the UI shows —),
+
+        never an error: Docker-on-macOS has no CPU temperature, for example.'
     TutorMode:
       type: string
       enum:

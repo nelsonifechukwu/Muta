@@ -8,6 +8,7 @@ already complete and correct even though the behaviour is not built yet.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import time
@@ -41,6 +42,7 @@ from contracts.models import (
     SessionActionResponse,
     Subject,
     SystemStatus,
+    TelemetrySnapshot,
     TutorMode,
     TutorReply,
     VerifyRequest,
@@ -62,6 +64,7 @@ from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.sessions import Admission, SessionManager
+from orchestrator.telemetry import get_hub
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
 from runtime.chat import ChatEngine
@@ -191,6 +194,8 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
     def _sse():
         n = 0
         t_first = t_last = 0.0
+        hub = get_hub()
+        hub.begin(cid)
         try:
             for kind, text in events:
                 now = time.monotonic()
@@ -198,11 +203,14 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                     t_first = now
                 t_last = now
                 n += 1  # reasoning and content both count: the engine decodes both
+                hub.tick(cid)  # feeds the live tok/s in the telemetry strip
                 key = "reasoning" if kind == "reasoning" else "delta"
                 yield f"data: {json.dumps({key: text})}\n\n"
         except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
             yield f"data: {json.dumps({'error': 'inference engine unreachable'})}\n\n"
             return
+        finally:
+            hub.end(cid)
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
         # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
         # reads close to the engine's own generation rate rather than being dragged down by a
@@ -278,6 +286,33 @@ def conversation_messages(
             for m in rows
         ],
     )
+
+
+@router.get(
+    "/conversations/{conversation_id}/telemetry",
+    response_model=TelemetrySnapshot,
+    tags=["ops"],
+)
+def conversation_telemetry(conversation_id: str) -> TelemetrySnapshot:
+    """One-shot telemetry snapshot (curl-able twin of the SSE stream below)."""
+    return TelemetrySnapshot(**get_hub().snapshot(conversation_id))
+
+
+@router.get(
+    "/conversations/{conversation_id}/telemetry/stream",
+    tags=["ops"],
+    responses={200: {"content": {"text/event-stream": {}}, "description": "1 Hz SSE telemetry"}},
+)
+async def conversation_telemetry_stream(conversation_id: str) -> StreamingResponse:
+    """1 Hz telemetry SSE. Async generator on purpose: a sync generator would pin a
+    threadpool thread per open strip. GET, so the browser's native EventSource works."""
+
+    async def _gen():
+        while True:
+            yield f"data: {json.dumps(get_hub().snapshot(conversation_id))}\n\n"
+            await asyncio.sleep(1.0)
+
+    return StreamingResponse(_gen(), media_type="text/event-stream", headers=_SSE_HEADERS)
 
 
 @router.delete(
