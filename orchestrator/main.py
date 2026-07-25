@@ -29,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from orchestrator.bench_metrics import PIDFILE
 from orchestrator.bench_metrics import app as bench_app
 from orchestrator.exam.app import app as exam_app
+from orchestrator.gateway.audio_routes import router as audio_router
 from orchestrator.gateway.deps import get_vision
 from orchestrator.gateway.routes import router as gateway_router
 from orchestrator.math.app import app as math_app
@@ -127,6 +128,7 @@ app = FastAPI(
 
 # Public contract: the ONLY surface clients address.
 app.include_router(gateway_router, prefix=API_PREFIX)
+app.include_router(audio_router, prefix=API_PREFIX)  # /v1/audio/transcribe + WS /v1/audio/voice
 
 # Logical services, collapsed into this process. Internal — not part of the /v1 contract.
 app.mount("/internal/math", math_app)

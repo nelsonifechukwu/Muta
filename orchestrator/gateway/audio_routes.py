@@ -1,0 +1,279 @@
+"""Audio on the gateway: `POST /v1/audio/transcribe` and the voice loop
+`WS /v1/audio/voice` (TDD §7.2's designed-but-unbuilt `WS /v1/audio/stream`, realised).
+
+Voice protocol (client ↔ server over one socket):
+- client → text `{"type":"start","student_id","conversation_id":null|id,"mode":"socratic"}`
+- client → binary frames: 16 kHz mono int16 PCM (~320 ms each)
+- client → text `{"type":"stop"}` force the endpoint; `{"type":"barge"}` cancel the reply
+- server → `{"type":"transcript","text","conversation_id"}` at the VAD endpoint
+- server → `{"type":"reasoning"|"delta","text"}` while the model generates
+- server → per sentence: `{"type":"tts_start","sample_rate"}`, binary PCM, `{"type":"tts_end"}`
+- server → `{"type":"done"}`; on missing ASR `{"type":"error","reason":"asr-unavailable",…}`
+
+Half-duplex by design: the client mutes its mic while the reply plays, and the server drops
+mic frames while a reply is in flight — no echo cancellation needed for the MVP.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import json
+import logging
+import re
+import subprocess
+from dataclasses import dataclass
+from functools import lru_cache
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, WebSocket
+from fastapi.concurrency import iterate_in_threadpool, run_in_threadpool
+from starlette.websockets import WebSocketDisconnect
+
+from contracts.models import TranscribeResponse
+from orchestrator.audio.config import AudioConfig
+from orchestrator.audio.engines import AsrEngine, SileroVad, TtsEngine, load_engines
+from orchestrator.audio.mathspeech import to_speech
+from orchestrator.audio.vad import Endpointer
+from orchestrator.gateway.deps import get_engine, load_prompt
+from orchestrator.telemetry import get_hub
+from runtime.chat import ChatEngine
+
+log = logging.getLogger("muta.gateway.audio")
+
+router = APIRouter()
+
+SAMPLE_RATE = 16000
+_SENTENCE_END = re.compile(r"(?<=[.!?:;])\s+")
+
+
+@dataclass
+class AudioStack:
+    config: AudioConfig
+    asr: AsrEngine
+    tts: TtsEngine
+
+
+@lru_cache(maxsize=1)
+def get_audio() -> AudioStack:
+    config = AudioConfig.load()
+    asr, tts = load_engines(config)
+    return AudioStack(config=config, asr=asr, tts=tts)
+
+
+# ---------------------------------------------------------------------------
+# POST /v1/audio/transcribe — uploaded files (webm/opus/m4a/mp3/wav → ffmpeg → ASR)
+# ---------------------------------------------------------------------------
+
+
+def _ffmpeg_to_pcm16k(data: bytes) -> bytes | None:
+    try:
+        proc = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error",
+             "-i", "pipe:0", "-f", "s16le", "-ac", "1", "-ar", str(SAMPLE_RATE), "pipe:1"],
+            input=data,
+            capture_output=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.stdout if proc.returncode == 0 and proc.stdout else None
+
+
+@router.post("/audio/transcribe", response_model=TranscribeResponse, tags=["audio"])
+async def audio_transcribe(
+    audio: UploadFile = File(...),
+    conversation_id: str | None = Form(None),
+    engine: ChatEngine = Depends(get_engine),
+) -> TranscribeResponse:
+    """Uploaded audio → text. 503 when ASR is unavailable (the UI tells the student to
+    type instead), 422 when ffmpeg can't decode the file."""
+    stack = get_audio()
+    if not stack.asr.available:
+        raise HTTPException(
+            status_code=503,
+            detail="speech recognition isn't available — type the question instead",
+        )
+    raw = await audio.read()
+    pcm = await run_in_threadpool(_ffmpeg_to_pcm16k, raw)
+    if pcm is None:
+        raise HTTPException(status_code=422, detail="couldn't decode that audio file")
+    text = await run_in_threadpool(stack.asr.transcribe_pcm, pcm)
+
+    attachment_id: int | None = None
+    try:
+        attachment_id = await run_in_threadpool(
+            engine.store.add_attachment,
+            "audio",
+            audio.content_type or "application/octet-stream",
+            raw,
+            conversation_id=conversation_id,
+        )
+    except Exception:  # noqa: BLE001 — persistence is best-effort; the transcript is the point
+        attachment_id = None
+    return TranscribeResponse(text=text, attachment_id=attachment_id)
+
+
+# ---------------------------------------------------------------------------
+# WS /v1/audio/voice — VAD → ASR → LLM → TTS, no extra clicks
+# ---------------------------------------------------------------------------
+
+
+def _rms_loud(pcm: bytes, threshold: float = 500.0) -> bool:
+    """Energy gate for the no-Silero fallback (same policy as audio/service.py)."""
+    import numpy as np
+
+    samples = np.frombuffer(pcm, dtype=np.int16)
+    if samples.size == 0:
+        return False
+    return float(np.sqrt(np.mean(samples.astype(np.float32) ** 2))) > threshold
+
+
+def _split_sentences(buf: str) -> tuple[list[str], str]:
+    parts = _SENTENCE_END.split(buf)
+    if len(parts) <= 1:
+        return [], buf
+    return [p for p in parts[:-1] if p.strip()], parts[-1]
+
+
+@router.websocket("/audio/voice")
+async def audio_voice(ws: WebSocket) -> None:
+    await ws.accept()
+    stack = get_audio()
+    if not stack.asr.available:
+        await ws.send_json(
+            {"type": "error", "reason": "asr-unavailable", "fallback": "type your question"}
+        )
+        await ws.close()
+        return
+
+    # Handshake.
+    try:
+        start = json.loads(await ws.receive_text())
+    except (WebSocketDisconnect, json.JSONDecodeError):
+        with contextlib.suppress(Exception):
+            await ws.close()
+        return
+    student_id = start.get("student_id") or "voice-user"
+    mode = start.get("mode") or "socratic"
+    state = {"conversation_id": start.get("conversation_id")}
+
+    vad = SileroVad(stack.config)
+    endpointer = Endpointer(
+        trailing_silence_seconds=stack.config.asr.vad.trailing_silence_seconds,
+        max_utterance_seconds=stack.config.asr.vad.max_utterance_seconds,
+    )
+    buffer = bytearray()
+    cancel = asyncio.Event()
+    respond_task: asyncio.Task | None = None
+
+    async def speak(sentence: str) -> None:
+        if not stack.tts.available or cancel.is_set():
+            return
+        spoken = to_speech(sentence)
+        chunks = await run_in_threadpool(lambda: list(stack.tts.synthesize(spoken)))
+        if not chunks or cancel.is_set():
+            return
+        await ws.send_json({"type": "tts_start", "sample_rate": stack.tts.sample_rate})
+        for chunk in chunks:
+            await ws.send_bytes(chunk)
+        await ws.send_json({"type": "tts_end"})
+
+    async def respond(utterance) -> None:
+        """utterance: float32 samples (VAD segment) or int16 PCM bytes (fallback path)."""
+        if isinstance(utterance, (bytes, bytearray)):
+            text = await run_in_threadpool(stack.asr.transcribe_pcm, bytes(utterance))
+        else:
+            text = await run_in_threadpool(stack.asr.transcribe_samples, utterance)
+        if not text.strip():
+            await ws.send_json({"type": "done", "heard": False})
+            return
+
+        engine = get_engine()
+        cid, _mid, events = engine.stream_events_chat(
+            student_id=student_id,
+            message=text,
+            conversation_id=state["conversation_id"],
+            system_prompt=load_prompt(mode),
+            mode=mode,
+            title=text[:80],
+        )
+        state["conversation_id"] = cid
+        await ws.send_json({"type": "transcript", "text": text, "conversation_id": cid})
+
+        hub = get_hub()
+        hub.begin(cid)
+        sentence_buf = ""
+        try:
+            async for kind, chunk in iterate_in_threadpool(events):
+                if cancel.is_set():
+                    break  # closes the generator → the partial reply is persisted
+                hub.tick(cid)
+                if kind == "reasoning":
+                    await ws.send_json({"type": "reasoning", "text": chunk})
+                    continue
+                await ws.send_json({"type": "delta", "text": chunk})
+                sentence_buf += chunk
+                sentences, sentence_buf = _split_sentences(sentence_buf)
+                for sentence in sentences:
+                    await speak(sentence)
+            if sentence_buf.strip() and not cancel.is_set():
+                await speak(sentence_buf)
+        finally:
+            hub.end(cid)
+        await ws.send_json({"type": "done"})
+
+    def _endpoint(utterance) -> None:
+        nonlocal respond_task
+        cancel.clear()
+        respond_task = asyncio.create_task(respond(utterance))
+
+    try:
+        while True:
+            msg = await ws.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            busy = respond_task is not None and not respond_task.done()
+            frame = msg.get("bytes")
+            if frame is not None:
+                if busy:
+                    continue  # half-duplex: mic frames during a reply are dropped
+                buffer.extend(frame)
+                if vad.available:
+                    vad.accept(frame)
+                    segment = vad.pop_segment()
+                    if segment is not None:
+                        buffer.clear()
+                        _endpoint(segment)
+                else:
+                    seconds = len(frame) / 2 / SAMPLE_RATE
+                    if endpointer.accept(seconds, is_speech=_rms_loud(frame)):
+                        utt = bytes(buffer)
+                        had_speech = endpointer.had_speech
+                        buffer.clear()
+                        endpointer.reset()
+                        if had_speech:
+                            _endpoint(utt)
+            elif msg.get("text"):
+                try:
+                    data = json.loads(msg["text"])
+                except json.JSONDecodeError:
+                    continue
+                kind = data.get("type")
+                if kind == "stop" and not busy:
+                    vad.flush()
+                    segment = vad.pop_segment() if vad.available else None
+                    utt = segment if segment is not None else bytes(buffer)
+                    buffer.clear()
+                    endpointer.reset()
+                    if segment is not None or len(utt):
+                        _endpoint(utt)
+                elif kind == "barge":
+                    cancel.set()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        cancel.set()
+        if respond_task is not None:
+            respond_task.cancel()
+            with contextlib.suppress(BaseException):
+                await respond_task

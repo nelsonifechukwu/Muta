@@ -1,0 +1,31 @@
+# Audio stack of record. Paths are relative to TUTOR_ROOT (the backend container sets
+# TUTOR_ROOT=/app, so these resolve inside the ./models volume mount).
+#
+# Every value here matches what `make fetch-models` actually pins and downloads
+# (scripts/model_specs.py): moonshine-tiny int8, silero_vad.onnx (underscore),
+# the CC0 en_US-joe-medium Piper voice at its native 22050 Hz.
+
+asr:
+  engine: sherpa-onnx
+  model_dir: models/asr/moonshine-tiny-en-int8
+  chunk_seconds: 0.2
+  sample_rate: 16000
+  num_threads: 1
+  decoding_method: greedy_search
+  language: en
+  vad:
+    model: models/asr/silero_vad.onnx
+    trailing_silence_seconds: 0.5
+    max_utterance_seconds: 90.0
+    threshold: 0.5
+
+tts:
+  engine: piper
+  # A hint only — engines report the voice's true rate from the generated audio.
+  sample_rate: 22050
+  num_threads: 1
+  voices:
+    en:
+      model: models/tts/piper/en_US-joe-medium.onnx
+      tokens: models/tts/piper/tokens.txt
+      data_dir: models/tts/piper/espeak-ng-data

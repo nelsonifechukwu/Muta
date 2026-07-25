@@ -594,6 +594,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemStatus'
+  /v1/audio/transcribe:
+    post:
+      tags:
+      - audio
+      summary: Audio Transcribe
+      description: 'Uploaded audio → text. 503 when ASR is unavailable (the UI tells the student to
+
+        type instead), 422 when ffmpeg can''t decode the file.'
+      operationId: audio_transcribe_v1_audio_transcribe_post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_audio_transcribe_v1_audio_transcribe_post'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscribeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
     AnswerCheckRequest:
@@ -663,6 +691,21 @@ components:
       - kind
       - mime
       title: AttachmentRef
+    Body_audio_transcribe_v1_audio_transcribe_post:
+      properties:
+        audio:
+          type: string
+          contentMediaType: application/octet-stream
+          title: Audio
+        conversation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Conversation Id
+      type: object
+      required:
+      - audio
+      title: Body_audio_transcribe_v1_audio_transcribe_post
     Body_tutor_vision_v1_tutor_vision_post:
       properties:
         session_id:
@@ -1206,6 +1249,22 @@ components:
       description: 'Per-conversation live telemetry. Unmeasurable metrics are null (the UI shows —),
 
         never an error: Docker-on-macOS has no CPU temperature, for example.'
+    TranscribeResponse:
+      properties:
+        text:
+          type: string
+          title: Text
+          description: What the ASR heard; empty when nothing was recognised.
+        attachment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Attachment Id
+          description: Stored copy of the uploaded audio.
+      type: object
+      required:
+      - text
+      title: TranscribeResponse
     TutorMode:
       type: string
       enum:

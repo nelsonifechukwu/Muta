@@ -1,4 +1,4 @@
-"""Audio configuration, loaded from `etc/audio.yaml` (TDD §6.6)."""
+"""Audio configuration, loaded from `orchestrator/audio/audio.yaml` (TDD §6.6)."""
 
 from __future__ import annotations
 
@@ -9,12 +9,14 @@ from typing import Any
 
 import yaml
 
-DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "deploy" / "etc" / "audio.yaml"
+DEFAULT_CONFIG = Path(__file__).resolve().parent / "audio.yaml"
 
 
 @dataclass(frozen=True)
 class VadConfig:
-    model: str = "models/asr/silero-vad.onnx"
+    # Underscore, matching what fetch_models actually writes (istupakov/silero-vad-onnx
+    # ships `silero_vad.onnx`); the historical dash name never existed on disk.
+    model: str = "models/asr/silero_vad.onnx"
     trailing_silence_seconds: float = 0.5
     max_utterance_seconds: float = 90.0
     threshold: float = 0.5

@@ -1,5 +1,285 @@
-/* Voice loop placeholder — replaced by the full VAD→ASR→LLM→TTS client in plan T8. */
+/* Voice loop client: mic → WS /v1/audio/voice → transcript + streamed reply + spoken audio.
+ *
+ * Half-duplex: the mic is muted while the tutor speaks (no echo cancellation needed).
+ * One persistent AudioContext is created on the mic click — that user gesture is what lets
+ * the reply auto-play later with zero extra clicks.
+ *
+ * Mic button states: idle → listening → (replying/speaking: click = barge) → listening.
+ */
 "use strict";
-document.querySelector("#btn-mic").addEventListener("click", () => {
-  window.MutaChat.toast("Voice is being wired up (plan T8).");
-});
+
+(() => {
+  const TARGET_RATE = 16000;
+  const BATCH_SAMPLES = 5120; // ~320 ms at 16 kHz
+
+  const micBtn = document.querySelector("#btn-mic");
+  const chat = window.MutaChat;
+
+  let audioCtx = null;
+  let mediaStream = null;
+  let captureNode = null;
+  let sourceNode = null;
+  let ws = null;
+  let active = false; // voice mode on
+  let replying = false; // server is generating/speaking
+  let micMuted = false; // drop capture while TTS plays
+  let pending = new Int16Array(0);
+  let playhead = 0;
+  let activeSources = [];
+  let ttsRate = 22050;
+  let assistant = null;
+  let statusEl = null;
+
+  // --- capture pipeline ---------------------------------------------------
+
+  function downsampleTo16k(float32, fromRate) {
+    const ratio = fromRate / TARGET_RATE;
+    const outLen = Math.floor(float32.length / ratio);
+    const out = new Int16Array(outLen);
+    for (let i = 0; i < outLen; i++) {
+      const idx = i * ratio;
+      const lo = Math.floor(idx);
+      const hi = Math.min(lo + 1, float32.length - 1);
+      const frac = idx - lo;
+      let s = float32[lo] * (1 - frac) + float32[hi] * frac;
+      s = Math.max(-1, Math.min(1, s));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    return out;
+  }
+
+  function onCapture(float32) {
+    if (!active || micMuted || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const chunk = downsampleTo16k(float32, audioCtx.sampleRate);
+    const merged = new Int16Array(pending.length + chunk.length);
+    merged.set(pending);
+    merged.set(chunk, pending.length);
+    pending = merged;
+    while (pending.length >= BATCH_SAMPLES) {
+      ws.send(pending.slice(0, BATCH_SAMPLES).buffer);
+      pending = pending.slice(BATCH_SAMPLES);
+    }
+  }
+
+  async function startCapture() {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    await audioCtx.resume();
+    sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+    if (audioCtx.audioWorklet) {
+      await audioCtx.audioWorklet.addModule("/worklet.js");
+      captureNode = new AudioWorkletNode(audioCtx, "muta-capture");
+      captureNode.port.onmessage = (ev) => onCapture(ev.data);
+      sourceNode.connect(captureNode);
+    } else {
+      // Legacy fallback; every 2026 evergreen browser has AudioWorklet.
+      captureNode = audioCtx.createScriptProcessor(4096, 1, 1);
+      captureNode.onaudioprocess = (ev) => onCapture(ev.inputBuffer.getChannelData(0).slice(0));
+      sourceNode.connect(captureNode);
+      captureNode.connect(audioCtx.destination);
+    }
+  }
+
+  function stopCapture() {
+    if (sourceNode) sourceNode.disconnect();
+    if (captureNode) captureNode.disconnect();
+    if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+    sourceNode = captureNode = mediaStream = null;
+    pending = new Int16Array(0);
+  }
+
+  // --- playback -----------------------------------------------------------
+
+  function playPcm(arrayBuffer) {
+    const int16 = new Int16Array(arrayBuffer);
+    if (!int16.length) return;
+    const f32 = Float32Array.from(int16, (v) => v / 32768);
+    const buf = audioCtx.createBuffer(1, f32.length, ttsRate);
+    buf.copyToChannel(f32, 0);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    const at = Math.max(audioCtx.currentTime, playhead);
+    src.start(at);
+    playhead = at + buf.duration;
+    activeSources.push(src);
+    src.onended = () => {
+      activeSources = activeSources.filter((s) => s !== src);
+      maybeResumeListening();
+    };
+  }
+
+  function stopPlayback() {
+    for (const s of activeSources) {
+      try {
+        s.stop();
+      } catch {
+        /* already stopped */
+      }
+    }
+    activeSources = [];
+    playhead = 0;
+  }
+
+  function maybeResumeListening() {
+    if (!replying && activeSources.length === 0 && active) {
+      micMuted = false;
+      setStatus("Listening…");
+    }
+  }
+
+  // --- UI status ----------------------------------------------------------
+
+  function setStatus(text) {
+    if (!active) {
+      if (statusEl) statusEl.remove();
+      statusEl = null;
+      return;
+    }
+    if (!statusEl) {
+      statusEl = document.createElement("div");
+      statusEl.className = "voice-status";
+      document.querySelector("#messages").appendChild(statusEl);
+    }
+    statusEl.textContent = "🎙 " + text;
+    document.querySelector("#chat-scroll").scrollTop = 1e9;
+  }
+
+  // --- websocket voice session ---------------------------------------------
+
+  function wsUrl() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    return `${proto}://${location.host}/v1/audio/voice`;
+  }
+
+  async function startVoice() {
+    if (chat.isGenerating()) return chat.toast("Wait for the current reply to finish.");
+    try {
+      await startCapture();
+    } catch {
+      return chat.toast("Microphone access was refused — voice needs it (and http://localhost).");
+    }
+    ws = new WebSocket(wsUrl());
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: "start",
+          student_id: chat.studentId,
+          conversation_id: chat.getConversationId(),
+          mode: "socratic",
+        })
+      );
+      active = true;
+      replying = false;
+      micMuted = false;
+      micBtn.classList.add("recording");
+      micBtn.title = "Stop voice (click while it speaks to interrupt)";
+      setStatus("Listening…");
+    };
+    ws.onmessage = onWsMessage;
+    ws.onerror = () => stopVoice("Voice connection failed.");
+    ws.onclose = () => {
+      if (active) stopVoice();
+    };
+  }
+
+  function onWsMessage(ev) {
+    if (ev.data instanceof ArrayBuffer) {
+      playPcm(ev.data);
+      return;
+    }
+    let msg;
+    try {
+      msg = JSON.parse(ev.data);
+    } catch {
+      return;
+    }
+    switch (msg.type) {
+      case "error":
+        stopVoice(msg.fallback ? `Voice unavailable — ${msg.fallback}.` : "Voice unavailable.");
+        break;
+      case "transcript":
+        chat.setConversationId(msg.conversation_id);
+        chat.addUserMessage(msg.text, [{ kind: "audio" }]);
+        assistant = chat.beginAssistantMessage();
+        chat.setGenerating(true);
+        chat.openTelemetry(msg.conversation_id);
+        replying = true;
+        micMuted = true;
+        setStatus("Thinking…");
+        break;
+      case "reasoning":
+        if (assistant) assistant.pushThought(msg.text);
+        break;
+      case "delta":
+        if (assistant) assistant.pushDelta(msg.text);
+        break;
+      case "tts_start":
+        ttsRate = msg.sample_rate || ttsRate;
+        micMuted = true;
+        setStatus("Speaking…");
+        break;
+      case "tts_end":
+        break;
+      case "done":
+        if (msg.heard === false) {
+          setStatus("Didn't catch that — try again.");
+        } else if (assistant) {
+          assistant.finalize();
+        }
+        assistant = null;
+        replying = false;
+        chat.setGenerating(false);
+        chat.closeTelemetry();
+        maybeResumeListening();
+        break;
+    }
+  }
+
+  function stopVoice(toastText) {
+    active = false;
+    replying = false;
+    micMuted = false;
+    stopPlayback();
+    stopCapture();
+    setStatus("");
+    if (ws) {
+      try {
+        ws.close();
+      } catch {
+        /* already closed */
+      }
+      ws = null;
+    }
+    if (assistant) {
+      assistant.finalize();
+      assistant = null;
+    }
+    chat.setGenerating(false);
+    chat.closeTelemetry();
+    micBtn.classList.remove("recording");
+    micBtn.title = "Talk to the tutor (voice loop)";
+    if (toastText) chat.toast(toastText);
+  }
+
+  function barge() {
+    // Interrupt: stop local playback, tell the server to abandon the reply, keep listening.
+    stopPlayback();
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "barge" }));
+    if (assistant) {
+      assistant.finalize();
+      assistant = null;
+    }
+    replying = false;
+    chat.setGenerating(false);
+    micMuted = false;
+    setStatus("Listening…");
+  }
+
+  micBtn.addEventListener("click", () => {
+    if (!active) startVoice();
+    else if (replying || activeSources.length) barge();
+    else stopVoice();
+  });
+})();

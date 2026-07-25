@@ -19,6 +19,7 @@ dependencies = [
     "python-multipart>=0.0.9",  # /v1/tutor/vision multipart upload (TDD §7.2)
     "psycopg[binary]>=3.2",  # conversations/attachments live in the Postgres container
     "psycopg-pool>=3.2",
+    "sherpa-onnx>=1.10",  # Moonshine ASR + Silero VAD + Piper TTS (wheels-only in the image)
     # Deterministic tools (TDD §7.5). These run inside the sandbox subprocess, not in the
     # gateway, so their footprint is charged to the 300 MiB tool pool rather than to the
     # gateway's 600 MiB cap — but they must be in the bundle, hence core dependencies.

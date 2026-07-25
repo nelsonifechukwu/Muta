@@ -135,6 +135,27 @@ class SherpaAsr:
         self.reset()
         return Transcript(text, is_final=True)
 
+    def transcribe_pcm(self, pcm: bytes) -> str:
+        """One-shot recognition on a dedicated stream — stateless, so concurrent callers
+        (upload endpoint, voice websocket) never share partial transcripts."""
+        if not self.available or not pcm:
+            return ""
+        import numpy as np
+
+        samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+        return self.transcribe_samples(samples)
+
+    def transcribe_samples(self, samples) -> str:
+        if not self.available:
+            return ""
+        stream = self._recognizer.create_stream()  # type: ignore[attr-defined]
+        stream.accept_waveform(self.config.asr.sample_rate, samples)
+        self._recognizer.decode_stream(stream)  # type: ignore[union-attr]
+        try:
+            return str(stream.result.text).strip()
+        except Exception:  # noqa: BLE001
+            return ""
+
     def _current_text(self) -> str:
         try:
             return str(self._stream.result.text).strip()  # type: ignore[union-attr]
@@ -171,11 +192,14 @@ class SherpaTts:
             log.info("TTS voice %s absent — replies will be text-only", model)
             return
         try:
+            # Exactly the instantiation scripts/verify_models.py proved against the pinned
+            # voice: tokens.txt (NOT the .onnx.json), and espeak-ng-data as data_dir.
             tts_config = sherpa_onnx.OfflineTtsConfig(
                 model=sherpa_onnx.OfflineTtsModelConfig(
                     vits=sherpa_onnx.OfflineTtsVitsModelConfig(
                         model=str(model),
-                        tokens=str(self.config.resolve(voice.get("config", ""))),
+                        tokens=str(self.config.resolve(voice["tokens"])),
+                        data_dir=str(self.config.resolve(voice.get("data_dir", ""))),
                     ),
                     num_threads=self.config.tts.num_threads,
                 ),
@@ -194,8 +218,70 @@ class SherpaTts:
         import numpy as np
 
         audio = self._tts.generate(text)  # type: ignore[union-attr]
+        # The voice's true rate (joe is 22050 Hz) — playing PCM at the config's guess would
+        # shift pitch and speed. The generated audio is the authority.
+        rate = int(getattr(audio, "sample_rate", 0) or 0)
+        if rate:
+            self.sample_rate = rate
         pcm = (np.asarray(audio.samples) * 32767).astype(np.int16).tobytes()
         return iter([pcm])
+
+
+@dataclass
+class SileroVad:
+    """Silero VAD via sherpa-onnx. A closed speech segment (speech, then enough silence)
+    appears on the detector's queue — that queue becoming non-empty IS the endpoint signal.
+    When the model/library is absent, `available=False` and callers fall back to the
+    pure-Python `Endpointer` energy policy (vad.py)."""
+
+    config: AudioConfig
+    available: bool = False
+    _vad: object | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        try:
+            import sherpa_onnx
+        except ImportError:
+            log.info("sherpa-onnx unavailable — VAD falls back to the energy endpointer")
+            return
+        model = self.config.resolve(self.config.asr.vad.model)
+        if not model.is_file():
+            log.info("VAD model %s absent — falling back to the energy endpointer", model)
+            return
+        try:
+            cfg = sherpa_onnx.VadModelConfig()
+            cfg.silero_vad.model = str(model)
+            cfg.silero_vad.threshold = self.config.asr.vad.threshold
+            cfg.silero_vad.min_silence_duration = self.config.asr.vad.trailing_silence_seconds
+            cfg.sample_rate = self.config.asr.sample_rate
+            self._vad = sherpa_onnx.VoiceActivityDetector(cfg, buffer_size_in_seconds=120)
+            self.available = True
+        except Exception as e:  # noqa: BLE001
+            log.warning("VAD init failed (%s) — falling back to the energy endpointer", e)
+
+    def accept(self, pcm: bytes) -> None:
+        if not self.available:
+            return
+        import numpy as np
+
+        samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+        self._vad.accept_waveform(samples)  # type: ignore[union-attr]
+
+    def pop_segment(self):
+        """The oldest finished speech segment's float32 samples, or None."""
+        if not self.available or self._vad.empty():  # type: ignore[union-attr]
+            return None
+        segment = self._vad.front  # type: ignore[union-attr]
+        self._vad.pop()  # type: ignore[union-attr]
+        return segment.samples
+
+    def flush(self) -> None:
+        if self.available:
+            self._vad.flush()  # type: ignore[union-attr]
+
+    def reset(self) -> None:
+        if self.available:
+            self._vad.reset()  # type: ignore[union-attr]
 
 
 def load_engines(config: AudioConfig | None = None) -> tuple[AsrEngine, TtsEngine]:
