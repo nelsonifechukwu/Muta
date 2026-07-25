@@ -146,6 +146,9 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 | `MUTA_RT_STARTUP_TIMEOUT_S` | `900` | model-load allowance (emulation is slow) |
 | `MUTA_RT_REQUEST_TIMEOUT_S` | `600` | per-request client timeout |
 | `TUTOR_ROOT` | `/app` | root for vision/audio model paths |
+| `MUTA_RT_N_CTX` | `2048` | context size (keeps core+draft under the ladder cap) |
+| `MUTA_RT_ENABLE_THINKING` | `0` | Qwen thinking mode (minutes-long on emulated CPU) |
+| `MUTA_CORE_CAP_MIB` | `5400` | ladder's core-RSS cap; default 4300 is main's 7 GB budget |
 
 ## Troubleshooting
 
