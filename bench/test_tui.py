@@ -111,3 +111,33 @@ def test_build_app_errors_clearly_when_no_app_is_running(monkeypatch):
     ))
     rc = tui.main(["--port", "8000"])
     assert rc == 1
+
+
+# --- /img command parse (pure; testable without a running Textual app) --------------------
+
+
+def test_img_with_question():
+    assert tui.parse_image_command("/img work.jpg what did I get wrong?") == (
+        "work.jpg",
+        "what did I get wrong?",
+    )
+
+
+def test_img_without_question():
+    assert tui.parse_image_command("/img ~/notes/page.png") == ("~/notes/page.png", None)
+
+
+def test_leading_and_trailing_whitespace_is_tolerated():
+    assert tui.parse_image_command("  /img  a.png  solve it  ") == ("a.png", "solve it")
+
+
+def test_quoted_path_with_spaces():
+    assert tui.parse_image_command('/img "my work.jpg" help') == ("my work.jpg", "help")
+
+
+def test_non_command_returns_none():
+    assert tui.parse_image_command("just a normal question") is None
+
+
+def test_img_with_no_path_returns_none():
+    assert tui.parse_image_command("/img   ") is None
