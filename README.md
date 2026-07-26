@@ -154,6 +154,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - [RACHEL](https://worldpossible.org/products/rachel-5-500)
 
 ## 11. The Story
+- If the laptop is low, how about we build something like [RACHEL](https://worldpossible.org/cdn/shop/products/RACHEL4-Englishcrop_480x6272.png?v=1656701790) w/a powerbank. 
 - Run a benchmark like [this](https://ai.google.dev/gemma/docs/core/model_card_4#benchmark_results), proving why we concluded on the chosen model.
 - Get feedback from the student -- they input their email once they use it, and then, we prompt them in their email, or as in-app notifications (remember, they may not have internet access.)
 - Cambridge: got a C despite being Best in Nigeria.
