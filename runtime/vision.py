@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 import shutil
 import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Callable
@@ -66,6 +67,15 @@ class VisionManager:
     # as "never touched" made an idle instance immortal.
     last_used: float | None = field(default=None, init=False)
     spawns: int = field(default=0, init=False)
+    #: True from Popen until the health check passes. An instance that is still loading has
+    #: not been idle for a single second yet, so the reaper has nothing to measure and must
+    #: leave it alone.
+    starting: bool = field(default=False, init=False)
+    #: Serialises spawn decisions. Two uploads in flight at once would otherwise both see
+    #: `running == False` and race two servers onto port 8082; the loser exits with EADDRINUSE
+    #: and both students are told the reader is broken. The second caller waits and then
+    #: reuses the instance the first one started — which is the queueing §5.3 already promises.
+    _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
 
     # --- state ------------------------------------------------------------------------
     @property
@@ -88,17 +98,18 @@ class VisionManager:
         Raises `VisionDenied` when the ladder says no — the caller turns that into S2's
         honest fallback ("type the problem for now"), never into an error page.
         """
-        if self.running:
+        with self._lock:
+            if self.running:
+                self.touch()
+                return self.base_url
+            if not self.admit():
+                raise VisionDenied(
+                    "vision is unavailable right now (memory pressure) — "
+                    "type the problem and I'll work through it with you"
+                )
+            self._spawn()
             self.touch()
             return self.base_url
-        if not self.admit():
-            raise VisionDenied(
-                "vision is unavailable right now (memory pressure) — "
-                "type the problem and I'll work through it with you"
-            )
-        self._spawn()
-        self.touch()
-        return self.base_url
 
     def _spawn(self) -> None:
         try:
@@ -109,16 +120,34 @@ class VisionManager:
         argv = _wrap_with_scope(invocation)
         log.info("spawning CORE-VISION: %s", " ".join(argv))
         started = self.clock()
-        self.process = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.spawns += 1
-        self._wait_until_ready(started)
+        # Start the idle clock at spawn, not after the load finishes. `_wait_until_ready`
+        # blocks for tens of seconds, and for all of it `running` is already True; leaving
+        # `last_used` on the *previous* use (always older than the TTL once an instance has
+        # been reaped) let the reaper kill the very server this call is waiting for.
+        self.starting = True
+        self.touch()
+        try:
+            # Inside the try: a Popen that raises must still clear `starting`, or the reaper
+            # is disabled for the rest of the process's life.
+            self.process = subprocess.Popen(
+                argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            self.spawns += 1
+            self._wait_until_ready(started)
+        finally:
+            self.starting = False
 
     def _wait_until_ready(self, started: float) -> None:
         deadline = started + STARTUP_TIMEOUT_SECONDS
+        # Hold the process locally: `stop()` nulls the attribute, so reading it through `self`
+        # meant a server that died mid-load looked merely slow and burned the whole timeout
+        # before reporting the wrong reason.
+        process = self.process
         while self.clock() < deadline:
-            if self.process is not None and self.process.poll() is not None:
-                code = self.process.returncode
-                self.process = None
+            if process is not None and process.poll() is not None:
+                code = process.returncode
+                if self.process is process:
+                    self.process = None
                 raise VisionDenied(f"vision server exited during startup (code {code})")
             if self._healthy():
                 elapsed = self.clock() - started
@@ -148,13 +177,25 @@ class VisionManager:
         degradation ladder spends (§5.3), so holding an idle vision server is not free even
         when nothing is asking for memory yet.
         """
-        if not self.running:
+        # Non-blocking: this runs on the gateway's event loop, so waiting on a 60 s spawn here
+        # would stall every other request. A spawn in flight also means nothing is idle.
+        if not self._lock.acquire(blocking=False):
             return False
-        if self.idle_seconds() < self.ttl_seconds:
-            return False
-        log.info("reaping idle CORE-VISION after %.0fs", self.idle_seconds())
-        self.stop()
-        return True
+        try:
+            if self.starting:
+                # Mid-load: a student is waiting on this exact instance, and it has accrued no
+                # idle time to judge. Killing it here is how the second upload of a session
+                # used to fail permanently.
+                return False
+            if not self.running:
+                return False
+            if self.idle_seconds() < self.ttl_seconds:
+                return False
+            log.info("reaping idle CORE-VISION after %.0fs", self.idle_seconds())
+            self.stop()
+            return True
+        finally:
+            self._lock.release()
 
     def stop(self) -> None:
         process, self.process = self.process, None

@@ -176,6 +176,15 @@ details.thinking .thought { white-space: pre-wrap; margin-top: 6px; }
 .chip img { height: 42px; border-radius: 6px; }
 .chip .x { cursor: pointer; color: var(--muted); border: none; background: none; }
 .chip .x:hover { color: var(--danger); }
+/* Reading a photo takes 15-90 s here, and a failed read must stay visible long after any
+   toast has faded — the chip is what tells the student whether the tutor can see it. */
+.chip-status { font-size: 0.75rem; color: var(--muted); }
+.chip.reading { opacity: 0.8; }
+.chip.reading .chip-status { animation: chip-pulse 1.4s ease-in-out infinite; }
+.chip.failed { border-color: var(--danger); }
+.chip.failed .chip-status { color: var(--danger); }
+@keyframes chip-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+button.icon:disabled { opacity: 0.4; cursor: default; }
 
 #input {
   width: 100%; border: none; outline: none; resize: none;

@@ -7,6 +7,8 @@ those is a decision about memory that has to hold whether or not an engine binar
 from __future__ import annotations
 
 import subprocess
+import threading
+import time
 
 import pytest
 
@@ -128,6 +130,69 @@ def test_use_resets_the_idle_clock(manager):
 
 def test_reaping_a_stopped_manager_is_a_no_op(manager):
     assert manager.reap_if_idle() is False
+
+
+def test_the_idle_reaper_does_not_kill_an_instance_that_is_still_starting(manager):
+    """Regression: the second image upload of a session used to fail, permanently.
+
+    `ensure()` stamped `last_used` only *after* `_spawn()` returned, but `_spawn()` blocks for
+    the whole model load. In that window `running` is already True (Popen returned) while
+    `last_used` still holds the *previous* use — which, once an instance has been reaped, is
+    always older than the TTL. The 30 s reaper tick therefore saw a fully idle instance and
+    killed the server mid-load. Every upload after the first then burned the full 60 s startup
+    timeout and came back refused.
+    """
+    manager.ensure()  # first use: spawns and stamps last_used
+    manager.ticks["now"] = IDLE_TTL_SECONDS + 1
+    assert manager.reap_if_idle() is True  # correctly reaped once genuinely idle
+
+    # A later upload. The cold mmproj load takes ~15 s, so a reaper tick lands inside it.
+    manager.ticks["now"] = 10_000.0
+    manager.fake_process.returncode = None  # Popen hands back a fresh process
+
+    def loading_then_ready() -> bool:
+        manager.ticks["now"] += 5.0
+        manager.reap_if_idle()  # the concurrent _vision_reaper task ticks
+        # A killed server never answers /health again.
+        return manager.fake_process.returncode is None and manager.ticks["now"] >= 10_015.0
+
+    manager._healthy = loading_then_ready
+    url = manager.ensure()
+    assert url.endswith(":8082")
+    assert manager.running, "the idle reaper killed a server that was still starting up"
+
+
+def test_concurrent_requests_spawn_exactly_one_instance(bundle, monkeypatch):  # noqa: F811
+    """Two uploads in flight at once must not race two servers onto the same port.
+
+    The loser exits with EADDRINUSE, and since both callers are waiting on the same port, the
+    winner's student is told the reader is broken. A classroom is six phones; an impatient
+    student is two clicks. Both are the normal case, not the edge case.
+    """
+    in_popen, release = threading.Event(), threading.Event()
+    spawned: list[list[str]] = []
+
+    def fake_popen(argv, **_kw):
+        spawned.append(argv)
+        in_popen.set()  # the first caller is inside the spawn
+        release.wait(timeout=5)  # hold it there while the second one tries
+        return FakeProcess()
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    mgr = VisionManager(paths=BundlePaths(bundle.root))
+    monkeypatch.setattr(mgr, "_healthy", lambda: True)
+
+    first = threading.Thread(target=mgr.ensure, daemon=True)
+    first.start()
+    assert in_popen.wait(timeout=5), "the first spawn never started"
+    second = threading.Thread(target=mgr.ensure, daemon=True)
+    second.start()
+    time.sleep(0.2)  # give the second caller every chance to race past the `running` check
+    release.set()
+    first.join(timeout=5)
+    second.join(timeout=5)
+
+    assert len(spawned) == 1, f"raced {len(spawned)} vision servers onto one port"
 
 
 def test_slow_spawn_is_logged_against_the_budget(manager, caplog):

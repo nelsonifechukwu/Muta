@@ -20,7 +20,7 @@ config switch — never a rewrite.
 | **D4** | Demo engine binary | A (mainline, pinned) | B (ik_llama) / C (OpenVINO) | on-target bench: B if ≥ 1.10× A; C only if Intel **and** it beats best-of(A,B) | `TUTOR_ENGINE_VARIANT`, `IK_LLAMA_REF=` / `OPENVINO_VERSION=` (both unpinned) |
 | **D5** | Premium TTS | Piper everywhere | + Kokoro in solo-demo | solo-demo RSS ≤ 6.5 GiB with Kokoro resident | `ServingProfile.tts_engine`; ladder L2 forces Piper regardless |
 | **D6** | KV cache type | q8_0 | q5_1 / q4_0 | ladder sweep shows no eval regression **and** slots gained | `TUTOR_KV_TYPE`; `runtime/kvmath.CACHE_TYPE_BYTES` prices each rung |
-| **D7** | Vision process mgmt | gateway subprocess manager | llama-swap / router mode | manager > 200 LoC or 3 bugs | `runtime/vision.py` — currently ~150 LoC, 0 known bugs |
+| **D7** | Vision process mgmt | gateway subprocess manager | llama-swap / router mode | manager > 200 LoC or 3 bugs | `runtime/vision.py` — **~188 code LoC, 2 bugs spent** (both lifecycle races, [vision-lifecycle.md](vision-lifecycle.md)). One bug from the escape hatch. |
 | **D8** | Embedding model | bge-small-en-v1.5 Q8_0 | multilingual-e5-small | a multilingual RAG corpus lands | `EMBED_MODEL_*` in the lock; index records the embedder identity and refuses a mismatched query |
 | **D9** | mlock core weights | off (classroom) / on (solo-demo) | flip | soak shows major-fault jitter > 50 ms p95 | `TUTOR_MLOCK`; `--mlock` appears only when the profile says so, and the invocation announces it |
 

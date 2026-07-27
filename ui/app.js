@@ -268,18 +268,40 @@ $("#new-chat").addEventListener("click", newChat);
 // ---------------------------------------------------------------------------
 // Attachments (image via /v1/tutor/vision, audio via /v1/audio/transcribe)
 // ---------------------------------------------------------------------------
+/** True while any image is still being read. Reading a photo is a 15–90 s job on this
+ *  hardware, so the composer has to hold the door: without it a student who sees no progress
+ *  clicks again, and each extra click is another CORE-VISION spawn racing for the same port. */
+function readingAnImage() {
+  return pendingAttachments.some((a) => a.status === "reading");
+}
+
+function syncComposerState() {
+  const busy = readingAnImage();
+  $("#btn-image").disabled = busy;
+  sendBtn.disabled = generating || busy;
+}
+
 function renderChips() {
   const box = $("#attachment-chips");
   box.innerHTML = "";
   for (const a of pendingAttachments) {
     const chip = document.createElement("span");
-    chip.className = "chip";
+    chip.className = "chip" + (a.status ? " " + a.status : "");
     if (a.kind === "image" && a.previewUrl) {
       const img = document.createElement("img");
       img.src = a.previewUrl;
       chip.appendChild(img);
     } else {
       chip.append(a.kind === "audio" ? "🎙 audio" : "📎 file");
+    }
+    if (a.status === "reading" || a.status === "failed") {
+      // Durable, not a toast that has already faded: this is the only signal that tells the
+      // student whether the tutor can actually see what they attached.
+      const label = document.createElement("span");
+      label.className = "chip-status";
+      label.textContent = a.status === "reading" ? "reading…" : "couldn't read it";
+      if (a.detail) label.title = a.detail;
+      chip.appendChild(label);
     }
     const x = document.createElement("button");
     x.className = "x";
@@ -291,34 +313,49 @@ function renderChips() {
     chip.appendChild(x);
     box.appendChild(chip);
   }
+  syncComposerState();
 }
 
 async function addImage(file) {
-  toast("Reading the image…", 2000);
+  // The chip goes up before the request, not after it: the student needs to see that the
+  // photo landed while CORE-VISION spends the next minute reading it.
+  const entry = {
+    id: null,
+    kind: "image",
+    previewUrl: URL.createObjectURL(file),
+    transcription: "",
+    status: "reading",
+  };
+  pendingAttachments.push(entry);
+  renderChips();
+
   const form = new FormData();
   form.append("session_id", studentId);
   if (conversationId) form.append("conversation_id", conversationId);
   form.append("image", file);
+
+  const settle = (status, detail) => {
+    entry.status = status;
+    entry.detail = detail || "";
+    renderChips();
+  };
+
   let body;
   try {
     const r = await fetch("/v1/tutor/vision", { method: "POST", body: form });
     body = await r.json();
   } catch {
+    settle("failed", "the upload never reached the tutor");
     return toast("Image upload failed — is the backend up?");
   }
-  if (!body.accepted) {
-    toast(body.detail || "The image was refused.");
-    if (body.attachment_id == null) return;
-  }
-  pendingAttachments.push({
-    id: body.attachment_id,
-    kind: "image",
-    previewUrl: URL.createObjectURL(file),
-    transcription: body.accepted ? body.transcription : "",
-  });
-  renderChips();
+  entry.id = body.attachment_id ?? null;
   if (body.accepted && body.transcription) {
+    entry.transcription = body.transcription;
+    settle("ready");
     toast("Image read. Ask your question and send.", 3000);
+  } else {
+    settle("failed", body.detail || "the image couldn't be read");
+    toast(entry.detail);
   }
 }
 
@@ -414,17 +451,26 @@ window.addEventListener("drop", (e) => {
 // Sending + SSE streaming
 // ---------------------------------------------------------------------------
 function composeOutgoingMessage(typed) {
-  // Image transcriptions ride along as context the tutor can see.
-  const transcribed = pendingAttachments
-    .filter((a) => a.kind === "image" && a.transcription)
-    .map((a) => `Problem transcribed from my image: "${a.transcription}"`);
-  if (!transcribed.length) return typed;
-  return typed ? `${transcribed.join("\n")}\n\n${typed}` : transcribed.join("\n");
+  // This text is the ONLY thing the tutor learns about a photo: `attachment_ids` binds rows
+  // in Postgres for history, it does not reach the model. So a photo we failed to read has
+  // to be declared too — otherwise the student watches their image sit in the transcript
+  // while the tutor insists there is no image, which is the worst of both worlds.
+  const lines = pendingAttachments
+    .filter((a) => a.kind === "image")
+    .map((a) =>
+      a.transcription
+        ? `Problem transcribed from my image: "${a.transcription}"`
+        : "I attached a photo but it could not be read, so you cannot see it. " +
+          "Ask me to type the problem out."
+    );
+  if (!lines.length) return typed;
+  return typed ? `${lines.join("\n")}\n\n${typed}` : lines.join("\n");
 }
 
 async function send() {
   const typed = inputEl.value.trim();
   if (generating) return;
+  if (readingAnImage()) return toast("Still reading your image — one moment.");
   if (!typed && !pendingAttachments.some((a) => a.transcription)) return;
 
   const message = composeOutgoingMessage(typed);
@@ -438,7 +484,7 @@ async function send() {
   addUserMessage(typed || "(from my image)", attachments);
   const assistant = beginAssistantMessage();
   generating = true;
-  sendBtn.disabled = true;
+  syncComposerState();
 
   try {
     const res = await fetch("/v1/chat/stream", {
@@ -461,7 +507,7 @@ async function send() {
     assistant.fail("Lost the connection mid-answer — the partial reply is saved.");
   } finally {
     generating = false;
-    sendBtn.disabled = false;
+    syncComposerState();
     closeTelemetry();
     refreshSidebar();
   }
@@ -538,7 +584,7 @@ window.MutaChat = {
   isGenerating: () => generating,
   setGenerating: (v) => {
     generating = v;
-    sendBtn.disabled = v;
+    syncComposerState();
   },
 };
 
