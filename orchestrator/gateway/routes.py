@@ -173,8 +173,9 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
 def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> StreamingResponse:
     """Token-streaming twin of `/chat` — the browser UI's primary path.
 
-    Emits Server-Sent Events: `{"reasoning": "..."}` for Qwen3 thinking tokens and
-    `{"delta": "..."}` for answer tokens, then a final
+    Emits Server-Sent Events: a leading `{"conversation_id": "..."}`, then
+    `{"reasoning": "..."}` for Qwen3 thinking tokens and `{"delta": "..."}` for answer
+    tokens, then a final
     `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
     """
     cid, user_message_id, events = engine.stream_events_chat(
@@ -196,6 +197,11 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
         t_first = t_last = 0.0
         hub = get_hub()
         hub.begin(cid)
+        # The id leads the stream rather than arriving only at `done`: a client that stops
+        # generation early (human-in-the-loop stop/steer) must already know which conversation
+        # its partial reply landed in, or stopping the first reply of a new chat forks a
+        # second thread on the next message.
+        yield f"data: {json.dumps({'conversation_id': cid})}\n\n"
         try:
             for kind, text in events:
                 now = time.monotonic()

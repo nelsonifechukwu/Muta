@@ -15,7 +15,9 @@ const studentId = (() => {
 
 let conversationId = null;
 let generating = false;
-let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?}
+let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
+let messageQueue = []; // {typed, attachments} — sent one by one when the tutor is free
+let currentAbort = null; // AbortController while a *chat* stream runs (voice has its own barge)
 let telemetrySource = null;
 let telemetryCloseTimer = null;
 
@@ -140,6 +142,7 @@ function beginAssistantMessage() {
     },
     fail(message) {
       prose.classList.remove("cursor");
+      thinking.querySelector("summary").textContent = "Thought process";
       if (!full) prose.textContent = message;
       else renderMarkdown(prose, full);
     },
@@ -242,7 +245,13 @@ async function refreshSidebar() {
 }
 
 async function loadConversation(cid) {
-  if (generating) return toast("Wait for the current reply to finish.");
+  // A running *chat* stream is interruptible — stop it (partial is persisted) and move on.
+  // A voice reply is not ours to kill from here; the mic button owns that loop.
+  if (generating) {
+    if (!currentAbort) return toast("Wait for the current reply to finish.");
+    stopGeneration();
+  }
+  discardQueue(); // queued messages were aimed at the thread we're leaving
   const r = await fetch(`/v1/conversations/${cid}/messages`);
   if (!r.ok) return toast("Couldn't load that conversation.");
   const body = await r.json();
@@ -255,7 +264,11 @@ async function loadConversation(cid) {
 }
 
 function newChat() {
-  if (generating) return toast("Wait for the current reply to finish.");
+  if (generating) {
+    if (!currentAbort) return toast("Wait for the current reply to finish.");
+    stopGeneration();
+  }
+  discardQueue();
   conversationId = null;
   pendingAttachments = [];
   renderChips();
@@ -277,8 +290,17 @@ function readingAnImage() {
 
 function syncComposerState() {
   const busy = readingAnImage();
+  const streaming = currentAbort != null;
   $("#btn-image").disabled = busy;
-  sendBtn.disabled = generating || busy;
+  // During a chat stream the send button *is* the stop button, so it stays enabled. During a
+  // voice reply (generating without a chat stream) the mic button owns interruption.
+  sendBtn.disabled = busy || (generating && !streaming);
+  sendBtn.classList.toggle("stop", streaming);
+  sendBtn.title = streaming ? "Stop the reply (Esc)" : "Send";
+}
+
+function stopGeneration() {
+  if (currentAbort) currentAbort.abort();
 }
 
 function renderChips() {
@@ -435,7 +457,10 @@ window.addEventListener("dragover", (e) => {
 window.addEventListener("dragend", hideDropHint);
 window.addEventListener("blur", hideDropHint);
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") hideDropHint();
+  if (e.key === "Escape") {
+    hideDropHint();
+    stopGeneration(); // no-op unless a chat stream is running
+  }
 });
 window.addEventListener("drop", (e) => {
   e.preventDefault();
@@ -450,12 +475,12 @@ window.addEventListener("drop", (e) => {
 // ---------------------------------------------------------------------------
 // Sending + SSE streaming
 // ---------------------------------------------------------------------------
-function composeOutgoingMessage(typed) {
+function composeOutgoingMessage(typed, attachments) {
   // This text is the ONLY thing the tutor learns about a photo: `attachment_ids` binds rows
   // in Postgres for history, it does not reach the model. So a photo we failed to read has
   // to be declared too — otherwise the student watches their image sit in the transcript
   // while the tutor insists there is no image, which is the worst of both worlds.
-  const lines = pendingAttachments
+  const lines = attachments
     .filter((a) => a.kind === "image")
     .map((a) =>
       a.transcription
@@ -467,23 +492,84 @@ function composeOutgoingMessage(typed) {
   return typed ? `${lines.join("\n")}\n\n${typed}` : lines.join("\n");
 }
 
-async function send() {
-  const typed = inputEl.value.trim();
+// --- the queue: messages typed while the tutor is busy -----------------------------------
+function renderQueue() {
+  const box = $("#queue");
+  box.innerHTML = "";
+  box.hidden = messageQueue.length === 0;
+  messageQueue.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "queued";
+    const label = document.createElement("span");
+    label.className = "queued-text";
+    const imgs = item.attachments.filter((a) => a.kind === "image").length;
+    label.textContent =
+      (imgs ? `🖼 ` : "") + (item.typed || "(from my image)");
+    const x = document.createElement("button");
+    x.className = "x";
+    x.textContent = "✕";
+    x.title = "Don't send this";
+    x.addEventListener("click", () => {
+      messageQueue = messageQueue.filter((q) => q !== item);
+      renderQueue();
+    });
+    row.append(label, x);
+    box.appendChild(row);
+  });
+}
+
+function discardQueue() {
+  if (messageQueue.length) {
+    toast(`Discarded ${messageQueue.length} queued message${messageQueue.length > 1 ? "s" : ""}.`);
+  }
+  messageQueue = [];
+  renderQueue();
+}
+
+function drainQueue() {
   if (generating) return;
+  const next = messageQueue.shift();
+  renderQueue();
+  if (next) dispatch(next);
+}
+
+function send(steer = false) {
+  const typed = inputEl.value.trim();
   if (readingAnImage()) return toast("Still reading your image — one moment.");
   if (!typed && !pendingAttachments.some((a) => a.transcription)) return;
 
-  const message = composeOutgoingMessage(typed);
-  const attachments = pendingAttachments.slice();
-  const attachmentIds = attachments.map((a) => a.id).filter((id) => id != null);
+  const item = { typed, attachments: pendingAttachments.slice() };
   pendingAttachments = [];
   renderChips();
   inputEl.value = "";
   autoGrow();
 
-  addUserMessage(typed || "(from my image)", attachments);
+  if (generating) {
+    // Human in the loop: Enter while the tutor talks queues the message; Ctrl+Enter steers —
+    // it cuts the current reply short (partial is persisted) and sends this message next,
+    // ahead of anything already queued. A voice reply can't be stopped from the keyboard
+    // (the mic button owns barge-in), so steering degrades to queueing there.
+    if (steer && currentAbort) {
+      messageQueue.unshift(item);
+      renderQueue();
+      stopGeneration(); // dispatch's finally drains the queue straight away
+    } else {
+      messageQueue.push(item);
+      renderQueue();
+    }
+    return;
+  }
+  dispatch(item);
+}
+
+async function dispatch(item) {
+  const message = composeOutgoingMessage(item.typed, item.attachments);
+  const attachmentIds = item.attachments.map((a) => a.id).filter((id) => id != null);
+
+  addUserMessage(item.typed || "(from my image)", item.attachments);
   const assistant = beginAssistantMessage();
   generating = true;
+  currentAbort = new AbortController();
   syncComposerState();
 
   try {
@@ -496,6 +582,7 @@ async function send() {
         conversation_id: conversationId,
         attachment_ids: attachmentIds,
       }),
+      signal: currentAbort.signal,
     });
     if (!res.ok) {
       const detail = (await res.json().catch(() => ({}))).detail;
@@ -504,12 +591,20 @@ async function send() {
     }
     await pumpSse(res, assistant);
   } catch (err) {
-    assistant.fail("Lost the connection mid-answer — the partial reply is saved.");
+    if (err && err.name === "AbortError") {
+      // Deliberate stop, not a failure. The backend persists the partial reply on
+      // disconnect, so what is on screen is what history will replay.
+      assistant.fail("Stopped.");
+    } else {
+      assistant.fail("Lost the connection mid-answer — the partial reply is saved.");
+    }
   } finally {
     generating = false;
+    currentAbort = null;
     syncComposerState();
     closeTelemetry();
     refreshSidebar();
+    drainQueue(); // steering: a stop followed by a queued correction sends it immediately
   }
 }
 
@@ -534,16 +629,15 @@ async function pumpSse(res, assistant) {
         } catch {
           continue;
         }
+        // The id leads the stream (first frame), so even a reply stopped mid-token knows
+        // which conversation its partial landed in — a stopped first turn must not fork a
+        // second thread on the next message.
+        if (ev.conversation_id) conversationId = ev.conversation_id;
         if (ev.reasoning) assistant.pushThought(ev.reasoning);
         else if (ev.delta) assistant.pushDelta(ev.delta);
         else if (ev.error) assistant.fail(ev.error);
-        else if (ev.done) {
-          conversationId = ev.conversation_id || conversationId;
-          assistant.finalize();
-        }
+        else if (ev.done) assistant.finalize();
         if (!telemetryOpened && (ev.reasoning || ev.delta) && conversationId) {
-          // Existing threads watch live from the first token; brand-new ones learn their
-          // id at `done` and are opened by the post-stream branch below.
           openTelemetry(conversationId);
           telemetryOpened = true;
         }
@@ -560,11 +654,16 @@ async function pumpSse(res, assistant) {
   }
 }
 
-sendBtn.addEventListener("click", send);
+sendBtn.addEventListener("click", () => {
+  // While a chat stream runs the button is Stop; Enter still queues (see send()).
+  if (currentAbort) stopGeneration();
+  else send();
+});
 inputEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    send();
+    // Cmd+Enter is the macOS spelling of Ctrl+Enter; both steer.
+    send(e.ctrlKey || e.metaKey);
   }
 });
 
@@ -585,6 +684,7 @@ window.MutaChat = {
   setGenerating: (v) => {
     generating = v;
     syncComposerState();
+    if (!v) drainQueue(); // a message typed during a voice reply goes out when it ends
   },
 };
 

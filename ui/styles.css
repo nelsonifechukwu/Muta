@@ -207,6 +207,26 @@ button.send {
 }
 button.send:disabled { opacity: 0.4; cursor: default; }
 button.send svg { width: 16px; height: 16px; fill: currentColor; }
+/* While a chat stream runs the send button IS the stop button (Enter still queues). */
+button.send .icon-stop { display: none; }
+button.send.stop .icon-send { display: none; }
+button.send.stop .icon-stop { display: block; }
+button.send.stop { background: var(--danger); }
+
+/* Messages queued while the tutor is talking — visible, individually cancellable. */
+#queue { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+/* Author display: beats the UA [hidden] rule; restate it or the empty box renders. */
+#queue[hidden] { display: none; }
+.queued {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px dashed var(--border); border-radius: 10px;
+  padding: 5px 10px; font-size: 0.85rem; color: var(--muted); background: var(--card);
+}
+.queued .queued-text {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.queued .x { cursor: pointer; color: var(--muted); border: none; background: none; }
+.queued .x:hover { color: var(--danger); }
 .fineprint { text-align: center; font-size: 0.7rem; color: var(--muted); margin-top: 8px; }
 
 /* --- drag overlay + toast ------------------------------------------------- */

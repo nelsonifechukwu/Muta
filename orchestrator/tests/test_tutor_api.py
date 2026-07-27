@@ -124,6 +124,19 @@ def test_the_slot_is_released_even_when_the_engine_fails(wired):
     assert slot is not None and slot.busy is False
 
 
+def test_chat_stream_announces_the_conversation_in_its_first_frame(wired):
+    """A client that stops the stream early (human-in-the-loop stop) must already know which
+    conversation its partial reply landed in — the id only arriving at `done` means stopping
+    the first reply of a brand-new chat forks a second thread on the next message."""
+    with client.stream(
+        "POST", "/v1/chat/stream", json={"student_id": "s1", "message": "Solve x^2 = 9"}
+    ) as response:
+        events = [line for line in response.iter_lines() if line.startswith("data: ")]
+    assert '"conversation_id": "conv-1"' in events[0]
+    assert '"done"' not in events[0], "the id frame must precede tokens, not replace done"
+    assert '"done": true' in events[-1]
+
+
 def test_streaming_turn_emits_reasoning_then_deltas_then_done(wired):
     with client.stream("POST", "/v1/tutor/chat/stream", json=turn()) as response:
         assert response.headers["content-type"].startswith("text/event-stream")

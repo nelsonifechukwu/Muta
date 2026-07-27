@@ -43,10 +43,12 @@
           <span id="t-tps" title="Tokens per second (this conversation)">— tok/s</span>
         </div>
 
+        <div id="queue" hidden aria-label="Queued messages"></div>
+
         <div id="composer">
           <div id="attachment-chips"></div>
           <textarea id="input" rows="1"
-            placeholder="Ask anything — Enter to send, Shift+Enter for a new line"></textarea>
+            placeholder="Ask anything — Enter to send (queues while replying), Ctrl+Enter to interrupt &amp; send"></textarea>
           <div id="composer-buttons">
             <div class="left">
               <button id="btn-image" class="icon" title="Attach an image (or drag one in)">
@@ -60,7 +62,8 @@
               </button>
             </div>
             <button id="btn-send" class="send" title="Send">
-              <svg viewBox="0 0 24 24"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87z"/></svg>
+              <svg class="icon-send" viewBox="0 0 24 24"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87z"/></svg>
+              <svg class="icon-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
             </button>
           </div>
         </div>
