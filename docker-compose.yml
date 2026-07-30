@@ -47,14 +47,19 @@ services:
       MUTA_RT_MODEL_FILE: Qwen3.5-4B-Q4_K_M.gguf
       MUTA_RT_MODEL_ALIAS: qwen3.5-4b
       # ctx 2048 keeps core+draft RSS under the ladder's 4300 MiB core cap — at 4096 the
-      # tree hits L4 and vision spawns are refused. Thinking off: on CPU/emulation the
-      # reasoning phase alone can run minutes before the first answer token.
+      # tree hits L4 and vision spawns are refused. Thinking on: the UI streams the chain
+      # of thought live (collapsible, Claude-style), so the wait is visible, not a hang —
+      # but on CPU/emulation the think phase still delays the first *answer* token; set
+      # "0" to trade reasoning quality for latency.
       MUTA_RT_N_CTX: "2048"
-      MUTA_RT_ENABLE_THINKING: "0"
+      MUTA_RT_ENABLE_THINKING: "1"
       # Smaller batch/ubatch shrink the compute buffers (~hundreds of MiB) and q8_0 K-cache
       # halves that side of the KV — together they keep the core+draft tree comfortably
       # below the 4300 MiB ladder cap so vision spawns stay admitted.
-      MUTA_RT_EXTRA_SERVER_ARGS: '["-b","512","-ub","128","--cache-type-k","q8_0"]'
+      # --reasoning-budget: unbounded thinking measured 1946 tokens (8.7 min at ~3.7 tok/s
+      # emulated) on "say hello" and filled ctx 2048 before ANY answer token — the engine
+      # force-closes the think phase at 512 so the answer always arrives.
+      MUTA_RT_EXTRA_SERVER_ARGS: '["-b","512","-ub","128","--cache-type-k","q8_0","--reasoning-budget","512"]'
       # Core + the speculation draft measure ~4.2 GiB under emulation; the default 4300 MiB
       # cap (main's 7 GB competition budget) would pin the ladder at L4 and refuse vision.
       # This VM has 8 GiB: core 4.2 + vision ~1.1 + gateway/db/nginx still leave headroom.

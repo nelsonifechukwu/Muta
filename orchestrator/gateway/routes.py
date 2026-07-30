@@ -146,6 +146,7 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             subject=req.subject.value,
             language=req.language,
             title=req.message[:80],
+            **params_for_mode(req.mode.value),
         )
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
         raise HTTPException(
@@ -188,6 +189,10 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
         subject=req.subject.value,
         language=req.language,
         title=req.message[:80],
+        # §6.5 sampling profiles apply to the UI's primary path too — without them the
+        # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
+        # student holding a slot indefinitely, and with thinking on it filled the context).
+        **params_for_mode(req.mode.value),
     )
     if req.attachment_ids:
         _link_attachments(engine, req.attachment_ids, cid, user_message_id)

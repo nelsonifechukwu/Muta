@@ -124,25 +124,47 @@ function beginAssistantMessage() {
   scrollToBottom();
 
   let full = "";
+  let thinkStartedAt = 0; // 0 = this reply produced no thinking
+  let thinkSettled = false;
+
+  // Claude-style train of thought: the block streams open with a shimmering "Thinking…"
+  // label, then folds itself away to "Thought for Ns" the moment the answer starts.
+  const settleThinking = () => {
+    if (!thinkStartedAt || thinkSettled) return;
+    thinkSettled = true;
+    const s = Math.max(1, Math.round((performance.now() - thinkStartedAt) / 1000));
+    summary.textContent = s < 60 ? `Thought for ${s}s` : `Thought for ${Math.floor(s / 60)}m ${s % 60}s`;
+    summary.classList.remove("shimmer");
+    thinking.open = false;
+  };
+
   return {
     pushThought(t) {
-      thinking.hidden = false;
+      if (!thinkStartedAt) {
+        thinkStartedAt = performance.now();
+        thinking.hidden = false;
+        thinking.open = true;
+        summary.classList.add("shimmer");
+      }
       thought.textContent += t;
+      thought.scrollTop = thought.scrollHeight; // the box caps at 16rem; follow the tail
+      scrollToBottom();
     },
     pushDelta(t) {
+      settleThinking();
       full += t;
       textNode.data = full;
       scrollToBottom();
     },
     finalize() {
+      settleThinking(); // a reply stopped mid-think still gets its label settled
       prose.classList.remove("cursor");
-      thinking.querySelector("summary").textContent = "Thought process";
       if (full.trim()) renderMarkdown(prose, full);
       scrollToBottom();
     },
     fail(message) {
+      settleThinking();
       prose.classList.remove("cursor");
-      thinking.querySelector("summary").textContent = "Thought process";
       if (!full) prose.textContent = message;
       else renderMarkdown(prose, full);
     },

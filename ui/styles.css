@@ -131,7 +131,23 @@ details.thinking {
   font-family: var(--sans);
 }
 details.thinking summary { cursor: pointer; user-select: none; }
-details.thinking .thought { white-space: pre-wrap; margin-top: 6px; }
+details.thinking .thought {
+  white-space: pre-wrap; margin-top: 6px;
+  border-left: 2px solid var(--border); padding-left: 10px;
+  max-height: 16rem; overflow-y: auto;
+}
+/* Streaming: a light sweep across the "Thinking…" label, Claude-style. */
+details.thinking summary.shimmer {
+  background: linear-gradient(90deg, var(--muted) 35%, var(--text) 50%, var(--muted) 65%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: think-shimmer 2s linear infinite;
+}
+@keyframes think-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
 
 .cursor::after {
   content: "▍"; color: var(--accent-strong);
