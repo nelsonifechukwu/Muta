@@ -136,3 +136,39 @@ def test_reads_the_real_dev_model():
     assert md.architecture == "qwen3"
     assert md.n_layer == 28 and md.n_kv_head == 8 and md.head_dim_k == 128
     assert md.file_bytes == 396_705_472  # the byte count pinned in versions.lock
+
+
+def qwen35_like(path: Path, *, layers=32, interval=4) -> Path:
+    """Hybrid fixture matching the shipped Qwen3.5-4B: full attention every `interval`
+    layers, gated-delta-net (SSM) state on the rest."""
+    entries = [
+        _kv("general.architecture", STR, _str("qwen35")),
+        _kv("qwen35.block_count", U32, _u32(layers)),
+        _kv("qwen35.attention.head_count", U32, _u32(16)),
+        _kv("qwen35.attention.head_count_kv", U32, _u32(4)),
+        _kv("qwen35.attention.key_length", U32, _u32(256)),
+        _kv("qwen35.attention.value_length", U32, _u32(256)),
+        _kv("qwen35.context_length", U32, _u32(262144)),
+        _kv("qwen35.embedding_length", U32, _u32(2560)),
+        _kv("qwen35.full_attention_interval", U32, _u32(interval)),
+        _kv("qwen35.ssm.state_size", U32, _u32(128)),
+        _kv("qwen35.ssm.inner_size", U32, _u32(4096)),
+        _kv("qwen35.ssm.conv_kernel", U32, _u32(4)),
+        _kv("qwen35.ssm.group_count", U32, _u32(16)),
+    ]
+    return write_gguf(path, entries)
+
+
+def test_hybrid_metadata_splits_attention_from_recurrent_layers(tmp_path):
+    md = read_metadata(qwen35_like(tmp_path / "h.gguf"))
+    assert md.is_hybrid
+    assert md.full_attention_interval == 4
+    assert md.n_attn_layer == 8  # 32 // 4 — only these carry token-growing KV
+    assert (md.ssm_state_size, md.ssm_inner_size) == (128, 4096)
+    assert (md.ssm_conv_kernel, md.ssm_group_count) == (4, 16)
+
+
+def test_non_hybrid_models_keep_all_layers_as_attention(tmp_path):
+    md = read_metadata(qwen_like(tmp_path / "m.gguf"))
+    assert not md.is_hybrid
+    assert md.n_attn_layer == md.n_layer == 36
