@@ -98,3 +98,14 @@ def test_ngram_simple_needs_no_draft_and_uses_measured_params(tmp_path):
     assert cmd[cmd.index("--spec-ngram-simple-size-n") + 1] == "4"
     assert cmd[cmd.index("--spec-ngram-simple-size-m") + 1] == "12"
     assert "--spec-draft-model" not in cmd
+
+
+def test_batch_and_cache_flags_come_from_config_not_extra_args(tmp_path):
+    """These four lived in MUTA_RT_EXTRA_SERVER_ARGS in docker-compose.yml — a JSON string
+    outside the config schema. Fields make them visible, testable and overridable."""
+    cfg, model = _cfg(tmp_path)
+    cmd = LlamaServer(cfg).build_command(model)
+    assert cmd[cmd.index("-b") + 1] == "512"
+    assert cmd[cmd.index("-ub") + 1] == "128"
+    assert cmd[cmd.index("--cache-type-k") + 1] == "q8_0"
+    assert cmd[cmd.index("--reasoning-budget") + 1] == "512"

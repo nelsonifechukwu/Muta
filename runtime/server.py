@@ -70,6 +70,10 @@ class LlamaServer:
             "--parallel", str(cfg.n_parallel),
             "--ctx-checkpoints", str(cfg.ctx_checkpoints),
             "--cache-ram", str(cfg.cache_ram_mib),
+            "-b", str(cfg.n_batch),
+            "-ub", str(cfg.n_ubatch),
+            "--cache-type-k", cfg.cache_type_k,
+            "--reasoning-budget", str(cfg.reasoning_budget),
         ]
         if cfg.n_threads is not None:
             cmd += ["--threads", str(cfg.n_threads)]

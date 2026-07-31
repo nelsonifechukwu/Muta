@@ -53,22 +53,25 @@ services:
       # "0" to trade reasoning quality for latency.
       MUTA_RT_N_CTX: "2048"
       MUTA_RT_ENABLE_THINKING: "1"
-      # Smaller batch/ubatch shrink the compute buffers (~hundreds of MiB) and q8_0 K-cache
-      # halves that side of the KV — together they keep the core+draft tree comfortably
-      # below the 4300 MiB ladder cap so vision spawns stay admitted.
-      # --reasoning-budget: unbounded thinking measured 1946 tokens (8.7 min at ~3.7 tok/s
-      # emulated) on "say hello" and filled ctx 2048 before ANY answer token — the engine
-      # force-closes the think phase at 512 so the answer always arrives.
-      MUTA_RT_EXTRA_SERVER_ARGS: '["-b","512","-ub","128","--cache-type-k","q8_0","--reasoning-budget","512"]'
-      # Core + the speculation draft measure ~4.2 GiB under emulation; the default 4300 MiB
-      # cap (main's 7 GB competition budget) would pin the ladder at L4 and refuse vision.
-      # This VM has 8 GiB: core 4.2 + vision ~1.1 + gateway/db/nginx still leave headroom.
+      # Engine + 0.8B draft with the RSS ceilings applied: re-measure after boot and
+      # record in bench/optimization-log.md. 5400 leaves room for vision on this 8 GiB VM.
       MUTA_CORE_CAP_MIB: "5400"
       # Weights are provisioned by run.sh (scripts/fetch_models.py); the gateway must never
       # surprise-download 2.6 GB itself.
       MUTA_RT_AUTO_DOWNLOAD: "0"
-      # Speculation draft: the small dev GGUF (make model). Skipped silently when absent.
-      MUTA_RT_DRAFT_MODEL: /app/models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf
+      # Engine flags now live in RuntimeConfig (runtime/config.py) — batch geometry,
+      # q8_0 K-cache, reasoning budget 512, and the RSS ceilings (--parallel 2,
+      # --ctx-checkpoints 4, --cache-ram 256) are the defaults there. Only deltas from
+      # those defaults belong here.
+      # Threads: the VM's 10 vCPUs are shared with the gateway/db/nginx — decode is
+      # bandwidth-bound and gains nothing from oversubscription (runtime/profiles.py
+      # thread table rationale), prefill may use them all.
+      MUTA_RT_N_THREADS: "8"
+      MUTA_RT_N_THREADS_BATCH: "10"
+      # Speculation draft: Qwen3.5-0.8B (fetch_models --with-draft). Qwen3-0.6B is NOT
+      # usable — vocab 151936 vs the 4B's 248320, the engine rejects the pairing
+      # (docs/engine-flags.md). Absent file -> speculation off, boot proceeds.
+      MUTA_RT_DRAFT_MODEL: /app/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf
       # Model load can take minutes under emulation; generous is free.
       MUTA_RT_STARTUP_TIMEOUT_S: "900"
       MUTA_RT_REQUEST_TIMEOUT_S: "600"
