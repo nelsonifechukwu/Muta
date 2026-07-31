@@ -66,7 +66,9 @@ def cache_type_bytes(name: str) -> float:
 
 @dataclass(frozen=True)
 class KVCost:
-    """Per-token KV cost of one model at one cache quantization."""
+    """Per-token KV cost of one model at one cache quantization. `n_layer` counts only the
+    layers whose KV grows with tokens (= all layers on classic transformers,
+    `block_count // full_attention_interval` on hybrids)."""
 
     n_layer: int
     n_kv_head: int
@@ -84,7 +86,7 @@ class KVCost:
                 "the target box (TDD §0.2)"
             )
         return cls(
-            n_layer=md.n_layer,
+            n_layer=md.n_attn_layer,
             n_kv_head=md.n_kv_head,
             head_dim_k=md.head_dim_k,
             head_dim_v=md.head_dim_v,
@@ -112,6 +114,42 @@ class KVCost:
 
 
 @dataclass(frozen=True)
+class RecurrentStateCost:
+    """Constant-size f32 state of a hybrid model's recurrent (SSM / gated-delta-net)
+    layers. Charged PER SLOT — and per context checkpoint, which is why
+    `--ctx-checkpoints` is a RAM knob (runtime/config.py). Formula validated against the
+    engine's own 'restored context checkpoint ... 50.251 MiB' log line for Qwen3.5-4B."""
+
+    n_layers: int  # recurrent layers = block_count - n_attn_layer
+    conv_kernel: int
+    d_inner: int
+    d_state: int
+    n_groups: int
+
+    @classmethod
+    def from_metadata(cls, md: GGUFMetadata) -> "RecurrentStateCost | None":
+        if not md.is_hybrid:
+            return None
+        return cls(
+            n_layers=md.n_layer - md.n_attn_layer,
+            conv_kernel=md.ssm_conv_kernel,
+            d_inner=md.ssm_inner_size,
+            d_state=md.ssm_state_size,
+            n_groups=md.ssm_group_count,
+        )
+
+    @property
+    def bytes_per_slot(self) -> int:
+        conv = (self.conv_kernel - 1) * (self.d_inner + 2 * self.n_groups * self.d_state)
+        delta = self.d_state * self.d_inner
+        return self.n_layers * (conv + delta) * 4  # f32
+
+    @property
+    def mib_per_slot(self) -> float:
+        return self.bytes_per_slot / MiB
+
+
+@dataclass(frozen=True)
 class SlotBudget:
     """One row of the §5.2 table: does this profile fit under CORE-TEXT's cap?"""
 
@@ -119,11 +157,12 @@ class SlotBudget:
     weights_mib: float
     kv_mib: float
     buffers_mib: float
+    state_mib: float = 0.0
     cap_mib: int = CORE_TEXT_CAP_MIB
 
     @property
     def total_mib(self) -> float:
-        return self.weights_mib + self.kv_mib + self.buffers_mib
+        return self.weights_mib + self.kv_mib + self.buffers_mib + self.state_mib
 
     @property
     def fits(self) -> bool:
@@ -145,12 +184,14 @@ def budget(
     weights_mib: float,
     buffers_mib: float | None = None,
     cap_mib: int = CORE_TEXT_CAP_MIB,
+    state_bytes_per_slot: int = 0,
 ) -> SlotBudget:
     return SlotBudget(
         profile=profile,
         weights_mib=weights_mib,
         kv_mib=cost.mib_for(profile.n_ctx),
         buffers_mib=compute_buffer_mib(profile) if buffers_mib is None else buffers_mib,
+        state_mib=state_bytes_per_slot * profile.n_parallel / MiB,
         cap_mib=cap_mib,
     )
 
@@ -165,11 +206,29 @@ def budget_table(
 ) -> tuple[KVCost, list[SlotBudget]]:
     cost = KVCost.from_metadata(md, cache_type)
     weights_mib = md.file_bytes / MiB
+    state = RecurrentStateCost.from_metadata(md)
     rows = [
-        budget(cost, p, weights_mib=weights_mib, buffers_mib=buffers_mib, cap_mib=cap_mib)
+        budget(
+            cost,
+            p,
+            weights_mib=weights_mib,
+            buffers_mib=buffers_mib,
+            cap_mib=cap_mib,
+            state_bytes_per_slot=state.bytes_per_slot if state else 0,
+        )
         for p in (profiles or PROFILES).values()
     ]
     return cost, rows
+
+
+def _round_half_up(value: float, ndigits: int = 1) -> float:
+    """`f"{x:.1f}"` alone is round-half-to-even. That is not a fixture-only curiosity: the
+    shipped Qwen3.5-4B's own ssm.* dims (128, 4096, 4, 16) make `RecurrentStateCost`'s
+    formula land on exactly 50.25 MiB per slot — an exact tie that plain `.1f` renders as
+    "50.2", the wrong side of the engine's measured 50.251 MiB checkpoint log. Round half up
+    instead, as a human reading a RAM budget expects."""
+    factor = 10**ndigits
+    return int(value * factor + 0.5) / factor
 
 
 def render_markdown(md: GGUFMetadata, cost: KVCost, rows: list[SlotBudget]) -> str:
@@ -180,8 +239,8 @@ def render_markdown(md: GGUFMetadata, cost: KVCost, rows: list[SlotBudget]) -> s
     )
     table = "\n".join(
         f"| {r.profile.name} | {r.profile.n_ctx} | {r.profile.n_parallel} | "
-        f"{r.profile.ctx_per_slot} | {r.kv_mib:.0f} MiB | {r.weights_mib:.0f} MiB | "
-        f"{r.buffers_mib:.0f} MiB | {r.total_mib:.0f} MiB | "
+        f"{r.profile.ctx_per_slot} | {r.kv_mib:.0f} MiB | {r.state_mib:.0f} MiB | "
+        f"{r.weights_mib:.0f} MiB | {r.buffers_mib:.0f} MiB | {r.total_mib:.0f} MiB | "
         f"{'yes' if r.fits else f'**NO** (over by {-r.headroom_mib:.0f} MiB)'} |"
         for r in rows
     )
@@ -191,6 +250,14 @@ def render_markdown(md: GGUFMetadata, cost: KVCost, rows: list[SlotBudget]) -> s
         "[MEASURE: RSS delta across the `-ub` sweep on the target box, T13] — "
         "re-run with `--buffers-mib` once measured.\n"
         if COMPUTE_BUFFER_PROVISIONAL
+        else ""
+    )
+    state = RecurrentStateCost.from_metadata(md)
+    hybrid_note = (
+        f"\nHybrid layout: **{md.n_attn_layer} attention** layers (token-growing KV) + "
+        f"**{md.n_layer - md.n_attn_layer} recurrent** layers at a constant "
+        f"**{_round_half_up(state.mib_per_slot):.1f} MiB f32 per slot** (and per context checkpoint).\n"
+        if state
         else ""
     )
     return f"""# KV budget — {md.path.name}
@@ -204,9 +271,9 @@ head_dim {md.head_dim_k}{'' if md.head_dim_v == md.head_dim_k else f'/{md.head_d
 trained context {md.trained_context}, file {md.file_bytes / GiB:.2f} GiB.
 
 Per-token KV = n_layer × n_kv_head × (head_dim_k × B_k + head_dim_v × B_v)
-= {md.n_layer} × {md.n_kv_head} × ({md.head_dim_k} + {md.head_dim_v}) elements
+= {cost.n_layer} × {md.n_kv_head} × ({md.head_dim_k} + {md.head_dim_v}) elements
 = **{cost.elements_per_token:,} elements/token**.
-
+{hybrid_note}
 ## KV quantization ladder (D6)
 
 | cache type | per token | 4096-token slot |
@@ -215,8 +282,8 @@ Per-token KV = n_layer × n_kv_head × (head_dim_k × B_k + head_dim_v × B_v)
 
 ## Slot budget vs the CORE-TEXT cap ({rows[0].cap_mib} MiB)
 
-| profile | `-c` | `-np` | ctx/slot | KV | weights | buffers | total | fits? |
-|---|---|---|---|---|---|---|---|---|
+| profile | `-c` | `-np` | ctx/slot | KV | state | weights | buffers | total | fits? |
+|---|---|---|---|---|---|---|---|---|---|
 {table}
 {provisional}
 """
