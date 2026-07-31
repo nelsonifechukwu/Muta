@@ -15,5 +15,7 @@ RUN apk add --no-cache curl \
  && test -f vendor/katex/katex.min.js && test -f vendor/katex/katex.min.css \
  && apk del curl
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Rendered to /etc/nginx/conf.d/default.conf at start by the image's envsubst entrypoint,
+# substituting ${BACKEND_UPSTREAM} (see docker-compose.yml / run.sh --native).
+COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY ui/ /usr/share/nginx/html/
