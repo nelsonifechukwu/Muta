@@ -14,6 +14,7 @@ from runtime.kvmath import (
     CACHE_TYPE_BYTES,
     CORE_TEXT_CAP_MIB,
     KVCost,
+    RecurrentStateCost,
     budget,
     budget_table,
     cache_type_bytes,
@@ -21,7 +22,7 @@ from runtime.kvmath import (
     render_markdown,
 )
 from runtime.profiles import PROFILES
-from runtime.tests.test_gguf import qwen_like
+from runtime.tests.test_gguf import qwen35_like, qwen_like
 
 
 def tdd_example(cache_type: str = "q8_0") -> KVCost:
@@ -153,3 +154,48 @@ def test_cli_fails_when_nothing_fits(tmp_path, capsys):
     model = qwen_like(tmp_path / "m.gguf")
     assert main([str(model), "--cache-type", "f32", "--cap-mib", "10"]) == 1
     assert "no profile fits" in capsys.readouterr().err
+
+
+# --- hybrid models -----------------------------------------------------------------------
+
+
+def test_hybrid_kv_grows_only_on_the_attention_layers(tmp_path):
+    """Qwen3.5-4B: 8 of 32 layers are full attention. Budgeting all 32 overstated
+    per-token KV 4x and missed the recurrent state entirely."""
+    md = read_metadata(qwen35_like(tmp_path / "h.gguf"))
+    cost = KVCost.from_metadata(md, "f16")
+    assert cost.n_layer == 8
+    assert cost.elements_per_token == 8 * 4 * (256 + 256)  # 16,384 — not 65,536
+
+
+def test_recurrent_state_matches_the_measured_checkpoint_size(tmp_path):
+    """The engine reported 'restored context checkpoint ... size = 50.251 MiB' for this
+    exact model shape (docs/engine-flags.md) — the formula must reproduce it."""
+    md = read_metadata(qwen35_like(tmp_path / "h.gguf"))
+    state = RecurrentStateCost.from_metadata(md)
+    assert state is not None
+    assert state.n_layers == 24
+    # per layer: conv R = (4-1) x (4096 + 2*16*128) el, delta-net S = 128 x 4096 el, f32
+    assert state.bytes_per_slot == 24 * ((3 * (4096 + 2 * 16 * 128)) + 128 * 4096) * 4
+    assert state.mib_per_slot == pytest.approx(50.25, abs=0.1)
+
+
+def test_non_hybrid_models_have_no_state_cost(tmp_path):
+    md = read_metadata(qwen_like(tmp_path / "m.gguf"))
+    assert RecurrentStateCost.from_metadata(md) is None
+
+
+def test_budget_charges_state_per_slot(tmp_path):
+    md = read_metadata(qwen35_like(tmp_path / "h.gguf"))
+    state = RecurrentStateCost.from_metadata(md)
+    cost = KVCost.from_metadata(md, "q8_0")
+    row = budget(cost, PROFILES["classroom"], weights_mib=2611, state_bytes_per_slot=state.bytes_per_slot)
+    assert row.state_mib == pytest.approx(50.25 * 6, abs=1)  # classroom runs 6 slots
+    assert row.total_mib == pytest.approx(row.weights_mib + row.kv_mib + row.buffers_mib + row.state_mib)
+
+
+def test_markdown_reports_the_hybrid_split(tmp_path):
+    md = read_metadata(qwen35_like(tmp_path / "h.gguf"))
+    cost, rows = budget_table(md)
+    doc = render_markdown(md, cost, rows)
+    assert "8 attention" in doc and "24 recurrent" in doc and "50.3 MiB" in doc
