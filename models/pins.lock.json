@@ -50,7 +50,12 @@
       "revision": "e87f176479d0855a907a41277aca2f8ee7a09523"
     },
     "draft": {
-      "files": {},
+      "files": {
+        "Qwen3.5-0.8B-Q4_K_M.gguf": {
+          "bytes": 532517120,
+          "sha256": "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517"
+        }
+      },
       "repo": "unsloth/Qwen3.5-0.8B-GGUF",
       "revision": "6ab461498e2023f6e3c1baea90a8f0fe38ab64d0"
     },
@@ -1532,5 +1537,5 @@
       "revision": "b3e3ee3cce4c11ceb63b1a0b229d916069c1ddf6"
     }
   },
-  "resolved_at": "2026-07-24T00:51:29+00:00"
+  "resolved_at": "2026-07-31T07:14:30+00:00"
 }

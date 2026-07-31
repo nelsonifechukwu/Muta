@@ -69,10 +69,14 @@ docker compose run --rm --no-deps backend \
 
 - `--mmproj-precision f16` is required: no first-party Q8_0 vision projector exists
   (`docs/model-provenance.md`), and the fetcher refuses to guess.
-- The speculative-decoding **draft** is the small dev GGUF, `models/Qwen3-0.6B/`
-  (fetch with `make model`). It's optional: when absent the engine simply runs
-  without speculation. (`--with-draft` can still fetch the pinned tier-B
-  Qwen3.5-0.8B if you want that instead — point `MUTA_RT_DRAFT_MODEL` at it.)
+- The speculative-decoding **draft of record** is the pinned tier-B Qwen3.5-0.8B,
+  `models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` — fetched by `--with-draft` in the command
+  above (`./run.sh` passes it automatically). It's optional: when absent the engine
+  simply runs without speculation. The small dev GGUF `models/Qwen3-0.6B/`
+  (`make model`) is **not** a draft candidate: the engine rejects it outright
+  ("the target and draft vocabs are not compatible" — Qwen3's vocab is 151,936 vs
+  Qwen3.5-4B's 248,320); it exists only as the smoke-test fixture
+  (`docs/smoke-fixture.md`).
 
 The roster (all under `./models`, volume-mounted into the backend, never baked):
 
@@ -84,7 +88,7 @@ The roster (all under `./models`, volume-mounted into the backend, never baked):
 | VAD | `models/asr/silero_vad.onnx` |
 | TTS | `models/tts/piper/en_US-joe-medium.onnx` (CC0) |
 | RAG embeddings | `models/embed/bge-small-en-v1.5-q8_0.gguf` |
-| Speculation draft (optional) | `models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf` |
+| Speculation draft (optional) | `models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` |
 
 `make verify-models` re-checks hashes, licences and load smoke.
 
@@ -166,7 +170,7 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 | `MUTA_RT_N_PARALLEL` | `2` | server slots (each costs ~50 MiB f32 state on the hybrid 4B) |
 | `MUTA_RT_CTX_CHECKPOINTS` | `4` | recurrent-state checkpoints per slot, ~50 MiB each |
 | `MUTA_RT_CACHE_RAM_MIB` | `256` | host-RAM prompt cache cap (engine default: 8192) |
-| `MUTA_RT_N_THREADS` / `_BATCH` | unset / unset (compose: `8` / `10`) | decode / prefill threads |
+| `MUTA_RT_N_THREADS` / `MUTA_RT_N_THREADS_BATCH` | unset / unset (compose: `8` / `10`) | decode / prefill threads |
 | `MUTA_RT_N_BATCH` / `_UBATCH` | `512` / `128` | logical / physical batch (compute-buffer size) |
 | `MUTA_RT_CACHE_TYPE_K` | `q8_0` | K-cache quantization |
 | `MUTA_RT_REASONING_BUDGET` | `512` | max thinking tokens before the answer is forced |

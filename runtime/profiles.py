@@ -342,6 +342,8 @@ def _speculation_flags(paths: BundlePaths, plan: ThreadPlan, notes: list[str]) -
         notes.append(f"TUTOR_SPECULATION=b but no draft model ({e}) — falling back to D2-c (none)")
         return []
     notes.append("D2-b active: re-run the -ub sweep, speculation multiplies verify-batch work")
+    # NOTE: inert at pin b10035 — speculation requires --spec-type (docs/engine-flags.md);
+    # flags kept for the main-branch launch path.
     return [
         "--spec-draft-model", str(draft),
         "--spec-draft-n-max", "8",
