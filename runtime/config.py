@@ -57,8 +57,12 @@ class RuntimeConfig(BaseSettings):
     # Per-request client timeout against llama-server. Applies between chunks on streams;
     # generous values are for emulated/dev boxes where time-to-first-token can be long.
     request_timeout_s: float = 120.0
-    # When set (and the file exists), llama-server runs with speculative decoding against
-    # this draft GGUF. Flags mirror runtime/profiles.py:_speculation_flags.
+    # Speculative decoding. b10035 gates ALL speculation behind --spec-type (default
+    # none): a draft model passed without it is silently ignored (docs/engine-flags.md).
+    # "draft-simple" needs draft_model to exist and share the target's vocab — the Qwen3.5
+    # family (vocab 248320) rejects Qwen3 drafts (151936). "ngram-simple" is zero-RAM
+    # self-speculation from the context; params are the measured tutoring-workload ones.
+    spec_type: Literal["none", "draft-simple", "ngram-simple"] = "draft-simple"
     draft_model: Path | None = None
     draft_max: int = 8
     draft_min: int = 1
