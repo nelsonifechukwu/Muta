@@ -39,7 +39,8 @@ must clear `ΔTPS ≥ 1.43 × ΔRAM_GB` to be worth it.
 
 | Date | Change | Harness | tps_max | Before (TPS / RAM / Acc) | After (TPS / RAM / Acc) | ΔTPS | ΔRAM | ΔAcc | ΔS_total | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|
-| _(first row lands 17 Jul — the zero-RAM-cost wins)_ | | | | | | | | | | |
+| 2026-07-31 | RSS ceilings: -np 2, --ctx-checkpoints 4, --cache-ram 256 (was auto-4/32/8192) | two-turn probe, docker/emulated | 15 | ~6.72 / 4.8 GB / — | 6.72 / 4.44 GB / — | ~0 | -0.36 GB | 0 | dev_host_provisional — RAM row only | keep |
+| 2026-07-31 | speculation ON: --spec-type draft-simple + Qwen3.5-0.8B (dead flags + incompatible 0.6B before) | two-turn probe, docker/emulated | 15 | 6.72 / — / — | 4.77 / +1.02 GB / — | -1.95 | +1.02 GB | 0 | dev_host_provisional — acceptance 98.4% ; target-box row pending | park (needs x86 numbers) |
 
 ## Why the ordering is what it is
 
