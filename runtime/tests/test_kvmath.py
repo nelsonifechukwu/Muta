@@ -199,3 +199,6 @@ def test_markdown_reports_the_hybrid_split(tmp_path):
     cost, rows = budget_table(md)
     doc = render_markdown(md, cost, rows)
     assert "8 attention" in doc and "24 recurrent" in doc and "50.3 MiB" in doc
+    # Checkpoint footnote (final-review F4): slot totals charge state once per slot, but
+    # every context checkpoint copies it again — the doc must say so, not just the once-off.
+    assert "ctx_checkpoints" in doc

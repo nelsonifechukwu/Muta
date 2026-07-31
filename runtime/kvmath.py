@@ -256,7 +256,11 @@ def render_markdown(md: GGUFMetadata, cost: KVCost, rows: list[SlotBudget]) -> s
     hybrid_note = (
         f"\nHybrid layout: **{md.n_attn_layer} attention** layers (token-growing KV) + "
         f"**{md.n_layer - md.n_attn_layer} recurrent** layers at a constant "
-        f"**{_round_half_up(state.mib_per_slot):.1f} MiB f32 per slot** (and per context checkpoint).\n"
+        f"**{_round_half_up(state.mib_per_slot):.1f} MiB f32 per slot** (and per context checkpoint). "
+        "Slot totals below charge the state ONCE per slot; each context checkpoint copies it "
+        "again — worst case per slot = state × (1 + ctx_checkpoints), engine default 32, "
+        "capped to 4 via `MUTA_RT_CTX_CHECKPOINTS` on the gateway path (`runtime/profiles.py` "
+        "launch paths pass no cap).\n"
         if state
         else ""
     )

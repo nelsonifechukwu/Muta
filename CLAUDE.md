@@ -53,11 +53,14 @@ missing; downloads are resumable and hash-skipped when present.
 The roster: core `models/core/Qwen3.5-4B-Q4_K_M.gguf` + `mmproj-F16.gguf` (vision),
 Moonshine tiny int8 (ASR), `models/asr/silero_vad.onnx` (VAD — underscore; the dash name
 never existed on disk), Piper `en_US-joe-medium` at its native **22050 Hz** (CC0 — lessac
-is NOT redistributable), bge-small (embeddings). The speculation draft is the small dev GGUF
-`models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf` (`make model`), wired in as
-`--model-draft` and skipped when absent. (The pinned tier-B Qwen3.5-0.8B remains
-available via `--with-draft` for anyone who wants a same-family draft; note there
-is no Qwen3.5-0.6B.)
+is NOT redistributable), bge-small (embeddings). The speculation draft of record is the
+pinned tier-B Qwen3.5-0.8B, `models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` (fetched by
+`--with-draft`; `run.sh` does this automatically), wired in via `--spec-type
+draft-simple` + `--spec-draft-model` — this llama.cpp pin (b10035) activates
+speculation only when `--spec-type` is passed, `--spec-draft-model` alone is a silent
+no-op (`docs/engine-flags.md`) — and skipped when absent. Qwen3-0.6B cannot serve as a
+draft here (vocab 151,936 vs Qwen3.5-4B's 248,320 — "vocabs are not compatible"); it
+remains only the small dev/smoke fixture (`make model`).
 
 ## Architecture rules that still bind
 

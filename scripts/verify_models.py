@@ -263,6 +263,7 @@ def check_kv_metadata(manifest: dict) -> None:
         "revision": a["revision"],
         "architecture": md.architecture,
         "block_count": md.n_layer,
+        "n_attn_layer": md.n_attn_layer,
         "head_count": md.n_head,
         "head_count_kv": md.n_kv_head,
         "key_length": md.head_dim_k,

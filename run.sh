@@ -3,6 +3,8 @@
 #
 #   ./run.sh            build (cached), provision models, start db + backend + frontend,
 #                       print the UI URL
+#   ./run.sh --native   dev mode: gateway + llama-server run on this host (arm64), db +
+#                       frontend stay in docker — skips the amd64 emulation tax
 #   ./run.sh down       stop the stack (data survives in the muta-pgdata volume)
 #   ./run.sh logs       follow logs
 #   ./run.sh --build    force a clean image rebuild first
@@ -72,6 +74,9 @@ native_up() {
         || die "project not importable by ${PY:-python3} — activate your venv and run 'make install'"
     fetch_native_engine
     info "starting db (docker)"
+    # A docker-mode backend still publishing :8000 would crash uvicorn below with a bare
+    # "address already in use" — stop it (no-op when nothing is running).
+    docker compose stop backend >/dev/null 2>&1 || true
     docker compose up -d --wait db || die "db failed to start"
     info "starting frontend (docker, proxying /v1 to this host)"
     BACKEND_UPSTREAM="host.docker.internal:8000" docker compose up -d --no-deps frontend \
@@ -165,9 +170,13 @@ if [ "$missing" = 1 ]; then
     fi
 elif [ ! -e "$DRAFT" ]; then
     # The draft only speeds decoding up — the stack runs without it, so its absence must
-    # never block a boot. build_command skips --model-draft when the file is missing.
+    # never block a boot. _speculation_flags skips --spec-draft-model when the file is missing.
     warn "speculation draft absent ($DRAFT) — running without it. Fetch it with:"
-    warn "  docker compose run --rm --no-deps backend python3.10 scripts/fetch_models.py --with-draft --only draft"
+    if [ "$MODE" = native ]; then
+        warn "  ${PY:-python3} scripts/fetch_models.py --with-draft --only draft"
+    else
+        warn "  docker compose run --rm --no-deps backend python3.10 scripts/fetch_models.py --with-draft --only draft"
+    fi
 else
     info "models already provisioned"
 fi

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-24T00:51:29+00:00",
+  "generated_at": "2026-07-31T07:14:30+00:00",
   "artifacts": [
     {
       "name": "core",
@@ -1976,12 +1976,11 @@
       "tier": "on-demand",
       "license": "Apache-2.0",
       "license_url": "https://huggingface.co/Qwen/Qwen3.5-0.8B",
-      "fetched": false,
+      "fetched": true,
       "file": "Qwen3.5-0.8B-Q4_K_M.gguf",
       "path": "models/draft/Qwen3.5-0.8B-Q4_K_M.gguf",
-      "bytes": 0,
-      "sha256": "",
-      "expected_bytes": 532517120,
+      "bytes": 532517120,
+      "sha256": "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
       "caveats": [
         "TDD \u00a74.4 admission rule: adopt only if measured speedup >= 1.43x per GiB spent. Fetching it does not mean shipping it."
       ]
