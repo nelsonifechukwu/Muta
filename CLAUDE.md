@@ -134,3 +134,8 @@ remains only the small dev/smoke fixture (`make model`).
    to assume the output is wrong and find why. Apply hardest where a silent bug is most
    expensive: the Postgres store's ordering semantics, stream partial-persist, the voice
    WS loop, and compose health/ordering.
+5. **Every configuration/architecture change lands with a same-day entry in `RESULTS.md`**
+   pairing the exact config with its measured results (peak llama-server-tree RSS, decode
+   tok/s, and whatever else was measured), named hardware context (emulated / native /
+   x86 target). No entry, no change. Scored ablation rows still go to
+   `bench/optimization-log.md`; `RESULTS.md` is the daily journal.
