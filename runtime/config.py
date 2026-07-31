@@ -37,6 +37,16 @@ class RuntimeConfig(BaseSettings):
     n_ctx: int = 4096
     n_threads: int | None = None  # None -> let llama.cpp choose
     n_gpu_layers: int = 0  # CPU-only target; raise for faster local dev on a GPU box
+    # --- engine memory ceilings -------------------------------------------------------
+    # b10035 defaults are sized for far bigger boxes. Measured on Qwen3.5-4B (hybrid:
+    # ~50 MiB f32 recurrent state per slot and per context checkpoint): -np auto picks 4
+    # slots, checkpoints cap at 32/slot and the prompt cache at 8 GiB — RSS drifted
+    # 2.9 -> 4.8 GiB in four requests. These four fields bound steady-state RSS.
+    # Worst case here: 2 slots x (50 state + 4 x 50 checkpoints) + 256 cache ~= 750 MiB.
+    n_parallel: int = 2  # 2, not 1: one warm spare conversation for UI switching
+    ctx_checkpoints: int = 4  # per slot; too low silently breaks multi-turn reuse (T8 verifies)
+    cache_ram_mib: int = 256  # host-RAM prompt cache (--cache-ram); engine default is 8192
+    n_threads_batch: int | None = None  # prefill threads; None -> engine default
     # Qwen3 is a hybrid-reasoning model. Thinking ON trades tokens/latency for reasoning
     # quality — honoured by llama-server via --jinja (server.py). Set MUTA_RT_ENABLE_THINKING
     # to override. Scoring note: this costs S_perf (slower, more tokens) — verify the accuracy
