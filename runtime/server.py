@@ -75,18 +75,35 @@ class LlamaServer:
             cmd += ["--threads", str(cfg.n_threads)]
         if cfg.n_threads_batch is not None:
             cmd += ["--threads-batch", str(cfg.n_threads_batch)]
-        if cfg.draft_model and Path(cfg.draft_model).is_file():
-            # Speculative decoding: zero quality change by construction (draft proposes,
-            # core verifies). Spellings are the b10035 ones — the old --draft-max/--draft-min
-            # were REMOVED upstream and hard-fail the server at startup.
-            cmd += [
+        cmd += self._speculation_flags()
+        cmd += cfg.extra_server_args
+        return cmd
+
+    def _speculation_flags(self) -> list[str]:
+        """Flag spellings are the b10035 ones (--spec-type framework; the old
+        --draft-max/--draft-min were REMOVED upstream and hard-fail at startup)."""
+        cfg = self.cfg
+        if cfg.spec_type == "draft-simple":
+            if not (cfg.draft_model and Path(cfg.draft_model).is_file()):
+                # Degradation, not error: the stack must boot without the draft.
+                log.info("spec_type=draft-simple but no draft model at %s — speculation off", cfg.draft_model)
+                return []
+            return [
+                "--spec-type", "draft-simple",
                 "--spec-draft-model", str(cfg.draft_model),
                 "--spec-draft-n-max", str(cfg.draft_max),
                 "--spec-draft-n-min", str(cfg.draft_min),
                 "--spec-draft-p-min", "0.75",
             ]
-        cmd += cfg.extra_server_args
-        return cmd
+        if cfg.spec_type == "ngram-simple":
+            # Engine defaults (N=12) never drafted on tutoring turns; N=4/M=12 measured
+            # 12-22% token acceptance at zero RAM cost (docs/engine-flags.md).
+            return [
+                "--spec-type", "ngram-simple",
+                "--spec-ngram-simple-size-n", "4",
+                "--spec-ngram-simple-size-m", "12",
+            ]
+        return []
 
     def is_up(self) -> bool:
         try:
