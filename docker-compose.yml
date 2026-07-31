@@ -96,6 +96,14 @@ services:
         condition: service_healthy
     ports:
       - "3000:80"
+    environment:
+      # nginx proxy target for /v1. run.sh --native overrides this to
+      # host.docker.internal:8000 (the host gateway); docker mode keeps the service name.
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-backend:8000}
+    extra_hosts:
+      # host.docker.internal resolves natively on Docker Desktop; host-gateway makes the
+      # same name work on Linux engines so native mode is not macOS-only.
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/"]
       interval: 5s
