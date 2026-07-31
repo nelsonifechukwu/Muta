@@ -127,6 +127,40 @@ class GGUFMetadata:
     def trained_context(self) -> int:
         return _as_int(self.arch_key("context_length", 0))
 
+    # --- hybrid (linear-attention / SSM) layout ----------------------------------------
+    @property
+    def full_attention_interval(self) -> int:
+        return _as_int(self.arch_key("full_attention_interval", 0))
+
+    @property
+    def n_attn_layer(self) -> int:
+        """Layers whose KV grows with tokens. Hybrid models (qwen35: gated delta net)
+        run full attention only every `full_attention_interval`-th layer; the rest carry
+        constant-size recurrent state instead. Budgeting all layers as attention
+        overstates per-token KV 4x on the shipped 4B."""
+        interval = self.full_attention_interval
+        return self.n_layer // interval if interval > 1 else self.n_layer
+
+    @property
+    def ssm_state_size(self) -> int:
+        return _as_int(self.arch_key("ssm.state_size", 0))
+
+    @property
+    def ssm_inner_size(self) -> int:
+        return _as_int(self.arch_key("ssm.inner_size", 0))
+
+    @property
+    def ssm_conv_kernel(self) -> int:
+        return _as_int(self.arch_key("ssm.conv_kernel", 0))
+
+    @property
+    def ssm_group_count(self) -> int:
+        return _as_int(self.arch_key("ssm.group_count", 0))
+
+    @property
+    def is_hybrid(self) -> bool:
+        return self.full_attention_interval > 1 and self.ssm_state_size > 0
+
     def summary(self) -> str:
         return (
             f"{self.path.name}: arch={self.architecture} layers={self.n_layer} "
