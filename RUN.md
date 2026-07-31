@@ -30,6 +30,20 @@ dependency order, waits for health, and prints the UI URL:
 > instance (weights pages are shared, its KV is not). Token speed under emulation is not
 > meaningful; correctness is.
 
+## Native dev mode (Apple silicon)
+
+`./run.sh --native` skips the amd64 emulation tax for day-to-day dev: db and frontend
+stay in docker, the gateway + llama-server run on the host (arm64). The pinned
+llama.cpp `b10035` macos-arm64 release is fetched into `runtime/build/bin` on first
+use, so engine parity with the container is kept. Requires `make install` (importable
+venv). Ctrl-C stops the backend; `./run.sh down` stops the containers. Audio degrades
+to text-only unless sherpa-onnx is installed on the host — expected in native mode.
+
+Docker (`./run.sh`, no flag) remains the default and the shape that ships: linux/amd64,
+compose-gated health, the compiled AVX2 engine. Use it for anything you are about to
+call a measurement of the real system, and re-verify there after native-mode iteration.
+Mac-native numbers are dev signals only (`bench/optimization-log.md` rule).
+
 ## The three containers
 
 | Container | Image | What it runs | Port |
