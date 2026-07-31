@@ -47,6 +47,15 @@ class RuntimeConfig(BaseSettings):
     ctx_checkpoints: int = 4  # per slot; too low silently breaks multi-turn reuse (T8 verifies)
     cache_ram_mib: int = 256  # host-RAM prompt cache (--cache-ram); engine default is 8192
     n_threads_batch: int | None = None  # prefill threads; None -> engine default
+    # Batch geometry + K-cache quantization + thinking cap — previously injected via
+    # MUTA_RT_EXTRA_SERVER_ARGS in docker-compose.yml. Small -b/-ub shrink the compute
+    # buffers (~31 MiB at -ub 128 on the 4B, measured); q8_0 K halves that side of the
+    # attention KV; the reasoning budget force-closes the think phase so the answer
+    # always arrives inside a 2048-token context.
+    n_batch: int = 512
+    n_ubatch: int = 128
+    cache_type_k: str = "q8_0"
+    reasoning_budget: int = 512  # -1 = unrestricted (engine default)
     # Qwen3 is a hybrid-reasoning model. Thinking ON trades tokens/latency for reasoning
     # quality — honoured by llama-server via --jinja (server.py). Set MUTA_RT_ENABLE_THINKING
     # to override. Scoring note: this costs S_perf (slower, more tokens) — verify the accuracy

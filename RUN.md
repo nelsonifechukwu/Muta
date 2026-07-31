@@ -141,14 +141,22 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 |---|---|---|
 | `MUTA_RT_DB_URL` | `postgresql://muta:muta@db:5432/muta` | Postgres DSN |
 | `MUTA_RT_MODEL_DIR` / `_FILE` | `/app/models/core` / `Qwen3.5-4B-Q4_K_M.gguf` | core GGUF |
-| `MUTA_RT_DRAFT_MODEL` | `/app/models/Qwen3-0.6B/Qwen3-0.6B-Q4_K_M.gguf` | speculative draft (skipped if absent) |
+| `MUTA_RT_DRAFT_MODEL` | `/app/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` | speculative draft (Qwen3.5 family only — Qwen3 vocab is incompatible; skipped if absent) |
 | `MUTA_RT_AUTOSTART` | `1` | gateway lifespan starts/supervises llama-server |
 | `MUTA_RT_STARTUP_TIMEOUT_S` | `900` | model-load allowance (emulation is slow) |
 | `MUTA_RT_REQUEST_TIMEOUT_S` | `600` | per-request client timeout |
 | `TUTOR_ROOT` | `/app` | root for vision/audio model paths |
 | `MUTA_RT_N_CTX` | `2048` | context size (keeps core+draft under the ladder cap) |
-| `MUTA_RT_ENABLE_THINKING` | `0` | Qwen thinking mode (minutes-long on emulated CPU) |
+| `MUTA_RT_ENABLE_THINKING` | `1` | Qwen thinking mode (minutes-long on emulated CPU) |
 | `MUTA_CORE_CAP_MIB` | `5400` | ladder's core-RSS cap; default 4300 is main's 7 GB budget |
+| `MUTA_RT_N_PARALLEL` | `2` | server slots (each costs ~50 MiB f32 state on the hybrid 4B) |
+| `MUTA_RT_CTX_CHECKPOINTS` | `4` | recurrent-state checkpoints per slot, ~50 MiB each |
+| `MUTA_RT_CACHE_RAM_MIB` | `256` | host-RAM prompt cache cap (engine default: 8192) |
+| `MUTA_RT_N_THREADS` / `_BATCH` | unset / unset (compose: `8` / `10`) | decode / prefill threads |
+| `MUTA_RT_N_BATCH` / `_UBATCH` | `512` / `128` | logical / physical batch (compute-buffer size) |
+| `MUTA_RT_CACHE_TYPE_K` | `q8_0` | K-cache quantization |
+| `MUTA_RT_REASONING_BUDGET` | `512` | max thinking tokens before the answer is forced |
+| `MUTA_RT_SPEC_TYPE` | `draft-simple` | `none` \| `draft-simple` \| `ngram-simple` |
 
 ## Troubleshooting
 
