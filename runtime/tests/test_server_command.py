@@ -44,3 +44,24 @@ def test_build_command_omits_draft_flags_when_draft_file_missing(tmp_path):
     cmd = LlamaServer(cfg).build_command(model)
     assert "--spec-draft-model" not in cmd
     assert "--spec-draft-n-max" not in cmd
+
+
+def test_build_command_bounds_engine_memory(tmp_path):
+    """b10035 defaults are sized for bigger boxes: -np auto -> 4 slots x ~50 MiB f32 state,
+    32 checkpoints/slot, 8 GiB prompt cache. These flags are what bound steady-state RSS."""
+    cfg, model = _cfg(tmp_path)
+    cmd = LlamaServer(cfg).build_command(model)
+    assert cmd[cmd.index("--parallel") + 1] == "2"
+    assert cmd[cmd.index("--ctx-checkpoints") + 1] == "4"
+    assert cmd[cmd.index("--cache-ram") + 1] == "256"
+
+
+def test_build_command_thread_flags_only_when_configured(tmp_path):
+    cfg, model = _cfg(tmp_path)
+    cmd = LlamaServer(cfg).build_command(model)
+    assert "--threads" not in cmd and "--threads-batch" not in cmd
+
+    cfg2, model2 = _cfg(tmp_path, n_threads=8, n_threads_batch=10)
+    cmd2 = LlamaServer(cfg2).build_command(model2)
+    assert cmd2[cmd2.index("--threads") + 1] == "8"
+    assert cmd2[cmd2.index("--threads-batch") + 1] == "10"

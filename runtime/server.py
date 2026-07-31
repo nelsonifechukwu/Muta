@@ -66,9 +66,15 @@ class LlamaServer:
             "--ctx-size", str(cfg.n_ctx),
             "--n-gpu-layers", str(cfg.n_gpu_layers),
             "--jinja",  # apply the model's embedded chat template (Qwen3 thinking control)
+            # RAM ceilings — see the field comments in runtime/config.py.
+            "--parallel", str(cfg.n_parallel),
+            "--ctx-checkpoints", str(cfg.ctx_checkpoints),
+            "--cache-ram", str(cfg.cache_ram_mib),
         ]
         if cfg.n_threads is not None:
             cmd += ["--threads", str(cfg.n_threads)]
+        if cfg.n_threads_batch is not None:
+            cmd += ["--threads-batch", str(cfg.n_threads_batch)]
         if cfg.draft_model and Path(cfg.draft_model).is_file():
             # Speculative decoding: zero quality change by construction (draft proposes,
             # core verifies). Spellings are the b10035 ones — the old --draft-max/--draft-min
