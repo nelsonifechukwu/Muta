@@ -41,6 +41,7 @@ must clear `ΔTPS ≥ 1.43 × ΔRAM_GB` to be worth it.
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-31 | RSS ceilings: -np 2, --ctx-checkpoints 4, --cache-ram 256 (was auto-4/32/8192) | two-turn probe, docker/emulated | 15 | ~6.72 / 4.8 GB / — | 6.72 / 4.44 GB / — | ~0 | -0.36 GB | 0 | dev_host_provisional — RAM row only | keep |
 | 2026-07-31 | speculation ON: --spec-type draft-simple + Qwen3.5-0.8B (dead flags + incompatible 0.6B before) | two-turn probe, docker/emulated | 15 | 6.72 / — / — | 4.77 / +1.02 GB / — | -1.95 | +1.02 GB | 0 | dev_host_provisional — acceptance 98.4% ; target-box row pending | park (needs x86 numbers) |
+| 2026-07-31 | run.sh --native (pinned arm64 b10035 on host; docker default unchanged) | two-turn probe, native | 15 | 6.72 tok/s docker-emulated | 24.72 tok/s native (draft off: 30.84 tok/s; acceptance 98.41%) | +18.00 | ~0 | 0 | dev_host_provisional — dev-loop only, never report-grade | keep |
 
 ## Why the ordering is what it is
 
