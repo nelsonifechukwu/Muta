@@ -54,12 +54,12 @@ fetch_native_engine() {
         || die "no llama-server found — install one on PATH or set MUTA_RT_LLAMA_SERVER_BIN"
     info "fetching pinned llama.cpp ${ENGINE_TAG} (macos-arm64 release) into runtime/build/bin"
     tmp=$(mktemp -d)
-    url="https://github.com/ggml-org/llama.cpp/releases/download/${ENGINE_TAG}/llama-${ENGINE_TAG}-bin-macos-arm64.zip"
-    curl -fL --retry 3 -o "$tmp/llama.zip" "$url" \
+    url="https://github.com/ggml-org/llama.cpp/releases/download/${ENGINE_TAG}/llama-${ENGINE_TAG}-bin-macos-arm64.tar.gz"
+    curl -fL --retry 3 -o "$tmp/llama.tar.gz" "$url" \
         || die "release download failed ($url) — install llama-server yourself and rerun"
-    unzip -q -o "$tmp/llama.zip" -d "$tmp"
+    tar xzf "$tmp/llama.tar.gz" -C "$tmp"
     src=$(find "$tmp" -name llama-server -type f | head -1)
-    [ -n "$src" ] || die "llama-server missing from the release zip — layout changed? extract manually into runtime/build/bin"
+    [ -n "$src" ] || die "llama-server missing from the release archive — layout changed? extract manually into runtime/build/bin"
     mkdir -p runtime/build/bin
     cp "$src" runtime/build/bin/
     find "$tmp" \( -name '*.dylib' -o -name '*.metal' \) -exec cp {} runtime/build/bin/ \; || true
