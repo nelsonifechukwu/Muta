@@ -104,6 +104,44 @@ re-measured (native-only session) — and note the docker default now pairs
 `--kv-unified` with active draft speculation, a combination no row measures together;
 the next docker session should verify both before trusting its numbers.
 
+### C. Target-box benchmark harness — new tooling + first container-proxy run — x86 container-proxy
+
+**Tooling landed:** `scripts/bench_target_box.sh` (+ `make bench-target`) runs the pinned
+engine inside a container shaped like the deploy box — backend image (Ubuntu 22.04
+userland, AVX2-only b10035), cgroup **8 GiB hard cap with swap denied**, cpuset of
+**6 physical cores + SMT siblings** (cfs-quota fallback when the runtime can't pin,
+recorded either way). Inside runs `bench/target_box.py`: hardware/cgroup/provenance
+fingerprint → numpy memcpy bandwidth (decode ceiling ≈ 2×memcpy ÷ weights) →
+llama-bench pp512/tg128 with `bench.sampler` tree-RSS → optional `bench.native_sweep`
+configs server-level (the metric of record). Every stage degrades to a recorded absence.
+Fidelity contract: `docs/benchmarking-target-box.md`. Labels for these numbers:
+**`x86 container-proxy (<host CPU>)`** — pre-target signal, never report-grade.
+
+**Measured this session** (cloud sandbox: 4 vCPU Xeon @ 2.10 GHz, kernel 6.18.5,
+docker cgroup v1 — *below* the 6C/12T target, shortfall warning exercised):
+
+| Check | Result |
+|---|---|
+| Engine build in-container | b10035 (`602f828`), AVX2-only; objdump AVX-512 assertion **passed** |
+| cgroup caps seen from inside | mem 8.0 GiB hard, mem+swap 8.0 GiB (no swap) — verified in-fingerprint |
+| cpuset | unavailable in this sandbox kernel → quota fallback exercised and recorded |
+| memcpy bandwidth (capped container) | **9.26 GiB/s** → first-order decode ceiling ≈ **7.3 tok/s** for the 2.55 GiB Q4_K_M weights |
+| Decode/prefill tok/s, RSS under load | **not measurable this session** — see below |
+
+**No model-dependent numbers:** this sandbox's egress policy denies `huggingface.co`
+(CONNECT 403), so `Qwen3.5-4B-Q4_K_M` could not be provisioned. llama-bench and sweep
+stages were validated to the last modelless step (CLI flags + JSON field names checked
+against the pinned source; degraded run recorded —
+`bench/.artifacts/target-box/target-box-20260801T060705Z.json`). First host with the
+model provisioned: `make bench-target` fills in the missing rows.
+
+**Interpretation note:** this proxy host's memory bus is *slower* than a dual-channel
+DDR4-3200 desktop (typically 12–18 GiB/s memcpy), so a run here lower-bounds the target
+box on decode — the opposite of the usual fast-cloud-host bias. **Session image
+provenance:** built from `docker/backend.Dockerfile` with two session-only insertions
+(trusting the sandbox's TLS-intercepting proxy CA so the pinned clone/pip could run);
+the engine-stage cmake and assertion lines are byte-identical to the committed file.
+
 ## 2026-07-31
 
 ### A. Capped engine config (the new baseline) — docker/emulated
