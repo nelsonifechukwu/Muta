@@ -104,7 +104,7 @@ re-measured (native-only session) — and note the docker default now pairs
 `--kv-unified` with active draft speculation, a combination no row measures together;
 the next docker session should verify both before trusting its numbers.
 
-### C. Bandwidth-ceiling diagnostic (bench/ceiling.py) — native
+### C. Bandwidth-ceiling diagnostic (bench/ceiling.py) — native, `dev_host_provisional`
 
 **Tooling:** new `bench/ceiling.py` (+ `bench/test_ceiling.py`, 3 tests) — the
 cactus-blog diagnostic (`docs/cactus-survey.md`): CPU decode of a dense GGUF is
