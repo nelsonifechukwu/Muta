@@ -31,6 +31,7 @@ import os
 import platform
 import re
 import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -100,8 +101,9 @@ def _swap_limit_bytes(mem_limit: int | None) -> int | None:
 def _pinned_core_bytes() -> int | None:
     try:
         core = json.loads(PINS.read_text())["artifacts"]["core"]["files"]
-        return next(iter(core.values()))["bytes"]
-    except (OSError, KeyError, StopIteration, json.JSONDecodeError):
+        # largest file = the GGUF, even if a sidecar ever joins the artifact
+        return max((f["bytes"] for f in core.values()), default=None)
+    except (OSError, KeyError, TypeError, json.JSONDecodeError):
         return None
 
 
@@ -144,16 +146,21 @@ def fingerprint(hash_model: bool = False) -> dict:
     mem_limit = _cgroup_bytes(
         "/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"
     )
+    affinity = sorted(os.sched_getaffinity(0))
     return {
         "cpu_model": model_name,
         "isa": {f: (f in flags) for f in _ISA_FLAGS},
-        "cpus_allowed": len(os.sched_getaffinity(0)),
+        "cpus_allowed": len(affinity),
+        # the list, not just the count: a bad cpuset (cross-socket, mixed P/E) must be
+        # diagnosable from the artifact alone, months later
+        "cpus_allowed_list": affinity,
         "cpu_quota": _cpu_quota(),
         "mem_limit_bytes": mem_limit,
         "swap_limit_bytes": _swap_limit_bytes(mem_limit),
         "kernel": platform.release(),
         "os": pretty.group(1) if pretty else None,
         "engine": engine,
+        "muta_git_sha": os.environ.get("MUTA_GIT_SHA"),
         "model": model,
     }
 
@@ -235,23 +242,32 @@ def run_llama_bench(threads: list[int], pp: int, tg: int, reps: int) -> dict:
 def run_sweeps(names: list[str]) -> dict:
     if not MODEL.exists():
         return {"skipped": f"model not present: {MODEL}"}
-    from bench.native_sweep import CONFIGS, run_config
+    from bench import native_sweep
+
+    # Container rows must never mingle with the M2-native record: run_config appends to
+    # the shared native-sweep.jsonl and OVERWRITES native-logs/<name>.log. Repoint both
+    # at the target-box artifact dir for this process before any config runs.
+    ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    native_sweep.OUT = ARTIFACTS / "container-sweep.jsonl"
+    native_sweep.LOGDIR = ARTIFACTS / "sweep-logs"
 
     out = {}
     for name in names:
-        if name not in CONFIGS:
+        if name not in native_sweep.CONFIGS:
             out[name] = {"error": "unknown config (see native_sweep --list)"}
             continue
-        extra, suite = CONFIGS[name]
-        out[name] = run_config(name, extra, suite=suite)
+        extra, suite = native_sweep.CONFIGS[name]
+        result = native_sweep.run_config(name, extra, suite=suite)
+        result["context"] = "x86 container-proxy"
+        out[name] = result
     return out
 
 
 def _default_threads() -> list[int]:
     # Physical-core threads for decode, all-logical for comparison — mirrors the
     # RESULTS.md finding that decode wants physical cores while prefill can use SMT.
-    # Under a quota fallback SMT topology is invisible; allowed-count and its half
-    # are still the two interesting points.
+    # Only a fallback: the driver always passes --threads. Under a bare quota (affinity
+    # shows every host CPU) these defaults oversubscribe — pass --threads explicitly.
     n = len(os.sched_getaffinity(0))
     return sorted({max(1, n // 2), n})
 
@@ -283,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
     started = datetime.now(timezone.utc)
     report: dict = {
         "started_utc": started.isoformat(timespec="seconds"),
-        "argv": argv if argv is not None else None,
+        "argv": argv if argv is not None else sys.argv[1:],
     }
     report["fingerprint"] = fingerprint(hash_model=args.hash)
     report["bandwidth"] = bandwidth_probe()
