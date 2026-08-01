@@ -5,7 +5,7 @@ PY ?= python3
 
 .PHONY: help install dev test lint fmt contract contract-test build up down smoke \
 	model fetch-models verify-models serve profiles core-cmd kv-budget index audio \
-	bench profile monitor
+	bench profile monitor bench-target
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -84,3 +84,6 @@ profile: ## Official profiler + product path, both scored. Args: ARGS="--skip-pr
 
 monitor: ## Live scored-metrics HUD against a running app. Args: ARGS="--pid <n>"
 	$(PY) -m bench.monitor $(ARGS)
+
+bench-target: ## Engine bench in a target-box-shaped container (8 GiB, 6C+SMT). Args: ARGS="-- --sweep WINNER"
+	scripts/bench_target_box.sh $(ARGS)
