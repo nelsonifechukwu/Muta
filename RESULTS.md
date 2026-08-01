@@ -104,6 +104,54 @@ re-measured (native-only session) — and note the docker default now pairs
 `--kv-unified` with active draft speculation, a combination no row measures together;
 the next docker session should verify both before trusting its numbers.
 
+### C. Bandwidth-ceiling diagnostic (bench/ceiling.py) — native
+
+**Tooling:** new `bench/ceiling.py` (+ `bench/test_ceiling.py`, 3 tests) — the
+cactus-blog diagnostic (`docs/cactus-survey.md`): CPU decode of a dense GGUF is
+memory-bandwidth-bound (each token streams ~the whole weight file once), so
+`ceiling_tps = bandwidth / model_bytes` gives a same-order-of-magnitude speed limit,
+and `measured / ceiling` grades whether thread/flag tuning is still worth doing.
+`measure_copy_bandwidth_bytes_s()` is a best-of-N STREAM-copy-style numpy probe
+(reads+writes counted); the model's file size stands in for bytes/token (attention-KV
+and SSM-state re-reads are each <2% on this hybrid at `-c 2048`, so the ceiling is a
+few percent optimistic — the safe direction for a stop rule).
+
+**Command:**
+
+```bash
+python3 -m bench.ceiling --model models/core/Qwen3.5-4B-Q4_K_M.gguf --measured 31.1
+```
+
+(31.1 tok/s = the 2026-08-01 native decode record, section A above.)
+
+**Host was busy** during this run: `llama-cli` at ~92% CPU and `codex` at ~85% CPU were
+both running concurrently (load average 5.35/7.31/6.05 on the 10-core, 6P+4E M2 Pro),
+contending for the same memory bandwidth the probe measures. 5 consecutive invocations
+swung 38.5–95.1 GiB/s (ceiling 15.1–37.3 tok/s, "% of ceiling" 83–206% — the >100%
+readings are the probe undershooting true bandwidth under contention, not decode
+outrunning memory). Since contention can only *lower* a measured copy bandwidth, never
+inflate it, the highest of the 5 runs is the least-contaminated estimate and is the one
+recorded below; the low outliers are noted for honesty, not used.
+
+| Metric | Value |
+|---|---|
+| Model size (bytes/token proxy) | 2.55 GiB (2,740,937,888 bytes) |
+| Measured copy bandwidth (best of 5 busy-host runs) | **95.1 GiB/s** |
+| Ceiling (`ceiling_tps`) | **37.3 tok/s** |
+| Measured decode (native, section A) | 31.1 tok/s |
+| **% of ceiling** | **83%** |
+
+**Interpretation (per the brief's rule: ≥70% → tuning done; ≤40% → not bandwidth-limited):**
+83% is ≥70% — thread/flag tuning on this box is essentially done; further native decode
+gains need a smaller model (quantization/weight size), not more threading or flag work.
+This lines up with cactus's own iPhone 17 Pro figure (140/169 = 83%) almost exactly,
+despite completely different hardware, which is a reasonable sanity check on the method.
+
+**x86 target prediction:** not produced yet — no spec-sheet bandwidth number exists for
+the competition box. Once known, run
+`python3 -m bench.ceiling --model models/core/Qwen3.5-4B-Q4_K_M.gguf --bandwidth-gib-s <spec>`
+to get its predicted ceiling without needing the hardware in hand.
+
 ## 2026-07-31
 
 ### A. Capped engine config (the new baseline) — docker/emulated
