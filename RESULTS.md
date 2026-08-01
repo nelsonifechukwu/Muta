@@ -124,7 +124,7 @@ docker cgroup v1 — *below* the 6C/12T target, shortfall warning exercised):
 |---|---|
 | Engine build in-container | b10035 (`602f828`), AVX2-only; objdump AVX-512 assertion **passed** |
 | cgroup caps seen from inside | mem 8.0 GiB hard, mem+swap 8.0 GiB (no swap) — verified in-fingerprint |
-| cpuset | unavailable in this sandbox kernel → quota fallback exercised and recorded |
+| cpuset | discarded by this sandbox kernel; both fallback paths exercised (quota, and count-verified whole-host set — identical constraint at 4 CPUs), shape recorded in-artifact |
 | memcpy bandwidth (capped container) | **9.26 GiB/s** → first-order decode ceiling ≈ **7.3 tok/s** for the 2.55 GiB Q4_K_M weights |
 | Decode/prefill tok/s, RSS under load | **not measurable this session** — see below |
 
@@ -132,7 +132,7 @@ docker cgroup v1 — *below* the 6C/12T target, shortfall warning exercised):
 (CONNECT 403), so `Qwen3.5-4B-Q4_K_M` could not be provisioned. llama-bench and sweep
 stages were validated to the last modelless step (CLI flags + JSON field names checked
 against the pinned source; degraded run recorded —
-`bench/.artifacts/target-box/target-box-20260801T060705Z.json`). First host with the
+`bench/.artifacts/target-box/target-box-20260801T061934Z.json`). First host with the
 model provisioned: `make bench-target` fills in the missing rows.
 
 **Interpretation note:** this proxy host's memory bus is *slower* than a dual-channel
