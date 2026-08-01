@@ -168,9 +168,10 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 | `MUTA_RT_ENABLE_THINKING` | `1` | Qwen thinking mode (minutes-long on emulated CPU) |
 | `MUTA_CORE_CAP_MIB` | `5400` | ladder's core-RSS cap; default 4300 is main's 7 GB budget |
 | `MUTA_RT_N_PARALLEL` | `2` | server slots (each costs ~50 MiB f32 state on the hybrid 4B) |
-| `MUTA_RT_CTX_CHECKPOINTS` | `4` | recurrent-state checkpoints per slot, ~50 MiB each |
+| `MUTA_RT_CTX_CHECKPOINTS` | `2` | recurrent-state checkpoints per slot, ~50 MiB each |
 | `MUTA_RT_CACHE_RAM_MIB` | `256` | host-RAM prompt cache cap (engine default: 8192) |
-| `MUTA_RT_N_THREADS` / `MUTA_RT_N_THREADS_BATCH` | unset / unset (compose: `8` / `10`) | decode / prefill threads |
+| `MUTA_RT_KV_UNIFIED` | `1` | slots share the full `-c` window (explicit `-np` would otherwise split it) |
+| `MUTA_RT_N_THREADS` / `MUTA_RT_N_THREADS_BATCH` | auto: P-core count on Apple silicon, engine default elsewhere (compose: `8` / `10`) | decode / prefill threads |
 | `MUTA_RT_N_BATCH` / `_UBATCH` | `512` / `128` | logical / physical batch (compute-buffer size) |
 | `MUTA_RT_CACHE_TYPE_K` | `q8_0` | K-cache quantization |
 | `MUTA_RT_REASONING_BUDGET` | `512` | max thinking tokens before the answer is forced |

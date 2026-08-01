@@ -27,6 +27,83 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-01
+
+### A. Native engine tuning sweep — 24 configs, engine-only (no gateway/db/docker) — native
+
+**Tooling:** new `bench/native_sweep.py` — drives the pinned arm64 `llama-server`
+directly over `/v1/chat/completions` (same endpoint the gateway uses) and records warm
+decode (max over 4 throughput probes + the 2 reuse-probe generations = metric of
+record), prefill (~900-token prompt), tree-RSS
+(25 ms sampling) **and macOS `phys_footprint`**, two-turn checkpoint reuse, a
+>1024-token window probe, 4 greedy accuracy probes, and a 3-conversation RAM stressor.
+Measurement finding that unblocks native RAM numbers: sampled RSS on macOS swings with
+file-backed page eviction (2.6–5.3 GiB on identical configs) — `phys_footprint`
+(`/usr/bin/footprint`) is the honest figure and is stable run-to-run (±2%).
+
+**Winner (now the `RuntimeConfig` defaults):** old caps + `--threads 6 --threads-batch 6`
+(P-core count, auto-derived on Apple silicon by `runtime/config.py`) + `--kv-unified` +
+`--ctx-checkpoints 2`, speculation **off natively** (`run.sh --native` now exports
+`MUTA_RT_SPEC_TYPE=none`). Unchanged: `-c 2048 -np 2 --cache-ram 256 -b 512 -ub 128
+--cache-type-k q8_0 --reasoning-budget 512 --jinja`.
+
+| Metric (native, M2 Pro) | old defaults | new defaults |
+|---|---|---|
+| Max tok/s (decode, warm; interleaved 3×3 A/B) | 29.78 (median-of-maxes 29.09) | **31.09** (median-of-maxes 30.13) |
+| Decode floor under ambient load (busy host, same morning) | **6.4** (B0 probes 6.4–23.5; `-t 10` collapses to 4.4) | 20.5 across winner-family runs (T6+KVU 28.5–29.6; shipped combo 20.6–26.7 in the same window) |
+| Prefill tok/s (907-token prompt, median) | 80.8 | **93.1** |
+| phys_footprint after 3-conversation stressor | 3519 MiB | **3137 MiB (−382)** |
+| Longest accepted prompt | 1024/slot — 1495 tokens → **400** `exceed_context_size_error` (artifact row `B0-longctx-verify`) | full 2048 shared (1495 tokens OK) |
+| Two-turn checkpoint reuse | 29/33 prompt_n | 29/33 (identical) |
+| Accuracy probes (greedy ×4) | 4/4 | 4/4 |
+
+Decode tok/s here is the max over the 4 warm throughput probes plus the 2 reuse-probe
+generations of a run (applied identically to both arms).
+
+**Why each flag:**
+- **Threads = P-cores (6/6):** decode is barrier-synchronized; one thread on an E-core
+  stalls every step. Engine default measured 23.5 max with a 6.4 floor under load;
+  `-t 6` gave the sweep's best maxes (29.6–31.1); `-t 10` catastrophic (4.4). The
+  *stability* win needs `--kv-unified` too — `-t 6` alone still probed one 12.2. Prefill
+  also loses from E-cores (`-tb 8/10` → 74/61 vs 97 tok/s). Compose still pins 8/10 for
+  the container via env (unchanged).
+- **`--kv-unified`:** explicit `-np 2` had silently flipped unified KV off, splitting
+  `-c 2048` into 1024/slot (the 07-31 open decision). Unified restores the full shared
+  window at *lower* footprint (3328 vs 3375) — resolves that decision without raising
+  `-c`.
+- **`--ctx-checkpoints 2`** (was 4): two-turn restore identical; stressed footprint
+  stepped 3519 (old defaults) → 3262 (T6 + checkpoints 2) → 3137 MiB (full winner), and
+  the checkpoint cut alone bounds −201 MiB worst-case (2 slots × 2 × 50.25 MiB). 1 also
+  passed the two-turn probe but leaves no slack for longer dialogs.
+
+### B. Rejected levers (measured, so nobody re-tries them silently) — native
+
+- **Speculation, every form, remains net-negative on native CPU** (draft-off 29.6):
+  draft n-max 3/p-min 0.90/2 draft threads → **15.75** despite 98.8% acceptance;
+  n-max 8/p-min 0.75 → 25.89 (92.9%); ngram-simple 4/12 → 21.55 (24.6% acceptance,
+  up from 12–22% emulated). Draft configs cost +~520 MiB footprint. x86 target verdict
+  still pending (unchanged).
+- **`-fa on`** decode-neutral alone; with `--cache-type-v q8_0` the stressed footprint
+  was ≈ neutral (3489 vs the 3519 stressed baseline) and decode probed slower that
+  round — no win to bank on 8 attention layers, f16 V kept.
+- **`-ub 256/512`**: no prefill gain natively (89/84 vs 97 at `-ub 128`); ub 128 also
+  keeps the smallest compute buffer. **`--no-mmap`**: −28% decode, +1 GiB footprint.
+  **`--mlock`**: unstable decode, no footprint win. **`--cache-ram 64`**: works, but the
+  saving is small and it starves cross-conversation warmth; 256 kept (a cap, not a cost).
+- `--prio 2`: pathological stalls (0.4 tok/s outliers, prefill 0.9) — never again.
+
+**Provenance:** engine b10035 arm64 release, Qwen3.5-4B-Q4_K_M, thinking on, budget 512;
+raw rows in `bench/.artifacts/native-sweep.jsonl`, engine logs in
+`bench/.artifacts/native-logs/`. The rows were recorded with the session iteration of
+the harness; `bench/native_sweep.py` is its cleaned committed successor (same probes —
+the ad-hoc `PRIO2`/`AB-*`/`B0-longctx-verify` rows came through its `run_config()` API,
+and full-suite rows recorded before the long-prompt probe existed lack a `longctx` key).
+Config changes in `runtime/config.py` / `runtime/server.py` / `run.sh` (tests updated).
+Docker/emulated numbers for the new `kv_unified`/`ctx_checkpoints` defaults were NOT
+re-measured (native-only session) — and note the docker default now pairs
+`--kv-unified` with active draft speculation, a combination no row measures together;
+the next docker session should verify both before trusting its numbers.
+
 ## 2026-07-31
 
 ### A. Capped engine config (the new baseline) — docker/emulated

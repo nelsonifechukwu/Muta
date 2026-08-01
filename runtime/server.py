@@ -70,6 +70,9 @@ class LlamaServer:
             "--parallel", str(cfg.n_parallel),
             "--ctx-checkpoints", str(cfg.ctx_checkpoints),
             "--cache-ram", str(cfg.cache_ram_mib),
+            # Explicit --parallel disables the engine's unified-KV default; restore it so
+            # slots share the full -c window instead of splitting it (runtime/config.py).
+            *(["--kv-unified"] if cfg.kv_unified else []),
             "-b", str(cfg.n_batch),
             "-ub", str(cfg.n_ubatch),
             "--cache-type-k", cfg.cache_type_k,

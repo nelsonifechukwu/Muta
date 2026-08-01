@@ -92,9 +92,15 @@ native_up() {
     export MUTA_RT_ENABLE_THINKING=1
     export MUTA_RT_AUTO_DOWNLOAD=0
     export MUTA_RT_DRAFT_MODEL=models/draft/Qwen3.5-0.8B-Q4_K_M.gguf
+    # Speculation is measured net-negative on native CPU in every form (RESULTS.md
+    # 2026-08-01: draft n-max 3 → −47% at 98.8% acceptance, n-max 8 → −13% at 92.9%,
+    # ngram → −27% at 24.6% — CPU verify pays full price). One env flip re-enables it.
+    export MUTA_RT_SPEC_TYPE=none
     export MUTA_RT_STARTUP_TIMEOUT_S=300
     export TUTOR_ROOT="$PWD"
-    # No MUTA_RT_N_THREADS here: llama.cpp's own Apple P/E-core detection beats a guess.
+    # No MUTA_RT_N_THREADS here — but not because the engine default wins: RuntimeConfig
+    # now derives P-core-pinned threads on Apple silicon itself (runtime/config.py,
+    # measured +26% and stable vs the engine's all-cores default).
     exec "${PY:-python3}" -m uvicorn orchestrator.main:app --host 0.0.0.0 --port 8000
 }
 

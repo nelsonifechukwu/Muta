@@ -61,8 +61,10 @@ services:
       MUTA_RT_AUTO_DOWNLOAD: "0"
       # Engine flags now live in RuntimeConfig (runtime/config.py) — batch geometry,
       # q8_0 K-cache, reasoning budget 512, and the RSS ceilings (--parallel 2,
-      # --ctx-checkpoints 4, --cache-ram 256) are the defaults there. Only deltas from
-      # those defaults belong here.
+      # --ctx-checkpoints 2, --cache-ram 256, --kv-unified) are the defaults there.
+      # Only deltas from those defaults belong here. NOTE: kv-unified + checkpoints 2
+      # landed from the 2026-08-01 NATIVE sweep (RESULTS.md) and are not yet re-measured
+      # under emulation — nor is kv-unified together with active draft speculation.
       # Threads: the VM's 10 vCPUs are shared with the gateway/db/nginx — decode is
       # bandwidth-bound and gains nothing from oversubscription (runtime/profiles.py
       # thread table rationale), prefill may use them all.

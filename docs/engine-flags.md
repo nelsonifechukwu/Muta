@@ -80,6 +80,49 @@ dev-host, emulated-CPU measurement (`bench/optimization-log.md` tags it
 bandwidth-bound rather than compute-bound under emulation, is the number that decides
 whether `spec_type: draft-simple` ships as the default.
 
+## Apple-silicon threading: pin decode AND prefill to the P-core count (native)
+
+Decode is barrier-synchronized — one thread scheduled onto an efficiency core stalls the
+whole step. Measured 2026-08-01, native M2 Pro (6P+4E), 24-config sweep
+(`bench/native_sweep.py`): engine-default threading probed 6.4–23.5 tok/s across
+identical warm runs under ambient load (`tg_3s` oscillated 26.9→13.8→26.9 *within one
+request* — engine log `native-logs/B0-baseline.log`), and `-t 10` collapsed to 4.4.
+`-t 6 -tb 6` gave the sweep's best maxes (29.6–31.1) and, combined with `--kv-unified`,
+its most stable runs (floor 20.5 under the same load vs 6.4 for the default). Prefill
+also LOSES from E-cores here (`-tb 8/10` → 74/61 vs 97 tok/s at `-tb 6`) — the §6.4
+"prefill may exceed decode threads" rule does not carry to asymmetric hosts.
+`RuntimeConfig` now derives the P-core count on darwin (`hw.perflevel0.physicalcpu`);
+`--prio 2` caused pathological stalls (0.4 tok/s outliers) — do not revisit.
+
+## Explicit -np silently disables unified KV
+
+`-np -1` (auto) resolves with `kv_unified = true`, but any explicit `--parallel N` flips
+it off: `-np 2 -c 2048` → `n_ctx_slot = 1024`, and a 1495-token prompt is rejected with
+a 400 `exceed_context_size_error` (artifact row `B0-longctx-verify`). Passing
+`--kv-unified` (requires `--cache-ram`, which we always set) restores the
+full shared window (`n_ctx_slot = 2048`), measured at *lower* phys_footprint (3328 vs
+3375 MiB) and the most stable decode of the 2026-08-01 sweep. `RuntimeConfig.kv_unified`
+defaults to True. Checkpoint restore is unaffected (two-turn probe identical).
+
+## Speculation is also net-negative on native Apple-silicon CPU (measured 2026-08-01)
+
+The emulated verdict above survives the move to native, in every configuration tried
+(draft-off reference 29.6 tok/s, T6 base): draft-simple n-max 3 / p-min 0.90 / 2 draft
+threads → **15.75** tok/s despite **98.8%** acceptance; n-max 8 / p-min 0.75 → 25.89
+(92.9%); ngram-simple 4/12 → 21.55 (24.6% acceptance — roughly double the emulated
+rate, still a loss). Draft configs add ~520 MiB phys_footprint. CPU verify batches pay
+full price per token; there is no idle-compute discount to harvest. `run.sh --native`
+exports `MUTA_RT_SPEC_TYPE=none`; the x86 target-box verdict remains the open one.
+
+## Measuring engine RAM natively on macOS: use phys_footprint, not sampled RSS
+
+Sampled tree-RSS swings with file-backed page eviction of the mmap'd weights — identical
+configs read anywhere from 2.6 to 5.3 GiB depending on memory pressure (this is why the
+07-31 native RAM row was flagged untrusted). `phys_footprint` (`/usr/bin/footprint <pid>`,
+what Apple's own tooling charges the process) is stable ±2% run-to-run: ~3.3–3.5 GiB for
+this stack across the sweep, 3137 MiB for the shipped config after a 3-conversation
+stressor. `bench/native_sweep.py` records both.
+
 ## Misc
 
 - `-np -1` (auto) resolves to 4 slots with `kv_unified = true` at `-c 2048`.

@@ -54,14 +54,34 @@ def test_build_command_bounds_engine_memory(tmp_path):
     cfg, model = _cfg(tmp_path)
     cmd = LlamaServer(cfg).build_command(model)
     assert cmd[cmd.index("--parallel") + 1] == "2"
-    assert cmd[cmd.index("--ctx-checkpoints") + 1] == "4"
+    # 2 checkpoints: two-turn restore measured intact, ~100-200 MiB shaved (2026-08-01)
+    assert cmd[cmd.index("--ctx-checkpoints") + 1] == "2"
     assert cmd[cmd.index("--cache-ram") + 1] == "256"
 
 
-def test_build_command_thread_flags_only_when_configured(tmp_path):
+def test_kv_unified_restores_full_window_sharing(tmp_path):
+    """Explicit --parallel silently turns unified KV off (2048 -> 1024/slot, measured:
+    longer prompts 400). Default True re-enables sharing; opt-out stays possible."""
+    cfg, model = _cfg(tmp_path)
+    assert "--kv-unified" in LlamaServer(cfg).build_command(model)
+    cfg2, model2 = _cfg(tmp_path, kv_unified=False)
+    assert "--kv-unified" not in LlamaServer(cfg2).build_command(model2)
+
+
+def test_thread_defaults_pin_performance_cores_on_apple_silicon(tmp_path):
+    """Measured (RESULTS.md 2026-08-01): engine-default threading is unstable on the
+    P/E-asymmetric dev host; the P-core count wins for decode AND prefill. Elsewhere the
+    engine default (no flag) stands. Explicit values always win."""
+    from runtime.config import darwin_performance_cores
+
     cfg, model = _cfg(tmp_path)
     cmd = LlamaServer(cfg).build_command(model)
-    assert "--threads" not in cmd and "--threads-batch" not in cmd
+    pcores = darwin_performance_cores()
+    if pcores:
+        assert cmd[cmd.index("--threads") + 1] == str(pcores)
+        assert cmd[cmd.index("--threads-batch") + 1] == str(pcores)
+    else:
+        assert "--threads" not in cmd and "--threads-batch" not in cmd
 
     cfg2, model2 = _cfg(tmp_path, n_threads=8, n_threads_batch=10)
     cmd2 = LlamaServer(cfg2).build_command(model2)
