@@ -153,6 +153,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - [Marble](https://withmarble.com/)
 - [Khanmigo](https://www.khanmigo.ai/)
 - [RACHEL](https://worldpossible.org/products/rachel-5-500)
+- [HEY CLICKY](https://www.heyclicky.com/)
 
 ## 11. The Story
 - If the laptop is low, how about we build something like [RACHEL](https://worldpossible.org/cdn/shop/products/RACHEL4-Englishcrop_480x6272.png?v=1656701790) or [LENTERA](https://youtu.be/qO_A8_DId0g) w/a powerbank. 
