@@ -18,7 +18,19 @@ dependency order, waits for health, and prints the UI URL:
 ./run.sh down       # stop it (conversations survive — see Persistence)
 ./run.sh logs       # follow all three containers' logs
 ./run.sh --build    # force a clean image rebuild first
+./run.sh --model models/core/candidates/Qwen3.5-4B-UD-Q3_K_XL.gguf
+                    # hot-swap the core GGUF (default models/core/Qwen3.5-4B-Q4_K_M.gguf)
 ```
+
+**`--model PATH`** (works with docker and `--native` modes) serves a different core GGUF
+without editing anything — the D1 bake-off seam. The file must already exist
+(`scripts/fetch_models.py --quant-variants` fetches the pinned candidates;
+`--with-draft` the 0.8B) and, in docker mode, live under `./models` (the only directory
+mounted into the container). The `/v1/models` alias follows the filename (default keeps
+`qwen3.5-4b`). Two pairings to know: vision's `mmproj-F16.gguf` belongs to the
+Qwen3.5-4B family, so non-4B cores degrade vision; and the docker default keeps draft
+speculation active, so a core outside the Qwen3.5 vocab (248,320) fails the engine boot —
+set `MUTA_RT_SPEC_TYPE=none` first for such cores.
 
 > **First run is slow.** The backend image compiles llama.cpp (pinned `b10035`,
 > AVX2-only — the same engine discipline as `main`) and the model download is ~4 GB.

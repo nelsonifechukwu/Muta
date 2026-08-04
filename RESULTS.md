@@ -29,6 +29,34 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ## 2026-08-04
 
+### C. `./run.sh --model PATH` — the core model is now hot-swappable (config change, no perf delta claimed)
+
+**Change:** `run.sh` grew `--model PATH` (default `models/core/Qwen3.5-4B-Q4_K_M.gguf`,
+docker + native modes). The served-model identity still lives only in
+`MUTA_RT_MODEL_DIR/FILE/ALIAS`; the flag just derives those three values —
+`docker-compose.yml`'s three model lines became `${MUTA_MODEL_*:-<old literal>}`
+interpolations (bare `docker compose up` / `make up` unchanged), `native_up`'s hardcoded
+exports became the derived values, and the provisioning gate now checks the *chosen*
+file (a missing custom model dies immediately with a fetch hint instead of triggering a
+roster fetch that couldn't produce it). Alias = filename stem lowercased; the default
+keeps the exact `qwen3.5-4b` identity. Guardrails: docker mode requires the file under
+`./models` (the only mount); a warn fires on any override (mmproj pairs with the 4B
+family; docker's active draft speculation rejects out-of-vocab cores — flip
+`MUTA_RT_SPEC_TYPE=none`). Motivated by section B below: the 4B-vs-0.8B and D1
+quant-candidate comparisons need model swaps without config edits.
+
+**Verified (same day):** `bash -n`; `--help`; `docker compose config` resolves the three
+env values correctly both bare (old literals) and overridden; `--model missing.gguf`
+and bare `--model` die with the intended messages; live native boot with
+`MUTA_RT_MODEL_*` set exactly as the flag derives them for
+`models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` (alt ports 8001/8181 — a prior gateway held
+8000) — `/v1/ready` reached `inference:true`, the engine's `/v1/models` reported
+`qwen3.5-0.8b-q4_k_m`, and a probe completion decoded at **110.7 tok/s** (native,
+`dev_host_provisional`; consistent with section B's 96–104 llama-bench rows). A full
+emulated-docker boot with a swapped model was **not** run (10+ min emulation tax);
+compose-level env resolution is verified, the in-container boot path is the same
+`RuntimeConfig` seam. RUN.md documents the flag.
+
 ### B. Core-model bake-off through the scored path: Qwen3.5-4B vs Qwen3.5-0.8B — native + docker/emulated, `dev_host_provisional`
 
 **Question:** what would each model score as *the* core model, on all three axes? First-ever
