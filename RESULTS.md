@@ -29,6 +29,62 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ## 2026-08-04
 
+### B. Core-model bake-off through the scored path: Qwen3.5-4B vs Qwen3.5-0.8B — native + docker/emulated, `dev_host_provisional`
+
+**Question:** what would each model score as *the* core model, on all three axes? First-ever
+rows for the 0.8B as core (it had only ever been measured as a draft).
+
+**Tooling:** profiler-mirror script (preserved at `bench/.artifacts/adtc_mirror-20260804.py`)
+replicating the ADTC methodology exactly per `docs/rules-digest.md` — `llama-bench -m <gguf>
+-p 512 -n 128 -o json` with 0.1 s psutil whole-tree RSS sampling — plus one deliberate
+deviation: `-ngl 0`, because the arm64 dev binary would otherwise offload to Metal and the
+audit box has no GPU. Native `llama-bench` was extracted into `runtime/build/bin/` from the
+same pinned b10035 macos-arm64 release archive `run.sh` uses (it ships only `llama-server`).
+Docker rows ran the backend image's own x86 `llama-bench` under emulation. **Ambient load:**
+host was not quiet (load avg 4.4 → 8.5 across the native rounds); native rows are 2
+interleaved A/B rounds and were consistent anyway. Raw rows:
+`bench/.artifacts/model-compare-20260804.jsonl`.
+
+| Context | Model | decode tok/s (tg128, scored) | prefill tok/s (pp512) | peak tree RSS |
+|---|---|---|---|---|
+| native | 4B Q4_K_M | 26.46 ±0.83 / 25.94 ±1.42 | 90.4 / 91.0 | 5.08 / 5.28 GB |
+| native | 0.8B Q4_K_M | 96.15 ±9.33 / 103.96 ±4.29 | 441.7 / 457.5 | 1.26 GB |
+| docker/emulated | 4B Q4_K_M | 3.89 ±0.09 | 14.4 | 4.36 GB |
+| docker/emulated | 0.8B Q4_K_M | 7.59 ±0.12 | 88.5 | 0.88 GB |
+
+**Findings that outlive the numbers:**
+
+1. **The scored-path RSS is not our tuned footprint.** llama-bench runs with its own default
+   flags — none of `RuntimeConfig`'s caps apply. 4B scored-path RSS is **4.36 GB on the x86
+   code path** (2.55 GiB mmap + ~1.3 GiB AVX2 repack + ctx) vs the tuned server's 3.1 GiB
+   phys_footprint, and `--no-repack` cannot be passed to the audit's fixed invocation. S_eff
+   for the 4B is therefore ~37, not ~55, and no server-flag work can move it. The only lever
+   on S_eff is the model file itself (smaller quant / smaller model).
+2. **llama-bench defaults to 6 threads on the M2 Pro natively** (= P-core count) — the audit
+   path lands on the good thread count by itself there; the emulated container used all 10
+   vCPUs (its default), consistent with the known-bad all-cores regime.
+3. **Emulation compresses the model-size speed ratio** (0.8B/4B = 1.95× emulated vs 3.8×
+   native). Bandwidth-bound decode on real hardware tracks file-size ratio (5.15×) closer
+   than translated-compute does; do not size-extrapolate from emulated rows.
+4. Scored through `bench/score.py` at provisional `tps_max=15`, with **estimated** accuracy
+   (no lm-eval measurement exists for either GGUF; hidden-task mix unknown): the verdict
+   flips on two unknowns — the accuracy gap and the audit box's memory bandwidth. With a
+   math-domain-like gap (est. ~72 vs ~38) the 4B wins wherever it clears ~13 tok/s
+   (needs ≳27 GiB/s bandwidth); with an arc_easy-like gap (est. ~84 vs ~66) the 0.8B wins
+   in every scenario because +50 S_eff pts (+10) plus any S_perf shortfall of the 4B
+   outweigh a ≤20-point accuracy gap (−10). Break-even accuracy gap ≈ 20 + 0.6×(15 −
+   4B_tok/s on the audit box) points. Decision stays with the 4B pending measured lm-eval
+   on both GGUFs and the organizer answers (task mix, audit hardware) — see the session
+   summary in the conversation log / recommendation below.
+
+**Verdict:** 4B remains the core model. The 0.8B-as-core option is real only if the hidden
+accuracy task is easy-MCQ-like *or* the audit box is bandwidth-starved (<~25 GiB/s) *or*
+the cohort tps_max lands far above 15 — all three currently unknowable from here. The
+already-staged D1 smaller-4B-quant bake-off (UD-Q3_K_XL 2.1 GiB, IQ4_XS 2.3 GiB) attacks
+the same S_perf/S_eff deficit without the accuracy cliff and should run first. Measuring
+real lm-eval accuracy for both GGUFs is the single highest-value next measurement: the
+whole decision is one accuracy delta.
+
 ### A. Cheap native probes — decode-thread floor (T4/T5) and repack toggle (WINNER-NOREPACK) — native, `dev_host_provisional`
 
 **Tooling:** `WINNER-NOREPACK`, `T4-DECODE`, `T5-DECODE` added to `bench/native_sweep.py`'s
