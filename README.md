@@ -103,6 +103,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - The application should consistently learn about its primary user and [adapt](https://blog.google/innovation-and-ai/technology/developers-tools/developers-changing-lives-with-gemma-3n/#:~:text=The%20result%20is%20a%20custom%20AI%20assistant%20that%20understands%20the%20user%E2%80%99s%20unique%20speech%20patterns%20and%20enables%20voice%20control%20over%20device%20functions.) to their taste (or even language).
 - This app will extend to UDO features...Not only science, but also a personal educational companion.
 - Teachers can even share their resources on the app (their curriculum via RAG - which each student can tailor to themselves) and even monitor students' progress. See [RACHEL](https://worldpossible.org/products/rachel-5-500).
+- [Guided discovery approach](https://youtu.be/6rkSPPyz_Bo)
 
 ## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
