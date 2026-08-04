@@ -23,13 +23,20 @@ die()  { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
     cat <<'EOF'
-Usage: ./run.sh [--native] [--build] | down | logs
+Usage: ./run.sh [--native] [--build] [--model PATH] | down | logs
 
   (no args)   docker mode (default): bring up db + backend + frontend, print the UI URL
   --native    dev mode: db + frontend stay in docker; the gateway and an arm64
               llama-server run on THIS host in the foreground (Ctrl-C stops them;
               './run.sh down' stops the containers). No slow amd64 emulation.
   --build     force a clean (no-cache) image rebuild first (docker images only)
+  --model P   core GGUF to serve (default models/core/Qwen3.5-4B-Q4_K_M.gguf). A
+              non-default model must already exist (fetch/quantize it first — e.g.
+              scripts/fetch_models.py --quant-variants for the D1 candidates) and, in
+              docker mode, live under ./models (the only dir mounted into the
+              container). Vision (mmproj) pairs with the Qwen3.5-4B family, and the
+              docker default keeps draft speculation active — a vocab-incompatible
+              core fails the engine boot (set MUTA_RT_SPEC_TYPE=none first).
   down        docker compose down (conversations survive: the muta-pgdata volume stays)
   logs        docker compose logs -f
 
@@ -85,9 +92,9 @@ native_up() {
     info "chat UI:   http://localhost:3000   (proxies 502 until the model finishes loading — seconds natively)"
     info "API:       http://localhost:8000/v1  (docs at http://localhost:8000/docs)"
     export MUTA_RT_AUTOSTART=1
-    export MUTA_RT_MODEL_DIR=models/core
-    export MUTA_RT_MODEL_FILE=Qwen3.5-4B-Q4_K_M.gguf
-    export MUTA_RT_MODEL_ALIAS=qwen3.5-4b
+    export MUTA_RT_MODEL_DIR="$MODEL_DIR"
+    export MUTA_RT_MODEL_FILE="$MODEL_FILE"
+    export MUTA_RT_MODEL_ALIAS="$MODEL_ALIAS"
     export MUTA_RT_N_CTX=2048
     export MUTA_RT_ENABLE_THINKING=1
     export MUTA_RT_AUTO_DOWNLOAD=0
@@ -106,10 +113,15 @@ native_up() {
 
 MODE=docker
 NO_CACHE=0
+DEFAULT_MODEL="models/core/Qwen3.5-4B-Q4_K_M.gguf"
+MODEL="$DEFAULT_MODEL"
 while [ $# -gt 0 ]; do
     case "$1" in
         --native)   MODE=native ;;
         --build)    NO_CACHE=1 ;;
+        --model)    [ $# -ge 2 ] || die "--model needs a path  (try --help)"
+                    MODEL="$2"; shift ;;
+        --model=*)  MODEL="${1#--model=}" ;;
         down)       exec docker compose down ;;
         logs)       exec docker compose logs -f ;;
         -h|--help)  usage; exit 0 ;;
@@ -117,6 +129,38 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# --- Core-model selection (hot-swap seam) --------------------------------------------
+# The identity of the served model lives in MUTA_RT_MODEL_DIR/FILE/ALIAS and nowhere
+# else; everything below only derives those three values from $MODEL.
+MODEL="${MODEL#./}"
+if [ "$MODEL" != "$DEFAULT_MODEL" ]; then
+    # A custom model is never auto-provisioned: fetch_models.py only knows the pinned
+    # roster, so a missing file here would otherwise surface minutes later as a boot
+    # failure with a misleading "provisioning" step in between.
+    [ -e "$MODEL" ] || die "model not found: $MODEL — fetch or quantize it first \
+(pinned candidates: scripts/fetch_models.py --quant-variants / --with-draft)"
+    case "$MODEL" in
+        models/*) ;;
+        *) [ "$MODE" = native ] \
+            || die "docker mode mounts only ./models into the container — pass a repo-relative path under models/ (got: $MODEL)" ;;
+    esac
+    warn "custom core model: $MODEL"
+    warn "  vision (mmproj-F16) pairs with the Qwen3.5-4B family; other cores degrade vision"
+fi
+MODEL_DIR=$(dirname "$MODEL")
+MODEL_FILE=$(basename "$MODEL")
+if [ "$MODEL" = "$DEFAULT_MODEL" ]; then
+    MODEL_ALIAS="qwen3.5-4b"   # unchanged /v1/models identity for the default
+else
+    MODEL_ALIAS=$(basename "$MODEL" .gguf | tr '[:upper:]' '[:lower:]')
+fi
+if [ "$MODE" = docker ]; then
+    # docker-compose.yml interpolates these (host path → the ./models mount at /app).
+    export MUTA_MODEL_DIR="/app/$MODEL_DIR"
+    export MUTA_MODEL_FILE="$MODEL_FILE"
+    export MUTA_MODEL_ALIAS="$MODEL_ALIAS"
+fi
 
 command -v docker >/dev/null 2>&1 || die "docker not found — install Docker Desktop / Engine."
 docker info >/dev/null 2>&1 || die "docker daemon isn't running — start it."
@@ -150,7 +194,7 @@ fi
 # 2. Model provisioning (idempotent: sha256-verified files are skipped)
 # ---------------------------------------------------------------------------
 required_models=(
-    "models/core/Qwen3.5-4B-Q4_K_M.gguf"
+    "$MODEL"
     "models/core/mmproj-F16.gguf"
     "models/asr/moonshine-tiny-en-int8/tokens.txt"
     "models/asr/silero_vad.onnx"

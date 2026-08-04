@@ -49,8 +49,13 @@ function autoGrow() {
 }
 inputEl.addEventListener("input", autoGrow);
 
+// Cheap pre-check: renderMathInElement walks the whole subtree, and this runs on every
+// frame of a streaming reply. No delimiter in the source means there is nothing to find.
+const MATH_HINT = /\$|\\\(|\\\[/;
+
 function renderMarkdown(el, text) {
   el.innerHTML = DOMPurify.sanitize(marked.parse(text));
+  if (!MATH_HINT.test(text)) return;
   renderMathInElement(el, {
     delimiters: [
       { left: "$$", right: "$$", display: true },
@@ -60,6 +65,32 @@ function renderMarkdown(el, text) {
     ],
     throwOnError: false,
   });
+}
+
+function clearCursor(root) {
+  root.classList.remove("cursor");
+  for (const el of root.querySelectorAll(".cursor")) el.classList.remove("cursor");
+}
+
+/** Park the blinking cursor on whatever element ends the text.
+ *
+ * Once a partial reply renders as markdown its tail is a block element, so a cursor on
+ * the container would blink on its own line below the paragraph. Descend to the last
+ * element that closes the content — skipping the whitespace text nodes marked emits
+ * between blocks, and stopping at a trailing text node, whose text comes *after* the
+ * last element (`<p>a <em>b</em> c</p>` must keep the cursor on the p, not the em). */
+function placeCursor(root) {
+  clearCursor(root);
+  let el = root;
+  for (;;) {
+    let last = el.lastChild;
+    while (last && last.nodeType === Node.TEXT_NODE && !last.data.trim()) {
+      last = last.previousSibling;
+    }
+    if (!last || last.nodeType !== Node.ELEMENT_NODE) break;
+    el = last;
+  }
+  el.classList.add("cursor");
 }
 
 // ---------------------------------------------------------------------------
@@ -109,33 +140,76 @@ function beginAssistantMessage() {
   thinking.className = "thinking";
   thinking.hidden = true;
   const summary = document.createElement("summary");
-  summary.textContent = "Thinking…";
+  const label = document.createElement("span");
+  label.className = "think-label";
+  label.textContent = "Thinking…";
+  const liveLine = document.createElement("span");
+  liveLine.className = "think-line";
+  summary.append(label, liveLine);
   const thought = document.createElement("div");
   thought.className = "thought";
   thinking.append(summary, thought);
 
   const prose = document.createElement("div");
   prose.className = "prose cursor";
-  const textNode = document.createTextNode("");
-  prose.appendChild(textNode);
 
   wrap.append(thinking, prose);
   messagesEl.appendChild(wrap);
   scrollToBottom();
 
   let full = "";
+  let thought_ = "";
   let thinkStartedAt = 0; // 0 = this reply produced no thinking
   let thinkSettled = false;
 
-  // Claude-style train of thought: the block streams open with a shimmering "Thinking…"
-  // label, then folds itself away to "Thought for Ns" the moment the answer starts.
+  // Markdown and math render AS the reply streams. Parsing is O(reply) and tokens land
+  // every ~30 ms, so rendering per token would be quadratic and spend the frame budget
+  // in marked/KaTeX; instead coalesce to at most one render per RENDER_MIN_MS, on a
+  // frame boundary. Partial syntax needs no special handling — an unclosed `**` or `$$`
+  // simply has not matched yet and stays literal until its closer arrives.
+  const RENDER_MIN_MS = 90;
+  let renderTimer = 0;
+  let lastRenderAt = 0;
+  let renderedLen = -1;
+  let streamDone = false; // the last render is finalize's; nothing may repaint after it
+
+  // Deliberately a plain timer, not requestAnimationFrame: rAF does not fire in a
+  // backgrounded tab, which would freeze the reply mid-sentence until the user came
+  // back. The timer already spaces the work out; the browser batches the paint.
+  const renderNow = () => {
+    renderTimer = 0;
+    lastRenderAt = performance.now();
+    if (streamDone || full.length === renderedLen) return;
+    renderedLen = full.length;
+    renderMarkdown(prose, full);
+    placeCursor(prose); // after markdown the tail is a block; keep the caret in the text
+    scrollToBottom();
+  };
+
+  const scheduleRender = () => {
+    if (streamDone || renderTimer) return;
+    const wait = Math.max(0, RENDER_MIN_MS - (performance.now() - lastRenderAt));
+    renderTimer = setTimeout(renderNow, wait);
+  };
+
+  // A pending timer outliving the stream would repaint the reply and restore the cursor.
+  const cancelRender = () => {
+    streamDone = true;
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = 0;
+  };
+
+  // Train of thought stays folded while it streams: the summary shows a shimmering
+  // "Thinking…" plus ONE live line — the tail of the trace, advancing line by line —
+  // so a long reasoning pass never pushes the conversation off screen. The whole trace
+  // is one click away (the <details> body), and settles to "Thought for Ns".
   const settleThinking = () => {
     if (!thinkStartedAt || thinkSettled) return;
     thinkSettled = true;
     const s = Math.max(1, Math.round((performance.now() - thinkStartedAt) / 1000));
-    summary.textContent = s < 60 ? `Thought for ${s}s` : `Thought for ${Math.floor(s / 60)}m ${s % 60}s`;
-    summary.classList.remove("shimmer");
-    thinking.open = false;
+    label.textContent = s < 60 ? `Thought for ${s}s` : `Thought for ${Math.floor(s / 60)}m ${s % 60}s`;
+    label.classList.remove("shimmer");
+    liveLine.textContent = ""; // the trace is the expandable body now, not a ticker
   };
 
   return {
@@ -143,30 +217,36 @@ function beginAssistantMessage() {
       if (!thinkStartedAt) {
         thinkStartedAt = performance.now();
         thinking.hidden = false;
-        thinking.open = true;
-        summary.classList.add("shimmer");
+        label.classList.add("shimmer");
       }
-      thought.textContent += t;
+      thought_ += t;
+      thought.textContent = thought_;
       thought.scrollTop = thought.scrollHeight; // the box caps at 16rem; follow the tail
+      // Last non-blank line: a just-arrived "\n" would otherwise blank the ticker until
+      // the next token lands.
+      const lines = thought_.split("\n");
+      while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+      liveLine.textContent = lines.length ? lines[lines.length - 1] : "";
       scrollToBottom();
     },
     pushDelta(t) {
       settleThinking();
       full += t;
-      textNode.data = full;
-      scrollToBottom();
+      scheduleRender();
     },
     finalize() {
       settleThinking(); // a reply stopped mid-think still gets its label settled
-      prose.classList.remove("cursor");
+      cancelRender();
       if (full.trim()) renderMarkdown(prose, full);
+      clearCursor(prose);
       scrollToBottom();
     },
     fail(message) {
       settleThinking();
-      prose.classList.remove("cursor");
+      cancelRender();
       if (!full) prose.textContent = message;
       else renderMarkdown(prose, full);
+      clearCursor(prose);
     },
   };
 }

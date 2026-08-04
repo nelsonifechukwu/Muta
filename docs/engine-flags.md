@@ -94,6 +94,17 @@ also LOSES from E-cores here (`-tb 8/10` → 74/61 vs 97 tok/s at `-tb 6`) — t
 `RuntimeConfig` now derives the P-core count on darwin (`hw.perflevel0.physicalcpu`);
 `--prio 2` caused pathological stalls (0.4 tok/s outliers) — do not revisit.
 
+**Below-P-core decode threads, tested 2026-08-04 (cactus's "GEMV caps at 4–5 threads"
+policy, `T4-DECODE`/`T5-DECODE` in `bench/native_sweep.py`):** does not replicate here.
+`-t 4 -tb 6` measured worse on both criteria under heavy load (max 20.06 vs the
+bracketing `WINNER` anchors' 22.86/23.33; floor 8.97 vs 13.17) — **rejected**.
+`-t 5 -tb 6` was a genuine coin flip against interleaved `WINNER` anchors (max
+24.66–25.65 vs neighbor maxes of 23.33–27.38; floor 12.88–18.89 vs neighbor floors of
+13.16–19.31, differences inside noise both times) across two rounds spanning heavy and
+light ambient load — **inconclusive under load; re-run on a quiet host before deciding**,
+not a keep (RESULTS.md 2026-08-04 has the full row-by-row numbers). Full P-core count
+(6/6) remains the shipped default.
+
 ## Explicit -np silently disables unified KV
 
 `-np -1` (auto) resolves with `kv_unified = true`, but any explicit `--parallel N` flips
@@ -123,15 +134,54 @@ what Apple's own tooling charges the process) is stable ±2% run-to-run: ~3.3–
 this stack across the sweep, 3137 MiB for the shipped config after a 3-conversation
 stressor. `bench/native_sweep.py` records both.
 
+## Weight repacking (CPU_REPACK) and whether it can be disabled
+
+**Verified 2026-08-01, b10035 `--help`:**
+
+```text
+--repack, -nr, --no-repack              whether to enable weight repacking (default: enabled)
+                                        (env: LLAMA_ARG_REPACK)
+```
+
+The flag exists at this pin, spelled `--no-repack`. Repacking is what copies weight
+tensors into anonymous RAM for AVX2/NEON kernels at load time; `--no-repack` is the
+direct lever to keep those tensors mmap'd/file-backed instead — the Muta analog of
+cactus's "stream weights, lose some decode" trade (`docs/cactus-survey.md` item 3, their
+measured −17% for evictable weights). Priced with the `WINNER-NOREPACK` probe in
+`bench/native_sweep.py`; see RESULTS.md 2026-08-04 for the measured ΔTPS/ΔRAM and the
+verdict.
+
+**Measured 2026-08-04, `WINNER-NOREPACK` (`_T6 + --kv-unified --ctx-checkpoints 2
+--no-repack`) vs the `WINNER` config, full suite, `phys_footprint` after the
+3-conversation stressor:** repack-off measured **602 MiB**, against **3097–3326 MiB**
+across every repack-on row collected in the same session (4 `WINNER` anchors, 2×
+`T4-DECODE`, 2× `T5-DECODE`) — a **~2.5–2.6 GiB drop**, corrected upward from the
+Misc bullet's older "~1.3 GiB" estimate below (that figure undercounts: repacking
+appears to convert most of the model's 2D weight matrices to anonymous pages, not a
+fixed ~1.3 GiB subset — roughly matches the 2.55 GiB GGUF size once compute/context
+overhead is subtracted). Decode was not measurably worse: NOREPACK's max (27.09) and
+floor (20.68) both sit at or above the same session's `WINNER` anchors (22.86–27.38 max,
+13.16–19.31 floor) — no sign of cactus's reported −17%, though the host was under heavy,
+variable ambient load throughout (RESULTS.md 2026-08-04 states the load conditions).
+**Caveat that matters for scoring:** `docs/rules-digest.md` confirms the ADTC profiler's
+`throughput.py` and its RSS sampler both wrap a `llama-bench`/`llama-cli` invocation it
+launches itself (`llama-bench -m <model.gguf> -p 512 -n 128 --output json`) — fixed
+flags we cannot influence, entirely independent of `RuntimeConfig`/`runtime/server.py`.
+So `--no-repack` is a **product-RAM-only** win (shrinks our own backend container's
+footprint); it is not expected to move the official `memory.peak_rss_mb` score at all.
+
 ## Misc
 
 - `-np -1` (auto) resolves to 4 slots with `kv_unified = true` at `-c 2048`.
 - Default threads = ALL cores for decode and prefill (`n_threads = 10 (n_threads_batch = 10)`
   in the 10-vCPU VM) — compose pins 8/10.
 - `--defrag-thold` is deprecated in this build (profiles.py still passes it — harmless).
-- Weight loading repacks ~1.3 GiB of the 4B's tensors into anonymous RAM
-  (`CPU_REPACK`) for AVX2 kernels; model memory ≈ 2.6 GiB total, context ≈ 250 MiB at
-  the old 4-slot default, compute ≈ 31 MiB at `-ub 128`.
+- Weight loading repacks the 4B's tensors into anonymous RAM (`CPU_REPACK`) for AVX2
+  kernels; model memory ≈ 2.6 GiB total, context ≈ 250 MiB at the old 4-slot default,
+  compute ≈ 31 MiB at `-ub 128`. The original "~1.3 GiB repacked" estimate here was
+  **superseded 2026-08-04** by a direct `--no-repack` A/B (see "Weight repacking"
+  above): the measured anonymous-RAM cost of repacking is closer to ~2.5–2.6 GiB, i.e.
+  most of the model, not a fixed subset.
 - This build's `llama-server.log` at `verbosity = 3` does **not** print the
   `context checkpoints enabled, max = N` or a draft-model "loaded" banner the plan
   expected — `n_slots = 2` is the only one of the four grep targets in

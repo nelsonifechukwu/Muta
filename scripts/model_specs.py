@@ -402,6 +402,33 @@ QUANT_VARIANTS: list[Artifact] = [
             "candidate, consumed on the build machine only.",
         ),
     ),
+    Artifact(
+        name="core-cand-unsloth-ud-q3kxl",
+        role="D1 candidate: Unsloth dynamic UD-Q3_K_XL (~3.5 bpw, per-tensor mixed)",
+        tier="on-demand",
+        repo="unsloth/Qwen3.5-4B-GGUF",
+        file="Qwen3.5-4B-UD-Q3_K_XL.gguf",
+        dest="models/core/candidates",
+        license=QWEN_LICENSE,
+        planning_bytes=int(2.1 * GiB),
+        flag="--quant-variants",
+        caveats=(
+            "Cactus CQ3.26 evidence (docs/cactus-survey.md): mixed ~3.3 bpw held "
+            "GSM8K/HumanEval near-lossless while uniform sub-3-bit collapsed GSM8K "
+            "73.67 -> 22.00. Generative math probes are the admission gate, not MCQ.",
+        ),
+    ),
+    Artifact(
+        name="core-cand-iq4xs",
+        role="D1 candidate: IQ4_XS (~4.25 bpw, smallest mainline 4-bit)",
+        tier="on-demand",
+        repo="unsloth/Qwen3.5-4B-GGUF",
+        file="Qwen3.5-4B-IQ4_XS.gguf",
+        dest="models/core/candidates",
+        license=QWEN_LICENSE,
+        planning_bytes=int(2.3 * GiB),
+        flag="--quant-variants",
+    ),
 ]
 
 # --------------------------------------------------------------------------------------
