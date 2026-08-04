@@ -27,6 +27,115 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-04
+
+### A. Cheap native probes — decode-thread floor (T4/T5) and repack toggle (WINNER-NOREPACK) — native, `dev_host_provisional`
+
+**Tooling:** `WINNER-NOREPACK`, `T4-DECODE`, `T5-DECODE` added to `bench/native_sweep.py`'s
+`CONFIGS` (cactus-inspired: their macOS decode path caps at 4–5 threads even on big cores,
+and they deliberately keep weights file-backed/evictable, accepting −17% decode —
+`docs/cactus-survey.md` items 2–3). `T4-DECODE`/`T5-DECODE` are `_T6` with `--threads`
+dropped to 4/5 (`--threads-batch` held at 6 — prefill was never in question). `WINNER-NOREPACK`
+is the shipped `WINNER` config plus `--no-repack` (Step 1 confirmed the flag exists at this
+pin: `--repack, -nr, --no-repack ... default: enabled`; see `docs/engine-flags.md`).
+
+**Conditions — read before trusting a number:** this sweep did **not** run on a quiet host
+and did **not** complete in one sitting. It spans three sessions — 2026-08-01 23:37 (load avg
+~4.3), 2026-08-02 ~08:03 (load avg not captured at that exact point, but the surrounding
+session was ~5–20), and 2026-08-04 03:22–03:41 (load avg swinging 3.9–20.1 within the
+20-minute window) — while another project's `llama-cli`/IDE tooling ran concurrently
+throughout (not killed, per standing instruction). Two runs were lost to the load: a
+background chain died mid-round after an apparent environment reset (engine log shows the
+second `WINNER` invocation receiving two SIGINTs and exiting before its JSON row was
+written), and one `WINNER` full-suite anchor itself failed late (`ReadTimeout`) after its
+four decode probes were already captured — that row is kept with `ok: false` since the
+decode/prefill numbers it recorded before failing are still valid data points, but it has no
+`footprint_mib`. Every remaining run after the second stall used the **speed** suite for
+`T4/T5-DECODE` and the `WINNER` anchors (full suite only for the original two `WINNER` rows
+and `WINNER-NOREPACK`, where the footprint reading is the point). Given all this, **decode
+maxes here are well below the 2026-08-01 quiet(er)-host record of 31.09** (section A above) —
+verdicts below are relative A/B within each interleaved round, not absolute performance
+claims.
+
+**All rows collected this task** (`bench/.artifacts/native-sweep.jsonl`; `decode_tps` = the 4
+warm throughput probes, `decode_tps_max` includes the 2 reuse-probe generations per the
+harness convention):
+
+| Config | Suite | decode_tps (4 probes) | decode_tps_max | floor (min probe) | prefill tps | phys_footprint MiB |
+|---|---|---|---|---|---|---|
+| WINNER (anchor 1) | full | 15.05, 22.86, 13.17, 18.25 | 22.86 | 13.17 | 67.4 | 3236 |
+| T4-DECODE (round 1) | speed | 11.38, 8.97, 14.2, 15.0 | 20.06 | 8.97 | 55.9 | 3152 |
+| WINNER (anchor 2, `ok:false` — late ReadTimeout, decode probes valid) | full | 2.21, 11.88, 16.58, 23.33 | 23.33 | 2.21† | 70.2 | — (never reached) |
+| T5-DECODE (round 1) | speed | 19.19, 15.69, 12.88, 16.21 | 24.66 | 12.88 | 61.6 | 3098 |
+| WINNER (anchor 3) | speed | 13.16, 24.56, 27.38, 24.22 | 27.38 | 13.16 | 78.4 | 3104 |
+| WINNER-NOREPACK | full | 26.59, 27.09, 26.49, 20.68 | 27.09 | 20.68 | 73.0 | **602** |
+| T4-DECODE (round 2) | speed | 24.86, 25.89, 24.95, 25.65 | 25.89 | 24.86 | 83.4 | 3097 |
+| WINNER (anchor 4) | speed | 19.31, 22.42, 22.82, 25.04 | 25.04 | 19.31 | 67.0 | 3098 |
+| T5-DECODE (round 2) | speed | 25.65, 18.97, 18.89, 25.35 | 25.65 | 18.89 | 84.8 | 3326 |
+
+† Anchor 2's 2.21 tok/s single-probe floor is treated as an untrusted extreme-contention
+outlier (nothing else in the sweep, including the same run's other three probes, is
+anywhere near it) and is excluded from the floor comparisons below.
+
+**Verdict — `T4-DECODE`: reject.** Decision rule (stated in advance): keep only if max ≥
+`WINNER`'s max **and** the loaded-host floor improves. Round 1 (heavy load) fails both
+outright: max 20.06 is below *both* bracketing `WINNER` anchors (22.86, 23.33) and floor
+8.97 is well below the bracketing floor of 13.17. Round 2 (lighter load) is not a rescue:
+max 25.89 beats the immediately-following `WINNER` anchor (25.04) but stays below the
+immediately-preceding one (27.38), and while its floor (24.86) exceeds the following
+anchor's floor (19.31), that is the lightest-load, best-case pairing in the whole dataset —
+not the "loaded-host floor improves" case the probe exists to test. The regime the lever was
+supposed to help (contention) is exactly where it measured worst.
+
+**Verdict — `T5-DECODE`: inconclusive under load — re-run on a quiet host.** Same rule.
+Round 1: max 24.66 beats the preceding anchor (23.33) but loses to the following one
+(27.38); floor 12.88 is a statistical tie with the following anchor's floor (13.16, Δ0.28).
+Round 2: max 25.65 marginally beats the preceding anchor (25.04, Δ0.61); floor 18.89 is
+marginally *below* the preceding anchor's floor (19.31, Δ−0.42). Every comparison is inside
+the noise band this host produced elsewhere in the same session (single-probe swings of
+4–13 tok/s within one run were common). Per the standing instruction for this task, a
+result this close under heavy, uncontrolled load is recorded as inconclusive rather than a
+marginal keep — `runtime/config.py` is **not** changed; the P-core count (6) stays the
+default. Re-run both configs on a quiet host before revisiting.
+
+**Verdict — `WINNER-NOREPACK`: keep as a documented product-RAM lever (not wired as
+default in this task).** `phys_footprint` after the full suite's 3-conversation stressor:
+**602 MiB with `--no-repack`, vs 3097–3326 MiB across every one of the other eight rows in
+this table** (repack on) — a consistent ~2.5–2.6 GiB drop, robust across both suite type and
+wildly different load conditions (the cleanest signal this noisy host produced all task).
+This corrects `docs/engine-flags.md`'s older "~1.3 GiB repacked" estimate — repacking
+appears to anonymize most of the model's weight matrices, not a fixed ~1.3 GiB subset.
+Decode was **not** measurably worse: NOREPACK's max (27.09) and floor (20.68) both sit at
+or above the full range of `WINNER` anchors in this table (22.86–27.38 max, 13.16–19.31
+floor) — no sign of cactus's reported −17% for the equivalent trade, though see the
+ambient-load caveat above. Accuracy 4/4, longctx accepted, checkpoint reuse identical
+(29/33) — nothing else regressed.
+
+Priced with `bench/score.py`'s exchange rate at the provisional `tps_max=15`
+(`ExchangeRate.delta_points(tps_before=27.38, delta_tps=27.09-27.38, delta_ram_gb=(602-3236)/1024)`):
+**ΔS_total = +7.35**, and essentially all of it is the RAM term — both 27.38 and 27.09 tok/s
+sit well past the `tps_max=15` clamp, so `S_perf` scores identically for either and the
+decode delta contributes ≈0. **Caveat that matters more than the price:**
+`docs/rules-digest.md` confirms the ADTC profiler's throughput *and* RSS sampling both wrap
+a `llama-bench`/`llama-cli` invocation the profiler launches itself
+(`llama-bench -m <model.gguf> -p 512 -n 128 --output json`, fixed flags) — entirely
+independent of `RuntimeConfig`/`runtime/server.py`. `--no-repack` is therefore a
+**product-RAM-only** win: it shrinks our own backend container's/dev-host's actual memory
+use, but is not expected to move the official `memory.peak_rss_mb` score at all. No
+`RuntimeConfig` field for repack exists yet; wiring `--no-repack` in as a default (a new
+field + `server.py` flag emission + a `test_server_command.py` case) is a follow-up
+decision, not made in this task — the brief's Step 4 only mandates a `runtime/config.py`
+edit for a `T4/T5-DECODE` keep, and neither of those kept.
+
+**Provenance:** raw rows in `bench/.artifacts/native-sweep.jsonl` (names `WINNER`,
+`T4-DECODE`, `T5-DECODE`, `WINNER-NOREPACK`); engine logs in
+`bench/.artifacts/native-logs/` (`WINNER.log` holds the last-run invocation only — the
+sweep harness truncates per-name logs on each run, so the failed anchor-2 attempt's log
+was overwritten by anchor 3/4's later runs; the SIGINT evidence for the lost background
+round was observed directly during the session, not preserved in a committed log). Engine
+b10035 arm64 release, Qwen3.5-4B-Q4_K_M, thinking on, budget 512, unchanged from the
+2026-08-01 sweep.
+
 ## 2026-08-01
 
 ### A. Native engine tuning sweep — 24 configs, engine-only (no gateway/db/docker) — native

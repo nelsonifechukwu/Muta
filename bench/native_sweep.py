@@ -306,6 +306,18 @@ CONFIGS: dict[str, tuple[list[str], str]] = {
                  "--spec-ngram-simple-size-m", "12"], "speed"),
     # What RuntimeConfig ships since 2026-08-01: P-core threads + unified KV + 2 checkpoints.
     "WINNER": (_T6 + ["--kv-unified", "--ctx-checkpoints", "2"], "full"),
+    # Cactus GEMV policy: their macOS decode path caps at 4-5 threads even on big
+    # cores (sync overhead beats bandwidth once saturated). Decode here is
+    # barrier-synchronized; probe below the P-core count.
+    "T4-DECODE": (["--threads", "4", "--threads-batch", "6",
+                   "--kv-unified", "--ctx-checkpoints", "2"], "speed"),
+    "T5-DECODE": (["--threads", "5", "--threads-batch", "6",
+                   "--kv-unified", "--ctx-checkpoints", "2"], "speed"),
+    # Cactus streams weights from storage, accepting -17% decode for evictable RAM.
+    # Our analog: disable CPU_REPACK (measured ~2.5-2.6 GiB anonymous on the 4B,
+    # 2026-08-04 — see docs/engine-flags.md) — spelling from `llama-server --help`.
+    "WINNER-NOREPACK": (_T6 + ["--kv-unified", "--ctx-checkpoints", "2",
+                               "--no-repack"], "full"),
 }
 
 
