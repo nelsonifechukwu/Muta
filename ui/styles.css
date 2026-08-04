@@ -131,13 +131,26 @@ details.thinking {
   font-family: var(--sans);
 }
 details.thinking summary { cursor: pointer; user-select: none; }
+/* The live line rides alongside the label while folded: one line, clipped — never
+   wrapped, or a long thought would grow the collapsed block it is meant to keep small.
+   Expanding shows the full trace below, so the ticker gets out of the way. */
+details.thinking .think-line {
+  /* Width reserves room for the marker + "Thinking…" so the clipped line stays BESIDE
+     the label: an inline-block that does not fit wraps as a whole box, which would make
+     the folded block two lines tall — the one thing the ticker exists to avoid. */
+  display: inline-block; vertical-align: bottom; max-width: calc(100% - 8rem);
+  margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  opacity: 0.75; font-style: italic;
+}
+details.thinking .think-line:empty { margin-left: 0; }
+details[open].thinking .think-line { display: none; }
 details.thinking .thought {
   white-space: pre-wrap; margin-top: 6px;
   border-left: 2px solid var(--border); padding-left: 10px;
   max-height: 16rem; overflow-y: auto;
 }
 /* Streaming: a light sweep across the "Thinking…" label, Claude-style. */
-details.thinking summary.shimmer {
+details.thinking .think-label.shimmer {
   background: linear-gradient(90deg, var(--muted) 35%, var(--text) 50%, var(--muted) 65%);
   background-size: 200% 100%;
   -webkit-background-clip: text; background-clip: text;

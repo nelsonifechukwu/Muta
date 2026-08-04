@@ -65,6 +65,10 @@ ACCURACY = [
     ("A rectangle has sides 7 cm and 12 cm. What is its area in square centimeters? Give only the number.", ["84"]),
     ("What is the derivative of x^3 + 2x with respect to x? Answer in one short line.", ["3x^2 + 2", "3x² + 2", "3x^2+2", "3x²+2"]),
     ("Convert 2.5 hours to minutes. Give only the number.", ["150"]),
+    ("A shop sells pens at 3 for 450 naira. How much do 7 pens cost in naira? Give only the number.", ["1050"]),
+    ("Solve for x: 2x + 7 = 19. Give only the number.", ["6"]),
+    ("What is 15% of 240? Give only the number.", ["36"]),
+    ("A car travels at 72 km/h. How many metres does it cover in 25 seconds? Give only the number.", ["500"]),
 ]
 
 THROUGHPUT_PROMPTS = [
@@ -182,7 +186,7 @@ def wait_health(proc, deadline=180.0):
     raise TimeoutError("engine not healthy in time")
 
 
-def run_config(name: str, extra: list[str], *, suite: str = "speed") -> dict:
+def run_config(name: str, extra: list[str], *, suite: str = "speed", model: Path | None = None) -> dict:
     """Launch, probe, sample, tear down; append one JSON line to OUT."""
     try:  # a stale server on PORT would silently absorb the probes of every config
         httpx.get(f"{BASE}/health", timeout=1.0)
@@ -190,12 +194,15 @@ def run_config(name: str, extra: list[str], *, suite: str = "speed") -> dict:
     except httpx.HTTPError:
         pass
     LOGDIR.mkdir(parents=True, exist_ok=True)
-    flags = [*BASE_FLAGS, *extra]  # llama-server arg parsing is last-wins
+    flags = list(BASE_FLAGS)
+    if model is not None:
+        flags[flags.index("--model") + 1] = str(model)
+    flags = flags + extra  # llama-server arg parsing is last-wins
     log_path = LOGDIR / f"{name}.log"
     print(f"\n=== {name} ===\n  flags: {' '.join(extra) or '(baseline)'}", flush=True)
     with open(log_path, "w") as lf:
         proc = subprocess.Popen([str(BIN), *flags], stdout=lf, stderr=subprocess.STDOUT)
-    result: dict = {"name": name, "extra_flags": extra, "suite": suite}
+    result: dict = {"name": name, "extra_flags": extra, "suite": suite, "model": str(model or MODEL)}
     sampler = None
     try:
         result["load_s"] = round(wait_health(proc), 1)
@@ -326,6 +333,8 @@ def main(argv: list[str] | None = None) -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("configs", nargs="*", help="config names (default: all)")
     parser.add_argument("--list", action="store_true", help="list known configs")
+    parser.add_argument("--model", type=Path, default=None,
+                        help="override the swept GGUF (bake-off candidates)")
     args = parser.parse_args(argv)
     if args.list:
         for n, (extra, suite) in CONFIGS.items():
@@ -336,7 +345,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"unknown configs {unknown}; known: {list(CONFIGS)}")
     for n in args.configs or list(CONFIGS):
         extra, suite = CONFIGS[n]
-        run_config(n, extra, suite=suite)
+        run_config(n, extra, suite=suite, model=args.model)
     return 0
 
 
