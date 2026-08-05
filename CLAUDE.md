@@ -2,18 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Which branch you are on matters
+## One branch: `main`
 
-- **`main`** — the ADTC 2026 competition build: one container, two processes, SQLite,
-  flash-drive deploy tooling. `README.md` + `ROADMAP.md` are its plan of record.
-- **`dev` (this branch)** — a **long-lived alternative architecture**: a conventional
-  3-container web app (Postgres + backend + nginx frontend). It is *not* destined for merge
-  into `main`. The plan that built it: `docs/plans/2026-07-25-three-container-architecture.md`.
+`main` is the only branch. It carries the **3-container architecture** (Postgres + backend +
+nginx frontend) that used to live on `dev`; the plan that built it is
+`docs/plans/2026-07-25-three-container-architecture.md`.
+
+The older single-container competition build (SQLite, systemd units, flash-drive `deploy/`
+and `bundle/` tooling, the TUI and the REPL CLI) was **retired on 2026-08-05**. It is not
+gone — it is preserved at the tag **`archive/main-competition-build`** — but nothing in the
+working tree depends on it. Historical docs under `docs/` that mention `deploy/`, `bundle/`
+or the TUI describe that archived design, not this one.
 
 The competition heritage still explains many invariants (AVX2-only engine build, pinned
-model provenance, degradation-not-errors, mode-aware tutoring), but the deploy story on
-this branch is `docker compose`, not a flash drive. Historical docs under `docs/` that
-mention `deploy/`, `bundle/` or the TUI describe `main`.
+model provenance, degradation-not-errors, mode-aware tutoring); the deploy story is
+`docker compose`, not a flash drive. One consequence to keep honest:
+`bench/submission/metadata.json` declares `packaging: "binary_bundle"`, which described the
+retired flash-drive bundle — revisit that claim before Gate 1.
 
 ## What this is
 

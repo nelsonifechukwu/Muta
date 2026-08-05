@@ -50,6 +50,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Allow option to select models (and even use a cloud model.)
 
 ## 2. Inference & Optimization
+- allow the option for weight streaming (better than it's not available).
 - Format: GGUF/GGML, llama.cpp. Follow [ggerganov](https://x.com/ggerganov?lang=en), incl. [tip](https://x.com/ggerganov/status/2039752638384709661?s=20) + [tip](https://x.com/ggerganov/status/2039804601810001921?s=20).
 - Quantization: [nor-blog](https://nor-blog.pages.dev/posts/2025-05-14-quantization/); 4-bit baseline.
 - **Adaptive precision:** 4-bit for simple arithmetic, 8-bit for multi-step proofs (quantization error breaks proofs, not arithmetic).
@@ -69,7 +70,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - KV-cache quantization (biggest hidden RAM cost), `mmap` model loading, cap thread count to avoid the −10 thermal penalty.
 - See [bitnet.cpp](https://github.com/microsoft/BitNet)
 - Must be multi-modal (and can even respond in whatever format to the student. see [audio](https://github.com/pwilkin/thinksound.cpp).
-- Switch between f4 and f16 to get best mixed results without triggering throttling.
+- Switch between f4 and f16 to get the best mixed results without triggering throttling.
 - Run these models on phones, see bigger competition, [Africa AI X-Prize](https://africaaixprize.org/#challenge). Other companies include: [cactuscompute.com](cactuscompute.com), [trymirai.com](trymirai.com)
 - Run on Bare Android/Nokia touch light
 - Swing between CPU, GPU, and cloud (if it notices that GPU and Cloud are available for better responses).
@@ -99,8 +100,10 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - How'd the blind use this (especially with the audio/braille feature)
 - The product can be personalised (like Hey Siri--whatever name the learner wants to call it.)
 - Look at clicky and the way it runs background tasks for you. Not only education, but education that empowers you too.
-- the applicaiton should consistently learn about its primary user and refine too.
-- This app will extend to UDO features...Not only science, but a personal educational companion.
+- The application should consistently learn about its primary user and [adapt](https://blog.google/innovation-and-ai/technology/developers-tools/developers-changing-lives-with-gemma-3n/#:~:text=The%20result%20is%20a%20custom%20AI%20assistant%20that%20understands%20the%20user%E2%80%99s%20unique%20speech%20patterns%20and%20enables%20voice%20control%20over%20device%20functions.) to their taste (or even language).
+- This app will extend to UDO features...Not only science, but also a personal educational companion.
+- Teachers can even share their resources on the app (their curriculum via RAG - which each student can tailor to themselves) and even monitor students' progress. See [RACHEL](https://worldpossible.org/products/rachel-5-500).
+- [Guided discovery approach](https://youtu.be/6rkSPPyz_Bo)
 
 ## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
@@ -149,8 +152,13 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - [Brilliant](brilliant.org)
 - [Opennote.com](https://withmarble.com/)
 - [Marble](https://withmarble.com/)
+- [Khanmigo](https://www.khanmigo.ai/)
+- [RACHEL](https://worldpossible.org/products/rachel-5-500)
+- [HEY CLICKY](https://www.heyclicky.com/)
 
 ## 11. The Story
+- If the laptop is low, how about we build something like [RACHEL](https://worldpossible.org/cdn/shop/products/RACHEL4-Englishcrop_480x6272.png?v=1656701790) or [LENTERA](https://youtu.be/qO_A8_DId0g) w/a powerbank. 
+- Run a benchmark like [this](https://ai.google.dev/gemma/docs/core/model_card_4#benchmark_results), proving why we concluded on the chosen model. Say we went through 1000 models, measured against x, y, and z, and selected this as ideal.
 - Get feedback from the student -- they input their email once they use it, and then, we prompt them in their email, or as in-app notifications (remember, they may not have internet access.)
 - Cambridge: got a C despite being Best in Nigeria.
 - Cambridge: a classmate wouldn't employ me.
