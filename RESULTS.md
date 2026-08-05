@@ -27,6 +27,137 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-05
+
+### A. The scored path re-derived at the new profiler pin — and it moves the whole strategy
+
+**Change:** `bench/adtc/install.py` `PROFILER_SHA` cf3432cf → **7adbe08** (upstream HEAD,
+2026-07-30; a clone lives at `bench/adtc-profiler/`). New docs:
+[`docs/audit-parity.md`](docs/audit-parity.md) (how self-reported numbers must be produced),
+[`docs/target-deploy-notes.md`](docs/target-deploy-notes.md) (verdicts on the community
+low-RAM playbook), plus a dated addendum in `docs/rules-digest.md`.
+
+**Findings that change decisions** (source-verified, not inferred):
+
+1. The audit's reference image builds llama.cpp **b10175 with AVX/AVX2/FMA/F16C OFF**
+   (SSE4.2+BMI2 survive via `INS_ENB`), under `--memory=7.5g`. In `arch/x86/quants.c` at
+   that tag, **only `q4_0_q8_0` has an `#elif __SSSE3__` dot kernel** — Q4_K/Q5_K/Q6_K/
+   Q8_0/IQ* all fall to scalar C. **Quant type moves audit throughput by multiples.**
+2. **No repack in that build** (every x86 repack path is gated on compile-time AVX2), so
+   scored peak RSS ≈ file size + ~0.4 GB — not the 4.36 GB an AVX2 llama-bench reports.
+   `GGML_CPU_REPACK=OFF` is an upstream cmake option and the only repack lever that
+   survives the profiler's fixed invocation.
+3. On x86 AVX2, repack is a **prefill** optimization (PR #12332: pp +61-76%, tg128 −2%)
+   — it buys nothing on the scored tg128 while costing ~+Q4_K-tensor-bytes of RSS.
+4. `first_token_latency_ms` (pp512) is reconciled at ±25% **too**, so a build-mismatched
+   self-report fails on prefill even if throughput survives.
+5. Upstream `_extract_score` + lm-eval 0.4.12 returns gsm8k's `sample_len` (= the limit)
+   as the score for generative tasks — **the official profiler mis-scores generation
+   tasks**. Our runner extracts explicitly (acc_norm > acc > exact_match strict). Worth
+   reporting upstream before the audit window.
+
+### B. Model + quant bake-off through the profiler's own accuracy path — first real S_acc numbers
+
+**Tooling:** new `bench/adtc_bakeoff.py` (+ 7 tests) and `bench/.venv-profiler` (the
+profiler installed at 7adbe08 with its lm-eval + llama-cpp-python stack). Accuracy runs
+are the audit's exact code path: llama-cpp-python, `n_ctx=2048`, **no chat template**,
+greedy. Rows: `bench/.artifacts/bakeoff.jsonl`; campaign journal with pre-registered
+predictions: `bench/.artifacts/campaign-20260805.md`.
+
+| model (file GiB) | arc_easy | arc_challenge | sciq | gsm8k (strict) | 4-task mean |
+|---|---|---|---|---|---|
+| 4B Q4_K_M (2.55) | 0.78 | 0.53 | 0.97 | 0.65 | 73.3 |
+| 4B Q4_0 (2.41) | 0.78 | — | — | 0.675 | — |
+| **4B Q4_0-EH (2.22, ours)** | **0.77** | — | — | **0.675** | — |
+| 4B UD-Q4_K_XL (2.71) | 0.78 | — | — | 0.65 | — |
+| 4B UD-Q3_K_XL (2.27) | 0.77 | — | — | 0.625 | — |
+| 4B IQ4_XS (2.31) | 0.82 | — | — | 0.65 | — |
+| 2B Q4_K_M (1.19) | 0.73 | 0.40 | 0.91 | 0.55 | 64.8 |
+| 2B Q6_K (1.47) | 0.70 | 0.43 | 0.91 | 0.60 | 66.0 |
+| 0.8B Q4_K_M (0.50) | 0.66 | 0.34 | 0.85 | 0.20 | 51.3 |
+
+n = 100 (MCQ) / 40 (gsm8k). **Uncertainties, stated correctly** (an earlier draft quoted
+single-model SEs as difference SEs — corrected after adversarial review): single-model
+4-task-mean SE ≈ 2.5-2.7; the **difference** SE for 4B−2B is **3.67** (95% CI [1.3, 15.7]).
+
+**What survives at this n:** no quant ≥3.5 bpw shows a *catastrophic* collapse (the
+≳20-pt cliff the cactus survey warned of). What does **not** survive: any claim of
+"no cliff" at 3-5-pt resolution — detecting a 4-pt drop needs n ≈ 1,400/group. Quant
+choice is therefore decided on S_perf/S_eff **within a band of accuracy indistinguishable
+at this sample size**, which is a weaker statement than the earlier draft made.
+
+- Raw no-template scores land 5-8 pts **below** chat-mode reputation on harder MCQ
+  (pre-registered prediction MISS, recorded as such) — the first evidence in this repo
+  that the scored harness sees a different model than the product does.
+- **A custom quant, `Qwen3.5-4B-Q4_0-EH`** (`llama-quantize --token-embedding-type q4_0`
+  from the BF16 source), puts *every* tensor incl. the tied 248k-vocab head on the audit
+  build's vectorized path: 2.22 GiB (smallest 4B), accuracy tied-best (gsm8k 0.675).
+- 0.8B rejected: gsm8k 0.20 is unusable as a tutor regardless of its efficiency score.
+  (The earlier "outside every break-even" justification was arithmetically wrong — the
+  0.8B does pass the composite rule; it is rejected on product grounds. Corrected.)
+
+### C. Engine/runtime configuration changes (product path)
+
+| Change | Why | Status |
+|---|---|---|
+| `RuntimeConfig.no_repack` (+ `--no-repack` emission) | repack costs ~model-size anon RAM for a prefill-only win; the 8 GB box has a 7 GB DQ ceiling | default **off** (engine default) pending an x86 A/B; env-flippable |
+| vision server `--no-repack` (hard-coded) | the "second instance is nearly free" claim only holds for mmap'd pages; two repacked 4B servers bust 7 GB | **unmeasured on Linux** — mechanism-argued only; flagged below |
+| compose thread pins annotated x86-hostile | `-t 8` on a 4-core i5 replays the measured oversubscription collapse; llama.cpp's Linux default already picks physical P-cores | comment-only (compose still targets the Apple VM) |
+| `bench/autotest.py --accuracy` | the 50%-weighted stage was unconditionally skipped; a shipped `accuracy: []` scores zero | flag added, both paths tested |
+| `report.params_match` null-safe | 7adbe08 returns `null` for "uncheckable"; `bool(None)` read that as fraud | fixed + test |
+| `bench/submission/metadata.json` | claimed the 0.6B smoke model (**would fail the audit's ±15% fraud check**); now Qwen3.5-4B-Q4_K_M / "4.2B" (true tensor sum 4,205,751,296) | fixed |
+| `bench/submission/download_model.sh` | did not exist; the audit runs it on a clean clone | added, pinned revision + sha256 |
+
+**Community low-RAM playbook** (llama.cpp #21136 / the 0ut0flin3 gist), dispositioned in
+`docs/target-deploy-notes.md`: adopt performance governor, `nice`, swappiness/cache-pressure
+sysctls; **reject `--mlock`** (this repo already measured no win; it maximizes the scored
+RSS metric and, on an 8 GB box, converts graceful degradation into the one failure that is
+an automatic disqualification); `-march=native -flto` is right for the product container
+and **wrong** for the self-report build, which must match the audit's ISA.
+
+### D. Adversarial review — findings accepted, and what they cost
+
+Four independent reviewers attacked the campaign (conclusions, code, docs, harness).
+Accepted findings, all corrected above or recorded here as open:
+
+1. **The standing model verdict contradicted the frozen objective.** Scored through
+   `bench/.artifacts/score_campaign.py`, **2B-Q4_K_M wins the laptop scenario outright
+   (77.8 vs 74.6) and loses the audit-docker scenario by 0.32 pts** — and above an
+   assumed audit throughput of ~2.5 tok/s for the stock 4B it wins both. Preferring the
+   4B is a **judgment call that overrides the metric**, on grounds outside it (hidden-set
+   difficulty, judged prompts, product quality). Recorded as such rather than dressed up
+   as a composite win. The measurement that settles it — harder-STEM MCQ, 4B vs 2B — is
+   running; the existing signal already points that way (the gap is 5-6 pts on the easy
+   tasks but 10-13 on arc_challenge/gsm8k).
+2. **The throughput axis never entered the append-only record.** `bakeoff.jsonl` holds 28
+   rows, all accuracy; every S_perf input is an assumption or a prose-only Rosetta probe
+   (`-p 32 -n 16 -r 1`, denominator swinging 84% between rounds — the "1.24-2.23×" band is
+   largely denominator noise, and probe #1's stated range silently dropped an outlier).
+   **No throughput verdict here is measurement-grade.** The x86 target box owes us the
+   real ones.
+3. **Harness edited mid-campaign** (v2 metric extraction, v3 timeout semantics) despite a
+   "frozen harness" claim; the poisoned gsm8k rows were re-run under v2, so the dataset is
+   consistent, but the framing was false.
+4. **RSS unit mismatch** — the harness divided by 1e6 while the profiler uses 1024², a
+   4.9% overstatement against the ±15% band. Fixed; the profiler-python offset is now a
+   field instead of a docstring aside.
+5. Missing tests for three new code paths (autotest `--accuracy` argv, `params_match`
+   null, vision `--no-repack`) — added, 63 tests green.
+6. **Open:** three fetched candidates are in `models/MANIFEST.json` but missing from
+   `models/pins.lock.json`; the vision `--no-repack` change has no Linux measurement; and
+   **`Qwen3.5-4B-Q4_0-EH` has no provenance surface at all** — it is locally quantized, so
+   shipping it requires publishing the file and rewriting `download_model.sh`,
+   `pins.lock.json` and the metadata claim. Swapping to a 2B would additionally require
+   changing `parameters_estimate` (a 2B against a "4.2B" claim **fails** the fraud check).
+
+**Provenance:** engine b10175 (audit pin) built four ways — arm64, x86-SSE, x86-AVX-only,
+x86-AVX2 — under `bench/.artifacts/llama.cpp-b10175/`; accuracy via `bench/.venv-profiler`.
+Every number here is `dev_host_provisional`; the host ran another project's `llama-cli` at
+~100% CPU throughout (standing instruction: not killed), which is why only accuracy (load-
+independent by construction) is treated as decision-grade.
+
+---
+
 ## 2026-08-04
 
 ### C. `./run.sh --model PATH` — the core model is now hot-swappable (config change, no perf delta claimed)
