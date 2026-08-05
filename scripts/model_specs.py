@@ -429,6 +429,51 @@ QUANT_VARIANTS: list[Artifact] = [
         planning_bytes=int(2.3 * GiB),
         flag="--quant-variants",
     ),
+    Artifact(
+        name="core-cand-q4-0",
+        role="D1 candidate: Q4_0 (audit-build fast path)",
+        tier="on-demand",
+        repo="unsloth/Qwen3.5-4B-GGUF",
+        file="Qwen3.5-4B-Q4_0.gguf",
+        dest="models/core/candidates",
+        license=QWEN_LICENSE,
+        planning_bytes=int(2.5 * GiB),
+        flag="--quant-variants",
+        caveats=(
+            "The ADTC audit image's llama-bench (b10175, AVX/AVX2/FMA/F16C all OFF) has a "
+            "vectorized (SSSE3) dot kernel ONLY for Q4_0; Q4_K/Q6_K/IQ* fall back to "
+            "scalar C. Q4_0 is therefore the S_perf candidate for the scored path.",
+        ),
+    ),
+    Artifact(
+        name="core-cand-2b-q4km",
+        role="D1 candidate: Qwen3.5-2B Q4_K_M (S_perf/S_eff hedge; ~10-15 acc pts below 4B)",
+        tier="on-demand",
+        repo="unsloth/Qwen3.5-2B-GGUF",
+        file="Qwen3.5-2B-Q4_K_M.gguf",
+        dest="models/core/candidates",
+        license=QWEN_LICENSE,
+        planning_bytes=int(1.3 * GiB),
+        flag="--quant-variants",
+        caveats=(
+            "Only competitive if S_perf normalization (TPS_max) or the audit's scalar-build "
+            "throughput makes the 4B's S_perf collapse; gate on the measured accuracy gap "
+            "through the profiler-exact lm-eval path before considering.",
+        ),
+    ),
+    Artifact(
+        name="core-cand-2b-q6k",
+        role="D1 candidate: Qwen3.5-2B Q6_K (measured 4B-2B raw-mode gap was only ~8.5 pts "
+        "at Q4_K_M; a near-lossless 2B quant probes whether the gap shrinks further while "
+        "keeping the 2B's S_perf/S_eff edge)",
+        tier="on-demand",
+        repo="unsloth/Qwen3.5-2B-GGUF",
+        file="Qwen3.5-2B-Q6_K.gguf",
+        dest="models/core/candidates",
+        license=QWEN_LICENSE,
+        planning_bytes=int(1.8 * GiB),
+        flag="--quant-variants",
+    ),
 ]
 
 # --------------------------------------------------------------------------------------

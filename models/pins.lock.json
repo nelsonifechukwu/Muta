@@ -49,6 +49,46 @@
       "repo": "unsloth/Qwen3.5-4B-GGUF",
       "revision": "e87f176479d0855a907a41277aca2f8ee7a09523"
     },
+    "core-cand-2b-q4km": {
+      "files": {
+        "Qwen3.5-2B-Q4_K_M.gguf": {
+          "bytes": 1280835840,
+          "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223"
+        }
+      },
+      "repo": "unsloth/Qwen3.5-2B-GGUF",
+      "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae"
+    },
+    "core-cand-bf16-imatrix-source": {
+      "files": {
+        "Qwen3.5-4B-BF16.gguf": {
+          "bytes": 8424393632,
+          "sha256": "9e6e2841a75f503ccb330831832fd7861266e187e0dbf149a954219ccb8c197a"
+        }
+      },
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523"
+    },
+    "core-cand-q4-0": {
+      "files": {
+        "Qwen3.5-4B-Q4_0.gguf": {
+          "bytes": 2583221408,
+          "sha256": "298fcb5fe7a77ccc79745ae24751560c5ac56874caff4bb39b1f2055bd72b8bb"
+        }
+      },
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523"
+    },
+    "core-cand-unsloth-ud-q3kxl": {
+      "files": {
+        "Qwen3.5-4B-UD-Q3_K_XL.gguf": {
+          "bytes": 2436420768,
+          "sha256": "1874727e4bb6ac23fd0cd134ac6562d2759fe44f37fa68c55197b36526da4e37"
+        }
+      },
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523"
+    },
     "draft": {
       "files": {
         "Qwen3.5-0.8B-Q4_K_M.gguf": {
@@ -1537,5 +1577,5 @@
       "revision": "b3e3ee3cce4c11ceb63b1a0b229d916069c1ddf6"
     }
   },
-  "resolved_at": "2026-07-31T07:14:30+00:00"
+  "resolved_at": "2026-08-05T16:43:34+00:00"
 }

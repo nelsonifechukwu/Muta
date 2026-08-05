@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-31T07:14:30+00:00",
+  "generated_at": "2026-08-05T16:43:34+00:00",
   "artifacts": [
     {
       "name": "core",
@@ -1984,6 +1984,119 @@
       "caveats": [
         "TDD \u00a74.4 admission rule: adopt only if measured speedup >= 1.43x per GiB spent. Fetching it does not mean shipping it."
       ]
+    },
+    {
+      "name": "core-cand-unsloth-ud-q4kxl",
+      "role": "D1 candidate: Unsloth dynamic UD-Q4_K_XL",
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "tier": "on-demand",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "fetched": true,
+      "file": "Qwen3.5-4B-UD-Q4_K_XL.gguf",
+      "path": "models/core/candidates/Qwen3.5-4B-UD-Q4_K_XL.gguf",
+      "bytes": 2912109728,
+      "sha256": "b252c5610a42ca82d20fe2a12813e9d069eed89292907e26c783eeb0bc961bc7",
+      "caveats": [
+        "TDD \u00a74.1: UD _XL files can carry f16 tensors that ik_llama.cpp (engine variant B) refuses. If this wins D1, the demo binary may differ from the scored binary."
+      ]
+    },
+    {
+      "name": "core-cand-bf16-imatrix-source",
+      "role": "D1 candidate source: BF16 weights for our own WAEC-calibrated imatrix quant",
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "tier": "on-demand",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "fetched": true,
+      "file": "Qwen3.5-4B-BF16.gguf",
+      "path": "models/core/candidates/Qwen3.5-4B-BF16.gguf",
+      "bytes": 8424393632,
+      "sha256": "9e6e2841a75f503ccb330831832fd7861266e187e0dbf149a954219ccb8c197a",
+      "caveats": [
+        "7.85 GiB and NOT shipped \u2014 it is the llama-quantize input for the imatrix candidate, consumed on the build machine only."
+      ]
+    },
+    {
+      "name": "core-cand-unsloth-ud-q3kxl",
+      "role": "D1 candidate: Unsloth dynamic UD-Q3_K_XL (~3.5 bpw, per-tensor mixed)",
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "tier": "on-demand",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "fetched": true,
+      "file": "Qwen3.5-4B-UD-Q3_K_XL.gguf",
+      "path": "models/core/candidates/Qwen3.5-4B-UD-Q3_K_XL.gguf",
+      "bytes": 2436420768,
+      "sha256": "1874727e4bb6ac23fd0cd134ac6562d2759fe44f37fa68c55197b36526da4e37",
+      "caveats": [
+        "Cactus CQ3.26 evidence (docs/cactus-survey.md): mixed ~3.3 bpw held GSM8K/HumanEval near-lossless while uniform sub-3-bit collapsed GSM8K 73.67 -> 22.00. Generative math probes are the admission gate, not MCQ."
+      ]
+    },
+    {
+      "name": "core-cand-iq4xs",
+      "role": "D1 candidate: IQ4_XS (~4.25 bpw, smallest mainline 4-bit)",
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "tier": "on-demand",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "fetched": true,
+      "file": "Qwen3.5-4B-IQ4_XS.gguf",
+      "path": "models/core/candidates/Qwen3.5-4B-IQ4_XS.gguf",
+      "bytes": 2477053088,
+      "sha256": "658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f"
+    },
+    {
+      "name": "core-cand-q4-0",
+      "role": "D1 candidate: Q4_0 (audit-build fast path)",
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "tier": "on-demand",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "fetched": true,
+      "file": "Qwen3.5-4B-Q4_0.gguf",
+      "path": "models/core/candidates/Qwen3.5-4B-Q4_0.gguf",
+      "bytes": 2583221408,
+      "sha256": "298fcb5fe7a77ccc79745ae24751560c5ac56874caff4bb39b1f2055bd72b8bb",
+      "caveats": [
+        "The ADTC audit image's llama-bench (b10175, AVX/AVX2/FMA/F16C all OFF) has a vectorized (SSSE3) dot kernel ONLY for Q4_0; Q4_K/Q6_K/IQ* fall back to scalar C. Q4_0 is therefore the S_perf candidate for the scored path."
+      ]
+    },
+    {
+      "name": "core-cand-2b-q4km",
+      "role": "D1 candidate: Qwen3.5-2B Q4_K_M (S_perf/S_eff hedge; ~10-15 acc pts below 4B)",
+      "repo": "unsloth/Qwen3.5-2B-GGUF",
+      "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+      "tier": "on-demand",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "fetched": true,
+      "file": "Qwen3.5-2B-Q4_K_M.gguf",
+      "path": "models/core/candidates/Qwen3.5-2B-Q4_K_M.gguf",
+      "bytes": 1280835840,
+      "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+      "caveats": [
+        "Only competitive if S_perf normalization (TPS_max) or the audit's scalar-build throughput makes the 4B's S_perf collapse; gate on the measured accuracy gap through the profiler-exact lm-eval path before considering."
+      ]
+    },
+    {
+      "name": "core-cand-2b-q6k",
+      "role": "D1 candidate: Qwen3.5-2B Q6_K (measured 4B-2B raw-mode gap was only ~8.5 pts at Q4_K_M; a near-lossless 2B quant probes whether the gap shrinks further while keeping the 2B's S_perf/S_eff edge)",
+      "repo": "unsloth/Qwen3.5-2B-GGUF",
+      "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+      "tier": "on-demand",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "fetched": true,
+      "file": "Qwen3.5-2B-Q6_K.gguf",
+      "path": "models/core/candidates/Qwen3.5-2B-Q6_K.gguf",
+      "bytes": 1574961408,
+      "sha256": "fc90339420b4298887aafb307a4291c55440b730133bbffe6ba9630503dcb548"
     }
   ]
 }
