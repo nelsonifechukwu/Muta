@@ -51,6 +51,34 @@ def test_run_official_returns_the_parsed_report(tmp_path):
     assert json.loads(out.read_text()) == GOOD
 
 
+def _argv_recording_stub(tmp_path, payload: dict):
+    """A stub that also records the argv it was invoked with, next to its output."""
+    script = tmp_path / "adtc-profiler"
+    script.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, sys\n"
+        "args = sys.argv\n"
+        "out = args[args.index('--output') + 1]\n"
+        f"open(out, 'w').write(json.dumps({payload!r}))\n"
+        "open(out + '.argv', 'w').write(json.dumps(args))\n"
+    )
+    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    return script
+
+
+def test_accuracy_stage_is_skipped_by_default_and_requested_on_demand(tmp_path):
+    # Accuracy is 50% of the official score but costs hours; the fast loop skips it and a
+    # real submission must not. Assert the flag actually reaches the profiler either way.
+    binary = _argv_recording_stub(tmp_path, GOOD)
+    out = tmp_path / "submission.json"
+    autotest.run_official(binary, tmp_path, out, extra_path=None)
+    assert "--skip-accuracy" in json.loads((tmp_path / "submission.json.argv").read_text())
+
+    out2 = tmp_path / "with-accuracy.json"
+    autotest.run_official(binary, tmp_path, out2, extra_path=None, accuracy=True)
+    assert "--skip-accuracy" not in json.loads((tmp_path / "with-accuracy.json.argv").read_text())
+
+
 def test_run_official_raises_on_a_failing_profiler(tmp_path):
     binary = _stub_profiler(tmp_path, GOOD, exit_code=3)
     with pytest.raises(autotest.AutotestError) as exc:

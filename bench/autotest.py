@@ -88,29 +88,41 @@ def find_llama_bench_dir() -> Path | None:
     return Path(found).parent if found else None
 
 
-def run_official(binary: Path, submission_dir: Path, output: Path, *, extra_path: Path | None) -> dict:
+def run_official(
+    binary: Path,
+    submission_dir: Path,
+    output: Path,
+    *,
+    extra_path: Path | None,
+    accuracy: bool = False,
+) -> dict:
     """Invoke the real profiler and return its parsed report."""
     env = dict(os.environ)
     if extra_path is not None:
         env["PATH"] = f"{extra_path}{os.pathsep}{env.get('PATH', '')}"
 
     output.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        str(binary),
+        "run",
+        "--submission",
+        str(submission_dir),
+        "--mode",
+        "participant",
+        "--output",
+        str(output),
+    ]
+    # Accuracy is 50% of the official score, but the lm-eval pass adds tens of minutes
+    # to hours — opt-in for the fast dev loop, mandatory before an actual submission
+    # (a shipped submission.json with `accuracy: []` scores 0 on the heaviest term).
+    if not accuracy:
+        cmd.append("--skip-accuracy")
     proc = subprocess.run(
-        [
-            str(binary),
-            "run",
-            "--submission",
-            str(submission_dir),
-            "--mode",
-            "participant",
-            "--output",
-            str(output),
-            "--skip-accuracy",
-        ],
+        cmd,
         capture_output=True,
         text=True,
         env=env,
-        timeout=3600,
+        timeout=3600 if not accuracy else 6 * 3600,
     )
     if proc.returncode != 0:
         raise AutotestError(
@@ -182,6 +194,13 @@ def main(argv: list[str] | None = None) -> int:
         "--skip-product", action="store_true", help="run only the officially scored path"
     )
     parser.add_argument(
+        "--accuracy",
+        action="store_true",
+        help="run the profiler's full lm-eval accuracy stage (slow; required for a real "
+        "submission — without it the report ships accuracy: [] and scores 0 on the "
+        "50%%-weighted term)",
+    )
+    parser.add_argument(
         "--no-log", action="store_true", help="do not append a row to optimization-log.md"
     )
     args = parser.parse_args(argv)
@@ -210,7 +229,9 @@ def main(argv: list[str] | None = None) -> int:
 
     output = ARTIFACT_DIR / "submission.json"
     try:
-        data = run_official(binary, submission_dir, output, extra_path=extra_path)
+        data = run_official(
+            binary, submission_dir, output, extra_path=extra_path, accuracy=args.accuracy
+        )
     except AutotestError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

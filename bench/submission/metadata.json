@@ -25,10 +25,10 @@
     }
   ],
   "model": {
-    "name": "Qwen3-0.6B-Q4_K_M",
+    "name": "Qwen3.5-4B-Q4_K_M",
     "runtime": "llama.cpp",
     "quantization": "GGUF Q4_K_M",
-    "parameters_estimate": "0.6B",
+    "parameters_estimate": "4.2B",
     "packaging": "binary_bundle"
   }
 }

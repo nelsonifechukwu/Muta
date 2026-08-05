@@ -15,7 +15,13 @@ import sys
 from pathlib import Path
 
 PROFILER_REPO = "https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler.git"
-PROFILER_SHA = "cf3432cf54216617429cf3f9d3d7150fb891fdd1"
+# 7adbe08 (2026-07-30) — upstream HEAD as of 2026-08-05. Behavioral deltas vs the old
+# cf3432cf pin that this repo's tooling depends on: two-sided ±15% fraud check (was
+# one-sided), `-ngl 0` pinned in the llama-bench call, accuracy stack (lm-eval +
+# llama-cpp-python) ships in the default install, audit Dockerfile = b10175 scalar
+# build. Both versions self-report 0.1.0 — delete bench/.venv-profiler to force the
+# re-pin to take.
+PROFILER_SHA = "7adbe08f157e9b96a670426339aca2a519706bdc"
 
 # bench/adtc/install.py -> parents[1] is bench/
 VENV_DIR = Path(__file__).resolve().parents[1] / ".venv-profiler"

@@ -129,10 +129,12 @@ def score_run(
 def params_match(data: dict) -> bool:
     """Read the profiler's GGUF fraud check.
 
-    Absent `model_info` means the profiler could not parse the header, not that we cheated —
-    upstream `fraud_check` itself returns True when it cannot check.
+    Absent `model_info` means the profiler could not parse the header, not that we cheated.
+    Since profiler 7adbe08, `fraud_check` returns None (JSON null) when the claim or header
+    is unparseable — "uncheckable", not "fraud". `bool(None)` would turn that into a false
+    alarm (autotest exit 3), so only an explicit False fails.
     """
     info = data.get("model_info")
     if not isinstance(info, dict) or "params_match" not in info:
         return True
-    return bool(info["params_match"])
+    return info["params_match"] is not False

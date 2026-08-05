@@ -16,7 +16,9 @@ from bench.adtc import install
 
 def test_sha_is_pinned_not_a_branch():
     # A moving pin makes every recorded benchmark unreproducible.
-    assert install.PROFILER_SHA == "cf3432cf54216617429cf3f9d3d7150fb891fdd1"
+    # 7adbe08 = upstream HEAD 2026-07-30: two-sided fraud check, -ngl 0 pinned,
+    # accuracy stack in the default install (see install.py comment).
+    assert install.PROFILER_SHA == "7adbe08f157e9b96a670426339aca2a519706bdc"
     assert len(install.PROFILER_SHA) == 40
 
 

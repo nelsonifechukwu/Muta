@@ -105,6 +105,13 @@ def test_params_match_reads_the_fraud_check():
     assert report.params_match(data) is True
 
 
+def test_params_match_treats_null_as_uncheckable_not_fraud():
+    # Since profiler 7adbe08 `fraud_check` returns None (JSON null) when the claim or the
+    # GGUF header cannot be parsed. bool(None) would read that as fraud and abort the run
+    # (autotest exit 3) — only an explicit False may fail.
+    assert report.params_match(_payload(model_info={"params_match": None})) is True
+
+
 def test_from_samplers_round_trips_the_product_path():
     run = report.from_samplers(
         MemoryReport(peak_rss_mb=3072.0, steady_state_rss_mb=2048.0, peak_vms_mb=9000.0),
