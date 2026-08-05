@@ -26,6 +26,54 @@ disagree, the code is what runs.
 
 ---
 
+## 2026-08-05 addendum — profiler moved to `7adbe08` (upstream HEAD, 2026-07-30)
+
+The digest below was written against `cf3432cf` (2026-06-22). A local clone of upstream HEAD
+now lives at `bench/adtc-profiler/` (verified = origin/main, zero commits since), and
+`bench/adtc/install.py` pins it. What changed, verified from that source:
+
+1. **The audit reference Dockerfile exists now, and its llama-bench is nearly SIMD-less.**
+   Stage 1 builds llama.cpp `b10175` with `GGML_NATIVE/AVX/AVX2/AVX512/FMA/F16C all OFF`
+   (SSE4.2 + BMI2 remain on via defaults); the container runs under `--memory=7.5g`.
+   Consequences, verified in llama.cpp source at that tag:
+   - Only **Q4_0** has a vectorized (`__SSSE3__`) CPU dot kernel in such a build; Q4_K,
+     Q5_K, Q6_K, Q8_0 and every IQ type fall through to pure-scalar generic C
+     (`ggml/src/ggml-cpu/arch/x86/quants.c`). Quant choice changes scored TPS by
+     multiples, not percents, if the audit uses this image.
+   - **No weight repack happens** (every x86 repack path is gated on compile-time AVX2 in
+     `repack.cpp`), so scored peak RSS ≈ GGUF file size + ~0.4–0.6 GB — NOT the
+     file+repack ≈ 4.36 GB measured through an AVX2 llama-bench (RESULTS.md 2026-08-04).
+   - The accuracy stage's llama-cpp-python is built with only `GGML_NATIVE=OFF` →
+     AVX2 stays on for S_acc; the crippled build applies to throughput/memory only.
+2. **The accuracy stack ships in the default profiler install** (lm-eval ≥0.4.4 +
+   llama-cpp-python ≥0.3.0, in-process, `n_ctx=2048` hardcoded, **no chat template**,
+   `acc_norm` preferred, generation greedy temp=0; audit mode exits 4 if the stack is
+   missing). New CLI: `--accuracy-task` (default `arc_easy`), `--accuracy-limit` (50),
+   `--skip-accuracy`.
+3. **The fraud check went two-sided**: claimed params must satisfy
+   `0.85·claim ≤ tensor-table sum ≤ 1.15·claim`, and returns `null` (not `true`) when
+   uncheckable. Our Qwen3.5-4B GGUF sums to **4,205,751,296** → "4B" and "4.2B" both pass.
+4. **Comparator bands clarified**: pass within ±25% TPS / ±15% RSS; **flag** (manual judge
+   review) out to a fixed |Δ| ≤ 50%; **fail** only beyond 50% or structural (schema,
+   team_id, `measured_on` ≠ participant_laptop/audit_cloud_vm, zero/missing values).
+   Delta is computed relative to the *submission* value. Accuracy is never delta-checked.
+   The old "beyond 2× tolerance" framing under-stated the flag band for memory.
+5. **`-ngl 0` is now pinned** in the profiler's llama-bench call (cf3432cf had no `-ngl`),
+   and TTFT is `n_prompt/pp_rate`, not `1/pp_rate`. Still no `-t` — the binary's default
+   thread count rules (llama-bench = physical/P cores; cgroup-oblivious in Docker).
+6. **Scoring-formula ambiguity stands**: profiler README/code say
+   `min(TPS/15, 1)·100` (capped); the challenge page says `100·TPS/TPS_max` with TPS_max =
+   fastest submission. Unresolved — plan candidates under both readings.
+7. **Deadline**: devpost says Aug 24, 2026 23:45 PDT; the site says Aug 25. Treat Aug 24
+   as binding. `>7 GB peak RSS = disqualification (S_total = 0)`, per the official page.
+
+Strategy consequence: **the submitted GGUF file is the only lever the scored path sees**
+(model, quant recipe, file size). Self-reported TPS/RSS must be measured through an
+audit-parity build (SSE-only b10175) or reconciliation risks flag/fail. See
+`bench/.artifacts/campaign-20260805.md` for the running bake-off.
+
+---
+
 ## The six questions
 
 ### 1. Does the profiler measure raw model TPS or end-to-end system TPS? — **RAW**

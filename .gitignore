@@ -244,5 +244,8 @@ models/*
 *.sqlite3-shm
 # isolated venv for the official ADTC profiler (GPL-3.0, never vendored)
 bench/.venv-profiler/
+# ...and the upstream profiler clone itself: GPL-3.0, pinned by SHA in bench/adtc/install.py
+# and re-clonable from there. Vendoring it would relicense-contaminate this tree.
+bench/adtc-profiler/
 # generated measurement artifacts: submission.json, runs.jsonl, synthesized submission dir
 bench/.artifacts/
