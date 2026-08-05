@@ -48,6 +48,17 @@ def test_build_command_omits_draft_flags_when_draft_file_missing(tmp_path):
     assert "--spec-type" not in cmd
 
 
+def test_no_repack_off_by_default_and_flips_via_config(tmp_path):
+    # Default: engine default (repack on) — no flag emitted. The lever exists because
+    # repack costs ~model-size anonymous RAM (RESULTS.md 2026-08-04: 3236 -> 602 MiB
+    # phys_footprint on the 4B) and the 8 GB target box has a 7 GB disqualification
+    # ceiling; the default flips only with a measured x86 A/B.
+    cfg, model = _cfg(tmp_path)
+    assert "--no-repack" not in LlamaServer(cfg).build_command(model)
+    cfg_on, model_on = _cfg(tmp_path, no_repack=True)
+    assert "--no-repack" in LlamaServer(cfg_on).build_command(model_on)
+
+
 def test_build_command_bounds_engine_memory(tmp_path):
     """b10035 defaults are sized for bigger boxes: -np auto -> 4 slots x ~50 MiB f32 state,
     32 checkpoints/slot, 8 GiB prompt cache. These flags are what bound steady-state RSS."""

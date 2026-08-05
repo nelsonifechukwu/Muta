@@ -64,8 +64,12 @@ class RuntimeConfig(BaseSettings):
     server_port: int = 8080
     model_alias: str = "qwen3-0.6b"
     n_ctx: int = 4096
-    # None -> let llama.cpp choose; on Apple silicon the measured default is the P-core
-    # count (see darwin_performance_cores). Compose pins 8/10 for the container via env.
+    # None -> let llama.cpp choose. On LINUX x86 that default is already the right one:
+    # cpu_get_num_math() counts physical cores only (SMT siblings skipped) and on hybrid
+    # 12th-gen Intel skips E-cores via CPUID — exactly the regime every measurement here
+    # favours — so None is a decision, not an omission. Apple silicon is the exception:
+    # llama.cpp has no P/E logic on darwin, hence the explicit derivation below.
+    # Compose pins 8/10 for the container via env.
     n_threads: int | None = Field(default_factory=darwin_performance_cores)
     n_gpu_layers: int = 0  # CPU-only target; raise for faster local dev on a GPU box
     # --- engine memory ceilings -------------------------------------------------------
@@ -98,6 +102,15 @@ class RuntimeConfig(BaseSettings):
     n_batch: int = 512
     n_ubatch: int = 128
     cache_type_k: str = "q8_0"
+    # Weight repacking (--no-repack when True). The engine default repacks Q4_0/Q4_K-family
+    # tensors into SIMD-friendly ANONYMOUS buffers at load — faster GEMM, but the copy sits
+    # on top of the mmap'd file. Measured (RESULTS.md 2026-08-04, M2 native, full suite):
+    # phys_footprint 3236 -> 602 MiB with --no-repack, decode NOT measurably worse there.
+    # On the 8 GB x86 target the repack copy (~+1.3-2.5 GiB) is the difference between
+    # sitting comfortably under the 7 GB disqualification ceiling and courting it; but AVX2
+    # repack likely buys more decode on x86 than on the M2, so the default stays False
+    # (engine default = repack on) until the x86 A/B lands. Flip with MUTA_RT_NO_REPACK=1.
+    no_repack: bool = False
     reasoning_budget: int = 512  # -1 = unrestricted (engine default)
     # Qwen3 is a hybrid-reasoning model. Thinking ON trades tokens/latency for reasoning
     # quality — honoured by llama-server via --jinja (server.py). Set MUTA_RT_ENABLE_THINKING

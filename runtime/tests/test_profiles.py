@@ -182,6 +182,14 @@ def test_vision_uses_smaller_batches_than_core(bundle):
     assert flag_value(argv, "-b") == "1024" and flag_value(argv, "-ub") == "256"
 
 
+def test_vision_keeps_weights_on_the_shared_page_cache(bundle):
+    """The "second instance is nearly free" claim only holds for mmap'd pages: the engine's
+    default repack copies Q4-family tensors into PRIVATE anonymous buffers, so a repacked
+    vision spike stacked on the repacked chat server would blow the 8 GB box's 7 GB
+    disqualification ceiling."""
+    assert "--no-repack" in core_vision_command(bundle).argv
+
+
 # --- EMBED (§6.7) ------------------------------------------------------------------------
 
 

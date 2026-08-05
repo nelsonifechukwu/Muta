@@ -70,6 +70,11 @@ services:
       # Threads: the VM's 10 vCPUs are shared with the gateway/db/nginx — decode is
       # bandwidth-bound and gains nothing from oversubscription (runtime/profiles.py
       # thread table rationale), prefill may use them all.
+      # ⚠ APPLE-VM NUMBERS ONLY. On an x86 target box these pins are the measured
+      # oversubscription collapse (-t 8 on a 4-core i5 is the "-t 10 → 4.4 tok/s"
+      # regime, RESULTS.md 2026-08-01). For x86 deploys REMOVE both pins: llama.cpp's
+      # own default (common_cpu_get_num_math) already picks physical P-cores on
+      # bare-metal Linux — the right answer on every target CPU.
       MUTA_RT_N_THREADS: "8"
       MUTA_RT_N_THREADS_BATCH: "10"
       # Speculation draft: Qwen3.5-0.8B (fetch_models --with-draft). Qwen3-0.6B is NOT

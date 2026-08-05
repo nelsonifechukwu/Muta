@@ -77,6 +77,9 @@ class LlamaServer:
             "-ub", str(cfg.n_ubatch),
             "--cache-type-k", cfg.cache_type_k,
             "--reasoning-budget", str(cfg.reasoning_budget),
+            # Keep weights file-backed/evictable instead of repacking into anonymous RAM
+            # (~2.5 GiB product-RAM swing on the 4B — runtime/config.py `no_repack`).
+            *(["--no-repack"] if cfg.no_repack else []),
         ]
         if cfg.n_threads is not None:
             cmd += ["--threads", str(cfg.n_threads)]

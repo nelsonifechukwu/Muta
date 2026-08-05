@@ -362,6 +362,11 @@ def core_vision_command(
 
     Same binary, same weight file — the OS page cache shares the read-only weight pages, so
     the marginal cost is mmproj + this instance's KV and buffers, not a second 2.5 GiB copy.
+    That sharing argument holds ONLY for mmap'd pages: the engine's default weight repack
+    copies Q4-family tensors into PRIVATE anonymous buffers (+~2.5 GiB per instance —
+    x86 AVX2 repack is a prefill-only win, tg128 −2%, PR #12332), so a repacked vision
+    spike on top of the repacked chat server busts the 8 GB box's 7 GB ceiling.
+    `--no-repack` keeps this instance's weights on the shared page cache.
 
     Deliberately WITHOUT `--cache-reuse`, `--slot-save-path` and `--context-shift`: loading
     an mmproj sets the multimodal capability flag on every slot, which disables all three
@@ -386,6 +391,7 @@ def core_vision_command(
         "-ub", "256",
         "--threads", str(plan.vision_threads),
         "--threads-http", "1",
+        "--no-repack",
         "--jinja",
         "--metrics", "--slots", "--props", "--no-webui",
         "--log-file", str(paths.log_dir / "vision.jsonl"),
