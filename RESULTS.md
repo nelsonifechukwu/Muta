@@ -126,9 +126,7 @@ Accepted findings, all corrected above or recorded here as open:
    assumed audit throughput of ~2.5 tok/s for the stock 4B it wins both. Preferring the
    4B is a **judgment call that overrides the metric**, on grounds outside it (hidden-set
    difficulty, judged prompts, product quality). Recorded as such rather than dressed up
-   as a composite win. The measurement that settles it — harder-STEM MCQ, 4B vs 2B — is
-   running; the existing signal already points that way (the gap is 5-6 pts on the easy
-   tasks but 10-13 on arc_challenge/gsm8k).
+   as a composite win. **The measurement that settles it has since landed — see E.**
 2. **The throughput axis never entered the append-only record.** `bakeoff.jsonl` holds 28
    rows, all accuracy; every S_perf input is an assumption or a prose-only Rosetta probe
    (`-p 32 -n 16 -r 1`, denominator swinging 84% between rounds — the "1.24-2.23×" band is
@@ -149,6 +147,44 @@ Accepted findings, all corrected above or recorded here as open:
    shipping it requires publishing the file and rewriting `download_model.sh`,
    `pins.lock.json` and the metadata claim. Swapping to a 2B would additionally require
    changing `parameters_estimate` (a 2B against a "4.2B" claim **fails** the fraud check).
+
+### E. The domain-matched accuracy probe — the 4B-vs-2B decider
+
+**Question:** the 4-task proxy (arc_easy/arc_challenge/sciq/gsm8k) is easy-task-heavy, and
+the competition domain is `math_scientific_reasoning`. Does the 4B→2B gap hold, or widen,
+on harder domain-matched material?
+
+**Measured** (same profiler accuracy path, n=100 per task, MMLU STEM subtasks):
+
+| task | 4B Q4_K_M | 2B Q4_K_M | gap | ±SE(diff) |
+|---|---|---|---|---|
+| mmlu_college_mathematics | 59.0 | 39.0 | **+20.0** | 6.9 |
+| mmlu_high_school_mathematics | 51.0 | 43.0 | +8.0 | 7.0 |
+| mmlu_college_physics | 62.0 | 43.0 | **+19.0** | 6.9 |
+| **STEM 3-task mean** | **57.3** | **41.7** | **+15.7** | **4.0** (95% CI [7.8, 23.5]) |
+| easy 4-task mean (for contrast) | 73.2 | 64.8 | +8.5 | 3.7 (95% CI [1.3, 15.7]) |
+
+**The gap nearly doubles on domain-matched tasks** — 8.5 → 15.7 pts — and unlike the easy
+proxy its confidence interval clears zero comfortably. Both models also drop in absolute
+terms (the 2B loses 23 pts, the 4B 16), i.e. the easy battery was compressing the
+difference by sitting near its ceiling (sciq 0.97/0.91).
+
+**What it does to the verdict** (S_perf/S_eff models unchanged, only S_acc swapped):
+
+| scenario | easy-proxy S_acc | STEM S_acc |
+|---|---|---|
+| Standard Laptop (AVX2) | 2B by 3.26 | **4B-Q4_0-EH by 0.14** |
+| Audit image @ 2.0 tok/s | 2B by 2.76 | **4B-Q4_0-EH by 0.64** |
+| Audit image @ 3.5 tok/s | 2B by 5.94 | 2B by 2.54 |
+| Audit image @ 5.0 tok/s | 2B by 9.12 | 2B by 5.72 |
+
+**Verdict: the 4B override was justified, and is now partly evidence-backed rather than
+purely a judgment call** — but only partly. On domain-matched accuracy the two models are
+a statistical dead heat in the laptop and pessimistic-audit scenarios, and the 2B still
+wins if the audit box turns out fast (≳3.5 tok/s for the stock 4B). The decision now rests
+on one measurable unknown — the audit anchor — which only the x86 target box can supply.
+Everything else that could move it (judged prompts, the hidden task mix) remains outside
+what any local measurement can reach.
 
 **Provenance:** engine b10175 (audit pin) built four ways — arm64, x86-SSE, x86-AVX-only,
 x86-AVX2 — under `bench/.artifacts/llama.cpp-b10175/`; accuracy via `bench/.venv-profiler`.
