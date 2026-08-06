@@ -59,11 +59,31 @@
       "repo": "unsloth/Qwen3.5-2B-GGUF",
       "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae"
     },
+    "core-cand-2b-q6k": {
+      "files": {
+        "Qwen3.5-2B-Q6_K.gguf": {
+          "bytes": 1574961408,
+          "sha256": "fc90339420b4298887aafb307a4291c55440b730133bbffe6ba9630503dcb548"
+        }
+      },
+      "repo": "unsloth/Qwen3.5-2B-GGUF",
+      "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae"
+    },
     "core-cand-bf16-imatrix-source": {
       "files": {
         "Qwen3.5-4B-BF16.gguf": {
           "bytes": 8424393632,
           "sha256": "9e6e2841a75f503ccb330831832fd7861266e187e0dbf149a954219ccb8c197a"
+        }
+      },
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523"
+    },
+    "core-cand-iq4xs": {
+      "files": {
+        "Qwen3.5-4B-IQ4_XS.gguf": {
+          "bytes": 2477053088,
+          "sha256": "658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f"
         }
       },
       "repo": "unsloth/Qwen3.5-4B-GGUF",
@@ -84,6 +104,16 @@
         "Qwen3.5-4B-UD-Q3_K_XL.gguf": {
           "bytes": 2436420768,
           "sha256": "1874727e4bb6ac23fd0cd134ac6562d2759fe44f37fa68c55197b36526da4e37"
+        }
+      },
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523"
+    },
+    "core-cand-unsloth-ud-q4kxl": {
+      "files": {
+        "Qwen3.5-4B-UD-Q4_K_XL.gguf": {
+          "bytes": 2912109728,
+          "sha256": "b252c5610a42ca82d20fe2a12813e9d069eed89292907e26c783eeb0bc961bc7"
         }
       },
       "repo": "unsloth/Qwen3.5-4B-GGUF",

@@ -21,7 +21,7 @@
     },
     {
       "prompt_id": "tp_002",
-      "prompt": "A student says that if a number is divisible by 4 it must also be divisible by 8. Guide them to discover why this is false, without stating the counterexample yourself."
+      "prompt": "A student writes: \"A heavier ball falls faster than a lighter one, because gravity pulls harder on it.\" Identify exactly what is correct and what is mistaken in that reasoning, explain what actually determines how fast each ball accelerates, and describe an observation the student could make to test it."
     }
   ],
   "model": {
@@ -29,6 +29,6 @@
     "runtime": "llama.cpp",
     "quantization": "GGUF Q4_K_M",
     "parameters_estimate": "4.2B",
-    "packaging": "binary_bundle"
+    "packaging": "docker_build_from_repo"
   }
 }

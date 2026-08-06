@@ -27,6 +27,74 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-06
+
+### A. Organizer answers land, and they invert the quant verdict
+
+Two answers from the organizers changed the optimization target:
+
+1. **S_perf is `TPS/TPS_max` uncapped** (cohort-relative), not the profiler README's
+   `min(TPS/15, 1)`. Throughput now scales linearly into the score with no saturation.
+2. **The audit runs on the physical Standard Laptop** (i5 10th-12th gen / Ryzen 5
+   3000-5000, 8 GB DDR4, Ubuntu 22.04) — **not** the SIMD-less reference container.
+
+(2) is the expensive one. The entire case for our custom `Q4_0-EH` was that Q4_0 is the
+only weight type with a vectorized kernel in a build with AVX2 off. On a real laptop
+Q4_K has an AVX2 kernel too — and **weight repack, which never runs in the container,
+runs there.**
+
+### B. The repack composition rule — measured, and it inverts the S_eff ranking
+
+Repack copies tensors into private anonymous RAM, and on x86 **only Q4_0 and Q4_K
+repack** (Q5_K/Q6_K/Q3_K/IQ4_XS never do — `repack.cpp` lists `iq4_nl`, not `iq4_xs`).
+So peak RSS is not "file + constant", it is **file + the repackable fraction of the
+file**. Measured with the audit-pin engine built AVX2 (`build-x86avx2`, `/usr/bin/time -l`):
+
+| model | file GiB | peak RSS GB | repack overhead | S_eff |
+|---|---|---|---|---|
+| 4B IQ4_XS | 2.31 | **2.65** | +0.34 (nothing repacks) | **62.1** |
+| 4B UD-Q3_K_XL | 2.27 | 3.20 | +0.93 (partial) | 54.3 |
+| 4B UD-Q4_K_XL | 2.71 | 3.88 | +1.17 | 44.6 |
+| 4B Q4_K_M (stock) | 2.55 | 4.21 | +1.66 | 39.9 |
+| 4B Q4_0 | 2.41 | 4.50 | +2.09 | 35.7 |
+| **4B Q4_0-EH (ours)** | **2.22** | **4.85** | **+2.63 (everything repacks)** | **30.7** |
+| 2B Q6_K | 1.47 | **1.73** | +0.26 | 75.3 |
+| 2B Q4_K_M | 1.19 | 1.94 | +0.75 | 72.3 |
+
+**`Q4_0-EH` has the smallest file and the largest footprint of every candidate** — 2.2 GB
+more resident than IQ4_XS while being 90 MB smaller on disk. The recipe that is optimal
+in the container is pessimal on the laptop.
+
+Scored for the laptop with measured RSS, the bandwidth model for throughput
+(`BW/file` at 28 GiB/s) and published AVX2 kernel efficiency (IQ4_XS ≈ 0.75 of a
+K-quant), across three cohort maxima:
+
+| TPS_max | best 4B | Q4_0-EH rank |
+|---|---|---|
+| 15 | UD-Q3_K_XL 70.49 | 2nd (68.17) |
+| 25 | UD-Q3_K_XL 61.12 | 5th (58.08) |
+| 50 | IQ4_XS 54.98 | **last (50.51)** |
+
+**`Q4_0-EH` is never the best 4B on the laptop, and is last when the cohort is fast.**
+IQ4_XS and UD-Q3_K_XL beat it at every TPS_max; IQ4_XS additionally holds the best
+measured accuracy of the ladder (arc_easy 0.82, gsm8k 0.65).
+
+**Measurement caveat, stated plainly:** the RSS numbers are trustworthy (allocation is
+not affected by binary translation, and the mechanism is source-confirmed), but the
+**Rosetta throughput numbers cannot rank quants for a native laptop** — under translation
+decode is compute-bound, which is why `Q4_0-EH` measured *slowest* (3.41 tok/s) despite
+the smallest file, a result inconsistent with the bandwidth-bound regime the target box
+actually runs in. Throughput above is therefore modelled, not measured.
+
+### C. Submission plumbing
+
+`Qwen3.5-4B-Q4_0-EH.gguf` published to `timiiowolabi/Qwen3.5-4B-Q4_0-EH-GGUF`
+(**private**, 2,380,008,352 bytes, Apache-2.0 with a provenance card). **It must be made
+public before Gate 1** — the audit runs `download_model.sh` credential-free on a clean
+clone, and a private repo makes the model unfetchable.
+
+---
+
 ## 2026-08-05
 
 ### A. The scored path re-derived at the new profiler pin — and it moves the whole strategy

@@ -4,54 +4,75 @@
 HEAD `7adbe08`), llama.cpp b10175 source, and the official pages. Companion to the
 2026-08-05 addendum in [rules-digest.md](rules-digest.md).
 
-## Which numbers actually score — two readings, one strategy
+## Which numbers actually score — settled 2026-08-06
 
-- The official page annotates the S_perf formula with "**TPSact: actual tokens/sec during
-  audit**", and its FAQ says final benchmarks run on the organizers' machine. Under this
-  reading the AUDIT re-run is scored and our submission.json is an integrity claim.
-- The Gate-1 leaderboard exists before any audit, so self-reported numbers plausibly rank
-  provisionally until Gate 2 re-runs them.
+Organizer answers, recorded here because two of them invalidate earlier reasoning:
 
-Both readings collapse to the same strategy: **maximize what the audit environment will
-measure, and self-report numbers produced the same way the audit produces them.** A
-self-report the audit can't reproduce within tolerance is flagged (>±25% TPS / ±15% RSS)
-or failed (>±50%) — and `first_token_latency_ms` (pp512) is reconciled at ±25% too, which
-kills any build-mismatch posture on its own: AVX2-vs-SSE pp deltas run 4–8×.
+- **`S_perf = TPS/TPS_max`, uncapped and cohort-relative** — not the profiler README's
+  `min(TPS/15, 1)`. Throughput scales linearly into the score with no saturation point,
+  so there is no "fast enough" threshold to stop at.
+- **The audit runs on the physical Standard Laptop** (i5 10th-12th gen / Ryzen 5
+  3000-5000, 8 GB DDR4, Ubuntu 22.04), **not** the SIMD-less reference container.
+- Gate 1 is **August 25**.
 
-## The audit environment (verified from the reference Dockerfile)
+The second answer changes the engineering target completely, because a normal laptop
+build has AVX2 — which means **weight repack runs**, and repack is the dominant term in
+peak RSS. See "The repack composition rule" below. The container analysis that used to
+live in this section is retained only as the contingency case, in case a cloud-VM audit
+reappears at Gate 2.
 
-llama.cpp **b10175** built with `GGML_NATIVE/AVX/AVX2/AVX512/FMA/F16C = OFF` (SSE4.2+BMI2
-stay on via defaults), llama-bench on PATH, run under `docker --memory=7.5g`, profiler
-invocation fixed: `llama-bench -m model.gguf -p 512 -n 128 -ngl 0 -o json` (no `-t`).
-Consequences (source-verified):
+## The repack composition rule — the single most important fact for S_eff
 
-- Only **Q4_0** weights have a vectorized (SSSE3) dot kernel there; Q4_K/Q5_K/Q6_K/Q8_0/IQ*
-  run generic scalar C. Quant choice moves audit TPS by multiples.
-- **No repack** (all x86 repack gates are compile-time AVX2) → audit peak tree RSS ≈
-  GGUF file size + ~0.35–0.5 GB (profiler python ~35–55 MB included; lm-eval imports are
-  lazy and outside the sampling window).
-- Cloud-VM thermal sensors read null → P_thermal unreachable there.
+llama.cpp copies repackable tensors into private anonymous memory at load. On x86 **only
+Q4_0 and Q4_K repack**; Q5_K, Q6_K, Q3_K and IQ4_XS never do (`repack.cpp` registers
+`iq4_nl`, not `iq4_xs`). Therefore:
+
+> **peak RSS ≈ file size + the repackable fraction of the file**
+
+Measured on the audit-pin engine built with AVX2 (2026-08-06, `/usr/bin/time -l`):
+
+| model | file GiB | peak RSS GB | overhead |
+|---|---|---|---|
+| 4B IQ4_XS | 2.31 | 2.65 | +0.34 |
+| 4B UD-Q3_K_XL | 2.27 | 3.20 | +0.93 |
+| 4B Q4_K_M | 2.55 | 4.21 | +1.66 |
+| 4B Q4_0-EH (all-Q4_0) | 2.22 | 4.85 | +2.63 |
+| 2B Q6_K | 1.47 | 1.73 | +0.26 |
+
+A file made entirely of repackable types doubles; a file made of non-repacking types does
+not grow at all. **Choosing the quant type is choosing the memory footprint**, and file
+size alone predicts it badly — the smallest file here is the heaviest in RAM.
 
 ## The self-report build (what `llama-bench` on our PATH must be)
 
+**Match a stock laptop build — do not tune it.** The audit measures on their machine with
+their binary, and reconciliation compares the two readings:
+
 ```bash
-# b10175, audit-matched CPU features, static, no repack:
-cmake -B build -DBUILD_SHARED_LIBS=OFF \
-      -DGGML_NATIVE=OFF -DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_AVX512=OFF \
-      -DGGML_FMA=OFF -DGGML_F16C=OFF \
-      -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target llama-bench
 ```
 
-Rationale: matching the audit's kernel map compresses the reconciliation delta to
-hardware-only variance, and pp/tg deltas then move together. An AVX2-built self-report
-against an SSE audit near-certainly hard-fails TTFT and likely TPS.
+That is deliberately the plainest possible invocation: `GGML_NATIVE` defaults on, AVX2/FMA
+/F16C/BMI2 come along, and **repack stays enabled**. Every temptation to be clever here is
+a reconciliation risk rather than a score gain:
 
-If the audit turns out to run AVX2 on the Standard Laptop instead (unconfirmed), the
-right self-report build is AVX2 **with `-DGGML_CPU_REPACK=OFF`**: repack on x86 AVX2 is a
-prefill-only optimization (PR #12332: pp +61–76%, tg128 −2%) that adds ~+1.3–2.5 GB
-anonymous RSS — strictly score-negative for the fixed tg128+RSS metrics. Rehearse both
-builds; ship the numbers from whichever matches the audit mode once organizers clarify.
+- `-DGGML_CPU_REPACK=OFF` would cut our reported RSS by 1.5-2.6 GB — and the audit, running
+  a stock build, would measure the full figure. Delta `(audit − sub)/sub` of +50% or more is
+  an outright **fail**, not a lower score. The same logic kills cgroup memory caps and any
+  other footprint suppression.
+- `-march=native` on our machine is fine for the *product*, but tuning past the audit box's
+  ISA inflates a number they cannot reproduce.
+
+**Consequence worth stating plainly: build flags cannot buy S_eff any more.** With the
+audit on real hardware running a stock binary, the only lever left on peak RSS is the
+**quant composition of the submitted file** — see the repack composition rule above. That
+is now the primary model-selection criterion, ahead of file size.
+
+*Contingency:* if a Gate-2 audit reappears in the SIMD-less reference container, the
+matching self-report build is the all-SIMD-off one (AVX/AVX2/FMA/F16C `OFF`), where no
+repack occurs and Q4_0 is the only vectorized weight kernel. Keep that build around; it
+is the reason `Qwen3.5-4B-Q4_0-EH` exists.
 
 ## Launch posture for the measurement run
 
