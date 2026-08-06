@@ -41,9 +41,9 @@
     },
     "core": {
       "files": {
-        "Qwen3.5-4B-Q4_K_M.gguf": {
-          "bytes": 2740937888,
-          "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"
+        "Qwen3.5-4B-IQ4_XS.gguf": {
+          "bytes": 2477053088,
+          "sha256": "658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f"
         }
       },
       "repo": "unsloth/Qwen3.5-4B-GGUF",

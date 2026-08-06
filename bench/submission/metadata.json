@@ -1,7 +1,9 @@
 {
   "team_id": "muta",
   "domain": "math_scientific_reasoning",
-  "language_scope": ["en"],
+  "language_scope": [
+    "en"
+  ],
   "african_alpha_claim": true,
   "budget_laptop_claim": true,
   "submitter": {
@@ -25,9 +27,9 @@
     }
   ],
   "model": {
-    "name": "Qwen3.5-4B-Q4_K_M",
+    "name": "Qwen3.5-4B-IQ4_XS",
     "runtime": "llama.cpp",
-    "quantization": "GGUF Q4_K_M",
+    "quantization": "GGUF IQ4_XS",
     "parameters_estimate": "4.2B",
     "packaging": "docker_build_from_repo"
   }

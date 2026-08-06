@@ -105,10 +105,15 @@ ARTIFACTS: list[Artifact] = [
         role="reasoning + vision backbone",
         tier="resident",
         repo="unsloth/Qwen3.5-4B-GGUF",
-        file="Qwen3.5-4B-Q4_K_M.gguf",
+        # IQ4_XS, not Q4_K_M: on an AVX2 host llama.cpp repacks Q4_0/Q4_K tensors into
+        # private anonymous RAM, and IQ4_XS/Q5_K/Q6_K/Q8_0 never repack. Measured peak RSS
+        # 2.65 GB vs 4.21 GB for Q4_K_M on the same engine -- a 1.56 GB saving against the
+        # competition's 7 GB ceiling, for equal-or-better measured accuracy
+        # (RESULTS.md 2026-08-06).
+        file="Qwen3.5-4B-IQ4_XS.gguf",
         dest="models/core",
         license=QWEN_LICENSE,
-        planning_bytes=int(2.5 * GiB),
+        planning_bytes=int(2.31 * GiB),
         search="Qwen3.5-4B GGUF",
         rejected=(
             "bartowski/Qwen_Qwen3.5-4B-GGUF — equivalent stock Q4_K_M, fewer downloads; "

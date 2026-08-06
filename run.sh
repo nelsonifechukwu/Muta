@@ -113,7 +113,7 @@ native_up() {
 
 MODE=docker
 NO_CACHE=0
-DEFAULT_MODEL="models/core/Qwen3.5-4B-Q4_K_M.gguf"
+DEFAULT_MODEL="models/core/Qwen3.5-4B-IQ4_XS.gguf"
 MODEL="$DEFAULT_MODEL"
 while [ $# -gt 0 ]; do
     case "$1" in

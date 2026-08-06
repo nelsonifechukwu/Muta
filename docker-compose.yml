@@ -46,7 +46,7 @@ services:
       # Core model is hot-swappable via `./run.sh --model <path>` (which exports the
       # MUTA_MODEL_* interpolations); bare `docker compose up` serves the default.
       MUTA_RT_MODEL_DIR: ${MUTA_MODEL_DIR:-/app/models/core}
-      MUTA_RT_MODEL_FILE: ${MUTA_MODEL_FILE:-Qwen3.5-4B-Q4_K_M.gguf}
+      MUTA_RT_MODEL_FILE: ${MUTA_MODEL_FILE:-Qwen3.5-4B-IQ4_XS.gguf}
       MUTA_RT_MODEL_ALIAS: ${MUTA_MODEL_ALIAS:-qwen3.5-4b}
       # ctx 2048 keeps core+draft RSS under the ladder's 4300 MiB core cap — at 4096 the
       # tree hits L4 and vision spawns are refused. Thinking on: the UI streams the chain

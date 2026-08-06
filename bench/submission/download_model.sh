@@ -9,8 +9,8 @@ set -eu
 
 REPO="unsloth/Qwen3.5-4B-GGUF"
 REVISION="e87f176479d0855a907a41277aca2f8ee7a09523"
-FILE="Qwen3.5-4B-Q4_K_M.gguf"
-SHA256="00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"
+FILE="Qwen3.5-4B-IQ4_XS.gguf"
+SHA256="658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f"
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 DEST_DIR="$DIR/model"
@@ -32,7 +32,7 @@ if [ -f "$DEST" ] && [ "$(checksum "$DEST")" = "$SHA256" ]; then
     exit 0
 fi
 
-echo "downloading $FILE @ $REVISION (~2.6 GB, resumable)"
+echo "downloading $FILE @ $REVISION (~2.48 GB, resumable)"
 if command -v curl >/dev/null 2>&1; then
     curl -fL --retry 5 -C - -o "$DEST.partial" "$URL"
 else
