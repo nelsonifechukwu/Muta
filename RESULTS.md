@@ -110,6 +110,12 @@ single core GGUF, `llama-server` boots it with the shipped flags, and greedy ans
 correct through `/v1/chat/completions` (15% of 240 → 36) at 9-11 tok/s on the dev host.
 It needs no hosting: unsloth publishes it, so the audit's credential-free fetch works.
 
+**The swap is accuracy-neutral-to-positive on every probe run**, which is what makes the
+1.52 GB free: arc_easy 0.82 vs 0.78, gsm8k 0.65 vs 0.65, and on the domain-matched STEM
+pair 61.0 vs 60.5 (college mathematics 0.62 vs 0.59, college physics 0.60 vs 0.62). Every
+one of those deltas is inside its own noise band — the honest claim is "no measurable
+accuracy cost", not "more accurate".
+
 ### D. Negative result: the domain-calibrated imatrix bought nothing
 
 Built `Qwen3.5-4B-IQ4_XS-im` from the BF16 source with a 150K-token math/science
@@ -120,11 +126,13 @@ are disjoint, so no leakage).
 |---|---|---|
 | arc_easy:100 | **0.82** | 0.81 |
 | gsm8k:40 | **0.65** | 0.60 |
-| mmlu_college_mathematics:100 | (running) | 0.61 |
-| mmlu_college_physics:100 | (running) | 0.62 |
+| mmlu_college_mathematics:100 | 0.62 | 0.61 |
+| mmlu_college_physics:100 | 0.60 | **0.62** |
+| STEM 2-task mean | 61.0 | 61.5 |
 
-No win on either completed probe, and both differences sit inside the sampling noise
-(±11.6 pts on arc_easy, ±21 on gsm8k). This matches the literature — imatrix gains are
+No win anywhere that survives the noise: the imatrix is 0.5 pts ahead on the STEM pair and
+1-5 pts behind on the general probes, against per-task difference SEs of ~7 (MCQ) and ~21
+(gsm8k at n=40). This matches the literature — imatrix gains are
 ~10-30% PPL at ≤4 bpw and marginal above it — and it does not justify the hosting burden a
 custom file carries. **Stock IQ4_XS stays.** Recorded because a negative result that stops
 someone re-running a 2.5-hour calibration is worth as much as a positive one.
