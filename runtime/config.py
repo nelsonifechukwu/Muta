@@ -127,7 +127,15 @@ class RuntimeConfig(BaseSettings):
     # "draft-simple" needs draft_model to exist and share the target's vocab — the Qwen3.5
     # family (vocab 248320) rejects Qwen3 drafts (151936). "ngram-simple" is zero-RAM
     # self-speculation from the context; params are the measured tutoring-workload ones.
-    spec_type: Literal["none", "draft-simple", "ngram-simple"] = "draft-simple"
+    #
+    # Default is "none" because every CPU measurement this project has taken says so:
+    # emulated 6.72 -> 4.77 tok/s at 98.4% draft acceptance, native 30.84 -> 24.72, and the
+    # 2026-08-01 retunes (n-max 3 -> 15.75, n-max 8 -> 25.89, ngram-4/12 -> 21.55 against
+    # 29.6 draft-off). On CPU the verify pass costs close to full price, so accepting nearly
+    # every drafted token still loses — and the draft adds ~520 MiB against an 8 GB box
+    # whose ceiling is a disqualification. Flip per-deploy with MUTA_RT_SPEC_TYPE once an
+    # x86 A/B says otherwise; "ngram-simple" is the zero-RAM option worth trying first.
+    spec_type: Literal["none", "draft-simple", "ngram-simple"] = "none"
     draft_model: Path | None = None
     draft_max: int = 8
     draft_min: int = 1

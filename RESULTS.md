@@ -86,7 +86,60 @@ decode is compute-bound, which is why `Q4_0-EH` measured *slowest* (3.41 tok/s) 
 the smallest file, a result inconsistent with the bandwidth-bound regime the target box
 actually runs in. Throughput above is therefore modelled, not measured.
 
-### C. Submission plumbing
+### C. The repack rule confirmed on true Linux RSS — and the model promoted
+
+The §B numbers were macOS `maximum resident set size`, which handles file-backed page
+eviction differently from Linux. Re-measured with the **official b10175 Linux x64 binary
+inside a `linux/amd64` container** (`/usr/bin/time -v`, so the figure is `VmHWM` — the
+same quantity `psutil` reports to the profiler):
+
+| model | file GiB | macOS RSS | **Linux RSS** | S_eff (Linux) |
+|---|---|---|---|---|
+| 4B IQ4_XS | 2.31 | 2.65 | **2.47 GB** | **64.7** |
+| 4B Q4_K_M | 2.55 | 4.21 | 3.99 GB | 43.0 |
+| 4B Q4_0-EH | 2.22 | 4.85 | 4.59 GB | 34.4 |
+
+Ranking identical, magnitudes ~0.2 GB lower, and the decisive gap holds: **IQ4_XS carries
+1.52 GB less than Q4_K_M on Linux** (1.56 on macOS) — worth **+21.7 S_eff, +4.34 S_total**.
+
+**`Qwen3.5-4B-IQ4_XS` is now the shipped core model** (commit `ad01ee7`): model_specs,
+`pins.lock.json` (hash re-verified against the file), `run.sh`, compose, submission
+metadata and `download_model.sh` moved together, with a test asserting the download script
+still matches the lockfile. Verified rather than assumed — `BundlePaths` resolves the
+single core GGUF, `llama-server` boots it with the shipped flags, and greedy answers are
+correct through `/v1/chat/completions` (15% of 240 → 36) at 9-11 tok/s on the dev host.
+It needs no hosting: unsloth publishes it, so the audit's credential-free fetch works.
+
+### D. Negative result: the domain-calibrated imatrix bought nothing
+
+Built `Qwen3.5-4B-IQ4_XS-im` from the BF16 source with a 150K-token math/science
+importance matrix (GSM8K + ARC + SciQ **train** splits only; the eval and perplexity texts
+are disjoint, so no leakage).
+
+| probe | stock IQ4_XS | imatrix IQ4_XS |
+|---|---|---|
+| arc_easy:100 | **0.82** | 0.81 |
+| gsm8k:40 | **0.65** | 0.60 |
+| mmlu_college_mathematics:100 | (running) | 0.61 |
+| mmlu_college_physics:100 | (running) | 0.62 |
+
+No win on either completed probe, and both differences sit inside the sampling noise
+(±11.6 pts on arc_easy, ±21 on gsm8k). This matches the literature — imatrix gains are
+~10-30% PPL at ≤4 bpw and marginal above it — and it does not justify the hosting burden a
+custom file carries. **Stock IQ4_XS stays.** Recorded because a negative result that stops
+someone re-running a 2.5-hour calibration is worth as much as a positive one.
+
+### E. Speculation default flipped to `none`
+
+`RuntimeConfig.spec_type` defaulted to `draft-simple` despite every CPU measurement this
+project has taken saying it loses: emulated 6.72 → 4.77 tok/s at **98.4% draft
+acceptance**, native 30.84 → 24.72, and all three 2026-08-01 retunes below the 29.6
+draft-off baseline. On CPU the verify pass costs close to full price, so accepting nearly
+every drafted token still loses — and the draft adds ~520 MiB against a box whose 7 GB
+ceiling is a disqualification, not a deduction. Tests now assert the behaviour instead of
+encoding the old default (119 green).
+
+### F. Submission plumbing
 
 `Qwen3.5-4B-Q4_0-EH.gguf` published to `timiiowolabi/Qwen3.5-4B-Q4_0-EH-GGUF`
 (**private**, 2,380,008,352 bytes, Apache-2.0 with a provenance card). **It must be made

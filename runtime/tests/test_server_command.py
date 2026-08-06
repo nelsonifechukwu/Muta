@@ -25,13 +25,23 @@ def test_build_command_baseline_flags(tmp_path):
 def test_build_command_emits_draft_flags_when_draft_model_exists(tmp_path):
     draft = tmp_path / "draft.gguf"
     draft.touch()
-    cfg, model = _cfg(tmp_path, draft_model=draft)
+    cfg, model = _cfg(tmp_path, draft_model=draft, spec_type="draft-simple")
     cmd = LlamaServer(cfg).build_command(model)
     assert cmd[cmd.index("--spec-draft-model") + 1] == str(draft)
     assert cmd[cmd.index("--spec-draft-n-max") + 1] == "8"
     assert cmd[cmd.index("--spec-draft-n-min") + 1] == "1"
     assert cmd[cmd.index("--spec-draft-p-min") + 1] == "0.75"
     assert cmd[cmd.index("--spec-type") + 1] == "draft-simple"
+
+
+def test_speculation_is_off_by_default_even_with_a_draft_present(tmp_path):
+    """Measured net-negative on CPU in every form (runtime/config.py spec_type), and the
+    draft costs ~520 MiB against an 8 GB box whose ceiling is a disqualification."""
+    draft = tmp_path / "draft.gguf"
+    draft.touch()
+    cfg, model = _cfg(tmp_path, draft_model=draft)
+    cmd = LlamaServer(cfg).build_command(model)
+    assert "--spec-type" not in cmd and "--spec-draft-model" not in cmd
 
 
 def test_build_command_omits_draft_flags_when_unset(tmp_path):
@@ -102,10 +112,10 @@ def test_thread_defaults_pin_performance_cores_on_apple_silicon(tmp_path):
 
 def test_spec_type_gates_the_draft_flags(tmp_path):
     """b10035 ignores --spec-draft-model unless --spec-type selects an implementation
-    (default none) — the flags were silently dead before this field existed."""
+    (engine default none) — the flags were silently dead before this field existed."""
     draft = tmp_path / "draft.gguf"
     draft.touch()
-    cfg, model = _cfg(tmp_path, draft_model=draft)
+    cfg, model = _cfg(tmp_path, draft_model=draft, spec_type="draft-simple")
     cmd = LlamaServer(cfg).build_command(model)
     assert cmd[cmd.index("--spec-type") + 1] == "draft-simple"
     assert cmd[cmd.index("--spec-draft-model") + 1] == str(draft)
