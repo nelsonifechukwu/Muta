@@ -104,6 +104,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - This app will extend to UDO features...Not only science, but also a personal educational companion.
 - Teachers can even share their resources on the app (their curriculum via RAG - which each student can tailor to themselves) and even monitor students' progress. See [RACHEL](https://worldpossible.org/products/rachel-5-500).
 - [Guided discovery approach](https://youtu.be/6rkSPPyz_Bo)
+- Make the entire WAEC (or other African education) curriculum like [ANATOMY](https://anatomy-livid.vercel.app/)
 
 ## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
