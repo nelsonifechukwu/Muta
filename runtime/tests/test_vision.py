@@ -17,6 +17,7 @@ from runtime.tests.test_profiles import bundle  # noqa: F401 — fixture reuse
 from runtime.vision import (
     IDLE_TTL_SECONDS,
     SPAWN_BUDGET_SECONDS,
+    STARTUP_TIMEOUT_SECONDS,
     VisionDenied,
     VisionManager,
     _wrap_with_scope,
@@ -193,6 +194,28 @@ def test_concurrent_requests_spawn_exactly_one_instance(bundle, monkeypatch):  #
     second.join(timeout=5)
 
     assert len(spawned) == 1, f"raced {len(spawned)} vision servers onto one port"
+
+
+def test_startup_timeout_is_env_tunable_for_slow_boxes(bundle, monkeypatch):  # noqa: F811
+    """60 s covers a warm spawn on the target; a cold load under emulation can exceed it and
+    every image comes back "did not become ready". MUTA_RT_VISION_STARTUP_S widens the
+    window per box — the same pattern as MUTA_RT_STARTUP_TIMEOUT_S for the core engine."""
+    monkeypatch.setenv("MUTA_RT_VISION_STARTUP_S", "300")
+    mgr = VisionManager(paths=BundlePaths(bundle.root))
+    assert mgr.startup_timeout_s == 300.0
+
+
+def test_startup_timeout_defaults_to_the_module_constant(bundle):  # noqa: F811
+    mgr = VisionManager(paths=BundlePaths(bundle.root))
+    assert mgr.startup_timeout_s == STARTUP_TIMEOUT_SECONDS
+
+
+def test_the_startup_deadline_comes_from_the_manager_field(manager):
+    """The field must actually drive `_wait_until_ready`, not just sit on the dataclass."""
+    manager.startup_timeout_s = 0.0
+    manager._healthy = lambda: False
+    with pytest.raises(VisionDenied, match="did not become ready"):
+        manager.ensure()
 
 
 def test_slow_spawn_is_logged_against_the_budget(manager, caplog):

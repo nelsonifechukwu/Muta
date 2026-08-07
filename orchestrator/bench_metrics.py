@@ -29,6 +29,7 @@ _last_tokens = 0
 _last_from_wall_clock = False
 
 
+
 def record(generation: Generation) -> None:
     """Record one completed generation. Zero-rate generations are not data points."""
     global _last_tokens, _last_from_wall_clock
@@ -70,3 +71,5 @@ app = make_service("bench")
 def metrics() -> dict:
     """Recent generation rates. Read by bench/monitor.py; not part of the /v1 contract."""
     return snapshot()
+
+

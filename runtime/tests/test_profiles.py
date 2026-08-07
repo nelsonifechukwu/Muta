@@ -182,6 +182,15 @@ def test_vision_uses_smaller_batches_than_core(bundle):
     assert flag_value(argv, "-b") == "1024" and flag_value(argv, "-ub") == "256"
 
 
+def test_vision_forces_the_qwen_vl_image_token_floor(bundle):
+    """The pinned engine warns at load that Qwen-VL models need ≥ 1024 image tokens to read
+    accurately (upstream #16842). Without the floor a 1280 px photo encodes to ~58 tokens and
+    the "transcription" is confident garbage returned as accepted:true — the worst failure a
+    tutor can produce."""
+    argv = core_vision_command(bundle).argv
+    assert flag_value(argv, "--image-min-tokens") == "1024"
+
+
 def test_vision_keeps_weights_on_the_shared_page_cache(bundle):
     """The "second instance is nearly free" claim only holds for mmap'd pages: the engine's
     default repack copies Q4-family tensors into PRIVATE anonymous buffers, so a repacked

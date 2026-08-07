@@ -211,6 +211,33 @@ def test_a_valid_photo_is_transcribed(wired, monkeypatch):
     assert captured["format"] == "PNG" and captured["bytes"] > 0
 
 
+def test_the_vision_call_honours_the_configured_request_timeout(wired, monkeypatch):
+    """A real photo needs minutes of prefill on a slow box; VisionClient's 120 s default cut
+    every one of them off mid-read ("the image reader didn't respond") while
+    MUTA_RT_REQUEST_TIMEOUT_S sat unused. The route must pass the configured timeout on."""
+    _, _, _, vision = wired
+    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
+    monkeypatch.setenv("MUTA_RT_REQUEST_TIMEOUT_S", "600")
+
+    seen = {}
+
+    class FakeClient:
+        def __init__(self, base_url, *, timeout=120.0, **_kw):
+            seen["timeout"] = timeout
+
+        def transcribe(self, image_bytes, image_format, *, prompt=None):
+            return "x^2 = 9"
+
+    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient", FakeClient)
+    body = client.post(
+        "/v1/tutor/vision",
+        data={"session_id": "s1"},
+        files={"image": ("work.png", png_bytes(), "image/png")},
+    ).json()
+    assert body["accepted"] is True
+    assert seen["timeout"] == 600.0
+
+
 def test_vision_server_unreachable_is_a_friendly_refusal_not_500(wired, monkeypatch):
     _, _, _, vision = wired
     monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")

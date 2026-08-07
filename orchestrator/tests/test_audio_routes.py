@@ -21,6 +21,48 @@ def null_audio(monkeypatch):
     return stack
 
 
+class _StubAsr:
+    """The smallest thing that counts as a working ASR engine for cache tests."""
+
+    available = True
+
+    def transcribe_pcm(self, pcm: bytes) -> str:
+        return "hi"
+
+    def transcribe_samples(self, samples) -> str:
+        return "hi"
+
+
+def test_an_unavailable_audio_stack_is_retried_not_latched(monkeypatch):
+    """Models can arrive after boot (late volume mount, post-boot fetch). The first probe
+    finding nothing must not condemn audio to 503 for the life of the process."""
+    monkeypatch.setattr(audio_routes, "_audio_stack", None, raising=False)
+    loads = {"n": 0}
+
+    def fake_load(config):
+        loads["n"] += 1
+        return (NullAsr(), NullTts()) if loads["n"] == 1 else (_StubAsr(), NullTts())
+
+    monkeypatch.setattr(audio_routes, "load_engines", fake_load)
+    assert audio_routes.get_audio().asr.available is False
+    assert audio_routes.get_audio().asr.available is True, "unavailability was cached forever"
+
+
+def test_an_available_audio_stack_is_loaded_exactly_once(monkeypatch):
+    """The retry path must not turn into a per-request ONNX reload once ASR is up."""
+    monkeypatch.setattr(audio_routes, "_audio_stack", None, raising=False)
+    loads = {"n": 0}
+
+    def fake_load(config):
+        loads["n"] += 1
+        return (_StubAsr(), NullTts())
+
+    monkeypatch.setattr(audio_routes, "load_engines", fake_load)
+    audio_routes.get_audio()
+    audio_routes.get_audio()
+    assert loads["n"] == 1
+
+
 def test_transcribe_503_when_asr_unavailable(null_audio):
     r = client.post("/v1/audio/transcribe", files={"audio": ("a.wav", b"RIFF....", "audio/wav")})
     assert r.status_code == 503
