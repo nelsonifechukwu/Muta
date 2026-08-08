@@ -29,6 +29,30 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ## 2026-08-08
 
+### 0. Production-readiness hardening pass (no decode-path change; docker/emulated)
+
+Branch `harden/production-readiness`. A security/reliability/data/observability pass closing
+the top audit findings. **No engine flags that affect decode changed**, so the tok/s / peak-RAM
+operating point of the 2026-08-08 entries below is unchanged. Two changes touch the runtime
+envelope and are worth stating:
+
+- **Thread pins are now empty by default** in `docker-compose.yml`
+  (`MUTA_RT_N_THREADS`/`_BATCH` = `${…:-}` → `None` via a new config validator). On the x86
+  target this hands threading to llama.cpp's physical-core default — the measured-correct
+  regime — instead of the Apple-VM `8/10` that reproduced the `-t 10 → 4.4 tok/s` collapse.
+  `run.sh` re-exports `8/10` **only** under Apple-silicon emulation, so dev throughput here is
+  unchanged; the x86 deploy is now correct out of the box.
+- **`mem_limit`** added: backend `7g` (a hard ceiling at the competition budget — Docker
+  OOM-kills the container, which the new supervisor respawns, rather than the host OOM-killer
+  picking a victim), db `512m`, frontend `128m`. Plus `restart: unless-stopped` and json-file
+  log rotation on all three services.
+
+Correctness/security changes (not perf): bearer-token auth + owner-scoped attachments/
+conversations, schema-migration framework, engine supervision/respawn, deterministic stream
+close, input caps, ffmpeg duration bound, nginx security headers, logging config, real
+tutoring prompts + safety block, product-level `S_acc` eval harness, first CI. Full suite
+green (store tests against the compose db). See the commit body for the itemised list.
+
 ### A. Multimodality repair — vision was failing on every real photo (docker/emulated)
 
 Systematic debugging of "image and audio inputs are broken". Audio was **not** broken in
