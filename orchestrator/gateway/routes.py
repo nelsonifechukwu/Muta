@@ -62,10 +62,10 @@ from orchestrator.gateway.deps import (
     load_prompt,
 )
 from orchestrator.gateway.images import ImageRejected, prepare_image
-from orchestrator.gateway.websearch import fetch_snippets
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.sessions import Admission, SessionManager
+from orchestrator.gateway.websearch import fetch_snippets
 from orchestrator.telemetry import get_hub
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
