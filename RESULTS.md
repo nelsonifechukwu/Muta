@@ -129,6 +129,23 @@ rebuilt stack; `./run.sh plan` → `net=online`; suite 698 passed (the house
 `[hidden]`-vs-author-display CSS test caught the dot's display rule — fixed with an
 explicit `.net-dot[hidden]` override).
 
+### D. Cloud model boost lands (P3) — opt-in, source always visible
+
+**Configuration:** `MUTA_CLOUD_URL` + `MUTA_CLOUD_MODEL` + `MUTA_CLOUD_API_KEY` (all
+three, else local) wrap the local `InferenceClient` in `CloudFallbackClient`. Policy:
+offline/unknown → local, no cloud attempt; cloud failure before the first streamed chunk
+→ silent local retry; mid-stream → propagate into the existing partial-persist path (a
+half-streamed reply must not silently restart elsewhere). `InferenceClient` itself
+gained `api_key` (bearer) + `template_kwargs=False` (strict providers 400 on the
+llama-server-only field) — one OpenAI-shaped client for both worlds. SSE `done` now
+carries `source`; the UI prints "answered via cloud" under any cloud answer.
+
+**Verified live** (host gateway + pinned native engine, no external dependencies):
+loopback cloud (`MUTA_CLOUD_URL=http://127.0.0.1:8080`, dummy key) →
+`"source": "cloud"`, 211 tokens at 18.7 tok/s through the authenticated path;
+dead-port cloud (`:9999`) → `"source": "local"`, the reply still arrived, nothing
+surfaced to the student.
+
 **Also observed today, environmental:** with the host offline, `./run.sh` died on registry
 metadata even with all images/models local, and another project's arm64 pull had clobbered
 the shared `postgres:16-alpine` tag (compose wants amd64 → forced re-pull → offline →
