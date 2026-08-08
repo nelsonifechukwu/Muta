@@ -4,7 +4,10 @@
 
 services:
   db:
-    image: postgres:16-alpine
+    # Digest-pinned (multi-arch manifest list, resolved 2026-08-08): another project's
+    # arm64 pull of the bare tag clobbered platform resolution on 2026-08-07 and took
+    # the whole boot down. A digest resolves per-platform and no neighbor can move it.
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     platform: linux/amd64
     environment:
       POSTGRES_USER: muta
