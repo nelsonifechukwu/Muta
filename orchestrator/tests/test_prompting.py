@@ -1,0 +1,49 @@
+"""Per-student prompt assembly: persona/language become real, cache prefix stays intact."""
+
+from __future__ import annotations
+
+from orchestrator.gateway.prompting import assemble_system_prompt, persona_language_directive
+
+BASE = "You are Muta.\n\n--- per-student context (variable — keep last) ---"
+
+
+def test_english_teacher_turn_appends_only_the_persona_line():
+    out = assemble_system_prompt(BASE, persona="teacher", language="en")
+    assert out.startswith(BASE.rstrip())
+    assert "teacher's voice" in out
+    assert "Respond in" not in out  # English adds no language clause
+
+
+def test_non_english_language_is_instructed():
+    out = assemble_system_prompt(BASE, persona="friend", language="yo")
+    assert "Respond in Yoruba" in out
+    assert "classmate" in out
+    assert "LaTeX" in out
+
+
+def test_unknown_language_tag_passes_through():
+    assert "Respond in zz" in persona_language_directive("teacher", "zz")
+
+
+def test_exam_persona_is_minimal_hints():
+    assert "minimal hints" in persona_language_directive("exam", "en")
+
+
+def test_layers_only_appear_when_present():
+    plain = assemble_system_prompt(BASE, persona="teacher", language="en")
+    withctx = assemble_system_prompt(
+        BASE, persona="teacher", language="en",
+        twin_summary="Working on: quadratics.",
+        web_lines="[1] Foo — bar.",
+        rag_block="<<<reference-material>>>\n[a:1] text\n<<<end-reference-material>>>",
+    )
+    assert "learning record" in withctx and "learning record" not in plain
+    assert "Web context" in withctx
+    assert "reference-material" in withctx
+    # The shared prefix (the base mode prompt) is unchanged at the front either way.
+    assert withctx.startswith(BASE.rstrip())
+
+
+def test_subject_focus_added_for_non_math():
+    assert "physics" in persona_language_directive("teacher", "en", subject="physics")
+    assert "working on" not in persona_language_directive("teacher", "en", subject="math")

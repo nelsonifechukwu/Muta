@@ -387,13 +387,28 @@ paths:
       tags:
       - tutor
       summary: Diagnose
+      description: 'A student''s weak spots + a concrete practice plan, from their learning twin. Mastery
+        is
+
+        only ever populated by real evidence (checked exam answers, §exam/answer), so a brand-new
+
+        student gets a fundamentals-first starter plan rather than an invented weakness.'
       operationId: diagnose_v1_diagnose_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/DiagnoseRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -412,6 +427,9 @@ paths:
       tags:
       - exam
       summary: Generate Question
+      description: 'WAEC/WASSCE-style items from the offline question bank (orchestrator/exam/bank.py),
+
+        filtered by subject/topic/difficulty. Deterministic for a given request.'
       operationId: generate_question_v1_generate_question_post
       requestBody:
         content:
@@ -437,6 +455,7 @@ paths:
       tags:
       - tutor
       summary: Mastery
+      description: The student's mastery map + next-best topic, from their learning twin.
       operationId: mastery_v1_mastery__student_id__get
       parameters:
       - name: student_id
@@ -451,6 +470,14 @@ paths:
         schema:
           $ref: '#/components/schemas/Subject'
           default: math
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       responses:
         '200':
           description: Successful Response
@@ -458,6 +485,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MasteryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/exam/answer:
+    post:
+      tags:
+      - exam
+      summary: Exam Answer
+      description: 'Score a student''s answer against the known-correct one and move their mastery on
+        that
+
+        topic — the honest evidence path that makes /mastery and /diagnose real. Mastery only
+
+        changes when the sandbox actually returned a verdict (checked); an undecidable check
+
+        leaves the record untouched rather than punishing the student for the tool''s limits.'
+      operationId: exam_answer_v1_exam_answer_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExamAnswerRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerCheckResponse'
         '422':
           description: Validation Error
           content:
@@ -1097,6 +1166,46 @@ components:
       required:
       - student_id
       title: DiagnoseResponse
+    ExamAnswerRequest:
+      properties:
+        student_id:
+          type: string
+          maxLength: 128
+          title: Student Id
+        topic:
+          type: string
+          maxLength: 80
+          title: Topic
+          description: Curriculum topic the answer scores mastery on.
+        candidate:
+          type: string
+          maxLength: 4096
+          title: Candidate
+          description: The student's submitted answer.
+        expected:
+          type: string
+          maxLength: 4096
+          title: Expected
+          description: The correct answer (from the question).
+        tolerance:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Tolerance
+          default: 0.0
+      type: object
+      required:
+      - student_id
+      - topic
+      - candidate
+      - expected
+      title: ExamAnswerRequest
+      description: 'Score a student''s answer to a known question and move their mastery on that topic.
+        The
+
+        expected answer comes from the question bank, so this is real evidence — unlike free-chat
+
+        volume, which never touches mastery.'
     GenerateQuestionRequest:
       properties:
         subject:

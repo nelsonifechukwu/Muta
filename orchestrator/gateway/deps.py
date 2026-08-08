@@ -9,13 +9,16 @@ cheap and offline.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.sessions import SessionManager
+from orchestrator.pedagogy.twin import TwinStore
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.sandbox import ToolPools
 from orchestrator.tools.verifier import AnswerVerifier
@@ -26,6 +29,8 @@ from runtime.memory import ConversationStore
 from runtime.profiles import BundlePaths, get_profile
 from runtime.slots import SlotClient, SnapshotReaper
 from runtime.vision import VisionManager
+
+log = logging.getLogger("muta.gateway.deps")
 
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
@@ -158,6 +163,22 @@ def get_tool_pools() -> ToolPools:
 @lru_cache(maxsize=1)
 def get_verifier() -> AnswerVerifier:
     return AnswerVerifier(get_tool_pools().verifier)
+
+
+@lru_cache(maxsize=1)
+def get_twin_store() -> TwinStore:
+    """The learning twin lives under TUTOR_ROOT/data/twins (atomic JSON per student). It is the
+    personalisation + session-summary layer (pedagogy/twin.py); wiring it here is what turns
+    the orphaned module into live adaptivity. A real deploy sets TUTOR_ROOT=/app (writable);
+    if the configured path is not writable (e.g. the default /opt/tutor in a dev shell) the
+    store degrades to an ephemeral temp dir rather than 500ing the pedagogy endpoints."""
+    target = Path(os.environ.get("TUTOR_ROOT", "/opt/tutor")) / "data" / "twins"
+    try:
+        return TwinStore(target)
+    except OSError:
+        fallback = Path(tempfile.gettempdir()) / "muta-twins"
+        log.warning("twin dir %s not writable — using ephemeral %s (set TUTOR_ROOT)", target, fallback)
+        return TwinStore(fallback)
 
 
 @lru_cache(maxsize=1)

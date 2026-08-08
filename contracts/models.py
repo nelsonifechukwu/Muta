@@ -239,6 +239,18 @@ class AnswerCheckResponse(BaseModel):
     detail: str = ""
 
 
+class ExamAnswerRequest(BaseModel):
+    """Score a student's answer to a known question and move their mastery on that topic. The
+    expected answer comes from the question bank, so this is real evidence — unlike free-chat
+    volume, which never touches mastery."""
+
+    student_id: str = Field(max_length=128)
+    topic: str = Field(max_length=80, description="Curriculum topic the answer scores mastery on.")
+    candidate: str = Field(max_length=4096, description="The student's submitted answer.")
+    expected: str = Field(max_length=4096, description="The correct answer (from the question).")
+    tolerance: float = Field(0.0, ge=0.0, le=1.0)
+
+
 class RenderRequest(BaseModel):
     kind: Literal["matplotlib", "svg"] = "matplotlib"
     code: str = Field(max_length=8192)

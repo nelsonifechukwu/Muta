@@ -1,9 +1,11 @@
 """The public `/v1` contract surface.
 
 Defined as a router so it can be included on the assembled app (`orchestrator.main`) and
-on the standalone gateway app (`orchestrator.gateway.app`) without duplication. Handlers
-are stubbed `501` for now — the shapes come from `contracts`, so the OpenAPI document is
-already complete and correct even though the behaviour is not built yet.
+on the standalone gateway app (`orchestrator.gateway.app`) without duplication. Shapes come
+from `contracts`, so the OpenAPI document is generated from the models. Every endpoint here
+is implemented (chat, vision, audio, conversations, verify, diagnose, generate_question,
+mastery, exam/answer) — the internal math/pedagogy sub-apps under `/internal/*` still hold
+their own stubs, but nothing on the public `/v1` surface returns 501.
 """
 
 from __future__ import annotations
@@ -34,6 +36,8 @@ from contracts.models import (
     ConversationOut,
     DiagnoseRequest,
     DiagnoseResponse,
+    ExamAnswerRequest,
+    GeneratedQuestion,
     GenerateQuestionRequest,
     GenerateQuestionResponse,
     HealthResponse,
@@ -62,13 +66,16 @@ from orchestrator.gateway.deps import (
     get_renderer,
     get_sessions,
     get_slot_client,
+    get_twin_store,
     get_verifier,
     get_vision,
     load_prompt,
 )
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
+from orchestrator.gateway.prompting import assemble_system_prompt
 from orchestrator.gateway.sampling import params_for_mode
+from orchestrator.gateway.selfcheck import scan_claims, self_check
 from orchestrator.gateway.sessions import Admission, SessionManager
 from orchestrator.gateway.websearch import fetch_snippets
 from orchestrator.telemetry import get_hub
@@ -96,10 +103,6 @@ _SAFE_ATTACHMENT_MIME = {
     "image/jpeg", "image/png", "image/webp",
     "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav",
 }
-
-
-def _todo(what: str) -> HTTPException:
-    return HTTPException(status_code=501, detail=f"{what} not implemented")
 
 
 def _close_events(events) -> None:
@@ -174,6 +177,69 @@ def _db_up(dsn: str) -> bool:
         return False
 
 
+def _twin_summary(student_id: str) -> str:
+    """The learning-twin session summary for this student, best-effort (never fails a turn)."""
+    try:
+        return get_twin_store().load(student_id).prompt_summary()
+    except Exception:  # noqa: BLE001 — personalisation is a nicety, not a dependency
+        log.warning("twin load failed for %s", student_id, exc_info=True)
+        return ""
+
+
+def _touch_twin(student_id: str, subject: str, message: str) -> None:
+    """Record activity after a turn: a turn count and a compact 'what they asked' summary that
+    seeds the next turn's context. Deliberately does NOT fabricate mastery — mastery only moves
+    on real evidence (a checked exam answer), never on free-chat volume."""
+    try:
+        store = get_twin_store()
+        twin = store.load(student_id)
+        twin.bump("turns")
+        snippet = " ".join(message.split())[:60]
+        if snippet:
+            twin.add_summary(f"asked about {subject}: {snippet}")
+        store.save(twin)
+    except Exception:  # noqa: BLE001
+        log.warning("twin update failed for %s", student_id, exc_info=True)
+
+
+def _rag_block(query: str, *, k: int = 4) -> str:
+    """Retrieved syllabus chunks for a query, rendered as a delimited reference block — or ""
+    when RAG is not available (no index staged, embed server down). Degradation is the design:
+    the offline-first default answers from the model alone, and grounding is a bonus when the
+    corpus has been indexed on this box."""
+    try:
+        from orchestrator.gateway.prompt_layout import RetrievedChunk, render_chunks
+        from orchestrator.retrieval.app import get_retriever
+
+        hits = get_retriever().search(query, k, min_score=0.0)
+        if not hits:
+            return ""
+        chunks = [
+            RetrievedChunk(doc_id=h.doc_id, chunk_id=h.chunk_id, text=h.text, score=h.score)
+            for h in hits
+        ]
+        log.info("rag: grounded on %d chunks", len(chunks))
+        return render_chunks(chunks)
+    except Exception:  # noqa: BLE001 — any retrieval failure = answer from the model alone
+        return ""
+
+
+def _run_self_check(reply: str) -> tuple[bool | None, str]:
+    """Symbolic self-check of a completed reply. Returns (verified, note): verified is None
+    when nothing was checkable (the common case), True/False otherwise. The verifier (which
+    forks a sandbox) is only constructed when the cheap scan finds explicit equations."""
+    try:
+        if not scan_claims(reply):
+            return None, ""
+        result = self_check(get_verifier(), reply)
+        if not result.checked:
+            return None, ""
+        return result.verified, result.note
+    except Exception:  # noqa: BLE001 — a self-check failure must never break the reply
+        log.warning("self-check failed", exc_info=True)
+        return None, ""
+
+
 def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: int | None) -> None:
     """Bind previously-uploaded attachments to the persisted user turn. Unknown ids are a
     no-op UPDATE, not an error — the message must never fail over a stale attachment ref."""
@@ -189,12 +255,19 @@ def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: 
 def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResponse:
     """Multi-turn tutoring turn. Memory is keyed by `conversation_id`; omit it to start a
     new thread. The mode selects the system prompt (ROADMAP 18 Jul, stable-prefix design)."""
+    system_prompt = assemble_system_prompt(
+        load_prompt(req.mode.value),
+        persona=req.persona.value,
+        language=req.language,
+        subject=req.subject.value,
+        twin_summary=_twin_summary(req.student_id),
+    )
     try:
         result = engine.chat(
             student_id=req.student_id,
             message=req.message,
             conversation_id=req.conversation_id,
-            system_prompt=load_prompt(req.mode.value),
+            system_prompt=system_prompt,
             mode=req.mode.value,
             persona=req.persona.value,
             subject=req.subject.value,
@@ -209,11 +282,17 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
     if result.generation is not None:
         bench_metrics.record(result.generation)
+    # Verified-tool-calls thesis: self-check the model's explicit arithmetic/algebra, append an
+    # honest caution when a step contradicts itself, and record the turn on the learning twin.
+    verified, note = _run_self_check(result.reply)
+    reply = result.reply if not note else f"{result.reply}\n\n{note}"
+    _touch_twin(req.student_id, req.subject.value, req.message)
     return ChatResponse(
         student_id=req.student_id,
         conversation_id=result.conversation_id,
         mode=req.mode,
-        reply=result.reply,
+        reply=reply,
+        verified=bool(verified),
     )
 
 
@@ -232,8 +311,8 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
     """
     # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
     # the ungrounded request must stay byte-identical to what the tutor already serves.
-    system_prompt = load_prompt(req.mode.value)
     sources: list[dict] = []
+    web_lines = ""
     search_url = os.environ.get("MUTA_SEARCH_URL")
     if req.use_web and search_url:
         from orchestrator.gateway.connectivity import get_connectivity
@@ -241,14 +320,24 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
         if get_connectivity().online() is True:
             snippets = fetch_snippets(req.message, base_url=search_url)
             if snippets:
-                lines = "\n".join(
+                web_lines = "\n".join(
                     f"[{i}] {s.title} — {s.snippet}" for i, s in enumerate(snippets, start=1)
                 )
-                system_prompt += (
-                    "\n\nWeb context (retrieved just now — cite [n] when you use it):\n"
-                    + lines
-                )
                 sources = [{"title": s.title, "url": s.url} for s in snippets]
+
+    # Retrieval grounding (RAG): syllabus corpus chunks, when an index is staged. Degrades
+    # silently to model-alone when there is no index (the offline-first default).
+    rag_block = _rag_block(req.message)
+
+    system_prompt = assemble_system_prompt(
+        load_prompt(req.mode.value),
+        persona=req.persona.value,
+        language=req.language,
+        subject=req.subject.value,
+        twin_summary=_twin_summary(req.student_id),
+        web_lines=web_lines,
+        rag_block=rag_block,
+    )
 
     cid, user_message_id, events = engine.stream_events_chat(
         student_id=req.student_id,
@@ -271,6 +360,7 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
     def _sse():
         n = 0
         t_first = t_last = 0.0
+        reply_parts: list[str] = []  # answer content only, for the post-stream self-check
         hub = get_hub()
         hub.begin(cid)
         # The id leads the stream rather than arriving only at `done`: a client that stops
@@ -287,6 +377,8 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                 n += 1  # reasoning and content both count: the engine decodes both
                 hub.tick(cid)  # feeds the live tok/s in the telemetry strip
                 key = "reasoning" if kind == "reasoning" else "delta"
+                if kind != "reasoning":
+                    reply_parts.append(text)
                 yield f"data: {json.dumps({key: text})}\n\n"
         except httpx.HTTPError as e:
             log.warning("engine error mid-stream at /chat/stream: %r", e)
@@ -317,6 +409,12 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                     from_wall_clock=True,
                 )
             )
+        # Post-stream: self-check the model's explicit arithmetic/algebra and record the turn
+        # on the learning twin. Runs here (threadpool, after the stream) so it never adds
+        # latency to a token and never blocks the event loop. `verified` is null when nothing
+        # was checkable — the UI shows a "✓ checked" badge only on a real True.
+        verified, check_note = _run_self_check("".join(reply_parts))
+        _touch_twin(req.student_id, req.subject.value, req.message)
         yield "data: " + json.dumps(
             {
                 "done": True,
@@ -330,6 +428,10 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                 or "local",
                 # Grounding sources (P4): empty unless web context shaped this answer.
                 "sources": sources,
+                # Verified-tool-calls (self-check): True/False when a step was checkable,
+                # null otherwise; check_note carries a friendly caution on a contradiction.
+                "verified": verified,
+                "check_note": check_note,
             }
         ) + "\n\n"
 
@@ -485,18 +587,81 @@ def student_erase(
 
 
 @router.post("/diagnose", response_model=DiagnoseResponse, tags=["tutor"])
-def diagnose(req: DiagnoseRequest) -> DiagnoseResponse:
-    raise _todo("diagnose")
+def diagnose(req: DiagnoseRequest, caller: str = Depends(require_caller)) -> DiagnoseResponse:
+    """A student's weak spots + a concrete practice plan, from their learning twin. Mastery is
+    only ever populated by real evidence (checked exam answers, §exam/answer), so a brand-new
+    student gets a fundamentals-first starter plan rather than an invented weakness."""
+    if req.student_id != caller:
+        raise HTTPException(status_code=403, detail="you can only diagnose your own progress")
+    twin = get_twin_store().load(req.student_id)
+    weak = twin.weakest(3)
+    if not weak:
+        weak = [req.topic] if req.topic else [f"{req.subject.value} fundamentals"]
+    plan = [f"Day {i + 1}: focused practice on {topic}" for i, topic in enumerate(weak)]
+    plan.append("Day 4: mixed review of the above, no hints")
+    plan.append("Day 5: a timed past-paper set on your weakest topic")
+    return DiagnoseResponse(student_id=req.student_id, weak_topics=weak, plan=plan)
 
 
 @router.post("/generate_question", response_model=GenerateQuestionResponse, tags=["exam"])
 def generate_question(req: GenerateQuestionRequest) -> GenerateQuestionResponse:
-    raise _todo("generate_question")
+    """WAEC/WASSCE-style items from the offline question bank (orchestrator/exam/bank.py),
+    filtered by subject/topic/difficulty. Deterministic for a given request."""
+    from orchestrator.exam.bank import generate as generate_from_bank
+
+    items = generate_from_bank(
+        req.subject.value, req.topic, req.difficulty, req.exam_board, req.count
+    )
+    return GenerateQuestionResponse(questions=[GeneratedQuestion(**it) for it in items])
 
 
 @router.get("/mastery/{student_id}", response_model=MasteryResponse, tags=["tutor"])
-def mastery(student_id: str, subject: Subject = Subject.math) -> MasteryResponse:
-    raise _todo("mastery")
+def mastery(
+    student_id: str, subject: Subject = Subject.math, caller: str = Depends(require_caller)
+) -> MasteryResponse:
+    """The student's mastery map + next-best topic, from their learning twin."""
+    if student_id != caller:
+        raise HTTPException(status_code=403, detail="you can only view your own mastery")
+    twin = get_twin_store().load(student_id)
+    weakest = twin.weakest(1)
+    return MasteryResponse(
+        student_id=student_id,
+        subject=subject,
+        mastery=twin.mastery,
+        next_topic=weakest[0] if weakest else None,
+    )
+
+
+@router.post("/exam/answer", response_model=AnswerCheckResponse, tags=["exam"])
+def exam_answer(
+    req: ExamAnswerRequest,
+    verifier: AnswerVerifier = Depends(get_verifier),
+    caller: str = Depends(require_caller),
+) -> AnswerCheckResponse:
+    """Score a student's answer against the known-correct one and move their mastery on that
+    topic — the honest evidence path that makes /mastery and /diagnose real. Mastery only
+    changes when the sandbox actually returned a verdict (checked); an undecidable check
+    leaves the record untouched rather than punishing the student for the tool's limits."""
+    if req.student_id != caller:
+        raise HTTPException(status_code=403, detail="you can only submit your own answers")
+    outcome = verifier.check_text(req.candidate, req.expected, tolerance=req.tolerance)
+    if outcome.checked:
+        try:
+            store = get_twin_store()
+            twin = store.load(req.student_id)
+            twin.record_mastery(req.topic, 1.0 if outcome.verified else 0.0)
+            if not outcome.verified:
+                twin.record_error(req.topic)
+            store.save(twin)
+        except Exception:  # noqa: BLE001 — a twin write must not fail the student's submission
+            log.warning("mastery update failed for %s", req.student_id, exc_info=True)
+    return AnswerCheckResponse(
+        verified=outcome.verified,
+        checked=outcome.checked,
+        normalized_candidate=outcome.normalized_candidate,
+        normalized_expected=outcome.normalized_expected,
+        detail=outcome.detail,
+    )
 
 
 @router.post("/verify", response_model=VerifyResponse, tags=["math"])

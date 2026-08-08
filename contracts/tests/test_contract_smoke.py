@@ -127,10 +127,21 @@ def test_internal_services_are_not_in_public_contract():
     assert not any(p.startswith("/internal") for p in paths)
 
 
-def test_stubbed_endpoints_return_501_not_500():
-    # A declared-but-unimplemented endpoint is 501, never a crash.
-    r = client.post("/v1/diagnose", json={"student_id": "s1"})
-    assert r.status_code == 501
+def test_diagnose_is_implemented_and_returns_a_plan(override_engine):
+    # Formerly a 501 stub; now backed by the learning twin. A fresh student gets a
+    # fundamentals-first starter plan, never a crash.
+    override_engine(_FakeEngine())
+    r = client.post(
+        "/v1/diagnose", json={"student_id": "s1", "subject": "math"}, headers=_AUTH_S1
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["student_id"] == "s1"
+    assert isinstance(body["plan"], list) and body["plan"]
+
+
+def test_diagnose_requires_auth():
+    assert client.post("/v1/diagnose", json={"student_id": "s1"}).status_code == 401
 
 
 def test_verify_checks_a_claim():
