@@ -81,6 +81,11 @@ button.ghost:hover { background: var(--accent-soft); }
   display: block; margin-top: 4px; font-size: 0.68rem; color: var(--muted);
   font-style: italic;
 }
+#btn-web.active { color: var(--accent); background: var(--accent-soft, rgba(193, 95, 60, 0.12)); }
+.sources {
+  display: block; margin-top: 6px; font-size: 0.72rem; color: var(--muted);
+}
+.sources a { color: inherit; text-decoration: underline; margin-right: 2px; }
 
 /* --- chat column ---------------------------------------------------------- */
 #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }

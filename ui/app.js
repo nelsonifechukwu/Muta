@@ -688,6 +688,7 @@ async function dispatch(item) {
         message,
         conversation_id: conversationId,
         attachment_ids: attachmentIds,
+        use_web: useWeb,
       }),
       signal: currentAbort.signal,
     });
@@ -745,6 +746,25 @@ async function pumpSse(res, assistant) {
         else if (ev.error) assistant.fail(ev.error);
         else if (ev.done) {
           assistant.finalize();
+          if (Array.isArray(ev.sources) && ev.sources.length) {
+            const msgs = messagesEl.querySelectorAll(".msg.assistant");
+            const last = msgs[msgs.length - 1];
+            if (last && !last.querySelector(".sources")) {
+              const box = document.createElement("div");
+              box.className = "sources";
+              box.append("Sources: ");
+              ev.sources.forEach((s, i) => {
+                const a = document.createElement("a");
+                a.href = s.url;
+                a.target = "_blank";
+                a.rel = "noopener";
+                a.textContent = `[${i + 1}] ${s.title}`;
+                box.appendChild(a);
+                if (i < ev.sources.length - 1) box.append(" · ");
+              });
+              last.appendChild(box);
+            }
+          }
           if (ev.source === "cloud") {
             // The one thing a privacy-respecting cloud boost owes the student: saying so.
             const msgs = messagesEl.querySelectorAll(".msg.assistant");
@@ -809,6 +829,16 @@ window.MutaChat = {
 };
 
 refreshSidebar();
+
+// --- web grounding toggle ---------------------------------------------------------------
+let useWeb = false;
+$("#btn-web").addEventListener("click", () => {
+  useWeb = !useWeb;
+  const btn = $("#btn-web");
+  btn.classList.toggle("active", useWeb);
+  btn.setAttribute("aria-pressed", String(useWeb));
+  toast(useWeb ? "Web grounding on — sources will be cited when online." : "Web grounding off.", 2500);
+});
 
 // --- connectivity dot: /v1/ready.online, polled slowly ---------------------------------
 async function refreshNetDot() {
