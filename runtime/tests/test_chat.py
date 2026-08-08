@@ -175,3 +175,81 @@ def test_regenerate_reanswers_the_last_user_turn_without_adding_one(store):
     assert [m["role"] for m in msgs] == ["user", "assistant"]  # NOT a duplicated user turn
     # The prompt the client saw was history-only: it ended with the existing user turn.
     assert engine.client.seen[-1][-1] == {"role": "user", "content": "what is 2+2?"}
+
+
+# --- write-through streaming ------------------------------------------------------------
+# A reply is written to its row AS IT ARRIVES rather than once at the end, because the end
+# is not guaranteed to happen: when a browser disconnects, Starlette abandons the response
+# generator inside a reference cycle and the `finally` only runs at the next cyclic GC.
+# Measured against a real uvicorn (2026-08-08): the reply was still missing from Postgres
+# seconds after the disconnect, and appeared only when gc.collect() was forced — which is
+# what made a student's answer vanish when they switched conversations and switched back.
+
+
+def test_reply_is_readable_from_the_store_mid_stream(store):
+    """The point of the whole mechanism: a reader that has never touched the generator can
+    already see what has streamed so far."""
+    engine, store = _stream_engine(store, ["alpha ", "beta ", "gamma"])
+    engine.persist_interval_s = 0.0  # flush every chunk, so the assertion is deterministic
+    cid, _mid, gen = engine.stream_chat("s1", "hi")
+
+    assert next(gen) == "alpha "
+    assert [m["content"] for m in store.get_messages(cid) if m["role"] == "assistant"] == ["alpha "]
+    assert next(gen) == "beta "
+    assert [m["content"] for m in store.get_messages(cid) if m["role"] == "assistant"] == ["alpha beta "]
+
+
+def test_write_through_keeps_one_row_that_grows_in_place(store):
+    """Flushes must UPDATE, never append: one assistant turn is one message, and its serial
+    id fixes its position in history."""
+    engine, store = _stream_engine(store, ["a", "b", "c", "d"])
+    engine.persist_interval_s = 0.0
+    cid, _mid, gen = engine.stream_chat("s1", "hi")
+    ids = []
+    for _ in gen:
+        rows = [m for m in store.list_messages(cid) if m["role"] == "assistant"]
+        ids.append(rows[0]["id"] if rows else None)
+
+    assert len(set(i for i in ids if i is not None)) == 1, "the reply forked into extra rows"
+    msgs = store.get_messages(cid)
+    assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "abcd")]
+
+
+def test_abandoned_stream_leaves_what_had_streamed_without_being_closed(store):
+    """The disconnect case, reproduced honestly: the generator is neither closed nor
+    collected — exactly the state Starlette leaves it in — and the text is still there."""
+    engine, store = _stream_engine(store, ["one ", "two ", "three ", "four"])
+    engine.persist_interval_s = 0.0
+    cid, _mid, gen = engine.stream_chat("s1", "hi")
+    next(gen)
+    next(gen)
+    del gen  # dropped on the floor; no close(), no gc.collect()
+
+    msgs = [m for m in store.get_messages(cid) if m["role"] == "assistant"]
+    assert msgs and msgs[0]["content"] == "one two "
+
+
+def test_thinking_only_turn_still_stores_nothing(store):
+    """Reasoning stays ephemeral: a turn abandoned before the answer began must not leave a
+    half-written assistant row behind."""
+
+    class ThinkingOnly(StreamingFakeClient):
+        def stream_events(self, messages, **params):
+            for i in range(3):
+                yield "reasoning", f"think{i}"
+
+    engine = ChatEngine(ThinkingOnly([]), store, persist_interval_s=0.0)
+    cid, _mid, gen = engine.stream_events_chat("s1", "hi")
+    list(gen)
+    assert [m["role"] for m in store.get_messages(cid)] == ["user"]
+
+
+def test_repeated_flush_without_new_text_is_a_no_op(store):
+    """Guards the idempotence the trailing flush relies on — a final flush after the last
+    periodic one must not rewrite or duplicate anything."""
+    engine, store = _stream_engine(store, ["x", "y"])
+    engine.persist_interval_s = 0.0
+    cid, _mid, gen = engine.stream_chat("s1", "hi")
+    assert "".join(gen) == "xy"  # drains, then the finally flushes again
+    msgs = store.get_messages(cid)
+    assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "xy")]

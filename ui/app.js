@@ -36,6 +36,11 @@ async function ensureAuth() {
 
 let conversationId = null;
 let generating = false;
+// The reply currently in flight, kept OUTSIDE the DOM so leaving its conversation cannot
+// destroy it: { cid, handle, preamble, reasoning, content }. `handle` is re-pointed at a
+// fresh bubble when the student comes back, and the three buffers are what gets replayed
+// into it. Null whenever nothing is streaming.
+let live = null;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
 let messageQueue = []; // {typed, attachments} — sent one by one when the tutor is free
 let currentAbort = null; // AbortController while a *chat* stream runs (voice has its own barge)
@@ -149,7 +154,13 @@ function addUserMessage(text, attachments = []) {
   hideEmptyState();
   const wrap = document.createElement("div");
   wrap.className = "msg user";
+  // The stack — attachments above the bubble — is the flex item inside `.msg.user`, so it
+  // is the element that must carry the width cap. It used to be an unstyled <div>, which
+  // left `.bubble`'s `max-width: 85%` resolving against a shrink-to-fit parent: a cyclic
+  // percentage that Chrome answers with "no constraint", collapsing short messages to one
+  // character per line and letting long ones escape the column.
   const inner = document.createElement("div");
+  inner.className = "user-stack";
   if (attachments.length) {
     const row = document.createElement("div");
     row.className = "attach-row";
@@ -210,10 +221,24 @@ function beginAssistantMessage(onAnswerNow) {
   thought.className = "thought";
   thinking.append(summary, thought);
 
+  // TTFT preamble: filler from the 1M-parameter warm-up model, shown only while the real
+  // engine prefills. Labelled, muted, and structurally separate from `prose` so it can
+  // never be mistaken for — or scraped as — the tutor's answer. It is deleted, not
+  // appended to, the moment the engine produces its first token.
+  const preamble = document.createElement("div");
+  preamble.className = "preamble";
+  preamble.hidden = true;
+  const preambleLabel = document.createElement("span");
+  preambleLabel.className = "preamble-label";
+  preambleLabel.textContent = "warming up";
+  const preambleText = document.createElement("span");
+  preambleText.className = "preamble-text";
+  preamble.append(preambleLabel, preambleText);
+
   const prose = document.createElement("div");
   prose.className = "prose cursor";
 
-  wrap.append(thinking, prose);
+  wrap.append(thinking, preamble, prose);
   messagesEl.appendChild(wrap);
   scrollToBottom();
 
@@ -274,8 +299,23 @@ function beginAssistantMessage(onAnswerNow) {
     liveLine.textContent = ""; // the trace is the expandable body now, not a ticker
   };
 
+  // The engine has spoken — the placeholder's whole job is over. Removed from the DOM
+  // rather than hidden, so no copy of it survives in the transcript the student can select.
+  const clearPreamble = () => {
+    if (preamble.isConnected) preamble.remove();
+  };
+
   return {
+    pushPreamble(t) {
+      if (preamble.hidden) {
+        preamble.hidden = false;
+        announce("Tutor is warming up.");
+      }
+      preambleText.textContent += t;
+      scrollToBottom();
+    },
     pushThought(t) {
+      clearPreamble();
       if (!thinkStartedAt) {
         thinkStartedAt = performance.now();
         thinking.hidden = false;
@@ -293,11 +333,13 @@ function beginAssistantMessage(onAnswerNow) {
       scrollToBottom();
     },
     pushDelta(t) {
+      clearPreamble();
       settleThinking();
       full += t;
       scheduleRender();
     },
     finalize() {
+      clearPreamble(); // a turn that ended before the engine spoke leaves nothing behind
       settleThinking(); // a reply stopped mid-think still gets its label settled
       cancelRender();
       if (full.trim()) renderMarkdown(prose, full);
@@ -425,29 +467,42 @@ async function refreshSidebar() {
 }
 
 async function loadConversation(cid) {
-  // A running *chat* stream is interruptible — stop it (partial is persisted) and move on.
-  // A voice reply is not ours to kill from here; the mic button owns that loop.
-  if (generating) {
-    if (!currentAbort) return toast("Wait for the current reply to finish.");
-    stopGeneration();
-  }
+  // Leaving a conversation no longer cancels its reply. It used to: the stream was aborted
+  // and the partial left to the server, so coming back showed a truncated answer at best —
+  // and usually nothing, because the partial was not durable yet. The stream now runs on,
+  // and `live` carries it across the switch.
   discardQueue(); // queued messages were aimed at the thread we're leaving
   const r = await fetch(`/v1/conversations/${cid}/messages`, { headers: authHeaders() });
   if (!r.ok) return toast("Couldn't load that conversation.");
   const body = await r.json();
   conversationId = cid;
   messagesEl.innerHTML = "";
-  emptyStateEl.style.display = body.messages.length ? "none" : "";
-  for (const m of body.messages) renderHistoryMessage(m);
+  const restoring = live && live.cid === cid;
+  let messages = body.messages;
+  // The server writes a streaming reply through to its row as it arrives, so the in-flight
+  // turn is already in this history — as a snapshot that is at most a moment old. `live`
+  // holds the same text plus whatever landed since, so drop the row and replay the buffer.
+  if (restoring && messages.length && messages[messages.length - 1].role === "assistant") {
+    messages = messages.slice(0, -1);
+  }
+  emptyStateEl.style.display = messages.length ? "none" : "";
+  for (const m of messages) renderHistoryMessage(m);
+  if (restoring) reattachLive();
   refreshSidebar();
+  syncComposerState(); // the send button is only a Stop button in the streaming thread
   scrollToBottom();
 }
 
+/** Re-render the in-flight reply into a fresh bubble and point the stream at it. */
+function reattachLive() {
+  const handle = beginAssistantMessage(null); // no "Answer now" on a resumed view
+  if (live.preamble) handle.pushPreamble(live.preamble);
+  if (live.reasoning) handle.pushThought(live.reasoning);
+  if (live.content) handle.pushDelta(live.content);
+  live.handle = handle;
+}
+
 function newChat() {
-  if (generating) {
-    if (!currentAbort) return toast("Wait for the current reply to finish.");
-    stopGeneration();
-  }
   discardQueue();
   conversationId = null;
   pendingAttachments = [];
@@ -455,6 +510,7 @@ function newChat() {
   messagesEl.innerHTML = "";
   emptyStateEl.style.display = "";
   refreshSidebar();
+  syncComposerState();
 }
 $("#new-chat").addEventListener("click", newChat);
 
@@ -468,9 +524,15 @@ function readingAnImage() {
   return pendingAttachments.some((a) => a.status === "reading");
 }
 
+/** True when the reply in flight belongs to the conversation on screen. A stream in another
+ *  thread must not be stoppable from here — the Stop button has to mean "this reply". */
+function viewingLiveStream() {
+  return currentAbort != null && (!live || live.cid == null || live.cid === conversationId);
+}
+
 function syncComposerState() {
   const busy = readingAnImage();
-  const streaming = currentAbort != null;
+  const streaming = viewingLiveStream();
   $("#btn-image").disabled = busy;
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
   // voice reply (generating without a chat stream) the mic button owns interruption.
@@ -733,6 +795,18 @@ function send(steer = false) {
   autoGrow();
 
   if (generating) {
+    // A reply running in a *different* thread must not be queued into this one — the queue
+    // drains into whatever conversation is open when the stream ends, which would post this
+    // message to the wrong conversation.
+    if (!viewingLiveStream() && live) {
+      // Hand the student's draft back exactly as it was — text and attachments — rather
+      // than swallowing it.
+      inputEl.value = item.typed;
+      pendingAttachments = item.attachments;
+      renderChips();
+      autoGrow();
+      return toast("Finish or stop the reply in the other chat first.");
+    }
     // Human in the loop: Enter while the tutor talks queues the message; Ctrl+Enter steers —
     // it cuts the current reply short (partial is persisted) and sends this message next,
     // ahead of anything already queued. A voice reply can't be stopped from the keyboard
@@ -767,6 +841,10 @@ async function dispatch(item, opts = {}) {
       stopGeneration();
     },
   );
+  // Everything the stream produces goes here as well as to the DOM, so that leaving this
+  // conversation costs nothing: `reattachLive` replays these buffers into a new bubble.
+  live = { cid: conversationId, handle: assistant, preamble: "", reasoning: "", content: "" };
+  const startedIn = conversationId;
   currentItem = item;
   generating = true;
   currentAbort = new AbortController();
@@ -779,7 +857,9 @@ async function dispatch(item, opts = {}) {
       body: JSON.stringify({
         student_id: studentId,
         message,
-        conversation_id: conversationId,
+        // The thread this turn belongs to, captured at dispatch — not `conversationId`,
+        // which now follows whatever the student is looking at.
+        conversation_id: startedIn,
         attachment_ids: regenerate ? [] : attachmentIds,
         use_web: useWeb,
         thinking,
@@ -789,21 +869,24 @@ async function dispatch(item, opts = {}) {
     });
     if (!res.ok) {
       const detail = (await res.json().catch(() => ({}))).detail;
-      assistant.fail(detail || `The tutor couldn't answer (HTTP ${res.status}).`);
+      live.handle.fail(detail || `The tutor couldn't answer (HTTP ${res.status}).`);
       return;
     }
-    await pumpSse(res, assistant);
+    await pumpSse(res);
   } catch (err) {
+    // `live.handle`, not `assistant`: after a switch away and back these are different
+    // bubbles, and the message belongs on the one currently on screen.
     if (err && err.name === "AbortError") {
       // A deliberate stop. If it was "Answer now", the finally re-dispatches — don't flash a
       // "Stopped" first; just drop this bubble. Otherwise the partial reply is saved as-is.
-      if (pendingRegen) assistant.remove();
-      else assistant.fail("Stopped.");
+      if (pendingRegen) live.handle.remove();
+      else live.handle.fail("Stopped.");
     } else {
-      assistant.fail("Lost the connection mid-answer — the partial reply is saved.");
+      live.handle.fail("Lost the connection mid-answer — the partial reply is saved.");
     }
   } finally {
     generating = false;
+    live = null;
     currentAbort = null;
     currentItem = null;
     syncComposerState();
@@ -820,7 +903,7 @@ async function dispatch(item, opts = {}) {
   }
 }
 
-async function pumpSse(res, assistant) {
+async function pumpSse(res) {
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "";
@@ -843,13 +926,27 @@ async function pumpSse(res, assistant) {
         }
         // The id leads the stream (first frame), so even a reply stopped mid-token knows
         // which conversation its partial landed in — a stopped first turn must not fork a
-        // second thread on the next message.
-        if (ev.conversation_id) conversationId = ev.conversation_id;
-        if (ev.reasoning) assistant.pushThought(ev.reasoning);
-        else if (ev.delta) assistant.pushDelta(ev.delta);
-        else if (ev.error) assistant.fail(ev.error);
+        // second thread on the next message. It names the *stream's* thread, so it only
+        // moves the view when the student is still looking at that thread.
+        if (ev.conversation_id) {
+          const wasViewingThisStream = conversationId === live.cid;
+          live.cid = ev.conversation_id;
+          if (wasViewingThisStream) conversationId = ev.conversation_id;
+          syncComposerState();
+        }
+        // Buffer first, then paint. `live.handle` is whichever bubble is on screen now.
+        if (ev.preamble) {
+          live.preamble += ev.preamble;
+          live.handle.pushPreamble(ev.preamble);
+        } else if (ev.reasoning) {
+          live.reasoning += ev.reasoning;
+          live.handle.pushThought(ev.reasoning);
+        } else if (ev.delta) {
+          live.content += ev.delta;
+          live.handle.pushDelta(ev.delta);
+        } else if (ev.error) live.handle.fail(ev.error);
         else if (ev.done) {
-          assistant.finalize();
+          live.handle.finalize();
           announce("Tutor replied.");
           if (Array.isArray(ev.sources) && ev.sources.length) {
             const msgs = messagesEl.querySelectorAll(".msg.assistant");
@@ -908,17 +1005,20 @@ async function pumpSse(res, assistant) {
             );
           }
         }
-        if (!telemetryOpened && (ev.reasoning || ev.delta) && conversationId) {
-          openTelemetry(conversationId);
+        // Telemetry follows the STREAM's thread, not the viewed one — a student who
+        // wanders off must not point the live strip at a conversation that is idle.
+        if (!telemetryOpened && (ev.reasoning || ev.delta) && live.cid) {
+          openTelemetry(live.cid);
           telemetryOpened = true;
         }
       }
     }
   }
-  if (conversationId && !telemetryOpened) openTelemetry(conversationId);
-  if (conversationId) {
+  const streamCid = live && live.cid;
+  if (streamCid && !telemetryOpened) openTelemetry(streamCid);
+  if (streamCid) {
     // One last snapshot so a brand-new thread still shows its numbers.
-    fetch(`/v1/conversations/${conversationId}/telemetry`)
+    fetch(`/v1/conversations/${streamCid}/telemetry`)
       .then((r) => (r.ok ? r.json() : null))
       .then((t) => t && updateTelemetry(t))
       .catch(() => {});

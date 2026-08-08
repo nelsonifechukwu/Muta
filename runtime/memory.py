@@ -223,6 +223,26 @@ class ConversationStore:
             )
         return int(row["id"])
 
+    def update_message(self, message_id: int, content: str) -> None:
+        """Rewrite a message's body in place, keeping its id (and therefore its position in
+        the conversation's serial ordering).
+
+        This exists for streaming: a reply is written to its row as it arrives, so what
+        survives a disconnect no longer depends on a generator being finalized. Ordering is
+        by serial id, so growing the row in place cannot reshuffle history.
+        """
+        ts = _now()
+        with self._pool.connection() as conn, conn.transaction():
+            row = conn.execute(
+                "UPDATE messages SET content = %s WHERE id = %s RETURNING conversation_id",
+                (content, message_id),
+            ).fetchone()
+            if row is not None:
+                conn.execute(
+                    "UPDATE conversations SET updated_at = %s WHERE id = %s",
+                    (ts, row["conversation_id"]),
+                )
+
     def get_messages(self, conversation_id: str, limit: int | None = None) -> list[dict]:
         """Messages in chronological order. With ``limit``, the most recent ``limit``."""
         with self._pool.connection() as conn:

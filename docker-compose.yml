@@ -115,6 +115,12 @@ services:
       # The vision spawn gets the same courtesy: 60 s covers a warm spawn on the target,
       # but a cold mmproj load under emulation can exceed it.
       MUTA_RT_VISION_STARTUP_S: "300"
+      # TTFT preamble (docs/ttft-preamble.md): the in-process NumPy warm-up model writes a
+      # labelled placeholder while llama-server prefills. Off unless asked for —
+      # `MUTA_RT_TTFT_PREAMBLE=1 ./run.sh`. Needs `make fetch-ttft` (models/ttft, 15 MB);
+      # a missing model degrades to the stream it already served, no error.
+      MUTA_RT_TTFT_PREAMBLE: "${MUTA_RT_TTFT_PREAMBLE:-0}"
+      MUTA_RT_TTFT_MAX_TOKENS: "${MUTA_RT_TTFT_MAX_TOKENS:-48}"
       TUTOR_ROOT: /app
       # Provisioning runs `docker compose run backend python3.10 scripts/fetch_models.py`;
       # keeping the HF cache inside the mount makes it persistent and resumable.

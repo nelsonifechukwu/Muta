@@ -29,6 +29,145 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ## 2026-08-08
 
+### -2. Streaming durability: a reply no longer depends on the GC (no decode-path change)
+
+**The decode path is untouched.** No engine flag, no model, no llama.cpp argument changed.
+This is the persistence and client-side half of a streaming turn.
+
+**The bug, as reported:** while a reply is streaming, switch to another conversation and
+back — the reply is gone. Two independent causes, both confirmed by measurement rather
+than reading.
+
+**Cause 1 — the partial reply was not durable.** `/v1/chat/stream`'s `finally` closes the
+engine generator so the partial-persist runs deterministically. It does not run on a client
+disconnect: Starlette abandons the sync response generator inside a reference cycle, so the
+`finally` waits for the next *cyclic* GC. Reproduced against a real uvicorn with a real
+socket close (`TestClient` cannot reproduce it — it runs the generator to completion and
+reports success, which would have "confirmed" a non-fix):
+
+| Disconnect during | assistant rows after 2 s | after forced `gc.collect()` |
+|---|---|---|
+| the thinking phase | 0 | 0 (correct — reasoning is deliberately ephemeral) |
+| the answer phase | **0** | **1, containing all 6 streamed words** |
+
+The text was never lost, only unbounded-late. The same latency hit the Stop button and tab
+close, where the UI says "the partial reply is saved".
+
+**Fix:** `runtime/chat.py:_ReplyWriter` writes the reply through to its row as it arrives —
+first content chunk INSERTs, each flush UPDATEs in place (`ConversationStore.update_message`,
+new). `persist_interval_s = 0.25` bounds the loss to ~1 token on the x86 target (5 tok/s)
+and ~8 native, at four small UPDATEs per second per active stream. The row keeps its serial
+id, so growing it in place cannot reshuffle history (ordering is by id). The trailing
+`flush()` is now an optimisation, not the mechanism. Re-measured after the fix: the answer-
+phase disconnect leaves 4 of 5 streamed chunks in Postgres immediately, no GC involved.
+
+**Cause 2 — leaving a conversation cancelled its reply.** `loadConversation` called
+`stopGeneration()` by design, so even with durable partials the best outcome was a
+permanently truncated answer. `ui/app.js` now keeps the in-flight reply in a `live` buffer
+outside the DOM: leaving wipes the DOM, not the stream; returning replays the buffer into a
+fresh bubble and re-points the stream at it, so it carries on streaming. Because the server
+now writes through, the returned history already holds the in-flight partial — the trailing
+assistant row is dropped and the (fresher) buffer replayed, so it renders once, not twice.
+
+Consequences worth stating: Stop now stops only the reply on screen (it could previously
+kill another thread's reply from a view where it was invisible), telemetry follows the
+streaming conversation rather than the viewed one, and sending into a different chat while
+one streams returns the draft with an explanation instead of posting it to the wrong thread.
+**Still true by design:** a turn abandoned during the *thinking* phase restores nothing,
+because reasoning is never persisted — on the emulated box that window is ~100 s.
+
+**Also in this pass — user-message bubble layout (`ui/`).** `addUserMessage` wrapped the
+bubble in an unstyled `<div>` that was the actual flex item, leaving `.bubble`'s
+`max-width: 85%` to resolve against a shrink-to-fit parent — a cyclic percentage Chrome
+answers with "no constraint". One character per line for short messages ("Hi" rendered as
+`H`/`i`), and no cap at all for long ones (measured: an 817 px bubble inside a 728 px
+column, bleeding out of the column). The cap moved to the flex item (`.user-stack`).
+Measured with headless Chrome over box geometry *and* painted-glyph rects: a bare URL in an
+assistant reply was also overflowing its column by 74 px, fixed by `overflow-wrap` on
+`.prose`; nothing now exceeds its container at desktop or narrow widths. Assistant prose
+also got overflow containment (code blocks, tables, KaTeX display math, images) and a
+typography pass.
+
+Tests: 5 new write-through cases in `runtime/tests/test_chat.py`, including one that drops
+the generator with no `close()` and no `gc.collect()` — the exact state Starlette leaves it
+in. Suite: **808 passed, 2 skipped**; ruff clean; `contracts/openapi.yaml` unchanged.
+
+### -1. TTFT preamble: TinyStories-1M in NumPy, in-process (no decode-path change; native M2)
+
+**The decode path is untouched.** No engine flag, no llama.cpp argument, no model in
+`models/core/` changed; llama-server does not know this exists. Peak RAM and tok/s for the
+4B stay exactly as the entries below record them. What changed is what happens *while*
+llama-server prefills.
+
+**Config of record:** `MUTA_RT_TTFT_PREAMBLE` (default `0` — off), `TTFT_MODEL_DIR
+models/ttft`, `TTFT_MAX_TOKENS 48`, `TTFT_TEMPERATURE 0.8`, `TTFT_SEED_TEXT "Once upon a
+time"`. Model: `roneneldan/TinyStories-1M` @ `77f1b168`, converted to
+`models/ttft/ttft-model.npz` (3,745,984 params, 15 MB) by `scripts/fetch_ttft_model.py`.
+Runner: `runtime/ttft.py` — NumPy GPT-Neo, in the gateway process.
+
+**Why not a GGUF** (verified, not assumed): TinyStories-1M is `GPTNeoForCausalLM`, and
+llama.cpp's converter registers `GPTNeoXForCausalLM` and `GPT2LMHeadModel` — plain GPT-Neo
+is in neither. No usable GGUF exists on the Hub (the one repo claiming to is empty). Its
+vocab is 50257 against the 4B's 248320, so it can never be a `draft-simple` draft either.
+Full reasoning: [`docs/ttft-preamble.md`](docs/ttft-preamble.md).
+
+**Fidelity (native, M2 Pro, against `transformers` on identical weights):**
+
+| Check | Result |
+|---|---|
+| Prefill logits, 3 prompts | max \|Δlogit\| 3.1e-05 … 7.2e-05 |
+| KV-cached continuation vs full prefill | max \|Δlogit\| 8.6e-05 |
+| 400-token prompt (local layers past their 256 window) | max \|Δlogit\| 3.1e-05 |
+| Greedy 30 tokens | **token-identical** |
+| Tokenizer ids | exact match with HF GPT-2/Neo BPE |
+
+**Performance (native, M2 Pro dev host, Python 3.12, single process):**
+
+| Metric | Value |
+|---|---|
+| Load (npz + vocab + merges) | 49 ms |
+| First generation after load (cold) | 32 ms |
+| First chunk, warm | **1.65 ms** p50 · 2.0 ms p95 (n=20) |
+| Throughput | 662 tok/s (mean of 20 × 32-token runs) |
+| Resident cost | ~51 MB (15 MB weights; the rest is the Python tokenizer tables) |
+| CPU | 0.99 cores over a 200-token run — single-threaded |
+
+Against it: the 4B's own first-turn prefill, which is the thing being hidden. The cold 32 ms
+is paid at boot (`PreambleWriter.warmup()` from the lifespan), not by the first student.
+
+**Cost, stated plainly.** The preamble takes ~80 ms of one core (48 tokens at 662 tok/s)
+*during* a prefill that is using every core — so it can make real TTFT marginally worse
+while making perceived TTFT much better. On the M2 that is inside run-to-run noise; it has
+**not** been A/B'd on the x86 target, and `ttft_max_tokens` is the dial if it shows up
+there. The 51 MB is 0.7% of the 7 GB ceiling.
+
+**Scoring:** nothing here touches `S_perf`. The scored path is llama-bench against the
+submitted GGUF (`docs/rules-digest.md`) and never executes this code. `preamble_ttft_s` is
+reported in the SSE `done` frame as a **separate** number from `ttft_s`, which remains the
+engine's own first token; the preamble is excluded from `completion_tokens` and from the
+tok/s window.
+
+**Not shipped, and why:** `roneneldan/TinyStories-1M` declares no licence at all, which the
+§13 permissive-or-refuse policy in `scripts/model_specs.py` does not permit. That is why it
+has its own fetcher instead of an `ARTIFACTS` entry, why the fetcher prints the status on
+every run, and why the default is off. Resolve the licence or swap the weights before Gate 1.
+
+**One real defect found and fixed during the build** (the adversarial-review rule earning
+its keep): the routes' `finally` closes the engine generator deterministically, and closing
+it while the preamble's helper thread is inside `next(events)` raises `ValueError: generator
+already executing`. Raised from a `finally`, that skips the `sessions.release()` after it —
+so **every client disconnect during the prefill window would leak an admission slot**, and
+at `n_parallel 2` two of them wedge the tutor until restart. It needs a disconnect inside a
+window that only exists when prefill is slow: it would have appeared on the x86 target, not
+here. Fix is ordering (`_close_events(streamed)` before `_close_events(events)`), pinned by
+two tests, one of which reproduces the failure deliberately.
+
+Tests: `runtime/tests/test_ttft.py` (15), `orchestrator/tests/test_preamble.py` (11 —
+ordering, no-drop/no-duplicate, error propagation, early close, cross-thread safety, the
+close-order trap above), `orchestrator/tests/test_ttft_wiring.py` (6, one of which runs the
+real model through the real route). Suite: **803 passed, 2 skipped**; ruff clean;
+`contracts/openapi.yaml` unchanged (SSE payloads are not schema).
+
 ### 0. Production-readiness hardening pass (no decode-path change; docker/emulated)
 
 Branch `harden/production-readiness`. A security/reliability/data/observability pass closing

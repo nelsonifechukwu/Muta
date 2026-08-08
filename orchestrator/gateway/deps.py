@@ -28,6 +28,7 @@ from runtime.config import RuntimeConfig
 from runtime.memory import ConversationStore
 from runtime.profiles import BundlePaths
 from runtime.slots import SlotClient, SnapshotReaper
+from runtime.ttft import PreambleWriter
 from runtime.vision import VisionManager
 
 log = logging.getLogger("muta.gateway.deps")
@@ -193,3 +194,28 @@ def get_twin_store() -> TwinStore:
 @lru_cache(maxsize=1)
 def get_renderer() -> DiagramRenderer:
     return DiagramRenderer(get_tool_pools().renderer)
+
+
+@lru_cache(maxsize=1)
+def get_preamble_writer() -> PreambleWriter | None:
+    """The TTFT preamble model, or None when it is switched off or not provisioned.
+
+    Loaded once (≈55 ms, 15 MB) on first use rather than at import: a deployment that never
+    turns the preamble on must not pay for it, and a missing model is a disabled feature,
+    not a failed boot."""
+    cfg = RuntimeConfig()
+    if not cfg.ttft_preamble:
+        return None
+    root = Path(os.environ.get("TUTOR_ROOT", "."))
+    directory = cfg.ttft_model_dir
+    if not directory.is_absolute():
+        directory = root / directory
+    writer = PreambleWriter.load(directory)
+    if writer is None:
+        log.warning(
+            "MUTA_RT_TTFT_PREAMBLE=1 but no model at %s — run scripts/fetch_ttft_model.py",
+            directory,
+        )
+        return None
+    writer.warmup()  # the cold first generation must not land on a student (see warmup())
+    return writer

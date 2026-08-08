@@ -151,6 +151,25 @@ class RuntimeConfig(BaseSettings):
     # Container mode: the gateway lifespan starts/supervises llama-server itself.
     autostart: bool = False
 
+    # --- TTFT preamble ----------------------------------------------------------------
+    # The in-process NumPy GPT-Neo (runtime/ttft.py) that writes while the 4B prefills.
+    # Measured on the M2 dev host: 1.5 ms to first chunk, ~600 tok/s, 15 MB resident —
+    # against seconds of first-turn prefill on the x86 target. Costs no engine RAM and no
+    # engine time: it runs on the gateway thread that would otherwise be blocked on
+    # llama-server's first byte.
+    #
+    # Default OFF, and that is a product judgement rather than a technical one: the pinned
+    # weights are TinyStories-1M, which writes children's stories and cannot tutor. It is
+    # a labelled placeholder, never the answer, never persisted, never counted in ttft_s
+    # (docs/ttft-preamble.md). Switch on with MUTA_RT_TTFT_PREAMBLE=1.
+    ttft_preamble: bool = False
+    ttft_model_dir: Path = Path("models/ttft")
+    ttft_max_tokens: int = 48  # ceiling, not a target — prefill normally cuts it short
+    ttft_temperature: float = 0.8
+    # Seeds the preamble so it opens mid-sentence-ish rather than with a hard "Once upon a
+    # time" — the text is filler and should not read as the start of a reply.
+    ttft_seed_text: str = "Once upon a time"
+
     # --- Persistent memory ------------------------------------------------------------
     # Postgres DSN. Default points at the compose `db` service as published on the host
     # (127.0.0.1:15432); inside the backend container compose overrides it to db:5432.

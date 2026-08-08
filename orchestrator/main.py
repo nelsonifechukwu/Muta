@@ -146,6 +146,14 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     get_connectivity().start()  # ~1/min online/offline verdict for /v1/ready and the UI
 
+    # Load + warm the TTFT preamble model at boot (no-op unless MUTA_RT_TTFT_PREAMBLE=1).
+    # Doing it lazily would put its ~50 ms load and 32 ms cold generation on the first
+    # student's first turn — the exact request the preamble exists to make feel instant.
+    with contextlib.suppress(Exception):
+        from orchestrator.gateway.deps import get_preamble_writer
+
+        get_preamble_writer()
+
     cfg = RuntimeConfig()
     engine_server: LlamaServer | None = None
     engine_stop: threading.Event | None = None

@@ -64,6 +64,7 @@ from orchestrator.gateway.auth import caller_from_token, mint_token, require_cal
 from orchestrator.gateway.deps import (
     get_engine,
     get_ladder,
+    get_preamble_writer,
     get_renderer,
     get_sessions,
     get_slot_client,
@@ -74,6 +75,7 @@ from orchestrator.gateway.deps import (
 )
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
+from orchestrator.gateway.preamble import with_preamble
 from orchestrator.gateway.prompting import assemble_system_prompt
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.selfcheck import scan_claims, self_check
@@ -86,6 +88,7 @@ from runtime.chat import ChatEngine
 from runtime.client import Generation
 from runtime.config import RuntimeConfig
 from runtime.slots import SlotError
+from runtime.ttft import PreambleWriter
 from runtime.vision import VisionDenied, VisionManager
 from runtime.vision_client import VisionClient, VisionResponseError
 
@@ -216,6 +219,19 @@ def _extended_reasoning_budget() -> int:
     return RuntimeConfig().reasoning_budget_extended
 
 
+@lru_cache(maxsize=1)
+def _preamble_opts() -> dict:
+    """Decode settings for the TTFT preamble. Cached for the same reason as above, and with
+    more reason: parsing BaseSettings per request on the path whose entire purpose is to
+    shave milliseconds off first paint would be self-defeating."""
+    cfg = RuntimeConfig()
+    return {
+        "seed_text": cfg.ttft_seed_text,
+        "max_tokens": cfg.ttft_max_tokens,
+        "temperature": cfg.ttft_temperature,
+    }
+
+
 def _apply_thinking(params: dict, thinking: str | None, *, extended_budget: int | None = None) -> dict:
     """Fold the request's thinking level into the sampling params the engine receives. `off`
     disables the Qwen3 thinking phase (a direct, faster answer); `auto`/None leave the launch
@@ -343,6 +359,7 @@ def chat_stream(
     engine: ChatEngine = Depends(get_engine),
     sessions: SessionManager = Depends(get_sessions),
     ladder: DegradationLadder = Depends(get_ladder),
+    preamble: PreambleWriter | None = Depends(get_preamble_writer),
 ) -> StreamingResponse:
     """Token-streaming twin of `/chat` — the browser UI's primary path.
 
@@ -415,9 +432,14 @@ def chat_stream(
     if req.attachment_ids:
         _link_attachments(engine, req.attachment_ids, cid, user_message_id)
 
+    # TTFT preamble (docs/ttft-preamble.md): fills the prefill window with a distinct,
+    # non-answer `preamble` event. A no-op when disabled or unprovisioned.
+    streamed = with_preamble(events, preamble, **_preamble_opts())
+
     def _sse():
         n = 0
         t_first = t_last = 0.0
+        t_preamble = 0.0
         reply_parts: list[str] = []  # answer content only, for the post-stream self-check
         hub = get_hub()
         hub.begin(cid)
@@ -426,9 +448,19 @@ def chat_stream(
         # its partial reply landed in, or stopping the first reply of a new chat forks a
         # second thread on the next message.
         yield f"data: {json.dumps({'conversation_id': cid})}\n\n"
+        started = time.monotonic()
         try:
-            for kind, text in events:
+            for kind, text in streamed:
                 now = time.monotonic()
+                # The preamble is filler from a 1 M-parameter model, not the tutor speaking:
+                # it gets its own event key, is excluded from the token count and the tok/s
+                # window, and never joins reply_parts (so it cannot reach the self-check or
+                # the store). Everything below this branch is the engine's own output.
+                if kind == "preamble":
+                    if not t_preamble:
+                        t_preamble = now
+                    yield f"data: {json.dumps({'preamble': text})}\n\n"
+                    continue
                 if n == 0:
                     t_first = now
                 t_last = now
@@ -448,6 +480,13 @@ def chat_stream(
             # persist) runs HERE, on this threadpool thread, the moment the stream ends —
             # instead of waiting for GC after a client disconnect, which could stall every
             # other stream and let an abandoned llama-server slot stay busy. Idempotent.
+            #
+            # ORDER IS LOAD-BEARING: the preamble wrapper is closed first because it owns a
+            # thread that may be sitting inside `next(events)` during prefill. Closing
+            # `events` while that thread is in it raises "generator already executing" —
+            # which, from this finally, would skip the `sessions.release()` below and leak
+            # an admission slot on every disconnect during the prefill window.
+            _close_events(streamed)
             _close_events(events)
             sessions.release(req.student_id)  # free the admission slot for the next student
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
@@ -481,6 +520,12 @@ def chat_stream(
                 "completion_tokens": n,
                 "elapsed_s": round(elapsed, 3),
                 "tokens_per_second": round(rate, 2),
+                # Two first-token numbers, deliberately separate. `ttft_s` is and stays the
+                # engine's own — what the tutor took to speak. `preamble_ttft_s` is when the
+                # pane stopped being empty. Collapsing them into one figure would be the
+                # dishonest version of this feature.
+                "ttft_s": round(t_first - started, 3) if n else None,
+                "preamble_ttft_s": round(t_preamble - started, 3) if t_preamble else None,
                 # Student text leaving the device must never be silent (P3): the UI
                 # badges any answer a cloud backend produced.
                 "source": getattr(getattr(engine, "client", None), "last_source", None)
@@ -815,6 +860,7 @@ def tutor_chat_stream(
     engine: ChatEngine = Depends(get_engine),
     sessions: SessionManager = Depends(get_sessions),
     ladder: DegradationLadder = Depends(get_ladder),
+    preamble: PreambleWriter | None = Depends(get_preamble_writer),
 ) -> StreamingResponse:
     """Token-streaming twin of `/tutor/chat` (§7.2: the tutoring turn is SSE).
 
@@ -843,12 +889,21 @@ def tutor_chat_stream(
         sessions.release(turn.session_id)
         raise
 
+    streamed = with_preamble(events, preamble, **_preamble_opts())
+
     def _sse():
         started = time.monotonic()
         first_token_at = 0.0
+        preamble_at = 0.0
         count = 0
         try:
-            for kind, text in events:
+            for kind, text in streamed:
+                if kind == "preamble":
+                    # Filler, not tutoring: own event key, excluded from count and ttft_s.
+                    if not preamble_at:
+                        preamble_at = time.monotonic()
+                    yield f"data: {json.dumps({'preamble': text})}\n\n"
+                    continue
                 if count == 0:
                     first_token_at = time.monotonic()
                 count += 1
@@ -860,6 +915,9 @@ def tutor_chat_stream(
             return
         finally:
             sessions.release(turn.session_id)
+            # Preamble wrapper first, then the engine's generator — same load-bearing order
+            # as /chat/stream: its helper thread may still be inside `next(events)`.
+            _close_events(streamed)
             _close_events(events)  # deterministic partial-persist off the event loop (see /chat/stream)
         yield "data: " + json.dumps(
             {
@@ -867,6 +925,7 @@ def tutor_chat_stream(
                 "session_id": cid,
                 "completion_tokens": count,
                 "ttft_s": round(first_token_at - started, 3) if count else None,
+                "preamble_ttft_s": round(preamble_at - started, 3) if preamble_at else None,
                 "degradation_level": f"L{int(state.level)}",
             }
         ) + "\n\n"

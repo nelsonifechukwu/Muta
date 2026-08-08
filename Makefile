@@ -56,6 +56,9 @@ fetch-models: ## Download the full pinned roster + write MANIFEST.json. Args: AR
 verify-models: ## Acceptance checks for the fetched roster: hashes, budget, licences, load smoke
 	scripts/verify_models.sh $(ARGS)
 
+fetch-ttft: ## Download+convert the TTFT preamble model (opt-in; licence unresolved — docs/ttft-preamble.md)
+	$(PY) scripts/fetch_ttft_model.py $(ARGS)
+
 # --- Host-side runtime tools ---
 serve: ## Launch llama-server on the host against the resolved model
 	$(PY) -m runtime.server

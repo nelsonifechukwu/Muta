@@ -104,6 +104,13 @@ The roster (all under `./models`, volume-mounted into the backend, never baked):
 
 `make verify-models` re-checks hashes, licences and load smoke.
 
+**Optional, not in the roster: the TTFT preamble model.** `make fetch-ttft` provisions
+TinyStories-1M into `models/ttft/` (15 MB) — an in-process NumPy model that writes filler
+while the 4B prefills, so the pane fills in ~1.6 ms instead of seconds. It is deliberately
+outside `fetch-models`: upstream declares **no licence**, so it is dev/measurement only and
+off by default. `MUTA_RT_TTFT_PREAMBLE=1` enables it.
+[`docs/ttft-preamble.md`](docs/ttft-preamble.md) has the full story.
+
 ## Talk to it
 
 Everything the UI does goes through `/v1` — so everything works from `curl` too
@@ -188,6 +195,9 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 | `MUTA_RT_CACHE_TYPE_K` | `q8_0` | K-cache quantization |
 | `MUTA_RT_REASONING_BUDGET` | `512` | max thinking tokens before the answer is forced |
 | `MUTA_RT_SPEC_TYPE` | `draft-simple` | `none` \| `draft-simple` \| `ngram-simple` |
+| `MUTA_RT_TTFT_PREAMBLE` | `0` (off) | in-process warm-up model fills the prefill window (`make fetch-ttft` first) |
+| `MUTA_RT_TTFT_MAX_TOKENS` | `48` | preamble length cap — also caps the ~80 ms of one core it costs |
+| `MUTA_RT_TTFT_MODEL_DIR` | `models/ttft` | resolved against `TUTOR_ROOT` when relative |
 
 ## Troubleshooting
 

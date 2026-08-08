@@ -8,6 +8,7 @@ and carries no pedagogy of its own.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 
@@ -31,6 +32,55 @@ class ChatResult:
     user_message_id: int | None = None
 
 
+class _ReplyWriter:
+    """Writes a streaming assistant reply to the store *as it arrives*.
+
+    Why not just persist once at the end: the end is not guaranteed to happen. When a
+    browser disconnects mid-stream, Starlette abandons the response generator inside a
+    reference cycle — its `finally` runs whenever the cyclic GC next collects, which is
+    unbounded. Measured against a real uvicorn (2026-08-08): after a disconnect the reply
+    was still absent from Postgres seconds later, and appeared only when `gc.collect()` was
+    forced. A student switching conversations and switching back saw their answer gone.
+
+    So durability cannot depend on finalization. The first content chunk INSERTs the row and
+    each subsequent flush UPDATEs it in place, which bounds the loss to `interval_s` of text
+    and keeps the row's serial id — and therefore its place in history — fixed. The trailing
+    `flush()` in the caller's `finally` is now an optimisation, not the mechanism.
+
+    Nothing is written until the first content chunk: an assistant turn that produced only
+    reasoning, or nothing at all, still stores nothing.
+    """
+
+    def __init__(self, store: ConversationStore, conversation_id: str, interval_s: float) -> None:
+        self.store = store
+        self.cid = conversation_id
+        self.interval_s = interval_s
+        self.chunks: list[str] = []
+        self.message_id: int | None = None
+        self._flushed_len = 0
+        self._last_flush = 0.0
+
+    def add(self, text: str) -> None:
+        self.chunks.append(text)
+        now = time.monotonic()
+        if now - self._last_flush >= self.interval_s:
+            self.flush()
+            self._last_flush = now
+
+    def flush(self) -> None:
+        """Idempotent: a flush with nothing new since the last one touches no rows."""
+        if not self.chunks:
+            return
+        text = "".join(self.chunks)
+        if len(text) == self._flushed_len:
+            return
+        if self.message_id is None:
+            self.message_id = self.store.add_message(self.cid, "assistant", text)
+        else:
+            self.store.update_message(self.message_id, text)
+        self._flushed_len = len(text)
+
+
 class ChatEngine:
     def __init__(
         self,
@@ -39,11 +89,19 @@ class ChatEngine:
         *,
         max_history_messages: int = 20,
         default_system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+        # 0.25 s bounds a disconnect's cost to ~1 token on the x86 target (5 tok/s) and ~8
+        # on a fast native box, for four small UPDATEs per second per active stream — far
+        # below anything Postgres notices, and cheaper than the alternative of a student
+        # losing a paragraph.
+        persist_interval_s: float = 0.25,
     ) -> None:
         self.client = client
         self.store = store
         self.max_history_messages = max_history_messages
         self.default_system_prompt = default_system_prompt
+        # How often a streaming reply is written through to the store. See `_ReplyWriter`:
+        # this is the bound on how much of a reply a disconnect can cost.
+        self.persist_interval_s = persist_interval_s
 
     def _open(self, student_id: str, conversation_id: str | None, **meta) -> str:
         if conversation_id and self.store.get_conversation(conversation_id):
@@ -123,17 +181,16 @@ class ChatEngine:
         user_message_id = self.store.add_message(cid, "user", message)
 
         def _gen() -> Iterator[str]:
-            chunks: list[str] = []
+            writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
                 for delta in self.client.stream(messages, **params):
-                    chunks.append(delta)
+                    # Written through as it arrives: losing the assistant half of a turn
+                    # corrupts the replayed history for every later turn, and a disconnect
+                    # gives no reliable chance to save it afterwards.
+                    writer.add(delta)
                     yield delta
             finally:
-                # Persist whatever was generated even when the consumer disconnects or the
-                # engine dies mid-stream — losing the assistant half of a turn corrupts the
-                # replayed history for every later turn. An empty reply stores nothing.
-                if chunks:
-                    self.store.add_message(cid, "assistant", "".join(chunks))
+                writer.flush()
 
         return cid, user_message_id, _gen()
 
@@ -170,15 +227,15 @@ class ChatEngine:
             user_message_id = self.store.add_message(cid, "user", message)
 
         def _gen() -> Iterator[tuple[str, str]]:
-            chunks: list[str] = []
+            writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
                 for kind, text in self.client.stream_events(messages, **params):
                     if kind == "content":
-                        chunks.append(text)
+                        writer.add(text)
                     yield kind, text
             finally:
-                # Same partial-persist rule as stream_chat; reasoning stays ephemeral.
-                if chunks:
-                    self.store.add_message(cid, "assistant", "".join(chunks))
+                # Same write-through rule as stream_chat; reasoning stays ephemeral, so a
+                # turn abandoned during the thinking phase still stores nothing.
+                writer.flush()
 
         return cid, user_message_id, _gen()
