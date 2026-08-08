@@ -23,20 +23,24 @@ die()  { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
     cat <<'EOF'
-Usage: ./run.sh [--native] [--build] [--model PATH] | down | logs
+Usage: ./run.sh [--native] [--cpu] [--build] [--model PATH] | plan | down | logs
 
   (no args)   docker mode (default): bring up db + backend + frontend, print the UI URL
   --native    dev mode: db + frontend stay in docker; the gateway and an arm64
               llama-server run on THIS host in the foreground (Ctrl-C stops them;
               './run.sh down' stops the containers). No slow amd64 emulation.
+              On Apple Silicon this offloads to Metal (all layers) unless --cpu is
+              given or MUTA_RT_N_GPU_LAYERS is already set. See docs/gpu.md.
+  --cpu       force CPU everywhere (no Metal offload, no GPU suggestions)
   --build     force a clean (no-cache) image rebuild first (docker images only)
-  --model P   core GGUF to serve (default models/core/Qwen3.5-4B-Q4_K_M.gguf). A
+  --model P   core GGUF to serve (default models/core/Qwen3.5-4B-IQ4_XS.gguf). A
               non-default model must already exist (fetch/quantize it first — e.g.
               scripts/fetch_models.py --quant-variants for the D1 candidates) and, in
               docker mode, live under ./models (the only dir mounted into the
               container). Vision (mmproj) pairs with the Qwen3.5-4B family, and the
               docker default keeps draft speculation active — a vocab-incompatible
               core fails the engine boot (set MUTA_RT_SPEC_TYPE=none first).
+  plan        print the hardware decisions (host, mode, gpu) and exit — no side effects
   down        docker compose down (conversations survive: the muta-pgdata volume stays)
   logs        docker compose logs -f
 
@@ -76,6 +80,36 @@ fetch_native_engine() {
     rm -rf "$tmp"
 }
 
+# GPU detection. CPU is the invariant default; Metal exists only in native mode (Docker
+# on macOS has no GPU passthrough); NVIDIA is detect-and-point-at-docs (docs/gpu.md)
+# until a CUDA image variant lands.
+detect_gpu() {
+    # Plain `if`s throughout: under set -e a false `[ … ] && …` list aborts the caller
+    # (or silently truncates a $(…) substitution), which here would report gpu="".
+    if [ "${FORCE_CPU:-0}" = 1 ]; then
+        echo none
+        return
+    fi
+    case "$(uname -s)/$(uname -m)" in
+        Darwin/arm64)
+            echo metal-native ;;
+        Linux/*)
+            if command -v nvidia-smi >/dev/null 2>&1; then
+                echo cuda-available
+            else
+                echo none
+            fi ;;
+        *)
+            echo none ;;
+    esac
+}
+
+print_plan() {
+    echo "host=$(uname -s)/$(uname -m)"
+    echo "mode=$MODE"
+    echo "gpu=$(detect_gpu)"
+}
+
 native_up() {
     "${PY:-python3}" -c "import orchestrator, uvicorn" >/dev/null 2>&1 \
         || die "project not importable by ${PY:-python3} — activate your venv and run 'make install'"
@@ -105,6 +139,13 @@ native_up() {
     export MUTA_RT_SPEC_TYPE=none
     export MUTA_RT_STARTUP_TIMEOUT_S=300
     export TUTOR_ROOT="$PWD"
+    # Metal offload unless the user pinned layers or forced CPU. At b10035 -ngl defaults
+    # to auto, but RuntimeConfig pins 0 — "all" is the deliberate opt-in.
+    if [ "${FORCE_CPU:-0}" != 1 ] && [ -z "${MUTA_RT_N_GPU_LAYERS:-}" ] \
+        && [ "$(detect_gpu)" = metal-native ]; then
+        export MUTA_RT_N_GPU_LAYERS=all
+        info "Metal: offloading all layers (MUTA_RT_N_GPU_LAYERS=all; --cpu to disable)"
+    fi
     # No MUTA_RT_N_THREADS here — but not because the engine default wins: RuntimeConfig
     # now derives P-core-pinned threads on Apple silicon itself (runtime/config.py,
     # measured +26% and stable vs the engine's all-cores default).
@@ -113,11 +154,14 @@ native_up() {
 
 MODE=docker
 NO_CACHE=0
+FORCE_CPU=0
 DEFAULT_MODEL="models/core/Qwen3.5-4B-IQ4_XS.gguf"
 MODEL="$DEFAULT_MODEL"
 while [ $# -gt 0 ]; do
     case "$1" in
         --native)   MODE=native ;;
+        --cpu)      FORCE_CPU=1 ;;
+        plan)       MODE=plan ;;
         --build)    NO_CACHE=1 ;;
         --model)    [ $# -ge 2 ] || die "--model needs a path  (try --help)"
                     MODEL="$2"; shift ;;
@@ -129,6 +173,13 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# `plan` is side-effect-free by contract: it must answer before docker, models, or the
+# network are even looked at, so it works on a bare clone and in tests.
+if [ "$MODE" = plan ]; then
+    print_plan
+    exit 0
+fi
 
 # --- Core-model selection (hot-swap seam) --------------------------------------------
 # The identity of the served model lives in MUTA_RT_MODEL_DIR/FILE/ALIAS and nowhere
@@ -167,6 +218,15 @@ docker info >/dev/null 2>&1 || die "docker daemon isn't running — start it."
 docker compose version >/dev/null 2>&1 || die "docker compose v2 not found — update Docker."
 
 mkdir -p models
+
+if [ "$MODE" = docker ]; then
+    gpu_hint=$(detect_gpu)
+    if [ "$gpu_hint" = metal-native ]; then
+        warn "emulated x86 on Apple Silicon: './run.sh --native' uses Metal and is ~10x faster"
+    elif [ "$gpu_hint" = cuda-available ]; then
+        warn "NVIDIA GPU detected: see docs/gpu.md for the CUDA backend variant"
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # 1. Images
