@@ -194,6 +194,24 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
+@app.middleware("http")
+async def _request_id(request, call_next):
+    """Accept an inbound X-Request-ID (from nginx / a client) or mint one, expose it to every
+    log line via the contextvar, and echo it back so a caller can quote it in a bug report."""
+    import uuid
+
+    from orchestrator.request_context import request_id_var
+
+    rid = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
+    token = request_id_var.set(rid)
+    try:
+        response = await call_next(request)
+    finally:
+        request_id_var.reset(token)
+    response.headers["X-Request-ID"] = rid
+    return response
+
+
 # Public contract: the ONLY surface clients address.
 app.include_router(gateway_router, prefix=API_PREFIX)
 app.include_router(audio_router, prefix=API_PREFIX)  # /v1/audio/transcribe + WS /v1/audio/voice

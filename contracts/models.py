@@ -40,6 +40,8 @@ class Subject(str, Enum):
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     service: str
+    version: str = Field("0.0.0", description="Semantic version of the running build.")
+    git_sha: str = Field("unknown", description="Commit the running image was built from.")
 
 
 class ReadyResponse(BaseModel):

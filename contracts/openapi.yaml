@@ -78,7 +78,14 @@ paths:
 
         tokens, then a final
 
-        `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.'
+        `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
+
+
+        Admission-controlled on the student''s session so the classroom demo (30 phones, 2 engine
+
+        slots) queues gracefully with a ''you''re next'' message instead of piling unbounded
+
+        concurrent streams onto the engine — the exact path production traffic takes.'
       operationId: chat_stream_v1_chat_stream_post
       requestBody:
         content:
@@ -1304,6 +1311,16 @@ components:
         service:
           type: string
           title: Service
+        version:
+          type: string
+          title: Version
+          description: Semantic version of the running build.
+          default: 0.0.0
+        git_sha:
+          type: string
+          title: Git Sha
+          description: Commit the running image was built from.
+          default: unknown
       type: object
       required:
       - service

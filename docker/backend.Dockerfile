@@ -93,5 +93,12 @@ ENV MUTA_RT_MODEL_DIR=/app/models \
     MUTA_RT_LLAMA_SERVER_BIN=/app/runtime/build/bin/llama-server \
     TUTOR_ROOT=/app
 
+# Build identity — stamped so a deployed box reports its version + commit at /v1/health.
+# Pass at build time: docker build --build-arg MUTA_GIT_SHA=$(git rev-parse --short HEAD)
+ARG MUTA_VERSION=0.1.0
+ARG MUTA_GIT_SHA=unknown
+ENV MUTA_VERSION=${MUTA_VERSION} \
+    MUTA_GIT_SHA=${MUTA_GIT_SHA}
+
 EXPOSE 8000
 CMD ["python3.10", "-m", "uvicorn", "orchestrator.main:app", "--host", "0.0.0.0", "--port", "8000"]

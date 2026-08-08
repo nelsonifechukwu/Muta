@@ -105,7 +105,18 @@ PUBLIC_PATHS = [
 def test_health_ok():
     r = client.get("/v1/health")
     assert r.status_code == 200
-    assert r.json()["status"] == "ok"
+    body = r.json()
+    assert body["status"] == "ok"
+    # Build identity so a deployed box can report what it runs.
+    assert body["version"] and body["git_sha"]
+
+
+def test_request_id_is_echoed_or_minted():
+    # An inbound correlation id is reflected; otherwise the server mints one.
+    r = client.get("/v1/health", headers={"X-Request-ID": "abc-123"})
+    assert r.headers.get("X-Request-ID") == "abc-123"
+    r2 = client.get("/v1/health")
+    assert r2.headers.get("X-Request-ID")
 
 
 def test_ready_shape():

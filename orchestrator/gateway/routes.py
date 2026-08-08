@@ -138,7 +138,9 @@ def _handle_engine_error(exc: httpx.HTTPError, *, where: str) -> HTTPException:
 
 @router.get("/health", response_model=HealthResponse, tags=["ops"])
 def health() -> HealthResponse:
-    return HealthResponse(service="gateway")
+    from orchestrator.version import git_sha, version
+
+    return HealthResponse(service="gateway", version=version(), git_sha=git_sha())
 
 
 @router.get("/ready", response_model=ReadyResponse, tags=["ops"])
@@ -301,14 +303,28 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
     tags=["tutor"],
     responses={200: {"content": {"text/event-stream": {}}, "description": "SSE token stream"}},
 )
-def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> StreamingResponse:
+def chat_stream(
+    req: ChatRequest,
+    engine: ChatEngine = Depends(get_engine),
+    sessions: SessionManager = Depends(get_sessions),
+    ladder: DegradationLadder = Depends(get_ladder),
+) -> StreamingResponse:
     """Token-streaming twin of `/chat` — the browser UI's primary path.
 
     Emits Server-Sent Events: a leading `{"conversation_id": "..."}`, then
     `{"reasoning": "..."}` for Qwen3 thinking tokens and `{"delta": "..."}` for answer
     tokens, then a final
     `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
+
+    Admission-controlled on the student's session so the classroom demo (30 phones, 2 engine
+    slots) queues gracefully with a 'you're next' message instead of piling unbounded
+    concurrent streams onto the engine — the exact path production traffic takes.
     """
+    state = ladder.evaluate()
+    decision = sessions.acquire(req.student_id)
+    if decision.admission is Admission.REFUSED:
+        raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
+
     # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
     # the ungrounded request must stay byte-identical to what the tutor already serves.
     sources: list[dict] = []
@@ -339,21 +355,27 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
         rag_block=rag_block,
     )
 
-    cid, user_message_id, events = engine.stream_events_chat(
-        student_id=req.student_id,
-        message=req.message,
-        conversation_id=req.conversation_id,
-        system_prompt=system_prompt,
-        mode=req.mode.value,
-        persona=req.persona.value,
-        subject=req.subject.value,
-        language=req.language,
-        title=req.message[:80],
-        # §6.5 sampling profiles apply to the UI's primary path too — without them the
-        # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
-        # student holding a slot indefinitely, and with thinking on it filled the context).
-        **params_for_mode(req.mode.value),
-    )
+    try:
+        cid, user_message_id, events = engine.stream_events_chat(
+            student_id=req.student_id,
+            message=req.message,
+            conversation_id=req.conversation_id,
+            system_prompt=system_prompt,
+            mode=req.mode.value,
+            persona=req.persona.value,
+            subject=req.subject.value,
+            language=req.language,
+            title=req.message[:80],
+            # §6.5 sampling profiles apply to the UI's primary path too — without them the
+            # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
+            # student holding a slot indefinitely, and with thinking on it filled the context).
+            **params_for_mode(req.mode.value),
+        )
+    except Exception:
+        # The slot is released in the SSE generator's finally, which only runs once streaming
+        # starts. A failure before that (store down, bad prompt) must free the lane here.
+        sessions.release(req.student_id)
+        raise
     if req.attachment_ids:
         _link_attachments(engine, req.attachment_ids, cid, user_message_id)
 
@@ -391,6 +413,7 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
             # instead of waiting for GC after a client disconnect, which could stall every
             # other stream and let an abandoned llama-server slot stay busy. Idempotent.
             _close_events(events)
+            sessions.release(req.student_id)  # free the admission slot for the next student
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
         # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
         # reads close to the engine's own generation rate rather than being dragged down by a
@@ -432,6 +455,11 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                 # null otherwise; check_note carries a friendly caution on a contradiction.
                 "verified": verified,
                 "check_note": check_note,
+                # Admission/degradation state, so the UI can show "you're next" and a
+                # reduced-capacity notice under classroom load.
+                "queued": decision.admission is Admission.QUEUED,
+                "queue_position": decision.queue_position,
+                "degradation_level": f"L{int(state.level)}",
             }
         ) + "\n\n"
 

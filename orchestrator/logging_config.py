@@ -16,7 +16,9 @@ from __future__ import annotations
 import logging
 import os
 
-_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+from orchestrator.request_context import RequestIdFilter
+
+_FORMAT = "%(asctime)s %(levelname)-7s [%(request_id)s] %(name)s: %(message)s"
 _DATEFMT = "%Y-%m-%dT%H:%M:%S%z"
 _configured = False
 
@@ -38,6 +40,7 @@ def configure_logging(*, force: bool = False) -> None:
         root.removeHandler(h)
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(_FORMAT, datefmt=_DATEFMT))
+    handler.addFilter(RequestIdFilter())  # stamps %(request_id)s onto every record
     root.addHandler(handler)
 
     # The muta namespace follows the root level explicitly, so a stray library that raised the

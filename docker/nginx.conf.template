@@ -39,6 +39,9 @@ server {
         # WS when upgrading, plain keepalive otherwise (the map above).
         proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
+        # Correlation id: reuse an inbound one or let nginx mint $request_id, and pass it to
+        # the gateway so one turn is traceable browser → nginx → gateway (orchestrator logs).
+        proxy_set_header X-Request-ID $request_id;
         # SSE: flush frames through instead of buffering a "complete" response.
         proxy_buffering off;
         proxy_cache off;
