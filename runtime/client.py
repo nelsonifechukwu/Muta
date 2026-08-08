@@ -41,21 +41,29 @@ class InferenceClient:
         model: str = "qwen3-0.6b",
         enable_thinking: bool = False,
         timeout: float = 120.0,
+        api_key: str | None = None,
+        template_kwargs: bool = True,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.enable_thinking = enable_thinking
         self.timeout = timeout
+        # The same client speaks to llama-server (no key, jinja template switch) and to
+        # cloud OpenAI-compatible endpoints (bearer key; strict providers 400 on unknown
+        # fields, so template_kwargs=False drops the llama-server-only field).
+        self._headers = {"authorization": f"Bearer {api_key}"} if api_key else {}
+        self.template_kwargs = template_kwargs
 
     def _payload(self, messages: list[Message], stream: bool, **params) -> dict:
         payload = {
             "model": self.model,
             "messages": messages,
             "stream": stream,
-            # Qwen3 hybrid-reasoning switch; honoured by llama-server when --jinja is set.
-            "chat_template_kwargs": {"enable_thinking": self.enable_thinking},
             **params,
         }
+        if self.template_kwargs:
+            # Qwen3 hybrid-reasoning switch; honoured by llama-server when --jinja is set.
+            payload["chat_template_kwargs"] = {"enable_thinking": self.enable_thinking}
         return payload
 
     def chat(self, messages: list[Message], **params) -> str:
@@ -66,7 +74,12 @@ class InferenceClient:
         """Non-streaming completion → reply plus token counts and generation rate."""
         url = f"{self.base_url}/v1/chat/completions"
         started = time.monotonic()
-        r = httpx.post(url, json=self._payload(messages, False, **params), timeout=self.timeout)
+        r = httpx.post(
+            url,
+            json=self._payload(messages, False, **params),
+            timeout=self.timeout,
+            headers=self._headers,
+        )
         r.raise_for_status()
         elapsed = time.monotonic() - started
         body = r.json()
@@ -115,7 +128,11 @@ class InferenceClient:
         """
         url = f"{self.base_url}/v1/chat/completions"
         with httpx.stream(
-            "POST", url, json=self._payload(messages, True, **params), timeout=self.timeout
+            "POST",
+            url,
+            json=self._payload(messages, True, **params),
+            timeout=self.timeout,
+            headers=self._headers,
         ) as r:
             r.raise_for_status()
             for line in r.iter_lines():
