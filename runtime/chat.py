@@ -59,6 +59,17 @@ class ChatEngine:
         messages.append({"role": "user", "content": message})
         return messages
 
+    def _assemble_history(self, conversation_id: str, system_prompt: str | None) -> list[Message]:
+        """Prompt for regeneration: system + existing history, with NO new user turn appended.
+        The last stored message is already the user's turn, so this re-answers it — used by
+        'answer now', which re-runs the in-flight turn without duplicating the question."""
+        history = self.store.get_messages(conversation_id, limit=self.max_history_messages)
+        messages: list[Message] = [
+            {"role": "system", "content": system_prompt or self.default_system_prompt}
+        ]
+        messages += [{"role": m["role"], "content": m["content"]} for m in history]
+        return messages
+
     def chat(
         self,
         student_id: str,
@@ -138,17 +149,25 @@ class ChatEngine:
         subject: str | None = None,
         language: str | None = None,
         title: str | None = None,
+        regenerate: bool = False,
         **params,
-    ) -> tuple[str, int, Iterator[tuple[str, str]]]:
+    ) -> tuple[str, int | None, Iterator[tuple[str, str]]]:
         """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
         can render Qwen3 thinking as it happens. Only the answer content is persisted — the
-        chain of thought is ephemeral, matching the non-streaming path which stores `content`."""
+        chain of thought is ephemeral, matching the non-streaming path which stores `content`.
+
+        With ``regenerate`` the last stored user turn is re-answered and NO new user message is
+        added (the 'answer now' path re-runs the in-flight turn without the thinking phase)."""
         cid = self._open(
             student_id, conversation_id,
             mode=mode, persona=persona, subject=subject, language=language, title=title,
         )
-        messages = self._assemble(cid, system_prompt, message)
-        user_message_id = self.store.add_message(cid, "user", message)
+        if regenerate:
+            messages = self._assemble_history(cid, system_prompt)
+            user_message_id = None
+        else:
+            messages = self._assemble(cid, system_prompt, message)
+            user_message_id = self.store.add_message(cid, "user", message)
 
         def _gen() -> Iterator[tuple[str, str]]:
             chunks: list[str] = []

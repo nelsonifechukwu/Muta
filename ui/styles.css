@@ -175,30 +175,93 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 
 details.thinking {
-  border: 1px dashed var(--border); border-radius: 10px;
-  padding: 6px 12px; margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 7px 12px; margin-bottom: 10px;
   color: var(--muted); font-size: 0.85rem;
   font-family: var(--sans);
+  background: color-mix(in srgb, var(--card) 60%, var(--bg));
+  animation: think-appear 0.28s ease both;
 }
-details.thinking summary { cursor: pointer; user-select: none; }
+@keyframes think-appear {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  details.thinking, details.thinking .think-dot { animation: none; }
+}
+details.thinking summary {
+  cursor: pointer; user-select: none; list-style: none;
+  display: flex; align-items: center; gap: 8px;
+}
+details.thinking summary::-webkit-details-marker { display: none; }
+/* Pulsing indicator while thinking; a calm green check once settled. */
+.think-dot {
+  flex: none; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-strong); box-shadow: 0 0 0 0 var(--accent-soft);
+  animation: think-pulse 1.4s ease-in-out infinite;
+}
+details.thinking.settled .think-dot {
+  width: 14px; height: 14px; border-radius: 0; background: transparent; box-shadow: none;
+  animation: none;
+  -webkit-mask: no-repeat center/contain; mask: no-repeat center/contain;
+  /* a checkmark drawn with a mask, tinted via background */
+  background-color: #2f7d51;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E");
+}
+@keyframes think-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-strong) 45%, transparent); }
+  50% { box-shadow: 0 0 0 5px transparent; transform: scale(1.15); }
+}
+/* "Answer now" — a quiet pill pushed to the right of the summary. */
+.answer-now {
+  margin-left: auto; flex: none;
+  border: 1px solid var(--border); background: var(--card); color: var(--accent);
+  font: inherit; font-size: 0.74rem; font-weight: 600;
+  padding: 2px 10px; border-radius: 999px; cursor: pointer;
+}
+.answer-now:hover { background: var(--accent-soft); border-color: var(--accent); }
 /* The live line rides alongside the label while folded: one line, clipped — never
    wrapped, or a long thought would grow the collapsed block it is meant to keep small.
    Expanding shows the full trace below, so the ticker gets out of the way. */
 details.thinking .think-line {
-  /* Width reserves room for the marker + "Thinking…" so the clipped line stays BESIDE
-     the label: an inline-block that does not fit wraps as a whole box, which would make
-     the folded block two lines tall — the one thing the ticker exists to avoid. */
-  display: inline-block; vertical-align: bottom; max-width: calc(100% - 8rem);
-  margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  opacity: 0.75; font-style: italic;
+  /* One clipped line riding beside the label; flex-shrinks so the "Answer now" pill and the
+     label always stay visible on one row. */
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  opacity: 0.7; font-style: italic;
 }
-details.thinking .think-line:empty { margin-left: 0; }
 details[open].thinking .think-line { display: none; }
 details.thinking .thought {
-  white-space: pre-wrap; margin-top: 6px;
+  white-space: pre-wrap; margin-top: 8px;
   border-left: 2px solid var(--border); padding-left: 10px;
   max-height: 16rem; overflow-y: auto;
+  animation: think-appear 0.2s ease both;
 }
+
+/* --- reasoning-effort selector (composer) --------------------------------- */
+.think-select { position: relative; display: inline-flex; }
+.think-btn { width: auto; gap: 5px; padding: 6px 9px; display: inline-flex; align-items: center; }
+.think-btn .think-current { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+.think-btn svg { width: 17px; height: 17px; }
+.think-menu {
+  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 30;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12); padding: 5px; min-width: 15rem;
+  animation: think-appear 0.16s ease both;
+}
+.think-menu button {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  width: 100%; text-align: left; border: none; background: none; cursor: pointer;
+  font: inherit; color: var(--text); padding: 8px 10px; border-radius: 8px;
+}
+.think-menu button small { color: var(--muted); font-size: 0.72rem; }
+.think-menu button:hover { background: var(--accent-soft); }
+.think-menu button.active { background: var(--accent-soft); color: var(--accent); }
+.think-menu button.active::after {
+  content: "✓"; position: absolute; right: 14px; color: var(--accent); font-weight: 700;
+}
+.think-menu button { position: relative; }
 /* Streaming: a light sweep across the "Thinking…" label, Claude-style. */
 details.thinking .think-label.shimmer {
   background: linear-gradient(90deg, var(--muted) 35%, var(--text) 50%, var(--muted) 65%);

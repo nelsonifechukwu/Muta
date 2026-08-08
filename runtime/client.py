@@ -55,6 +55,9 @@ class InferenceClient:
         self.template_kwargs = template_kwargs
 
     def _payload(self, messages: list[Message], stream: bool, **params) -> dict:
+        # Per-request thinking override (the gateway maps the request's `thinking` level to
+        # this); falls back to the client default set at construction.
+        enable_thinking = params.pop("enable_thinking", self.enable_thinking)
         payload = {
             "model": self.model,
             "messages": messages,
@@ -63,7 +66,7 @@ class InferenceClient:
         }
         if self.template_kwargs:
             # Qwen3 hybrid-reasoning switch; honoured by llama-server when --jinja is set.
-            payload["chat_template_kwargs"] = {"enable_thinking": self.enable_thinking}
+            payload["chat_template_kwargs"] = {"enable_thinking": enable_thinking}
         return payload
 
     def chat(self, messages: list[Message], **params) -> str:

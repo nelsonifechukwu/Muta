@@ -41,6 +41,10 @@ let messageQueue = []; // {typed, attachments} — sent one by one when the tuto
 let currentAbort = null; // AbortController while a *chat* stream runs (voice has its own barge)
 let telemetrySource = null;
 let telemetryCloseTimer = null;
+// Reasoning effort for new turns: "off" (direct answer) | "auto" (think first) | "extended".
+let thinkingLevel = localStorage.getItem("muta-thinking") || "auto";
+let currentItem = null; // the item the active stream is answering (for "Answer now")
+let pendingRegen = null; // set by "Answer now": re-dispatch this item with thinking off
 
 const $ = (sel) => document.querySelector(sel);
 const messagesEl = $("#messages");
@@ -172,7 +176,7 @@ function addUserMessage(text, attachments = []) {
   scrollToBottom();
 }
 
-function beginAssistantMessage() {
+function beginAssistantMessage(onAnswerNow) {
   hideEmptyState();
   const wrap = document.createElement("div");
   wrap.className = "msg assistant";
@@ -181,12 +185,27 @@ function beginAssistantMessage() {
   thinking.className = "thinking";
   thinking.hidden = true;
   const summary = document.createElement("summary");
+  const dot = document.createElement("span");
+  dot.className = "think-dot"; // pulsing while thinking, becomes a check when settled
   const label = document.createElement("span");
   label.className = "think-label";
-  label.textContent = "Thinking…";
+  label.textContent = "Thinking";
   const liveLine = document.createElement("span");
   liveLine.className = "think-line";
-  summary.append(label, liveLine);
+  // "Answer now" — skip the thinking and get a direct answer. Lives in the summary but must
+  // not toggle the <details>, so it swallows the click.
+  const answerNowBtn = document.createElement("button");
+  answerNowBtn.type = "button";
+  answerNowBtn.className = "answer-now";
+  answerNowBtn.textContent = "Answer now";
+  answerNowBtn.hidden = true;
+  answerNowBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    answerNowBtn.hidden = true;
+    if (onAnswerNow) onAnswerNow();
+  });
+  summary.append(dot, label, liveLine, answerNowBtn);
   const thought = document.createElement("div");
   thought.className = "thought";
   thinking.append(summary, thought);
@@ -245,11 +264,13 @@ function beginAssistantMessage() {
   // so a long reasoning pass never pushes the conversation off screen. The whole trace
   // is one click away (the <details> body), and settles to "Thought for Ns".
   const settleThinking = () => {
+    answerNowBtn.hidden = true;
     if (!thinkStartedAt || thinkSettled) return;
     thinkSettled = true;
     const s = Math.max(1, Math.round((performance.now() - thinkStartedAt) / 1000));
     label.textContent = s < 60 ? `Thought for ${s}s` : `Thought for ${Math.floor(s / 60)}m ${s % 60}s`;
     label.classList.remove("shimmer");
+    thinking.classList.add("settled"); // dot → check, stop the pulse
     liveLine.textContent = ""; // the trace is the expandable body now, not a ticker
   };
 
@@ -259,6 +280,7 @@ function beginAssistantMessage() {
         thinkStartedAt = performance.now();
         thinking.hidden = false;
         label.classList.add("shimmer");
+        if (onAnswerNow) answerNowBtn.hidden = false; // offer the skip only while thinking
       }
       thought_ += t;
       thought.textContent = thought_;
@@ -281,6 +303,10 @@ function beginAssistantMessage() {
       if (full.trim()) renderMarkdown(prose, full);
       clearCursor(prose);
       scrollToBottom();
+    },
+    remove() {
+      cancelRender();
+      wrap.remove();
     },
     fail(message) {
       settleThinking();
@@ -619,6 +645,8 @@ window.addEventListener("blur", hideDropHint);
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     hideDropHint();
+    const menu = $("#think-menu");
+    if (menu && !menu.hidden) return openThinkMenu(false); // close the menu before stopping
     stopGeneration(); // no-op unless a chat stream is running
   }
 });
@@ -722,12 +750,24 @@ function send(steer = false) {
   dispatch(item);
 }
 
-async function dispatch(item) {
+async function dispatch(item, opts = {}) {
+  const { regenerate = false, thinking = thinkingLevel } = opts;
   const message = composeOutgoingMessage(item.typed, item.attachments);
   const attachmentIds = item.attachments.map((a) => a.id).filter((id) => id != null);
 
-  addUserMessage(item.typed || "(from my image)", item.attachments);
-  const assistant = beginAssistantMessage();
+  // A regenerate ("answer now") re-answers the turn already on screen, so it neither adds a
+  // new user bubble nor re-links attachments — the backend re-runs the last user turn.
+  if (!regenerate) addUserMessage(item.typed || "(from my image)", item.attachments);
+  // "Answer now" is offered while the tutor is thinking: it cancels this stream and asks for
+  // a direct answer to the same question. Not offered on a regenerate (it is already the
+  // direct answer — thinking is off — so it can't loop).
+  const assistant = beginAssistantMessage(
+    regenerate ? null : () => {
+      pendingRegen = item;
+      stopGeneration();
+    },
+  );
+  currentItem = item;
   generating = true;
   currentAbort = new AbortController();
   syncComposerState();
@@ -740,8 +780,10 @@ async function dispatch(item) {
         student_id: studentId,
         message,
         conversation_id: conversationId,
-        attachment_ids: attachmentIds,
+        attachment_ids: regenerate ? [] : attachmentIds,
         use_web: useWeb,
+        thinking,
+        regenerate,
       }),
       signal: currentAbort.signal,
     });
@@ -753,19 +795,28 @@ async function dispatch(item) {
     await pumpSse(res, assistant);
   } catch (err) {
     if (err && err.name === "AbortError") {
-      // Deliberate stop, not a failure. The backend persists the partial reply on
-      // disconnect, so what is on screen is what history will replay.
-      assistant.fail("Stopped.");
+      // A deliberate stop. If it was "Answer now", the finally re-dispatches — don't flash a
+      // "Stopped" first; just drop this bubble. Otherwise the partial reply is saved as-is.
+      if (pendingRegen) assistant.remove();
+      else assistant.fail("Stopped.");
     } else {
       assistant.fail("Lost the connection mid-answer — the partial reply is saved.");
     }
   } finally {
     generating = false;
     currentAbort = null;
+    currentItem = null;
     syncComposerState();
     closeTelemetry();
     refreshSidebar();
-    drainQueue(); // steering: a stop followed by a queued correction sends it immediately
+    if (pendingRegen) {
+      // "Answer now": re-answer the same turn directly, no thinking, no duplicate question.
+      const again = pendingRegen;
+      pendingRegen = null;
+      dispatch(again, { regenerate: true, thinking: "off" });
+    } else {
+      drainQueue(); // steering: a stop followed by a queued correction sends it immediately
+    }
   }
 }
 
@@ -928,6 +979,40 @@ if (menuToggle) {
 // Mint the bearer token (signed-mode servers), then load the sidebar. In default mode the
 // token already equals the student id, so a failed/slow mint never blocks startup.
 ensureAuth().then(refreshSidebar);
+
+// --- thinking-level selector ------------------------------------------------------------
+const THINK_LABELS = { off: "Instant", auto: "Thinking", extended: "Extended" };
+const thinkBtn = $("#btn-think");
+const thinkMenu = $("#think-menu");
+const thinkCurrent = $("#think-current");
+function applyThinkingLabel() {
+  thinkCurrent.textContent = THINK_LABELS[thinkingLevel] || "Thinking";
+  thinkMenu.querySelectorAll("[data-level]").forEach((b) => {
+    b.setAttribute("aria-checked", String(b.dataset.level === thinkingLevel));
+    b.classList.toggle("active", b.dataset.level === thinkingLevel);
+  });
+}
+function openThinkMenu(open) {
+  thinkMenu.hidden = !open;
+  thinkBtn.setAttribute("aria-expanded", String(open));
+}
+thinkBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  openThinkMenu(thinkMenu.hidden);
+});
+thinkMenu.querySelectorAll("[data-level]").forEach((b) => {
+  b.addEventListener("click", () => {
+    thinkingLevel = b.dataset.level;
+    localStorage.setItem("muta-thinking", thinkingLevel);
+    applyThinkingLabel();
+    openThinkMenu(false);
+    toast(`Reasoning: ${THINK_LABELS[thinkingLevel]}.`, 2000);
+  });
+});
+document.addEventListener("click", (e) => {
+  if (!thinkMenu.hidden && !e.target.closest(".think-select")) openThinkMenu(false);
+});
+applyThinkingLabel();
 
 // --- web grounding toggle ---------------------------------------------------------------
 let useWeb = false;

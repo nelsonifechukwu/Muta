@@ -204,6 +204,26 @@ def _touch_twin(student_id: str, subject: str, message: str) -> None:
         log.warning("twin update failed for %s", student_id, exc_info=True)
 
 
+#: Extended thinking gives the answer more room; the reasoning budget itself is a launch flag
+#: (docs/engine-flags.md), so 'extended' buys a fuller answer rather than a deeper trace.
+_EXTENDED_MAX_TOKENS = 3000
+
+
+def _apply_thinking(params: dict, thinking: str | None) -> dict:
+    """Fold the request's thinking level into the sampling params the engine receives. `off`
+    disables the Qwen3 thinking phase (a direct, faster answer); `extended` keeps it on and
+    widens the token budget; `auto`/None leave the server default. Per-request enable_thinking
+    is honoured by runtime.client._payload."""
+    if thinking == "off":
+        params["enable_thinking"] = False
+    elif thinking == "auto":
+        params["enable_thinking"] = True
+    elif thinking == "extended":
+        params["enable_thinking"] = True
+        params["max_tokens"] = max(int(params.get("max_tokens") or 0), _EXTENDED_MAX_TOKENS)
+    return params
+
+
 def _rag_block(query: str, *, k: int = 4) -> str:
     """Retrieved syllabus chunks for a query, rendered as a delimited reference block — or ""
     when RAG is not available (no index staged, embed server down). Degradation is the design:
@@ -278,7 +298,7 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             subject=req.subject.value,
             language=req.language,
             title=req.message[:80],
-            **params_for_mode(req.mode.value),
+            **_apply_thinking(params_for_mode(req.mode.value), req.thinking),
         )
     except httpx.HTTPError as e:
         raise _handle_engine_error(e, where="/chat") from e
@@ -369,10 +389,11 @@ def chat_stream(
             subject=req.subject.value,
             language=req.language,
             title=req.message[:80],
+            regenerate=req.regenerate,  # 'answer now' re-runs this turn without a new user msg
             # §6.5 sampling profiles apply to the UI's primary path too — without them the
             # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
             # student holding a slot indefinitely, and with thinking on it filled the context).
-            **params_for_mode(req.mode.value),
+            **_apply_thinking(params_for_mode(req.mode.value), req.thinking),
         )
     except Exception:
         # The slot is released in the SSE generator's finally, which only runs once streaming

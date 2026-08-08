@@ -81,6 +81,21 @@ class ChatRequest(BaseModel):
     stream: bool = Field(
         False, description="When true the server replies with an SSE token stream instead."
     )
+    thinking: Literal["off", "auto", "extended"] | None = Field(
+        None,
+        description=(
+            "Reasoning effort for this turn: 'off' answers directly (no thinking, fastest), "
+            "'auto' thinks first (default behaviour), 'extended' thinks and gives a fuller "
+            "answer. Null uses the server default."
+        ),
+    )
+    regenerate: bool = Field(
+        False,
+        description=(
+            "Re-answer the current last user turn WITHOUT adding a new user message. Used by "
+            "'answer now' to replace an in-flight reply (e.g. skip the thinking phase)."
+        ),
+    )
     use_web: bool = Field(
         False,
         description=(

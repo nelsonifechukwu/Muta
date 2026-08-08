@@ -155,3 +155,23 @@ def test_stream_chat_skips_empty_assistant_message_when_nothing_streamed(store):
         next(gen)
     msgs = store.get_messages(cid)
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi")]
+
+
+def test_regenerate_reanswers_the_last_user_turn_without_adding_one(store):
+    # 'answer now' scenario: the user turn is already persisted (the in-flight reply was
+    # thinking-only, so nothing assistant-side was saved), and we re-answer it thinking-off.
+    engine, store = _stream_engine(store, ["4"])
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "what is 2+2?")
+
+    cid2, mid, gen = engine.stream_events_chat(
+        "s1", "what is 2+2?", conversation_id=cid, regenerate=True
+    )
+    assert cid2 == cid
+    assert mid is None  # no new user message row
+    assert "".join(t for _k, t in gen) == "4"
+
+    msgs = store.get_messages(cid)
+    assert [m["role"] for m in msgs] == ["user", "assistant"]  # NOT a duplicated user turn
+    # The prompt the client saw was history-only: it ended with the existing user turn.
+    assert engine.client.seen[-1][-1] == {"role": "user", "content": "what is 2+2?"}
