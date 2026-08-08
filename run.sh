@@ -23,15 +23,17 @@ die()  { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
     cat <<'EOF'
-Usage: ./run.sh [--native] [--cpu] [--build] [--model PATH] | plan | down | logs
+Usage: ./run.sh [--native] [--gpu|--cpu] [--build] [--model PATH] | plan | down | logs
 
   (no args)   docker mode (default): bring up db + backend + frontend, print the UI URL
   --native    dev mode: db + frontend stay in docker; the gateway and an arm64
               llama-server run on THIS host in the foreground (Ctrl-C stops them;
               './run.sh down' stops the containers). No slow amd64 emulation.
-              On Apple Silicon this offloads to Metal (all layers) unless --cpu is
-              given or MUTA_RT_N_GPU_LAYERS is already set. See docs/gpu.md.
-  --cpu       force CPU everywhere (no Metal offload, no GPU suggestions)
+              Native CPU is the ~10x-over-emulation path of record; --gpu adds Metal
+              offload, which measured NEUTRAL for Qwen3.5-4B (docs/gpu.md).
+  --gpu       native mode: export MUTA_RT_N_GPU_LAYERS=all (Metal). Experimental —
+              measured no faster than native CPU for the default model at this pin.
+  --cpu       force CPU everywhere (suppresses GPU detection and suggestions)
   --build     force a clean (no-cache) image rebuild first (docker images only)
   --model P   core GGUF to serve (default models/core/Qwen3.5-4B-IQ4_XS.gguf). A
               non-default model must already exist (fetch/quantize it first — e.g.
@@ -139,12 +141,14 @@ native_up() {
     export MUTA_RT_SPEC_TYPE=none
     export MUTA_RT_STARTUP_TIMEOUT_S=300
     export TUTOR_ROOT="$PWD"
-    # Metal offload unless the user pinned layers or forced CPU. At b10035 -ngl defaults
-    # to auto, but RuntimeConfig pins 0 — "all" is the deliberate opt-in.
-    if [ "${FORCE_CPU:-0}" != 1 ] && [ -z "${MUTA_RT_N_GPU_LAYERS:-}" ] \
+    # Metal is opt-in (--gpu), NOT the native default: measured 2026-08-08 (RESULTS.md,
+    # bare-engine A/B), -ngl all is neutral-to-slightly-negative for the hybrid
+    # Qwen3.5-4B at this pin — layers assign to MTL0 but decode doesn't move. Native
+    # CPU is already the ~10x-over-emulation win; don't default to a measured no-op.
+    if [ "${GPU_OPT:-0}" = 1 ] && [ -z "${MUTA_RT_N_GPU_LAYERS:-}" ] \
         && [ "$(detect_gpu)" = metal-native ]; then
         export MUTA_RT_N_GPU_LAYERS=all
-        info "Metal: offloading all layers (MUTA_RT_N_GPU_LAYERS=all; --cpu to disable)"
+        info "Metal: offloading all layers (measured neutral for Qwen3.5-4B — see docs/gpu.md)"
     fi
     # No MUTA_RT_N_THREADS here — but not because the engine default wins: RuntimeConfig
     # now derives P-core-pinned threads on Apple silicon itself (runtime/config.py,
@@ -155,12 +159,14 @@ native_up() {
 MODE=docker
 NO_CACHE=0
 FORCE_CPU=0
+GPU_OPT=0
 DEFAULT_MODEL="models/core/Qwen3.5-4B-IQ4_XS.gguf"
 MODEL="$DEFAULT_MODEL"
 while [ $# -gt 0 ]; do
     case "$1" in
         --native)   MODE=native ;;
         --cpu)      FORCE_CPU=1 ;;
+        --gpu)      GPU_OPT=1 ;;
         plan)       MODE=plan ;;
         --build)    NO_CACHE=1 ;;
         --model)    [ $# -ge 2 ] || die "--model needs a path  (try --help)"
@@ -222,7 +228,7 @@ mkdir -p models
 if [ "$MODE" = docker ]; then
     gpu_hint=$(detect_gpu)
     if [ "$gpu_hint" = metal-native ]; then
-        warn "emulated x86 on Apple Silicon: './run.sh --native' uses Metal and is ~10x faster"
+        warn "emulated x86 on Apple Silicon: './run.sh --native' runs the arm64 engine natively — ~10x faster (measured, RESULTS.md 2026-08-08)"
     elif [ "$gpu_hint" = cuda-available ]; then
         warn "NVIDIA GPU detected: see docs/gpu.md for the CUDA backend variant"
     fi

@@ -21,21 +21,26 @@ engine's own `-ngl` vocabulary at the b10035 pin). Two things worth knowing:
 - The flag is inert on a CPU-only build (the container's AVX2 engine has no GPU backend),
   so it is always present and always safe.
 
-## Metal (Apple Silicon) — supported today
+## Apple Silicon — native mode is the accelerator; Metal measured neutral
 
-Docker on macOS has no GPU passthrough, so Metal means **native mode**:
+Docker on macOS has no GPU passthrough, so GPU experiments mean **native mode**:
 
 ```sh
-./run.sh --native        # db + frontend in docker; gateway + Metal llama-server on host
-./run.sh --native --cpu  # same, forced CPU (measurement baselines)
+./run.sh --native        # the ~10x path: arm64 engine on the host, CPU
+./run.sh --native --gpu  # + Metal offload (experimental; see the measurement below)
 ```
 
-Native mode auto-exports `MUTA_RT_N_GPU_LAYERS=all` on Darwin/arm64 unless you set the
-variable yourself or pass `--cpu`. The pinned b10035 `macos-arm64` release that
-`run.sh` fetches into `runtime/build/bin/` ships with Metal (`libggml-metal`); the
-`llama-server` on PATH at `/usr/local/bin` is an unpinned x86 build — never use it for
-numbers. Both CORE-TEXT and CORE-VISION offload; measured results live in RESULTS.md
-(`native` context).
+**Measured 2026-08-08** (RESULTS.md, `native` context, M2 Pro, bare-engine A/B on
+Qwen3.5-4B-IQ4_XS at b10035): `-ngl all` assigns all layers to `MTL0` (verified at
+`-lv 5`) yet decode is 19–20 tok/s vs CPU's 20–21, prefill even — **neutral to slightly
+negative**, most plausibly the hybrid model's recurrent-scan ops falling back per-op.
+That is why `--gpu` is an explicit experiment flag, not the native default: the real
+speedup is native-vs-emulation itself (~87 vs ~7.6 prefill tok/s, ~20 vs ~5.3 decode).
+Re-test when the engine pin moves or the core model stops being a hybrid.
+
+The pinned b10035 `macos-arm64` release that `run.sh` fetches into `runtime/build/bin/`
+ships with Metal (`libggml-metal`); the `llama-server` on PATH at `/usr/local/bin` is an
+unpinned x86 build — never use it for numbers.
 
 ## NVIDIA / CUDA — detected, not yet shipped
 

@@ -73,6 +73,38 @@ The ~4 min/photo cost is the emulation tax on the 1024-token floor — correctne
 the native/Metal path (approved design, `docs/plans/2026-08-08-gpu-and-internet-capabilities.md`)
 is the latency answer. 8 new unit tests cover every fix; suite 683 passed, 2 skipped.
 
+### B. GPU auto-detect lands; Metal measured NEUTRAL for the hybrid 4B — native (M2 Pro)
+
+P1 of `docs/plans/2026-08-08-gpu-and-internet-capabilities.md`: `./run.sh plan` (pure
+detection: `metal-native` / `cuda-available` / `none`), `--gpu`/`--cpu`, and an explicit
+`--n-gpu-layers` on every spawn path (`RuntimeConfig` now accepts the engine's
+`auto`/`all` vocabulary; the vision command reads `MUTA_RT_N_GPU_LAYERS`, default `0` —
+mandatory because **-ngl defaults to `auto` at this pin**, so an unpinned spawn on a
+Metal binary would offload silently).
+
+**Configuration:** pinned b10035 macos-arm64 (Metal build, `runtime/build/bin`),
+Qwen3.5-4B-IQ4_XS, bare engine command (`-c 4096`, engine defaults otherwise), quiet
+host (compose stack down), ~800-token cache-busting prompts, 128-token completions,
+runs 2–3 of 3 reported.
+
+| Config | Prefill tok/s | Decode tok/s | RSS |
+|---|---|---|---|
+| native CPU (`-ngl 0`) | 87.0–87.1 | 20.5–21.3 | ~2.5 GiB |
+| native Metal (`-ngl all`) | 74.3–86.8 | 19.4–20.4 | ~2.5 GiB |
+| docker/emulated (07-30 baseline, for scale) | 10.1–13.2 | ~5.3 | — |
+
+With the full production flag set (`--parallel 2 --kv-unified -b 512 -ub 128
+--cache-type-k q8_0`) the picture is the same: CPU 64–76 prefill / 15.1–17.7 decode,
+Metal 72–78 / 14.0–17.6.
+
+**Verdict:** `-ngl all` assigns every layer to `MTL0` (verified at `-lv 5`) yet moves
+nothing — neutral to slightly negative for this hybrid model at this pin, most plausibly
+the recurrent-scan ops falling back to CPU per-op. So `--gpu` ships as an explicit
+experiment flag, NOT the native default, and the docker-mode hint sells what is actually
+measured: **native mode itself is ~10× over emulation** (prefill 87 vs ~10, decode ~21
+vs ~5.3) — that, not Metal, is what makes the ~4 min/photo vision tax shrink toward
+seconds. Re-test on an engine-pin move or a non-hybrid core.
+
 **Also observed today, environmental:** with the host offline, `./run.sh` died on registry
 metadata even with all images/models local, and another project's arm64 pull had clobbered
 the shared `postgres:16-alpine` tag (compose wants amd64 → forced re-pull → offline →
