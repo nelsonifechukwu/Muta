@@ -144,6 +144,11 @@ services:
         condition: service_healthy
     ports:
       - "3000:80"
+      # For LAN TLS (the mic/voice loop needs a secure context off-host), also publish 443
+      # and mount certs — see docs/tls-lan.md:
+      # - "3443:443"
+    # volumes:
+    #   - ./certs:/etc/nginx/certs:ro   # rootCA.pem/fullchain.pem/privkey.pem from scripts/gen_local_tls.sh
     environment:
       # nginx proxy target for /v1. run.sh --native overrides this to
       # host.docker.internal:8000 (the host gateway); docker mode keeps the service name.
