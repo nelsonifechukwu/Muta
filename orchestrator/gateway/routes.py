@@ -251,6 +251,10 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                 "completion_tokens": n,
                 "elapsed_s": round(elapsed, 3),
                 "tokens_per_second": round(rate, 2),
+                # Student text leaving the device must never be silent (P3): the UI
+                # badges any answer a cloud backend produced.
+                "source": getattr(getattr(engine, "client", None), "last_source", None)
+                or "local",
             }
         ) + "\n\n"
 

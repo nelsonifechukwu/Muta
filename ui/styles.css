@@ -77,6 +77,10 @@ button.ghost:hover { background: var(--accent-soft); }
 /* The display rule above outranks the UA's [hidden] rule (author origin beats UA). */
 .net-dot[hidden] { display: none; }
 .net-dot.online { background: #5c9a6f; }
+.src-badge {
+  display: block; margin-top: 4px; font-size: 0.68rem; color: var(--muted);
+  font-style: italic;
+}
 
 /* --- chat column ---------------------------------------------------------- */
 #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }

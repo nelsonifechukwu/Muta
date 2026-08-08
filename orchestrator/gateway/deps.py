@@ -49,6 +49,26 @@ def get_engine() -> ChatEngine:
         enable_thinking=cfg.enable_thinking,
         timeout=cfg.request_timeout_s,
     )
+    # Cloud boost (design P3, 2026-08-08): all three vars set = enabled. Two of three is
+    # a misconfiguration, not a half-enabled cloud. The wrap only ever engages while the
+    # connectivity probe says online; every failure path lands back on the local engine.
+    cloud_url = os.environ.get("MUTA_CLOUD_URL")
+    cloud_model = os.environ.get("MUTA_CLOUD_MODEL")
+    cloud_key = os.environ.get("MUTA_CLOUD_API_KEY")
+    if cloud_url and cloud_model and cloud_key:
+        from orchestrator.gateway.connectivity import get_connectivity
+        from runtime.cloud import CloudFallbackClient
+
+        cloud = InferenceClient(
+            cloud_url,
+            model=cloud_model,
+            api_key=cloud_key,
+            template_kwargs=False,  # strict providers 400 on llama-server-only fields
+            timeout=cfg.request_timeout_s,
+        )
+        client = CloudFallbackClient(
+            cloud=cloud, local=client, online=lambda: get_connectivity().online()
+        )
     store = ConversationStore(cfg.db_url)
     return ChatEngine(client, store, max_history_messages=cfg.max_history_messages)
 

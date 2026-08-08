@@ -743,7 +743,20 @@ async function pumpSse(res, assistant) {
         if (ev.reasoning) assistant.pushThought(ev.reasoning);
         else if (ev.delta) assistant.pushDelta(ev.delta);
         else if (ev.error) assistant.fail(ev.error);
-        else if (ev.done) assistant.finalize();
+        else if (ev.done) {
+          assistant.finalize();
+          if (ev.source === "cloud") {
+            // The one thing a privacy-respecting cloud boost owes the student: saying so.
+            const msgs = messagesEl.querySelectorAll(".msg.assistant");
+            const last = msgs[msgs.length - 1];
+            if (last && !last.querySelector(".src-badge")) {
+              const badge = document.createElement("span");
+              badge.className = "src-badge";
+              badge.textContent = "answered via cloud";
+              last.appendChild(badge);
+            }
+          }
+        }
         if (!telemetryOpened && (ev.reasoning || ev.delta) && conversationId) {
           openTelemetry(conversationId);
           telemetryOpened = true;

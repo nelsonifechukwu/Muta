@@ -146,6 +146,16 @@ def test_streaming_turn_emits_reasoning_then_deltas_then_done(wired):
     assert '"done": true' in events[-1] and '"ttft_s"' in events[-1]
 
 
+def test_stream_done_reports_the_answer_source(wired):
+    """Student text leaving the device must never be silent: every done event names the
+    backend that answered. The fake engine has no client, which must read as local."""
+    r = client.post(
+        "/v1/chat/stream",
+        json={"student_id": "s1", "message": "hi", "stream": True},
+    )
+    assert '"source": "local"' in r.text.strip().splitlines()[-1]
+
+
 # --- vision -------------------------------------------------------------------------------
 
 
