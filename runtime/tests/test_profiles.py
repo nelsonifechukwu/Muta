@@ -191,6 +191,17 @@ def test_vision_forces_the_qwen_vl_image_token_floor(bundle):
     assert flag_value(argv, "--image-min-tokens") == "1024"
 
 
+def test_vision_pins_cpu_by_default(bundle):
+    """-ngl defaults to *auto* at this pin: on a Metal host an unpinned vision spawn would
+    silently offload. Explicit 0 keeps CPU paths CPU."""
+    assert flag_value(core_vision_command(bundle).argv, "--n-gpu-layers") == "0"
+
+
+def test_vision_offloads_when_the_env_says_so(bundle, monkeypatch):
+    monkeypatch.setenv("MUTA_RT_N_GPU_LAYERS", "all")
+    assert flag_value(core_vision_command(bundle).argv, "--n-gpu-layers") == "all"
+
+
 def test_vision_keeps_weights_on_the_shared_page_cache(bundle):
     """The "second instance is nearly free" claim only holds for mmap'd pages: the engine's
     default repack copies Q4-family tensors into PRIVATE anonymous buffers, so a repacked

@@ -393,6 +393,9 @@ def core_vision_command(
         # (upstream #16842); without the floor a 1280 px photo encodes to ~58 tokens and the
         # "transcription" is confident garbage. Costs prefill time, buys correctness.
         "--image-min-tokens", "1024",
+        # Explicit because -ngl defaults to *auto* at this pin: a Metal host would otherwise
+        # offload silently. run.sh native GPU mode sets the env to "all".
+        "--n-gpu-layers", os.environ.get("MUTA_RT_N_GPU_LAYERS", "0"),
         "--threads", str(plan.vision_threads),
         "--threads-http", "1",
         "--no-repack",
