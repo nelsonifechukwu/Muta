@@ -7,9 +7,27 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 
+# Security headers, applied to every response (static, proxied, and errors) via `always`.
+# Kept in one place and pulled into the server with `include` so they cannot drift between
+# locations.
+#
+# CSP notes (verified against ui/index.html + app.js):
+#   script-src 'self'      — every <script> is a vendored src=; there is NO inline JS.
+#   style-src  'unsafe-inline' — KaTeX sets inline style="" attributes on rendered math.
+#   img-src    blob: data: — image previews use URL.createObjectURL (blob:).
+#   connect-src ws: wss:   — the voice loop opens a same-origin WebSocket.
+# 'unsafe-inline' is scoped to STYLES only (cannot execute JS); scripts stay locked to self,
+# so this is the real backstop behind DOMPurify, not a rubber stamp.
+
 server {
     listen 80;
     root /usr/share/nginx/html;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "geolocation=(), camera=(), microphone=(self)" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ws: wss:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
     location /v1/ {
         # ${BACKEND_UPSTREAM} is substituted by the nginx image's envsubst entrypoint at
@@ -34,3 +52,28 @@ server {
         try_files $uri /index.html;
     }
 }
+
+# --- TLS for LAN / classroom deployment (opt-in) ---------------------------------------
+# The mic (getUserMedia) and the voice WebSocket require a SECURE CONTEXT. Browsers treat
+# http://localhost as secure but NOT http://<lan-ip>, so over the classroom LAN the flagship
+# voice loop is dead on plain :80 — every phone that is not the host machine gets the mic
+# refused. Serving :443 with a locally-trusted cert fixes it, fully offline (no public CA).
+#
+# To enable (documented in RUN.md / docs/tls-lan.md):
+#   1. Generate a local CA + server cert (e.g. mkcert, or the helper in scripts/) and mount
+#      them at /etc/nginx/certs/ (fullchain.pem + privkey.pem).
+#   2. Install the local CA on each classroom device once (the one-time trust step).
+#   3. Uncomment the block below and redeploy; keep :80 only to redirect to :443.
+#
+# server {
+#     listen 443 ssl;
+#     http2 on;
+#     server_name _;
+#     ssl_certificate     /etc/nginx/certs/fullchain.pem;
+#     ssl_certificate_key /etc/nginx/certs/privkey.pem;
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     root /usr/share/nginx/html;
+#     include /etc/nginx/snippets/muta-headers.conf;   # the add_header set above, extracted
+#     # ... same location /v1/ and location / blocks as the :80 server ...
+# }
+# server { listen 80; server_name _; return 301 https://$host$request_uri; }

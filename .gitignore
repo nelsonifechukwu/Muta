@@ -249,3 +249,4 @@ bench/.venv-profiler/
 bench/adtc-profiler/
 # generated measurement artifacts: submission.json, runs.jsonl, synthesized submission dir
 bench/.artifacts/
+backups/

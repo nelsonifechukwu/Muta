@@ -33,7 +33,13 @@ def test_lifespan_autostart_on_starts_engine_and_creates_dirs(monkeypatch, tmp_p
     monkeypatch.setenv("TUTOR_ROOT", str(tmp_path))
     started: list = []
     stopped: list = []
-    monkeypatch.setattr(main_mod, "_start_engine_thread", lambda *a, **k: started.append(a))
+
+    def _fake_start(*a, **k):
+        # The supervisor returns (thread, stop_event); the lifespan unpacks and later .set()s it.
+        started.append(a)
+        return (None, main_mod.threading.Event())
+
+    monkeypatch.setattr(main_mod, "_start_engine_thread", _fake_start)
     monkeypatch.setattr(
         main_mod.LlamaServer, "stop", lambda self: stopped.append(True), raising=True
     )

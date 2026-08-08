@@ -16,9 +16,13 @@ CSS = (UI / "styles.css").read_text()
 
 
 def _hidden_elements() -> list[tuple[str, str]]:
-    """(id, class list) for every element carrying the `hidden` attribute."""
+    """(id, class list) for every element carrying the boolean `hidden` attribute.
+
+    The `(?<![-\\w])hidden(?![-\\w=])` guard matches the standalone HTML attribute while
+    excluding `aria-hidden` (decorative SVGs legitimately carry it, and the display-override
+    invariant below does not apply to ARIA)."""
     out: list[tuple[str, str]] = []
-    for tag in re.findall(r"<[a-zA-Z][^>]*\bhidden\b[^>]*>", HTML):
+    for tag in re.findall(r"<[a-zA-Z][^>]*(?<![-\w])hidden(?![-\w=])[^>]*>", HTML):
         el_id = re.search(r'id="([^"]+)"', tag)
         classes = re.search(r'class="([^"]+)"', tag)
         out.append((el_id.group(1) if el_id else "", classes.group(1) if classes else ""))

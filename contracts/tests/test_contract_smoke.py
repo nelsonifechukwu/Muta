@@ -39,8 +39,13 @@ class _FakeStore:
     def get_conversation(self, cid):
         return self.conversations.get(cid)
 
-    def delete_conversation(self, cid):
+    def delete_conversation(self, cid, *, owner_id=None):
+        convo = self.conversations.get(cid)
+        if convo is None or (owner_id is not None and convo["student_id"] != owner_id):
+            return False
         self.deleted.append(cid)
+        self.conversations.pop(cid, None)
+        return True
 
     def list_messages(self, cid):
         return [
@@ -53,7 +58,7 @@ class _FakeStore:
             }
         ]
 
-    def get_attachment(self, aid):
+    def get_attachment(self, aid, *, owner_id=None):
         return None  # the smoke test exercises the 404 path
 
     def link_attachment(self, aid, cid, message_id):
@@ -165,18 +170,33 @@ def test_chat_returns_503_when_inference_unreachable(override_engine):
     assert r.status_code == 503
 
 
+# In dev mode (no MUTA_AUTH_SECRET) the bearer token is the student id itself.
+_AUTH_S1 = {"Authorization": "Bearer s1"}
+
+
 def test_conversations_lists_a_students_threads(override_engine):
     override_engine(_FakeEngine())
-    r = client.get("/v1/conversations", params={"student_id": "s1"})
+    r = client.get("/v1/conversations", params={"student_id": "s1"}, headers=_AUTH_S1)
     assert r.status_code == 200
     body = r.json()
     assert body["conversations"][0]["id"] == "conv-123"
     assert body["conversations"][0]["title"] == "hello"
 
 
+def test_conversations_requires_auth(override_engine):
+    override_engine(_FakeEngine())
+    assert client.get("/v1/conversations", params={"student_id": "s1"}).status_code == 401
+
+
+def test_conversations_cannot_list_another_students_threads(override_engine):
+    override_engine(_FakeEngine())
+    r = client.get("/v1/conversations", params={"student_id": "s1"}, headers={"Authorization": "Bearer mallory"})
+    assert r.status_code == 403
+
+
 def test_conversation_messages_include_attachment_refs(override_engine):
     override_engine(_FakeEngine())
-    r = client.get("/v1/conversations/conv-123/messages")
+    r = client.get("/v1/conversations/conv-123/messages", headers=_AUTH_S1)
     assert r.status_code == 200
     msg = r.json()["messages"][0]
     assert msg["attachments"] == [{"id": 7, "kind": "image", "mime": "image/png"}]
@@ -184,20 +204,49 @@ def test_conversation_messages_include_attachment_refs(override_engine):
 
 def test_conversation_messages_404_for_unknown_thread(override_engine):
     override_engine(_FakeEngine())
-    r = client.get("/v1/conversations/nope/messages")
+    r = client.get("/v1/conversations/nope/messages", headers=_AUTH_S1)
+    assert r.status_code == 404
+
+
+def test_conversation_messages_hidden_from_non_owner(override_engine):
+    # Another student's thread is a 404, not a leak of its content.
+    override_engine(_FakeEngine())
+    r = client.get(
+        "/v1/conversations/conv-123/messages", headers={"Authorization": "Bearer mallory"}
+    )
     assert r.status_code == 404
 
 
 def test_conversation_delete(override_engine):
     engine = _FakeEngine()
     override_engine(engine)
-    r = client.delete("/v1/conversations/conv-123")
+    r = client.delete("/v1/conversations/conv-123", headers=_AUTH_S1)
     assert r.status_code == 200
     assert r.json() == {"id": "conv-123", "deleted": True}
     assert engine.store.deleted == ["conv-123"]
 
 
+def test_conversation_delete_by_non_owner_is_404_not_a_silent_success(override_engine):
+    engine = _FakeEngine()
+    override_engine(engine)
+    r = client.delete("/v1/conversations/conv-123", headers={"Authorization": "Bearer mallory"})
+    assert r.status_code == 404
+    assert engine.store.deleted == []  # nothing was destroyed
+
+
+def test_attachment_requires_auth(override_engine):
+    override_engine(_FakeEngine())
+    assert client.get("/v1/attachments/999").status_code == 401
+
+
 def test_attachment_404_for_unknown_id(override_engine):
     override_engine(_FakeEngine())
-    r = client.get("/v1/attachments/999")
+    r = client.get("/v1/attachments/999", headers=_AUTH_S1)
     assert r.status_code == 404
+
+
+def test_attachment_token_accepted_as_query_param(override_engine):
+    # An <img>/download link cannot set headers, so ?token= must also authenticate.
+    override_engine(_FakeEngine())
+    r = client.get("/v1/attachments/999", params={"token": "s1"})
+    assert r.status_code == 404  # authenticated (not 401), then not found

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import time
@@ -23,6 +24,8 @@ from contracts.models import (
     AnswerCheckRequest,
     AnswerCheckResponse,
     AttachmentRef,
+    AuthTokenRequest,
+    AuthTokenResponse,
     ChatRequest,
     ChatResponse,
     ChatTurn,
@@ -41,6 +44,7 @@ from contracts.models import (
     RenderRequest,
     RenderResponse,
     SessionActionResponse,
+    StudentErased,
     Subject,
     SystemStatus,
     TelemetrySnapshot,
@@ -51,6 +55,7 @@ from contracts.models import (
     VisionReply,
 )
 from orchestrator import bench_metrics
+from orchestrator.gateway.auth import caller_from_token, mint_token, require_caller
 from orchestrator.gateway.deps import (
     get_engine,
     get_ladder,
@@ -78,12 +83,54 @@ from runtime.vision_client import VisionClient, VisionResponseError
 
 router = APIRouter()
 
+log = logging.getLogger("muta.gateway.routes")
+
 # SSE through a proxy: no caching, and tell nginx not to buffer the stream.
 _SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+# Serve stored attachments as inert downloads: never let a browser MIME-sniff or render bytes
+# a student uploaded (an audio/HTML polyglot with a client-set text/html type was a stored-XSS
+# vector). Constrain the served type to a known-safe allowlist, too.
+_ATTACHMENT_HEADERS = {"X-Content-Type-Options": "nosniff", "Content-Disposition": "attachment"}
+_SAFE_ATTACHMENT_MIME = {
+    "image/jpeg", "image/png", "image/webp",
+    "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav",
+}
 
 
 def _todo(what: str) -> HTTPException:
     return HTTPException(status_code=501, detail=f"{what} not implemented")
+
+
+def _close_events(events) -> None:
+    """Deterministically close the engine's event generator so its finally (partial-reply
+    persist) runs on this thread, now — not via GC after a client disconnect. A no-op for a
+    plain iterator (e.g. a test double), which holds nothing to release."""
+    close = getattr(events, "close", None)
+    if close is not None:
+        close()
+
+
+def _engine_unreachable() -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail="the tutor is starting up or busy — give it a moment and try again",
+    )
+
+
+def _handle_engine_error(exc: httpx.HTTPError, *, where: str) -> HTTPException:
+    """Map any llama-server failure to a friendly, student-safe 503 — and record the real
+    cause server-side so an operator can diagnose it. A 400 is almost always context overflow
+    (a long conversation), which the student can act on; transport errors mean the engine is
+    down or slow."""
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 400:
+        log.warning("engine rejected request at %s: %s", where, exc)
+        return HTTPException(
+            status_code=503,
+            detail="this conversation got long — start a new chat and I'll keep up",
+        )
+    log.warning("engine unreachable at %s: %r", where, exc)
+    return _engine_unreachable()
 
 
 @router.get("/health", response_model=HealthResponse, tags=["ops"])
@@ -134,6 +181,7 @@ def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: 
         try:
             engine.store.link_attachment(aid, cid, message_id)
         except Exception:  # noqa: BLE001 — linking is best-effort metadata
+            log.warning("failed to link attachment %s to conversation %s", aid, cid, exc_info=True)
             continue
 
 
@@ -154,11 +202,8 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             title=req.message[:80],
             **params_for_mode(req.mode.value),
         )
-    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
-        raise HTTPException(
-            status_code=503,
-            detail="inference engine unreachable — start llama-server (see RUN.md)",
-        ) from e
+    except httpx.HTTPError as e:
+        raise _handle_engine_error(e, where="/chat") from e
     if req.attachment_ids:
         _link_attachments(engine, req.attachment_ids, result.conversation_id, result.user_message_id)
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
@@ -243,11 +288,17 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                 hub.tick(cid)  # feeds the live tok/s in the telemetry strip
                 key = "reasoning" if kind == "reasoning" else "delta"
                 yield f"data: {json.dumps({key: text})}\n\n"
-        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
-            yield f"data: {json.dumps({'error': 'inference engine unreachable'})}\n\n"
+        except httpx.HTTPError as e:
+            log.warning("engine error mid-stream at /chat/stream: %r", e)
+            yield f"data: {json.dumps({'error': 'the tutor dropped the connection — try again'})}\n\n"
             return
         finally:
             hub.end(cid)
+            # Deterministically close the source generator so its finally (partial-reply
+            # persist) runs HERE, on this threadpool thread, the moment the stream ends —
+            # instead of waiting for GC after a client disconnect, which could stall every
+            # other stream and let an abandoned llama-server slot stay busy. Idempotent.
+            _close_events(events)
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
         # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
         # reads close to the engine's own generation rate rather than being dragged down by a
@@ -286,8 +337,15 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
 
 
 @router.get("/conversations", response_model=ConversationList, tags=["conversations"])
-def conversations(student_id: str, engine: ChatEngine = Depends(get_engine)) -> ConversationList:
-    """A student's threads, most recently active first — the UI sidebar."""
+def conversations(
+    student_id: str,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> ConversationList:
+    """A student's threads, most recently active first — the UI sidebar. A caller only sees
+    their own threads; the query id must match the authenticated identity."""
+    if student_id != caller:
+        raise HTTPException(status_code=403, detail="you can only list your own conversations")
     rows = engine.store.list_conversations(student_id)
     return ConversationList(
         conversations=[
@@ -310,10 +368,14 @@ def conversations(student_id: str, engine: ChatEngine = Depends(get_engine)) -> 
     tags=["conversations"],
 )
 def conversation_messages(
-    conversation_id: str, engine: ChatEngine = Depends(get_engine)
+    conversation_id: str,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
 ) -> MessageList:
-    """Full history with attachment refs — how the UI reloads a thread after a restart."""
-    if engine.store.get_conversation(conversation_id) is None:
+    """Full history with attachment refs — how the UI reloads a thread after a restart. Scoped
+    to the owner: a thread the caller does not own is indistinguishable from a missing one."""
+    convo = engine.store.get_conversation(conversation_id)
+    if convo is None or convo.get("student_id") != caller:
         raise HTTPException(status_code=404, detail="unknown conversation")
     rows = engine.store.list_messages(conversation_id)
     return MessageList(
@@ -362,9 +424,14 @@ async def conversation_telemetry_stream(conversation_id: str) -> StreamingRespon
     "/conversations/{conversation_id}", response_model=ConversationDeleted, tags=["conversations"]
 )
 def conversation_delete(
-    conversation_id: str, engine: ChatEngine = Depends(get_engine)
+    conversation_id: str,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
 ) -> ConversationDeleted:
-    engine.store.delete_conversation(conversation_id)
+    """Delete one of the caller's own threads. 404 (not a false success) when the caller does
+    not own it or it does not exist — a client cannot destroy another student's history."""
+    if not engine.store.delete_conversation(conversation_id, owner_id=caller):
+        raise HTTPException(status_code=404, detail="unknown conversation")
     return ConversationDeleted(id=conversation_id)
 
 
@@ -374,11 +441,47 @@ def conversation_delete(
     response_class=Response,
     responses={200: {"content": {"application/octet-stream": {}}, "description": "Raw bytes"}},
 )
-def attachment(attachment_id: int, engine: ChatEngine = Depends(get_engine)) -> Response:
-    row = engine.store.get_attachment(attachment_id)
+def attachment(
+    attachment_id: int,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(caller_from_token),
+) -> Response:
+    """Serve an attachment the caller owns. Ownership is checked at the store (owner or the
+    owner of the linked conversation); a miss is a 404, so ids stay non-probeable. Served as an
+    inert `nosniff` download with a whitelisted content type (never the client-set one)."""
+    row = engine.store.get_attachment(attachment_id, owner_id=caller)
     if row is None:
         raise HTTPException(status_code=404, detail="unknown attachment")
-    return Response(content=bytes(row["data"]), media_type=row["mime"])
+    mime = row["mime"] if row["mime"] in _SAFE_ATTACHMENT_MIME else "application/octet-stream"
+    return Response(content=bytes(row["data"]), media_type=mime, headers=_ATTACHMENT_HEADERS)
+
+
+@router.post("/auth/session", response_model=AuthTokenResponse, tags=["ops"])
+def auth_session(req: AuthTokenRequest) -> AuthTokenResponse:
+    """Mint a bearer token for a per-device learner id. With MUTA_AUTH_SECRET set the token is
+    HMAC-signed (unforgeable); without it the token is the id itself (opaque per-device
+    secret). The client sends it as `Authorization: Bearer <token>` on data endpoints."""
+    try:
+        token = mint_token(req.student_id)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return AuthTokenResponse(student_id=req.student_id, token=token)
+
+
+@router.delete("/students/{student_id}", response_model=StudentErased, tags=["ops"])
+def student_erase(
+    student_id: str,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> StudentErased:
+    """Data-subject erasure: delete everything owned by a student (conversations + cascaded
+    messages/attachments, owned orphan attachments, settings). A caller may only erase their
+    own data. Returns the removed counts as a receipt."""
+    if caller != student_id:
+        raise HTTPException(status_code=403, detail="you can only erase your own data")
+    counts = engine.store.delete_student(student_id)
+    log.info("erased data for student %s: %s", student_id, counts)
+    return StudentErased(student_id=student_id, **counts)
 
 
 @router.post("/diagnose", response_model=DiagnoseResponse, tags=["tutor"])
@@ -450,8 +553,8 @@ def tutor_chat(
             language=turn.lang,
             **params_for_mode(turn.mode.value),
         )
-    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
-        raise HTTPException(status_code=503, detail="inference engine unreachable") from e
+    except httpx.HTTPError as e:
+        raise _handle_engine_error(e, where="/tutor/chat") from e
     finally:
         sessions.release(turn.session_id)
 
@@ -522,11 +625,13 @@ def tutor_chat_stream(
                 count += 1
                 key = "reasoning" if kind == "reasoning" else "delta"
                 yield f"data: {json.dumps({key: text})}\n\n"
-        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
-            yield f"data: {json.dumps({'error': 'inference engine unreachable'})}\n\n"
+        except httpx.HTTPError as e:
+            log.warning("engine error mid-stream at /tutor/chat/stream: %r", e)
+            yield f"data: {json.dumps({'error': 'the tutor dropped the connection — try again'})}\n\n"
             return
         finally:
             sessions.release(turn.session_id)
+            _close_events(events)  # deterministic partial-persist off the event loop (see /chat/stream)
         yield "data: " + json.dumps(
             {
                 "done": True,
@@ -573,8 +678,10 @@ async def tutor_vision(
             _IMAGE_MIME.get(prepared.format, "application/octet-stream"),
             prepared.data,
             conversation_id=conversation_id,
+            owner_id=session_id,
         )
     except Exception:  # noqa: BLE001 — best-effort persistence
+        log.warning("failed to persist vision attachment for session %s", session_id, exc_info=True)
         attachment_id = None
 
     # Both `ensure()` (polls for up to MUTA_RT_VISION_STARTUP_S on a cold spawn) and

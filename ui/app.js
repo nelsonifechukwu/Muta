@@ -13,6 +13,27 @@ const studentId = (() => {
   return id;
 })();
 
+// Bearer token for the data endpoints (conversations, attachments). In the default (no
+// server secret) deployment the token IS the student id, so this works immediately; when the
+// server sets MUTA_AUTH_SECRET, ensureAuth() upgrades it to a signed token. Attachment <img>
+// URLs can't carry a header, so they take ?token= instead.
+let authToken = studentId;
+const authHeaders = () => ({ Authorization: `Bearer ${authToken}` });
+const attachmentUrl = (id) => `/v1/attachments/${id}?token=${encodeURIComponent(authToken)}`;
+
+async function ensureAuth() {
+  try {
+    const r = await fetch("/v1/auth/session", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ student_id: studentId }),
+    });
+    if (r.ok) authToken = (await r.json()).token || studentId;
+  } catch {
+    /* offline / older server: fall back to the student id (dev-mode token) */
+  }
+}
+
 let conversationId = null;
 let generating = false;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
@@ -36,6 +57,26 @@ function toast(text, ms = 4200) {
   el.hidden = false;
   clearTimeout(el._t);
   el._t = setTimeout(() => (el.hidden = true), ms);
+}
+
+// Screen-reader announcement (visually hidden #sr-live). Re-set to "" first so identical
+// consecutive messages are still announced.
+function announce(text) {
+  const el = $("#sr-live");
+  if (!el) return;
+  el.textContent = "";
+  requestAnimationFrame(() => (el.textContent = text));
+}
+
+// Only allow http(s) links from model/web-grounding output to become real hrefs — never
+// javascript:/data: — even though the source URLs come from a server-side search.
+function safeHttpUrl(url) {
+  try {
+    const u = new URL(url, location.origin);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : null;
+  } catch {
+    return null;
+  }
 }
 
 function scrollToBottom() {
@@ -111,7 +152,7 @@ function addUserMessage(text, attachments = []) {
     for (const a of attachments) {
       if (a.kind === "image") {
         const img = document.createElement("img");
-        img.src = a.previewUrl || `/v1/attachments/${a.id}`;
+        img.src = a.previewUrl || attachmentUrl(a.id);
         row.appendChild(img);
       } else {
         const chip = document.createElement("span");
@@ -316,7 +357,9 @@ function closeTelemetry(afterMs = 4000) {
 // ---------------------------------------------------------------------------
 async function refreshSidebar() {
   try {
-    const r = await fetch(`/v1/conversations?student_id=${encodeURIComponent(studentId)}`);
+    const r = await fetch(`/v1/conversations?student_id=${encodeURIComponent(studentId)}`, {
+      headers: authHeaders(),
+    });
     if (!r.ok) return;
     const body = await r.json();
     const list = $("#conversation-list");
@@ -333,7 +376,7 @@ async function refreshSidebar() {
       del.title = "Delete conversation";
       del.addEventListener("click", async (ev) => {
         ev.stopPropagation();
-        await fetch(`/v1/conversations/${c.id}`, { method: "DELETE" });
+        await fetch(`/v1/conversations/${c.id}`, { method: "DELETE", headers: authHeaders() });
         if (c.id === conversationId) newChat();
         refreshSidebar();
       });
@@ -354,7 +397,7 @@ async function loadConversation(cid) {
     stopGeneration();
   }
   discardQueue(); // queued messages were aimed at the thread we're leaving
-  const r = await fetch(`/v1/conversations/${cid}/messages`);
+  const r = await fetch(`/v1/conversations/${cid}/messages`, { headers: authHeaders() });
   if (!r.ok) return toast("Couldn't load that conversation.");
   const body = await r.json();
   conversationId = cid;
@@ -492,6 +535,7 @@ async function addAudio(file) {
   toast("Transcribing the audio…", 3000);
   const form = new FormData();
   if (conversationId) form.append("conversation_id", conversationId);
+  form.append("student_id", studentId); // owner, so the stored recording is scoped to us
   form.append("audio", file);
   let body;
   try {
@@ -746,6 +790,7 @@ async function pumpSse(res, assistant) {
         else if (ev.error) assistant.fail(ev.error);
         else if (ev.done) {
           assistant.finalize();
+          announce("Tutor replied.");
           if (Array.isArray(ev.sources) && ev.sources.length) {
             const msgs = messagesEl.querySelectorAll(".msg.assistant");
             const last = msgs[msgs.length - 1];
@@ -754,10 +799,13 @@ async function pumpSse(res, assistant) {
               box.className = "sources";
               box.append("Sources: ");
               ev.sources.forEach((s, i) => {
-                const a = document.createElement("a");
-                a.href = s.url;
-                a.target = "_blank";
-                a.rel = "noopener";
+                const safe = safeHttpUrl(s.url);
+                const a = document.createElement(safe ? "a" : "span");
+                if (safe) {
+                  a.href = safe;
+                  a.target = "_blank";
+                  a.rel = "noopener noreferrer";
+                }
                 a.textContent = `[${i + 1}] ${s.title}`;
                 box.appendChild(a);
                 if (i < ev.sources.length - 1) box.append(" · ");
@@ -828,7 +876,26 @@ window.MutaChat = {
   },
 };
 
-refreshSidebar();
+// --- mobile sidebar drawer -------------------------------------------------------------
+const appEl = $("#app");
+const menuToggle = $("#menu-toggle");
+function setDrawer(open) {
+  appEl.classList.toggle("sidebar-open", open);
+  if (menuToggle) menuToggle.setAttribute("aria-expanded", String(open));
+  const backdrop = $("#sidebar-backdrop");
+  if (backdrop) backdrop.hidden = !open;
+}
+if (menuToggle) {
+  menuToggle.addEventListener("click", () => setDrawer(!appEl.classList.contains("sidebar-open")));
+  $("#sidebar-backdrop").addEventListener("click", () => setDrawer(false));
+  // Close the drawer after picking a thread or starting a new one (mobile only).
+  $("#conversation-list").addEventListener("click", () => setDrawer(false));
+  $("#new-chat").addEventListener("click", () => setDrawer(false));
+}
+
+// Mint the bearer token (signed-mode servers), then load the sidebar. In default mode the
+// token already equals the student id, so a failed/slow mint never blocks startup.
+ensureAuth().then(refreshSidebar);
 
 // --- web grounding toggle ---------------------------------------------------------------
 let useWeb = false;

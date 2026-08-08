@@ -45,6 +45,26 @@ router = APIRouter()
 SAMPLE_RATE = 16000
 _SENTENCE_END = re.compile(r"(?<=[.!?:;])\s+")
 
+# Bound the intake so a small, highly-compressed upload cannot decode to gigabytes of PCM and
+# OOM the 8GB backend (which would kill the tutor for the whole classroom). Two independent
+# limits: bytes on the wire, and decoded duration (ffmpeg -t), each enough on its own.
+MAX_AUDIO_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_AUDIO_SECONDS = 300  # 5 minutes of speech is far past any real tutoring question
+# Never re-serve a client-declared audio type verbatim (stored-XSS vector); store a safe one.
+_SAFE_AUDIO_MIME = {"audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav"}
+
+
+def _safe_audio_mime(declared: str | None) -> str:
+    return declared if declared in _SAFE_AUDIO_MIME else "application/octet-stream"
+
+
+def _close_gen(gen) -> None:
+    """Close an engine event generator (runs its partial-persist finally). No-op for a plain
+    iterator. Called off the event loop because the persist write blocks."""
+    close = getattr(gen, "close", None)
+    if close is not None:
+        close()
+
 
 @dataclass
 class AudioStack:
@@ -80,8 +100,13 @@ def get_audio() -> AudioStack:
 def _ffmpeg_to_pcm16k(data: bytes) -> bytes | None:
     try:
         proc = subprocess.run(
+            # `-t MAX_AUDIO_SECONDS` caps decoded DURATION regardless of how the input inflates,
+            # so a compressed-silence bomb can no longer expand to gigabytes of PCM within the
+            # wall-clock timeout. Output is still bounded a second way by MAX_AUDIO_SECONDS ×
+            # 16 kHz × 2 bytes ≈ 9.6 MB.
             ["ffmpeg", "-hide_banner", "-loglevel", "error",
-             "-i", "pipe:0", "-f", "s16le", "-ac", "1", "-ar", str(SAMPLE_RATE), "pipe:1"],
+             "-i", "pipe:0", "-t", str(MAX_AUDIO_SECONDS),
+             "-f", "s16le", "-ac", "1", "-ar", str(SAMPLE_RATE), "pipe:1"],
             input=data,
             capture_output=True,
             timeout=30,
@@ -95,10 +120,11 @@ def _ffmpeg_to_pcm16k(data: bytes) -> bytes | None:
 async def audio_transcribe(
     audio: UploadFile = File(...),
     conversation_id: str | None = Form(None),
+    student_id: str | None = Form(None),
     engine: ChatEngine = Depends(get_engine),
 ) -> TranscribeResponse:
     """Uploaded audio → text. 503 when ASR is unavailable (the UI tells the student to
-    type instead), 422 when ffmpeg can't decode the file."""
+    type instead), 422 when ffmpeg can't decode the file, 413 when the upload is too large."""
     stack = await run_in_threadpool(get_audio)  # first call loads ONNX models
     if not stack.asr.available:
         raise HTTPException(
@@ -106,6 +132,11 @@ async def audio_transcribe(
             detail="speech recognition isn't available — type the question instead",
         )
     raw = await audio.read()
+    if len(raw) > MAX_AUDIO_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"that recording is too large — keep it under {MAX_AUDIO_UPLOAD_BYTES // 2**20} MB",
+        )
     pcm = await run_in_threadpool(_ffmpeg_to_pcm16k, raw)
     if pcm is None:
         raise HTTPException(status_code=422, detail="couldn't decode that audio file")
@@ -116,11 +147,13 @@ async def audio_transcribe(
         attachment_id = await run_in_threadpool(
             engine.store.add_attachment,
             "audio",
-            audio.content_type or "application/octet-stream",
+            _safe_audio_mime(audio.content_type),
             raw,
             conversation_id=conversation_id,
+            owner_id=student_id,
         )
     except Exception:  # noqa: BLE001 — persistence is best-effort; the transcript is the point
+        log.warning("failed to persist audio attachment", exc_info=True)
         attachment_id = None
     return TranscribeResponse(text=text, attachment_id=attachment_id)
 
@@ -263,6 +296,10 @@ async def audio_voice(ws: WebSocket) -> None:
                 await speak(sentence_buf)
         finally:
             hub.end(cid)
+            # A barge/disconnect breaks the loop above; close the source generator now, off
+            # the event loop, so its partial-reply persist runs deterministically instead of
+            # waiting for GC (which would block a random later stream and pin an engine slot).
+            await run_in_threadpool(_close_gen, events)
         await ws.send_json({"type": "done"})
 
     async def _endpoint(utterance) -> None:

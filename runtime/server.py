@@ -133,7 +133,9 @@ class LlamaServer:
         out = None
         if log_file is not None:
             Path(log_file).parent.mkdir(parents=True, exist_ok=True)
-            self._log_fh = open(log_file, "w")
+            # Append, don't truncate: on a supervised respawn the previous crash's tail is the
+            # evidence of WHY it died, and "w" erased it on every restart.
+            self._log_fh = open(log_file, "a")
             out = self._log_fh
         self.process = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT if out else None)
         self._managed = True

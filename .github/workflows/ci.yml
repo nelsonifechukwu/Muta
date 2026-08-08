@@ -1,0 +1,126 @@
+# Muta CI — first pipeline for this repo.
+#
+# What each job gates:
+#   lint          — ruff check + ruff format --check across the tree (style + import sort).
+#   test          — pytest against a real Postgres service container, so the store tests in
+#                   runtime/tests actually RUN instead of skipping. `addopts` in pyproject
+#                   already deselects `-m integration`, so only unit/store tests execute.
+#   contract-drift— regenerates contracts/openapi.yaml the same way `make contract` does
+#                   (python -m contracts.openapi) and fails if the committed YAML is stale.
+#   build         — validates docker-compose.yml with `docker compose config`.
+#
+# KNOWN LIMITATION — audio/engine integration is deliberately NOT exercised here:
+#   * llama-server (the compiled AVX2 engine) and the pinned GGUF models are never present
+#     in CI, so chat/vision/voice code paths degrade or skip by design — that is expected.
+#   * sherpa-onnx ASR/VAD/TTS need model files that CI does not fetch; those tests skip too.
+#   * A full `docker compose build` compiles llama.cpp (~30+ min) and is intentionally
+#     omitted from PR CI — it belongs in a nightly/release workflow (sketched, commented
+#     out, at the bottom of this file). The `build` job only lints the compose wiring.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install (app + dev extras)
+        run: pip install -e ".[dev]"
+      - name: ruff check
+        run: ruff check .
+      - name: ruff format --check
+        run: ruff format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: muta
+          POSTGRES_PASSWORD: muta
+          POSTGRES_DB: muta
+        ports:
+          - 5432:5432
+        # pg_isready gate so pytest doesn't race the DB coming up.
+        options: >-
+          --health-cmd "pg_isready -U muta -d muta"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # runtime/tests/conftest.py reads MUTA_TEST_DB_URL as its admin DSN (default is the
+      # compose db on :15432). Point it at the service container so the store tests RUN
+      # instead of skipping; conftest CREATEs the muta_test database on this connection.
+      MUTA_TEST_DB_URL: postgresql://muta:muta@127.0.0.1:5432/muta
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install (app + dev extras)
+        run: pip install -e ".[dev]"
+      - name: pytest
+        # bench/adtc-profiler is a separate project (its own venv/integration tests) — skip it.
+        run: python -m pytest --ignore=bench/adtc-profiler
+
+  contract-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install (app + dev extras)
+        run: pip install -e ".[dev]"
+      - name: Regenerate the contract (same as `make contract`)
+        run: python -m contracts.openapi
+      - name: Fail if the committed contract drifted
+        run: git diff --exit-code contracts/openapi.yaml
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Validate the compose wiring only. A real image build is intentionally NOT run here:
+      # docker/backend.Dockerfile compiles llama.cpp (~30+ min) and belongs in a nightly/
+      # release workflow (sketched below), not on every push/PR.
+      - name: Validate docker-compose.yml
+        run: docker compose config
+
+# --- Full image build (nightly/release) — intentionally NOT run on push/PR -------------
+# Uncomment and move to its own workflow (e.g. .github/workflows/nightly-build.yml) when a
+# scheduled/release build is wanted. This compiles the AVX2 llama.cpp engine and is slow.
+#
+#  full-build:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Set up Buildx
+#        uses: docker/setup-buildx-action@v3
+#      - name: Build all images (linux/amd64)
+#        run: docker compose build
+#
+# And trigger it on a schedule / release instead of push+pull_request:
+#
+#  on:
+#    schedule:
+#      - cron: "0 6 * * *"   # nightly 06:00 UTC
+#    release:
+#      types: [published]

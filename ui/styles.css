@@ -5,7 +5,8 @@
   --sidebar: #f0eee6;
   --card: #ffffff;
   --text: #3d3929;
-  --muted: #83827d;
+  /* Darkened from #83827d (~3.6:1 on --bg, below WCAG AA) to meet 4.5:1 for body text. */
+  --muted: #6b6a63;
   --border: #e8e6dc;
   --accent: #bd5d3a;
   --accent-soft: rgba(218, 119, 86, 0.08);
@@ -26,7 +27,30 @@ body {
   line-height: 1.6;
 }
 
-#app { display: flex; height: 100vh; }
+/* 100dvh so the composer isn't hidden behind a mobile browser's URL bar / keyboard; 100vh
+   fallback for browsers without dvh. */
+#app { display: flex; height: 100vh; height: 100dvh; }
+
+/* Visually hidden but available to assistive tech (screen-reader live region). */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Mobile-only hamburger; hidden on desktop where the sidebar is always visible. */
+.menu-toggle {
+  display: none;
+  position: fixed; top: 10px; left: 10px; z-index: 45;
+  width: 40px; height: 40px; padding: 8px; border-radius: 9px;
+  background: var(--card); border: 1px solid var(--border); color: var(--text); cursor: pointer;
+}
+.menu-toggle svg { width: 100%; height: 100%; }
+#sidebar-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 39; border: 0;
+}
+/* JS toggles the `hidden` attribute; make it beat the author display above (UA [hidden]
+   would otherwise be outranked). */
+#sidebar-backdrop[hidden] { display: none; }
 
 /* --- sidebar ------------------------------------------------------------- */
 #sidebar {
@@ -234,6 +258,8 @@ button.icon:disabled { opacity: 0.4; cursor: default; }
 #input {
   width: 100%; border: none; outline: none; resize: none;
   font: inherit; color: inherit; background: transparent;
+  /* 16px minimum: iOS Safari zooms the page when focusing a <16px input. */
+  font-size: 16px;
   max-height: 200px; padding: 4px 6px;
 }
 #composer-buttons { display: flex; justify-content: space-between; align-items: center; }
@@ -296,5 +322,19 @@ button.send.stop { background: var(--danger); }
 }
 
 @media (max-width: 720px) {
-  #sidebar { display: none; }
+  /* The sidebar becomes an off-canvas drawer instead of vanishing — history and "+ New chat"
+     stay reachable on the phones the classroom mode targets (README §7). */
+  .menu-toggle { display: block; }
+  #sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 2px 0 18px rgba(0, 0, 0, 0.18);
+  }
+  #app.sidebar-open #sidebar { transform: translateX(0); }
+  /* Give the header row clearance for the fixed hamburger. */
+  #chat-column { padding-top: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #sidebar { transition: none; }
 }

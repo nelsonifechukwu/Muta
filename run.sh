@@ -266,6 +266,11 @@ if [ "$MODE" = docker ]; then
     gpu_hint=$(detect_gpu)
     if [ "$gpu_hint" = metal-native ]; then
         warn "emulated x86 on Apple Silicon: './run.sh --native' runs the arm64 engine natively — ~10x faster (measured, RESULTS.md 2026-08-08)"
+        # The compose thread pins default to empty (correct for a real x86 target, where
+        # llama.cpp picks physical cores). Under Apple-silicon emulation that default
+        # collapses, so restore the measured Apple-VM pins for THIS host only.
+        export MUTA_RT_N_THREADS="${MUTA_RT_N_THREADS:-8}"
+        export MUTA_RT_N_THREADS_BATCH="${MUTA_RT_N_THREADS_BATCH:-10}"
     elif [ "$gpu_hint" = cuda-available ]; then
         warn "NVIDIA GPU detected: see docs/gpu.md for the CUDA backend variant"
     fi

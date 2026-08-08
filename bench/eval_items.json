@@ -1,0 +1,150 @@
+{
+  "_comment": "WAEC/WASSCE-level secondary maths & science items for the product-level tutoring eval (bench/eval.py). Each item has an UNAMBIGUOUS canonical final answer chosen so SymPy equivalence can grade it. 'acceptable' lists alternative correct forms (percent/decimal/unit variants, alternate root orderings); a reply matching ANY of them is correct. 'expected_answer' is the plainest canonical form. All answers hand-verified; see the round-trip check in bench/eval.py's --selftest and the item-verification snippet in the build report.",
+  "items": [
+    {
+      "id": "q01",
+      "subject": "math",
+      "topic": "arithmetic-fractions",
+      "question": "Simplify 3/4 + 2/5, leaving your answer as a single fraction in its lowest terms.",
+      "expected_answer": "23/20",
+      "acceptable": ["1.15"],
+      "tolerance": 0.001
+    },
+    {
+      "id": "q02",
+      "subject": "math",
+      "topic": "arithmetic-percentage",
+      "question": "A trader bought a bag of rice for 18000 naira and sold it for 21600 naira. Calculate the percentage profit.",
+      "expected_answer": "20",
+      "acceptable": ["20%", "0.2", "1/5"]
+    },
+    {
+      "id": "q03",
+      "subject": "math",
+      "topic": "indices",
+      "question": "Evaluate 27^(2/3).",
+      "expected_answer": "9",
+      "acceptable": []
+    },
+    {
+      "id": "q04",
+      "subject": "math",
+      "topic": "indices",
+      "question": "Simplify (2^5 * 2^3) / 2^6, giving your answer as a whole number.",
+      "expected_answer": "4",
+      "acceptable": ["2^2"]
+    },
+    {
+      "id": "q05",
+      "subject": "math",
+      "topic": "linear-equations",
+      "question": "Solve for x: 3(x - 2) = 2x + 4.",
+      "expected_answer": "10",
+      "acceptable": ["x = 10"]
+    },
+    {
+      "id": "q06",
+      "subject": "math",
+      "topic": "quadratic-equations",
+      "question": "Solve the equation x^2 - 5x + 6 = 0.",
+      "expected_answer": "2, 3",
+      "acceptable": ["x = 2 or x = 3", "3, 2", "x = 2, x = 3"]
+    },
+    {
+      "id": "q07",
+      "subject": "math",
+      "topic": "simultaneous-equations",
+      "question": "Solve the simultaneous equations 2x + y = 11 and x - y = 1, and hence state the value of x.",
+      "expected_answer": "4",
+      "acceptable": ["x = 4"]
+    },
+    {
+      "id": "q08",
+      "subject": "math",
+      "topic": "mensuration-circle",
+      "question": "A circle has radius 7 cm. Taking pi = 22/7, calculate its area in cm^2.",
+      "expected_answer": "154",
+      "acceptable": ["154 cm^2"]
+    },
+    {
+      "id": "q09",
+      "subject": "math",
+      "topic": "mensuration-volume",
+      "question": "Calculate the volume of a cube of side 5 cm, in cm^3.",
+      "expected_answer": "125",
+      "acceptable": ["125 cm^3"]
+    },
+    {
+      "id": "q10",
+      "subject": "math",
+      "topic": "trigonometry",
+      "question": "Evaluate sin(30 degrees) + cos(60 degrees).",
+      "expected_answer": "1",
+      "acceptable": []
+    },
+    {
+      "id": "q11",
+      "subject": "math",
+      "topic": "trigonometry-application",
+      "question": "A straight ladder leans against a vertical wall, making an angle of 60 degrees with the horizontal ground. If the foot of the ladder is 3 m from the wall, find the length of the ladder. Take cos(60 degrees) = 0.5.",
+      "expected_answer": "6",
+      "acceptable": ["6 m", "6.0"]
+    },
+    {
+      "id": "q12",
+      "subject": "math",
+      "topic": "calculus-differentiation",
+      "question": "Given y = 3x^2 + 2x, find the value of dy/dx at x = 2.",
+      "expected_answer": "14",
+      "acceptable": []
+    },
+    {
+      "id": "q13",
+      "subject": "math",
+      "topic": "calculus-integration",
+      "question": "Evaluate the definite integral of 2x with respect to x from 0 to 2.",
+      "expected_answer": "4",
+      "acceptable": []
+    },
+    {
+      "id": "q14",
+      "subject": "physics",
+      "topic": "kinematics",
+      "question": "A car starts from rest and accelerates uniformly at 3 m/s^2 for 4 s. Using v = u + at with u = 0, calculate its final velocity.",
+      "expected_answer": "12",
+      "acceptable": ["12 m/s"]
+    },
+    {
+      "id": "q15",
+      "subject": "physics",
+      "topic": "kinematics",
+      "question": "A ball is thrown vertically upward with an initial velocity of 20 m/s. Taking g = 10 m/s^2 and using v^2 = u^2 - 2gh with v = 0 at the top, calculate the maximum height reached.",
+      "expected_answer": "20",
+      "acceptable": ["20 m"]
+    },
+    {
+      "id": "q16",
+      "subject": "math",
+      "topic": "indices-exponential-equation",
+      "question": "Solve for x: 2^x = 32.",
+      "expected_answer": "5",
+      "acceptable": ["x = 5"]
+    },
+    {
+      "id": "q17",
+      "subject": "math",
+      "topic": "geometry-angles",
+      "question": "The angles of a triangle are in the ratio 2 : 3 : 4. Find the largest angle in degrees.",
+      "expected_answer": "80",
+      "acceptable": ["80 degrees", "80°"]
+    },
+    {
+      "id": "q18",
+      "subject": "math",
+      "topic": "geometry-pythagoras",
+      "question": "A right-angled triangle has the two legs measuring 6 cm and 8 cm. Find the length of the hypotenuse.",
+      "expected_answer": "10",
+      "acceptable": ["10 cm"]
+    }
+  ]
+}

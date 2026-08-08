@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -149,6 +149,17 @@ class RuntimeConfig(BaseSettings):
     # (127.0.0.1:15432); inside the backend container compose overrides it to db:5432.
     db_url: str = "postgresql://muta:muta@127.0.0.1:15432/muta"
     max_history_messages: int = 20  # multi-turn context window trim (excludes system)
+
+    @field_validator("n_threads", "n_threads_batch", mode="before")
+    @classmethod
+    def _empty_thread_pin_means_auto(cls, v):
+        """An empty env value (``MUTA_RT_N_THREADS=``) means "let the engine choose", not a
+        parse error. This is what lets docker-compose pass the pins through as
+        ``${MUTA_RT_N_THREADS:-}`` — set only on the Apple-VM emulation path, empty on a real
+        x86 target where llama.cpp's own physical-core default is the right answer."""
+        if v is None or (isinstance(v, str) and v.strip() == ""):
+            return None
+        return v
 
     @property
     def model_path(self) -> Path:

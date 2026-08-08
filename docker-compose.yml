@@ -9,16 +9,27 @@ services:
     # the whole boot down. A digest resolves per-platform and no neighbor can move it.
     image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     platform: linux/amd64
+    # A crashed db or a host reboot must not leave the tutor down until someone reruns
+    # ./run.sh — 'a student-facing crash is never acceptable' (CLAUDE.md). Healthchecks gate
+    # startup order, so a restarted container converges on its own.
+    restart: unless-stopped
     environment:
       POSTGRES_USER: muta
-      POSTGRES_PASSWORD: muta
+      # Credentials come from the environment (see .env.example / RUN.md). Default kept for
+      # frictionless local dev; a real deployment sets MUTA_DB_PASSWORD to something else.
+      POSTGRES_PASSWORD: ${MUTA_DB_PASSWORD:-muta}
       POSTGRES_DB: muta
     volumes:
       - muta-pgdata:/var/lib/postgresql/data
     ports:
       # Published for host-side dev/tests (runtime/tests use MUTA_TEST_DB_URL against it).
-      # 15432 not 5432 so a host Postgres never collides.
+      # 15432 not 5432 so a host Postgres never collides. Bound to loopback only.
       - "127.0.0.1:15432:5432"
+    # Cap so a runaway query cannot starve the 8GB box; the db's footprint is small.
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U muta -d muta"]
       interval: 5s
@@ -33,19 +44,31 @@ services:
     platform: linux/amd64
     # tini as PID 1: reaps orphaned engine/vision grandchildren and forwards signals.
     init: true
+    # Recover from a crash / OOM-kill / host reboot without a human (see db).
+    restart: unless-stopped
     # LlamaServer.stop() waits up to 10s before SIGKILL; give the whole shutdown room.
     stop_grace_period: 30s
     depends_on:
       db:
         condition: service_healthy
     ports:
-      # Direct curl/debug access; the frontend proxies /v1 for the browser.
-      - "8000:8000"
+      # Loopback only: the browser reaches /v1 through the nginx frontend (same-origin
+      # proxy); the raw, unauthenticated-by-default surface must not be published to the LAN.
+      # The frontend container still reaches it as `backend:8000` over the compose network,
+      # which needs no host publishing at all — this line is for host-side curl/debug.
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./models:/app/models
+    # Hard ceiling near the 7GB competition budget: if the engine tree exceeds it Docker
+    # OOM-kills THIS container (which the supervisor then respawns) instead of the host
+    # OOM-killer picking a random victim. Tune per target box.
+    mem_limit: 7g
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
     environment:
       MUTA_RT_AUTOSTART: "1"
-      MUTA_RT_DB_URL: postgresql://muta:muta@db:5432/muta
+      MUTA_RT_DB_URL: postgresql://muta:${MUTA_DB_PASSWORD:-muta}@db:5432/muta
       # Core model is hot-swappable via `./run.sh --model <path>` (which exports the
       # MUTA_MODEL_* interpolations); bare `docker compose up` serves the default.
       MUTA_RT_MODEL_DIR: ${MUTA_MODEL_DIR:-/app/models/core}
@@ -73,13 +96,15 @@ services:
       # Threads: the VM's 10 vCPUs are shared with the gateway/db/nginx — decode is
       # bandwidth-bound and gains nothing from oversubscription (runtime/profiles.py
       # thread table rationale), prefill may use them all.
-      # ⚠ APPLE-VM NUMBERS ONLY. On an x86 target box these pins are the measured
-      # oversubscription collapse (-t 8 on a 4-core i5 is the "-t 10 → 4.4 tok/s"
-      # regime, RESULTS.md 2026-08-01). For x86 deploys REMOVE both pins: llama.cpp's
-      # own default (common_cpu_get_num_math) already picks physical P-cores on
-      # bare-metal Linux — the right answer on every target CPU.
-      MUTA_RT_N_THREADS: "8"
-      MUTA_RT_N_THREADS_BATCH: "10"
+      # ⚠ APPLE-VM oversubscription pins, now OFF by default. On an x86 target box hardcoded
+      # pins were the measured collapse (-t 8 on a 4-core i5 = the "-t 10 → 4.4 tok/s" regime,
+      # RESULTS.md 2026-08-01); empty here means llama.cpp's own default picks physical
+      # P-cores on bare-metal Linux — the right answer on every target CPU. run.sh exports the
+      # Apple-VM values (8/10) ONLY when it detects Apple-silicon emulation, so dev stays fast
+      # while a real x86 deploy is correct out of the box. (Empty string → None, see
+      # runtime/config.py `_empty_thread_pin_means_auto`.)
+      MUTA_RT_N_THREADS: "${MUTA_RT_N_THREADS:-}"
+      MUTA_RT_N_THREADS_BATCH: "${MUTA_RT_N_THREADS_BATCH:-}"
       # Speculation draft: Qwen3.5-0.8B (fetch_models --with-draft). Qwen3-0.6B is NOT
       # usable — vocab 151936 vs the 4B's 248320, the engine rejects the pairing
       # (docs/engine-flags.md). Absent file -> speculation off, boot proceeds.
@@ -109,6 +134,11 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
     platform: linux/amd64
+    restart: unless-stopped
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     depends_on:
       backend:
         condition: service_healthy

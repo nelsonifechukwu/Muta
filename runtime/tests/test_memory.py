@@ -110,3 +110,68 @@ def test_settings_round_trip(store: ConversationStore):
     assert store.get_settings("s1") == {"theme": "warm", "tts": True}
     store.put_settings("s1", {"theme": "dark"})
     assert store.get_settings("s1") == {"theme": "dark"}
+
+
+# --- ownership & erasure (production-hardening) -----------------------------------------
+
+
+def test_get_attachment_owner_scoping(store: ConversationStore):
+    # Uploaded by alice, unlinked: only alice (or no-owner-check) may read it.
+    aid = store.add_attachment("image", "image/png", b"\x89PNG", owner_id="alice")
+    assert store.get_attachment(aid, owner_id="alice") is not None
+    assert store.get_attachment(aid, owner_id="bob") is None
+    assert store.get_attachment(aid) is not None  # no owner filter = unchecked (internal)
+
+
+def test_get_attachment_owner_via_linked_conversation(store: ConversationStore):
+    # An attachment with no owner_id is still reachable by the owner of its conversation.
+    cid = store.create_conversation("alice")
+    mid = store.add_message(cid, "user", "see this")
+    aid = store.add_attachment("image", "image/png", b"\x89PNG", conversation_id=cid, message_id=mid)
+    assert store.get_attachment(aid, owner_id="alice") is not None
+    assert store.get_attachment(aid, owner_id="mallory") is None
+
+
+def test_delete_conversation_owner_scoped(store: ConversationStore):
+    cid = store.create_conversation("alice")
+    # A non-owner's delete removes nothing and reports it.
+    assert store.delete_conversation(cid, owner_id="mallory") is False
+    assert store.get_conversation(cid) is not None
+    # The owner's delete succeeds and reports it.
+    assert store.delete_conversation(cid, owner_id="alice") is True
+    assert store.get_conversation(cid) is None
+    # Deleting again (now nonexistent) reports False, not a false success.
+    assert store.delete_conversation(cid, owner_id="alice") is False
+
+
+def test_delete_student_erases_all_owned_data(store: ConversationStore):
+    cid = store.create_conversation("alice")
+    store.add_message(cid, "user", "hi")
+    linked = store.add_attachment("image", "image/png", b"\x89PNG", conversation_id=cid, owner_id="alice")
+    orphan = store.add_attachment("audio", "audio/webm", b"\x1a\x45", owner_id="alice")
+    store.put_settings("alice", {"theme": "dark"})
+    # bob's data is untouched.
+    bob_cid = store.create_conversation("bob")
+
+    counts = store.delete_student("alice")
+    assert counts["conversations"] == 1
+    assert counts["orphan_attachments"] == 1
+    assert counts["settings"] == 1
+    assert store.get_conversation(cid) is None
+    assert store.get_attachment(linked) is None  # cascaded with the conversation
+    assert store.get_attachment(orphan) is None  # removed as an owned orphan
+    assert store.get_settings("alice") == {}
+    assert store.get_conversation(bob_cid) is not None
+
+
+def test_reap_orphan_attachments_only_unlinked(store: ConversationStore):
+    cid = store.create_conversation("alice")
+    linked = store.add_attachment("image", "image/png", b"\x89PNG", conversation_id=cid)
+    orphan = store.add_attachment("image", "image/png", b"\x89PNG", owner_id="alice")
+    # Nothing is old enough to reap yet.
+    assert store.reap_orphan_attachments(older_than_seconds=3600) == 0
+    assert store.get_attachment(orphan) is not None
+    # Everything already created is "older than -1s"; the linked one is exempt.
+    assert store.reap_orphan_attachments(older_than_seconds=-1) == 1
+    assert store.get_attachment(orphan) is None
+    assert store.get_attachment(linked) is not None

@@ -16,13 +16,21 @@ Porting invariants kept from the SQLite original:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-_SCHEMA = """
+# --- Schema migrations ------------------------------------------------------------------
+# Ordered, append-only. Each runs once; the version is recorded in `schema_migrations`. A
+# deployed muta-pgdata volume upgrades by running only the versions it has not seen, so a new
+# column reaches an existing fleet instead of being silently skipped by CREATE IF NOT EXISTS.
+# Migrations must be idempotent (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS) so re-applying the
+# base schema over a pre-migration database is safe. NEVER edit a shipped migration — add a
+# new one.
+
+_MIGRATION_1_BASE = """
 CREATE TABLE IF NOT EXISTS conversations (
     id          TEXT PRIMARY KEY,
     student_id  TEXT NOT NULL,
@@ -61,6 +69,38 @@ CREATE TABLE IF NOT EXISTS user_settings (
 );
 """
 
+# Ownership on attachments: without an owner column the GET-by-id endpoint cannot tell whose
+# photo/recording an id belongs to (the enumerable-IDOR fix). `owner_id` is set at upload; an
+# attachment is accessible to its owner, or to the owner of the conversation it is linked to.
+_MIGRATION_2_ATTACHMENT_OWNER = """
+ALTER TABLE attachments ADD COLUMN IF NOT EXISTS owner_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_attachments_owner ON attachments(owner_id, created_at);
+"""
+
+_MIGRATIONS: list[tuple[int, str]] = [
+    (1, _MIGRATION_1_BASE),
+    (2, _MIGRATION_2_ATTACHMENT_OWNER),
+]
+
+
+def _apply_migrations(conn) -> None:
+    """Run every migration the database has not recorded yet, each in its own transaction."""
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations "
+        "(version INT PRIMARY KEY, applied_at TEXT NOT NULL)"
+    )
+    applied = {r["version"] for r in conn.execute("SELECT version FROM schema_migrations").fetchall()}
+    for version, sql in _MIGRATIONS:
+        if version in applied:
+            continue
+        with conn.transaction():
+            conn.execute(sql)
+            conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (%s, %s)",
+                (version, _now()),
+            )
+
+
 # Postgres restarts once during first-boot init; a fixed DSN that is *about* to be ready is
 # the normal case under compose, so construction waits rather than failing fast.
 _OPEN_TIMEOUT_S = 30.0
@@ -82,12 +122,16 @@ class ConversationStore:
             min_size=1,
             max_size=8,
             kwargs={"row_factory": dict_row},
+            # Validate a connection on checkout (one round trip): after a Postgres restart the
+            # pool otherwise hands out stale connections that fail on first use, surfacing as a
+            # 500 to the student. `check` discards and replaces them transparently.
+            check=ConnectionPool.check_connection,
             open=False,
         )
         try:
             self._pool.open(wait=True, timeout=_OPEN_TIMEOUT_S)
             with self._pool.connection() as conn:
-                conn.execute(_SCHEMA)
+                _apply_migrations(conn)
         except Exception:
             # A half-constructed store has no owner to close it — every retry against a
             # down db would otherwise leak a pool and its reconnect worker thread.
@@ -140,9 +184,20 @@ class ConversationStore:
             ).fetchall()
         return [dict(r) for r in rows]
 
-    def delete_conversation(self, conversation_id: str) -> None:
+    def delete_conversation(self, conversation_id: str, *, owner_id: str | None = None) -> bool:
+        """Delete a conversation (messages/attachments cascade). Returns True when a row was
+        actually removed. With ``owner_id`` the delete only touches a conversation that student
+        owns, so the caller can 404 rather than silently reporting success for someone else's
+        (or a nonexistent) thread."""
         with self._pool.connection() as conn:
-            conn.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
+            if owner_id is None:
+                cur = conn.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
+            else:
+                cur = conn.execute(
+                    "DELETE FROM conversations WHERE id = %s AND student_id = %s",
+                    (conversation_id, owner_id),
+                )
+            return cur.rowcount > 0
 
     def set_title(self, conversation_id: str, title: str) -> None:
         """First write wins — the title is the opening message, not the latest one."""
@@ -221,23 +276,33 @@ class ConversationStore:
         *,
         conversation_id: str | None = None,
         message_id: int | None = None,
+        owner_id: str | None = None,
     ) -> int:
         with self._pool.connection() as conn:
             row = conn.execute(
                 "INSERT INTO attachments (conversation_id, message_id, kind, mime, data, "
-                "created_at) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-                (conversation_id, message_id, kind, mime, data, _now()),
+                "owner_id, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (conversation_id, message_id, kind, mime, data, owner_id, _now()),
             ).fetchone()
         return int(row["id"])
 
-    def get_attachment(self, attachment_id: int) -> dict | None:
+    def get_attachment(self, attachment_id: int, *, owner_id: str | None = None) -> dict | None:
+        """Fetch an attachment's bytes. With ``owner_id`` the row is returned only when that
+        student owns it directly (uploaded it) or owns the conversation it is linked to —
+        otherwise None, so the endpoint 404s instead of leaking another student's file."""
         with self._pool.connection() as conn:
             row = conn.execute(
-                "SELECT id, conversation_id, message_id, kind, mime, data, created_at "
-                "FROM attachments WHERE id = %s",
+                "SELECT a.id, a.conversation_id, a.message_id, a.kind, a.mime, a.data, "
+                "a.owner_id, a.created_at, c.student_id AS conversation_owner "
+                "FROM attachments a LEFT JOIN conversations c ON c.id = a.conversation_id "
+                "WHERE a.id = %s",
                 (attachment_id,),
             ).fetchone()
-        return dict(row) if row else None
+        if row is None:
+            return None
+        if owner_id is not None and owner_id not in (row.get("owner_id"), row.get("conversation_owner")):
+            return None
+        return dict(row)
 
     def link_attachment(
         self, attachment_id: int, conversation_id: str, message_id: int | None = None
@@ -266,6 +331,43 @@ class ConversationStore:
                 "SET settings = EXCLUDED.settings, updated_at = EXCLUDED.updated_at",
                 (student_id, Jsonb(settings), _now()),
             )
+
+    # --- retention & erasure ----------------------------------------------------------
+
+    def delete_student(self, student_id: str) -> dict[str, int]:
+        """Erase everything owned by one student: their conversations (messages + linked
+        attachments cascade), any attachments they uploaded that never linked to a
+        conversation, and their settings. Returns per-table deleted counts. This is the
+        primitive a parent/guardian-facing 'delete my child's data' request is built on."""
+        with self._pool.connection() as conn, conn.transaction():
+            orphans = conn.execute(
+                "DELETE FROM attachments WHERE owner_id = %s AND conversation_id IS NULL",
+                (student_id,),
+            ).rowcount
+            convos = conn.execute(
+                "DELETE FROM conversations WHERE student_id = %s", (student_id,)
+            ).rowcount
+            settings = conn.execute(
+                "DELETE FROM user_settings WHERE student_id = %s", (student_id,)
+            ).rowcount
+        return {"conversations": convos, "orphan_attachments": orphans, "settings": settings}
+
+    def reap_orphan_attachments(self, older_than_seconds: float) -> int:
+        """Delete never-linked attachments (conversation_id IS NULL) older than the cutoff —
+        photos/recordings whose chat was never sent. ISO-8601 UTC timestamps sort
+        lexicographically, so a string comparison is a chronological one. Returns the count."""
+        cutoff = (
+            datetime.now(timezone.utc) - timedelta(seconds=older_than_seconds)
+        ).isoformat()
+        with self._pool.connection() as conn:
+            return conn.execute(
+                "DELETE FROM attachments WHERE conversation_id IS NULL AND created_at < %s",
+                (cutoff,),
+            ).rowcount
+
+    def delete_settings(self, student_id: str) -> None:
+        with self._pool.connection() as conn:
+            conn.execute("DELETE FROM user_settings WHERE student_id = %s", (student_id,))
 
     def close(self) -> None:
         self._pool.close()

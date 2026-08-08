@@ -58,15 +58,24 @@ class ReadyResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    student_id: str = Field(description="Stable per-learner id; keys the learning twin.")
-    message: str
+    student_id: str = Field(
+        max_length=128, description="Stable per-learner id; keys the learning twin."
+    )
+    # Input cap (prompt-bomb guard): the primary browser path was previously unbounded while
+    # the sibling /tutor path capped its text — one multi-MB message blows the 2048-token
+    # context and drives prefill RAM/CPU on the shared 8GB box, degrading every other student.
+    message: str = Field(max_length=8000)
     conversation_id: str | None = Field(
-        None, description="Omit to start a new thread; pass to continue one (multi-turn memory)."
+        None,
+        max_length=64,
+        description="Omit to start a new thread; pass to continue one (multi-turn memory).",
     )
     mode: TutoringMode = TutoringMode.socratic
     persona: Persona = Persona.teacher
     subject: Subject = Subject.math
-    language: str = Field("en", description="BCP-47-ish tag: en, fr, ha, yo, ig, sw, ar, am, zu.")
+    language: str = Field(
+        "en", max_length=16, description="BCP-47-ish tag: en, fr, ha, yo, ig, sw, ar, am, zu."
+    )
     stream: bool = Field(
         False, description="When true the server replies with an SSE token stream instead."
     )
@@ -80,6 +89,7 @@ class ChatRequest(BaseModel):
     )
     attachment_ids: list[int] = Field(
         default_factory=list,
+        max_length=32,
         description="Previously-uploaded attachments to link to this message.",
     )
 
@@ -295,6 +305,32 @@ class MessageList(BaseModel):
 class ConversationDeleted(BaseModel):
     id: str
     deleted: bool = True
+
+
+# --- auth & data-subject rights (additive) ---------------------------------------------
+
+
+class AuthTokenRequest(BaseModel):
+    student_id: str = Field(max_length=128, description="The per-device learner id to bind.")
+
+
+class AuthTokenResponse(BaseModel):
+    student_id: str
+    token: str = Field(
+        description=(
+            "Bearer token for the /v1 data endpoints. Send as `Authorization: Bearer <token>` "
+            "(or `?token=` on attachment URLs). Opaque; treat as a per-device secret."
+        )
+    )
+
+
+class StudentErased(BaseModel):
+    """Result of a data-subject erasure — the counts removed, for an auditable receipt."""
+
+    student_id: str
+    conversations: int = 0
+    orphan_attachments: int = 0
+    settings: int = 0
 
 
 class TranscribeResponse(BaseModel):

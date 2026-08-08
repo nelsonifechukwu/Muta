@@ -5,7 +5,7 @@ PY ?= python3
 
 .PHONY: help install dev test lint fmt contract contract-test build up down smoke \
 	model fetch-models verify-models serve profiles core-cmd kv-budget index audio \
-	bench profile monitor
+	bench profile monitor eval backup restore
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -84,3 +84,21 @@ profile: ## Official profiler + product path, both scored. Args: ARGS="--skip-pr
 
 monitor: ## Live scored-metrics HUD against a running app. Args: ARGS="--pid <n>"
 	$(PY) -m bench.monitor $(ARGS)
+
+eval: ## Tutoring-quality eval (the 50% S_acc term) against a running stack. Args: ARGS="--base http://localhost:3000"
+	$(PY) -m bench.eval $(ARGS)
+
+# --- Data safety (student conversations live only in the muta-pgdata volume) ---
+backup: ## Dump the Postgres db to backups/muta-<timestamp>.dump (compressed, restorable)
+	@mkdir -p backups
+	@ts=$$(date +%Y%m%d-%H%M%S); \
+	 out=backups/muta-$$ts.dump; \
+	 docker compose exec -T db pg_dump -U muta -Fc muta > $$out \
+	   && echo "wrote $$out ($$(du -h $$out | cut -f1))" \
+	   || { echo "backup failed — is the db up? (make up)"; rm -f $$out; exit 1; }
+
+restore: ## Restore from a dump: make restore DUMP=backups/muta-<ts>.dump  (DESTRUCTIVE)
+	@test -n "$(DUMP)" || { echo "usage: make restore DUMP=backups/muta-<timestamp>.dump"; exit 2; }
+	@test -f "$(DUMP)" || { echo "no such dump: $(DUMP)"; exit 2; }
+	@echo "restoring $(DUMP) into the muta db (existing data is replaced)…"
+	docker compose exec -T db pg_restore -U muta -d muta --clean --if-exists < "$(DUMP)"

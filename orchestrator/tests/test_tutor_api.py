@@ -112,7 +112,10 @@ def test_engine_down_is_a_503_not_a_stack_trace(wired):
     engine, *_ = wired
     engine.raises = httpx.ConnectError("no server")
     r = client.post("/v1/tutor/chat", json=turn())
-    assert r.status_code == 503 and "unreachable" in r.json()["detail"]
+    # A friendly, student-safe 503 — never a stack trace.
+    assert r.status_code == 503
+    detail = r.json()["detail"]
+    assert isinstance(detail, str) and "try again" in detail and "Traceback" not in detail
 
 
 def test_the_slot_is_released_even_when_the_engine_fails(wired):

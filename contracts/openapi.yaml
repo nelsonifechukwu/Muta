@@ -104,7 +104,9 @@ paths:
       tags:
       - conversations
       summary: Conversations
-      description: A student's threads, most recently active first — the UI sidebar.
+      description: 'A student''s threads, most recently active first — the UI sidebar. A caller only sees
+
+        their own threads; the query id must match the authenticated identity.'
       operationId: conversations_v1_conversations_get
       parameters:
       - name: student_id
@@ -113,6 +115,14 @@ paths:
         schema:
           type: string
           title: Student Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       responses:
         '200':
           description: Successful Response
@@ -131,7 +141,9 @@ paths:
       tags:
       - conversations
       summary: Conversation Messages
-      description: Full history with attachment refs — how the UI reloads a thread after a restart.
+      description: 'Full history with attachment refs — how the UI reloads a thread after a restart. Scoped
+
+        to the owner: a thread the caller does not own is indistinguishable from a missing one.'
       operationId: conversation_messages_v1_conversations__conversation_id__messages_get
       parameters:
       - name: conversation_id
@@ -140,6 +152,14 @@ paths:
         schema:
           type: string
           title: Conversation Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       responses:
         '200':
           description: Successful Response
@@ -214,6 +234,10 @@ paths:
       tags:
       - conversations
       summary: Conversation Delete
+      description: 'Delete one of the caller''s own threads. 404 (not a false success) when the caller
+        does
+
+        not own it or it does not exist — a client cannot destroy another student''s history.'
       operationId: conversation_delete_v1_conversations__conversation_id__delete
       parameters:
       - name: conversation_id
@@ -222,6 +246,14 @@ paths:
         schema:
           type: string
           title: Conversation Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       responses:
         '200':
           description: Successful Response
@@ -240,6 +272,11 @@ paths:
       tags:
       - conversations
       summary: Attachment
+      description: 'Serve an attachment the caller owns. Ownership is checked at the store (owner or the
+
+        owner of the linked conversation); a miss is a 404, so ids stay non-probeable. Served as an
+
+        inert `nosniff` download with a whitelisted content type (never the client-set one).'
       operationId: attachment_v1_attachments__attachment_id__get
       parameters:
       - name: attachment_id
@@ -248,11 +285,97 @@ paths:
         schema:
           type: integer
           title: Attachment Id
+      - name: token
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Token
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       responses:
         '200':
           description: Raw bytes
           content:
             application/octet-stream: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/auth/session:
+    post:
+      tags:
+      - ops
+      summary: Auth Session
+      description: 'Mint a bearer token for a per-device learner id. With MUTA_AUTH_SECRET set the token
+        is
+
+        HMAC-signed (unforgeable); without it the token is the id itself (opaque per-device
+
+        secret). The client sends it as `Authorization: Bearer <token>` on data endpoints.'
+      operationId: auth_session_v1_auth_session_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthTokenRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/students/{student_id}:
+    delete:
+      tags:
+      - ops
+      summary: Student Erase
+      description: 'Data-subject erasure: delete everything owned by a student (conversations + cascaded
+
+        messages/attachments, owned orphan attachments, settings). A caller may only erase their
+
+        own data. Returns the removed counts as a receipt.'
+      operationId: student_erase_v1_students__student_id__delete
+      parameters:
+      - name: student_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Student Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentErased'
         '422':
           description: Validation Error
           content:
@@ -603,7 +726,7 @@ paths:
       summary: Audio Transcribe
       description: 'Uploaded audio → text. 503 when ASR is unavailable (the UI tells the student to
 
-        type instead), 422 when ffmpeg can''t decode the file.'
+        type instead), 422 when ffmpeg can''t decode the file, 413 when the upload is too large.'
       operationId: audio_transcribe_v1_audio_transcribe_post
       requestBody:
         content:
@@ -693,6 +816,32 @@ components:
       - kind
       - mime
       title: AttachmentRef
+    AuthTokenRequest:
+      properties:
+        student_id:
+          type: string
+          maxLength: 128
+          title: Student Id
+          description: The per-device learner id to bind.
+      type: object
+      required:
+      - student_id
+      title: AuthTokenRequest
+    AuthTokenResponse:
+      properties:
+        student_id:
+          type: string
+          title: Student Id
+        token:
+          type: string
+          title: Token
+          description: 'Bearer token for the /v1 data endpoints. Send as `Authorization: Bearer <token>`
+            (or `?token=` on attachment URLs). Opaque; treat as a per-device secret.'
+      type: object
+      required:
+      - student_id
+      - token
+      title: AuthTokenResponse
     Body_audio_transcribe_v1_audio_transcribe_post:
       properties:
         audio:
@@ -704,6 +853,11 @@ components:
           - type: string
           - type: 'null'
           title: Conversation Id
+        student_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Student Id
       type: object
       required:
       - audio
@@ -731,14 +885,17 @@ components:
       properties:
         student_id:
           type: string
+          maxLength: 128
           title: Student Id
           description: Stable per-learner id; keys the learning twin.
         message:
           type: string
+          maxLength: 8000
           title: Message
         conversation_id:
           anyOf:
           - type: string
+            maxLength: 64
           - type: 'null'
           title: Conversation Id
           description: Omit to start a new thread; pass to continue one (multi-turn memory).
@@ -753,6 +910,7 @@ components:
           default: math
         language:
           type: string
+          maxLength: 16
           title: Language
           description: 'BCP-47-ish tag: en, fr, ha, yo, ig, sw, ar, am, zu.'
           default: en
@@ -772,6 +930,7 @@ components:
           items:
             type: integer
           type: array
+          maxItems: 32
           title: Attachment Ids
           description: Previously-uploaded attachments to link to this message.
       type: object
@@ -1195,6 +1354,28 @@ components:
       - action
       - ok
       title: SessionActionResponse
+    StudentErased:
+      properties:
+        student_id:
+          type: string
+          title: Student Id
+        conversations:
+          type: integer
+          title: Conversations
+          default: 0
+        orphan_attachments:
+          type: integer
+          title: Orphan Attachments
+          default: 0
+        settings:
+          type: integer
+          title: Settings
+          default: 0
+      type: object
+      required:
+      - student_id
+      title: StudentErased
+      description: Result of a data-subject erasure — the counts removed, for an auditable receipt.
     Subject:
       type: string
       enum:
