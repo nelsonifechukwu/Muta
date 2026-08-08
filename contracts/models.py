@@ -47,6 +47,11 @@ class ReadyResponse(BaseModel):
     checks: dict[str, bool] = Field(
         default_factory=dict, description="Per-dependency readiness (llama-server, sub-apps)."
     )
+    # Deliberately NOT a check: ready = all(checks), and an offline-but-healthy stack is
+    # still ready — offline is a state, not a failure (design P2, 2026-08-08).
+    online: bool | None = Field(
+        None, description="Internet reachability; null until the first probe completes."
+    )
 
 
 # --- /chat -----------------------------------------------------------------------------

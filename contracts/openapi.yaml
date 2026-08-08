@@ -72,9 +72,11 @@ paths:
       description: 'Token-streaming twin of `/chat` — the browser UI''s primary path.
 
 
-        Emits Server-Sent Events: `{"reasoning": "..."}` for Qwen3 thinking tokens and
+        Emits Server-Sent Events: a leading `{"conversation_id": "..."}`, then
 
-        `{"delta": "..."}` for answer tokens, then a final
+        `{"reasoning": "..."}` for Qwen3 thinking tokens and `{"delta": "..."}` for answer
+
+        tokens, then a final
 
         `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.'
       operationId: chat_stream_v1_chat_stream_post
@@ -1114,6 +1116,12 @@ components:
           type: object
           title: Checks
           description: Per-dependency readiness (llama-server, sub-apps).
+        online:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Online
+          description: Internet reachability; null until the first probe completes.
       type: object
       required:
       - ready

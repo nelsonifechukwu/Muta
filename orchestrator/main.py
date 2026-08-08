@@ -87,6 +87,10 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     get_hub().start()  # 1 Hz RSS/temp sampling for /v1/conversations/{id}/telemetry
 
+    from orchestrator.gateway.connectivity import get_connectivity
+
+    get_connectivity().start()  # ~1/min online/offline verdict for /v1/ready and the UI
+
     cfg = RuntimeConfig()
     engine_server: LlamaServer | None = None
     reaper_task: asyncio.Task | None = None
@@ -103,6 +107,8 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        with contextlib.suppress(Exception):
+            get_connectivity().stop()
         if reaper_task is not None:
             reaper_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

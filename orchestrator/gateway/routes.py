@@ -100,7 +100,11 @@ def ready() -> ReadyResponse:
         "inference": _url_up(f"{cfg.base_url}/health"),
         "db": _db_up(cfg.db_url),
     }
-    return ReadyResponse(ready=all(checks.values()), checks=checks)
+    from orchestrator.gateway.connectivity import get_connectivity
+
+    return ReadyResponse(
+        ready=all(checks.values()), checks=checks, online=get_connectivity().online()
+    )
 
 
 def _url_up(url: str) -> bool:

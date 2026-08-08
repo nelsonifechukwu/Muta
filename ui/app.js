@@ -796,3 +796,20 @@ window.MutaChat = {
 };
 
 refreshSidebar();
+
+// --- connectivity dot: /v1/ready.online, polled slowly ---------------------------------
+async function refreshNetDot() {
+  const dot = $("#net-dot");
+  if (!dot) return;
+  try {
+    const body = await (await fetch("/v1/ready")).json();
+    if (body.online == null) return; // probe hasn't run yet — keep the dot hidden
+    dot.hidden = false;
+    dot.classList.toggle("online", body.online === true);
+    dot.title = body.online ? "internet available" : "offline";
+  } catch {
+    /* the ready poll failing is not worth a toast */
+  }
+}
+refreshNetDot();
+setInterval(refreshNetDot, 60_000);
