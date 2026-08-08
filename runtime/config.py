@@ -114,6 +114,13 @@ class RuntimeConfig(BaseSettings):
     # (engine default = repack on) until the x86 A/B lands. Flip with MUTA_RT_NO_REPACK=1.
     no_repack: bool = False
     reasoning_budget: int = 512  # -1 = unrestricted (engine default)
+    # Per-request thinking budget for the UI's "Extended" reasoning level. llama-server takes a
+    # `reasoning_budget_tokens` field on each chat request (server-common.cpp; falls back to the
+    # launch --reasoning-budget when absent), so "Extended" raises the cap for THAT turn only —
+    # no engine relaunch, no disruption to other students. An engine pin that predates the field
+    # simply ignores it (llama-server is lenient with unknown request fields), so Extended
+    # degrades to a fuller answer. Costs S_perf (more thinking tokens) — a per-turn opt-in.
+    reasoning_budget_extended: int = 2048
     # Qwen3 is a hybrid-reasoning model. Thinking ON trades tokens/latency for reasoning
     # quality — honoured by llama-server via --jinja (server.py). Set MUTA_RT_ENABLE_THINKING
     # to override. Scoring note: this costs S_perf (slower, more tokens) — verify the accuracy

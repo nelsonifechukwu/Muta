@@ -104,8 +104,9 @@ are the class defaults; the `Qwen3-0.6B` smoke-fixture defaults are what ship in
 | `MUTA_RT_N_UBATCH` | `128` | physical batch size (compute-buffer size) | `config.py:105`, `server.py:77` |
 | `MUTA_RT_CACHE_TYPE_K` | `q8_0` | K-cache quantization | `config.py:106`, `server.py:78` |
 | `MUTA_RT_NO_REPACK` | `false` | pass `--no-repack` (keep weights file-backed vs repack into anon RAM) | `config.py:115`, `server.py:82` |
-| `MUTA_RT_REASONING_BUDGET` | `512` | max thinking tokens before the answer is forced (`-1` = unrestricted) | `config.py:116`, `server.py:79` |
-| `MUTA_RT_ENABLE_THINKING` | `true` *(compose: `1`)* | Qwen3 hybrid thinking on/off (via `--jinja`) | `config.py:121`, compose `:60` |
+| `MUTA_RT_REASONING_BUDGET` | `512` | launch `--reasoning-budget`: default max thinking tokens before the answer is forced (`-1` = unrestricted) | `config.py:116`, `server.py:79` |
+| `MUTA_RT_REASONING_BUDGET_EXTENDED` | `2048` | per-request thinking cap for the UI's "Extended" level — sent as `reasoning_budget_tokens` on the chat request (no engine relaunch); older engine pins ignore it | `config.py`, `routes.py::_apply_thinking` |
+| `MUTA_RT_ENABLE_THINKING` | `true` *(compose: `1`)* | Qwen3 hybrid thinking on/off (via `--jinja`); overridable per request by the UI's reasoning selector | `config.py:121`, compose `:60` |
 | `MUTA_RT_EXTRA_SERVER_ARGS` | `[]` | extra raw args appended to the `llama-server` command | `config.py:122`, `server.py:89` |
 | `MUTA_RT_STARTUP_TIMEOUT_S` | `120.0` *(compose: `900`)* | model-load wait before giving up | `config.py:123`, compose `:88` |
 | `MUTA_RT_REQUEST_TIMEOUT_S` | `120.0` *(compose: `600`)* | per-request client timeout (between stream chunks) | `config.py:126`, compose `:89` |

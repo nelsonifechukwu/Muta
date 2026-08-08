@@ -16,6 +16,7 @@ import logging
 import os
 import re
 import time
+from functools import lru_cache
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -204,22 +205,33 @@ def _touch_twin(student_id: str, subject: str, message: str) -> None:
         log.warning("twin update failed for %s", student_id, exc_info=True)
 
 
-#: Extended thinking gives the answer more room; the reasoning budget itself is a launch flag
-#: (docs/engine-flags.md), so 'extended' buys a fuller answer rather than a deeper trace.
+#: Extended thinking widens the answer's token room so a longer trace + answer isn't clipped.
 _EXTENDED_MAX_TOKENS = 3000
 
 
-def _apply_thinking(params: dict, thinking: str | None) -> dict:
+@lru_cache(maxsize=1)
+def _extended_reasoning_budget() -> int:
+    """The per-request thinking cap for 'Extended', from RuntimeConfig (cached — it's fixed at
+    boot)."""
+    return RuntimeConfig().reasoning_budget_extended
+
+
+def _apply_thinking(params: dict, thinking: str | None, *, extended_budget: int | None = None) -> dict:
     """Fold the request's thinking level into the sampling params the engine receives. `off`
-    disables the Qwen3 thinking phase (a direct, faster answer); `extended` keeps it on and
-    widens the token budget; `auto`/None leave the server default. Per-request enable_thinking
-    is honoured by runtime.client._payload."""
+    disables the Qwen3 thinking phase (a direct, faster answer); `auto`/None leave the launch
+    default reasoning budget; `extended` keeps thinking on, raises the PER-REQUEST reasoning
+    budget (`reasoning_budget_tokens`, no engine relaunch), and widens the answer's token room.
+    Per-request enable_thinking + reasoning_budget_tokens are applied by runtime.client._payload
+    (local engine only)."""
     if thinking == "off":
         params["enable_thinking"] = False
     elif thinking == "auto":
         params["enable_thinking"] = True
     elif thinking == "extended":
         params["enable_thinking"] = True
+        params["reasoning_budget_tokens"] = (
+            extended_budget if extended_budget is not None else _extended_reasoning_budget()
+        )
         params["max_tokens"] = max(int(params.get("max_tokens") or 0), _EXTENDED_MAX_TOKENS)
     return params
 

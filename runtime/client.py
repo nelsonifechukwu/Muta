@@ -58,6 +58,10 @@ class InferenceClient:
         # Per-request thinking override (the gateway maps the request's `thinking` level to
         # this); falls back to the client default set at construction.
         enable_thinking = params.pop("enable_thinking", self.enable_thinking)
+        # llama-server-only per-request thinking cap ("Extended"). Popped here so it is never
+        # sent to a strict cloud provider (which 400s on unknown fields — the same reason
+        # chat_template_kwargs is gated below).
+        reasoning_budget = params.pop("reasoning_budget_tokens", None)
         payload = {
             "model": self.model,
             "messages": messages,
@@ -67,6 +71,10 @@ class InferenceClient:
         if self.template_kwargs:
             # Qwen3 hybrid-reasoning switch; honoured by llama-server when --jinja is set.
             payload["chat_template_kwargs"] = {"enable_thinking": enable_thinking}
+            if reasoning_budget is not None:
+                # Honoured on recent llama.cpp; older pins ignore the field (lenient parser),
+                # so Extended degrades to a fuller answer rather than erroring.
+                payload["reasoning_budget_tokens"] = reasoning_budget
         return payload
 
     def chat(self, messages: list[Message], **params) -> str:
