@@ -70,6 +70,14 @@ class ChatRequest(BaseModel):
     stream: bool = Field(
         False, description="When true the server replies with an SSE token stream instead."
     )
+    use_web: bool = Field(
+        False,
+        description=(
+            "Opt-in web grounding: when the box is online and a search endpoint is "
+            "configured, the answer is grounded with fresh snippets and their sources "
+            "are returned. Ignored (silently) offline or unconfigured."
+        ),
+    )
     attachment_ids: list[int] = Field(
         default_factory=list,
         description="Previously-uploaded attachments to link to this message.",

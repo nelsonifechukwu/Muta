@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import time
 
@@ -61,6 +62,7 @@ from orchestrator.gateway.deps import (
     load_prompt,
 )
 from orchestrator.gateway.images import ImageRejected, prepare_image
+from orchestrator.gateway.websearch import fetch_snippets
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.sessions import Admission, SessionManager
@@ -183,11 +185,31 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
     tokens, then a final
     `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
     """
+    # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
+    # the ungrounded request must stay byte-identical to what the tutor already serves.
+    system_prompt = load_prompt(req.mode.value)
+    sources: list[dict] = []
+    search_url = os.environ.get("MUTA_SEARCH_URL")
+    if req.use_web and search_url:
+        from orchestrator.gateway.connectivity import get_connectivity
+
+        if get_connectivity().online() is True:
+            snippets = fetch_snippets(req.message, base_url=search_url)
+            if snippets:
+                lines = "\n".join(
+                    f"[{i}] {s.title} — {s.snippet}" for i, s in enumerate(snippets, start=1)
+                )
+                system_prompt += (
+                    "\n\nWeb context (retrieved just now — cite [n] when you use it):\n"
+                    + lines
+                )
+                sources = [{"title": s.title, "url": s.url} for s in snippets]
+
     cid, user_message_id, events = engine.stream_events_chat(
         student_id=req.student_id,
         message=req.message,
         conversation_id=req.conversation_id,
-        system_prompt=load_prompt(req.mode.value),
+        system_prompt=system_prompt,
         mode=req.mode.value,
         persona=req.persona.value,
         subject=req.subject.value,
@@ -255,6 +277,8 @@ def chat_stream(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> S
                 # badges any answer a cloud backend produced.
                 "source": getattr(getattr(engine, "client", None), "last_source", None)
                 or "local",
+                # Grounding sources (P4): empty unless web context shaped this answer.
+                "sources": sources,
             }
         ) + "\n\n"
 
