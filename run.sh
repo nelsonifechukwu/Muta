@@ -106,10 +106,24 @@ detect_gpu() {
     esac
 }
 
+# Connectivity, decided once per invocation (~3 s worst case). Any HTTP response counts
+# as online; only transport failure (DNS, TLS, unreachable) means offline. The boot must
+# never die on a registry it cannot reach when everything it needs is already local
+# (2026-08-07: a dead network + a neighbor-clobbered db tag took the whole stack down).
+probe_net() {
+    if curl -fsSI --max-time 3 "${MUTA_NET_PROBE_URL:-https://huggingface.co}" \
+        >/dev/null 2>&1; then
+        echo online
+    else
+        echo offline
+    fi
+}
+
 print_plan() {
     echo "host=$(uname -s)/$(uname -m)"
     echo "mode=$MODE"
     echo "gpu=$(detect_gpu)"
+    echo "net=$(probe_net)"
 }
 
 native_up() {
@@ -237,9 +251,23 @@ fi
 # ---------------------------------------------------------------------------
 # 1. Images
 # ---------------------------------------------------------------------------
+NET=$(probe_net)
+if [ "$NET" = offline ]; then
+    info "offline — skipping builds/pulls; using what is already local"
+fi
+
 if [ "$MODE" = native ]; then
-    info "native mode: building only the frontend image (the backend runs on this host)"
-    docker compose build frontend || die "frontend image build failed"
+    if [ "$NET" = offline ]; then
+        docker image inspect muta-frontend:latest >/dev/null 2>&1 \
+            || die "offline and no local frontend image — connect once and rerun"
+        info "native mode: offline, using the existing frontend image"
+    else
+        info "native mode: building only the frontend image (the backend runs on this host)"
+        docker compose build frontend || die "frontend image build failed"
+    fi
+elif [ "$NET" = offline ]; then
+    docker image inspect muta-backend:latest muta-frontend:latest >/dev/null 2>&1 \
+        || die "offline and no local images exist — connect once and rerun ./run.sh"
 elif [ "$NO_CACHE" = 1 ]; then
     info "rebuilding images from scratch"
     docker compose build --no-cache
@@ -272,7 +300,13 @@ missing=0
 for f in "${required_models[@]}"; do
     [ -e "$f" ] || { missing=1; break; }
 done
-if [ "$missing" = 1 ]; then
+if [ "$missing" = 1 ] && [ "$NET" = offline ]; then
+    warn "offline, and these required model files are missing:"
+    for f in "${required_models[@]}"; do
+        if [ ! -e "$f" ]; then warn "  $f"; fi
+    done
+    die "connect once and rerun ./run.sh — downloads resume where they stopped"
+elif [ "$missing" = 1 ]; then
     info "provisioning models into ./models (first time: ~4 GB — resumable, so rerun on failure)"
     # --mmproj-precision f16: no first-party Q8_0 projector exists (docs/model-provenance.md);
     # --with-draft: the tier-B speculative-decoding draft (Qwen3.5-0.8B — no 0.6B exists).
@@ -305,7 +339,13 @@ if [ "$MODE" = native ]; then
 fi
 
 info "starting the stack (backend is healthy once the model is loaded — minutes on Apple silicon)"
-if ! docker compose up -d --wait; then
+# Offline: --pull never makes a genuinely-missing image fail fast with our message
+# instead of hanging on a registry that cannot answer. Deliberately a plain string
+# expanded unquoted: empty-array expansion under set -u breaks macOS's bash 3.2.
+PULL_NEVER=""
+if [ "$NET" = offline ]; then PULL_NEVER="--pull never"; fi
+# shellcheck disable=SC2086
+if ! docker compose up -d --wait $PULL_NEVER; then
     warn "stack did not become healthy. Most useful next step:"
     warn "  docker compose ps"
     warn "  docker compose logs backend --tail 50"

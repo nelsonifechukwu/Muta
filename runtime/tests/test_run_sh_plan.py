@@ -36,6 +36,26 @@ def run_plan(tmp_path, uname_s: str, uname_m: str, *args: str, nvidia: bool = Fa
     return out.stdout
 
 
+def _shim_curl(tmp_path, exit_code: int) -> None:
+    shim = tmp_path / "bin"
+    shim.mkdir(exist_ok=True)
+    curl = shim / "curl"
+    curl.write_text(f"#!/bin/sh\nexit {exit_code}\n")
+    curl.chmod(curl.stat().st_mode | stat.S_IEXEC)
+
+
+def test_plan_reports_online_when_curl_succeeds(tmp_path):
+    _shim_curl(tmp_path, 0)
+    out = run_plan(tmp_path, "Darwin", "arm64")
+    assert "net=online" in out
+
+
+def test_plan_reports_offline_when_curl_fails(tmp_path):
+    _shim_curl(tmp_path, 6)  # curl exit 6: could not resolve host
+    out = run_plan(tmp_path, "Darwin", "arm64")
+    assert "net=offline" in out
+
+
 def test_plan_on_apple_silicon_offers_metal(tmp_path):
     out = run_plan(tmp_path, "Darwin", "arm64")
     assert "host=Darwin/arm64" in out
