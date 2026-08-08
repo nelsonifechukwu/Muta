@@ -26,7 +26,7 @@ from runtime.chat import ChatEngine
 from runtime.client import InferenceClient
 from runtime.config import RuntimeConfig
 from runtime.memory import ConversationStore
-from runtime.profiles import BundlePaths, get_profile
+from runtime.profiles import BundlePaths
 from runtime.slots import SlotClient, SnapshotReaper
 from runtime.vision import VisionManager
 
@@ -105,10 +105,14 @@ def core_rss_bytes() -> int:
 
 @lru_cache(maxsize=1)
 def get_slot_client() -> SlotClient:
-    port = os.environ.get("TUTOR_CORE_PORT", "8081")
+    # The slot API lives on the SAME llama-server the gateway supervises. RuntimeConfig is the
+    # one authority for its address — this used to point at a dead TUTOR_CORE_PORT (8081) while
+    # the engine actually listens on RuntimeConfig.server_port (8080), so /v1/metrics.engine and
+    # session suspend/resume always hit nothing (audit: config-split).
+    cfg = RuntimeConfig()
     key_file = BundlePaths.from_env().api_key_file
     api_key = key_file.read_text().strip() if key_file.is_file() else None
-    return SlotClient(base_url=f"http://127.0.0.1:{port}", api_key=api_key)
+    return SlotClient(base_url=cfg.base_url, api_key=api_key)
 
 
 @lru_cache(maxsize=1)
@@ -118,8 +122,13 @@ def get_reaper() -> SnapshotReaper:
 
 @lru_cache(maxsize=1)
 def get_sessions() -> SessionManager:
-    """Admission control (§8.2), wired to real suspend/resume and to the ladder."""
-    profile = get_profile()
+    """Admission control (§8.2), wired to real suspend/resume and to the ladder.
+
+    Slot count comes from RuntimeConfig.n_parallel — the SAME number the engine is launched
+    with — so admission admits exactly as many concurrent sessions as the engine has slots.
+    It previously sized from the classroom profile (6) against a 2-slot engine, so a third
+    student queued invisibly inside llama-server instead of getting the designed message."""
+    n_parallel = RuntimeConfig().n_parallel
     ladder = get_ladder()
     slots = get_slot_client()
     reaper = get_reaper()
@@ -139,10 +148,10 @@ def get_sessions() -> SessionManager:
         return True
 
     manager = SessionManager(
-        slots_count=profile.n_parallel,
+        slots_count=n_parallel,
         suspend_hook=suspend,
         resume_hook=resume,
-        effective_slots=lambda: ladder.evaluate().effective_slots(profile.n_parallel),
+        effective_slots=lambda: ladder.evaluate().effective_slots(n_parallel),
         accepts_new_sessions=lambda: ladder.evaluate().accepts_new_sessions,
     )
     return manager

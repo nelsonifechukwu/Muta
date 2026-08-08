@@ -285,8 +285,17 @@ function beginAssistantMessage() {
     fail(message) {
       settleThinking();
       cancelRender();
-      if (!full) prose.textContent = message;
-      else renderMarkdown(prose, full);
+      if (!full) {
+        prose.textContent = message;
+      } else {
+        // A partial reply exists: render it, but never let a truncated answer look finished —
+        // append a visible incomplete marker instead of silently dropping the error.
+        renderMarkdown(prose, full);
+        const warn = document.createElement("div");
+        warn.className = "reply-incomplete";
+        warn.textContent = message || "Connection lost — this answer is incomplete.";
+        prose.appendChild(warn);
+      }
       clearCursor(prose);
     },
   };
@@ -823,6 +832,29 @@ async function pumpSse(res, assistant) {
               badge.textContent = "answered via cloud";
               last.appendChild(badge);
             }
+          }
+          // Self-check result: a "steps checked" badge when the model's explicit arithmetic
+          // held, or a friendly caution the server produced when a step contradicted itself.
+          const last = messagesEl.querySelector(".msg.assistant:last-child");
+          if (last) {
+            if (ev.check_note) {
+              const warn = document.createElement("div");
+              warn.className = "reply-incomplete";
+              warn.textContent = ev.check_note;
+              last.querySelector(".prose")?.appendChild(warn);
+            } else if (ev.verified === true && !last.querySelector(".verified-badge")) {
+              const badge = document.createElement("span");
+              badge.className = "verified-badge";
+              badge.textContent = "✓ steps checked";
+              badge.title = "The explicit arithmetic in this reply was verified with a math engine.";
+              last.appendChild(badge);
+            }
+          }
+          if (ev.queued) {
+            toast(
+              `You're #${ev.queue_position || 1} in line — the tutor is busy. Your answer will start shortly.`,
+              4000,
+            );
           }
         }
         if (!telemetryOpened && (ev.reasoning || ev.delta) && conversationId) {

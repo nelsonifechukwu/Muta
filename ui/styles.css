@@ -110,6 +110,16 @@ button.ghost:hover { background: var(--accent-soft); }
   display: block; margin-top: 6px; font-size: 0.72rem; color: var(--muted);
 }
 .sources a { color: inherit; text-decoration: underline; margin-right: 2px; }
+/* Self-check outcomes: a quiet green "steps checked" badge, or a warm caution when a step
+   didn't hold / the reply was cut off. */
+.verified-badge {
+  display: inline-block; margin-top: 6px; font-size: 0.68rem; font-weight: 600;
+  color: #2f7d51; background: rgba(47, 125, 81, 0.1); border-radius: 6px; padding: 1px 7px;
+}
+.reply-incomplete {
+  margin-top: 8px; font-size: 0.8rem; color: var(--danger);
+  border-left: 3px solid var(--danger); padding-left: 8px;
+}
 
 /* --- chat column ---------------------------------------------------------- */
 #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
