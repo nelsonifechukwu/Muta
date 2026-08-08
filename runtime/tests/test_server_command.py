@@ -150,3 +150,18 @@ def test_batch_and_cache_flags_come_from_config_not_extra_args(tmp_path):
     assert cmd[cmd.index("-ub") + 1] == "128"
     assert cmd[cmd.index("--cache-type-k") + 1] == "q8_0"
     assert cmd[cmd.index("--reasoning-budget") + 1] == "512"
+
+
+def test_gpu_layers_accepts_the_engine_vocabulary(tmp_path):
+    """At the pin -ngl takes a number, 'auto' or 'all' (default auto): 'all' is how native
+    Metal mode offloads without hardcoding a layer count."""
+    cfg, model = _cfg(tmp_path, n_gpu_layers="all")
+    cmd = LlamaServer(cfg).build_command(model)
+    assert cmd[cmd.index("--n-gpu-layers") + 1] == "all"
+
+
+def test_gpu_layers_default_stays_cpu(tmp_path):
+    """-ngl DEFAULTS to auto at this pin — the explicit 0 is what keeps CPU paths CPU."""
+    cfg, model = _cfg(tmp_path)
+    cmd = LlamaServer(cfg).build_command(model)
+    assert cmd[cmd.index("--n-gpu-layers") + 1] == "0"

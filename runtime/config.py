@@ -71,7 +71,9 @@ class RuntimeConfig(BaseSettings):
     # llama.cpp has no P/E logic on darwin, hence the explicit derivation below.
     # Compose pins 8/10 for the container via env.
     n_threads: int | None = Field(default_factory=darwin_performance_cores)
-    n_gpu_layers: int = 0  # CPU-only target; raise for faster local dev on a GPU box
+    # CPU-only target; "all"/"auto"/N for GPU boxes. At the b10035 pin -ngl DEFAULTS to
+    # auto — the explicit 0 here is what keeps CPU paths CPU on a Metal-built binary.
+    n_gpu_layers: int | Literal["auto", "all"] = 0
     # --- engine memory ceilings -------------------------------------------------------
     # b10035 defaults are sized for far bigger boxes. Measured on Qwen3.5-4B (hybrid:
     # ~50 MiB f32 recurrent state per slot and per context checkpoint): -np auto picks 4
