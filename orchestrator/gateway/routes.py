@@ -213,7 +213,10 @@ def _rag_block(query: str, *, k: int = 4) -> str:
         from orchestrator.gateway.prompt_layout import RetrievedChunk, render_chunks
         from orchestrator.retrieval.app import get_retriever
 
-        hits = get_retriever().search(query, k, min_score=0.0)
+        # A modest relevance floor keeps unrelated chunks out of the prompt (they cost context
+        # and can mislead); the real bge embedder's cosine scores clear it easily for on-topic
+        # material.
+        hits = get_retriever().search(query, k, min_score=0.1)
         if not hits:
             return ""
         chunks = [
