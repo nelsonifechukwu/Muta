@@ -23,7 +23,7 @@ die()  { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
     cat <<'EOF'
-Usage: ./run.sh [--native] [--gpu|--cpu] [--build] [--model PATH] | plan | down | logs
+Usage: ./run.sh [--native] [--gpu|--cpu] [--build] [--model PATH] | plan | update | down | logs
 
   (no args)   docker mode (default): bring up db + backend + frontend, print the UI URL
   --native    dev mode: db + frontend stay in docker; the gateway and an arm64
@@ -42,7 +42,8 @@ Usage: ./run.sh [--native] [--gpu|--cpu] [--build] [--model PATH] | plan | down 
               container). Vision (mmproj) pairs with the Qwen3.5-4B family, and the
               docker default keeps draft speculation active — a vocab-incompatible
               core fails the engine boot (set MUTA_RT_SPEC_TYPE=none first).
-  plan        print the hardware decisions (host, mode, gpu) and exit — no side effects
+  plan        print the hardware decisions (host, mode, gpu, net) and exit — no side effects
+  update      pull code, refresh models (hash-skipped), rebuild images, restart (online only)
   down        docker compose down (conversations survive: the muta-pgdata volume stays)
   logs        docker compose logs -f
 
@@ -126,6 +127,23 @@ print_plan() {
     echo "net=$(probe_net)"
 }
 
+update_stack() {
+    if [ "$(probe_net)" != online ]; then
+        die "update needs the network — try again when online"
+    fi
+    info "pulling code"
+    git pull --ff-only || die "git pull failed — resolve manually and rerun"
+    info "refreshing models (hash-verified files are skipped)"
+    docker compose run --rm --no-deps backend \
+        python3.10 scripts/fetch_models.py --with-draft --mmproj-precision f16 \
+        || warn "model refresh failed — the stack still runs on the current files"
+    info "rebuilding images"
+    docker compose build || die "image rebuild failed"
+    info "restarting"
+    docker compose up -d --wait || die "stack did not become healthy after the update"
+    bold "updated — http://localhost:3000"
+}
+
 native_up() {
     "${PY:-python3}" -c "import orchestrator, uvicorn" >/dev/null 2>&1 \
         || die "project not importable by ${PY:-python3} — activate your venv and run 'make install'"
@@ -182,6 +200,7 @@ while [ $# -gt 0 ]; do
         --cpu)      FORCE_CPU=1 ;;
         --gpu)      GPU_OPT=1 ;;
         plan)       MODE=plan ;;
+        update)     MODE=update ;;
         --build)    NO_CACHE=1 ;;
         --model)    [ $# -ge 2 ] || die "--model needs a path  (try --help)"
                     MODEL="$2"; shift ;;
@@ -198,6 +217,10 @@ done
 # network are even looked at, so it works on a bare clone and in tests.
 if [ "$MODE" = plan ]; then
     print_plan
+    exit 0
+fi
+if [ "$MODE" = update ]; then
+    update_stack
     exit 0
 fi
 
