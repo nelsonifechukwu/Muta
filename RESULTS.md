@@ -105,6 +105,30 @@ measured: **native mode itself is ~10× over emulation** (prefill 87 vs ~10, dec
 vs ~5.3) — that, not Metal, is what makes the ~4 min/photo vision tax shrink toward
 seconds. Re-test on an engine-pin move or a non-hybrid core.
 
+### C. Offline-resilient boot + connectivity surface land (P2) — docker/emulated
+
+The 2026-08-07 outage, turned into behavior. **Configuration:**
+
+- `run.sh`: `probe_net` (curl HEAD, 3 s budget, any HTTP status = online) decides once
+  per invocation; `./run.sh plan` prints it. Boot matrix now: offline + local images →
+  skip build, `--pull never`, one warning line; offline + missing images or model files
+  → die naming exactly what is missing and the command for when back online; online →
+  unchanged. New `./run.sh update` (online-gated): pull → hash-skipping model refresh →
+  rebuild → restart.
+- `docker-compose.yml`: db digest-pinned
+  (`postgres:16-alpine@sha256:57c72fd2…`) — the bare tag was clobbered to arm64 by a
+  neighboring project, which is what actually killed the 08-07 boot. Verified: the amd64
+  blob pulls by digest and the db is healthy without touching the shared tag.
+- Gateway: `ConnectivityProbe` (60 s timer thread, `MUTA_NET_PROBE_URL`) → `/v1/ready`
+  gains a **top-level** `online: bool|null` — deliberately not a `checks` entry, because
+  `ready = all(checks)` and an offline-but-healthy stack is still ready. Contract
+  regenerated (additive). UI: a quiet green/gray dot in the sidebar foot.
+
+**Verified live:** `{"ready":true,…,"online":true}` through the nginx proxy on the
+rebuilt stack; `./run.sh plan` → `net=online`; suite 698 passed (the house
+`[hidden]`-vs-author-display CSS test caught the dot's display rule — fixed with an
+explicit `.net-dot[hidden]` override).
+
 **Also observed today, environmental:** with the host offline, `./run.sh` died on registry
 metadata even with all images/models local, and another project's arm64 pull had clobbered
 the shared `postgres:16-alpine` tag (compose wants amd64 → forced re-pull → offline →
