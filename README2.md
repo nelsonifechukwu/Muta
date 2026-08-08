@@ -5,3 +5,6 @@
 
 # Hack
 - Add a small 50m sub-model to hack tps.
+
+# Optimise Time to First Token (TTFT)
+- This would improve the reading experience
