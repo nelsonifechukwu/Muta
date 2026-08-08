@@ -477,6 +477,11 @@ async function addImage(file) {
     entry.transcription = body.transcription;
     settle("ready");
     toast("Image read. Ask your question and send.", 3000);
+  } else if (body.accepted) {
+    // The reader ran but saw nothing it could transcribe — a camera problem, not a system
+    // problem. Say so: "couldn't be read" sends the student hunting for a bug that isn't there.
+    settle("failed", "the photo came back empty — try a closer, sharper shot");
+    toast(entry.detail);
   } else {
     settle("failed", body.detail || "the image couldn't be read");
     toast(entry.detail);

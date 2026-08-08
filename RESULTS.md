@@ -27,6 +27,61 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-08
+
+### A. Multimodality repair — vision was failing on every real photo (docker/emulated)
+
+Systematic debugging of "image and audio inputs are broken". Audio was **not** broken in
+the container (transcribe + full WS voice loop verified live: Silero endpoint → Moonshine
+transcript → LLM → Piper TTS, 122–144 KB audio out); the failures were all on the vision
+path, and every one wore the friendly "the image reader didn't respond" mask:
+
+1. **`VisionClient` hardcoded `timeout=120.0`** while `MUTA_RT_REQUEST_TIMEOUT_S=600`
+   only reached the text client. Any transcription slower than 120 s — i.e. every real
+   photo under emulation — was cut off mid-read. Reproduced live: 3.2 MB photo failed at
+   exactly **120.4 s**. Fix: the route now passes `RuntimeConfig().request_timeout_s`.
+2. **`core_vision_command` omitted `--image-min-tokens 1024`.** The pinned engine warns at
+   load that Qwen-VL needs ≥ 1024 image tokens (upstream #16842); without it a 1280 px
+   photo encoded to **~58 tokens** and returned a confident 10-token garbage
+   "transcription" as `accepted:true`. Fix: flag added to the vision spawn.
+3. **The TTL reaper killed busy servers** (exposed by fix 1): `reap_if_idle` guarded the
+   `starting` phase but had no notion of a request in flight, and `last_used` is stamped
+   only at `ensure()` — so at 120 s into a legitimate long read the server was reaped
+   under the student. Latent while the client timeout ≤ TTL. Fix: `VisionManager.in_use()`
+   context manager; the route holds it across `transcribe()`.
+4. **Vision spawn timeout hardcoded 60 s** (vs the core's env-tunable 900 s):
+   now `MUTA_RT_VISION_STARTUP_S` (compose sets 300 for emulation).
+5. **Audio env hardening:** `make dev`/`make audio` now export `TUTOR_ROOT=$(CURDIR)`
+   (unset → models resolved against `/opt/tutor` → every audio request 503);
+   `get_audio()` no longer latches an unavailable ASR verdict for the process lifetime
+   (`lru_cache` → retry-until-available with a lock). UI: a failed voice turn keeps the
+   session listening instead of tearing it down; an accepted-but-empty vision reply says
+   "photo came back empty", not "couldn't be read".
+
+**Measured after the fixes** (docker/emulated, IQ4_XS core, thinking off for vision):
+
+| Probe | Before | After |
+|---|---|---|
+| 826 B math PNG → `/v1/tutor/vision` | 28.7 s, ~58 image tokens, garbage-prone | **252.7 s, correct "2x + 6 = 14"**, `accepted:true` |
+| 3.2 MB photo via nginx proxy | **fails at 120.4 s** ("reader didn't respond") | **251.7 s, honest transcription**, `accepted:true` |
+| Vision prefill | — | 7.6 tok/s over ~1100-token prompt (44 text + ~1050 image) |
+| Vision spawn (page-cache warm) | 6.0 s | 5.3–6.0 s |
+| `/v1/audio/transcribe` (16 kHz WAV) | 200 OK, 3.2 s | 200 OK, 3.2–4.5 s (unchanged) |
+| WS voice loop end-to-end | works | works (transcript + reasoning + reply + TTS) |
+
+The ~4 min/photo cost is the emulation tax on the 1024-token floor — correctness first;
+the native/Metal path (approved design, `docs/plans/2026-08-08-gpu-and-internet-capabilities.md`)
+is the latency answer. 8 new unit tests cover every fix; suite 683 passed, 2 skipped.
+
+**Also observed today, environmental:** with the host offline, `./run.sh` died on registry
+metadata even with all images/models local, and another project's arm64 pull had clobbered
+the shared `postgres:16-alpine` tag (compose wants amd64 → forced re-pull → offline →
+no boot at all). That boot fragility — not any code path — is why "multimodality was
+broken" on recent attempts: the stack never came up. Fix designed as P2 of the
+GPU/Internet plan (offline-resilient boot + digest-pinned db image).
+
+---
+
 ## 2026-08-06
 
 ### A. Organizer answers land, and they invert the quant verdict

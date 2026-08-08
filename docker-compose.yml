@@ -84,6 +84,9 @@ services:
       # Model load can take minutes under emulation; generous is free.
       MUTA_RT_STARTUP_TIMEOUT_S: "900"
       MUTA_RT_REQUEST_TIMEOUT_S: "600"
+      # The vision spawn gets the same courtesy: 60 s covers a warm spawn on the target,
+      # but a cold mmproj load under emulation can exceed it.
+      MUTA_RT_VISION_STARTUP_S: "300"
       TUTOR_ROOT: /app
       # Provisioning runs `docker compose run backend python3.10 scripts/fetch_models.py`;
       # keeping the HF cache inside the mount makes it persistent and resumable.

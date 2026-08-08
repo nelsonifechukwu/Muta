@@ -17,13 +17,15 @@ reap.
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
 import shutil
 import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, Iterator
 
 import httpx
 
@@ -42,6 +44,16 @@ IDLE_TTL_SECONDS = 120.0
 SPAWN_BUDGET_SECONDS = 6.0
 STARTUP_TIMEOUT_SECONDS = 60.0
 
+
+def _startup_timeout_from_env() -> float:
+    """60 s covers a warm spawn on the target box; a cold load under emulation can exceed it,
+    turning every image into "did not become ready". MUTA_RT_VISION_STARTUP_S widens the
+    window per box — the vision-side sibling of MUTA_RT_STARTUP_TIMEOUT_S."""
+    try:
+        return float(os.environ.get("MUTA_RT_VISION_STARTUP_S", STARTUP_TIMEOUT_SECONDS))
+    except ValueError:
+        return STARTUP_TIMEOUT_SECONDS
+
 #: §5.1 — the vision instance's marginal cap. Enforced by systemd where available so a
 #: runaway vision job is bounded by the kernel rather than by our own good intentions.
 MEMORY_MAX = "1100M"
@@ -57,6 +69,7 @@ class VisionManager:
     paths: BundlePaths = field(default_factory=BundlePaths.from_env)
     profile: ServingProfile = field(default_factory=get_profile)
     ttl_seconds: float = IDLE_TTL_SECONDS
+    startup_timeout_s: float = field(default_factory=_startup_timeout_from_env)
     #: Returns True when a vision spawn is allowed. Wired to the degradation ladder (§5.3):
     #: at L1 and above new spawns are denied and vision requests queue.
     admit: Callable[[], bool] = lambda: True
@@ -71,6 +84,15 @@ class VisionManager:
     #: not been idle for a single second yet, so the reaper has nothing to measure and must
     #: leave it alone.
     starting: bool = field(default=False, init=False)
+    #: Requests currently inside `in_use()`. A transcription at the Qwen-VL token floor
+    #: legitimately runs past the 120 s TTL on a slow box, and `last_used` is only stamped at
+    #: `ensure()` — without this count the reaper killed a busy server mid-read (latent until
+    #: the client timeout grew past the TTL).
+    _active: int = field(default=0, init=False, repr=False)
+    #: Guards `_active` alone. Deliberately NOT `_lock`: that one is held for the whole
+    #: spawn (up to minutes), and a finishing request must never wait on someone else's
+    #: model load just to decrement a counter.
+    _active_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     #: Serialises spawn decisions. Two uploads in flight at once would otherwise both see
     #: `running == False` and race two servers onto port 8082; the loser exits with EADDRINUSE
     #: and both students are told the reader is broken. The second caller waits and then
@@ -138,7 +160,7 @@ class VisionManager:
             self.starting = False
 
     def _wait_until_ready(self, started: float) -> None:
-        deadline = started + STARTUP_TIMEOUT_SECONDS
+        deadline = started + self.startup_timeout_s
         # Hold the process locally: `stop()` nulls the attribute, so reading it through `self`
         # meant a server that died mid-load looked merely slow and burned the whole timeout
         # before reporting the wrong reason.
@@ -170,6 +192,19 @@ class VisionManager:
     def touch(self) -> None:
         self.last_used = self.clock()
 
+    @contextlib.contextmanager
+    def in_use(self) -> Iterator[None]:
+        """Marks a request in flight so the TTL reaper leaves the server alone. The idle
+        clock restarts when the request finishes — TTL measures idleness, not wall time."""
+        with self._active_lock:
+            self._active += 1
+        try:
+            yield
+        finally:
+            with self._active_lock:
+                self._active -= 1
+                self.touch()
+
     def reap_if_idle(self) -> bool:
         """TTL reaper tick. Returns True when it killed the instance.
 
@@ -186,6 +221,9 @@ class VisionManager:
                 # Mid-load: a student is waiting on this exact instance, and it has accrued no
                 # idle time to judge. Killing it here is how the second upload of a session
                 # used to fail permanently.
+                return False
+            if self._active > 0:
+                # Mid-request: a student is waiting on this exact answer.
                 return False
             if not self.running:
                 return False

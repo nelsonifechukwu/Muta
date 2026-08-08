@@ -389,6 +389,10 @@ def core_vision_command(
         "--flash-attn", "on",
         "-b", "1024",
         "-ub", "256",
+        # The engine warns at load that Qwen-VL needs ≥ 1024 image tokens to read accurately
+        # (upstream #16842); without the floor a 1280 px photo encodes to ~58 tokens and the
+        # "transcription" is confident garbage. Costs prefill time, buys correctness.
+        "--image-min-tokens", "1024",
         "--threads", str(plan.vision_threads),
         "--threads-http", "1",
         "--no-repack",

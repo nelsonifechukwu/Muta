@@ -121,6 +121,19 @@ def test_idle_instance_is_reaped_after_the_ttl(manager):
     assert not manager.running and manager.fake_process.terminated
 
 
+def test_a_request_in_flight_blocks_the_reaper(manager):
+    """A transcription at the Qwen-VL token floor legitimately runs past the 120 s TTL on a
+    slow box, and `last_used` is only stamped at `ensure()` — so the reaper saw a busy server
+    as idle and killed it mid-read. Latent until the client timeout grew past the TTL."""
+    manager.ensure()
+    with manager.in_use():
+        manager.ticks["now"] = IDLE_TTL_SECONDS + 30
+        assert manager.reap_if_idle() is False, "reaped a server that was serving a request"
+    # The clock restarts when the request finishes, and idle reaping resumes.
+    manager.ticks["now"] += IDLE_TTL_SECONDS + 1
+    assert manager.reap_if_idle() is True
+
+
 def test_use_resets_the_idle_clock(manager):
     manager.ensure()
     manager.ticks["now"] = IDLE_TTL_SECONDS - 1
@@ -212,10 +225,16 @@ def test_startup_timeout_defaults_to_the_module_constant(bundle):  # noqa: F811
 
 def test_the_startup_deadline_comes_from_the_manager_field(manager):
     """The field must actually drive `_wait_until_ready`, not just sit on the dataclass."""
-    manager.startup_timeout_s = 0.0
-    manager._healthy = lambda: False
+    manager.startup_timeout_s = 5.0
+
+    def never_healthy() -> bool:
+        manager.ticks["now"] += 1.0
+        return False
+
+    manager._healthy = never_healthy
     with pytest.raises(VisionDenied, match="did not become ready"):
         manager.ensure()
+    assert manager.ticks["now"] <= 10.0, "deadline ignored the field and used the 60 s constant"
 
 
 def test_slow_spawn_is_logged_against_the_budget(manager, caplog):

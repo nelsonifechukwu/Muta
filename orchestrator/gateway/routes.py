@@ -545,10 +545,10 @@ async def tutor_vision(
     except Exception:  # noqa: BLE001 — best-effort persistence
         attachment_id = None
 
-    # Both `ensure()` (polls, may sleep up to 60s on a cold spawn) and `transcribe()` (a blocking
-    # httpx.post, up to 120s) are synchronous. This handler is async, so run them in the
-    # threadpool — otherwise one vision request freezes the single event loop and stalls every
-    # other phone in the classroom mid-stream.
+    # Both `ensure()` (polls for up to MUTA_RT_VISION_STARTUP_S on a cold spawn) and
+    # `transcribe()` (a blocking httpx.post, up to request_timeout_s) are synchronous. This
+    # handler is async, so run them in the threadpool — otherwise one vision request freezes
+    # the single event loop and stalls every other phone in the classroom mid-stream.
     try:
         base_url = await run_in_threadpool(vision.ensure)  # spawns CORE-VISION if needed
     except VisionDenied as e:
@@ -559,10 +559,17 @@ async def tutor_vision(
     # The vision instance is stateless and TTL-killable by design: it returns a transcription,
     # and the *text* session carries the conversation (§6.3, S2). A transport failure OR a
     # malformed-but-200 reply is S2's honest fallback, never a 500 in a non-technical judge's face.
+    # The same per-request budget the text engine gets: a real photo at the Qwen-VL
+    # 1024-image-token floor needs minutes of prefill on a slow box, and the client's 120 s
+    # default silently cut every one of them off mid-read. `in_use()` keeps the TTL reaper
+    # off a server that is mid-transcription for exactly as long.
+    def _read() -> str:
+        with vision.in_use():
+            client = VisionClient(base_url, timeout=RuntimeConfig().request_timeout_s)
+            return client.transcribe(prepared.data, prepared.format)
+
     try:
-        transcription = await run_in_threadpool(
-            VisionClient(base_url).transcribe, prepared.data, prepared.format
-        )
+        transcription = await run_in_threadpool(_read)
     except (httpx.HTTPError, VisionResponseError):
         return VisionReply(
             session_id=session_id,

@@ -201,6 +201,23 @@
     }
     switch (msg.type) {
       case "error":
+        if (msg.reason === "voice-turn-failed") {
+          // One failed turn (engine hiccup, timeout) is not a dead session: finish the
+          // half-built bubble, free the mic, keep listening. Tearing the whole voice mode
+          // down here made every transient error cost the student a click and their flow.
+          if (assistant) {
+            assistant.finalize();
+            assistant = null;
+          }
+          replying = false;
+          suppressTts = false;
+          chat.setGenerating(false);
+          chat.closeTelemetry();
+          micMuted = false;
+          setStatus("Listening…");
+          chat.toast("That answer failed — I'm still listening, ask again.");
+          break;
+        }
         stopVoice(msg.fallback ? `Voice unavailable — ${msg.fallback}.` : "Voice unavailable.");
         break;
       case "transcript":

@@ -22,8 +22,8 @@ import json
 import logging
 import re
 import subprocess
+import threading
 from dataclasses import dataclass
-from functools import lru_cache
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, WebSocket
 from fastapi.concurrency import iterate_in_threadpool, run_in_threadpool
@@ -53,11 +53,23 @@ class AudioStack:
     tts: TtsEngine
 
 
-@lru_cache(maxsize=1)
+_audio_stack: AudioStack | None = None
+_audio_lock = threading.Lock()
+
+
 def get_audio() -> AudioStack:
-    config = AudioConfig.load()
-    asr, tts = load_engines(config)
-    return AudioStack(config=config, asr=asr, tts=tts)
+    """Load the ONNX engines once — but only cache success. Models can arrive after boot
+    (late volume mount, post-boot fetch), and the old `lru_cache` latched the first probe's
+    verdict for the life of the process: one early request condemned audio to 503 forever.
+    ASR gates the retry; a missing TTS alone is a legitimate degraded mode not worth
+    re-initialising a working ASR for."""
+    global _audio_stack
+    with _audio_lock:
+        if _audio_stack is None or not _audio_stack.asr.available:
+            config = AudioConfig.load()
+            asr, tts = load_engines(config)
+            _audio_stack = AudioStack(config=config, asr=asr, tts=tts)
+        return _audio_stack
 
 
 # ---------------------------------------------------------------------------

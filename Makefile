@@ -15,7 +15,7 @@ install: ## Install the app + dev tooling (editable)
 	$(PY) -m pip install -e ".[dev]"
 
 dev: ## Run the gateway with reload on the host (http://127.0.0.1:8000; needs `make up` for db)
-	$(PY) -m uvicorn orchestrator.main:app --reload --port 8000
+	TUTOR_ROOT=$(CURDIR) $(PY) -m uvicorn orchestrator.main:app --reload --port 8000
 
 test: ## Run the test suite (Postgres tests use the compose db on 127.0.0.1:15432; else skip)
 	$(PY) -m pytest
@@ -73,7 +73,7 @@ index: ## Build the RAG index from a chunked corpus. Args: CORPUS=... OUT=index/
 	$(PY) -m orchestrator.retrieval.index build --corpus $(CORPUS) --out $(or $(OUT),index)
 
 audio: ## Run the standalone ASR/TTS websocket service (the gateway also serves /v1/audio)
-	$(PY) -m orchestrator.audio.service
+	TUTOR_ROOT=$(CURDIR) $(PY) -m orchestrator.audio.service
 
 # --- Measurement ---
 bench: ## Product-path pass against a running app. Args: ARGS="--pid <n>"
