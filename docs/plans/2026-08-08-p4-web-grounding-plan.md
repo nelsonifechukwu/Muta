@@ -20,9 +20,9 @@
 
 **Interfaces:** `Source` dataclass `(title: str, url: str, snippet: str)`; `fetch_snippets(query: str, *, base_url: str, k: int = 3, timeout: float = 2.0) -> list[Source]` — GET `{base_url}/search?q=…&format=json`, map `results[:k]` (`title`, `url`, `content`); ANY exception or non-JSON → `[]`.
 
-- [ ] RED: tests — happy path maps k results; transport error → []; malformed JSON → []; k truncates.
-- [ ] GREEN: implement; ruff.
-- [ ] Commit `gateway: websearch snippets — SearXNG-shaped, fail-silent`.
+- [x] RED: tests — happy path maps k results; transport error → []; malformed JSON → []; k truncates.
+- [x] GREEN: implement; ruff.
+- [x] Commit `gateway: websearch snippets — SearXNG-shaped, fail-silent`.
 
 ### Task 2: grounding in `/v1/chat/stream` + contract
 
@@ -31,17 +31,17 @@
 **Interfaces:** grounding block appended to the system prompt:
 `"\n\nWeb context (retrieved just now — cite [n] when you use it):\n[1] {title} — {snippet}\n…"`; done event gains `"sources": [{"title","url"}, …]` (empty list when ungrounded).
 
-- [ ] RED: wired-fixture tests — `use_web=true` + env + online-true → fake engine's captured `system_prompt` contains `[1]` and the snippet, done contains sources; toggle off / env unset / offline → prompt untouched, `"sources": []`.
-- [ ] GREEN: implement (env `MUTA_SEARCH_URL`; `get_connectivity().online() is True` gate; `fetch_snippets` in a threadpool). `make contract`.
-- [ ] Commit `gateway: opt-in web grounding on chat/stream — sources ride the done event`.
+- [x] RED: wired-fixture tests — `use_web=true` + env + online-true → fake engine's captured `system_prompt` contains `[1]` and the snippet, done contains sources; toggle off / env unset / offline → prompt untouched, `"sources": []`.
+- [x] GREEN: implement (env `MUTA_SEARCH_URL`; `get_connectivity().online() is True` gate; `fetch_snippets` in a threadpool). `make contract`.
+- [x] Commit `gateway: opt-in web grounding on chat/stream — sources ride the done event`.
 
 ### Task 3: UI toggle + sources
 
 **Files:** `ui/index.html` (a 🌐 toggle button in the composer, `aria-pressed`), `ui/app.js` (send `use_web` when active + render sources under the finalized reply), `ui/styles.css`.
 
-- [ ] Implement; `node --check`; UI asset tests green.
-- [ ] Commit `ui: web-grounding toggle and source list`.
+- [x] Implement; `node --check`; UI asset tests green.
+- [x] Commit `ui: web-grounding toggle and source list`.
 
 ### Task 4: close P4
 
-- [ ] Full suite + ruff; RESULTS.md entry (grounded vs ungrounded prompt evidence from tests; note no live SearXNG endpoint was available if that is the case); check off plan; commit `results: web grounding landed; P4 closed`.
+- [x] Full suite + ruff; RESULTS.md entry (grounded vs ungrounded prompt evidence from tests; note no live SearXNG endpoint was available if that is the case); check off plan; commit `results: web grounding landed; P4 closed`.

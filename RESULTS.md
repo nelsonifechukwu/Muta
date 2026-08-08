@@ -146,6 +146,23 @@ loopback cloud (`MUTA_CLOUD_URL=http://127.0.0.1:8080`, dummy key) →
 dead-port cloud (`:9999`) → `"source": "local"`, the reply still arrived, nothing
 surfaced to the student.
 
+### E. Web-augmented tutoring lands (P4) — opt-in, RAG-style, fail-silent
+
+No agentic tool-calling on a 4B model: when the student flips the 🌐 toggle
+(`ChatRequest.use_web`, additive), `MUTA_SEARCH_URL` is configured (SearXNG-shaped
+JSON API), **and** the connectivity probe says online, the gateway prepends top-3
+snippets to the system prompt ("cite [n]") and the SSE `done` event returns
+`sources` for the UI to render under the reply. Any other combination — toggle off,
+unconfigured, offline, search slow (2 s budget) or malformed — produces the
+byte-identical ungrounded request with `"sources": []`; four wiring tests pin each
+gate. No live SearXNG endpoint was available this session: the search client is
+verified against the mocked provider shape only — point `MUTA_SEARCH_URL` at a real
+instance before calling the retrieval quality itself measured.
+
+**Suite at close of day: 722 passed, 2 skipped** (adtc-profiler excluded — its venv
+is separate). Phases P1–P4 of `docs/plans/2026-08-08-gpu-and-internet-capabilities.md`
+are all landed, each with its plan checked off in `docs/plans/`.
+
 **Also observed today, environmental:** with the host offline, `./run.sh` died on registry
 metadata even with all images/models local, and another project's arm64 pull had clobbered
 the shared `postgres:16-alpine` tag (compose wants amd64 → forced re-pull → offline →
