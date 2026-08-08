@@ -53,6 +53,21 @@ close, input caps, ffmpeg duration bound, nginx security headers, logging config
 tutoring prompts + safety block, product-level `S_acc` eval harness, first CI. Full suite
 green (store tests against the compose db). See the commit body for the itemised list.
 
+**Feature wiring (same branch, same no-decode-path-change property).** After the hardening
+pass, the orphaned pedagogy modules and 501 stubs were wired into the live path — none of it
+touches engine flags, so the operating point above still stands: persona/language become live
+prompt directives; the learning twin records activity and personalises the next turn; a
+conservative symbolic self-check verifies the model's explicit arithmetic (SymPy sandbox) and
+badges `verified` on chat replies; the exam bank (60 SymPy-verified items) backs
+`/v1/generate_question`, and `/v1/exam/answer` scores answers into mastery (the honest
+adaptivity evidence loop behind `/mastery` + `/diagnose`); RAG grounds chat when an index is
+staged and degrades to model-alone otherwise; admission control now guards the real
+`/chat/stream` path sized from `RuntimeConfig.n_parallel` (2), not the stale profile 6; request
+IDs correlate the logs and `/v1/health` reports version+git_sha. Nothing on the public `/v1`
+surface returns 501 anymore. Full suite: **761 passed, 2 skipped**. Live RAG additionally needs
+the embed server running + `make index` at provision (corpus/README); the decode/RAM numbers
+of the sections below are unaffected either way.
+
 ### A. Multimodality repair — vision was failing on every real photo (docker/emulated)
 
 Systematic debugging of "image and audio inputs are broken". Audio was **not** broken in
