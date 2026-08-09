@@ -1,7 +1,7 @@
 From 5eed58b8e2fbd1a5914e35f2fe52555ed71bef02 Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 07:52:50 +0100
-Subject: [PATCH 04/13] L4: route vocab and model metadata reads through bundle
+Subject: [PATCH 04/16] L4: route vocab and model metadata reads through bundle
  prefix
 
 Assisted-by: Claude Fable 5

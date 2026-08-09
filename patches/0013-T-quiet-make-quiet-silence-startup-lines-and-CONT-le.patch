@@ -1,7 +1,7 @@
 From 30b0af9c3715c72c568b7ca7a304ff92a1474b8c Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 09:54:22 +0100
-Subject: [PATCH 13/13] T-quiet: make --quiet silence startup lines and
+Subject: [PATCH 13/16] T-quiet: make --quiet silence startup lines and
  CONT-level progress dots
 
 Assisted-by: Claude Fable 5

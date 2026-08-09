@@ -1,7 +1,7 @@
 From be6f590b2453ab782b6a362e11ed149885c6b559 Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 07:51:55 +0100
-Subject: [PATCH 03/13] L3: resolve loader KV lookups through bundle prefix
+Subject: [PATCH 03/16] L3: resolve loader KV lookups through bundle prefix
 
 Assisted-by: Claude Fable 5
 ---

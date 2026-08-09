@@ -1,0 +1,34 @@
+{
+  "models": [
+    {
+      "file": "SmolLM2-135M-Instruct-Q4_K_M.gguf",
+      "role": "front (original DUO PoC pair)",
+      "architecture": "llama",
+      "params": "135M",
+      "quant": "Q4_K_M",
+      "sha256": "ed5fa30c487b282ec156c29062f1222e5c20875a944ac98289dbd242e947f747",
+      "license": "apache-2.0",
+      "source": "pre-existing local file (predates this repo's tooling); HuggingFaceTB/SmolLM2-135M-Instruct GGUF conversion"
+    },
+    {
+      "file": "Qwen3.5-4B-Q4_K_M.gguf",
+      "role": "expert",
+      "architecture": "qwen35 (hybrid Gated-DeltaNet)",
+      "params": "4.21B",
+      "quant": "Q4_K_M",
+      "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+      "license": "apache-2.0",
+      "source": "pre-existing local file (predates this repo's tooling); unsloth Qwen3.5-4B GGUF (per embedded metadata: quantized_by Unsloth, imatrix_unsloth)"
+    },
+    {
+      "file": "Qwen3.5-0.8B-MTP-Q4_K_M.gguf",
+      "role": "front (same-family pair, bundle/muta-duo-q.gguf)",
+      "architecture": "qwen35 (hybrid Gated-DeltaNet, MTP head: nextn_predict_layers=1)",
+      "params": "773M",
+      "quant": "Q4_K_M",
+      "sha256": "ac7c9d7a1b3e3695bb3bd50f8ceaa97f9c93e99ccc3d3d1a620301b6dd6d3d86",
+      "license": "apache-2.0",
+      "source": "https://huggingface.co/unsloth/Qwen3.5-0.8B-MTP-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf (downloaded 2026-08-09)"
+    }
+  ]
+}

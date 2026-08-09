@@ -1,7 +1,7 @@
 From f8aea396a1991b0c80d1d7d22e96abedc70ba25d Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 08:08:24 +0100
-Subject: [PATCH 05/13] L2: name created tensors with the requested name, not
+Subject: [PATCH 05/16] L2: name created tensors with the requested name, not
  the on-file name
 
 With a bundle prefix the on-file name keeps the prefix while weights_map

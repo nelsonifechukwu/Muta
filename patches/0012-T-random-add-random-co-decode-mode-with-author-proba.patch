@@ -1,7 +1,7 @@
 From 83152f96656a7defbfa5fa958e43d1a8038365b1 Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 09:35:47 +0100
-Subject: [PATCH 12/13] T-random: add random co-decode mode with author
+Subject: [PATCH 12/16] T-random: add random co-decode mode with author
  probabilities
 
 Segments cut at any word boundary (may be mid-sentence) after a random

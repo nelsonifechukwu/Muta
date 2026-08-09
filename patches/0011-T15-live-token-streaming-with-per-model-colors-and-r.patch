@@ -1,7 +1,7 @@
 From b6acfd08601cc7c96d75a30e970eccf60836072d Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 09:07:04 +0100
-Subject: [PATCH 11/13] T15: live token streaming with per-model colors and
+Subject: [PATCH 11/16] T15: live token streaming with per-model colors and
  retraction markers
 
 Assisted-by: Claude Fable 5

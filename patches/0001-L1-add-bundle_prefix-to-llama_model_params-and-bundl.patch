@@ -1,7 +1,7 @@
 From 8ed6102672b7c65f7669ac1c890c6c33c028895e Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 07:49:54 +0100
-Subject: [PATCH 01/13] L1: add bundle_prefix to llama_model_params and
+Subject: [PATCH 01/16] L1: add bundle_prefix to llama_model_params and
  --bundle-prefix flag
 
 Assisted-by: Claude Fable 5

@@ -16,6 +16,8 @@ cmake -S llama.cpp -B llama.cpp/build \
 cmake --build llama.cpp/build -j --target llama-duo llama-completion llama-bench llama-tokenize
 ```
 
+Two bundles exist: `bundle/muta-duo.gguf` (SmolLM2-135M front + Qwen3.5-4B expert) and `bundle/muta-duo-q.gguf` (Qwen3.5-0.8B front, same-family - much higher verify-mode acceptance; see bench/results.md). Pass either via `--bundle`.
+
 Pack the two models into one bundle (only needed if `bundle/muta-duo.gguf` is missing):
 
 ```bash
@@ -43,6 +45,11 @@ llama.cpp/build/bin/llama-duo --bundle bundle/muta-duo.gguf --mode codraft --qui
 # random: models take over at random word boundaries (mid-sentence allowed);
 # author drawn per segment with P(front)=--p-front, P(expert)=1-p; length from [seg-min, seg-max]
 llama.cpp/build/bin/llama-duo --bundle bundle/muta-duo.gguf --mode random --p-front 0.7 --seg-min 8 --seg-max 24 --quiet
+
+# verify: speculative-style co-decoding - the front drafts, the expert approves/corrects
+# every span in batched forward passes (expert-anchored accuracy; speed depends on how
+# often the pair agrees - see bench/results.md "verify mode" notes)
+llama.cpp/build/bin/llama-duo --bundle bundle/muta-duo.gguf --mode verify --quiet
 ```
 
 ### What you see
@@ -70,7 +77,11 @@ One-off runs do not stream by default (keeps captured output clean); add `--stre
 
 | flag | default | what it does |
 |---|---|---|
-| `--mode router\|codraft\|random` | router | answer routing / sentence-boundary co-drafting / random word-boundary co-decoding |
+| `--mode router\|codraft\|random\|verify` | router | routing / sentence-boundary co-drafting / random co-decoding / expert-verified drafting |
+| `--hard-mode expert\|verify` | expert | router: how hard-routed prompts are answered |
+| `--draft N` / `--draft-max N` | 16 / 24 | verify: adaptive front draft length |
+| `--repair-min N` | 12 | verify: expert repair span after a rejection (doubles on consecutive rejects) |
+| `--verify-rule logprob\|greedy` / `--accept-threshold F` | logprob / −3.0 | verify: acceptance test for drafted tokens |
 | `--p-front F` / `--p-expert F` | 0.5 / 1−p_front | random mode: probability each segment's author is front/expert (validated to sum to 1) |
 | `--seg-min/--seg-max N` | 24/96 | segment budgets; in random mode, bounds of each segment's random length |
 | `--seg-min-expert/--seg-max-expert N` | same | codraft only: expert-specific budgets (small = faster, large = higher quality) |

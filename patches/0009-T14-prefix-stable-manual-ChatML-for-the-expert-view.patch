@@ -1,7 +1,7 @@
 From 3eb63a99158d18697de8e4aa8dc4fdce130a957a Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 08:32:14 +0100
-Subject: [PATCH 09/13] T14: prefix-stable manual ChatML for the expert view
+Subject: [PATCH 09/16] T14: prefix-stable manual ChatML for the expert view
 
 The jinja template drops think blocks from past assistant turns, so every
 new turn broke prefix extension and forced a full expert re-sync (cost

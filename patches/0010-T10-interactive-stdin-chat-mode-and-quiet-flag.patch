@@ -1,7 +1,7 @@
 From c3d19a5c3e722b4cbfa3af1835c02d3746aee2ad Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Sun, 9 Aug 2026 08:49:26 +0100
-Subject: [PATCH 10/13] T10: interactive stdin chat mode and --quiet flag
+Subject: [PATCH 10/16] T10: interactive stdin chat mode and --quiet flag
 
 Assisted-by: Claude Fable 5
 ---

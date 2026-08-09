@@ -53,6 +53,24 @@ Deviations format (ground rule 1): what the plan said → what the tree/host has
 - G4 (first run): 5 codraft turns of 390-1024 tokens. Front selftest strictly canonical on ALL turns; expert 4/5 OK plus one NON-CANONICAL self-segment case (equal token counts, identical text; the documented allowed case - expert never re-encodes its own spans).
 - G4 exposed a multi-turn perf bug: expert ingest grew O(history) per turn (5s -> 33s) because the Qwen jinja template drops think blocks from PAST assistant turns, breaking prefix extension -> full expert re-sync every turn. Fix: expert view rendered with manual prefix-stable ChatML (history assistant turns keep the closed think block byte-identical to live generation). After fix: resync_expert=0, per-turn expert ingest ~2.5s flat, throughput steady ~35 tok/s across turns. Committed as T14 fix; front keeps the jinja path (naturally prefix-stable).
 
+## Optimization session (branch duo-verify, 2026-08-09)
+
+Question: best config/architecture for max+average tok/s WITHOUT reducing accuracy. Method: fixed-prompt fixed-seed one-change-at-a-time experiments (borrowed from karpathy/autoresearch's keep-or-revert loop).
+
+- User's rapid-random setting (`--mode random --p-front 0.3 --seg-min 1 --seg-max 2`): 205 segments for 335 tokens, 28.2 tok/s (SLOWER than expert alone) with locally-fluent but globally muddled text (self-contradictions, repeated claims). Switching overhead eats the entire front-speed advantage; a throughput pessimum. Great stress test though: 205 seams, zero crashes.
+- Built `--mode verify`: speculative-style expert verification of front drafts with seq-1 checkpointing over the hybrid's unrewindable recurrent state (`seq_cp` is copy-on-write; rollback = whole-seq rm + cp-back + re-decode accepted prefix). Deterministic, seam-exact (selftests pass), correct rollback across 40+ rounds.
+- Experiments (water-cycle 256-token prompt, seed 42): acceptance ~0.42 is INSENSITIVE to the threshold (tau -5/-3/-2 identical) - front/expert disagreement is bimodal (agree, or lp << -5). Greedy drafts do NOT help (0.39): divergence is content-level, not sampling noise. Acceptance is domain-dependent: 0.54 on equation math, 0.32-0.42 on prose.
+- Break-even analysis: verify beats plain expert decode only at acceptance >= ~0.55 (accepted tokens cost ~12ms vs 33ms, but failed rounds burn draft+verify+redo overhead). This 135M-SmolLM2/4B-Qwen3.5 pair sits below break-even on most content (cross-family, 30x size gap) -> `--hard-mode` default = expert; verify stays opt-in and pays off with a better-aligned draft (e.g. a Qwen-family 0.5B) - first next step.
+- Bugs found and fixed during the loop: (1) router+verify loaded the expert WITHOUT the checkpoint sequence; recurrent seq_cp to a nonexistent seq is a SILENT no-op, so the first rejection wiped the expert state and produced garbage continuations - fixed + loud GGML_ASSERT; caught by finally READING the answer text, not just the tok/s number. (2) A correction token could be EOS and was decoded blindly, letting generation continue past it; EOG corrections now end the turn, and the expert also gets an end-of-turn say after every accepted span (fixes answers running to the 1024 cap).
+- Environmental lesson: one "0.6 tok/s catastrophe" was fully explained by concurrent model processes contending for cores (clean rerun: 28.0 tok/s, identical deterministic trace); serialize all measurements.
+
+## Same-family front (branch duo-qwen-front, 2026-08-09)
+
+- Downloaded `unsloth/Qwen3.5-0.8B-MTP-GGUF` Q4_K_M (550 MB, sha256 ac7c9d7a1b3e...) -> `models/Qwen3.5-0.8B-MTP-Q4_K_M.gguf`. Same `qwen35` arch and SAME 248k tokenizer as the expert; MTP head present (`nextn_predict_layers=1`), loads fine with load_mtp off. Smoke + bundle identity PASS; new bundle `bundle/muta-duo-q.gguf` (3.29 GB).
+- duo changes (commit Q1): hybrid fronts auto-detected (`llama_model_is_recurrent/hybrid`) and treated as append-only with their own checkpoint seq; verify drafts run provisionally (save -> draft -> restore); routing decodes on a checkpoint with a closed think block; conf monitor disabled for append-only authors; forced front resync narrowed to word-word/punct-punct correction joins (the review's verifier had shown those are the only risky ones - the broad trigger was costing ~1 s per reject at the 0.8B's 574 t/s prefill).
+- Results: acceptance on math 0.32 -> 0.75 (0.80 with draft 24/32); verify beats expert-alone there (26.9 vs 25.4 tok/s) - first outright drafting win. Prose still trails (greedy drafts diverge stylistically; temp 0 helps math, hurts prose). The 0.8B also routes better than SmolLM2 (classifies explain-y prompts as hard).
+- Next levers, in order: use the MTP head to halve draft cost; domain-aware verify-vs-expert dispatch; T16 overlap.
+
 ## Gate results
 
 - G1 (identity repack, greedy byte-identical): PASS (2026-08-09)
