@@ -1,0 +1,79 @@
+From 56e4c6fe079d4af2c1fc12d19a1eed2bd0d5e89b Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Sun, 9 Aug 2026 08:24:27 +0100
+Subject: [PATCH 08/13] T-bench: add --route-only and expert segment budget
+ flags
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index 875388a..0f325ed 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -46,6 +46,8 @@ struct duo_params {
+     int32_t n_predict   = 1024;
+     int32_t seg_min     = 24;
+     int32_t seg_max     = 96;
++    int32_t seg_min_expert = -1; // -1 = same as seg_min/seg_max
++    int32_t seg_max_expert = -1;
+     int32_t conf_window = 16;
+ 
+     float temp_front   = 0.7f;
+@@ -61,6 +63,7 @@ struct duo_params {
+     bool carry_draft    = false;
+     bool trace          = true;
+     bool selftest_seams = false;
++    bool route_only     = false;
+ };
+ 
+ struct duo_model {
+@@ -122,6 +125,8 @@ static void print_usage() {
+            "  --route-threshold F     verdict logit-diff threshold [0.0]\n"
+            "  --conf-window N [16]  --conf-threshold F [-2.5]\n"
+            "  --seg-min N [24]  --seg-max N [96]\n"
++           "  --seg-min-expert N --seg-max-expert N   expert-only segment budgets [same]\n"
++           "  --route-only            print route scores only, do not answer\n"
+            "  --closer expert|either  [expert]\n"
+            "  --carry-draft           expert continues front draft on escalation\n"
+            "  -n, --n-predict N       per-answer token cap [1024]\n"
+@@ -159,6 +164,9 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+         else if (arg == "--conf-threshold")  { p.conf_threshold = atof(need("--conf-threshold")); }
+         else if (arg == "--seg-min")         { p.seg_min = atoi(need("--seg-min")); }
+         else if (arg == "--seg-max")         { p.seg_max = atoi(need("--seg-max")); }
++        else if (arg == "--seg-min-expert")  { p.seg_min_expert = atoi(need("--seg-min-expert")); }
++        else if (arg == "--seg-max-expert")  { p.seg_max_expert = atoi(need("--seg-max-expert")); }
++        else if (arg == "--route-only")      { p.route_only = true; }
+         else if (arg == "--closer")          { p.closer_expert = std::string(need("--closer")) == "expert"; }
+         else if (arg == "--carry-draft")     { p.carry_draft = true; }
+         else if (arg == "-n" || arg == "--n-predict") { p.n_predict = atoi(need("-n")); }
+@@ -568,8 +576,9 @@ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+         }
+ 
+         gen_opts opts;
+-        opts.seg_min        = p.seg_min;
+-        opts.seg_max        = p.seg_max;
++        const bool exp_seg = active == &s.expert && p.seg_min_expert > 0;
++        opts.seg_min        = exp_seg ? p.seg_min_expert : p.seg_min;
++        opts.seg_max        = exp_seg ? p.seg_max_expert : p.seg_max;
+         opts.n_predict      = p.n_predict - n_total;
+         opts.conf_monitor   = (active == &s.front);
+         opts.conf_window    = p.conf_window;
+@@ -686,6 +695,12 @@ int main(int argc, char ** argv) {
+         if (p.trace) {
+             fprintf(stderr, "\n=== turn %zu: %s\n", i + 1, turns[i].c_str());
+         }
++        if (p.route_only) {
++            const float score = route_score(s.front, turns[i]);
++            printf("%.4f\t%s\n", score, turns[i].c_str());
++            fflush(stdout);
++            continue;
++        }
+         std::string answer = p.mode == "codraft" ? run_codraft_turn(s, turns[i])
+                                                  : run_router_turn(s, turns[i]);
+         printf("%s\n", answer.c_str());
+-- 
+2.50.1 (Apple Git-155)
+

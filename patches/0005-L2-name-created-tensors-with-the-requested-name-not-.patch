@@ -1,0 +1,31 @@
+From f8aea396a1991b0c80d1d7d22e96abedc70ba25d Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Sun, 9 Aug 2026 08:08:24 +0100
+Subject: [PATCH 05/13] L2: name created tensors with the requested name, not
+ the on-file name
+
+With a bundle prefix the on-file name keeps the prefix while weights_map
+keys are stripped, so load_all_data silently skipped every tensor.
+Identical strings in normal loads.
+
+Assisted-by: Claude Fable 5
+---
+ src/llama-model-loader.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
+index 9c605c9..36526ad 100644
+--- a/src/llama-model-loader.cpp
++++ b/src/llama-model-loader.cpp
+@@ -1330,7 +1330,7 @@ struct ggml_tensor * llama_model_loader::create_tensor(
+     const bool duplicated = flags & TENSOR_DUPLICATED;
+ 
+     struct ggml_tensor * tensor = ggml_dup_tensor(ctx, &t_meta);
+-    ggml_set_name(tensor, ggml_get_name(&t_meta));
++    ggml_set_name(tensor, tn.str().c_str());
+ 
+     if (duplicated) {
+         size_data += ggml_nbytes(&t_meta);
+-- 
+2.50.1 (Apple Git-155)
+

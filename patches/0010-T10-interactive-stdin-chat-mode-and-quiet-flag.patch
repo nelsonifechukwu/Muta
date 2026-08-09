@@ -1,0 +1,150 @@
+From c3d19a5c3e722b4cbfa3af1835c02d3746aee2ad Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Sun, 9 Aug 2026 08:49:26 +0100
+Subject: [PATCH 10/13] T10: interactive stdin chat mode and --quiet flag
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 80 +++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 56 insertions(+), 24 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index bb3accc..58be975 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -28,6 +28,7 @@
+ #include <cstring>
+ #include <deque>
+ #include <fstream>
++#include <iostream>
+ #include <string>
+ #include <vector>
+ 
+@@ -64,6 +65,7 @@ struct duo_params {
+     bool trace          = true;
+     bool selftest_seams = false;
+     bool route_only     = false;
++    bool quiet          = false;
+ };
+ 
+ struct duo_model {
+@@ -127,6 +129,9 @@ static void print_usage() {
+            "  --seg-min N [24]  --seg-max N [96]\n"
+            "  --seg-min-expert N --seg-max-expert N   expert-only segment budgets [same]\n"
+            "  --route-only            print route scores only, do not answer\n"
++           "  -q, --quiet             suppress library logs (traces stay)\n"
++           "\n"
++           "with no -p and no --prompts-file, reads chat turns from stdin\n"
+            "  --closer expert|either  [expert]\n"
+            "  --carry-draft           expert continues front draft on escalation\n"
+            "  -n, --n-predict N       per-answer token cap [1024]\n"
+@@ -167,6 +172,7 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+         else if (arg == "--seg-min-expert")  { p.seg_min_expert = atoi(need("--seg-min-expert")); }
+         else if (arg == "--seg-max-expert")  { p.seg_max_expert = atoi(need("--seg-max-expert")); }
+         else if (arg == "--route-only")      { p.route_only = true; }
++        else if (arg == "-q" || arg == "--quiet") { p.quiet = true; }
+         else if (arg == "--closer")          { p.closer_expert = std::string(need("--closer")) == "expert"; }
+         else if (arg == "--carry-draft")     { p.carry_draft = true; }
+         else if (arg == "-n" || arg == "--n-predict") { p.n_predict = atoi(need("-n")); }
+@@ -655,6 +661,14 @@ int main(int argc, char ** argv) {
+     common_init();
+     llama_backend_init();
+ 
++    if (p.quiet) {
++        llama_log_set([](ggml_log_level level, const char * text, void *) {
++            if (level >= GGML_LOG_LEVEL_ERROR) {
++                fputs(text, stderr);
++            }
++        }, nullptr);
++    }
++
+     if (!p.json_trace.empty()) {
+         g_json = fopen(p.json_trace.c_str(), "w");
+     }
+@@ -685,41 +699,59 @@ int main(int argc, char ** argv) {
+         fprintf(stderr, "verdict tokens: easy 'A'=%d hard 'B'=%d, threshold %.2f\n", g_id_easy, g_id_hard, p.route_threshold);
+     }
+ 
+-    std::vector<std::string> turns;
+-    if (!p.prompts_file.empty()) {
+-        std::ifstream f(p.prompts_file);
+-        std::string line;
+-        while (std::getline(f, line)) {
+-            if (!line.empty()) {
+-                turns.push_back(line);
+-            }
+-        }
+-    } else if (!p.prompt.empty()) {
+-        turns.push_back(p.prompt);
+-    } else {
+-        fprintf(stderr, "error: need -p or --prompts-file\n");
+-        return 1;
+-    }
+-
+-    for (size_t i = 0; i < turns.size(); i++) {
++    auto run_turn = [&](const std::string & user, size_t idx) {
+         if (p.trace) {
+-            fprintf(stderr, "\n=== turn %zu: %s\n", i + 1, turns[i].c_str());
++            fprintf(stderr, "\n=== turn %zu: %s\n", idx, user.c_str());
+         }
+         if (p.route_only) {
+-            const float score = route_score(s.front, turns[i]);
+-            printf("%.4f\t%s\n", score, turns[i].c_str());
++            const float score = route_score(s.front, user);
++            printf("%.4f\t%s\n", score, user.c_str());
+             fflush(stdout);
+-            continue;
++            return;
+         }
+-        std::string answer = p.mode == "codraft" ? run_codraft_turn(s, turns[i])
+-                                                 : run_router_turn(s, turns[i]);
++        std::string answer = p.mode == "codraft" ? run_codraft_turn(s, user)
++                                                 : run_router_turn(s, user);
+         printf("%s\n", answer.c_str());
+         fflush(stdout);
+ 
+         if (p.selftest_seams && p.mode == "codraft") {
+             selftest_seams(s);
+         }
+-        s.history.push_back({ turns[i], answer });
++        s.history.push_back({ user, answer });
++    };
++
++    if (p.prompt.empty() && p.prompts_file.empty()) {
++        // interactive chat on stdin
++        fprintf(stderr, "\nchat mode (%s): type a message and press enter; /exit or Ctrl-D to quit\n", p.mode.c_str());
++        std::string line;
++        size_t i = 0;
++        while (true) {
++            fprintf(stderr, "\n> ");
++            fflush(stderr);
++            if (!std::getline(std::cin, line) || line == "/exit" || line == "/quit") {
++                break;
++            }
++            if (line.empty()) {
++                continue;
++            }
++            run_turn(line, ++i);
++        }
++    } else {
++        std::vector<std::string> turns;
++        if (!p.prompts_file.empty()) {
++            std::ifstream f(p.prompts_file);
++            std::string line;
++            while (std::getline(f, line)) {
++                if (!line.empty()) {
++                    turns.push_back(line);
++                }
++            }
++        } else {
++            turns.push_back(p.prompt);
++        }
++        for (size_t i = 0; i < turns.size(); i++) {
++            run_turn(turns[i], i + 1);
++        }
+     }
+ 
+     if (g_json) {
+-- 
+2.50.1 (Apple Git-155)
+
