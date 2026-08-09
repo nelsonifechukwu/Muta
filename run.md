@@ -107,7 +107,12 @@ One-off runs do not stream by default (keeps captured output clean); add `--stre
 
 ```bash
 bash scripts/bench_duo.sh              # G3 routing sweep + G6/G7 perf+RSS matrix -> bench/.runs/
+python3 scripts/sweep_duo.py all       # extensive 39-config sweep + accuracy suite (~2.5 h)
+python3 scripts/score_bench.py         # official ADTC S_total scoring over the sweep
+.venv/bin/python scripts/plot_bench.py # render bench/plots/*.png
 ```
+
+The full analysis (leaderboard, plots, official profiler numbers) lives in `docs/BENCHMARK_REPORT.md`. The ADTC profiler is pinned at SHA `7adbe08f` in `bench/adtc-profiler/` (GPL-3.0: cloned, never committed) with its own venv at `bench/.venv-profiler/`.
 
 Results and analysis live in `bench/baseline.md`, `bench/results.md`, `docs/POC_REPORT.md`.
 

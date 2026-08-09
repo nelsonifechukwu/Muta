@@ -71,6 +71,13 @@ Question: best config/architecture for max+average tok/s WITHOUT reducing accura
 - Results: acceptance on math 0.32 -> 0.75 (0.80 with draft 24/32); verify beats expert-alone there (26.9 vs 25.4 tok/s) - first outright drafting win. Prose still trails (greedy drafts diverge stylistically; temp 0 helps math, hurts prose). The 0.8B also routes better than SmolLM2 (classifies explain-y prompts as hard).
 - Next levers, in order: use the MTP head to halve draft cost; domain-aware verify-vs-expert dispatch; T16 overlap.
 
+## Extensive benchmark (2026-08-09)
+
+- ADTC profiler pinned at `7adbe08f` (v1's SHA), isolated at `bench/.venv-profiler/` per CLAUDE.md GPL rule; llama-cpp-python needed the full mac toolchain flag set PLUS `-DLLAMA_OPENSSL=OFF` (same x86 Homebrew OpenSSL trap as the main build). Submission schema rejects `domain: education`; Muta's track is `math_scientific_reasoning`.
+- 39-config serialized sweep (scripts/sweep_duo.py) + 14-question accuracy suite (11 configs, one process per question) + official profiler runs on all 3 raw models. Official vs harness generation rates agree within ~10% - the two instruments cross-validate.
+- Scoring per the profiler README formulas exactly (scripts/score_bench.py); S_acc imputation for unmeasured variants is dagger-flagged. Headline: qwen/front-alone wins S_total 83.0; ALL 39 configs saturate S_perf=100, so the official formula is decided by S_acc and S_eff. Official per-model scores: 0.8B 79.6 > 4B 72.6 > 135M 70.3.
+- Full analysis in docs/BENCHMARK_REPORT.md (6 plots, bench/plots/). Key measured curves: verify acceptance 0.26-0.39 (SmolLM2) vs 0.55-0.72 (Qwen0.8B) across ALL setting variants; accuracy floor 0.571 (135M alone) lifted to 0.86-0.93 by every duo mode; expert's sole accuracy miss is a token-cap artifact on its verbose derivation.
+
 ## Gate results
 
 - G1 (identity repack, greedy byte-identical): PASS (2026-08-09)
