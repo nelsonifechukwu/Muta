@@ -18,3 +18,8 @@
 - Still open, and these are the reductions rather than the mask: prewarm each mode's
   system-prompt prefix into the engine cache at boot (first turn becomes a cache hit);
   A/B `n_ubatch` 128 → higher on x86.
+
+  # Report style
+  - I love the quote style before every chapter in [this](https://www.mlmi.eng.cam.ac.uk/files/2021-2022_dissertations/attention-based-sheaf-neural-networks.pdf)
+  - Quote [this](https://www.arjunvirk.com/inference-engineering.html#:~:text=Optimization%20is%20not%20%22make%20the%20number%20go%20up.%22%20It%27s%20picking%20the%20least%2Dbad%20tradeoff%20among%20things%20that%20fight%20each%20other)
+    
