@@ -2,11 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## One branch: `main`
+## Two lines of work: `main` and `pilot/v2`
 
-`main` is the only branch. It carries the **3-container architecture** (Postgres + backend +
-nginx frontend) that used to live on `dev`; the plan that built it is
-`docs/plans/2026-07-25-three-container-architecture.md`.
+`main` carries the **3-container architecture** (Postgres + backend + nginx frontend) that
+used to live on `dev`; the plan that built it is
+`docs/plans/2026-07-25-three-container-architecture.md`. Everything below this section
+describes `main` and only `main`.
+
+`pilot/v2` is a **second, unrelated root** — a pilot of a different approach (a patched
+llama.cpp `llama-duo` router: front/expert co-decode, verify mode, single-file model
+bundles) that was developed in a standalone `Muta_v2` repo and folded into this one on
+**2026-08-11**, its four commits preserved. It shares no ancestor with `main`, so it has no
+Postgres, no `/v1` contract, no containers, and none of the rules below bind it; a future
+merge in either direction would need `--allow-unrelated-histories`. It is checked out as a
+linked worktree at `.worktrees/pilot-v2` (gitignored, carries ~12G of untracked
+`llama.cpp/`, `models/` and `.venv/`), and its own `CLAUDE.md` governs work there. The
+retired standalone repo's `.git` is kept at `../Muta_v2-standalone.git` and its remote is
+`github.com/iitimii/Muta_v2`.
 
 The older single-container competition build (SQLite, systemd units, flash-drive `deploy/`
 and `bundle/` tooling, the TUI and the REPL CLI) was **retired on 2026-08-05**. It is not
