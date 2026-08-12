@@ -1,0 +1,56 @@
+From 1cdcdc24f595d89d0aa8688c25c146eaeb6fc295 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Thu, 13 Aug 2026 03:38:27 +0100
+Subject: [PATCH 26/31] S3.1: pointer-stable tier container + help text
+
+Review finding: duo_state's front/easy/mid are raw duo_tier* into
+tiers, safe today only because build_tier_registry resizes exactly
+once before any address is taken -- undocumented, and exactly the kind
+of invariant C3 (staged/incremental tier loading) could silently break
+with a later push_back. Swap std::vector<duo_tier> for
+std::deque<duo_tier>: push_back/resize on a deque never relocates
+existing elements, so front/easy/mid stay valid across future growth;
+a vector would dangle all three on the first reallocation. Documented
+the invariant on the member itself.
+
+Also: --tier-policy help text was missing the auto value.
+
+Router regression re-run against the saved C1 baseline: stdout
+sha256 unchanged (4bbb514f...), confirming no behavior change.
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index 768f0ef..e8b147b 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -306,7 +306,7 @@ static void print_usage() {
+            "  --tier NAME=PREFIX          add/override a tier's bundle prefix (repeatable)\n"
+            "  --tier-file NAME=PATH       add/override a tier's source file [bundle]\n"
+            "  --tier-ctx NAME=N           add/override a tier's context size [role default]\n"
+-           "  --tier-policy NAME=mlock|resident|streamed   add/override a tier's residency policy [role default]\n"
++           "  --tier-policy NAME=mlock|resident|streamed|auto   add/override a tier's residency policy [role default]\n"
+            "  --mode router|codraft|random|verify   [router]\n"
+            "  -p, --prompt STR        user message (one turn)\n"
+            "  --prompts-file PATH     one user message per line (multi-turn)\n"
+@@ -810,7 +810,13 @@ static float route_score(duo_model & front, const std::string & user) {
+ // ---------- turn drivers ----------
+ 
+ struct duo_state {
+-    std::vector<duo_tier> tiers;
++    // front/easy/mid point into tiers; built once by build_tier_registry() before any
++    // pointer is taken. tiers is a deque, not a vector: push_back/resize on a deque never
++    // relocates existing elements (only vector's contiguous-reallocation growth would), so
++    // these pointers stay valid even if a later task (C3 staged loading) grows the registry
++    // after this point -- a vector here would silently dangle all three on the first growth
++    // past capacity. Never insert/erase in the middle; that still invalidates neighbors.
++    std::deque<duo_tier> tiers;
+     duo_tier * front = nullptr;
+     duo_tier * easy  = nullptr;
+     duo_tier * mid   = nullptr;
+-- 
+2.50.1 (Apple Git-155)
+

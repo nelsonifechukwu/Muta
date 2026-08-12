@@ -909,3 +909,127 @@ budget, handle conf in extension, verify-seed gating` (1 file, +101/-38).
   easy-not-ready 3-turn fallback (turn 1 front @242 ms, turn 3 easy); `--route-only` teardown
   (exit 0 in 1.75 s, mid skipped); TSAN run (0 warnings); `build` + `build-noblas` + container
   builds (0 errors, 0 compiler warnings, `duo.cpp.o` recompiled); comments still ASCII-only.
+
+### Task C4 (S3.4) — residency wiring, ledger, tier-switch choreography, 2026-08-13
+
+llama.cpp `streaming` **`5134e20`** `S3.4: residency wiring, ledger log, tier-switch
+choreography, sticky demote` (6 files, +793/-20). Patches re-exported (`patches/0025..0031`,
+the C1-C4 backlog). Nothing pushed.
+
+- **`mlock_front_mib` source: the accessor won.** Added `LLAMA_API uint64_t
+  llama_model_mlock_bytes()` (`include/llama.h:634`, `src/llama-model.cpp:1734` via a public
+  `llama_model::mlock_bytes()`, backed by a new `llama_mlock::size()` at
+  `src/llama-mmap.cpp:877`). Three lines of real code against the bundle-manifest
+  alternative's offset arithmetic, and it reports what is ACTUALLY locked rather than what
+  was requested: a refused lock reads back 0, so duo falls back to the tensor span with the
+  reason logged (`duo.cpp:1440`). Measured: trio front returns 127,389,760 B = 121.5 MiB,
+  matching S3.3's three-way-confirmed lock range exactly.
+- **The KV estimator is metadata-based, and it is exact.** `tier_read_facts()`
+  (`duo.cpp:641`) opens each tier with `gguf_init_from_file(no_alloc)` and reproduces
+  llama.cpp's own sizing: attention layers x n_ctx_seq x (n_embd_k_gqa + n_embd_v_gqa) x 2
+  (F16), recurrent layers x n_seq_max x (n_embd_r + n_embd_s) x 4 (F32), with the
+  qwen35 `(il+1) % full_attention_interval` recurrence rule and `n_layer = block_count -
+  nextn_predict_layers`. It has to be metadata-based, not read off a live context: **mid's
+  ledger charges easy's KV and easy's ledger charges mid's**, and at solve time one of the
+  two does not exist. Verified against llama.cpp's own log lines, same run:
+
+  | tier | duo estimate | llama.cpp reported |
+  |---|---|---|
+  | front (n_ctx 4096) | 90.0 MiB | `llama_kv_cache: size = 90.00 MiB` |
+  | easy (n_ctx 8192 -> **16384**) | 134.5 MiB | 96.00 + 38.53 = **134.53** MiB |
+  | mid (n_ctx 8192 -> **16384**) | 356.5 MiB | 256.00 + 100.50 = **356.50** MiB |
+
+- **The checkpoint doubling is not just easy's problem.** `load_duo_model` forces
+  `checkpoint_seq` on any recurrent/hybrid model, and BOTH qwen35 tiers are hybrid, so mid's
+  n_ctx is doubled too whether or not the mode asked for a checkpoint. `--ctx-expert 8192`
+  therefore buys a 16384-cell cache. Itemized as its own `[checkpoint-doubled]` ledger line
+  for exactly this reason.
+- **Deviation, and the biggest finding: the compute buffer had to join the ledger.** The
+  brief's cross-terms are weights + KV. Measured, that under-counts a trio by ~1.1 GiB: the
+  scheduler reserves its graph buffer for the worst-case ubatch (n_ubatch positions all
+  producing logits), so the final projection's `n_vocab x n_ubatch` f32 output dominates it,
+  and this bundle's vocab is 248,320. Measured at n_ubatch 512: front 98.25 MiB, easy
+  **505.02 MiB**, mid ~545 MiB -- and each is allocated at context creation and held for the
+  process lifetime whether that tier decodes or not. Estimated in duo as
+  `n_ubatch * 4 * (n_vocab + 12 * n_embd)`, which lands 4-12% HIGH (safe direction) against
+  all three measurements. `--stream-reserve-mib` is now pure slack (default **256**: in-RAM
+  vocab/tokenizer structures, the output buffer, non-mapped model buffers, allocator slop).
+- **Consequence: `-ub/--ubatch` added** (`duo.cpp:78`, applied only when given so no-flag runs
+  are untouched). It is the single largest non-weight RAM lever in this process -- 512 costs
+  ~505 MiB per 248k-vocab tier, 128 costs ~123 MiB. **The trio cannot fit 2048 MiB at duo's
+  default `--ctx-expert 8192` + n_ubatch 512**: the fixed non-weight cost alone is ~2.6 GiB
+  before one weight byte of mid. The ledger says so and refuses (exit 1, inequality printed,
+  no OOM, no crash) -- degradation, not errors, working as designed. The G8 preview
+  configuration of record is therefore `--ctx-expert 4096 --tier-ctx easy=4096 --ubatch 128`.
+- **Occupancy serialization is what makes the cross-terms add up.** At most one STREAMED tier
+  is ACTIVE; `duo_switch_to()` (`duo.cpp:1637`) suspends the outgoing one, and suspend bulk-
+  evicts *including its pins*. So a streamed tier charges another streamed tier's ledger for
+  its KV + compute buffer and **nothing** for its weights. Enforced at both ends: a manager is
+  parked (`llama_residency_suspend`) the moment it is built (`duo_residency_park`,
+  `duo.cpp:1554`), so two tiers' pins are never installed at once, and `tier_activate()`
+  (`duo.cpp:1663`) pairs every acquire with a switch -- a streamed tier that is decoded
+  without being resumed still produces correct tokens (demand faults) but its window logic is
+  parked, i.e. its RAM is no longer bounded, which is the one thing a cap run must not lose.
+- **Deviation: streamed tiers load FIRST under `--stream-weights`** (`tier_loader_main`,
+  `duo.cpp:1876`), inverting C3's easy-then-mid order. A tier's policy is fixed at load time
+  (`llama_model_params::stream_weights`), so the sticky demote -- decided by *mid's* ledger --
+  has to happen before *easy* is loaded, or easy would have to be loaded twice. Cheap: a
+  streamed load suppresses populate, so mid is mapped rather than read (740 ms in the
+  container vs 8.9 s unstreamed on macOS).
+- **Sticky demote observed at 2048, every run.** With easy resident the ledger refuses
+  (`R_pin` negative at W=1 both configs); `[ledger] DEMOTE easy resident->streamed` fires
+  once, mid re-solves feasible, and easy then gets its own manager whose solve pins its
+  entire 500.8 MiB (0 streamed) because a suspended mid only charges it KV + compute.
+  Stickiness is structural: the policy field is overwritten in place and the ledger is never
+  re-solved. `--tier-policy easy=resident` refuses to start instead, naming the flag.
+- **Ledger of record, trio @ 2048 MiB, ctx 4096, ubatch 128** (identical macOS and container):
+  mid = **head-pinned**, head 497.3 MiB pinned, 0 blk pinned, **2106.2 MiB streamed** over 32
+  ring units, W = 2, predicted **0.742 s/token** at D = 2.977 GB/s. Container measured
+  **1.3-1.7 tok/s** on the streamed segments -- the prediction is good to ~10%.
+- **Cap runs (`scripts/stream_env.sh cgrun 3g`, cgroup `memory.peak`, all exit 0, OOMKilled=false):**
+
+  | run | peak | vs 2048 target |
+  |---|---|---|
+  | (i) easy prompt, easy answers | 1,486,786,560 B = **1417.9 MiB** | -630 |
+  | (ii) hard prompt, mid streams (-n 96) | 1,720,262,656 B = **1640.7 MiB** | -407 |
+  | (iii) forced easy->mid escalation | 1,737,383,936 B = **1656.9 MiB** | -391 |
+  | (d) 3-turn alternating easy/hard/easy | 1,734,234,112 B = **1653.8 MiB** | -394 |
+
+  Control: the same trio **without** `--stream-weights` is **OOM-killed at 3 GiB** (exit 137).
+- **Switch evidence** (gate d, one process): `switch none->easy reason=route-easy` ->
+  `switch easy->mid reason=route` -> `switch mid->easy reason=route-easy`, each followed by
+  `[ledger] active=<tier> pinned=... streamed=... W=2 config=head-pinned`. Gate (c)(iii)
+  produces `[tier] switch easy->mid reason=conf` after a real conf cut + checkpoint restore.
+- **PRE-EXISTING DEFECT FOUND, not C4's, and it blocks G8's answer-quality half: the SmolLM2
+  front produces garbage in the container build.** Its opener is
+  `staking solicitarith\`):` repeated (mean_lp -1.47/-1.65) and every route score is shifted
+  strongly positive (`Say hello.` scores **+2.35** in the container vs **-3.16** on macOS), so
+  the router sends everything hard at the default threshold 0.0. Proved pre-existing with a
+  no-flag control at an 8 GiB cap: byte-identical garbage, `s=4.158` vs `4.170` streamed.
+  Not mlock (`--tier-policy front=resident` gives identical scores). The easy and mid tiers
+  are fine in the same binary (coherent answers, mean_lp -0.05). Suspect the aarch64-Linux
+  `GGML_BLAS=OFF` CPU kernels / Q4_K repack on this 135M llama-arch model. C4's gates use
+  `--route-threshold 3.0` to separate easy from hard on the container's shifted scale; the
+  RESIDENCY machinery under test is unaffected, but **G8 cannot claim answer quality on the
+  trio until this is diagnosed**.
+- **Free order, stated and enforced** (`duo_tier_free`, `duo.cpp:288`): sampler -> context ->
+  residency manager -> model. The context's `cb_eval` points at the manager, so the manager
+  must outlive the context; the manager evicts through the model's mapping, so it must die
+  before the model. Same ordering `common_init_result` gets from member declaration order.
+- **Self-review catches (fixed before the amend):** (1) `duo_residency_park` read
+  `duo_state::active_streamed` from the LOADER thread while main writes it -- a real data
+  race; the read is gone, the park is unconditional, and it is provably equivalent (a tier
+  that has not been published cannot be the active one). (2) `duo_switch_to` now gates on an
+  ACQUIRE load of `TS_READY` before touching `duo_tier::residency`, which the loader writes --
+  pairing with `tier_publish`'s release; the early hard-path switch is simply a no-op until
+  mid is ready. (3) dead `demoted_easy` state removed (stickiness is structural).
+- **Gates:** (a) byte-identity **PASS, verified three times** (`4bbb514f`/`f726b586`/
+  `eb906de6` on `muta-duo-q`, plus the trio no-flag router run `d648b1cc` unchanged) --
+  the wiring is inert without `--stream-weights`; (b) macOS streamed trio **PASS** (coherent
+  128-token algebra answer, full ledger block, `switch none->mid`, 15/15 `--json-trace` lines
+  parse, 7 of them ledger events); (c) container G8 preview **PASS** (table above);
+  (d) switch hygiene **PASS**; (e) builds **clean** -- macOS `build` (BLAS-on),
+  `build-noblas`, and the container (`stream_env.sh build`, 0 errors, 0 compiler warnings).
+- **Trace-string change (cosmetic, stderr only):** `tier_acquire`'s reason strings are now the
+  plan's vocabulary (`route`, `conf`, `verify`, `codraft`) instead of C3's `hard route` /
+  `conf escalation`, so acquire and switch lines share one reason space.

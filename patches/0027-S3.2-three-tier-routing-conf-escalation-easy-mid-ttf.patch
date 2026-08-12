@@ -1,0 +1,534 @@
+From 2609120432139631ef76407a5bbf0d64c1c28349 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Thu, 13 Aug 2026 03:55:36 +0100
+Subject: [PATCH 27/31] S3.2: three-tier routing + conf escalation easy->mid +
+ --ttft-opener
+
+Load the easy tier synchronously (front -> easy -> mid, freed in reverse),
+always with a checkpoint sequence. Route easy questions to the easy tier
+when the bundle has one, hard ones to mid; the front stays the router.
+
+Confidence escalation from an append-only easy tier is checkpoint-provisional:
+save a checkpoint, arm the conf monitor (the !append_only restriction is now
+lifted only when the caller holds a checkpoint), and on a trigger restore the
+state and re-ingest the committed prefix canonically before handing the draft
+to mid via the existing carry-draft path.
+
+--ttft-opener streams a front opening segment before the routing decision on
+the first turn; the answering tier carries it as a draft. It defaults on only
+for a 3-tier registry, so 2-model bundles keep their exact prior behavior.
+--codraft-tiers picks the codraft author pair, --temp-easy/--top-p-easy the
+easy tier's sampling.
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 267 +++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 228 insertions(+), 39 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index e8b147b..d0de31f 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -1,9 +1,12 @@
+-// llama-duo: two models, one bundle GGUF, one process.
++// llama-duo: two or three models, one bundle GGUF, one process.
+ //
+ // Modes:
+-//   router  - front model classifies the question via verdict-token logits and
+-//             either answers itself (with a confidence monitor that can escalate
+-//             to the expert) or hands the question to the expert directly.
++//   router  - front model classifies the question via verdict-token logits; the
++//             easy tier answers easy questions (the front itself on a 2-model
++//             bundle) with a confidence monitor that can escalate to the mid tier
++//             mid-answer, and hard questions go straight to the mid tier. With
++//             --ttft-opener the front streams one opening segment before the route
++//             is even known; the answering tier carries it as a draft.
+ //   codraft - front and expert alternately author segments of one answer over a
+ //             shared text transcript. Segments always end immediately before a
+ //             whitespace character, so per-model delta tokenizations compose
+@@ -67,6 +70,11 @@ struct duo_params {
+     float top_p_front  = 0.9f;
+     float temp_expert  = 0.6f;
+     float top_p_expert = 0.95f;
++    // easy is a competent answerer, not a 135M drafter: it samples with the expert-style
++    // defaults (0.6/0.95, and it follows --temp-expert/--top-p-expert when those are given)
++    // unless --temp-easy/--top-p-easy override it. <0 means "inherit the expert values".
++    float temp_easy    = -1.0f;
++    float top_p_easy   = -1.0f;
+     float route_threshold = 0.0f;
+     float conf_threshold  = -2.5f;
+     float p_front  = 0.5f;   // random mode: P(next segment is front's)
+@@ -83,6 +91,11 @@ struct duo_params {
+     // available for better-aligned front/expert pairs
+     std::string hard_mode   = "expert";   // router hard path: expert|verify
+ 
++    // codraft/random author pair, "NAME,NAME" (front,mid default; easy,mid needs an easy tier)
++    std::string codraft_tiers = "front,mid";
++    // first-turn TTFT opener: -1 auto (on iff an easy tier is registered), 0 off, 1 on
++    int ttft_opener = -1;
++
+     uint32_t seed = 42;
+ 
+     bool closer_expert  = true;  // --closer expert|either
+@@ -120,9 +133,9 @@ struct duo_model {
+ // A tier is one model slot in the bundle: which name it answers to (role), which
+ // prefix/file it loads from, and how its weights should be kept in RAM (policy).
+ // The registry replaces the old hardcoded front/expert pair so a bundle can carry
+-// more than two models (S3 streaming tiers); this task only builds the registry and
+-// keeps front+mid loading exactly as before -- policy is stored, not acted on, and
+-// easy is registered but not loaded (S3.3 adds that).
++// more than two models (S3 streaming tiers). Policy is stored, not acted on (C4 wires
++// it to real residency calls); front, easy and mid are all loaded synchronously here
++// (C3 stages easy's load in the background).
+ 
+ enum tier_role {
+     TIER_FRONT = 0,
+@@ -236,6 +249,10 @@ struct seg_stats {
+     double      mean_lp  = 0.0;
+     int64_t     t_us     = 0;
+     bool        turn_done = false;
++    // set when an append-only author was conf-cut under gen_opts::conf_checkpoint: its state
++    // ran past the boundary the text was cut at, so the CALLER owes a checkpoint_restore()
++    // plus a canonical re-ingest of st.text before anything else touches that model
++    bool        needs_ckpt_restore = false;
+ };
+ 
+ static FILE * g_json = nullptr;
+@@ -315,6 +332,11 @@ static void print_usage() {
+            "  -t, --threads N         [math cores]\n"
+            "  --temp-front F [0.7]  --top-p-front F [0.9]\n"
+            "  --temp-expert F [0.6] --top-p-expert F [0.95]\n"
++           "  --temp-easy F --top-p-easy F            easy tier sampling [same as expert]\n"
++           "  --codraft-tiers A,B     codraft/random author pair: front,mid | easy,mid [front,mid]\n"
++           "  --ttft-opener / --no-ttft-opener        first-turn front opening segment, streamed\n"
++           "                          before the routing decision and carried as a draft by the\n"
++           "                          answering tier [auto: on with a 3-tier bundle, off with 2]\n"
+            "  --route-threshold F     verdict logit-diff threshold [0.0]\n"
+            "  --conf-window N [16]  --conf-threshold F [-2.5]\n"
+            "  --seg-min N [24]  --seg-max N [96]\n"
+@@ -376,6 +398,11 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+         else if (arg == "--top-p-front")     { p.top_p_front = atof(need("--top-p-front")); }
+         else if (arg == "--temp-expert")     { p.temp_expert = atof(need("--temp-expert")); }
+         else if (arg == "--top-p-expert")    { p.top_p_expert = atof(need("--top-p-expert")); }
++        else if (arg == "--temp-easy")       { p.temp_easy = atof(need("--temp-easy")); }
++        else if (arg == "--top-p-easy")      { p.top_p_easy = atof(need("--top-p-easy")); }
++        else if (arg == "--codraft-tiers")   { p.codraft_tiers = need("--codraft-tiers"); }
++        else if (arg == "--ttft-opener")     { p.ttft_opener = 1; }
++        else if (arg == "--no-ttft-opener")  { p.ttft_opener = 0; }
+         else if (arg == "--route-threshold") { p.route_threshold = atof(need("--route-threshold")); }
+         else if (arg == "--conf-window")     { p.conf_window = atoi(need("--conf-window")); }
+         else if (arg == "--conf-threshold")  { p.conf_threshold = atof(need("--conf-threshold")); }
+@@ -627,6 +654,11 @@ struct gen_opts {
+     bool  eos_ends_turn;    // false: EOS is treated as a handoff (front under --closer expert)
+     bool  random_cut = false; // cut at ANY word boundary past seg_min (may be mid-sentence)
+     bool  provisional = false; // do not commit or rewind; the caller manages memory state (checkpointed drafts)
++    // the caller holds a checkpoint of this author (checkpoint_save() before the call), so the
++    // conf monitor may cut an append-only author too: the state is rewindable after all. The
++    // caller must then honor seg_stats::needs_ckpt_restore. Without it an append-only author
++    // is never conf-cut (its truncation would desync text from state) -- the Q1 rule.
++    bool  conf_checkpoint = false;
+ };
+ 
+ // segment ends immediately before whitespace: cut happens when the peeked token
+@@ -688,7 +720,8 @@ static seg_stats gen_segment(duo_model & m, const gen_opts & opts) {
+                 st.cut = "cap";
+                 break;
+             }
+-            if (opts.conf_monitor && !m.append_only && (int) lp_window.size() >= opts.conf_window) {
++            if (opts.conf_monitor && (!m.append_only || opts.conf_checkpoint) &&
++                (int) lp_window.size() >= opts.conf_window) {
+                 double mean = 0.0;
+                 for (double v : lp_window) mean += v;
+                 mean /= (double) lp_window.size();
+@@ -739,11 +772,17 @@ static seg_stats gen_segment(duo_model & m, const gen_opts & opts) {
+ 
+     if (opts.provisional) {
+         // caller restores the memory via its checkpoint; nothing is committed here
++    } else if (m.append_only && st.cut == "conf") {
++        // checkpoint-provisional conf cut (only reachable under opts.conf_checkpoint): the
++        // buffer was truncated back to the last boundary but the tokens past it were already
++        // decoded, so committing here would desync text from state. The caller restores its
++        // checkpoint and re-ingests st.text canonically instead.
++        st.needs_ckpt_restore = true;
+     } else if (m.append_only) {
+         // append-only author: sampled tokens stay; committed state extends by the emitted text
+         m.committed_text += st.text;
+         m.committed_tokens.insert(m.committed_tokens.end(), buf_toks.begin(), buf_toks.end());
+-        // conf cuts never truncate append-only buffers, so text == decoded pieces
++        // no conf cut here, so text == decoded pieces
+     } else {
+         // dense author: rewind the whole segment; committed text is re-ingested canonically later
+         llama_memory_seq_rm(llama_get_memory(m.ctx.get()), 0, n_past0, -1);
+@@ -764,6 +803,11 @@ static void checkpoint_restore(duo_model & m) {
+ static void checkpoint_drop(duo_model & m) {
+     llama_memory_seq_rm(llama_get_memory(m.ctx.get()), 1, -1, -1);
+ }
++// seq 1 only exists when the context was created with checkpoint_seq; without it every
++// seq_cp above is a silent no-op (the bug the verify-mode GGML_ASSERT was added for)
++static bool has_checkpoint(const duo_model & m) {
++    return llama_n_seq_max(m.ctx.get()) >= 2;
++}
+ 
+ // ---------- routing ----------
+ 
+@@ -821,6 +865,10 @@ struct duo_state {
+     duo_tier * easy  = nullptr;
+     duo_tier * mid   = nullptr;
+ 
++    // the two authors of codraft/random mode, resolved from --codraft-tiers in main()
++    duo_tier * cd_a = nullptr;
++    duo_tier * cd_b = nullptr;
++
+     duo_params p;
+     std::vector<chat_turn> history;
+     std::mt19937 rng;
+@@ -929,6 +977,12 @@ static bool build_tier_registry(duo_state & s) {
+         switch (t.role) {
+             case TIER_FRONT: t.temp = p.temp_front;  t.top_p = p.top_p_front;  break;
+             case TIER_MID:   t.temp = p.temp_expert; t.top_p = p.top_p_expert; break;
++            case TIER_EASY:
++                // easy authors real answers (C2), so it samples like the expert unless told
++                // otherwise -- and --temp-expert 0 still makes the whole run greedy
++                t.temp  = p.temp_easy  >= 0.0f ? p.temp_easy  : p.temp_expert;
++                t.top_p = p.top_p_easy >= 0.0f ? p.top_p_easy : p.top_p_expert;
++                break;
+             default:         t.temp = p.temp_expert; t.top_p = p.top_p_expert; break;
+         }
+     }
+@@ -954,7 +1008,18 @@ static void trace_seg(const duo_params & p, int k, const char * author, const se
+            k, author, st.n_tokens, st.t_us / 1e3, st.mean_lp, st.cut.c_str());
+ }
+ 
+-static std::string run_verify_turn(duo_state & s, const std::string & user);
++static std::string run_verify_turn(duo_state & s, const std::string & user,
++                                   const std::string & seed_draft = "", int n_seed = 0);
++
++// TTFT opener default: ON only when a 3-tier registry is active (an easy tier was
++// discovered/registered). A 2-tier bundle keeps its pre-C2 behavior byte-for-byte, which is
++// what makes the duo regression baselines still valid. --ttft-opener/--no-ttft-opener force it.
++static bool opener_enabled(const duo_state & s) {
++    if (s.p.ttft_opener >= 0) {
++        return s.p.ttft_opener == 1;
++    }
++    return s.easy != nullptr;
++}
+ 
+ static std::string run_router_turn(duo_state & s, const std::string & user) {
+     const duo_params & p = s.p;
+@@ -962,35 +1027,86 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+     duo_model & front  = s.front->m;
+     duo_model & expert = s.mid->m;
+ 
++    std::string transcript;
++    int n_tokens = 0;
++
++    // ---- TTFT opener: the front speaks before the route is known (first turn only) ----
++    // The front is the mlocked always-resident tier, so its first token lands at 135M
++    // latency while the routing decode (and, from C3, a tier load) still has to happen.
++    // The segment is cut by the ordinary seam rule, so whichever tier continues can ingest
++    // it as a carry-draft with an exact delta tokenization.
++    if (opener_enabled(s) && s.history.empty()) {
++        if (sync_to(front, render_prompt(front, s.sys_front, s.history, user, false), true)) {
++            gen_opts oopts = { p.seg_min, p.seg_max, p.n_predict, /*conf*/ true,
++                               p.conf_window, p.conf_threshold, /*eos_ends*/ false };
++            seg_stats ost = gen_segment(front, oopts);
++            transcript = ost.text;
++            n_tokens  += ost.n_tokens;
++            if (p.trace) {
++                fprintf(stderr, "[opener] author=front tokens=%d ms=%.1f tok/s=%.1f mean_lp=%.2f cut=%s\n",
++                        ost.n_tokens, ost.t_us / 1e3,
++                        ost.t_us > 0 ? ost.n_tokens * 1e6 / ost.t_us : 0.0, ost.mean_lp, ost.cut.c_str());
++            }
++            jtrace("{\"type\":\"opener\",\"author\":\"front\",\"tokens\":%d,\"ms\":%.1f,\"mean_lp\":%.3f,\"cut\":\"%s\"}",
++                   ost.n_tokens, ost.t_us / 1e3, ost.mean_lp, ost.cut.c_str());
++        }
++    }
++
+     // route on the front model, deterministically
+     const float score = route_score(front, user);
+     const bool hard = score >= p.route_threshold;
+ 
+-    std::string transcript;
+     std::string author = "front";
+     std::string trigger = "";
+-    int n_tokens = 0;
+ 
+     if (!hard) {
+-        // easy path: front answers with the confidence monitor armed
+-        if (!sync_to(front, render_prompt(front, s.sys_front, s.history, user, false), true)) {
++        // easy path: the EASY tier authors when the bundle has one (three-tier routing);
++        // a 2-tier bundle keeps the front as the easy-path author, exactly as before
++        duo_tier * atier = (s.easy && s.easy->state.load() == TS_READY) ? s.easy : s.front;
++        duo_model & auth = atier->m;
++        author = auth.name;
++
++        const std::string auth_prompt = render_prompt(auth, s.sys_front, s.history, user, false);
++        if (!sync_to(auth, auth_prompt + transcript, true)) {
+             return transcript;
+         }
+-        gen_opts opts = { /*seg_min*/ 0, /*seg_max*/ 0, p.n_predict, /*conf*/ true, p.conf_window, p.conf_threshold, /*eos_ends*/ true };
++        gen_opts opts = { /*seg_min*/ 0, /*seg_max*/ 0, p.n_predict - n_tokens, /*conf*/ true, p.conf_window, p.conf_threshold, /*eos_ends*/ true };
+         // conf trigger needs segmentation checks enabled: use seg budgets that never boundary-cut
+         opts.seg_min = p.n_predict + 1;
+         opts.seg_max = p.n_predict + 1;
+-        seg_stats st = gen_segment(front, opts);
++        // checkpoint-provisional confidence monitoring: an append-only author (easy is hybrid)
++        // may be conf-cut as long as its state can be rolled back to the boundary
++        opts.conf_checkpoint = auth.append_only && has_checkpoint(auth);
++        if (opts.conf_checkpoint) {
++            checkpoint_save(auth);
++        }
++        seg_stats st = gen_segment(auth, opts);
+         n_tokens += st.n_tokens;
+         if (st.cut == "conf" || (st.cut == "eos" && !st.turn_done)) {
+             trigger = st.cut;
+         }
+-        transcript = st.text;
+-        trace_seg(p, 0, "front", st);
++        transcript += st.text;
++        trace_seg(p, 0, auth.name.c_str(), st);
++
++        if (st.needs_ckpt_restore) {
++            // roll the recurrent state back to the checkpoint and re-decode the committed
++            // prefix (prefill speed at 0.8B): the author's state now ends exactly at the
++            // boundary the text was cut at, so its next activation is still seam-exact
++            checkpoint_restore(auth);
++            if (p.trace) {
++                fprintf(stderr, "[esc] author=%s restore+redecode chars=%zu mean_lp=%.2f trigger=conf\n",
++                        auth.name.c_str(), st.text.size(), st.mean_lp);
++            }
++            if (!sync_to(auth, auth_prompt + transcript, true)) {
++                return transcript;
++            }
++        } else if (opts.conf_checkpoint) {
++            checkpoint_drop(auth);
++        }
+ 
+         if (st.cut == "conf") {
+-            // escalate
+-            author = "front+expert";
++            // escalate to the mid tier via the carry-draft machinery
++            author += "+expert";
+             if (!p.carry_draft) {
+                 transcript.clear();
+                 stream_marker("\n[[draft discarded; expert restarts]]\n");
+@@ -1010,17 +1126,17 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+         if (p.trace) {
+             fprintf(stderr, "[turn] route=hard s=%.3f -> verify\n", score);
+         }
+-        return run_verify_turn(s, user);
++        return run_verify_turn(s, user, transcript, n_tokens);
+     } else {
+         // hard path: expert answers directly (lazy history sync)
+         author = "expert";
+-        if (!sync_to(expert, render_prompt(expert, s.sys_expert, s.history, user, false), true)) {
++        if (!sync_to(expert, render_prompt(expert, s.sys_expert, s.history, user, false) + transcript, true)) {
+             return transcript;
+         }
+-        gen_opts opts = { 0, 0, p.n_predict, false, p.conf_window, p.conf_threshold, true };
++        gen_opts opts = { 0, 0, p.n_predict - n_tokens, false, p.conf_window, p.conf_threshold, true };
+         seg_stats st = gen_segment(expert, opts);
+-        n_tokens = st.n_tokens;
+-        transcript = st.text;
++        n_tokens += st.n_tokens;
++        transcript += st.text;
+         trace_seg(p, 0, "expert", st);
+     }
+ 
+@@ -1039,8 +1155,14 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+     const duo_params & p = s.p;
+     const int64_t t0 = ggml_time_us();
+-    duo_model & front  = s.front->m;
+-    duo_model & expert = s.mid->m;
++    // the author pair comes from --codraft-tiers (front,mid default; easy,mid also legal).
++    // "front"/"expert" below name the two SLOTS, not necessarily the front/mid tiers: slot A
++    // is the drafter (conf monitor armed, EOS is a handoff under --closer expert), slot B the
++    // closer. An append-only slot-A model (easy) is already handled by gen_segment's
++    // append-only branch -- the hybrid-front support from Q1 -- so it commits instead of
++    // rewinding and its conf monitor stays disabled (no checkpoint is taken here).
++    duo_model & front  = s.cd_a->m;
++    duo_model & expert = s.cd_b->m;
+ 
+     const std::string front_prompt  = render_prompt(front,  s.sys_front,  s.history, user, false);
+     const std::string expert_prompt = render_prompt(expert, s.sys_expert, s.history, user, false);
+@@ -1147,13 +1269,18 @@ static double logprob_row(const float * z, int n, llama_token tok) {
+     return (double) z[tok] - zmax - log(sum);
+ }
+ 
+-static std::string run_verify_turn(duo_state & s, const std::string & user) {
++// seed_draft: text already streamed for this turn (the TTFT opener) that the transcript must
++// start from; n_seed is its token count, charged against the per-answer budget. Both default
++// to empty/0, which is the plain --mode verify path, unchanged.
++static std::string run_verify_turn(duo_state & s, const std::string & user,
++                                   const std::string & seed_draft, int n_seed) {
+     const duo_params & p = s.p;
+     const int64_t t0 = ggml_time_us();
+     duo_model & fr = s.front->m;
+     duo_model & ex = s.mid->m;
+     const int n_vocab = llama_vocab_n_tokens(ex.vocab);
+     const bool greedy = p.verify_rule == "greedy";
++    const int budget = std::max(0, p.n_predict - n_seed);
+ 
+     // seq 1 is the rollback checkpoint; without it seq_cp is a silent no-op and a
+     // rejection would wipe the expert state
+@@ -1162,27 +1289,27 @@ static std::string run_verify_turn(duo_state & s, const std::string & user) {
+     const std::string front_prompt  = render_prompt(fr, s.sys_front,  s.history, user, false);
+     const std::string expert_prompt = render_prompt(ex, s.sys_expert, s.history, user, false);
+ 
+-    if (!sync_to(ex, expert_prompt, true)) {
+-        return "";
++    if (!sync_to(ex, expert_prompt + seed_draft, true)) {
++        return seed_draft;
+     }
+     // logits row predicting the expert's next position; judges draft token 0 of each round
+     std::vector<float> prev_row(llama_get_logits_ith(ex.ctx.get(), -1),
+                                 llama_get_logits_ith(ex.ctx.get(), -1) + n_vocab);
+ 
+-    std::string transcript;
++    std::string transcript = seed_draft;
+     int k = std::max(4, p.draft_init);
+     int consec_rejects = 0;
+     int n_total = 0, n_expert_auth = 0, n_drafted = 0, n_accepted = 0, n_rounds = 0, n_rejects = 0;
+     bool turn_open = true;
+ 
+-    while (turn_open && n_total < p.n_predict) {
++    while (turn_open && n_total < budget) {
+         if (!sync_to(fr, front_prompt + transcript, true)) {
+             break;
+         }
+         gen_opts dopts = {};
+         dopts.seg_min = k; dopts.seg_max = k;
+         dopts.random_cut = true;
+-        dopts.n_predict = p.n_predict - n_total;
++        dopts.n_predict = budget - n_total;
+         dopts.conf_window = p.conf_window; dopts.conf_threshold = p.conf_threshold;
+         dopts.eos_ends_turn = !p.closer_expert;
+         dopts.provisional = fr.append_only;
+@@ -1353,7 +1480,7 @@ static std::string run_verify_turn(duo_state & s, const std::string & user) {
+                 gen_opts ropts = {};
+                 ropts.seg_min = repair; ropts.seg_max = repair;
+                 ropts.random_cut = true;
+-                ropts.n_predict = p.n_predict - n_total;
++                ropts.n_predict = budget - n_total;
+                 ropts.conf_window = p.conf_window; ropts.conf_threshold = p.conf_threshold;
+                 ropts.eos_ends_turn = true;
+                 seg_stats rst = gen_segment(ex, ropts);
+@@ -1387,7 +1514,7 @@ static std::string run_verify_turn(duo_state & s, const std::string & user) {
+                 // the front thinks the answer is done; the expert gets the final word
+                 gen_opts copts = {};
+                 copts.seg_min = 0; copts.seg_max = 0;
+-                copts.n_predict = p.n_predict - n_total;
++                copts.n_predict = budget - n_total;
+                 copts.conf_window = p.conf_window; copts.conf_threshold = p.conf_threshold;
+                 copts.eos_ends_turn = true;
+                 seg_stats cst = gen_segment(ex, copts);
+@@ -1422,7 +1549,13 @@ static std::string run_verify_turn(duo_state & s, const std::string & user) {
+ // The expert's own sampled segments may legally deviate from canonical tokenization (they are
+ // never re-encoded), so expert mismatches are reported as counts, not failures.
+ static void selftest_seams(duo_state & s) {
+-    for (duo_model * m : { &s.front->m, &s.mid->m }) {
++    std::vector<duo_model *> models;
++    models.push_back(&s.front->m);
++    if (s.easy && s.easy->state.load() == TS_READY) {
++        models.push_back(&s.easy->m);
++    }
++    models.push_back(&s.mid->m);
++    for (duo_model * m : models) {
+         std::vector<llama_token> fresh = common_tokenize(m->vocab, m->committed_text, false, true);
+         if (fresh == m->committed_tokens) {
+             fprintf(stderr, "[selftest] %s: OK (%zu tokens)\n", m->name.c_str(), fresh.size());
+@@ -1497,6 +1630,43 @@ int main(int argc, char ** argv) {
+     s.mid->m.append_only = true;
+     s.front->m.color = "\033[36m";   // cyan
+     s.mid->m.color   = "\033[33m";   // yellow
++    if (s.easy) {
++        s.easy->m.color = "\033[32m";   // green
++    }
++
++    // --codraft-tiers NAME,NAME: resolved before any load so a bad pair fails fast
++    {
++        const size_t comma = p.codraft_tiers.find(',');
++        if (comma == std::string::npos || comma == 0 || comma + 1 >= p.codraft_tiers.size()) {
++            fprintf(stderr, "error: --codraft-tiers expects NAME,NAME (got '%s')\n", p.codraft_tiers.c_str());
++            return 1;
++        }
++        const std::string names[2] = { p.codraft_tiers.substr(0, comma), p.codraft_tiers.substr(comma + 1) };
++        duo_tier * pick[2] = { nullptr, nullptr };
++        for (int i = 0; i < 2; i++) {
++            tier_role r;
++            if (!tier_role_from_str(names[i], r)) {
++                fprintf(stderr, "error: --codraft-tiers: unknown tier name '%s' (want front|easy|mid)\n", names[i].c_str());
++                return 1;
++            }
++            switch (r) {
++                case TIER_FRONT: pick[i] = s.front; break;
++                case TIER_EASY:  pick[i] = s.easy;  break;
++                case TIER_MID:   pick[i] = s.mid;   break;
++                default:         pick[i] = nullptr; break;   // top: registered but never loaded
++            }
++            if (!pick[i]) {
++                fprintf(stderr, "error: --codraft-tiers: this bundle has no loaded '%s' tier\n", names[i].c_str());
++                return 1;
++            }
++        }
++        if (pick[0] == pick[1]) {
++            fprintf(stderr, "error: --codraft-tiers: the two authors must be different tiers\n");
++            return 1;
++        }
++        s.cd_a = pick[0];
++        s.cd_b = pick[1];
++    }
+ 
+     const bool interactive = p.prompt.empty() && p.prompts_file.empty();
+     g_stream.on    = !p.route_only && (p.stream == 1 || (p.stream == -1 && interactive));
+@@ -1509,8 +1679,23 @@ int main(int argc, char ** argv) {
+                         tier_ctx_resolved(*s.front, p), s.front->temp, s.front->top_p)) {
+         return 1;
+     }
+-    if (s.easy && !p.quiet) {
+-        fprintf(stderr, "tier %s registered (loading lands in S3.3)\n", tier_role_name(s.easy->role));
++    s.front->state.store(TS_READY);
++    // C2 loads easy synchronously, in registry order front -> easy -> mid (freed in reverse).
++    // C3 turns this into a staged/background load -- the front answers the TTFT opener while
++    // easy is still arriving -- and duo_tier::state is the flag that task flips.
++    if (s.easy) {
++        if (!p.quiet) {
++            fprintf(stderr, "loading %s   ('%s') from %s\n", tier_role_name(s.easy->role),
++                    s.easy->prefix.c_str(), s.easy->file.c_str());
++        }
++        // easy ALWAYS gets a checkpoint sequence: it is hybrid, hence append-only, and the
++        // checkpoint is what lets its answer be provisional enough to conf-escalate to mid
++        if (!load_duo_model(s.easy->m, p, "easy", s.easy->file, s.easy->prefix,
++                            tier_ctx_resolved(*s.easy, p), s.easy->temp, s.easy->top_p,
++                            /*checkpoint_seq*/ true)) {
++            return 1;
++        }
++        s.easy->state.store(TS_READY);
+     }
+     if (!p.quiet) {
+         fprintf(stderr, "loading expert ('%s') from %s\n", s.mid->prefix.c_str(), s.mid->file.c_str());
+@@ -1521,6 +1706,7 @@ int main(int argc, char ** argv) {
+                         /*checkpoint_seq*/ need_checkpoint)) {
+         return 1;
+     }
++    s.mid->state.store(TS_READY);
+ 
+     // resolve verdict tokens in the front vocab (bare letters follow "assistant\n")
+     {
+@@ -1600,8 +1786,11 @@ int main(int argc, char ** argv) {
+     if (g_json) {
+         fclose(g_json);
+     }
+-    // free in reverse order of creation
++    // free in reverse order of creation (mid -> easy -> front)
+     s.mid->m.smpl.reset();   s.mid->m.ctx.reset();   s.mid->m.model.reset();
++    if (s.easy) {
++        s.easy->m.smpl.reset(); s.easy->m.ctx.reset(); s.easy->m.model.reset();
++    }
+     s.front->m.smpl.reset(); s.front->m.ctx.reset(); s.front->m.model.reset();
+     llama_backend_free();
+     return 0;
+-- 
+2.50.1 (Apple Git-155)
+
