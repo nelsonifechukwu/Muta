@@ -210,3 +210,107 @@ v2 memory accounting behaves exactly as STREAMING_PLAN.md's design assumes
 almost no charge), `D = 2977 MB/s` is the number for every later prediction,
 and the one build gap found (`llama-duo`/GCC) is scoped and deferred rather
 than silently absent.
+
+### S0.2 — Model geometry
+
+Task A2 (S0.2): per-layer/head byte tables for the streaming residency
+manager's ledger, produced by `scripts/layer_sizes.py`
+(`.venv/bin/python scripts/layer_sizes.py`, no args = the three pinned
+models + `bundle/muta-duo-q.gguf`) via `GGUFReader` from this tree's
+`llama.cpp/gguf-py`. Every number below cross-checks exactly against the
+plan's independently-measured expectations (`docs/STREAMING_IMPL_PLAN.md:28`).
+
+**`ReaderTensor.data_offset` semantics (verified empirically, not assumed):**
+it is already the tensor's **absolute** file offset, not header-relative —
+`gguf_reader.py:339` computes `data_offs = start_offs + offset_tensor[0]`
+inside `_build_tensors`, where `start_offs` is `GGUFReader.data_offset` (the
+aligned start of the data section) — the addition already happened inside
+the reader. Confirmed on all four inputs: `min(t.data_offset for t in
+reader.tensors) == reader.data_offset` exactly, and `max(t.data_offset +
+t.n_bytes) == file size on disk` exactly (zero trailing slack in every
+case). So the correct absolute offset is `tensor.data_offset` used as-is —
+adding `reader.data_offset` to it again would double-count the header.
+
+#### (a) Summary
+
+| model | total bytes | n_layers | blk total MiB | b_layer min/avg/max MiB | token_embd MiB (quant) | output.weight? | output_norm bytes |
+|---|---|---|---|---|---|---|---|
+| SmolLM2-135M-Instruct-Q4_K_M | 105,454,144 | 30 | 70.2 | 2.2 / 2.3 / 2.5 | 28.7 (Q8_0) | no — **TIED** | 2,304 |
+| Qwen3.5-0.8B-MTP-Q4_K_M | 549,698,976 | 25 | 314.8 | 9.9 / 12.6 / 14.5 | 198.9 (Q6_K) | no — **TIED** | 4,096 |
+| Qwen3.5-4B-Q4_K_M | 2,740,937,888 | 32 | 2106.2 | 57.7 / 65.8 / 70.3 | 497.3 (Q6_K) | no — **TIED** | 10,240 |
+| `bundle/muta-duo-q.gguf` `[m0]` (front, 0.8B) | 538,735,872† | 25 | 314.8 | 9.9 / 12.6 / 14.5 | 198.9 (Q6_K) | no — **TIED** | 4,096 |
+| `bundle/muta-duo-q.gguf` `[m1]` (expert, 4B) | 2,729,969,664† | 32 | 2106.2 | 57.7 / 65.8 / 70.3 | 497.3 (Q6_K) | no — **TIED** | 10,240 |
+
+† bundle rows: sum of that prefix group's tensor bytes (payload bytes, not
+a whole-file size — the two groups share one file).
+
+All five confirm STREAMING_IMPL_PLAN.md's independently-measured numbers
+exactly: 4B `token_embd` 497.3 MiB, blk total 2106.2 MiB, 32 layers,
+per-layer 57.7–70.3 MiB, tied head; 0.8B embd 198.9 MiB, blk 314.8 MiB, 25
+layers, tied; SmolLM2 embd 28.7 MiB, blk 70.2 MiB, 30 layers, tied. **No
+`output.weight` tensor exists anywhere** — all five are tied-embedding
+heads, confirming the plan's "HEAD pseudo-layer" design (`token_embd` must
+be treated as the logits matmul's weight, not excluded as a pure
+embedding-lookup table). The bundle's per-group byte totals are
+bit-identical to their standalone counterparts (same per-layer, embd, and
+norm byte counts) — a second, independent confirmation of Phase 1/G1's
+lossless-repack result, this time via file geometry rather than hashing.
+
+Bundle payload intervals (per-prefix, `[min data offset, max offset+len)`):
+`m0` `[21,934,464, 560,670,336)` (513.8 MiB span — matches 314.8 blk + 198.9
+embd + small misc), `m1` `[560,670,336, 3,290,640,000)` (2603.5 MiB span).
+The two intervals are contiguous with the header's data-section start
+(21,934,464) and the file's end (3,290,640,000), and `m0`'s interval ends
+exactly where `m1`'s begins — no gap, no overlap between the two packed
+sub-models.
+
+#### (b) Per-layer table — 4B (`Qwen3.5-4B-Q4_K_M.gguf`; bundle `[m1]` byte-identical, only offsets differ)
+
+| layer | MiB | layer | MiB | layer | MiB | layer | MiB |
+|---|---|---|---|---|---|---|---|
+| 0 | 70.3 | 8 | 64.5 | 16 | 64.5 | 24 | 70.3 |
+| 1 | 70.3 | 9 | 70.3 | 17 | 64.5 | 25 | 64.5 |
+| 2 | 70.3 | 10 | 64.5 | 18 | 70.3 | 26 | 64.5 |
+| 3 | 64.1 | 11 | 58.3 | 19 | 57.7 | 27 | 64.1 |
+| 4 | 64.5 | 12 | 70.3 | 20 | 64.5 | 28 | 70.3 |
+| 5 | 64.5 | 13 | 64.5 | 21 | 70.3 | 29 | 70.3 |
+| 6 | 70.3 | 14 | 64.5 | 22 | 64.5 | 30 | 70.3 |
+| 7 | 58.3 | 15 | 64.1 | 23 | 57.7 | 31 | 63.5 |
+
+min 57.7 MiB (layers 19, 23), max 70.3 MiB (12 of the 32 layers: 0, 1, 2,
+6, 9, 12, 18, 21, 24, 28, 29, 30), avg 65.8 MiB. Six distinct per-layer
+sizes appear (70.3 / 64.5 / 64.1 / 58.3 / 57.7 / 63.5 MiB) — consistent
+with the plan's note that Qwen3.5-4B mixes GDN (Gated-DeltaNet) and
+full-attention layers with different tensor shapes per type
+(`docs/STREAMING_IMPL_PLAN.md:28`); this task measured byte sizes only and
+did not cross-reference which numeric layer indices are which
+architectural type. Every layer's per-tensor extent equals its byte-sum
+exactly (`extent/sum = 1.000` on all 32 rows, per `scripts/layer_sizes.py`
+output) — each layer's tensors are laid out back-to-back with zero
+padding, far inside the 1.05x contiguity threshold.
+
+0.8B (25 layers, 9.9–14.5 MiB) and SmolLM2 (30 layers, 2.2–2.5 MiB) are
+identical in kind — also perfectly contiguous (`extent/sum = 1.000` on
+every row, zero flags in either) — and are fully captured by the min/avg/max
+in (a); their full per-layer rows are in the script's stdout, omitted here
+per the task's compact-table guidance.
+
+#### (c) Layer-order monotonicity
+
+**PASS on all five** (three standalone files, two bundle prefix groups):
+each layer's minimum tensor offset increases strictly with layer index in
+every case, zero exceptions.
+
+#### (d) token_embd position
+
+Not the first tensor in any of the five — `output_norm.weight` (2,304 to
+10,240 bytes, a rounding error next to `token_embd`) is written first in
+every case, `token_embd.weight` immediately second, then the layer-0
+tensors. E.g. 4B: `output_norm.weight` at offset 10,968,224 (10,240 B),
+then `token_embd.weight` at 10,978,464 (497.3 MiB), then `blk.0.*` starting
+at 10,978,464 + 497.3 MiB. Same pattern in the other four (SmolLM2, 0.8B,
+bundle `[m0]`, bundle `[m1]`). Functionally this still satisfies the
+plan's "HEAD pseudo-layer, pinned first" intent
+(`docs/STREAMING_IMPL_PLAN.md:49`): the tiny norm ahead of it costs a
+one-page rounding error, not a real placement problem for a pin-first
+policy.
