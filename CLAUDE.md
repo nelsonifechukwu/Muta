@@ -9,14 +9,18 @@ used to live on `dev`; the plan that built it is
 `docs/plans/2026-07-25-three-container-architecture.md`. Everything below this section
 describes `main` and only `main`.
 
-`pilot/v2` is a **second, unrelated root** — a pilot of a different approach (a patched
-llama.cpp `llama-duo` router: front/expert co-decode, verify mode, single-file model
-bundles) that was developed in a standalone `Muta_v2` repo and folded into this one on
-**2026-08-11**, its four commits preserved. It shares no ancestor with `main`, so it has no
-Postgres, no `/v1` contract, no containers, and none of the rules below bind it; a future
-merge in either direction would need `--allow-unrelated-histories`. It is checked out as a
-linked worktree at `.worktrees/pilot-v2` (gitignored, carries ~12G of untracked
-`llama.cpp/`, `models/` and `.venv/`), and its own `CLAUDE.md` governs work there. The
+`pilot/v2` is a pilot of a different approach (a patched llama.cpp `llama-duo` router:
+front/expert co-decode, verify mode, single-file model bundles, and — since 2026-08-13 —
+**weight streaming under a 2 GiB cgroup cap**: residency manager + cb_eval sliding
+window, three-tier registry, staged startup; see `pilot-v2/docs/STREAMING_IMPL_PLAN.md`
+and `pilot-v2/bench/results.md` §5). Developed in a standalone `Muta_v2` repo, folded in
+on **2026-08-11** as a root with no common ancestor, and **merged into `main` on
+2026-08-13 as a subtree at `pilot-v2/`** (full history grafted; future merges from the
+still-live branch use `git merge -X subtree=pilot-v2 pilot/v2`). It has no Postgres, no
+`/v1` contract, and none of the rules below bind it; `pilot-v2/CLAUDE.md` governs work
+there. Active development stays in the linked worktree `.worktrees/pilot-v2` (gitignored;
+carries ~12G of untracked `llama.cpp/` — its `streaming` branch holds the engine patches,
+mirrored in-tree at `pilot-v2/patches/` — plus `models/`, `bundle/` and `.venv/`). The
 retired standalone repo's `.git` is kept at `../Muta_v2-standalone.git` and its remote is
 `github.com/iitimii/Muta_v2`.
 
