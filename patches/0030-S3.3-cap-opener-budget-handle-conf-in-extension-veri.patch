@@ -1,7 +1,7 @@
 From c8aeb9ecdc77246a1cbf754742ffcfba894b91e5 Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Thu, 13 Aug 2026 09:45:15 +0100
-Subject: [PATCH 30/31] S3.3: cap opener budget, handle conf in extension,
+Subject: [PATCH 30/32] S3.3: cap opener budget, handle conf in extension,
  verify-seed gating
 
 Fix round on the C3 review's five Important findings.

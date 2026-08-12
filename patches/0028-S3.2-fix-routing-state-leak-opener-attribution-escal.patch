@@ -1,7 +1,7 @@
 From 23fb79d0ac50bb60bc675ddc64e1edc27c29404a Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Thu, 13 Aug 2026 04:44:03 +0100
-Subject: [PATCH 28/31] S3.2: fix routing-state leak, opener attribution +
+Subject: [PATCH 28/32] S3.2: fix routing-state leak, opener attribution +
  escalation carry
 
 The routing few-shot was decoded on top of whatever was resident on the

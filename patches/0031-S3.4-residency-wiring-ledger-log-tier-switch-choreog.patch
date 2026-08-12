@@ -1,7 +1,7 @@
 From 5134e20a73429468ec5bf80b4a4fb9d55e962a80 Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Thu, 13 Aug 2026 12:16:01 +0100
-Subject: [PATCH 31/31] S3.4: residency wiring, ledger log, tier-switch
+Subject: [PATCH 31/32] S3.4: residency wiring, ledger log, tier-switch
  choreography, sticky demote
 
 Wires the weight residency manager into llama-duo, per tier.

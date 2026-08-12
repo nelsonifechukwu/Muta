@@ -933,11 +933,16 @@ the C1-C4 backlog). Nothing pushed.
   ledger charges easy's KV and easy's ledger charges mid's**, and at solve time one of the
   two does not exist. Verified against llama.cpp's own log lines, same run:
 
-  | tier | duo estimate | llama.cpp reported |
-  |---|---|---|
-  | front (n_ctx 4096) | 90.0 MiB | `llama_kv_cache: size = 90.00 MiB` |
-  | easy (n_ctx 8192 -> **16384**) | 134.5 MiB | 96.00 + 38.53 = **134.53** MiB |
-  | mid (n_ctx 8192 -> **16384**) | 356.5 MiB | 256.00 + 100.50 = **356.50** MiB |
+  | tier | n_ctx base -> effective | duo estimate | llama.cpp reported |
+  |---|---|---|---|
+  | front | 4096 (no checkpoint) | 90.0 MiB | `kv_cache 90.00` (4096 cells, 30 layers) |
+  | easy | 4096 -> **8192** | 134.5 MiB | `kv_cache 96.00` + `recurrent 38.53` = **134.53** |
+  | mid | 4096 -> **8192** | 356.5 MiB | `kv_cache 256.00` + `recurrent 100.50` = **356.50** |
+  | easy | 8192 -> **16384** (duo default ctx) | 230.5 MiB | `kv_cache 192.00` + `recurrent 38.53` = **230.53** |
+
+  (The first three rows are the G8 configuration of record, `--ctx-expert 4096 --tier-ctx
+  easy=4096`; the fourth is the default-ctx run, so easy is verified at BOTH context sizes.
+  mid at 16384 is never measured -- the ledger refuses before its context is created.)
 
 - **The checkpoint doubling is not just easy's problem.** `load_duo_model` forces
   `checkpoint_seq` on any recurrent/hybrid model, and BOTH qwen35 tiers are hybrid, so mid's
@@ -949,10 +954,23 @@ the C1-C4 backlog). Nothing pushed.
   scheduler reserves its graph buffer for the worst-case ubatch (n_ubatch positions all
   producing logits), so the final projection's `n_vocab x n_ubatch` f32 output dominates it,
   and this bundle's vocab is 248,320. Measured at n_ubatch 512: front 98.25 MiB, easy
-  **505.02 MiB**, mid ~545 MiB -- and each is allocated at context creation and held for the
-  process lifetime whether that tier decodes or not. Estimated in duo as
-  `n_ubatch * 4 * (n_vocab + 12 * n_embd)`, which lands 4-12% HIGH (safe direction) against
-  all three measurements. `--stream-reserve-mib` is now pure slack (default **256**: in-RAM
+  **505.02 MiB** -- and each is allocated at context creation and held for the process
+  lifetime whether that tier decodes or not. Estimated in duo as
+  `n_ubatch * 4 * (n_vocab + 12 * n_embd)`. Measured margins, all HIGH (the safe direction)
+  but **not uniformly**: front@512 +11.5% (109.50 est vs 98.25), **easy@512 +0.79%** (509.00
+  vs 505.02), front@128 +11.5% (27.38 vs 24.56), easy@128 +3.67% (127.25 vs 122.75), mid@128
+  +8.35% (136.25 vs 125.75). The thin one is easy@512: **0.8% of cushion, ~4 MiB**, so the
+  estimator is only just conservative at the large-ubatch end and must not be assumed to
+  carry margin there. mid@512 was never measured -- the default-ctx ledger refuses before
+  that context exists -- so the ~545 MiB previously quoted for it is the estimator's own
+  output, not evidence. **The formula has no n_ctx term, which is only valid with flash
+  attention ON**: without FA the graph also materializes KQ as `n_kv x n_ubatch x n_head`
+  f32, which grows with the context and would be charged to nobody. llama's default is
+  `LLAMA_FLASH_ATTN_TYPE_AUTO` and there is no API to read back what AUTO resolved to, so
+  duo now sets it **ENABLED explicitly under `--stream-weights`** rather than assuming
+  (`duo.cpp:824`). AUTO had already resolved to enabled on both measured builds
+  (`resolve_fused_ops: Flash Attention enabled`, macOS arm64 and the aarch64 container), and
+  forcing it leaves the streamed trio answer byte-identical. `--stream-reserve-mib` is now pure slack (default **256**: in-RAM
   vocab/tokenizer structures, the output buffer, non-mapped model buffers, allocator slop).
 - **Consequence: `-ub/--ubatch` added** (`duo.cpp:78`, applied only when given so no-flag runs
   are untouched). It is the single largest non-weight RAM lever in this process -- 512 costs
@@ -976,6 +994,18 @@ the C1-C4 backlog). Nothing pushed.
   has to happen before *easy* is loaded, or easy would have to be loaded twice. Cheap: a
   streamed load suppresses populate, so mid is mapped rather than read (740 ms in the
   container vs 8.9 s unstreamed on macOS).
+- **Declared deviation (narrowing): the demote is feasibility-driven, not min-s/token.** The
+  plan says the solver "evaluates easy-resident+HEAD-streamed vs easy-demoted+HEAD-pinned and
+  picks min predicted s/token". What is implemented is narrower: duo demotes **only when
+  `llama_residency_init` refuses** the easy-resident configuration -- feasibility -- and never
+  compares two feasible plans' predicted s/token. (Within one configuration `res_solve` does
+  still pick min streamed bytes across W and head placement; the narrowing is purely the
+  cross-tier easy-resident-vs-demoted choice.) The 2048 MiB outcome is unaffected: there
+  easy-resident is INFEASIBLE, not merely slower, so both rules agree on every number recorded
+  here. They would diverge at a larger `--max-ram-mib` where both fit and keeping easy resident
+  is the slower one. Not implemented because it needs a predicted-s/token probe of a
+  configuration the process will not adopt, i.e. a dry-run entry point the residency API does
+  not expose.
 - **Sticky demote observed at 2048, every run.** With easy resident the ledger refuses
   (`R_pin` negative at W=1 both configs); `[ledger] DEMOTE easy resident->streamed` fires
   once, mid re-solves feasible, and easy then gets its own manager whose solve pins its
@@ -986,14 +1016,30 @@ the C1-C4 backlog). Nothing pushed.
   mid = **head-pinned**, head 497.3 MiB pinned, 0 blk pinned, **2106.2 MiB streamed** over 32
   ring units, W = 2, predicted **0.742 s/token** at D = 2.977 GB/s. Container measured
   **1.3-1.7 tok/s** on the streamed segments -- the prediction is good to ~10%.
-- **Cap runs (`scripts/stream_env.sh cgrun 3g`, cgroup `memory.peak`, all exit 0, OOMKilled=false):**
+- **Cap runs.** *Environment (results.md section 5 convention): container `muta-stream`
+  (`scripts/Dockerfile.streaming`, `ubuntu:22.04`), llama.cpp branch `streaming` @ `7593921`,
+  `GGML_BLAS=OFF GGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8.5-a+dotprod+i8mm+fp16`, Docker
+  Desktop's native **aarch64** linuxkit VM, cgroup v2, 7.653 GiB VM RAM, metric
+  `/sys/fs/cgroup/memory.peak` via `scripts/stream_env.sh cgrun`. **These are
+  aarch64-Linux-on-Apple-Silicon numbers, NOT the x86-64 ADTC target** -- architecture-
+  comparative, to be re-measured on target hardware, the same caveat results.md section 5 and
+  POC_REPORT.md already carry. The macOS figures elsewhere in this entry are arm64 Darwin
+  (`llama.cpp/build`, BLAS-on) and are machinery evidence only: Darwin eviction is advisory.*
+  All runs exit 0, OOMKilled=false:
 
-  | run | peak | vs 2048 target |
-  |---|---|---|
-  | (i) easy prompt, easy answers | 1,486,786,560 B = **1417.9 MiB** | -630 |
-  | (ii) hard prompt, mid streams (-n 96) | 1,720,262,656 B = **1640.7 MiB** | -407 |
-  | (iii) forced easy->mid escalation | 1,737,383,936 B = **1656.9 MiB** | -391 |
-  | (d) 3-turn alternating easy/hard/easy | 1,734,234,112 B = **1653.8 MiB** | -394 |
+  | run | cgroup `memory.max` | `memory.peak` | vs 2048 |
+  |---|---|---|---|
+  | (i) easy prompt, easy answers | 3 GiB (observed mode) | 1,486,786,560 B = **1417.9 MiB** | -630 |
+  | (ii) hard prompt, mid streams (-n 96) | 3 GiB (observed mode) | 1,720,262,656 B = **1640.7 MiB** | -407 |
+  | (iii) forced easy->mid escalation | 3 GiB (observed mode) | 1,737,383,936 B = **1656.9 MiB** | -391 |
+  | (d) 3-turn alternating easy/hard/easy | 3 GiB (observed mode) | 1,734,234,112 B = **1653.8 MiB** | -394 |
+  | **(iii) re-run under G8's own condition** | **2048 MiB (enforced)** | 1,840,775,168 B = **1755.2 MiB** | **-293** |
+
+  The last row is the one that answers G8: with the cgroup limit set AT 2048 MiB rather than
+  merely observed under a looser 3 GiB, the escalation run of record still completes -- exit 0,
+  OOMKilled=false, 292.8 MiB of headroom, `[tier] switch easy->mid reason=conf` intact. Its
+  peak is ~98 MiB HIGHER than the same run at 3 GiB, the expected direction for page-cache
+  accounting under a tighter limit, not a regression.
 
   Control: the same trio **without** `--stream-weights` is **OOM-killed at 3 GiB** (exit 137).
 - **Switch evidence** (gate d, one process): `switch none->easy reason=route-easy` ->
@@ -1033,3 +1079,59 @@ the C1-C4 backlog). Nothing pushed.
 - **Trace-string change (cosmetic, stderr only):** `tier_acquire`'s reason strings are now the
   plan's vocabulary (`route`, `conf`, `verify`, `codraft`) instead of C3's `hard route` /
   `conf escalation`, so acquire and switch lines share one reason space.
+
+### Task C4 fix round (post-review, findings I1-I7), 2026-08-13
+
+Task review of `c8aeb9e..5134e20` confirmed the machinery (occupancy serialization enforced,
+switch coverage complete for the shipped policies, teardown correct, the compute-buffer
+discovery credited) with seven Important findings. Three were code, four were the record.
+Code fixed in one commit, **`7593921`**, `S3.4: fatal unknown-facts + refusal, FA guard`
+(1 file, +74/-10).
+
+- **I1 - an unreadable tier charged the ledger ZERO.** `duo_tier_resident_bytes` returned
+  `facts.weight_bytes` unguarded and the KV/compute terms were `facts.known`-gated, so a tier
+  whose metadata could not be read vanished from the budget entirely (and for the tier being
+  solved, `reserve` collapsed to slack with a giveaway `own kv 0.0 MiB (n_ctx 0 x 0 seq)`
+  line). Chose **fatal over pessimistic-charge**: a pessimistic charge needs a defensible
+  worst case for a file we could not parse, which is a guess wearing a number, whereas the
+  honest statement is "the ledger cannot account for a tier it cannot measure". Under
+  `--stream-weights` an unreadable tier now refuses to start, naming the tier, the prefix and
+  the file (`duo.cpp:2760`); the invariant that establishes is stated where
+  `duo_tier_resident_bytes` relies on it. Gated: `--tier-file mid=/nope/missing.gguf` ->
+  one-line error, exit 1, nothing loaded.
+- **I3 - a refusal did not stop the process.** After `llama_residency_init` returned NULL the
+  loader carried on. Two concrete bad outcomes, both reachable: with an explicit
+  `--tier-policy easy=resident` the REFUSAL was followed by loading easy RESIDENT -- exactly
+  the allocation the ledger had just declared unaffordable -- and a double refusal left easy
+  mutated to STREAMED and ran the whole session with no mid tier, exiting 1 only at the very
+  end. A refusal is now **fatal at the point of refusal** (`duo_mark_fatal`, `duo.cpp:1583`):
+  `loader_stop` so every not-yet-started tier publishes a terminal state instead of loading,
+  plus a `duo_state::fatal` flag the turn loop checks, so `main` stops instead of degrading
+  and exits 1 with the inequality. This is the degradation contract's *clean refusal*: the
+  contract says a student never sees a crash, not that a refused budget should be
+  half-served. Gated: `--tier-policy easy=resident` at 2048 MiB -> REFUSED line, exit 1,
+  **zero `loading easy` lines** (was: easy loaded resident anyway). Stale
+  "caller frees the model" comment corrected while there.
+- **I4 - the estimator margin was over-claimed, and it silently assumed flash attention.**
+  Both corrected in place above: real per-term margins (+0.79% at easy@512, not "4-12%
+  across all three"), mid@512 relabelled as estimator output rather than measurement, and
+  `--stream-weights` now sets `LLAMA_FLASH_ATTN_TYPE_ENABLED` explicitly (`duo.cpp:824`)
+  because llama's default is AUTO and nothing reads back what AUTO chose. Verified: the
+  streamed trio answer is **byte-identical** with FA forced, and all three contexts now log
+  `flash_attn = enabled` instead of `auto`.
+- **I2, I5, I7 - record corrections** (the deviation list, the KV-verification table labels,
+  and the architecture header), applied in place above.
+- **I6 - the 2048 MiB row.** Every earlier container run used `cgrun 3g`, which observes the
+  peak under a looser limit rather than testing G8's actual condition. Added; see the cap-run
+  table. **exit 0, OOMKilled=false, 1755.2 MiB under an enforced 2048 MiB cap.**
+- **Cosmetic, noted not fixed:** duo's `fprintf(stderr, ...)` traces and llama's `common_log`
+  (which writes from a background worker thread) can interleave *within* a line, so a
+  `[ledger]` line adjacent to a llama-side log line can appear with a `0.01.019.423 E` prefix
+  glued to it. It makes the human-readable block occasionally ragged; `--json-trace` is the
+  machine-readable channel and is unaffected (`jtrace` is mutex-guarded and writes its own
+  FILE).
+- **Re-run matrix:** byte-identity **PASS** (`4bbb514f`/`f726b586`/`eb906de6`, a fourth
+  consecutive verification -- the wiring stays inert without the flag); macOS streamed trio
+  smoke **PASS** (answer byte-identical to the pre-fix streamed run, DEMOTE + `switch
+  none->mid` intact); I1 smoke **PASS**; I3 smoke **PASS**; I6 2048 MiB run **PASS**; macOS
+  `build` + `build-noblas` **clean, 0 warnings**; container build **clean, 0 errors**.

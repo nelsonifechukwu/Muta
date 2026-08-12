@@ -1,0 +1,223 @@
+From 7593921f9bf404d7bd1d69e3ae57c971323db075 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Thu, 13 Aug 2026 13:21:17 +0100
+Subject: [PATCH 32/32] S3.4: fatal unknown-facts + refusal, FA guard
+
+Three defects found in task review of the S3.4 wiring.
+
+- A tier whose GGUF metadata could not be read charged the ledger ZERO for its
+  weights, KV and compute buffer, and the budget computed from it was fiction.
+  Under --stream-weights an unreadable tier is now fatal at startup, with the
+  invariant that establishes stated where it is relied on.
+- A residency refusal did not stop the process: the loader carried on and loaded
+  the next tier against the allocation just declared unaffordable (with an
+  explicit --tier-policy easy=resident it loaded exactly the resident tier the
+  ledger had refused, and a double refusal ran the session with no mid tier).
+  A refusal is now fatal at the point of refusal -- loader_stop plus a session
+  fatal flag, so remaining tiers publish a terminal state, the turn loop stops
+  instead of degrading, and the process exits 1 with the inequality.
+- The compute-buffer estimate has no n_ctx term, which only holds with flash
+  attention on. llama's default is AUTO and there is no API to read back what it
+  resolved to, so a --stream-weights run now sets it ENABLED explicitly rather
+  than assuming. Verified: the streamed trio answer is byte-identical, AUTO had
+  already resolved to enabled on both measured builds.
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 84 +++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 74 insertions(+), 10 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index b9b3f5e..f4bb865 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -858,6 +858,19 @@ static bool load_duo_model(duo_model & m, const duo_params & p, const std::strin
+         cparams.n_ubatch = (uint32_t) p.n_ubatch;
+         cparams.n_batch  = std::max<uint32_t>(cparams.n_batch, cparams.n_ubatch);
+     }
++    if (st) {
++        // --stream-weights only. duo's compute-buffer estimate (tier_read_facts) has NO
++        // n_ctx term, which is only true with flash attention ON: without it the graph
++        // additionally materializes KQ as n_kv x n_ubatch x n_head f32, which grows with
++        // the context and would be charged to nobody. llama's default here is
++        // LLAMA_FLASH_ATTN_TYPE_AUTO, and there is no API to read back what AUTO
++        // resolved to, so a budgeted run removes the ambiguity instead of assuming it.
++        // AUTO has resolved to ENABLED on every build measured (both macOS arm64 and the
++        // aarch64 container log "Flash Attention enabled"); if a backend cannot do it,
++        // llama_init_from_model fails and duo reports it rather than silently
++        // over-committing RAM.
++        cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
++    }
+     if (checkpoint_seq) {
+         // seq 1 is a rollback checkpoint sharing seq 0's prefix (verify mode's draft
+         // verification, and the easy tier's conf escalation)
+@@ -875,9 +888,19 @@ static bool load_duo_model(duo_model & m, const duo_params & p, const std::strin
+     if (st && tier && policy == POL_STREAMED) {
+         llama_residency * res = duo_residency_init(*st, *tier, name, file);
+         if (!res) {
+-            fprintf(stderr, "error: %s: the residency ledger refused this budget (see the inequality above)\n",
+-                    name.c_str());
+-            return false;   // caller frees the model; nothing else was built yet
++            // FATAL, and at the point of refusal. Carrying on would load the next tier
++            // against the very allocation the ledger just declared unaffordable -- and
++            // after a demote it would do so with a policy the session mutated on the way
++            // to failing. A refusal is the degradation contract's CLEAN refusal: say why,
++            // stop, exit non-zero. loader_stop makes every not-yet-started tier publish a
++            // terminal state instead of loading; duo_fatal is what ends the turn loop.
++            fprintf(stderr, "error: %s: the residency ledger refused this budget (see the "
++                    "inequality above). --stream-weights makes this fatal: no further tier "
++                    "is loaded against a budget that does not fit.\n", name.c_str());
++            // the session-stopping flags are set by duo_residency_init, which has the
++            // whole duo_state. The model and this tier's residency slot are freed by
++            // duo_tier_free at teardown; nothing else has been built here yet.
++            return false;
+         }
+         tier->residency = res;
+ 
+@@ -1307,6 +1330,10 @@ struct duo_state {
+     bool                    mid_checkpoint = false;  // mid needs seq 1 (verify modes)
+     std::atomic<bool>       loader_stop { false };   // teardown: skip tiers not started yet
+     std::atomic<bool>       loader_failed { false }; // a background load failed
++    // an unrecoverable configuration failure (a residency ledger refusal). Set by the
++    // loader thread, read by the turn loop, which stops instead of degrading: the whole
++    // point of a refusal is that this budget cannot be served.
++    std::atomic<bool>       fatal { false };
+ 
+     // Declared LAST on purpose: members are destroyed in reverse declaration order, so
+     // this joiner runs BEFORE tiers/tier_mu/tier_cv are destroyed. That makes every
+@@ -1436,6 +1463,9 @@ static uint64_t duo_tier_resident_bytes(const duo_tier & t) {
+             }
+             return t.facts.weight_bytes;
+         case POL_RESIDENT:
++            // facts.known is guaranteed under --stream-weights: main refuses to start if
++            // any tier's metadata could not be read, precisely so this cannot silently
++            // charge zero for a whole model
+             return t.facts.weight_bytes;
+         case POL_STREAMED:
+         case POL_AUTO:
+@@ -1577,6 +1607,14 @@ static void duo_residency_park(duo_tier & t, const std::string & name) {
+     llama_residency_suspend(t.residency);
+ }
+ 
++// A ledger refusal ends the session. Stopping the loader here is what prevents the
++// next tier from being loaded against the allocation just declared unaffordable --
++// including, after a demote, with a policy this session mutated on the way to failing.
++static void duo_mark_fatal(duo_state & s) {
++    s.loader_stop.store(true, std::memory_order_release);
++    s.fatal.store(true, std::memory_order_release);
++}
++
+ static llama_residency * duo_residency_init(duo_state & s, duo_tier & t,
+                                             const std::string & name, const std::string & file) {
+     llama_residency_params rp = duo_ledger_terms(s, t, name, /*log*/ true);
+@@ -1599,6 +1637,7 @@ static llama_residency * duo_residency_init(duo_state & s, duo_tier & t,
+         }
+     }
+     if (!cand) {
++        duo_mark_fatal(s);
+         return nullptr;
+     }
+     if (s.p.tier_policy_ovr.count(tier_role_name(cand->role))) {
+@@ -1606,6 +1645,7 @@ static llama_residency * duo_residency_init(duo_state & s, duo_tier & t,
+                 "was given explicitly; not demoting. Raise --max-ram-mib, lower the tier context, "
+                 "or drop the explicit policy.\n",
+                 name.c_str(), s.p.max_ram_mib, tier_role_name(cand->role));
++        duo_mark_fatal(s);
+         return nullptr;
+     }
+ 
+@@ -1624,6 +1664,8 @@ static llama_residency * duo_residency_init(duo_state & s, duo_tier & t,
+     if (res) {
+         t.residency = res;
+         duo_residency_park(t, name);
++    } else {
++        duo_mark_fatal(s);
+     }
+     return res;
+ }
+@@ -2759,8 +2801,15 @@ int main(int argc, char ** argv) {
+             const bool ckpt = (&t == s.easy) || (&t == s.mid && s.mid_checkpoint);
+             if (!tier_read_facts(t.file, t.prefix, (uint32_t) tier_ctx_resolved(t, p), ckpt,
+                                  n_ubatch_eff, t.facts)) {
+-                fprintf(stderr, "warning: could not read %s's metadata from %s; its RAM is unaccounted "
+-                        "in the ledger\n", tier_role_name(t.role), t.file.c_str());
++                // FATAL rather than a warning: an unread tier would charge the ledger ZERO
++                // for its weights, its KV and its compute buffer, so every budget computed
++                // from it would be fiction -- and the failure mode of a too-generous budget
++                // is an OOM kill, not a refusal.
++                fprintf(stderr, "error: --stream-weights: cannot read tier '%s' (prefix '%s') "
++                        "metadata from %s. The RAM ledger cannot account for a tier it cannot "
++                        "measure; refusing to start.\n",
++                        tier_role_name(t.role), t.prefix.c_str(), t.file.c_str());
++                return 1;
+             }
+         }
+         fprintf(stderr, "[ledger] budget %d MiB, tiers:\n", p.max_ram_mib);
+@@ -2869,7 +2918,12 @@ int main(int argc, char ** argv) {
+     // immediately -- the front is READY and the router's fallbacks handle the rest.
+     s.loader.th = std::thread(tier_loader_main, std::ref(s));
+ 
+-    auto run_turn = [&](const std::string & user, size_t idx) {
++    // returns false when the session must stop (a fatal ledger refusal on the loader
++    // thread); the caller breaks out of its turn loop rather than degrading further
++    auto run_turn = [&](const std::string & user, size_t idx) -> bool {
++        if (s.fatal.load(std::memory_order_acquire)) {
++            return false;
++        }
+         if (p.trace) {
+             fprintf(stderr, "\n=== turn %zu: %s\n", idx, user.c_str());
+         }
+@@ -2877,7 +2931,7 @@ int main(int argc, char ** argv) {
+             const float score = route_score(s.front->m, user);
+             printf("%.4f\t%s\n", score, user.c_str());
+             fflush(stdout);
+-            return;
++            return true;
+         }
+         std::string answer = p.mode == "router" ? run_router_turn(s, user)
+                            : p.mode == "verify" ? run_verify_turn(s, user)
+@@ -2896,6 +2950,11 @@ int main(int argc, char ** argv) {
+             selftest_seams(s);
+         }
+         s.history.push_back({ user, answer });
++        // a refusal can land mid-turn: the tier_acquire this turn blocked on returns
++        // nullptr once the loader publishes TS_FAILED, so the answer above may be a
++        // partial transcript. Stop here rather than starting another turn against a
++        // budget that has already been refused.
++        return !s.fatal.load(std::memory_order_acquire);
+     };
+ 
+     if (interactive) {
+@@ -2912,7 +2971,9 @@ int main(int argc, char ** argv) {
+             if (line.empty()) {
+                 continue;
+             }
+-            run_turn(line, ++i);
++            if (!run_turn(line, ++i)) {
++                break;
++            }
+         }
+     } else {
+         std::vector<std::string> turns;
+@@ -2928,7 +2989,9 @@ int main(int argc, char ** argv) {
+             turns.push_back(p.prompt);
+         }
+         for (size_t i = 0; i < turns.size(); i++) {
+-            run_turn(turns[i], i + 1);
++            if (!run_turn(turns[i], i + 1)) {
++                break;
++            }
+         }
+     }
+ 
+@@ -2957,5 +3020,6 @@ int main(int argc, char ** argv) {
+     }
+     duo_tier_free(*s.front);
+     llama_backend_free();
+-    return s.loader_failed.load(std::memory_order_acquire) ? 1 : 0;
++    return (s.loader_failed.load(std::memory_order_acquire) ||
++            s.fatal.load(std::memory_order_acquire)) ? 1 : 0;
+ }
+-- 
+2.50.1 (Apple Git-155)
+

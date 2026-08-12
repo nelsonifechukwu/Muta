@@ -1,7 +1,7 @@
 From 2609120432139631ef76407a5bbf0d64c1c28349 Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Thu, 13 Aug 2026 03:55:36 +0100
-Subject: [PATCH 27/31] S3.2: three-tier routing + conf escalation easy->mid +
+Subject: [PATCH 27/32] S3.2: three-tier routing + conf escalation easy->mid +
  --ttft-opener
 
 Load the easy tier synchronously (front -> easy -> mid, freed in reverse),

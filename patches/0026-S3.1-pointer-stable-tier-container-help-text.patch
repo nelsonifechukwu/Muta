@@ -1,7 +1,7 @@
 From 1cdcdc24f595d89d0aa8688c25c146eaeb6fc295 Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Thu, 13 Aug 2026 03:38:27 +0100
-Subject: [PATCH 26/31] S3.1: pointer-stable tier container + help text
+Subject: [PATCH 26/32] S3.1: pointer-stable tier container + help text
 
 Review finding: duo_state's front/easy/mid are raw duo_tier* into
 tiers, safe today only because build_tier_registry resizes exactly

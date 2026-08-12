@@ -1,7 +1,7 @@
 From be69fef61d325bdd9c03d640cd3796903352fdad Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Thu, 13 Aug 2026 08:59:19 +0100
-Subject: [PATCH 29/31] S3.3: staged startup - mlocked front first, background
+Subject: [PATCH 29/32] S3.3: staged startup - mlocked front first, background
  tier loader
 
 The main thread now loads only the front tier (mmap+mlock under its default

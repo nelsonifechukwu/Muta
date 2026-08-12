@@ -1,7 +1,7 @@
 From 50cac21af14f966641f2814024c3ee995271ddde Mon Sep 17 00:00:00 2001
 From: iitimii <timiiowolabi@gmail.com>
 Date: Thu, 13 Aug 2026 03:25:51 +0100
-Subject: [PATCH 25/31] S3.1: duo tier registry + bundle-manifest
+Subject: [PATCH 25/32] S3.1: duo tier registry + bundle-manifest
  auto-discovery
 
 Pure refactor: front/expert hardcoded pair -> tier registry (tier_role,
