@@ -112,8 +112,12 @@ the same hard cap through page-cache reclaim.
 `memory.peak` **1,720,438,784 B = 1640.7 MiB**; memwatch's own max sampled `memory.current`
 **1,704,964,096 B = 1626.0 MiB** — both under the 2048 MiB budget throughout (**PASS** on the
 cap clause). Decode **410.33 ms/token = 2.44 tok/s**; the ledger's own predicted s/token is
-**0.531**, so measured/predicted = 0.773 — well inside the ±30% band (**PASS** on the accuracy
-clause). Load 2516.82 ms, prefill 251.65 ms/token (10-token standard prompt).
+**0.531**, so measured/predicted = 0.773 — inside the ±30% band, toward the fast edge (22.7 of
+the 30 points used; **PASS** on the accuracy clause). Running *faster* than predicted here is
+expected, not incidental: the Environment header above records `D = 2.977 GB/s` as A1's
+measured **upper bound**, not a floor, so a run that rides host-level caching underneath the
+`drop_caches`-cleared VM cache should land at or above the predicted rate, exactly the
+direction this ratio leans. Load 2516.82 ms, prefill 251.65 ms/token (10-token standard prompt).
 
 Ledger block, verbatim:
 
@@ -132,9 +136,11 @@ residency: prefill reads ~= ceil(n_prompt/n_ubatch) x 1508.8 MiB streamed (the r
 Unchanged from the B2/B3/B4 baseline (same model, same `--max-ram-mib`/`--stream-reserve-mib`
 defaults) — Milestone A reconfirms the ledger rather than discovering a new one. This run's
 410.33 ms/token is in fact *faster* than B3's own number of record (521.73 ms/token; see MA-4
-note below on why that is not directly comparable) — host noise on a Docker Desktop VM cuts
-both ways, and the ±30% band exists precisely because of that noise, not because the
-prediction is loose.
+note below on why that is not directly comparable) — consistent with the upper-bound-D
+explanation above. The ±30% band still has to cover the *other* direction too: host
+contention on a Docker Desktop VM (other processes, CPU throttling) can push a run slower than
+predicted even though `D` cannot push it slower on its own, which is why the band is symmetric
+rather than one-sided.
 
 ### MA-1b — full-ubatch prefill (first ever), same flags as MA-1, ~600-token prompt, `-n 16`
 
@@ -207,8 +213,9 @@ cap** — the kernel held it there rather than killing it, because these are all
 and refault. Load **5036.82 ms** (2.1x MA-2's load, reclaim pressure already active during
 load), decode **1701.11 ms/token = 0.59 tok/s** — **3.83x slower than MA-2's managed 2.26
 tok/s**. `/usr/bin/time -v`: **975,286 major faults**, **File system inputs 352,386,776**
-sectors (x512 B = **168.0 GiB** read over the ~110 s run) — about **65.8x the model's own 2.6
-GiB size**, direct evidence of the predicted reclaim-thrash: the kernel evicts and re-faults
+sectors (x512 B = **168.0 GiB** read over the measured **115.68 s** wall-clock run — GNU
+`time`'s `Elapsed (wall clock) time`, `1:55.68`) — about **65.8x the model's own 2.6 GiB
+size**, direct evidence of the predicted reclaim-thrash: the kernel evicts and re-faults
 the same weight bytes over and over because nothing is holding a working set steady the way
 the residency manager's ring does.
 

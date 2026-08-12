@@ -126,6 +126,19 @@ memwatch_max_col() {
 
 bytes_to_mib() { awk -v b="$1" 'BEGIN{printf "%.1f", b/1048576}'; }
 
+# ms -> seconds at the given precision, or "--" when ms is empty (an arm that
+# never reached common_perf_print -- e.g. SIGKILLed before load finished --
+# has no load/prefill time to report, and "0.00" would misreport that as a
+# measured near-zero time rather than "never logged").
+ms_to_s_or_dash() {
+    local ms="$1" prec="${2:-2}"
+    if [[ -z "$ms" ]]; then
+        echo "--"
+    else
+        awk -v m="$ms" -v p="$prec" 'BEGIN{printf "%." p "f", m/1000}'
+    fi
+}
+
 # --- MA-1: observed, 3g cap, memwatch sidecar ---
 run_ma1() {
     log "MA-1 (observed): drop_caches, cgrun 3g, --stream-weights --max-ram-mib ${MAX_RAM_MIB}, -n 64, memwatch sidecar"
@@ -187,7 +200,7 @@ exit \$status
         echo "MEMWATCH_MAX_CURRENT_BYTES=${mw_max}"
         echo "MEMWATCH_MAX_CURRENT_MIB=$(bytes_to_mib "${mw_max:-0}")"
         echo "LOAD_MS=${load_ms}"
-        echo "LOAD_S=$(awk -v m="${load_ms:-0}" 'BEGIN{printf "%.2f", m/1000}')"
+        echo "LOAD_S=$(ms_to_s_or_dash "$load_ms" 2)"
         echo "PREFILL_MS_TOTAL=$(line_total_ms "$prefill_line")"
         echo "PREFILL_MS_TOK=$(line_ms_per_tok "$prefill_line")"
         echo "DECODE_MS_TOK=${decode_ms_tok}"
@@ -264,9 +277,9 @@ exit \$status
         echo "MEMWATCH_MAX_ANON_BYTES=${mw_max_anon}"
         echo "MEMWATCH_MAX_ANON_MIB=$(bytes_to_mib "${mw_max_anon:-0}")"
         echo "LOAD_MS=${load_ms}"
-        echo "LOAD_S=$(awk -v m="${load_ms:-0}" 'BEGIN{printf "%.2f", m/1000}')"
+        echo "LOAD_S=$(ms_to_s_or_dash "$load_ms" 2)"
         echo "PREFILL_MS_TOTAL=$(line_total_ms "$prefill_line")"
-        echo "PREFILL_S=$(awk -v m="$(line_total_ms "$prefill_line")" 'BEGIN{printf "%.3f", (m==""?0:m)/1000}')"
+        echo "PREFILL_S=$(ms_to_s_or_dash "$(line_total_ms "$prefill_line")" 3)"
         echo "PREDICTED_PREFILL_S=${predicted_prefill_s}"
         echo "VERDICT=${verdict}"
     } > "${ARTIFACTS_DIR}/ma1b.env"
@@ -318,7 +331,7 @@ run_ma2() {
         echo "PEAK_BYTES=${peak}"
         echo "PEAK_MIB=$(bytes_to_mib "${peak:-0}")"
         echo "LOAD_MS=${load_ms}"
-        echo "LOAD_S=$(awk -v m="${load_ms:-0}" 'BEGIN{printf "%.2f", m/1000}')"
+        echo "LOAD_S=$(ms_to_s_or_dash "$load_ms" 2)"
         echo "DECODE_MS_TOK=${decode_ms_tok}"
         echo "DECODE_TOKS=${decode_tps}"
         echo "PREDICTED_S_TOK=${predicted}"
@@ -366,7 +379,7 @@ run_ma3_arm() {
         echo "PEAK_BYTES=${peak}"
         echo "PEAK_MIB=$(bytes_to_mib "${peak:-0}")"
         echo "LOAD_MS=${load_ms}"
-        echo "LOAD_S=$(awk -v m="${load_ms:-0}" 'BEGIN{printf "%.2f", m/1000}')"
+        echo "LOAD_S=$(ms_to_s_or_dash "$load_ms" 2)"
         echo "DECODE_MS_TOK=${decode_ms_tok}"
         echo "DECODE_TOKS=${decode_tps}"
         echo "MAJFLT=${mf}"

@@ -279,7 +279,9 @@ style.
 - **MA-1 (observed).** `memory.peak` 1,720,438,784 B = 1640.7 MiB, memwatch max sampled
   `memory.current` 1,704,964,096 B = 1626.0 MiB — both under 2048 MiB throughout (**PASS**).
   Decode 410.33 ms/token = 2.44 tok/s vs. the ledger's own predicted 0.531 s/token = ratio
-  0.773, inside ±30% (**PASS**). Ledger unchanged from B2/B3/B4 (`config = head-pinned, pinned
+  0.773, inside ±30% toward the fast edge (**PASS**) — expected, since `D = 2.977 GB/s` is an
+  upper bound rather than a floor (bench/results.md §5's Environment header), not evidence the
+  band is loose. Ledger unchanged from B2/B3/B4 (`config = head-pinned, pinned
   1094.7 MiB, streamed 1508.8 MiB, W = 2`) — Milestone A reconfirms it rather than discovering
   a new one, as expected since neither the model nor the flags changed.
 - **MA-1b (full-ubatch prefill, first ever) — closes B3 Concern 1.** Prompt: `bench/prompts/hard.txt`
@@ -321,7 +323,8 @@ style.
   refault, so the OOM killer (reserved for memory that cannot be reclaimed) never fires. Decode
   1701.11 ms/token = 0.59 tok/s, **3.83x slower than MA-2's managed 2.26 tok/s**. `/usr/bin/time
   -v`: 975,286 major faults, `File system inputs` 352,386,776 sectors (x512 B = 168.0 GiB) read
-  over the ~110 s run — about 65.8x the model's own 2.6 GiB size, direct evidence of sustained
+  over the measured 115.68 s wall-clock run (GNU `time`'s `Elapsed`, `1:55.68`) — about 65.8x
+  the model's own 2.6 GiB size, direct evidence of sustained
   reclaim thrash (the kernel evicting and re-faulting the same weight bytes repeatedly because
   nothing pins a stable working set the way the residency manager's ring does). Naive-default
   arm (no flags beyond `-c 4096`, repack left at default ON): **OOMKilled**, `exit 137`. The log
