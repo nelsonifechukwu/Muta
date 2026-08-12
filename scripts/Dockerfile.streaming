@@ -1,0 +1,18 @@
+# scripts/Dockerfile.streaming — gate-grade Linux container for the weight-streaming
+# work (pilot/v2, STREAMING_IMPL_PLAN.md Phase A). ubuntu:22.04 matches the ADTC
+# deployment target OS; this image only provides the toolchain + measurement tools,
+# it does not bake llama.cpp or models (those live in named volumes, see
+# scripts/stream_env.sh).
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    sysstat \
+    time \
+    python3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work
