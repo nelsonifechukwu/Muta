@@ -361,3 +361,114 @@ style.
   MA-4-by-reference note, `--no-repack` note); `docs/POC_REPORT.md` `## Streaming (Milestone A)`
   stub (verdict paragraph + condensed table + pointer to `bench/results.md` §5, full
   `## Streaming` deferred to E2); this entry.
+
+### Task C1 (S3.1) — duo tier registry + bundle-manifest auto-discovery
+
+Pure refactor of `tools/duo/duo.cpp`'s hardcoded front/expert pair into a tier registry, the
+first task of Phase C (weight-streaming into `llama-duo`). Single commit `84c4f11..<C1>` on
+`streaming`; no other file touched (`git diff --stat` shows exactly `tools/duo/duo.cpp`,
++369/-50 lines).
+
+- **What moved.** `enum tier_role {FRONT,EASY,MID,TOP}`, `enum tier_policy
+  {MLOCK,RESIDENT,STREAMED,AUTO}`, `enum tier_state {UNLOADED,LOADING,READY}` (the last as
+  `std::atomic<tier_state>`); `struct duo_tier {role,prefix,file,policy,n_ctx,temp,top_p,
+  duo_model m,state,residency*}` (`duo.cpp:191-224` post-refactor). `duo_state` traded its two
+  `duo_model front;`/`duo_model expert;` members for `std::vector<duo_tier> tiers` plus raw
+  `front`/`easy`/`mid` pointers into it (`duo_state` grows `struct duo_tier` as a *movable*
+  type: `std::atomic` has no move constructor, so `duo_tier` needed one hand-written --
+  `state.load()`/`state.store()` instead of moving the atomic itself -- or
+  `std::vector<duo_tier>::resize()` would not have compiled). `s.front`/`s.expert`
+  (`duo_model&`) became `s.front->m`/`s.mid->m` (`duo_tier*`) at every call site, exactly as
+  the brief specified; `run_verify_turn`'s existing `fr`/`ex` local-alias pattern was extended
+  to `run_router_turn`/`run_codraft_turn` (`duo_model & front = s.front->m; duo_model & expert
+  = s.mid->m;`) so the bodies of those two functions needed almost no further edits beyond the
+  two alias lines. Registry population (`build_tier_registry()`, called once in `main()` right
+  after `duo_state` construction, before any model load): bundle-manifest auto-discovery first
+  (`discover_bundle_tiers()`, `gguf_init_from_file(no_alloc=true, ctx=NULL)` on `p.bundle`,
+  reads `bundle.count`/`bundle.{i}.prefix`/`bundle.{i}.role`, `gguf_free`d immediately after --
+  metadata-only, confirmed sub-millisecond even on the 3.4 GB `muta-duo-q.gguf` and 3.2 GB
+  `muta-trio.gguf` files used below), legacy role string `"expert"` mapped to `TIER_MID`
+  in `tier_role_from_str()`; explicit `--tier NAME=PREFIX`, `--tier-file NAME=PATH`,
+  `--tier-ctx NAME=N`, `--tier-policy NAME=mlock|resident|streamed|auto` (repeatable, `NAME=
+  VALUE` split by `parse_tier_kv()`) layer on top per-role, and can *add* a role the manifest
+  never carried (this is the mechanism the plan wants for a future top/27B tier: pure data,
+  zero code change). `--front-prefix`/`--expert-prefix` are now literally sugar for `--tier
+  front=X`/`--tier mid=X` (`parse_args`, `duo.cpp:363-364`) -- they populate the same
+  `tier_prefix_ovr` map instead of separate `duo_params` fields, so `duo_params::front_prefix`/
+  `expert_prefix` were deleted rather than left as dead duplicate storage. Sampling defaults:
+  front tier keeps `--temp-front`/`--top-p-front`, every other role (mid, and easy/top by
+  extension since neither has dedicated flags yet) keeps `--temp-expert`/`--top-p-expert` --
+  matches the brief's "temp_expert/top_p_expert -> mid tier" instruction exactly for the roles
+  that matter this task (front, mid); easy/top's values are unused until C2/C3 give them a
+  sampler. `n_ctx`: `-1` sentinel resolves via `tier_ctx_resolved()` to `p.ctx_front`/
+  `p.ctx_expert` for front/mid (so the legacy `--ctx-front`/`--ctx-expert` flags keep working
+  unchanged, not just "8192 hardcoded") and a flat `8192` default for easy/top, matching
+  "front 4096, easy/mid 8192" once `p.ctx_front`/`p.ctx_expert`'s own defaults are substituted
+  in. `load_duo_model()` gained an explicit `file` parameter (previously always read
+  `p.bundle` internally) so a tier's `--tier-file` override is honored end-to-end; every call
+  site this task still passes `p.bundle` (no `--tier-file` exercised), so this is
+  forward-compatible plumbing with no behavior change yet.
+
+- **The registered-not-loaded easy decision.** Per the brief, `main()` still loads exactly
+  front then mid, unchanged order/semantics; if a discovered/registered tier has role `easy`,
+  `main()` logs one line, `tier easy registered (loading lands in S3.3)`, and does not call
+  `load_duo_model()` for it -- `s.easy->m` stays a default-constructed `duo_model` with
+  `state == TS_UNLOADED` for the rest of this task's runs. This is the only place a 3-tier
+  bundle's control flow differs from a 2-tier bundle's, and it differs by *doing less*, not by
+  a different code path: the front/mid load calls are byte-for-byte the same statements
+  whether or not `s.easy` is non-null.
+
+- **Drift from the brief.** None worth calling out beyond what's already folded into "what
+  moved" above -- `duo_params::front_prefix`/`expert_prefix` deletion (brief only said "become
+  aliases", didn't mandate keeping or dropping the backing fields; dropping them removed what
+  would otherwise have been dead, never-written storage) and the `load_duo_model()` `file`
+  parameter (brief's struct spec already implied per-tier files via `duo_tier::file`; wiring
+  it through was the only way to make that field do anything, still zero behavior change since
+  no run exercises `--tier-file` yet).
+
+- **Regression gate.** Baselines captured *before* any edit, from the then-current
+  `llama.cpp/build/bin/llama-duo` (arm64, BLAS on, this tree's macOS duo regression binary):
+  router/codraft/verify on `bundle/muta-duo-q.gguf`, `-n 128 --temp-front 0 --temp-expert 0
+  --seed 42 --no-stream -q`, verify additionally `--draft 8 --draft-max 8`. Rebuilt
+  `llama-duo` after the refactor (`cmake --build llama.cpp/build -j --target llama-duo`, exit
+  0, 0 `error:`/`warning:` lines including in `duo.cpp` itself), re-ran all three with
+  identical flags:
+  | mode | pre-refactor sha256 (stdout) | post-refactor sha256 (stdout) |
+  |---|---|---|
+  | router | `4bbb514f...` | `4bbb514f...` (identical) |
+  | codraft | `f726b586...` | `f726b586...` (identical) |
+  | verify | `eb906de6...` | `eb906de6...` (identical) |
+  All three: **byte-identical**, confirmed by both `sha256sum` match and `diff -q` (silent =
+  no difference). Only stdout is gated per the brief; stderr differs cosmetically (the new
+  registry-building log lines) and was not compared.
+  - **Trio auto-discovery smoke (d).** `--bundle bundle/muta-trio.gguf --mode router -p
+    "hello" -n 16 --temp-front 0 --temp-expert 0 --seed 42 --no-stream`: stderr shows `loading
+    front  ('m0.') from bundle/muta-trio.gguf`, `tier easy registered (loading lands in
+    S3.3)`, `loading expert ('m2.') from bundle/muta-trio.gguf` -- three tiers discovered from
+    the manifest (`bundle.count=3`), and mid correctly resolved to prefix `m2.` (the bundle's
+    third model), not `m1.` (easy's prefix) -- proof the manifest walk is actually reading
+    per-index roles rather than coincidentally reusing the 2-tier bundle's `m1.` default. Exit
+    0, answered "i'm glad you asked. i'm here to help with any math or science" (truncated at
+    `-n 16`), no crash.
+  - **Alias check (e).** Router baseline re-run with `--front-prefix m0. --expert-prefix m1.`
+    appended: stdout sha256 `4bbb514f...`, identical to baseline (a) and to the plain
+    post-refactor re-run -- confirms the alias flags reach the same `tier_prefix_ovr` entries
+    `--tier front=m0.`/`--tier mid=m1.` would.
+  - **Shared-code / other builds.** `build-noblas` `llama-completion` target: full rebuild
+    (this pulled in `libllama`/`libllama-common` too, both unaffected since only `duo.cpp`
+    changed), exit 0, 0 `error:`/`warning:` lines -- confirms `duo.cpp`'s changes stayed
+    contained to its own translation unit despite touching `gguf.h`/`llama.h` APIs already
+    used elsewhere. Container build (`scripts/stream_env.sh build 2>&1 | tail -3`, all four
+    `BUILD_TARGETS`: `llama-completion`, `llama-duo`, `llama-bench`,
+    `llama-speculative-simple`): exit 0 (`set -euo pipefail` in the script means a non-zero
+    exit here would prove a compile failure somewhere in the four targets); the container's
+    fresh `llama-duo` binary timestamp matches this task's rebuild.
+
+- **Known limitation, not hardened this task.** `discover_bundle_tiers()` checks
+  `gguf_get_kv_type()` before calling `gguf_get_val_u32`/`gguf_get_val_str` (added defensively
+  beyond what the brief asked for, since those getters abort the process on a type mismatch
+  per their own doc comments) for `bundle.count` and each `bundle.{i}.prefix`/`.role`, but
+  does not otherwise validate manifest well-formedness beyond "skip this index" on a missing
+  key. Not exercised by either real bundle (both have well-formed manifests, confirmed via
+  `gguf-py` dump before this task), so out of scope for a pure-refactor regression gate; noted
+  here rather than silently assumed safe for a hypothetical malformed bundle.
