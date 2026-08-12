@@ -314,3 +314,112 @@ plan's "HEAD pseudo-layer, pinned first" intent
 (`docs/STREAMING_IMPL_PLAN.md:49`): the tiny norm ahead of it costs a
 one-page rounding error, not a real placement problem for a pin-first
 policy.
+
+### S0.3 — Eviction semantics probe
+
+Task A3 (S0.3): the go/no-go for the whole streaming design. Standalone C11
+probe `scripts/stream_probe.c` (single file, compiles clean with
+`-Wall -Wextra` on both Linux/gcc-11.4.0 and macOS/AppleClang-21) that mmaps
+the whole 4B model file once (`PROT_READ, MAP_SHARED`, matching llama.cpp's
+own strategy) and measures, against three page-aligned 256 MiB regions
+(A/B/C at file offsets 512/1024/1536 MiB), whether `madvise(MADV_DONTNEED)`
++ `posix_fadvise(POSIX_FADV_DONTNEED)` actually uncharges cgroup v2
+`memory.current` — the primitive the entire residency-manager design
+depends on.
+
+**Container run (gate-grade)**: `scripts/stream_env.sh drop_caches` then a
+fresh `cgrun 3g` (nothing else running), compiling and running in-container
+against `/models/Qwen3.5-4B-Q4_K_M.gguf` (2,740,937,888 bytes). Full
+`-Wall -Wextra` compile: zero warnings.
+
+| step | before(B) | after(B) | delta(B) | mincore% | ms | rss(KB) | cg_file(B) |
+|---|---|---|---|---|---|---|---|
+| 1. touch A | 30,121,984 | 299,626,496 | +269,504,512 | 100.0 | 107.1 | 263,536 | 296,157,184 |
+| 2. madvise(A,DONTNEED) alone | 299,888,640 | 299,888,640 | +0 | 100.0 | 1.6 | 1,392 | 296,157,184 |
+| **3. fadvise(A,DONTNEED) [KEY]** | 299,888,640 | 31,453,184 | **-268,435,456** | 0.0 | 6.8 | 1,392 | 27,721,728 |
+| 3b-i. touch B | 31,453,184 | 300,666,880 | +269,213,696 | 100.0 | 80.6 | 263,536 | 296,419,328 |
+| 3b-ii. fadvise(B) no madvise first | 300,666,880 | 300,666,880 | +0 | 100.0 | 3.0 | 263,536 | 296,419,328 |
+| 3b-iii. madvise(B,DONTNEED) | 300,666,880 | 300,666,880 | +0 | 100.0 | 1.5 | 1,392 | 296,419,328 |
+| **3b-iv. fadvise(B,DONTNEED) after madvise** | 300,666,880 | 32,231,424 | **-268,435,456** | 0.0 | 6.9 | 1,392 | 27,983,872 |
+| 4. madvise(C,WILLNEED)+poll | 32,231,424 | 32,894,976 | +663,552 | 0.5 | 10,022.2 | 1,580 | 29,360,128 |
+| 5. MAP_FIXED remap C + fadvise | 32,894,976 | 31,584,256 | -1,310,720 | 0.0 | 0.2 | 1,580 | 28,049,408 |
+
+`memory.peak` for the run: 300,666,880 B. `memory.stat`: `anon 393216`,
+`file 28590080`. `OOMKilled=false`, `exit_status=0`, cap=3g (plenty of
+headroom over the ≤~570 MiB simultaneously touched across A/B/C).
+
+**Step 3 (THE KEY MEASUREMENT)**: `madvise(DONTNEED)` alone leaves
+`memory.current` unchanged (Δ=0, page cache still charged, as expected) and
+mincore still 100% resident. `posix_fadvise(DONTNEED)` issued *after* that
+madvise then uncharges **exactly** -268,435,456 B = -256 MiB = -region,
+**100.0% reclaimed**, mincore drops to 0%. Confirms the plan's primitive
+works exactly as designed.
+
+**Step 3b (ordering control, region B)**: `fadvise(DONTNEED)` issued
+*without* a prior `madvise(DONTNEED)` uncharges **nothing** (Δ=0, mincore
+stays 100%) — `invalidate_mapping_pages()` skips pages still mapped into a
+process's page tables. Following with `madvise(DONTNEED)` (Δ=0, as step 2
+showed) then `fadvise(DONTNEED)` again reclaims the full -268,435,456 B
+(100%), byte-identical to step 3. **This proves the PTEs-first ordering
+requirement is real and load-bearing**, not a theoretical concern: the
+residency manager MUST call `madvise(MADV_DONTNEED)` before
+`posix_fadvise(POSIX_FADV_DONTNEED)` on every eviction, or the fadvise is a
+silent no-op.
+
+**Step 4 (WILLNEED prefetch)**: the `madvise(MADV_WILLNEED)` call itself is
+non-blocking (0.13 ms), confirming it does not synchronously block the
+calling thread (matches R10's expectation). But contrary to the plan's
+assumption that this drives an effective background prefetch, mincore never
+reached the 95% threshold within the 10 s poll timeout — only 0.5% resident,
++663,552 B (~648 KiB) added to `memory.stat`'s `file` counter, out of a
+256 MiB region. A follow-up diagnostic (Python `mmap.madvise`, same
+container class, not part of the committed probe) confirms this is not a
+"just needs more time" effect: `memory.current` rises by ~1.09 MB in the
+first ~1 s after the `WILLNEED` call and then **flatlines** for a further
+20+ s of polling; a subsequent explicit touch of the same region still pays
+the full cold-read cost (195 ms for 256 MiB, ≈1.3 GiB/s — disk speed, not
+RAM speed). **`MADV_WILLNEED`'s background readahead is effectively inert
+beyond a small (~1 MiB) initial burst in this emulated-aarch64 Docker
+Desktop VM** — it is not a usable async-prefetch primitive here. Prefetch
+bandwidth via an explicit touch loop (step 1: 1.1–2.4 GiB/s across runs) is
+the mechanism that actually works; any residency-manager warm-path should
+use an explicit touch (or `read()`), not `MADV_WILLNEED`, to prefetch pages
+ahead of decode. Recorded as a deviation below.
+
+**Step 5 (plan-B: `MAP_FIXED` remap + fadvise)**: because step 4 failed to
+populate region C (only 0.5% resident going in), step 5's small delta
+(-1,310,720 B, ~1.25 MiB, not -256 MiB) is **not** an independent test of
+the `MAP_FIXED` fallback against a genuinely-resident region — it is
+confounded by step 4's `WILLNEED` failure. This does not affect the
+go/no-go: the primary primitive (step 3) already reclaimed exactly 100% of
+the region, so the fallback was never needed for this task's verdict. If
+the fallback needs independent validation later, region C should be warmed
+with an explicit touch (not `WILLNEED`) first.
+
+**macOS run (informational)**: `cc -std=c11 -O2 -pthread -Wall -Wextra`,
+run against `models/Qwen3.5-4B-Q4_K_M.gguf` on the host (AppleClang 21.0.0,
+arm64, page size 16384). Fault bandwidth 577.4 MiB/s (step 1). `mincore%`
+stays at **100.0 for every single step**, including after step 2's
+`madvise(A, MADV_DONTNEED)` and after the (skipped) fadvise/`MAP_FIXED`
+steps — **confirms `MADV_DONTNEED` is advisory-only on Darwin**: unlike
+Linux, it does not unmap or evict anything the kernel can observe via
+`mincore`. `madvise(MADV_WILLNEED)` on C: call took 174.05 ms and mincore
+reached ≥95% at 200.30 ms (prefetch bandwidth 1278.1 MiB/s) — on Darwin the
+call is effectively synchronous/blocking for this size (`call ≈
+time-to-95%`), the opposite of the container's non-blocking-but-ineffective
+behavior. `posix_fadvise` and cgroup `memory.current` are both unavailable
+(`#ifdef __APPLE__` branches print `SKIPPED`/`n/a` throughout, exactly as
+specified) — Darwin has no equivalent whole-file eviction primitive or
+cgroup-style accounting to probe.
+
+**VERDICT: PRIMARY** — `madvise(MADV_DONTNEED)` followed by
+`posix_fadvise(POSIX_FADV_DONTNEED)`, in that order, uncharges cgroup v2
+`memory.current` (step 3: 100.0% of the region reclaimed; step 3b: proves
+the ordering is required, not incidental). The streaming design's core
+eviction assumption **holds** in the gate-grade container environment. The
+`MAP_FIXED` fallback (step 5) was not exercised under valid conditions this
+run (confounded by step 4) but is not needed given step 3's clean pass.
+Task A3 status: **not blocked** — proceed with `madvise(DONTNEED)` →
+`posix_fadvise(DONTNEED)`, strictly in that order, as the residency
+manager's eviction primitive; do not use `MADV_WILLNEED` for prefetch,
+use explicit reads/touches instead.
