@@ -12,7 +12,10 @@ Asserts, for every source model:
 Additionally, over the whole bundle manifest (independent of which SOURCEs this
 invocation was given, so these run the same way for a 2-model or N-model bundle):
   (d) contiguity: each prefix's tensor payloads form a single gap-free-mod-
-      alignment interval (no gaps beyond writer padding, no overlaps).
+      alignment interval (no gaps beyond writer padding, no overlaps), AND
+      those per-prefix intervals themselves appear in manifest order
+      (bundle.0, bundle.1, ...) with physically increasing file offsets --
+      catches a scrambled-but-internally-contiguous bundle.
   (e) vocab-identity: tokens/merges/pre/special-ids compared for every prefix
       pair; the front!=mid / easy==mid expectation is additionally asserted
       when those three roles are present (the trio bundle).
@@ -26,7 +29,18 @@ import hashlib
 import sys
 from pathlib import Path
 
-import gguf
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# The tree's own gguf-py must win over any pip-installed `gguf` package.
+# Empirically (2026-08-12, this worktree): a stale `gguf==0.19.0` is
+# pip-installed into .venv (its "editable" source dir points at an orphaned
+# ../Muta_v2/llama.cpp/gguf-py that no longer exists on disk) and a bare
+# `import gguf` succeeds against IT, not against llama.cpp/gguf-py -- so
+# "fall back to sys.path.insert only on ImportError" (the naive reading)
+# would silently use the wrong, older gguf reader. Prepend the tree's copy
+# unconditionally so it always wins (same pattern as scripts/layer_sizes.py).
+sys.path.insert(0, str(REPO_ROOT / "llama.cpp" / "gguf-py"))
+import gguf  # noqa: E402
 
 
 def sha256_bytes(data) -> str:
@@ -157,6 +171,7 @@ def main() -> int:
     # printed in manifest order (bundle.0, bundle.1, ...).
     print()
     print(f"* Contiguity check (alignment={bundle.alignment})")
+    intervals: list[tuple[str, str, int | None, int | None]] = []  # (source, prefix, lo, hi)
     for entry in manifest_entries:
         prefix = entry["prefix"]
         tensors = sorted((t for t in bundle.tensors if t.name.startswith(prefix)),
@@ -164,6 +179,7 @@ def main() -> int:
         if not tensors:
             check(entry["source"], f"payload interval contiguous under prefix {prefix!r}",
                   False, "no tensors found under prefix")
+            intervals.append((entry["source"], prefix, None, None))
             continue
         ok = True
         for a, b in zip(tensors, tensors[1:]):
@@ -177,6 +193,25 @@ def main() -> int:
         hi = max(t.data_offset + t.n_bytes for t in tensors)
         print(f"  {prefix} [{lo}, {hi - lo}]")
         check(entry["source"], f"payload interval contiguous under prefix {prefix!r}", ok)
+        intervals.append((entry["source"], prefix, lo, hi))
+
+    # (d2) manifest order matches physical file-offset order: a bundle
+    # where every prefix is internally contiguous but the prefixes
+    # themselves are scrambled relative to bundle.{i} order would still
+    # pass (d) alone -- so additionally require each successive manifest
+    # prefix's interval to start at or after the previous prefix's
+    # interval end, with a gap no larger than one alignment-padding step.
+    valid_intervals = [iv for iv in intervals if iv[2] is not None]
+    order_ok = True
+    for (prev_src, prev_prefix, _, prev_hi), (cur_src, cur_prefix, cur_lo, _) in \
+            zip(valid_intervals, valid_intervals[1:]):
+        expected = align_up(prev_hi, bundle.alignment)
+        if not (prev_hi <= cur_lo <= expected):
+            order_ok = False
+            print(f"    MANIFEST-ORDER BREAK: {prev_prefix} ends {prev_hi:,} -> "
+                  f"{cur_prefix} starts {cur_lo:,} (expected in [{prev_hi:,}, {expected:,}])")
+    print(f"  manifest-order contiguity: {'PASS' if order_ok else 'FAIL'}")
+    check("bundle", "manifest prefix order matches physical file-offset order", order_ok)
 
     # (e) vocab-identity gate: tokens/merges/pre/special-ids compared for
     # every prefix pair in the bundle (generic, works for any N). The
