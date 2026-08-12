@@ -91,3 +91,9 @@ Question: best config/architecture for max+average tok/s WITHOUT reducing accura
 - G7 (peak RSS < 6.5 GB all rows): PASS - max 5.74 GiB; duo ~= expert-alone + 0.4 GiB (2026-08-09)
 - Patches exported to patches/: DONE (re-exported after T-series commits)
 - T16 overlap: deferred with quantitative justification (see POC_REPORT known-limits)
+
+## Phase 5 — Streaming
+
+### Task A1 (S0.1)
+
+- D (disk bandwidth): plan said bind mounts are virtiofs, "wrong IO class for gates" (`docs/STREAMING_IMPL_PLAN.md:30`, worded as O_DIRECT not being viable there) -> measured: `dd iflag=direct` actually **succeeds** on the repo bind mount (virtiofs), at 2901.9 MB/s cold (post `drop_caches`), vs 2977.0 MB/s cold on the `muta-models` named volume + `iflag=direct` -> the two numbers are close to each other and far below the buffered/cached-ceiling number (7188.3 MB/s), which is evidence the virtiofs read genuinely bypassed cache rather than silently falling back to buffered I/O against an already-warm host-side cache -> kept the plan's conclusion (gates use the named volume) but corrected the reason logged in `docs/DISCOVERY.md` S0: it's not that O_DIRECT is rejected on virtiofs in this Docker Desktop version (29.1.3), it's that the volume is the VM-native block path with no host-macOS caching layer to reason about. Full D table (page size, THP, kernel) in `docs/DISCOVERY.md` S0.
