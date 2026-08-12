@@ -791,8 +791,11 @@ still C4/Phase-gate work; these are the measurement hooks and the mechanism.
   expert-alone answer (it wanders into "solve for y" and "3x = 17"). The conf monitor does not
   catch it — the front's mean logprob stayed at -0.09..-0.29, nowhere near the -2.5 threshold:
   it is confidently wrong. G11 wants the overlap; whoever owns the TTFT-vs-quality trade-off
-  should know it currently costs answer quality on hard prompts at long `-n`, and that
-  `--hard-mode verify` (which re-verifies the seeded span) is the existing lever against it.
+  should know it currently costs answer quality on hard prompts at long `-n`. **Corrected in the
+  fix round below (I1): this bullet originally claimed `--hard-mode verify` "re-verifies the
+  seeded span" and was the lever against this. That is false** — `run_verify_turn` only ingests
+  the seed as context (`duo.cpp:1694`) and never judges it against the expert. There is no
+  existing lever; the overlap extension is now disabled under verify instead.
 - **Test-only hook: `MUTA_SLOW_LOAD_MS=<n>`** (`duo.cpp:1166`) sleeps n ms before each
   *background* load so the not-ready fallbacks can be exercised deterministically. Deliberately
   an env var and not a flag, absent from `--help`; it exists to make gate evidence
@@ -832,3 +835,77 @@ still C4/Phase-gate work; these are the measurement hooks and the mechanism.
   - Extra: `--codraft-tiers easy,mid` on the trio now **waits** where C2's I5 guard errored —
     `[tier] waiting for easy … / waiting for mid …`, 3 segments, `[selftest] front/easy/expert:
     OK`, 0 resyncs.
+
+### Task C3 fix round (post-review, findings I1-I5), 2026-08-13
+
+Task review of `23fb79d..be69fef` found the threading core sound (cv protocol, join discipline and
+single-writer tier ownership all verified; `TS_FAILED` and the extension budget cap called
+exemplary) with five Important findings. Fixed in one commit, **`c8aeb9e`**, `S3.3: cap opener
+budget, handle conf in extension, verify-seed gating` (1 file, +101/-38).
+
+- **I1 - `--hard-mode verify` had silently become an overlap site, and the seed is not verified.**
+  Two defects, one of them in the C3 report. The *code* defect: the extension loop ran before the
+  `hard_mode == "verify"` dispatch, so the extended front span became `run_verify_turn`'s seed.
+  The *reporting* defect: the report (and the WORKLOG bullet above, both now corrected in place)
+  claimed verify "re-verifies the seeded span" - it does not. `run_verify_turn` only ingests the
+  seed as context (`sync_to(ex, expert_prompt + seed.text)`, `duo.cpp:1694`); verification starts
+  with the drafts generated *after* it. Extending the seed multiplied **unverified front text**
+  inside the one mode whose promise is that the expert approved what you are reading. Fixed by
+  gating the extension on `p.hard_mode != "verify"` (`duo.cpp:1453`) rather than by implementing
+  seed verification: the latter is a real feature (re-score the seed against `prev_row` in round
+  1, with a rejection path that must rewrite text the user already saw) and does not belong in a
+  staged-startup task. **Declared deviation:** under `--hard-mode verify` the opener still runs
+  (C2 behavior, unchanged) but the C3 overlap extension does not. Gated: trio + `--hard-mode
+  verify` + opener -> one `[opener] tokens=62`, zero `[seg k] author=front` lines, then
+  `[turn] mode=verify rounds=6 rejects=2 acc=0.73`.
+- **I2 - the "routed tier owns the majority" invariant was still breakable through the UNCAPPED
+  opener.** `oopts.n_predict` was `p.n_predict`, so at `-n 64` the opener *alone* could consume the
+  whole answer and hand the expert a zero budget - the same symptom the extension cap was added
+  for, with no extension involved. The cap is now computed once as
+  `front_cap = min(3*seg_max, n_predict/2)` (`duo.cpp:1319`) and applied to the opener **and** the
+  extension, so it bounds everything the front writes in a turn; the comment now states what the
+  code guarantees (the routed tier gets at least `n_predict/2`). Gated at the size that used to
+  break it: trio hard `-n 64` -> `[opener] tokens=32 cut=limit` / `[seg 0] author=expert
+  tokens=32`.
+- **I3 - the extension armed the confidence monitor with no handler.** A fired monitor truncated
+  the segment back to the seam boundary, emitted a visible `[[conf-cut -Nch]]` stream marker, and
+  then changed nothing. Now handled (`duo.cpp:1482`): `cut=="conf"` breaks the overlap and falls
+  through to the blocking acquire - the right escalation, since the front has declared itself
+  unsure. Traced as `[tier] overlap stopped: front conf-cut mean_lp=..., escalating to mid`. The
+  caveat is documented where it bites (`:1471-1479`): an append-only front never conf-cuts here
+  (no checkpoint is taken on the opener path, so `gen_segment`'s `(!append_only ||
+  conf_checkpoint)` guard disables the monitor), exactly as for the opener segment itself.
+- **I4 - the mlock comment understated the locked range.** `duo.cpp:549` claimed a bundle member
+  locks "its own ~100 MiB". It locks from the **mapping base**, so the range is header-inclusive.
+  The comment now carries both measured figures (trio front 127,389,760 B = 121.5 MiB = 98.9 MiB
+  weights + 22.6 MiB header; `muta-duo-q` front 560,670,336 B = 534.7 MiB), the note that C4's
+  `mlock_front_mib` must use the LOCK RANGE, and the `-q`-hides-the-warning caveat.
+- **I5 - TSAN run, done, CLEAN.** The C3 threading argument covered `duo.cpp` but said nothing
+  about llama/ggml global state under concurrent load+decode, and ASAN had been skipped. A scratch
+  build (`/tmp/c3-tsan`, RelWithDebInfo + `-fsanitize=thread`, arm64, `GGML_BLAS=OFF`, llama + duo
+  only) built with 0 warnings; the exercise was trio router, hard prompt, opener on, `-n 64` - the
+  front decoding its opener while the loader thread loads easy and then mid. **0 `WARNING:
+  ThreadSanitizer` reports, exit 0.** The trace confirms the overlap really happened under
+  instrumentation (`[opener] tokens=32` at 4.8 tok/s, `[tier] easy ready load_ms=11829.4`,
+  `[tier] mid ready load_ms=26876.2` - TSAN's ~10x slowdown widens the concurrency window rather
+  than hiding it). So concurrent load+decode is **verified for this workload**, not assumed; scope
+  caveat: one run, one bundle, one mode, CPU backend only. (The TSAN binary is BLAS-off, so its
+  route score reads `s=1.008` where the BLAS-on build reads `s=1.064` - different kernels, same
+  verdict.)
+- **Minors folded in:** M1 the `[tier] ... ready load_ms=` trace now prints *before* the
+  `tier_publish` that wakes waiters (`:1244`), so cause precedes effect in the overlap traces G11
+  is read from (visible in the re-run: `mid ready load_ms=2620.8` then `mid acquired
+  wait_ms=1941.1`); M2 `tier_acquire` re-checks under the lock before announcing a wait (`:1043`),
+  killing the phantom `waiting for ...` line when a tier arrives in the gap; M3 `loader_joiner`
+  sets `loader_stop` before joining (`:1004`), so early returns skip not-yet-started loads instead
+  of sitting through them (`--route-only` on the trio now exits in **1.75 s**); M4
+  `ttft_note_first_token()` moved above `llama_decode` (`:835`) - that decode is prefill for the
+  NEXT token and was inflating G11's headline number by a decode step.
+- **Re-run matrix, all serialized:** 3 byte-identity baselines (**PASS**, `4bbb514f`/`f726b586`/
+  `eb906de6`, a 4th consecutive verification); trio hard `-n 64` expert-budget floor (32/32);
+  trio hard `-n 512` overlap trace (front segments with `[tier] easy ready` interleaved; answer
+  **byte-identical to the pre-fix run**, `d648b1cc`); trio `--hard-mode verify` + opener
+  (seed-only); trio codraft `easy,mid` (3/3 selftests OK, 0 resyncs, output unchanged);
+  easy-not-ready 3-turn fallback (turn 1 front @242 ms, turn 3 easy); `--route-only` teardown
+  (exit 0 in 1.75 s, mid skipped); TSAN run (0 warnings); `build` + `build-noblas` + container
+  builds (0 errors, 0 compiler warnings, `duo.cpp.o` recompiled); comments still ASCII-only.
