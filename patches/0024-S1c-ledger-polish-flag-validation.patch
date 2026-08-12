@@ -1,0 +1,111 @@
+From 84c4f11bfc5ba0c18b81cc5a1d92f5232ed463c2 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Thu, 13 Aug 2026 00:03:27 +0100
+Subject: [PATCH 24/24] S1c: ledger polish + flag validation
+
+Verified the S1c checklist (refusal inequality print, startup plan log,
+--pin-budget override) against B2's shipped code: all three already
+landed in e7b853e, nothing to re-implement.
+
+Fixes carried from earlier reviews:
+- reject negative --max-ram-mib/--prefetch-layers/--stream-reserve-mib
+  and non-digit --pin-budget at parse time instead of silently
+  wrapping into a huge uint32 or falling back to auto.
+- raise the streamed-load repack-off notice from LLAMA_LOG_INFO to
+  LLAMA_LOG_WARN so it is visible at default verbosity instead of
+  needing -lv 4.
+- add O_CLOEXEC to the residency module's own fd open.
+
+Assisted-by: Claude Fable 5
+---
+ common/arg.cpp          | 14 ++++++++++++++
+ src/llama-model.cpp     |  5 ++++-
+ src/llama-residency.cpp |  3 ++-
+ 3 files changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/common/arg.cpp b/common/arg.cpp
+index 9e161a7..e19a58a 100644
+--- a/common/arg.cpp
++++ b/common/arg.cpp
+@@ -25,6 +25,7 @@
+ #include <nlohmann/json.hpp>
+ 
+ #include <algorithm>
++#include <cctype>
+ #include <cinttypes>
+ #include <climits>
+ #include <cmath>
+@@ -2844,6 +2845,9 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+         {"--max-ram-mib"}, "N",
+         string_format("residency manager RAM budget in MiB (default: %" PRIu32 ")", params.max_ram_mib),
+         [](common_params & params, int value) {
++            if (value < 0) {
++                throw std::invalid_argument("max-ram-mib must be non-negative");
++            }
+             params.max_ram_mib = value;
+         }
+     ));
+@@ -2851,6 +2855,9 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+         {"--prefetch-layers"}, "N",
+         string_format("layers to prefetch ahead of the decode cursor (default: %" PRIu32 ")", params.prefetch_layers),
+         [](common_params & params, int value) {
++            if (value < 0) {
++                throw std::invalid_argument("prefetch-layers must be non-negative");
++            }
+             params.prefetch_layers = value;
+         }
+     ));
+@@ -2858,6 +2865,10 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+         {"--pin-budget"}, "auto|MIB",
+         string_format("how much of max-ram-mib to mlock/pin, \"auto\" or a MiB value (default: %s)", params.pin_budget.c_str()),
+         [](common_params & params, const std::string & value) {
++            if (value != "auto" &&
++                (value.empty() || !std::all_of(value.begin(), value.end(), [](unsigned char c) { return std::isdigit(c); }))) {
++                throw std::invalid_argument("pin-budget must be \"auto\" or a non-negative integer");
++            }
+             params.pin_budget = value;
+         }
+     ));
+@@ -2865,6 +2876,9 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+         {"--stream-reserve-mib"}, "N",
+         string_format("headroom withheld from max-ram-mib for non-weight memory (default: %" PRIu32 ")", params.stream_reserve_mib),
+         [](common_params & params, int value) {
++            if (value < 0) {
++                throw std::invalid_argument("stream-reserve-mib must be non-negative");
++            }
+             params.stream_reserve_mib = value;
+         }
+     ));
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 5f6b7fb..0aea236 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -1283,7 +1283,10 @@ bool llama_model_base::load_tensors(llama_model_loader & ml) {
+     // mutually exclusive by construction, so streaming wins here.
+     bool use_extra_bufts = params.use_extra_bufts;
+     if (params.stream_weights && use_extra_bufts) {
+-        LLAMA_LOG_INFO("%s: stream_weights is enabled, disabling extra buffer types "
++        // WARN, not INFO: GGML_LOG_LEVEL_INFO maps to LOG_LEVEL_TRACE in
++        // common_log_default_callback and is invisible below -lv 4, but losing
++        // repack kernels silently changes which numeric kernels the model runs.
++        LLAMA_LOG_WARN("%s: stream_weights is enabled, disabling extra buffer types "
+                 "(repacked weights cannot be streamed)\n", __func__);
+         use_extra_bufts = false;
+     }
+diff --git a/src/llama-residency.cpp b/src/llama-residency.cpp
+index f4febbb..69cf43c 100644
+--- a/src/llama-residency.cpp
++++ b/src/llama-residency.cpp
+@@ -991,7 +991,8 @@ struct llama_residency * llama_residency_init(
+ 
+     // the module's own descriptor: the page cache is per-inode so any fd works,
+     // and owning one keeps eviction independent of the loader's lifetime.
+-    r->fd = open(path_model, O_RDONLY);
++    // O_CLOEXEC: this fd must not leak into a child process across exec.
++    r->fd = open(path_model, O_RDONLY | O_CLOEXEC);
+     if (r->fd < 0) {
+         LLAMA_LOG_ERROR("residency: open(%s) failed: %s\n", path_model, strerror(errno));
+         delete r;
+-- 
+2.50.1 (Apple Git-155)
+

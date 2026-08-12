@@ -1,0 +1,355 @@
+From c86da62418622afa2c925d53802bcefaf6b5f5db Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Wed, 12 Aug 2026 23:03:28 +0100
+Subject: [PATCH 22/24] S2: cb_eval gate - sliding-window evict/prefetch
+
+Drive the residency ring from the scheduler's eval callback, replacing the
+S1b stub.
+
+Node -> unit resolution is pointer-based: init builds a map from every mapped
+weight tensor to its unit id, and the callback tries each of a node's sources
+and each source's view base against it. No tensor name is parsed while a graph
+is running. Entries are cross-checked against the unit's own extent at build
+time, so an id space that stopped agreeing with the table is a load error.
+
+The tied head is the one ambiguity - token_embd.weight IS the output matrix,
+so the same pointer appears in the embedding lookup at the start of the graph
+and in the logits matmul at the end. Only GGML_OP_MUL_MAT resolves to HEAD;
+GET_ROWS resolves to no unit, so the head's window logic cannot fire at the
+wrong end of the graph.
+
+ASK returns true only on the first node touching a streamed unit the graph has
+not already gated on, which is the coalescing filter the scheduler's lookahead
+requires; POST calls on_gate_post and always returns true. The gate needs no
+graph-start signal because on_gate_post is absolute rather than incremental:
+it evicts every resident streamed unit outside [u, u+W] and prefetches what is
+missing inside it, computed from u alone, so any missed boundary is corrected
+at the next gate.
+
+Also: MUTA_CB_NOOP installs a no-op callback in common instead of the gate,
+for the callback-overhead A/B, and the ledger now prints the prefill read
+estimate (the ring walks once per ubatch graph).
+
+Assisted-by: Claude Fable 5
+---
+ common/common.cpp       |  21 ++++-
+ src/llama-residency.cpp | 198 ++++++++++++++++++++++++++++++++++++++--
+ src/llama-residency.h   |  10 +-
+ 3 files changed, 218 insertions(+), 11 deletions(-)
+
+diff --git a/common/common.cpp b/common/common.cpp
+index 46520da..7e2237e 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -1216,6 +1216,18 @@ static void common_init_sampler_from_model(
+     get_float(llama_model_meta_key_str(LLAMA_MODEL_META_KEY_SAMPLING_MIROSTAT_ETA),    sparams.mirostat_eta,    common_params_sampling_config::COMMON_PARAMS_SAMPLING_CONFIG_MIROSTAT_ETA);
+ }
+ 
++// Debug hook for the callback-overhead A/B (task B3). With MUTA_CB_NOOP set in
++// the environment, a streamed run installs THIS instead of the residency gate:
++// the scheduler still calls back on every node, but ASK never returns true, so
++// the graph is never chunked and the ring never advances. Subtracting a run
++// with no callback at all leaves the cost of the callback machinery itself.
++// Measurement only -- with the ring parked, --max-ram-mib is not enforced.
++static bool common_residency_noop_eval_cb(struct ggml_tensor * t, bool ask, void * user_data) {
++    GGML_UNUSED(t);
++    GGML_UNUSED(user_data);
++    return !ask;
++}
++
+ struct common_init_result::impl {
+     impl() = default;
+     ~impl() = default;
+@@ -1325,7 +1337,14 @@ common_init_result::common_init_result(common_params & params, bool model_only)
+                 rinfo.streamed_bytes / (1024.0 * 1024.0), rinfo.n_streamed_layers,
+                 rinfo.head_pinned ? "" : " + head", rinfo.window);
+ 
+-        cparams.cb_eval           = llama_residency_sched_eval_cb;
++        if (std::getenv("MUTA_CB_NOOP") != nullptr) {
++            COM_WRN("%s", "MUTA_CB_NOOP is set: installing a no-op eval callback instead of the "
++                    "residency gate -- the ring will NOT advance and --max-ram-mib is NOT "
++                    "enforced. Overhead measurement only.\n");
++            cparams.cb_eval = common_residency_noop_eval_cb;
++        } else {
++            cparams.cb_eval = llama_residency_sched_eval_cb;
++        }
+         cparams.cb_eval_user_data = residency;
+     }
+ 
+diff --git a/src/llama-residency.cpp b/src/llama-residency.cpp
+index 2c11fd6..968a8b8 100644
+--- a/src/llama-residency.cpp
++++ b/src/llama-residency.cpp
+@@ -18,6 +18,7 @@
+ #include <mutex>
+ #include <string>
+ #include <thread>
++#include <unordered_map>
+ #include <vector>
+ 
+ #ifdef __has_include
+@@ -135,6 +136,16 @@ struct llama_residency {
+     int head_unit = -1;
+     int misc_unit = -1;
+ 
++    // graph gate (S2): every mapped weight tensor pointer -> its unit id, built
++    // once at init so the callback never parses a tensor name while a graph runs.
++    std::unordered_map<const ggml_tensor *, int32_t> unit_of;
++
++    // the unit the last gate fired on, i.e. the ring position the window is
++    // currently anchored at. Written by the ASK half of the callback and read
++    // back by its POST half, both on the scheduler's compute thread; atomic so
++    // that a reader on any other thread is still well defined.
++    std::atomic<int32_t> gate_unit{-1};
++
+     llama_residency_info info = {};
+ 
+     // the manager thread and its FIFO. every verb runs here and only here.
+@@ -360,6 +371,54 @@ static bool res_build_units(llama_residency * r, const llama_model * model) {
+     r->info.head_tied  = !has_output_weight;
+     r->info.head_bytes = r->head_unit >= 0 ? r->units[r->head_unit].bytes : 0;
+ 
++    // ---- the graph gate's node -> unit map ---------------------------------
++    //
++    // Classification repeats the pass above, but against the FINAL unit ids:
++    // the ordering loop puts blk.il at unit id il (the hole check above is what
++    // makes that identity safe), the head next and misc last. Every entry is
++    // cross-checked against the unit's own extent, so an id that ever stopped
++    // agreeing with the table is a load-time error rather than a silent
++    // mis-gate at 30 tokens per second.
++    r->unit_of.reserve(model->tensors_by_name.size() * 2);
++
++    for (const auto & it : model->tensors_by_name) {
++        const std::string        & name = it.first;
++        const struct ggml_tensor * t    = it.second;
++
++        if (t == nullptr || t->data == nullptr) {
++            continue;
++        }
++
++        int     il   = -1;
++        int32_t unit = -1;
++
++        if (sscanf(name.c_str(), "blk.%d.", &il) == 1 && il >= 0) {
++            unit = il;
++        } else if (name == "token_embd.weight" || name == "output.weight") {
++            unit = r->head_unit;
++        } else {
++            unit = r->misc_unit;
++        }
++
++        if (unit < 0 || unit >= (int32_t) r->units.size()) {
++            LLAMA_LOG_ERROR("residency: tensor '%s' resolved to unit %d, outside the %zu-unit table\n",
++                    name.c_str(), unit, r->units.size());
++            return false;
++        }
++
++        const size_t off = (size_t) ((const uint8_t *) t->data - r->base);
++        const auto & un  = r->units[unit];
++
++        if (off < un.off_min || off + ggml_nbytes(t) > un.off_max) {
++            LLAMA_LOG_ERROR("residency: tensor '%s' at [%zu, %zu) is not inside unit %s's extent "
++                    "[%zu, %zu) -- the unit id space and the node map disagree\n",
++                    name.c_str(), off, off + ggml_nbytes(t), un.name.c_str(), un.off_min, un.off_max);
++            return false;
++        }
++
++        r->unit_of[t] = unit;
++    }
++
+     return true;
+ }
+ 
+@@ -637,6 +696,16 @@ static bool res_solve(llama_residency * r) {
+                 res_mib(r->info.streamed_bytes), (double) r->params.disk_gbps);
+     }
+ 
++    // One graph is built and executed per ubatch, and the gate walks the whole
++    // ring in every one of them, so a prompt costs the ring walk once per ubatch
++    // rather than once in total. That is the design, not a leak: the window is
++    // what bounds RAM, and it holds W+1 units whether the walk runs once or a
++    // hundred times. It does mean prefill is read-bound at the same rate decode
++    // is, which is the number to size a prompt against.
++    LLAMA_LOG_INFO("residency: prefill reads ~= ceil(n_prompt/n_ubatch) x %.1f MiB streamed "
++            "(the ring walks once per ubatch graph -- expected, not a bug)\n",
++            res_mib(r->info.streamed_bytes));
++
+     if (!chosen.head_pinned && head_bytes > 0) {
+         if (r->params.disk_gbps > 0.0f) {
+             LLAMA_LOG_WARN("residency: HEAD IS STREAMED: +%.3f s/token for the head alone "
+@@ -980,14 +1049,126 @@ void llama_residency_free(struct llama_residency * res) {
+     delete res;
+ }
+ 
++// ---------------------------------------------------------------------------
++// the graph gate
++// ---------------------------------------------------------------------------
++
++static int32_t res_lookup(const llama_residency * r, const ggml_tensor * t) {
++    if (t == nullptr) {
++        return -1;
++    }
++    const auto it = r->unit_of.find(t);
++    return it == r->unit_of.end() ? -1 : it->second;
++}
++
++// Which unit's weights does this node read? Pointer lookups only: every source
++// of the node, and each source's view base, is tried against the map built at
++// init. One level of view_src is enough because ggml collapses a view of a view
++// onto the ultimate base at creation time (ggml.c:1777-1779).
++//
++// The head is the one ambiguity, and it is not a corner case: with tied
++// embeddings token_embd.weight IS the output matrix (models/qwen35.cpp:52
++// creates the head with TENSOR_DUPLICATED and the loader hands back the tensor
++// that already exists), so one pointer appears twice in every graph -- in the
++// GGML_OP_GET_ROWS embedding lookup at the very start, and in the
++// GGML_OP_MUL_MAT logits projection at the very end. Only the matmul is the
++// head's real use. Gating on the lookup would fire the head's window logic at
++// the wrong end of the graph: the head sits last in the ring, so its window
++// wraps to ring[0], and the wrap would happen BEFORE the first layer instead of
++// after the last one, evicting most of the ring on the way in and again on the
++// way out. So for the head unit, anything that is not a matmul resolves to "no
++// unit"; the lookup is then served by demand faults over the few rows it reads
++// (2100 B per token at n_embd 2560, q6_K), which is correct and cheap.
++static int32_t res_unit_of_node(const llama_residency * r, const ggml_tensor * t) {
++    if (t == nullptr) {
++        return -1;
++    }
++
++    for (int i = 0; i < GGML_MAX_SRC; i++) {
++        const ggml_tensor * src = t->src[i];
++        if (src == nullptr) {
++            continue;
++        }
++
++        int32_t u = res_lookup(r, src);
++        if (u < 0 && src->view_src != nullptr) {
++            u = res_lookup(r, src->view_src);
++        }
++        if (u < 0) {
++            continue;
++        }
++        if (u == r->head_unit && t->op != GGML_OP_MUL_MAT) {
++            continue; // see above: the embedding lookup is not the head's use
++        }
++        return u;
++    }
++
++    return -1;
++}
++
++// The scheduler's eval callback, and the only thing that drives the ring during
++// real execution. Its contract (ggml/src/ggml-backend.cpp:1730-1767):
++//
++//   ASK(t, true)  is called on node after node in a coalescing loop. Returning
++//                 false lets the scheduler swallow the node into the current
++//                 chunk; returning true ends the chunk AT t, so nodes [j0..j1]
++//                 -- t included -- are computed, the backend is synchronized,
++//                 and POST(t, false) follows. Returning false from POST aborts
++//                 the graph, so POST here always returns true.
++//
++// The gate anchors on POST for the ordering it buys: at the POST of the first
++// node that touches unit N, every node ahead of it in the graph has run, so all
++// of unit N-1 is provably finished and safe to evict, while unit N itself is in
++// the window and stays. ASK is the filter, not the event -- the scheduler's
++// lookahead means ASK can probe well ahead of what has executed, so the only
++// safe test there is "is this a streamed unit the graph has not already gated
++// on", which is exactly the coalescing rule that makes one gate per unit.
++//
++// There is no graph-start signal in this contract, and the gate does not need
++// one. llama_residency_on_gate_post() is idempotent and absolute rather than
++// incremental: it evicts every resident streamed unit OUTSIDE [u, u+W] and
++// prefetches everything inside it that is missing, computed from u alone. A
++// missed boundary, a graph that starts mid-ring, a KV-shift graph that gates
++// not at all, a prefill ubatch that stops early -- none of them can leave the
++// ring in a state the next gate does not correct, because the next gate does
++// not consult the previous one. gate_unit carries across graphs on purpose: it
++// makes the first gate of graph G+1 fire iff its unit differs from the last one
++// graph G gated on, which is the normal case (a graph ends on the last ring
++// unit and the next one starts on the first). The single degenerate case is a
++// ring of exactly one unit, where the window is the whole ring anyway and there
++// is nothing for a gate to move.
+ bool llama_residency_sched_eval_cb(struct ggml_tensor * t, bool ask, void * user_data) {
+-    GGML_UNUSED(t);
+-    GGML_UNUSED(user_data);
++    llama_residency * r = (llama_residency *) user_data;
+ 
+-    // S1b installs the seam only. ASK -> false (no node is observed yet),
+-    // POST -> true (never abort the graph). Node -> unit resolution and the
+-    // llama_residency_on_gate_post() call land in S2/B3.
+-    return !ask;
++    if (r == nullptr || r->ring.empty()) {
++        return !ask; // nothing streams: coalesce through, never abort
++    }
++
++    if (!ask) {
++        // POST. Runs on the compute thread; on_gate_post takes the manager lock
++        // only to append to its queue and never issues a syscall.
++        const int32_t u = r->gate_unit.load(std::memory_order_relaxed);
++        if (u >= 0) {
++            llama_residency_on_gate_post(r, (int) u);
++        }
++        return true;
++    }
++
++    const int32_t u = res_unit_of_node(r, t);
++
++    // no unit (activations only), misc, or a unit the ledger pinned: nothing to
++    // slide, so let the scheduler keep coalescing.
++    if (u < 0 || r->units[u].pinned) {
++        return false;
++    }
++
++    if (u == r->gate_unit.load(std::memory_order_relaxed)) {
++        return false; // already gated on this unit, this is a later node of it
++    }
++
++    r->gate_unit.store(u, std::memory_order_relaxed);
++
++    return true;
+ }
+ 
+ void llama_residency_suspend(struct llama_residency * res) {
+@@ -995,6 +1176,11 @@ void llama_residency_suspend(struct llama_residency * res) {
+         return;
+     }
+ 
++    // the ring is about to be emptied, so the anchor the gate would compare
++    // against is meaningless: forget it, and let the first gate after a resume
++    // fire whatever unit it lands on.
++    res->gate_unit.store(-1, std::memory_order_relaxed);
++
+     {
+         std::lock_guard<std::mutex> lk(res->mtx);
+         res->q.clear();
+diff --git a/src/llama-residency.h b/src/llama-residency.h
+index 09adf86..c889b34 100644
+--- a/src/llama-residency.h
++++ b/src/llama-residency.h
+@@ -6,8 +6,9 @@
+ 
+ // Internal entry points of the weight residency manager. The public C API is
+ // in include/llama.h; what follows is llama.cpp internal and exists so the
+-// module's own selftest -- and the graph gating that lands in S2/B3 -- can
+-// drive the ring/window state machine directly.
++// module's own selftest can drive the ring/window state machine directly,
++// without a graph. In production the driver is the scheduler eval callback
++// (llama_residency_sched_eval_cb), which calls on_gate_post below.
+ //
+ // Unit ids are stable indices into the manager's unit table: one unit per
+ // decoder block, one for the (tied) head, one for the always-pinned misc
+@@ -23,8 +24,9 @@ int llama_residency_unit_head    (const struct llama_residency * res);
+ // The ring/window state machine: unit `unit` has just been executed. Evicts
+ // every resident streamed unit outside the window [unit, unit+W] and queues a
+ // prefetch for the units inside it that are neither resident nor already
+-// queued. Runs on the caller's thread (the compute thread in S2/B3): it only
+-// takes the manager's lock and appends to its queue, it never issues a syscall.
++// queued. Runs on the caller's thread -- the compute thread, when the gate
++// calls it: it only takes the manager's lock and appends to its queue, it
++// never issues a syscall.
+ void llama_residency_on_gate_post(struct llama_residency * res, int unit);
+ 
+ // Block until the manager thread has executed every queued verb. Test and
+-- 
+2.50.1 (Apple Git-155)
+
