@@ -1,0 +1,426 @@
+From f3ec6fd95613298b3271c93179da14fdaff56cc1 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Sun, 9 Aug 2026 11:18:35 +0100
+Subject: [PATCH 14/16] V1: verify mode - expert-verified front drafting with
+ seq_cp checkpointing
+
+Front drafts k tokens (adaptive 4..24); expert judges them in one batched
+forward pass with per-position logits. seq 1 checkpoints the hybrid state
+(recurrent seq_cp is copy-on-write) so rejection can roll back what the
+Gated-DeltaNet layers cannot rewind. Cross-vocab at text level with
+whitespace seams. Acceptance: logprob threshold or greedy argmax match.
+Adaptive repair spans; expert can end the turn at any accepted boundary.
+Router --hard-mode verify|expert dispatches hard prompts either way;
+default expert (measured draft acceptance 0.32-0.42 on this model pair is
+below verify break-even ~0.55).
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 314 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 309 insertions(+), 5 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index 644f780..b98a272 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -62,6 +62,17 @@ struct duo_params {
+     float p_front  = 0.5f;   // random mode: P(next segment is front's)
+     float p_expert = -1.0f;  // derived as 1 - p_front unless given
+ 
++    // verify mode
++    int32_t draft_init  = 16;    // initial draft length (adaptive)
++    int32_t draft_max   = 24;    // capped: batches >= ~32 tokens hit the BLAS dequant path on this build
++    int32_t repair_min  = 12;    // expert repair span after a rejection (doubles on consecutive rejects)
++    std::string verify_rule = "logprob";  // logprob|greedy
++    float accept_threshold  = -3.0f;      // logprob rule: accept while expert lp(token) >= this
++    // measured on this model pair: draft acceptance ~0.32-0.42 is below verify's
++    // break-even (~0.55), so plain expert decode wins on hard prompts; verify stays
++    // available for better-aligned front/expert pairs
++    std::string hard_mode   = "expert";   // router hard path: expert|verify
++
+     uint32_t seed = 42;
+ 
+     bool closer_expert  = true;  // --closer expert|either
+@@ -168,7 +179,7 @@ static void print_usage() {
+            "  --bundle PATH           bundle gguf [bundle/muta-duo.gguf]\n"
+            "  --front-prefix STR      [m0.]\n"
+            "  --expert-prefix STR     [m1.]\n"
+-           "  --mode router|codraft|random   [router]\n"
++           "  --mode router|codraft|random|verify   [router]\n"
+            "  -p, --prompt STR        user message (one turn)\n"
+            "  --prompts-file PATH     one user message per line (multi-turn)\n"
+            "  --ctx-front N           [4096]\n"
+@@ -181,6 +192,10 @@ static void print_usage() {
+            "  --seg-min N [24]  --seg-max N [96]\n"
+            "  --seg-min-expert N --seg-max-expert N   expert-only segment budgets [same]\n"
+            "  --p-front F [0.5] --p-expert F [1-p_front]   random mode author probabilities (sum to 1)\n"
++           "  --draft N [16] --draft-max N [48]       verify mode: adaptive front draft length\n"
++           "  --repair-min N [12]                     verify mode: expert repair span after rejection\n"
++           "  --verify-rule logprob|greedy [logprob]  verify mode acceptance rule\n"
++           "  --accept-threshold F [-3.0]             logprob rule: accept while expert lp >= F\n"
+            "  --route-only            print route scores only, do not answer\n"
+            "  -q, --quiet             suppress library logs (traces stay)\n"
+            "  --stream / --no-stream  live token output with per-model colors [auto: on in chat]\n"
+@@ -227,6 +242,12 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+         else if (arg == "--seg-max-expert")  { p.seg_max_expert = atoi(need("--seg-max-expert")); }
+         else if (arg == "--p-front")         { p.p_front = atof(need("--p-front")); }
+         else if (arg == "--p-expert")        { p.p_expert = atof(need("--p-expert")); }
++        else if (arg == "--draft")           { p.draft_init = atoi(need("--draft")); }
++        else if (arg == "--draft-max")       { p.draft_max = atoi(need("--draft-max")); }
++        else if (arg == "--repair-min")      { p.repair_min = atoi(need("--repair-min")); }
++        else if (arg == "--verify-rule")     { p.verify_rule = need("--verify-rule"); }
++        else if (arg == "--accept-threshold"){ p.accept_threshold = atof(need("--accept-threshold")); }
++        else if (arg == "--hard-mode")       { p.hard_mode = need("--hard-mode"); }
+         else if (arg == "--route-only")      { p.route_only = true; }
+         else if (arg == "-q" || arg == "--quiet") { p.quiet = true; }
+         else if (arg == "--stream")          { p.stream = 1; }
+@@ -251,7 +272,8 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+ // ---------- model plumbing ----------
+ 
+ static bool load_duo_model(duo_model & m, const duo_params & p, const std::string & name,
+-                           const std::string & prefix, int32_t n_ctx, float temp, float top_p) {
++                           const std::string & prefix, int32_t n_ctx, float temp, float top_p,
++                           bool checkpoint_seq = false) {
+     m.name = name;
+ 
+     llama_model_params mparams = llama_model_default_params();
+@@ -268,6 +290,12 @@ static bool load_duo_model(duo_model & m, const duo_params & p, const std::strin
+     cparams.n_ctx           = n_ctx;
+     cparams.n_threads       = p.n_threads;
+     cparams.n_threads_batch = p.n_threads;
++    if (checkpoint_seq) {
++        // seq 1 is a rollback checkpoint sharing seq 0's prefix (verify mode)
++        cparams.n_seq_max  = 2;
++        cparams.n_ctx      = 2 * n_ctx;
++        cparams.kv_unified = getenv("DUO_KV_SPLIT") == nullptr;
++    }
+ 
+     m.ctx.reset(llama_init_from_model(m.model.get(), cparams));
+     if (!m.ctx) {
+@@ -572,6 +600,8 @@ static void trace_seg(const duo_params & p, int k, const char * author, const se
+            k, author, st.n_tokens, st.t_us / 1e3, st.mean_lp, st.cut.c_str());
+ }
+ 
++static std::string run_verify_turn(duo_state & s, const std::string & user);
++
+ static std::string run_router_turn(duo_state & s, const std::string & user) {
+     const duo_params & p = s.p;
+     const int64_t t0 = ggml_time_us();
+@@ -619,6 +649,12 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+             transcript += est.text;
+             trace_seg(p, 1, "expert", est);
+         }
++    } else if (p.hard_mode == "verify") {
++        // hard path: verified front drafting (expert-approved text at prefill speed where possible)
++        if (p.trace) {
++            fprintf(stderr, "[turn] route=hard s=%.3f -> verify\n", score);
++        }
++        return run_verify_turn(s, user);
+     } else {
+         // hard path: expert answers directly (lazy history sync)
+         author = "expert";
+@@ -723,6 +759,267 @@ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+     return transcript;
+ }
+ 
++// ---------- verify mode ----------
++//
++// The front drafts k tokens; the expert judges them in ONE batched forward pass
++// (logits at every position). Accepted spans cost the expert prefill-speed instead
++// of decode-speed while staying expert-approved. The expert's Gated-DeltaNet state
++// cannot rewind, so seq 1 holds a checkpoint: seq_cp before the verify batch, and
++// on rejection the state is restored and only the accepted prefix is re-decoded.
++
++static int argmax_row(const float * z, int n) {
++    int best = 0;
++    for (int i = 1; i < n; i++) {
++        if (z[i] > z[best]) {
++            best = i;
++        }
++    }
++    return best;
++}
++
++static double logprob_row(const float * z, int n, llama_token tok) {
++    float zmax = z[0];
++    for (int i = 1; i < n; i++) {
++        zmax = z[i] > zmax ? z[i] : zmax;
++    }
++    double sum = 0.0;
++    for (int i = 0; i < n; i++) {
++        sum += exp((double) z[i] - zmax);
++    }
++    return (double) z[tok] - zmax - log(sum);
++}
++
++static std::string run_verify_turn(duo_state & s, const std::string & user) {
++    const duo_params & p = s.p;
++    const int64_t t0 = ggml_time_us();
++    duo_model & fr = s.front;
++    duo_model & ex = s.expert;
++    llama_memory_t mem = llama_get_memory(ex.ctx.get());
++    const int n_vocab = llama_vocab_n_tokens(ex.vocab);
++    const bool greedy = p.verify_rule == "greedy";
++
++    // seq 1 is the rollback checkpoint; without it seq_cp is a silent no-op and a
++    // rejection would wipe the expert state
++    GGML_ASSERT(llama_n_seq_max(ex.ctx.get()) >= 2 && "verify mode needs the expert context loaded with checkpoint_seq");
++
++    const std::string front_prompt  = render_prompt(fr, s.sys_front,  s.history, user, true);
++    const std::string expert_prompt = render_prompt(ex, s.sys_expert, s.history, user, false);
++
++    if (!sync_to(ex, expert_prompt, true)) {
++        return "";
++    }
++    // logits row predicting the expert's next position; judges draft token 0 of each round
++    std::vector<float> prev_row(llama_get_logits_ith(ex.ctx.get(), -1),
++                                llama_get_logits_ith(ex.ctx.get(), -1) + n_vocab);
++
++    std::string transcript;
++    int k = std::max(4, p.draft_init);
++    int consec_rejects = 0;
++    int n_total = 0, n_expert_auth = 0, n_drafted = 0, n_accepted = 0, n_rounds = 0, n_rejects = 0;
++    bool turn_open = true;
++
++    while (turn_open && n_total < p.n_predict) {
++        if (!sync_to(fr, front_prompt + transcript, true)) {
++            break;
++        }
++        gen_opts dopts = {};
++        dopts.seg_min = k; dopts.seg_max = k;
++        dopts.random_cut = true;
++        dopts.n_predict = p.n_predict - n_total;
++        dopts.conf_window = p.conf_window; dopts.conf_threshold = p.conf_threshold;
++        dopts.eos_ends_turn = !p.closer_expert;
++        seg_stats dst = gen_segment(fr, dopts);   // rewinds the front KV itself
++        const bool front_eos = dst.cut == "eos";
++
++        int accepted = 0, m = 0;
++        if (!dst.text.empty()) {
++            std::vector<llama_token> d = common_tokenize(ex.vocab, dst.text, false, false);
++            m = (int) d.size();
++            n_drafted += m;
++
++            llama_memory_seq_cp(mem, 0, 1, -1, -1);
++
++            llama_batch b = llama_batch_init(m, 0, 1);
++            b.n_tokens = m;
++            for (int i = 0; i < m; i++) {
++                b.token[i] = d[i];
++                b.pos[i] = ex.n_past() + i;
++                b.n_seq_id[i] = 1;
++                b.seq_id[i][0] = 0;
++                b.logits[i] = 1;
++            }
++            const bool decode_ok = llama_decode(ex.ctx.get(), b) == 0;
++            llama_batch_free(b);
++            if (!decode_ok) {
++                fprintf(stderr, "error: expert verify decode failed\n");
++                break;
++            }
++
++            while (accepted < m) {
++                const float * row = accepted == 0 ? prev_row.data()
++                                                  : llama_get_logits_ith(ex.ctx.get(), accepted - 1);
++                const bool ok = greedy ? argmax_row(row, n_vocab) == d[accepted]
++                                       : logprob_row(row, n_vocab, d[accepted]) >= p.accept_threshold;
++                if (!ok) {
++                    break;
++                }
++                accepted++;
++            }
++            n_accepted += accepted;
++            n_rounds++;
++
++            if (accepted == m) {
++                // full accept: state is already advanced; drop the checkpoint
++                llama_memory_seq_rm(mem, 1, -1, -1);
++                prev_row.assign(llama_get_logits_ith(ex.ctx.get(), m - 1),
++                                llama_get_logits_ith(ex.ctx.get(), m - 1) + n_vocab);
++                ex.committed_tokens.insert(ex.committed_tokens.end(), d.begin(), d.end());
++                ex.committed_text += dst.text;
++                transcript += dst.text;
++                n_total += m;
++                if (p.trace) {
++                    fprintf(stderr, "[ver %d] draft=%d acc=%d/%d ACCEPT k->%d\n", n_rounds, m, accepted, m,
++                            std::min(k + 8, p.draft_max));
++                }
++                jtrace("{\"type\":\"ver\",\"round\":%d,\"draft\":%d,\"accepted\":%d,\"result\":\"accept\"}", n_rounds, m, accepted);
++                k = std::min(k + 8, p.draft_max);
++                consec_rejects = 0;
++                // the expert gets a say on ending the turn after every accepted span
++                if (llama_vocab_is_eog(ex.vocab, argmax_row(prev_row.data(), n_vocab))) {
++                    turn_open = false;
++                }
++            } else {
++                n_rejects++;
++                // correction token from the logits row that judged the rejected position
++                const float * crow = accepted == 0 ? prev_row.data()
++                                                   : llama_get_logits_ith(ex.ctx.get(), accepted - 1);
++                const llama_token c = argmax_row(crow, n_vocab);
++                const bool c_ends = llama_vocab_is_eog(ex.vocab, c);
++
++                // rollback to the checkpoint, then re-decode accepted prefix (+ correction) in one batch
++                llama_memory_seq_rm(mem, 0, -1, -1);
++                llama_memory_seq_cp(mem, 1, 0, -1, -1);
++                llama_memory_seq_rm(mem, 1, -1, -1);
++
++                std::string acc_text;
++                for (int i = 0; i < accepted; i++) {
++                    acc_text += common_token_to_piece(ex.ctx.get(), d[i], false);
++                }
++                const std::string c_text = c_ends ? "" : common_token_to_piece(ex.ctx.get(), c, false);
++
++                const int n_redo = accepted + (c_ends ? 0 : 1);
++                if (n_redo > 0) {
++                    llama_batch rb = llama_batch_init(n_redo, 0, 1);
++                    rb.n_tokens = n_redo;
++                    for (int i = 0; i < n_redo; i++) {
++                        rb.token[i] = i < accepted ? d[i] : c;
++                        rb.pos[i] = ex.n_past() + i;
++                        rb.n_seq_id[i] = 1;
++                        rb.seq_id[i][0] = 0;
++                        rb.logits[i] = i == n_redo - 1;
++                    }
++                    const bool redo_ok = llama_decode(ex.ctx.get(), rb) == 0;
++                    llama_batch_free(rb);
++                    if (!redo_ok) {
++                        fprintf(stderr, "error: expert redo decode failed\n");
++                        break;
++                    }
++                }
++                ex.committed_tokens.insert(ex.committed_tokens.end(), d.begin(), d.begin() + accepted);
++                if (!c_ends) {
++                    ex.committed_tokens.push_back(c);
++                }
++                ex.committed_text += acc_text + c_text;
++
++                if (g_stream.on && dst.text.size() > acc_text.size()) {
++                    char marker[64];
++                    snprintf(marker, sizeof(marker), " [[rej -%zuch]] ", dst.text.size() - acc_text.size());
++                    stream_marker(marker);
++                }
++                stream_begin(&ex, ex.name.c_str(), ex.color);
++                stream_piece(c_text);
++
++                transcript += acc_text + c_text;
++                n_total += accepted + (c_ends ? 0 : 1);
++                n_expert_auth += c_ends ? 0 : 1;
++
++                if (c_ends) {
++                    // the expert's correction is "stop": end the turn at the accepted prefix
++                    if (p.trace) {
++                        fprintf(stderr, "[ver %d] draft=%d acc=%d/%d REJECT eos\n", n_rounds, m, accepted, m);
++                    }
++                    jtrace("{\"type\":\"ver\",\"round\":%d,\"draft\":%d,\"accepted\":%d,\"result\":\"reject-eos\"}", n_rounds, m, accepted);
++                    turn_open = false;
++                    continue;
++                }
++
++                // expert repair span, then hand the pen back to the front;
++                // repair grows with consecutive rejects so hostile stretches degrade toward expert-alone speed
++                consec_rejects = std::min(consec_rejects + 1, 3);
++                const int repair = p.repair_min << (consec_rejects - 1);
++                gen_opts ropts = {};
++                ropts.seg_min = repair; ropts.seg_max = repair;
++                ropts.random_cut = true;
++                ropts.n_predict = p.n_predict - n_total;
++                ropts.conf_window = p.conf_window; ropts.conf_threshold = p.conf_threshold;
++                ropts.eos_ends_turn = true;
++                seg_stats rst = gen_segment(ex, ropts);
++                transcript += rst.text;
++                n_total += rst.n_tokens;
++                n_expert_auth += rst.n_tokens;
++                prev_row.assign(llama_get_logits_ith(ex.ctx.get(), -1),
++                                llama_get_logits_ith(ex.ctx.get(), -1) + n_vocab);
++                if (p.trace) {
++                    fprintf(stderr, "[ver %d] draft=%d acc=%d/%d REJECT repair=%d cut=%s k->%d\n", n_rounds, m,
++                            accepted, m, rst.n_tokens, rst.cut.c_str(), std::max(4, k / 2));
++                }
++                jtrace("{\"type\":\"ver\",\"round\":%d,\"draft\":%d,\"accepted\":%d,\"result\":\"reject\",\"repair\":%d}",
++                       n_rounds, m, accepted, rst.n_tokens);
++                k = std::max(4, k / 2);
++                if (rst.turn_done) {
++                    turn_open = false;
++                }
++            }
++        }
++
++        if (front_eos && turn_open) {
++            if (!p.closer_expert) {
++                turn_open = false;
++            } else {
++                // the front thinks the answer is done; the expert gets the final word
++                gen_opts copts = {};
++                copts.seg_min = 0; copts.seg_max = 0;
++                copts.n_predict = p.n_predict - n_total;
++                copts.conf_window = p.conf_window; copts.conf_threshold = p.conf_threshold;
++                copts.eos_ends_turn = true;
++                seg_stats cst = gen_segment(ex, copts);
++                transcript += cst.text;
++                n_total += cst.n_tokens;
++                n_expert_auth += cst.n_tokens;
++                if (p.trace && cst.n_tokens > 0) {
++                    trace_seg(p, n_rounds, "expert-close", cst);
++                }
++                prev_row.assign(llama_get_logits_ith(ex.ctx.get(), -1),
++                                llama_get_logits_ith(ex.ctx.get(), -1) + n_vocab);
++                if (cst.turn_done || cst.n_tokens == 0) {
++                    turn_open = false;
++                }
++            }
++        }
++    }
++
++    const int64_t t_us = ggml_time_us() - t0;
++    const double acc_rate = n_drafted > 0 ? (double) n_accepted / n_drafted : 0.0;
++    if (p.trace) {
++        fprintf(stderr, "[turn] mode=verify rounds=%d rejects=%d acc=%.2f tokens=%d expert_auth=%d ms=%.1f tok/s=%.1f\n",
++                n_rounds, n_rejects, acc_rate, n_total, n_expert_auth, t_us / 1e3,
++                t_us > 0 ? n_total * 1e6 / (double) t_us : 0.0);
++    }
++    jtrace("{\"type\":\"turn\",\"mode\":\"verify\",\"rounds\":%d,\"rejects\":%d,\"acc\":%.3f,\"tokens\":%d,\"ms\":%.1f}",
++           n_rounds, n_rejects, acc_rate, n_total, t_us / 1e3);
++    return transcript;
++}
++
+ // G4: from-scratch tokenization of each model's committed text must equal its committed tokens.
+ // The expert's own sampled segments may legally deviate from canonical tokenization (they are
+ // never re-encoded), so expert mismatches are reported as counts, not failures.
+@@ -768,8 +1065,12 @@ int main(int argc, char ** argv) {
+         g_json = fopen(p.json_trace.c_str(), "w");
+     }
+ 
+-    if (p.mode != "router" && p.mode != "codraft" && p.mode != "random") {
+-        fprintf(stderr, "error: unknown mode '%s' (want router|codraft|random)\n", p.mode.c_str());
++    if (p.mode != "router" && p.mode != "codraft" && p.mode != "random" && p.mode != "verify") {
++        fprintf(stderr, "error: unknown mode '%s' (want router|codraft|random|verify)\n", p.mode.c_str());
++        return 1;
++    }
++    if (p.verify_rule != "logprob" && p.verify_rule != "greedy") {
++        fprintf(stderr, "error: --verify-rule must be logprob or greedy\n");
+         return 1;
+     }
+     if (p.p_expert >= 0.0f) {
+@@ -803,7 +1104,9 @@ int main(int argc, char ** argv) {
+     if (!p.quiet) {
+         fprintf(stderr, "loading expert ('%s') from %s\n", p.expert_prefix.c_str(), p.bundle.c_str());
+     }
+-    if (!load_duo_model(s.expert, p, "expert", p.expert_prefix, p.ctx_expert, p.temp_expert, p.top_p_expert)) {
++    const bool need_checkpoint = p.mode == "verify" || (p.mode == "router" && p.hard_mode == "verify");
++    if (!load_duo_model(s.expert, p, "expert", p.expert_prefix, p.ctx_expert, p.temp_expert, p.top_p_expert,
++                        /*checkpoint_seq*/ need_checkpoint)) {
+         return 1;
+     }
+ 
+@@ -833,6 +1136,7 @@ int main(int argc, char ** argv) {
+             return;
+         }
+         std::string answer = p.mode == "router" ? run_router_turn(s, user)
++                           : p.mode == "verify" ? run_verify_turn(s, user)
+                                                 : run_codraft_turn(s, user);
+         if (g_stream.on) {
+             stream_end_turn();  // answer already streamed
+-- 
+2.50.1 (Apple Git-155)
+

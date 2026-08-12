@@ -1,0 +1,39 @@
+INFO:gguf-dump:* Loading: models/SmolLM2-135M-Instruct-Q4_K_M.gguf
+* File is LITTLE endian, script is running on a LITTLE endian host.
+* Dumping 36 key/value pair(s)
+      1: UINT32     |        1 | GGUF.version = 3
+      2: UINT64     |        1 | GGUF.tensor_count = 272
+      3: UINT64     |        1 | GGUF.kv_count = 33
+      4: STRING     |        1 | general.architecture = 'llama'
+      5: STRING     |        1 | general.type = 'model'
+      6: STRING     |        1 | general.name = 'SmolLM2 135M Instruct'
+      7: STRING     |        1 | general.organization = 'HuggingFaceTB'
+      8: STRING     |        1 | general.finetune = 'Instruct'
+      9: STRING     |        1 | general.basename = 'SmolLM2'
+     10: STRING     |        1 | general.size_label = '135M'
+     11: UINT32     |        1 | llama.block_count = 30
+     12: UINT32     |        1 | llama.context_length = 8192
+     13: UINT32     |        1 | llama.embedding_length = 576
+     14: UINT32     |        1 | llama.feed_forward_length = 1536
+     15: UINT32     |        1 | llama.attention.head_count = 9
+     16: UINT32     |        1 | llama.attention.head_count_kv = 3
+     17: FLOAT32    |        1 | llama.rope.freq_base = 100000.0
+     18: FLOAT32    |        1 | llama.attention.layer_norm_rms_epsilon = 9.999999747378752e-06
+     19: UINT32     |        1 | llama.attention.key_length = 64
+     20: UINT32     |        1 | llama.attention.value_length = 64
+     21: UINT32     |        1 | general.file_type = 15
+     22: UINT32     |        1 | llama.vocab_size = 49152
+     23: UINT32     |        1 | llama.rope.dimension_count = 64
+     24: BOOL       |        1 | tokenizer.ggml.add_space_prefix = False
+     25: BOOL       |        1 | tokenizer.ggml.add_bos_token = False
+     26: STRING     |        1 | tokenizer.ggml.model = 'gpt2'
+     27: STRING     |        1 | tokenizer.ggml.pre = 'smollm'
+     28: [STRING]   |    49152 | tokenizer.ggml.tokens = ['<|endoftext|>', '<|im_start|>', '<|im_end|>', '<repo_name>', '<reponame>', '<file_sep>', ...]
+     29: [INT32]    |    49152 | tokenizer.ggml.token_type = [3, 3, 3, 3, 3, 3, ...]
+     30: [STRING]   |    48900 | tokenizer.ggml.merges = ['Ġ t', 'Ġ a', 'i n', 'h e', 'Ġ Ġ', 'r e', ...]
+     31: UINT32     |        1 | tokenizer.ggml.bos_token_id = 1
+     32: UINT32     |        1 | tokenizer.ggml.eos_token_id = 2
+     33: UINT32     |        1 | tokenizer.ggml.unknown_token_id = 0
+     34: UINT32     |        1 | tokenizer.ggml.padding_token_id = 0
+     35: STRING     |        1 | tokenizer.chat_template = '{% for message in messages %}{% if loop.first and message...'
+     36: UINT32     |        1 | general.quantization_version = 2

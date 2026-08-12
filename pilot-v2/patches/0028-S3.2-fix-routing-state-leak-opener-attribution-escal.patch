@@ -1,0 +1,302 @@
+From 23fb79d0ac50bb60bc675ddc64e1edc27c29404a Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Thu, 13 Aug 2026 04:44:03 +0100
+Subject: [PATCH 28/32] S3.2: fix routing-state leak, opener attribution +
+ escalation carry
+
+The routing few-shot was decoded on top of whatever was resident on the
+front's seq 0, so the verdict depended on context it should not see: the
+TTFT opener put this turn's prompt in front of it, and on turn >= 2 the
+previous turn's transcript already did the same before C2. route_score now
+resets seq 0 (and the committed_text/committed_tokens bookkeeping with it,
+which must move together) before and after its decode. Turn-1 behavior is
+unchanged (the sequence was already empty there); turn >= 2 verdicts now
+match a fresh run's score for the same question.
+
+The opener's tokens are counted in the turn total, so the front is named in
+the author list ("front+easy", "front+expert") instead of the routed tier
+being credited with text it did not write. --no-carry-draft now discards
+only the low-confidence draft, not the opener: that text was already
+streamed to the user, so the expert's fresh answer continues from it, the
+same rule the verify path's seed already followed. Verify's turn line counts
+the seeded span's tokens and time.
+
+--selftest-seams now also runs in router mode, where the conf-escalation
+seam is; codraft checks tier readiness at its use site.
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 133 ++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 93 insertions(+), 40 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index d0de31f..81d2d7e 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -509,7 +509,8 @@ static bool load_duo_model(duo_model & m, const duo_params & p, const std::strin
+     cparams.n_threads       = p.n_threads;
+     cparams.n_threads_batch = p.n_threads;
+     if (checkpoint_seq) {
+-        // seq 1 is a rollback checkpoint sharing seq 0's prefix (verify mode)
++        // seq 1 is a rollback checkpoint sharing seq 0's prefix (verify mode's draft
++        // verification, and the easy tier's conf escalation)
+         cparams.n_seq_max  = 2;
+         cparams.n_ctx      = 2 * n_ctx;
+         cparams.kv_unified = getenv("DUO_KV_SPLIT") == nullptr;
+@@ -648,7 +649,8 @@ struct gen_opts {
+     int   seg_min;          // 0 = no segmentation (run to EOS/cap)
+     int   seg_max;
+     int   n_predict;        // remaining token budget for the answer
+-    bool  conf_monitor;     // arm the mean-logprob trigger (front only)
++    bool  conf_monitor;     // arm the mean-logprob trigger (any dense author; append-only
++                            // authors additionally need conf_checkpoint, see below)
+     int   conf_window;
+     float conf_threshold;
+     bool  eos_ends_turn;    // false: EOS is treated as a handoff (front under --closer expert)
+@@ -811,6 +813,15 @@ static bool has_checkpoint(const duo_model & m) {
+ 
+ // ---------- routing ----------
+ 
++// drop everything resident on seq 0 AND the bookkeeping that claims it is resident; the two
++// must move together or sync_to() will ingest a delta against a context that no longer holds
++// the prefix it assumes
++static void front_reset(duo_model & m) {
++    llama_memory_seq_rm(llama_get_memory(m.ctx.get()), 0, -1, -1);
++    m.committed_text.clear();
++    m.committed_tokens.clear();
++}
++
+ // verdict token ids in the front vocab, resolved at startup from "A"/"B"
+ static llama_token g_id_easy = -1;
+ static llama_token g_id_hard = -1;
+@@ -828,26 +839,28 @@ static float route_score(duo_model & front, const std::string & user) {
+         "<|im_start|>user\nQ: \"Solve 3x + 5 = 20 and explain each step.\" ->\n<|im_end|>\n<|im_start|>assistant\n" + think + "B<|im_end|>\n"
+         "<|im_start|>user\nQ: \"" + user + "\" ->\n<|im_end|>\n<|im_start|>assistant\n" + think;
+ 
+-    const int n_past0 = front.n_past();
+-    const bool ckpt = front.append_only;
+-    if (ckpt) {
+-        checkpoint_save(front);
+-    }
+-    std::vector<llama_token> toks = common_tokenize(front.vocab, prompt, false, true);
+-    if (!decode_tokens(front, toks)) {
+-        if (ckpt) {
+-            checkpoint_restore(front);
+-        }
+-        return 0.0f;
+-    }
+-    const float * z = llama_get_logits_ith(front.ctx.get(), -1);
+-    const float s = z[g_id_hard] - z[g_id_easy];
++    // The verdict must be a function of THIS few-shot and nothing else. Decoding it on top of
++    // whatever is resident leaks context into the routing logits: the TTFT opener leaves this
++    // turn's rendered prompt (and, for a hybrid front, the opener text) in front of the
++    // few-shot, and on turn >= 2 the previous turn's transcript did the same even before C2.
++    // So the routing decode always starts from an empty sequence.
++    //
++    // Clearing the memory REQUIRES clearing the bookkeeping with it: committed_tokens is the
++    // record of what is resident, and sync_to() only ingests the delta past it. Leaving it
++    // populated over a wiped sequence would make the front's next activation decode a
++    // fragment against an empty context -- silent garbage, not a crash.
++    front_reset(front);
+ 
+-    if (ckpt) {
+-        checkpoint_restore(front);
+-    } else {
+-        llama_memory_seq_rm(llama_get_memory(front.ctx.get()), 0, n_past0, -1);
+-    }
++    std::vector<llama_token> toks = common_tokenize(front.vocab, prompt, false, true);
++    const bool ok = decode_tokens(front, toks);
++    const float s = ok ? [&] {
++        const float * z = llama_get_logits_ith(front.ctx.get(), -1);
++        return z[g_id_hard] - z[g_id_easy];
++    }() : 0.0f;
++
++    // full removal, legal for recurrent/hybrid state too (a PARTIAL rewind is what those
++    // models cannot do, which is why this used to need a checkpoint round-trip)
++    front_reset(front);
+     return s;
+ }
+ 
+@@ -1008,8 +1021,17 @@ static void trace_seg(const duo_params & p, int k, const char * author, const se
+            k, author, st.n_tokens, st.t_us / 1e3, st.mean_lp, st.cut.c_str());
+ }
+ 
++// text a turn driver must continue from because it has ALREADY been streamed to the user
++// (the TTFT opener). Its tokens and time belong to the turn's totals even though the driver
++// did not produce them.
++struct turn_seed {
++    std::string text;
++    int         n_tokens = 0;
++    int64_t     t_us     = 0;
++};
++
+ static std::string run_verify_turn(duo_state & s, const std::string & user,
+-                                   const std::string & seed_draft = "", int n_seed = 0);
++                                   const turn_seed & seed = {});
+ 
+ // TTFT opener default: ON only when a 3-tier registry is active (an easy tier was
+ // discovered/registered). A 2-tier bundle keeps its pre-C2 behavior byte-for-byte, which is
+@@ -1029,6 +1051,10 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+ 
+     std::string transcript;
+     int n_tokens = 0;
++    // the opener span, kept separately: it has already been streamed to the user, so it
++    // survives a discarded draft (I3) and is credited to the front in the turn trace (I2)
++    std::string opener_text;
++    int64_t opener_us = 0;
+ 
+     // ---- TTFT opener: the front speaks before the route is known (first turn only) ----
+     // The front is the mlocked always-resident tier, so its first token lands at 135M
+@@ -1040,8 +1066,10 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+             gen_opts oopts = { p.seg_min, p.seg_max, p.n_predict, /*conf*/ true,
+                                p.conf_window, p.conf_threshold, /*eos_ends*/ false };
+             seg_stats ost = gen_segment(front, oopts);
+-            transcript = ost.text;
+-            n_tokens  += ost.n_tokens;
++            transcript  = ost.text;
++            opener_text = ost.text;
++            opener_us   = ost.t_us;
++            n_tokens   += ost.n_tokens;
+             if (p.trace) {
+                 fprintf(stderr, "[opener] author=front tokens=%d ms=%.1f tok/s=%.1f mean_lp=%.2f cut=%s\n",
+                         ost.n_tokens, ost.t_us / 1e3,
+@@ -1108,7 +1136,10 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+             // escalate to the mid tier via the carry-draft machinery
+             author += "+expert";
+             if (!p.carry_draft) {
+-                transcript.clear();
++                // the LOW-CONFIDENCE DRAFT is what --no-carry-draft discards. The opener is
++                // not part of that draft: it was already streamed to the user, so the expert's
++                // fresh answer continues from it (same rule as the verify path's seed).
++                transcript = opener_text;
+                 stream_marker("\n[[draft discarded; expert restarts]]\n");
+             }
+             std::string target = render_prompt(expert, s.sys_expert, s.history, user, false) + transcript;
+@@ -1126,7 +1157,7 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+         if (p.trace) {
+             fprintf(stderr, "[turn] route=hard s=%.3f -> verify\n", score);
+         }
+-        return run_verify_turn(s, user, transcript, n_tokens);
++        return run_verify_turn(s, user, { transcript, n_tokens, opener_us });
+     } else {
+         // hard path: expert answers directly (lazy history sync)
+         author = "expert";
+@@ -1140,6 +1171,12 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+         trace_seg(p, 0, "expert", st);
+     }
+ 
++    // the opener's tokens are inside n_tokens, so the front has to appear in the author list
++    // or the routed tier is credited with text it never wrote (unless the front IS that tier)
++    if (!opener_text.empty() && author.compare(0, front.name.size(), front.name) != 0) {
++        author = front.name + "+" + author;
++    }
++
+     const int64_t t_us = ggml_time_us() - t0;
+     if (p.trace) {
+         fprintf(stderr, "[turn] route=%s s=%.3f author=%s tokens=%d ms=%.1f tok/s=%.1f%s%s\n",
+@@ -1161,6 +1198,14 @@ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+     // closer. An append-only slot-A model (easy) is already handled by gen_segment's
+     // append-only branch -- the hybrid-front support from Q1 -- so it commits instead of
+     // rewinding and its conf monitor stays disabled (no checkpoint is taken here).
++    // use-site readiness check, mirroring the router's own TS_READY test: main() resolves the
++    // pair before any load, and under C3's background loading a registered tier may still be
++    // TS_LOADING when a turn starts. Dereferencing an unloaded tier here is a null-ctx crash.
++    if (s.cd_a->state.load() != TS_READY || s.cd_b->state.load() != TS_READY) {
++        fprintf(stderr, "error: --codraft-tiers: %s/%s not loaded yet\n",
++                tier_role_name(s.cd_a->role), tier_role_name(s.cd_b->role));
++        return "";
++    }
+     duo_model & front  = s.cd_a->m;
+     duo_model & expert = s.cd_b->m;
+ 
+@@ -1269,18 +1314,19 @@ static double logprob_row(const float * z, int n, llama_token tok) {
+     return (double) z[tok] - zmax - log(sum);
+ }
+ 
+-// seed_draft: text already streamed for this turn (the TTFT opener) that the transcript must
+-// start from; n_seed is its token count, charged against the per-answer budget. Both default
+-// to empty/0, which is the plain --mode verify path, unchanged.
++// seed: text already streamed for this turn (the TTFT opener) that the transcript must start
++// from; its tokens are charged against the per-answer budget and its tokens/time are added
++// back into the turn totals. A default-constructed seed is the plain --mode verify path,
++// unchanged in every observable way.
+ static std::string run_verify_turn(duo_state & s, const std::string & user,
+-                                   const std::string & seed_draft, int n_seed) {
++                                   const turn_seed & seed) {
+     const duo_params & p = s.p;
+     const int64_t t0 = ggml_time_us();
+     duo_model & fr = s.front->m;
+     duo_model & ex = s.mid->m;
+     const int n_vocab = llama_vocab_n_tokens(ex.vocab);
+     const bool greedy = p.verify_rule == "greedy";
+-    const int budget = std::max(0, p.n_predict - n_seed);
++    const int budget = std::max(0, p.n_predict - seed.n_tokens);
+ 
+     // seq 1 is the rollback checkpoint; without it seq_cp is a silent no-op and a
+     // rejection would wipe the expert state
+@@ -1289,14 +1335,14 @@ static std::string run_verify_turn(duo_state & s, const std::string & user,
+     const std::string front_prompt  = render_prompt(fr, s.sys_front,  s.history, user, false);
+     const std::string expert_prompt = render_prompt(ex, s.sys_expert, s.history, user, false);
+ 
+-    if (!sync_to(ex, expert_prompt + seed_draft, true)) {
+-        return seed_draft;
++    if (!sync_to(ex, expert_prompt + seed.text, true)) {
++        return seed.text;
+     }
+     // logits row predicting the expert's next position; judges draft token 0 of each round
+     std::vector<float> prev_row(llama_get_logits_ith(ex.ctx.get(), -1),
+                                 llama_get_logits_ith(ex.ctx.get(), -1) + n_vocab);
+ 
+-    std::string transcript = seed_draft;
++    std::string transcript = seed.text;
+     int k = std::max(4, p.draft_init);
+     int consec_rejects = 0;
+     int n_total = 0, n_expert_auth = 0, n_drafted = 0, n_accepted = 0, n_rounds = 0, n_rejects = 0;
+@@ -1533,15 +1579,18 @@ static std::string run_verify_turn(duo_state & s, const std::string & user,
+         }
+     }
+ 
+-    const int64_t t_us = ggml_time_us() - t0;
++    // the seed's tokens and time are part of this turn even though the loop above did not
++    // produce them; excluding them undercounts the turn line whenever an opener ran
++    const int     n_turn = n_total + seed.n_tokens;
++    const int64_t t_us   = ggml_time_us() - t0 + seed.t_us;
+     const double acc_rate = n_drafted > 0 ? (double) n_accepted / n_drafted : 0.0;
+     if (p.trace) {
+         fprintf(stderr, "[turn] mode=verify rounds=%d rejects=%d acc=%.2f tokens=%d expert_auth=%d ms=%.1f tok/s=%.1f\n",
+-                n_rounds, n_rejects, acc_rate, n_total, n_expert_auth, t_us / 1e3,
+-                t_us > 0 ? n_total * 1e6 / (double) t_us : 0.0);
++                n_rounds, n_rejects, acc_rate, n_turn, n_expert_auth, t_us / 1e3,
++                t_us > 0 ? n_turn * 1e6 / (double) t_us : 0.0);
+     }
+     jtrace("{\"type\":\"turn\",\"mode\":\"verify\",\"rounds\":%d,\"rejects\":%d,\"acc\":%.3f,\"tokens\":%d,\"ms\":%.1f}",
+-           n_rounds, n_rejects, acc_rate, n_total, t_us / 1e3);
++           n_rounds, n_rejects, acc_rate, n_turn, t_us / 1e3);
+     return transcript;
+ }
+ 
+@@ -1656,7 +1705,8 @@ int main(int argc, char ** argv) {
+                 default:         pick[i] = nullptr; break;   // top: registered but never loaded
+             }
+             if (!pick[i]) {
+-                fprintf(stderr, "error: --codraft-tiers: this bundle has no loaded '%s' tier\n", names[i].c_str());
++                // pre-load check: nothing is loaded yet, so this is about the REGISTRY
++                fprintf(stderr, "error: --codraft-tiers: this bundle has no '%s' tier\n", names[i].c_str());
+                 return 1;
+             }
+         }
+@@ -1743,7 +1793,10 @@ int main(int argc, char ** argv) {
+             fflush(stdout);
+         }
+ 
+-        if (p.selftest_seams && p.mode != "router") {
++        // router mode is checked too: the conf-escalation path (checkpoint restore + canonical
++        // re-decode) is the newest and least obvious seam in the tool, so it is exactly the one
++        // that needs the round-trip verified rather than assumed
++        if (p.selftest_seams) {
+             selftest_seams(s);
+         }
+         s.history.push_back({ user, answer });
+-- 
+2.50.1 (Apple Git-155)
+

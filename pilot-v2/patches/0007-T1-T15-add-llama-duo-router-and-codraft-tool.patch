@@ -1,0 +1,756 @@
+From 770ad645e1fa5f81a75d0340484262b04b36eaab Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Sun, 9 Aug 2026 08:22:49 +0100
+Subject: [PATCH 07/16] T1-T15: add llama-duo router and codraft tool
+
+Assisted-by: Claude Fable 5
+---
+ tools/CMakeLists.txt     |   1 +
+ tools/duo/CMakeLists.txt |   7 +
+ tools/duo/duo.cpp        | 708 +++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 716 insertions(+)
+ create mode 100644 tools/duo/CMakeLists.txt
+ create mode 100644 tools/duo/duo.cpp
+
+diff --git a/tools/CMakeLists.txt b/tools/CMakeLists.txt
+index 780df32..c0ff65e 100644
+--- a/tools/CMakeLists.txt
++++ b/tools/CMakeLists.txt
+@@ -19,6 +19,7 @@ else()
+     add_subdirectory(imatrix)
+     add_subdirectory(llama-bench)
+     add_subdirectory(completion)
++    add_subdirectory(duo)
+     add_subdirectory(perplexity)
+     add_subdirectory(quantize)
+     if (LLAMA_BUILD_SERVER)
+diff --git a/tools/duo/CMakeLists.txt b/tools/duo/CMakeLists.txt
+new file mode 100644
+index 0000000..e6d0ee3
+--- /dev/null
++++ b/tools/duo/CMakeLists.txt
+@@ -0,0 +1,7 @@
++set(TARGET llama-duo)
++add_executable(${TARGET} duo.cpp)
++if(LLAMA_TOOLS_INSTALL)
++    install(TARGETS ${TARGET} RUNTIME)
++endif()
++target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
++target_compile_features(${TARGET} PRIVATE cxx_std_17)
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+new file mode 100644
+index 0000000..875388a
+--- /dev/null
++++ b/tools/duo/duo.cpp
+@@ -0,0 +1,708 @@
++// llama-duo: two models, one bundle GGUF, one process.
++//
++// Modes:
++//   router  - front model classifies the question via verdict-token logits and
++//             either answers itself (with a confidence monitor that can escalate
++//             to the expert) or hands the question to the expert directly.
++//   codraft - front and expert alternately author segments of one answer over a
++//             shared text transcript. Segments always end immediately before a
++//             whitespace character, so per-model delta tokenizations compose
++//             exactly and no context is ever re-encoded.
++//
++// The expert (hybrid Gated-DeltaNet) is strictly append-only: its segments are
++// cut with a peek token that is sampled but never decoded, so its recurrent
++// state always ends exactly at the committed boundary. The front (dense
++// attention) rewinds its whole segment KV after each cut and re-ingests the
++// committed text canonically on its next activation.
++
++#include "chat.h"
++#include "common.h"
++#include "llama-cpp.h"
++#include "llama.h"
++#include "log.h"
++#include "sampling.h"
++
++#include <cinttypes>
++#include <cmath>
++#include <cstdio>
++#include <cstring>
++#include <deque>
++#include <fstream>
++#include <string>
++#include <vector>
++
++struct duo_params {
++    std::string bundle        = "bundle/muta-duo.gguf";
++    std::string front_prefix  = "m0.";
++    std::string expert_prefix = "m1.";
++    std::string mode          = "router";
++    std::string prompt;
++    std::string prompts_file;
++    std::string json_trace;
++
++    int32_t ctx_front   = 4096;
++    int32_t ctx_expert  = 8192;
++    int32_t n_threads   = common_cpu_get_num_math();
++    int32_t n_predict   = 1024;
++    int32_t seg_min     = 24;
++    int32_t seg_max     = 96;
++    int32_t conf_window = 16;
++
++    float temp_front   = 0.7f;
++    float top_p_front  = 0.9f;
++    float temp_expert  = 0.6f;
++    float top_p_expert = 0.95f;
++    float route_threshold = 0.0f;
++    float conf_threshold  = -2.5f;
++
++    uint32_t seed = 42;
++
++    bool closer_expert  = true;  // --closer expert|either
++    bool carry_draft    = false;
++    bool trace          = true;
++    bool selftest_seams = false;
++};
++
++struct duo_model {
++    std::string        name;
++    llama_model_ptr    model;
++    llama_context_ptr  ctx;
++    common_sampler_ptr smpl;
++    const llama_vocab * vocab = nullptr;
++    common_chat_templates_ptr tmpls;
++    bool append_only = false;
++
++    // committed = rendered prompt + ingested transcript; always in sync with the context state
++    std::string              committed_text;
++    std::vector<llama_token> committed_tokens;
++
++    int n_past() const { return (int) committed_tokens.size(); }
++
++    int64_t t_ingest_us = 0;
++    int     n_ingest    = 0;
++    int     n_full_resync = 0;
++};
++
++struct seg_stats {
++    std::string text;       // committed text of the segment
++    std::string cut;        // boundary|cap|conf|eos|limit
++    int         n_tokens = 0;
++    double      mean_lp  = 0.0;
++    int64_t     t_us     = 0;
++    bool        turn_done = false;
++};
++
++static FILE * g_json = nullptr;
++
++static void jtrace(const char * fmt, ...) {
++    if (!g_json) {
++        return;
++    }
++    va_list args;
++    va_start(args, fmt);
++    vfprintf(g_json, fmt, args);
++    va_end(args);
++    fputc('\n', g_json);
++    fflush(g_json);
++}
++
++static void print_usage() {
++    printf("usage: llama-duo [options]\n\n"
++           "  --bundle PATH           bundle gguf [bundle/muta-duo.gguf]\n"
++           "  --front-prefix STR      [m0.]\n"
++           "  --expert-prefix STR     [m1.]\n"
++           "  --mode router|codraft   [router]\n"
++           "  -p, --prompt STR        user message (one turn)\n"
++           "  --prompts-file PATH     one user message per line (multi-turn)\n"
++           "  --ctx-front N           [4096]\n"
++           "  --ctx-expert N          [8192]\n"
++           "  -t, --threads N         [math cores]\n"
++           "  --temp-front F [0.7]  --top-p-front F [0.9]\n"
++           "  --temp-expert F [0.6] --top-p-expert F [0.95]\n"
++           "  --route-threshold F     verdict logit-diff threshold [0.0]\n"
++           "  --conf-window N [16]  --conf-threshold F [-2.5]\n"
++           "  --seg-min N [24]  --seg-max N [96]\n"
++           "  --closer expert|either  [expert]\n"
++           "  --carry-draft           expert continues front draft on escalation\n"
++           "  -n, --n-predict N       per-answer token cap [1024]\n"
++           "  --seed N                [42]\n"
++           "  --no-trace              disable stderr trace\n"
++           "  --json-trace PATH       mirror trace as JSON lines\n"
++           "  --selftest-seams        verify committed tokens vs from-scratch tokenization each turn\n");
++}
++
++static bool parse_args(int argc, char ** argv, duo_params & p) {
++    for (int i = 1; i < argc; i++) {
++        std::string arg = argv[i];
++        auto need = [&](const char * what) -> const char * {
++            if (i + 1 >= argc) {
++                fprintf(stderr, "error: %s needs a value\n", what);
++                exit(1);
++            }
++            return argv[++i];
++        };
++        if      (arg == "--bundle")          { p.bundle = need("--bundle"); }
++        else if (arg == "--front-prefix")    { p.front_prefix = need("--front-prefix"); }
++        else if (arg == "--expert-prefix")   { p.expert_prefix = need("--expert-prefix"); }
++        else if (arg == "--mode")            { p.mode = need("--mode"); }
++        else if (arg == "-p" || arg == "--prompt") { p.prompt = need("-p"); }
++        else if (arg == "--prompts-file")    { p.prompts_file = need("--prompts-file"); }
++        else if (arg == "--ctx-front")       { p.ctx_front = atoi(need("--ctx-front")); }
++        else if (arg == "--ctx-expert")      { p.ctx_expert = atoi(need("--ctx-expert")); }
++        else if (arg == "-t" || arg == "--threads") { p.n_threads = atoi(need("-t")); }
++        else if (arg == "--temp-front")      { p.temp_front = atof(need("--temp-front")); }
++        else if (arg == "--top-p-front")     { p.top_p_front = atof(need("--top-p-front")); }
++        else if (arg == "--temp-expert")     { p.temp_expert = atof(need("--temp-expert")); }
++        else if (arg == "--top-p-expert")    { p.top_p_expert = atof(need("--top-p-expert")); }
++        else if (arg == "--route-threshold") { p.route_threshold = atof(need("--route-threshold")); }
++        else if (arg == "--conf-window")     { p.conf_window = atoi(need("--conf-window")); }
++        else if (arg == "--conf-threshold")  { p.conf_threshold = atof(need("--conf-threshold")); }
++        else if (arg == "--seg-min")         { p.seg_min = atoi(need("--seg-min")); }
++        else if (arg == "--seg-max")         { p.seg_max = atoi(need("--seg-max")); }
++        else if (arg == "--closer")          { p.closer_expert = std::string(need("--closer")) == "expert"; }
++        else if (arg == "--carry-draft")     { p.carry_draft = true; }
++        else if (arg == "-n" || arg == "--n-predict") { p.n_predict = atoi(need("-n")); }
++        else if (arg == "--seed")            { p.seed = (uint32_t) atoll(need("--seed")); }
++        else if (arg == "--no-trace")        { p.trace = false; }
++        else if (arg == "--json-trace")      { p.json_trace = need("--json-trace"); }
++        else if (arg == "--selftest-seams")  { p.selftest_seams = true; }
++        else if (arg == "-h" || arg == "--help") { print_usage(); exit(0); }
++        else {
++            fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
++            print_usage();
++            return false;
++        }
++    }
++    return true;
++}
++
++// ---------- model plumbing ----------
++
++static bool load_duo_model(duo_model & m, const duo_params & p, const std::string & name,
++                           const std::string & prefix, int32_t n_ctx, float temp, float top_p) {
++    m.name = name;
++
++    llama_model_params mparams = llama_model_default_params();
++    mparams.bundle_prefix = prefix.c_str();
++
++    m.model.reset(llama_model_load_from_file(p.bundle.c_str(), mparams));
++    if (!m.model) {
++        fprintf(stderr, "error: failed to load %s (prefix '%s') from %s\n", name.c_str(), prefix.c_str(), p.bundle.c_str());
++        return false;
++    }
++    m.vocab = llama_model_get_vocab(m.model.get());
++
++    llama_context_params cparams = llama_context_default_params();
++    cparams.n_ctx           = n_ctx;
++    cparams.n_threads       = p.n_threads;
++    cparams.n_threads_batch = p.n_threads;
++
++    m.ctx.reset(llama_init_from_model(m.model.get(), cparams));
++    if (!m.ctx) {
++        fprintf(stderr, "error: failed to create %s context\n", name.c_str());
++        return false;
++    }
++
++    common_params_sampling sparams;
++    sparams.temp  = temp;
++    sparams.top_p = top_p;
++    sparams.seed  = p.seed;
++    m.smpl.reset(common_sampler_init(m.model.get(), sparams));
++    if (!m.smpl) {
++        fprintf(stderr, "error: failed to create %s sampler\n", name.c_str());
++        return false;
++    }
++
++    m.tmpls = common_chat_templates_init(m.model.get(), "");
++    return true;
++}
++
++static bool decode_tokens(duo_model & m, const std::vector<llama_token> & toks) {
++    const int n_batch = 512;
++    for (size_t i = 0; i < toks.size(); i += n_batch) {
++        const int n = (int) std::min((size_t) n_batch, toks.size() - i);
++        if (llama_decode(m.ctx.get(), llama_batch_get_one(const_cast<llama_token *>(toks.data() + i), n)) != 0) {
++            fprintf(stderr, "error: %s decode failed at ingest pos %zu\n", m.name.c_str(), i);
++            return false;
++        }
++    }
++    return true;
++}
++
++// bring the model's context to exactly `target` (rendered prompt + transcript so far)
++static bool sync_to(duo_model & m, const std::string & target, bool parse_special) {
++    if (target == m.committed_text) {
++        return true;
++    }
++    const int64_t t0 = ggml_time_us();
++
++    if (target.compare(0, m.committed_text.size(), m.committed_text) != 0) {
++        // committed state is not a prefix of the target: full re-sync
++        llama_memory_seq_rm(llama_get_memory(m.ctx.get()), 0, 0, -1);
++        m.committed_text.clear();
++        m.committed_tokens.clear();
++        m.n_full_resync++;
++    }
++
++    const std::string delta = target.substr(m.committed_text.size());
++    std::vector<llama_token> toks = common_tokenize(m.vocab, delta, /*add_special*/ m.committed_text.empty() ? false : false, parse_special);
++    if (!toks.empty() && !decode_tokens(m, toks)) {
++        return false;
++    }
++    m.committed_tokens.insert(m.committed_tokens.end(), toks.begin(), toks.end());
++    m.committed_text = target;
++    m.t_ingest_us += ggml_time_us() - t0;
++    m.n_ingest += (int) toks.size();
++    return true;
++}
++
++// log-probability of token `tok` under the model's current last-position logits
++static double token_logprob(duo_model & m, llama_token tok) {
++    const float * z = llama_get_logits_ith(m.ctx.get(), -1);
++    const int n_vocab = llama_vocab_n_tokens(m.vocab);
++    float zmax = z[0];
++    for (int i = 1; i < n_vocab; i++) {
++        zmax = z[i] > zmax ? z[i] : zmax;
++    }
++    double sum = 0.0;
++    for (int i = 0; i < n_vocab; i++) {
++        sum += exp((double) z[i] - zmax);
++    }
++    return (double) z[tok] - zmax - log(sum);
++}
++
++// ---------- chat rendering ----------
++
++struct chat_turn {
++    std::string user;
++    std::string assistant;
++};
++
++static std::string render_prompt(duo_model & m, const std::string & system,
++                                 const std::vector<chat_turn> & history, const std::string & user,
++                                 bool enable_thinking) {
++    common_chat_templates_inputs inputs;
++    inputs.add_generation_prompt = true;
++    inputs.enable_thinking       = enable_thinking;
++    common_chat_msg msg;
++    msg.role = "system"; msg.content = system;
++    inputs.messages.push_back(msg);
++    for (const auto & t : history) {
++        msg.role = "user";      msg.content = t.user;      inputs.messages.push_back(msg);
++        msg.role = "assistant"; msg.content = t.assistant; inputs.messages.push_back(msg);
++    }
++    msg.role = "user"; msg.content = user;
++    inputs.messages.push_back(msg);
++
++    try {
++        return common_chat_templates_apply(m.tmpls.get(), inputs).prompt;
++    } catch (const std::exception & e) {
++        LOG_WRN("%s: template apply failed (%s), using manual ChatML\n", m.name.c_str(), e.what());
++        std::string out = "<|im_start|>system\n" + system + "<|im_end|>\n";
++        for (const auto & t : history) {
++            out += "<|im_start|>user\n" + t.user + "<|im_end|>\n";
++            out += "<|im_start|>assistant\n" + t.assistant + "<|im_end|>\n";
++        }
++        out += "<|im_start|>user\n" + user + "<|im_end|>\n<|im_start|>assistant\n";
++        if (!enable_thinking) {
++            out += "<think>\n\n</think>\n\n";
++        }
++        return out;
++    }
++}
++
++// ---------- segment generation ----------
++
++struct gen_opts {
++    int   seg_min;          // 0 = no segmentation (run to EOS/cap)
++    int   seg_max;
++    int   n_predict;        // remaining token budget for the answer
++    bool  conf_monitor;     // arm the mean-logprob trigger (front only)
++    int   conf_window;
++    float conf_threshold;
++    bool  eos_ends_turn;    // false: EOS is treated as a handoff (front under --closer expert)
++};
++
++// segment ends immediately before whitespace: cut happens when the peeked token
++// starts with whitespace and the buffered text ends at a sentence boundary
++static bool at_boundary(const std::string & buf) {
++    size_t i = buf.size();
++    while (i > 0 && strchr("\"')]", buf[i - 1]) != nullptr) {
++        i--;
++    }
++    return i > 0 && strchr(".!?", buf[i - 1]) != nullptr;
++}
++
++static seg_stats gen_segment(duo_model & m, const gen_opts & opts) {
++    seg_stats st;
++    const int64_t t0 = ggml_time_us();
++    const int n_past0 = m.n_past();
++
++    std::string buf;                      // emitted but uncommitted text
++    std::vector<llama_token> buf_toks;
++    std::deque<double> lp_window;
++    double lp_sum_all = 0.0;
++    size_t last_boundary = std::string::npos; // byte offset in buf where a cut was possible
++
++    common_sampler_reset(m.smpl.get());
++
++    while (true) {
++        const llama_token tok = common_sampler_sample(m.smpl.get(), m.ctx.get(), -1);
++
++        if (llama_vocab_is_eog(m.vocab, tok)) {
++            st.cut = "eos";
++            st.turn_done = opts.eos_ends_turn;
++            break;
++        }
++
++        const std::string piece = common_token_to_piece(m.ctx.get(), tok, false);
++        const bool ws_start = !piece.empty() && (piece[0] == ' ' || piece[0] == '\n' || piece[0] == '\t');
++
++        // peek cut: commit buf without decoding this token
++        if (opts.seg_min > 0 && ws_start && !buf.empty()) {
++            const bool boundary = at_boundary(buf);
++            if (boundary) {
++                last_boundary = buf.size();
++            }
++            if (boundary && (int) buf_toks.size() >= opts.seg_min) {
++                st.cut = "boundary";
++                break;
++            }
++            if ((int) buf_toks.size() >= opts.seg_max) {
++                st.cut = "cap";
++                break;
++            }
++            if (opts.conf_monitor && (int) lp_window.size() >= opts.conf_window) {
++                double mean = 0.0;
++                for (double v : lp_window) mean += v;
++                mean /= (double) lp_window.size();
++                if (mean < opts.conf_threshold && last_boundary != std::string::npos) {
++                    buf.resize(last_boundary);
++                    st.cut = "conf";
++                    break;
++                }
++            }
++        }
++
++        if ((int) buf_toks.size() >= opts.n_predict) {
++            st.cut = "limit";
++            st.turn_done = true;
++            break;
++        }
++
++        const double lp = token_logprob(m, tok);
++        lp_sum_all += lp;
++        lp_window.push_back(lp);
++        while ((int) lp_window.size() > opts.conf_window) {
++            lp_window.pop_front();
++        }
++
++        common_sampler_accept(m.smpl.get(), tok, true);
++        llama_token t = tok;
++        if (llama_decode(m.ctx.get(), llama_batch_get_one(&t, 1)) != 0) {
++            fprintf(stderr, "error: %s decode failed mid-segment\n", m.name.c_str());
++            st.cut = "error";
++            st.turn_done = true;
++            break;
++        }
++        buf += piece;
++        buf_toks.push_back(tok);
++    }
++
++    st.text     = buf;
++    st.n_tokens = (int) buf_toks.size();
++    st.mean_lp  = buf_toks.empty() ? 0.0 : lp_sum_all / (double) buf_toks.size();
++    st.t_us     = ggml_time_us() - t0;
++
++    if (m.append_only) {
++        // expert: sampled tokens stay; committed state extends by the emitted text
++        m.committed_text += st.text;
++        m.committed_tokens.insert(m.committed_tokens.end(), buf_toks.begin(), buf_toks.end());
++        // conf cuts never apply to the expert (buf never truncated), so text == decoded pieces
++    } else {
++        // front: rewind the whole segment; committed text is re-ingested canonically later
++        llama_memory_seq_rm(llama_get_memory(m.ctx.get()), 0, n_past0, -1);
++    }
++    return st;
++}
++
++// ---------- routing ----------
++
++// verdict token ids in the front vocab, resolved at startup from "A"/"B"
++static llama_token g_id_easy = -1;
++static llama_token g_id_hard = -1;
++
++static float route_score(duo_model & front, const std::string & user) {
++    const std::string prompt =
++        "<|im_start|>system\n"
++        "You classify questions by difficulty. Reply with exactly one letter.\n"
++        "A = simple: greeting, chit-chat, a single fact, a one-line definition.\n"
++        "B = hard: math with steps, physics/chemistry problems, essays, code, anything multi-step.\n"
++        "<|im_end|>\n"
++        "<|im_start|>user\nQ: \"Hello, how are you?\" ->\n<|im_end|>\n<|im_start|>assistant\nA<|im_end|>\n"
++        "<|im_start|>user\nQ: \"Solve 3x + 5 = 20 and explain each step.\" ->\n<|im_end|>\n<|im_start|>assistant\nB<|im_end|>\n"
++        "<|im_start|>user\nQ: \"" + user + "\" ->\n<|im_end|>\n<|im_start|>assistant\n";
++
++    const int n_past0 = front.n_past();
++    std::vector<llama_token> toks = common_tokenize(front.vocab, prompt, false, true);
++    if (!decode_tokens(front, toks)) {
++        return 0.0f;
++    }
++    const float * z = llama_get_logits_ith(front.ctx.get(), -1);
++    const float s = z[g_id_hard] - z[g_id_easy];
++
++    llama_memory_seq_rm(llama_get_memory(front.ctx.get()), 0, n_past0, -1);
++    return s;
++}
++
++// ---------- turn drivers ----------
++
++struct duo_state {
++    duo_model front;
++    duo_model expert;
++    duo_params p;
++    std::vector<chat_turn> history;
++
++    const char * sys_front  = "You are a helpful tutor. Continue the answer naturally and concisely.";
++    const char * sys_expert = "You are the senior tutor. Continue the answer; if the draft so far has errors or drifts, correct course and steer it right, then continue.";
++};
++
++static void trace_seg(const duo_params & p, int k, const char * author, const seg_stats & st) {
++    if (p.trace) {
++        fprintf(stderr, "[seg %d] author=%s tokens=%d ms=%.1f tok/s=%.1f mean_lp=%.2f cut=%s\n",
++                k, author, st.n_tokens, st.t_us / 1e3,
++                st.t_us > 0 ? st.n_tokens * 1e6 / st.t_us : 0.0, st.mean_lp, st.cut.c_str());
++    }
++    jtrace("{\"type\":\"seg\",\"k\":%d,\"author\":\"%s\",\"tokens\":%d,\"ms\":%.1f,\"mean_lp\":%.3f,\"cut\":\"%s\"}",
++           k, author, st.n_tokens, st.t_us / 1e3, st.mean_lp, st.cut.c_str());
++}
++
++static std::string run_router_turn(duo_state & s, const std::string & user) {
++    const duo_params & p = s.p;
++    const int64_t t0 = ggml_time_us();
++
++    // route on the front model, deterministically
++    const float score = route_score(s.front, user);
++    const bool hard = score >= p.route_threshold;
++
++    std::string transcript;
++    std::string author = "front";
++    std::string trigger = "";
++    int n_tokens = 0;
++
++    if (!hard) {
++        // easy path: front answers with the confidence monitor armed
++        if (!sync_to(s.front, render_prompt(s.front, s.sys_front, s.history, user, true), true)) {
++            return transcript;
++        }
++        gen_opts opts = { /*seg_min*/ 0, /*seg_max*/ 0, p.n_predict, /*conf*/ true, p.conf_window, p.conf_threshold, /*eos_ends*/ true };
++        // conf trigger needs segmentation checks enabled: use seg budgets that never boundary-cut
++        opts.seg_min = p.n_predict + 1;
++        opts.seg_max = p.n_predict + 1;
++        seg_stats st = gen_segment(s.front, opts);
++        n_tokens += st.n_tokens;
++        if (st.cut == "conf" || (st.cut == "eos" && !st.turn_done)) {
++            trigger = st.cut;
++        }
++        transcript = st.text;
++        trace_seg(p, 0, "front", st);
++
++        if (st.cut == "conf") {
++            // escalate
++            author = "front+expert";
++            if (!p.carry_draft) {
++                transcript.clear();
++            }
++            std::string target = render_prompt(s.expert, s.sys_expert, s.history, user, false) + transcript;
++            if (!sync_to(s.expert, target, true)) {
++                return transcript;
++            }
++            gen_opts eopts = { 0, 0, p.n_predict - n_tokens, false, p.conf_window, p.conf_threshold, true };
++            seg_stats est = gen_segment(s.expert, eopts);
++            n_tokens += est.n_tokens;
++            transcript += est.text;
++            trace_seg(p, 1, "expert", est);
++        }
++    } else {
++        // hard path: expert answers directly (lazy history sync)
++        author = "expert";
++        if (!sync_to(s.expert, render_prompt(s.expert, s.sys_expert, s.history, user, false), true)) {
++            return transcript;
++        }
++        gen_opts opts = { 0, 0, p.n_predict, false, p.conf_window, p.conf_threshold, true };
++        seg_stats st = gen_segment(s.expert, opts);
++        n_tokens = st.n_tokens;
++        transcript = st.text;
++        trace_seg(p, 0, "expert", st);
++    }
++
++    const int64_t t_us = ggml_time_us() - t0;
++    if (p.trace) {
++        fprintf(stderr, "[turn] route=%s s=%.3f author=%s tokens=%d ms=%.1f tok/s=%.1f%s%s\n",
++                hard ? "hard" : "easy", score, author.c_str(), n_tokens, t_us / 1e3,
++                t_us > 0 ? n_tokens * 1e6 / (double) t_us : 0.0,
++                trigger.empty() ? "" : " trigger=", trigger.c_str());
++    }
++    jtrace("{\"type\":\"turn\",\"mode\":\"router\",\"route\":\"%s\",\"score\":%.3f,\"author\":\"%s\",\"tokens\":%d,\"ms\":%.1f}",
++           hard ? "hard" : "easy", score, author.c_str(), n_tokens, t_us / 1e3);
++    return transcript;
++}
++
++static std::string run_codraft_turn(duo_state & s, const std::string & user) {
++    const duo_params & p = s.p;
++    const int64_t t0 = ggml_time_us();
++
++    const std::string front_prompt  = render_prompt(s.front,  s.sys_front,  s.history, user, true);
++    const std::string expert_prompt = render_prompt(s.expert, s.sys_expert, s.history, user, false);
++
++    std::string transcript;
++    duo_model * active = &s.front;
++    int k = 0;
++    int n_total = 0, n_expert = 0;
++    bool turn_open = true;
++
++    while (turn_open) {
++        const std::string & prompt = (active == &s.front) ? front_prompt : expert_prompt;
++        if (!sync_to(*active, prompt + transcript, true)) {
++            break;
++        }
++
++        gen_opts opts;
++        opts.seg_min        = p.seg_min;
++        opts.seg_max        = p.seg_max;
++        opts.n_predict      = p.n_predict - n_total;
++        opts.conf_monitor   = (active == &s.front);
++        opts.conf_window    = p.conf_window;
++        opts.conf_threshold = p.conf_threshold;
++        // under --closer expert a front EOS is a handoff, not an ending
++        opts.eos_ends_turn  = (active == &s.expert) || !p.closer_expert;
++
++        seg_stats st = gen_segment(*active, opts);
++        transcript += st.text;
++        n_total += st.n_tokens;
++        if (active == &s.expert) {
++            n_expert += st.n_tokens;
++        }
++        trace_seg(p, k, active->name.c_str(), st);
++        k++;
++
++        if (st.turn_done || n_total >= p.n_predict) {
++            turn_open = false;
++        } else if (st.cut == "eos" && !st.turn_done) {
++            active = &s.expert;    // front EOS handoff
++        } else {
++            active = (active == &s.front) ? &s.expert : &s.front;
++        }
++    }
++
++    const int64_t t_us = ggml_time_us() - t0;
++    const double f = n_total > 0 ? (double) n_expert / n_total : 0.0;
++    if (p.trace) {
++        fprintf(stderr, "[turn] mode=codraft segs=%d tokens=%d expert_share=%.2f ms=%.1f tok/s=%.1f ingest_front=%.1fms ingest_expert=%.1fms\n",
++                k, n_total, f, t_us / 1e3, t_us > 0 ? n_total * 1e6 / (double) t_us : 0.0,
++                s.front.t_ingest_us / 1e3, s.expert.t_ingest_us / 1e3);
++    }
++    jtrace("{\"type\":\"turn\",\"mode\":\"codraft\",\"segs\":%d,\"tokens\":%d,\"expert_share\":%.3f,\"ms\":%.1f,\"ingest_front_ms\":%.1f,\"ingest_expert_ms\":%.1f}",
++           k, n_total, f, t_us / 1e3, s.front.t_ingest_us / 1e3, s.expert.t_ingest_us / 1e3);
++    return transcript;
++}
++
++// G4: from-scratch tokenization of each model's committed text must equal its committed tokens.
++// The expert's own sampled segments may legally deviate from canonical tokenization (they are
++// never re-encoded), so expert mismatches are reported as counts, not failures.
++static void selftest_seams(duo_state & s) {
++    for (duo_model * m : { &s.front, &s.expert }) {
++        std::vector<llama_token> fresh = common_tokenize(m->vocab, m->committed_text, false, true);
++        if (fresh == m->committed_tokens) {
++            fprintf(stderr, "[selftest] %s: OK (%zu tokens)\n", m->name.c_str(), fresh.size());
++        } else {
++            size_t i = 0;
++            while (i < fresh.size() && i < m->committed_tokens.size() && fresh[i] == m->committed_tokens[i]) {
++                i++;
++            }
++            fprintf(stderr, "[selftest] %s: %s (fresh %zu vs committed %zu tokens, first diff at %zu)\n",
++                    m->name.c_str(), m->append_only ? "NON-CANONICAL (expert self-segments, allowed)" : "SEAM VIOLATION",
++                    fresh.size(), m->committed_tokens.size(), i);
++        }
++    }
++}
++
++int main(int argc, char ** argv) {
++    duo_params p;
++    if (!parse_args(argc, argv, p)) {
++        return 1;
++    }
++
++    common_init();
++    llama_backend_init();
++
++    if (!p.json_trace.empty()) {
++        g_json = fopen(p.json_trace.c_str(), "w");
++    }
++
++    duo_state s;
++    s.p = p;
++    s.expert.append_only = true;
++
++    fprintf(stderr, "loading front  ('%s') from %s\n", p.front_prefix.c_str(), p.bundle.c_str());
++    if (!load_duo_model(s.front, p, "front", p.front_prefix, p.ctx_front, p.temp_front, p.top_p_front)) {
++        return 1;
++    }
++    fprintf(stderr, "loading expert ('%s') from %s\n", p.expert_prefix.c_str(), p.bundle.c_str());
++    if (!load_duo_model(s.expert, p, "expert", p.expert_prefix, p.ctx_expert, p.temp_expert, p.top_p_expert)) {
++        return 1;
++    }
++
++    // resolve verdict tokens in the front vocab (bare letters follow "assistant\n")
++    {
++        std::vector<llama_token> a = common_tokenize(s.front.vocab, "A", false, false);
++        std::vector<llama_token> b = common_tokenize(s.front.vocab, "B", false, false);
++        if (a.size() != 1 || b.size() != 1) {
++            fprintf(stderr, "error: verdict strings are not single tokens (A=%zu, B=%zu)\n", a.size(), b.size());
++            return 1;
++        }
++        g_id_easy = a[0];
++        g_id_hard = b[0];
++        fprintf(stderr, "verdict tokens: easy 'A'=%d hard 'B'=%d, threshold %.2f\n", g_id_easy, g_id_hard, p.route_threshold);
++    }
++
++    std::vector<std::string> turns;
++    if (!p.prompts_file.empty()) {
++        std::ifstream f(p.prompts_file);
++        std::string line;
++        while (std::getline(f, line)) {
++            if (!line.empty()) {
++                turns.push_back(line);
++            }
++        }
++    } else if (!p.prompt.empty()) {
++        turns.push_back(p.prompt);
++    } else {
++        fprintf(stderr, "error: need -p or --prompts-file\n");
++        return 1;
++    }
++
++    for (size_t i = 0; i < turns.size(); i++) {
++        if (p.trace) {
++            fprintf(stderr, "\n=== turn %zu: %s\n", i + 1, turns[i].c_str());
++        }
++        std::string answer = p.mode == "codraft" ? run_codraft_turn(s, turns[i])
++                                                 : run_router_turn(s, turns[i]);
++        printf("%s\n", answer.c_str());
++        fflush(stdout);
++
++        if (p.selftest_seams && p.mode == "codraft") {
++            selftest_seams(s);
++        }
++        s.history.push_back({ turns[i], answer });
++    }
++
++    if (g_json) {
++        fclose(g_json);
++    }
++    // free in reverse order of creation
++    s.expert.smpl.reset(); s.expert.ctx.reset(); s.expert.model.reset();
++    s.front.smpl.reset();  s.front.ctx.reset();  s.front.model.reset();
++    llama_backend_free();
++    return 0;
++}
+-- 
+2.50.1 (Apple Git-155)
+

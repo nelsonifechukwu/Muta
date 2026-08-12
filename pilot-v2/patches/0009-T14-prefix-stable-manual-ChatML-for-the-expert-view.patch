@@ -1,0 +1,81 @@
+From 3eb63a99158d18697de8e4aa8dc4fdce130a957a Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Sun, 9 Aug 2026 08:32:14 +0100
+Subject: [PATCH 09/16] T14: prefix-stable manual ChatML for the expert view
+
+The jinja template drops think blocks from past assistant turns, so every
+new turn broke prefix extension and forced a full expert re-sync (cost
+O(history) at 4B prefill speed). Manual ChatML keeps history bytes equal
+to what the live turn produced. Also trace full-resync counts.
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 34 ++++++++++++++++++++++------------
+ 1 file changed, 22 insertions(+), 12 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index 0f325ed..bb3accc 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -286,9 +286,27 @@ struct chat_turn {
+     std::string assistant;
+ };
+ 
++// manual ChatML keeps past assistant turns byte-identical to what the live turn
++// produced (including the closed think block), so successive renders are prefix
++// extensions and the append-only expert never needs a full re-sync
++static std::string render_chatml(const std::string & system, const std::vector<chat_turn> & history,
++                                 const std::string & user, bool closed_think) {
++    const std::string think = closed_think ? "<think>\n\n</think>\n\n" : "";
++    std::string out = "<|im_start|>system\n" + system + "<|im_end|>\n";
++    for (const auto & t : history) {
++        out += "<|im_start|>user\n" + t.user + "<|im_end|>\n";
++        out += "<|im_start|>assistant\n" + think + t.assistant + "<|im_end|>\n";
++    }
++    out += "<|im_start|>user\n" + user + "<|im_end|>\n<|im_start|>assistant\n" + think;
++    return out;
++}
++
+ static std::string render_prompt(duo_model & m, const std::string & system,
+                                  const std::vector<chat_turn> & history, const std::string & user,
+                                  bool enable_thinking) {
++    if (m.append_only) {
++        return render_chatml(system, history, user, !enable_thinking);
++    }
+     common_chat_templates_inputs inputs;
+     inputs.add_generation_prompt = true;
+     inputs.enable_thinking       = enable_thinking;
+@@ -306,16 +324,7 @@ static std::string render_prompt(duo_model & m, const std::string & system,
+         return common_chat_templates_apply(m.tmpls.get(), inputs).prompt;
+     } catch (const std::exception & e) {
+         LOG_WRN("%s: template apply failed (%s), using manual ChatML\n", m.name.c_str(), e.what());
+-        std::string out = "<|im_start|>system\n" + system + "<|im_end|>\n";
+-        for (const auto & t : history) {
+-            out += "<|im_start|>user\n" + t.user + "<|im_end|>\n";
+-            out += "<|im_start|>assistant\n" + t.assistant + "<|im_end|>\n";
+-        }
+-        out += "<|im_start|>user\n" + user + "<|im_end|>\n<|im_start|>assistant\n";
+-        if (!enable_thinking) {
+-            out += "<think>\n\n</think>\n\n";
+-        }
+-        return out;
++        return render_chatml(system, history, user, !enable_thinking);
+     }
+ }
+ 
+@@ -607,9 +616,10 @@ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+     const int64_t t_us = ggml_time_us() - t0;
+     const double f = n_total > 0 ? (double) n_expert / n_total : 0.0;
+     if (p.trace) {
+-        fprintf(stderr, "[turn] mode=codraft segs=%d tokens=%d expert_share=%.2f ms=%.1f tok/s=%.1f ingest_front=%.1fms ingest_expert=%.1fms\n",
++        fprintf(stderr, "[turn] mode=codraft segs=%d tokens=%d expert_share=%.2f ms=%.1f tok/s=%.1f ingest_front=%.1fms ingest_expert=%.1fms resync_front=%d resync_expert=%d\n",
+                 k, n_total, f, t_us / 1e3, t_us > 0 ? n_total * 1e6 / (double) t_us : 0.0,
+-                s.front.t_ingest_us / 1e3, s.expert.t_ingest_us / 1e3);
++                s.front.t_ingest_us / 1e3, s.expert.t_ingest_us / 1e3,
++                s.front.n_full_resync, s.expert.n_full_resync);
+     }
+     jtrace("{\"type\":\"turn\",\"mode\":\"codraft\",\"segs\":%d,\"tokens\":%d,\"expert_share\":%.3f,\"ms\":%.1f,\"ingest_front_ms\":%.1f,\"ingest_expert_ms\":%.1f}",
+            k, n_total, f, t_us / 1e3, s.front.t_ingest_us / 1e3, s.expert.t_ingest_us / 1e3);
+-- 
+2.50.1 (Apple Git-155)
+

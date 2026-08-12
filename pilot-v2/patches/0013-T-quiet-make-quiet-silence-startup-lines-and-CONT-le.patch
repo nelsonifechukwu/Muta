@@ -1,0 +1,60 @@
+From 30b0af9c3715c72c568b7ca7a304ff92a1474b8c Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Sun, 9 Aug 2026 09:54:22 +0100
+Subject: [PATCH 13/16] T-quiet: make --quiet silence startup lines and
+ CONT-level progress dots
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index 58d69f0..644f780 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -754,7 +754,11 @@ int main(int argc, char ** argv) {
+ 
+     if (p.quiet) {
+         llama_log_set([](ggml_log_level level, const char * text, void *) {
+-            if (level >= GGML_LOG_LEVEL_ERROR) {
++            static ggml_log_level prev = GGML_LOG_LEVEL_NONE;
++            if (level != GGML_LOG_LEVEL_CONT) {
++                prev = level;
++            }
++            if (prev == GGML_LOG_LEVEL_ERROR) {
+                 fputs(text, stderr);
+             }
+         }, nullptr);
+@@ -790,11 +794,15 @@ int main(int argc, char ** argv) {
+     g_stream.on    = !p.route_only && (p.stream == 1 || (p.stream == -1 && interactive));
+     g_stream.color = isatty(STDOUT_FILENO);
+ 
+-    fprintf(stderr, "loading front  ('%s') from %s\n", p.front_prefix.c_str(), p.bundle.c_str());
++    if (!p.quiet) {
++        fprintf(stderr, "loading front  ('%s') from %s\n", p.front_prefix.c_str(), p.bundle.c_str());
++    }
+     if (!load_duo_model(s.front, p, "front", p.front_prefix, p.ctx_front, p.temp_front, p.top_p_front)) {
+         return 1;
+     }
+-    fprintf(stderr, "loading expert ('%s') from %s\n", p.expert_prefix.c_str(), p.bundle.c_str());
++    if (!p.quiet) {
++        fprintf(stderr, "loading expert ('%s') from %s\n", p.expert_prefix.c_str(), p.bundle.c_str());
++    }
+     if (!load_duo_model(s.expert, p, "expert", p.expert_prefix, p.ctx_expert, p.temp_expert, p.top_p_expert)) {
+         return 1;
+     }
+@@ -809,7 +817,9 @@ int main(int argc, char ** argv) {
+         }
+         g_id_easy = a[0];
+         g_id_hard = b[0];
+-        fprintf(stderr, "verdict tokens: easy 'A'=%d hard 'B'=%d, threshold %.2f\n", g_id_easy, g_id_hard, p.route_threshold);
++        if (!p.quiet) {
++            fprintf(stderr, "verdict tokens: easy 'A'=%d hard 'B'=%d, threshold %.2f\n", g_id_easy, g_id_hard, p.route_threshold);
++        }
+     }
+ 
+     auto run_turn = [&](const std::string & user, size_t idx) {
+-- 
+2.50.1 (Apple Git-155)
+

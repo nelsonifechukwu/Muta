@@ -1,0 +1,452 @@
+From c528ee2c5423711bfed86ddd2e405d740846ef61 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Wed, 12 Aug 2026 17:46:46 +0100
+Subject: [PATCH 18/24] S1a: stream_weights load-path opt-out + common flags
+
+Add llama_model_params::stream_weights, off by default: when set, the
+loader suppresses load-time prefetch (posix_madvise WILLNEED) and
+populate (Linux MAP_POPULATE), and instead advises the mapping
+POSIX_MADV_RANDOM plus MADV_NOHUGEPAGE where available. Weights then
+become resident purely on demand-fault, so a later residency manager
+can control what stays in RAM.
+
+llama_mmap gains a stream ctor arg with these semantics. It also
+gains discard_range(), a pure madvise(DONTNEED) with no munmap and no
+fragment bookkeeping, mirroring the align/page-boundary idiom already
+used by unmap_fragment.
+
+Any bundle-member load (bundle_prefix set), not only genuinely
+streamed ones, suppresses populate too: a non-streamed tier
+MAP_POPULATE-ing the whole multi-GB bundle would charge the cgroup
+for every other tier's bytes and install PTEs over their regions that
+block their own fadvise-based eviction. llama_model_loader grows a
+stream_no_populate() helper (stream_weights || bundle_prefix set) and
+threads it into init_mappings(). After load_all_data finishes a
+bundle-member load, it now sweeps discard_range() over the mapping
+outside that model's own [mmap_used.first, mmap_used.second) interval
+before the existing unmap_fragment() trims it, so no foreign
+page-cache charge survives the load.
+
+llama_model_load gates stream_weights on LLAMA_LOAD_MODE_MMAP and a
+single-file model, failing the load with a clear error otherwise.
+no_alloc probes (used by -fit's device memory breakdown) are exempt:
+they never touch the populate/prefetch path regardless of load_mode,
+so gating them produced a spurious error on every default
+--stream-weights invocation without changing the outcome.
+
+common_params gains the Phase 5 streaming flags (stream_weights,
+max_ram_mib, prefetch_layers, pin_budget, stream_reserve_mib,
+stream_disk_gbps, residency_selftest) and matching arg.cpp options
+next to --bundle-prefix. common_init_from_params disables warmup when
+streaming (weights aren't resident yet by design) with a log line.
+residency_selftest is parsed but inert here; a later task wires it up.
+
+Assisted-by: Claude Fable 5
+---
+ common/arg.cpp             | 49 +++++++++++++++++++++++++++++
+ common/common.cpp          |  7 +++++
+ common/common.h            |  9 ++++++
+ include/llama.h            |  1 +
+ src/llama-mmap.cpp         | 64 +++++++++++++++++++++++++++++++++-----
+ src/llama-mmap.h           |  5 ++-
+ src/llama-model-loader.cpp | 15 +++++++--
+ src/llama-model-loader.h   | 13 +++++++-
+ src/llama-model.cpp        |  1 +
+ src/llama.cpp              | 10 +++++-
+ 10 files changed, 162 insertions(+), 12 deletions(-)
+
+diff --git a/common/arg.cpp b/common/arg.cpp
+index a3addb1..9e161a7 100644
+--- a/common/arg.cpp
++++ b/common/arg.cpp
+@@ -2833,6 +2833,55 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+             params.bundle_prefix = value;
+         }
+     ));
++    add_opt(common_arg(
++        {"--stream-weights"},
++        "suppress load-time prefetch/populate; weights are managed externally by a residency manager (default: disabled)",
++        [](common_params & params) {
++            params.stream_weights = true;
++        }
++    ));
++    add_opt(common_arg(
++        {"--max-ram-mib"}, "N",
++        string_format("residency manager RAM budget in MiB (default: %" PRIu32 ")", params.max_ram_mib),
++        [](common_params & params, int value) {
++            params.max_ram_mib = value;
++        }
++    ));
++    add_opt(common_arg(
++        {"--prefetch-layers"}, "N",
++        string_format("layers to prefetch ahead of the decode cursor (default: %" PRIu32 ")", params.prefetch_layers),
++        [](common_params & params, int value) {
++            params.prefetch_layers = value;
++        }
++    ));
++    add_opt(common_arg(
++        {"--pin-budget"}, "auto|MIB",
++        string_format("how much of max-ram-mib to mlock/pin, \"auto\" or a MiB value (default: %s)", params.pin_budget.c_str()),
++        [](common_params & params, const std::string & value) {
++            params.pin_budget = value;
++        }
++    ));
++    add_opt(common_arg(
++        {"--stream-reserve-mib"}, "N",
++        string_format("headroom withheld from max-ram-mib for non-weight memory (default: %" PRIu32 ")", params.stream_reserve_mib),
++        [](common_params & params, int value) {
++            params.stream_reserve_mib = value;
++        }
++    ));
++    add_opt(common_arg(
++        {"--stream-disk-gbps"}, "F",
++        string_format("measured disk bandwidth in GB/s, 0 = unmeasured (default: %.1f)", (double) params.stream_disk_gbps),
++        [](common_params & params, const std::string & value) {
++            params.stream_disk_gbps = std::stof(value);
++        }
++    ));
++    add_opt(common_arg(
++        {"--residency-selftest"},
++        "run the residency manager selftest (default: disabled)",
++        [](common_params & params) {
++            params.residency_selftest = true;
++        }
++    ));
+     add_opt(common_arg(
+         {"--override-kv"}, "KEY=TYPE:VALUE,...",
+         "advanced option to override model metadata by key. to specify multiple overrides, either use comma-separated values.\n"
+diff --git a/common/common.cpp b/common/common.cpp
+index f6d61bd..87bd40c 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -1425,6 +1425,11 @@ common_init_result_ptr common_init_from_params(common_params & params, bool mode
+         common_set_adapter_lora(lctx, params.lora_adapters);
+     }
+ 
++    if (params.stream_weights && params.warmup) {
++        COM_INF("%s", "stream_weights is enabled, disabling warmup (weights are managed externally)\n");
++        params.warmup = false;
++    }
++
+     if (params.warmup) {
+         COM_TRC("%s", "warming up the model with an empty run - please wait ... (--no-warmup to disable)\n");
+ 
+@@ -1614,6 +1619,8 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+         mparams.bundle_prefix = params.bundle_prefix.c_str();
+     }
+ 
++    mparams.stream_weights = params.stream_weights;
++
+     if (params.kv_overrides.empty()) {
+         mparams.kv_overrides = NULL;
+     } else {
+diff --git a/common/common.h b/common/common.h
+index 71724ae..b558001 100644
+--- a/common/common.h
++++ b/common/common.h
+@@ -573,6 +573,15 @@ struct common_params {
+     bool no_extra_bufts    = false; // disable extra buffer types (used for weight repacking)
+     bool no_host           = false; // bypass host buffer allowing extra buffers to be used
+ 
++    // Phase 5 weight streaming
++    bool        stream_weights      = false;  // suppress load-time prefetch/populate; weights managed externally
++    uint32_t    max_ram_mib         = 2048;    // residency manager RAM budget
++    uint32_t    prefetch_layers     = 2;       // layers to prefetch ahead of the decode cursor
++    std::string pin_budget          = "auto";  // "auto" or a MiB value: how much to mlock/pin
++    uint32_t    stream_reserve_mib  = 640;     // headroom withheld from max_ram_mib for non-weight memory
++    float       stream_disk_gbps    = 0.0f;    // measured disk bandwidth, 0 = unmeasured
++    bool        residency_selftest  = false;   // run the residency manager selftest (wired up in a later task)
++
+     bool single_turn       = false; // single turn chat conversation
+ 
+     ggml_type cache_type_k = GGML_TYPE_F16; // KV cache data type for the K
+diff --git a/include/llama.h b/include/llama.h
+index 405ee4f..36734d4 100644
+--- a/include/llama.h
++++ b/include/llama.h
+@@ -341,6 +341,7 @@ extern "C" {
+         bool no_host;         // bypass host buffer allowing extra buffers to be used
+         bool no_alloc;        // only load metadata and simulate memory allocations
+         bool load_mtp;        // whether to load MTP layers
++        bool stream_weights;  // suppress load-time prefetch/populate; weights managed externally (residency manager)
+     };
+ 
+     struct llama_sampler_seq_config {
+diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
+index ed572da..9bd61a9 100644
+--- a/src/llama-mmap.cpp
++++ b/src/llama-mmap.cpp
+@@ -442,15 +442,18 @@ struct llama_mmap::impl {
+ #ifdef _POSIX_MAPPED_FILES
+     std::vector<std::pair<size_t, size_t>> mapped_fragments;
+ 
+-    impl(struct llama_file * file, size_t prefetch, bool numa) {
++    impl(struct llama_file * file, size_t prefetch, bool numa, bool stream) {
+         size = file->size();
+         int fd = file->file_id();
+         int flags = MAP_SHARED;
+         if (numa) { prefetch = 0; }
++        if (stream) { prefetch = 0; }
+ #ifdef __linux__
+-        if (posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) {
+-            LLAMA_LOG_WARN("warning: posix_fadvise(.., POSIX_FADV_SEQUENTIAL) failed: %s\n",
+-                    strerror(errno));
++        if (!stream) {
++            if (posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) {
++                LLAMA_LOG_WARN("warning: posix_fadvise(.., POSIX_FADV_SEQUENTIAL) failed: %s\n",
++                        strerror(errno));
++            }
+         }
+         if (prefetch) { flags |= MAP_POPULATE; }
+ #endif
+@@ -471,6 +474,20 @@ struct llama_mmap::impl {
+                         strerror(errno));
+             }
+         }
++        if (stream) {
++            // random-touch access pattern, not the sequential scan mmap defaults assume
++            if (posix_madvise(addr, file->size(), POSIX_MADV_RANDOM)) {
++                LLAMA_LOG_WARN("warning: posix_madvise(.., POSIX_MADV_RANDOM) failed: %s\n",
++                        strerror(errno));
++            }
++#ifdef MADV_NOHUGEPAGE
++            // huge pages would pull in far more than the residency manager asked to touch
++            if (madvise(addr, file->size(), MADV_NOHUGEPAGE)) {
++                LLAMA_LOG_WARN("warning: madvise(.., MADV_NOHUGEPAGE) failed: %s\n",
++                        strerror(errno));
++            }
++#endif
++        }
+ 
+         mapped_fragments.emplace_back(0, file->size());
+     }
+@@ -523,6 +540,23 @@ struct llama_mmap::impl {
+         mapped_fragments = std::move(new_mapped_fragments);
+     }
+ 
++    // evict the page-cache pages backing [first, last) without touching the mapping itself
++    void discard_range(size_t first, size_t last) {
++        int page_size = sysconf(_SC_PAGESIZE);
++        align_range(&first, &last, page_size);
++        size_t len = last - first;
++
++        if (len == 0) {
++            return;
++        }
++
++        void * range_start = (uint8_t *) addr + first;
++
++        if (posix_madvise(range_start, len, POSIX_MADV_DONTNEED)) {
++            LLAMA_LOG_WARN("warning: posix_madvise(.., POSIX_MADV_DONTNEED) failed: %s\n", strerror(errno));
++        }
++    }
++
+     ~impl() {
+         for (const auto & frag : mapped_fragments) {
+             if (munmap((char *) addr + frag.first, frag.second - frag.first)) {
+@@ -533,8 +567,9 @@ struct llama_mmap::impl {
+ #elif defined(_WIN32)
+     HANDLE hMapping = nullptr;
+ 
+-    impl(struct llama_file * file, size_t prefetch, bool numa) {
++    impl(struct llama_file * file, size_t prefetch, bool numa, bool stream) {
+         GGML_UNUSED(numa);
++        GGML_UNUSED(stream);
+ 
+         size = file->size();
+ 
+@@ -582,6 +617,11 @@ struct llama_mmap::impl {
+         GGML_UNUSED(last);
+     }
+ 
++    void discard_range(size_t first, size_t last) {
++        GGML_UNUSED(first);
++        GGML_UNUSED(last);
++    }
++
+     ~impl() {
+         if (hMapping) {
+             if (addr) {
+@@ -597,10 +637,11 @@ struct llama_mmap::impl {
+         }
+     }
+ #else
+-    impl(struct llama_file * file, size_t prefetch, bool numa) {
++    impl(struct llama_file * file, size_t prefetch, bool numa, bool stream) {
+         GGML_UNUSED(file);
+         GGML_UNUSED(prefetch);
+         GGML_UNUSED(numa);
++        GGML_UNUSED(stream);
+ 
+         throw std::runtime_error("mmap not supported");
+     }
+@@ -611,13 +652,20 @@ struct llama_mmap::impl {
+ 
+         throw std::runtime_error("mmap not supported");
+     }
++
++    void discard_range(size_t first, size_t last) {
++        GGML_UNUSED(first);
++        GGML_UNUSED(last);
++
++        throw std::runtime_error("mmap not supported");
++    }
+ #endif
+ 
+     void * addr;
+     size_t size;
+ };
+ 
+-llama_mmap::llama_mmap(struct llama_file * file, size_t prefetch, bool numa) : pimpl(std::make_unique<impl>(file, prefetch, numa)) {}
++llama_mmap::llama_mmap(struct llama_file * file, size_t prefetch, bool numa, bool stream) : pimpl(std::make_unique<impl>(file, prefetch, numa, stream)) {}
+ llama_mmap::~llama_mmap() = default;
+ 
+ size_t llama_mmap::size() const { return pimpl->size; }
+@@ -625,6 +673,8 @@ void * llama_mmap::addr() const { return pimpl->addr; }
+ 
+ void llama_mmap::unmap_fragment(size_t first, size_t last) { pimpl->unmap_fragment(first, last); }
+ 
++void llama_mmap::discard_range(size_t first, size_t last) { pimpl->discard_range(first, last); }
++
+ #if defined(_POSIX_MEMLOCK_RANGE) || defined(_WIN32)
+ const bool llama_mmap::SUPPORTED  = true;
+ #else
+diff --git a/src/llama-mmap.h b/src/llama-mmap.h
+index b7d5c61..79df66b 100644
+--- a/src/llama-mmap.h
++++ b/src/llama-mmap.h
+@@ -42,7 +42,7 @@ private:
+ 
+ struct llama_mmap {
+     llama_mmap(const llama_mmap &) = delete;
+-    llama_mmap(struct llama_file * file, size_t prefetch = (size_t) -1, bool numa = false);
++    llama_mmap(struct llama_file * file, size_t prefetch = (size_t) -1, bool numa = false, bool stream = false);
+     ~llama_mmap();
+ 
+     size_t size() const;
+@@ -50,6 +50,9 @@ struct llama_mmap {
+ 
+     void unmap_fragment(size_t first, size_t last);
+ 
++    // drop cached pages over [first, last) without unmapping (page-cache eviction only)
++    void discard_range(size_t first, size_t last);
++
+     static const bool SUPPORTED;
+ 
+ private:
+diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
+index 36526ad..6daf46b 100644
+--- a/src/llama-model-loader.cpp
++++ b/src/llama-model-loader.cpp
+@@ -529,11 +529,13 @@ llama_model_loader::llama_model_loader(
+         bool load_mtp,
+         const llama_model_kv_override * param_overrides_p,
+         const llama_model_tensor_buft_override * param_tensor_buft_overrides_p,
+-        const char * bundle_prefix)
++        const char * bundle_prefix,
++        bool stream_weights)
+         : metadata(meta), set_tensor_data(set_tensor_data), set_tensor_data_ud(set_tensor_data_ud) {
+     if (bundle_prefix != nullptr) {
+         this->bundle_prefix = bundle_prefix;
+     }
++    this->stream_weights = stream_weights;
+     int trace = 0;
+     if (getenv("LLAMA_TRACE")) {
+         trace = atoi(getenv("LLAMA_TRACE"));
+@@ -1375,7 +1377,8 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+                 }
+             }
+ 
+-            std::unique_ptr<llama_mmap> mapping = std::make_unique<llama_mmap>(file.get(), prefetch ? -1 : 0, is_numa);
++            std::unique_ptr<llama_mmap> mapping = std::make_unique<llama_mmap>(
++                    file.get(), (prefetch && !stream_no_populate()) ? -1 : 0, is_numa, stream_no_populate());
+             mmaps_used.emplace_back(mapping->size(), 0);
+             if (mlock_mmaps) {
+                 std::unique_ptr<llama_mlock> mlock_mmap(new llama_mlock());
+@@ -1700,6 +1703,14 @@ bool llama_model_loader::load_all_data(
+             for (uint32_t idx = 0; idx < mappings.size(); idx++) {
+                 const auto & mmap_used = mmaps_used.at(idx);
+                 auto & mapping = mappings.at(idx);
++                if (!bundle_prefix.empty()) {
++                    // bundle members share one file: evict this model's foreign
++                    // page-cache charge before trimming the mapping (S1a/B3)
++                    mapping->discard_range(0, mmap_used.first);
++                    if (mmap_used.second != 0) {
++                        mapping->discard_range(mmap_used.second, mapping->size());
++                    }
++                }
+                 mapping->unmap_fragment(0, mmap_used.first);
+                 if (mmap_used.second != 0) {
+                     mapping->unmap_fragment(mmap_used.second, mapping->size());
+diff --git a/src/llama-model-loader.h b/src/llama-model-loader.h
+index 7d26d1b..5672a13 100644
+--- a/src/llama-model-loader.h
++++ b/src/llama-model-loader.h
+@@ -104,11 +104,21 @@ struct llama_model_loader {
+     // sub-model prefix for bundle GGUFs; empty = normal load
+     std::string bundle_prefix;
+ 
++    // weights managed externally (residency manager); suppress load-time prefetch/populate
++    bool stream_weights = false;
++
+     // map a requested KV name to its on-file name
+     std::string resolve_key(const std::string & key) const {
+         return bundle_prefix.empty() ? key : bundle_prefix + key;
+     }
+ 
++    // any bundle member must suppress populate/WILLNEED: a non-streamed tier
++    // MAP_POPULATE-ing the whole bundle would charge the cgroup for the other
++    // tiers' bytes too and install PTEs that block their fadvise eviction
++    bool stream_no_populate() const {
++        return stream_weights || !bundle_prefix.empty();
++    }
++
+     size_t size_done = 0;
+     size_t size_data = 0;
+     std::vector<std::pair<size_t, size_t>> mmaps_used;
+@@ -142,7 +152,8 @@ struct llama_model_loader {
+         bool load_mtp,
+         const llama_model_kv_override * param_overrides_p,
+         const llama_model_tensor_buft_override * param_tensor_buft_overrides_p,
+-        const char * bundle_prefix = nullptr);
++        const char * bundle_prefix = nullptr,
++        bool stream_weights = false);
+ 
+     template<typename T>
+     typename std::enable_if<std::is_integral<T>::value, bool>::type
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 76f9cce..c07452d 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -2461,6 +2461,7 @@ llama_model_params llama_model_default_params() {
+         /*.no_host                     =*/ false,
+         /*.no_alloc                    =*/ false,
+         /*.load_mtp                    =*/ false,
++        /*.stream_weights              =*/ false,
+     };
+ 
+     return result;
+diff --git a/src/llama.cpp b/src/llama.cpp
+index d1de2ab..0f7cb0a 100644
+--- a/src/llama.cpp
++++ b/src/llama.cpp
+@@ -306,7 +306,15 @@ static std::pair<int, llama_model *> llama_model_load(struct gguf_context * meta
+     try {
+         llama_model_loader ml(metadata, set_tensor_data, set_tensor_data_ud, fname, splits, file, params.load_mode,
+             params.check_tensors, params.no_alloc, params.load_mtp, params.kv_overrides, params.tensor_buft_overrides,
+-            params.bundle_prefix);
++            params.bundle_prefix, params.stream_weights);
++
++        // no_alloc probes (e.g. -fit's device memory breakdown) never touch mmap
++        // populate/prefetch, so they are exempt: this guard protects the real,
++        // data-carrying load path only.
++        if (params.stream_weights && !params.no_alloc && (params.load_mode != LLAMA_LOAD_MODE_MMAP || splits.size() > 1)) {
++            LLAMA_LOG_ERROR("%s: stream_weights requires LLAMA_LOAD_MODE_MMAP and a single-file model\n", __func__);
++            return {-1, nullptr};
++        }
+ 
+         ml.print_info();
+         std::unique_ptr<llama_model> model_ptr(llama_model_create(ml, params));
+-- 
+2.50.1 (Apple Git-155)
+

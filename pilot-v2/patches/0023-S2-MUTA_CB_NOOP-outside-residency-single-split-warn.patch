@@ -1,0 +1,197 @@
+From 9a0bc06f6f3f82de920543f0ea513afcee1d1550 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Wed, 12 Aug 2026 23:33:37 +0100
+Subject: [PATCH 23/24] S2: MUTA_CB_NOOP outside residency + single-split warn
+
+MUTA_CB_NOOP was installed inside the stream_weights block, so it could not
+be reached without also getting the manager, the pins, the first window and
+the mapping-wide RANDOM advice - i.e. the one arm it exists to provide, "a
+run that differs from an ordinary one by the callback and nothing else",
+was not reachable. Move it after the block with a null user_data, and adapt
+the warning to say whether the ring is also parked.
+
+Also name the two assumptions the gate protocol rests on, neither of which
+was written down: one split on one backend (gate_unit persists across the
+scheduler's per-split node loop, so an extra split re-reads units - output
+correct, budget not), and layer-sequential topology ("all of unit N-1 is
+finished at unit N's gate" is a property of this graph builder, not of the
+callback contract).
+
+Both get a cheap one-time warning: llama_context::graph_compute checks the
+scheduler's split and backend counts once a graph has run, and the gate
+itself checks that consecutive gates are ring successors. The second is the
+stronger guard - a backend count cannot detect a topology change, a
+non-successor ring step detects either. Both are diagnostics, not failures,
+because the consequence is IO and not wrong output. Both verified silent on
+macOS and in the container.
+
+Assisted-by: Claude Fable 5
+---
+ common/common.cpp       | 28 +++++++++++++++-------
+ src/llama-context.cpp   | 20 ++++++++++++++++
+ src/llama-residency.cpp | 52 ++++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 91 insertions(+), 9 deletions(-)
+
+diff --git a/common/common.cpp b/common/common.cpp
+index 7e2237e..5037216 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -1337,17 +1337,29 @@ common_init_result::common_init_result(common_params & params, bool model_only)
+                 rinfo.streamed_bytes / (1024.0 * 1024.0), rinfo.n_streamed_layers,
+                 rinfo.head_pinned ? "" : " + head", rinfo.window);
+ 
+-        if (std::getenv("MUTA_CB_NOOP") != nullptr) {
+-            COM_WRN("%s", "MUTA_CB_NOOP is set: installing a no-op eval callback instead of the "
+-                    "residency gate -- the ring will NOT advance and --max-ram-mib is NOT "
+-                    "enforced. Overhead measurement only.\n");
+-            cparams.cb_eval = common_residency_noop_eval_cb;
+-        } else {
+-            cparams.cb_eval = llama_residency_sched_eval_cb;
+-        }
++        cparams.cb_eval           = llama_residency_sched_eval_cb;
+         cparams.cb_eval_user_data = residency;
+     }
+ 
++    // MUTA_CB_NOOP (debug): install the no-op callback INSTEAD of whatever is
++    // there, streamed or not. It sits OUTSIDE the block above on purpose. The
++    // point of the overhead A/B is an arm that differs from an ordinary run by
++    // the callback and nothing else, and --stream-weights is not that: it also
++    // disables repack, pins n_ctx and re-advises the mapping. Reachable without
++    // it, the no-op arm isolates the scheduler's per-node callback loop.
++    // Combined with --stream-weights it additionally parks the ring, and then
++    // --max-ram-mib is NOT enforced.
++    if (std::getenv("MUTA_CB_NOOP") != nullptr) {
++        COM_WRN("MUTA_CB_NOOP is set: installing a no-op eval callback%s. Overhead measurement "
++                "only.\n",
++                params.stream_weights
++                    ? " instead of the residency gate -- the ring will NOT advance and"
++                      " --max-ram-mib is NOT enforced"
++                    : "");
++        cparams.cb_eval           = common_residency_noop_eval_cb;
++        cparams.cb_eval_user_data = nullptr;
++    }
++
+     const llama_vocab * vocab = llama_model_get_vocab(model);
+ 
+     // load and optionally apply lora adapters
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index 19cca7d..4df12b0 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -12,6 +12,7 @@
+ #include "llama-ext.h"
+ #include "llama.h"
+ 
++#include <atomic>
+ #include <cinttypes>
+ #include <cmath>
+ #include <cstring>
+@@ -2479,6 +2480,25 @@ ggml_status llama_context::graph_compute(
+ 
+     // fprintf(stderr, "splits: %d\n", ggml_backend_sched_get_n_splits(sched));
+ 
++    // The weight residency gate assumes this graph is one split on one backend:
++    // its ring cursor persists across the scheduler's per-split node loop, so an
++    // extra split boundary makes it re-see units it has already passed and
++    // re-read them. Output is unaffected (clean file pages), the IO and RAM
++    // budget is not. Split counts are only valid after the graph has run, so the
++    // check lives here; it latches after the first warning.
++    if (cparams.cb_eval == llama_residency_sched_eval_cb) {
++        static std::atomic<bool> warned_splits(false);
++
++        const int n_backends = ggml_backend_sched_get_n_backends(sched.get());
++        const int n_splits   = ggml_backend_sched_get_n_splits  (sched.get());
++
++        if ((n_backends > 1 || n_splits > 1) && !warned_splits.exchange(true)) {
++            LLAMA_LOG_WARN("%s: weight streaming is running over %d splits on %d backends; it is "
++                    "designed for a single CPU split and will re-read streamed units at every "
++                    "extra split boundary\n", __func__, n_splits, n_backends);
++        }
++    }
++
+     return status;
+ }
+ 
+diff --git a/src/llama-residency.cpp b/src/llama-residency.cpp
+index 968a8b8..f4febbb 100644
+--- a/src/llama-residency.cpp
++++ b/src/llama-residency.cpp
+@@ -146,6 +146,9 @@ struct llama_residency {
+     // that a reader on any other thread is still well defined.
+     std::atomic<int32_t> gate_unit{-1};
+ 
++    // one-shot latch for the gate's topology warning (see res_check_ring_step)
++    std::atomic<bool> warned_topology{false};
++
+     llama_residency_info info = {};
+ 
+     // the manager thread and its FIFO. every verb runs here and only here.
+@@ -1106,6 +1109,50 @@ static int32_t res_unit_of_node(const llama_residency * r, const ggml_tensor * t
+     return -1;
+ }
+ 
++// Consecutive gates must advance exactly one ring step. That is not a property
++// of the callback protocol, it is a property of the two things the protocol is
++// being used on top of, and both are worth naming because neither is checked
++// anywhere else:
++//
++//   1. ONE split, ONE backend. The scheduler runs its node loop per split and
++//      restarts it at each split's j0, while gate_unit persists across splits.
++//      With a second split (or a second backend) the gate would re-see units it
++//      has already passed and the ring would re-read them. Output stays correct
++//      -- these are clean file pages, a wrong evict costs a re-fault and nothing
++//      else -- but the read volume silently multiplies, and the read volume IS
++//      the budget. llama_context::graph_compute carries the matching one-time
++//      warning on the scheduler's own split/backend counts.
++//   2. LAYER-SEQUENTIAL topology. "All of unit N-1 is finished at unit N's gate"
++//      holds because this graph builder emits blocks in order and every block
++//      feeds the next through the residual chain, so layer N-1's nodes are all
++//      ancestors of layer N's first weight node. A builder that interleaved
++//      units, or revisited one, would break the eviction ordering.
++//
++// A backend count cannot see (2), so the check here is behavioural and covers
++// both: any gate that is not the ring successor of the previous one means an
++// assumption above stopped holding. Warn once -- this is a diagnostic, not a
++// failure, because the consequence is IO and not wrong output.
++static void res_check_ring_step(llama_residency * r, int32_t prev, int32_t next) {
++    if (prev < 0 || r->ring.size() < 2) {
++        return;
++    }
++
++    const int n = (int) r->ring.size();
++    if (r->ring_pos[next] == (r->ring_pos[prev] + 1) % n) {
++        return;
++    }
++
++    if (r->warned_topology.exchange(true)) {
++        return;
++    }
++
++    LLAMA_LOG_WARN("residency: gate advanced %s -> %s, ring step %d -> %d of %d, which is not the "
++            "next ring unit -- weight streaming assumes one scheduler split over a "
++            "layer-sequential graph; expect re-read units (output is unaffected)\n",
++            r->units[prev].name.c_str(), r->units[next].name.c_str(),
++            r->ring_pos[prev], r->ring_pos[next], n);
++}
++
+ // The scheduler's eval callback, and the only thing that drives the ring during
+ // real execution. Its contract (ggml/src/ggml-backend.cpp:1730-1767):
+ //
+@@ -1162,10 +1209,13 @@ bool llama_residency_sched_eval_cb(struct ggml_tensor * t, bool ask, void * user
+         return false;
+     }
+ 
+-    if (u == r->gate_unit.load(std::memory_order_relaxed)) {
++    const int32_t prev = r->gate_unit.load(std::memory_order_relaxed);
++    if (u == prev) {
+         return false; // already gated on this unit, this is a later node of it
+     }
+ 
++    res_check_ring_step(r, prev, u);
++
+     r->gate_unit.store(u, std::memory_order_relaxed);
+ 
+     return true;
+-- 
+2.50.1 (Apple Git-155)
+

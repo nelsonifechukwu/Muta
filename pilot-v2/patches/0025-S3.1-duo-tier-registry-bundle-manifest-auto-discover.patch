@@ -1,0 +1,685 @@
+From 50cac21af14f966641f2814024c3ee995271ddde Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Thu, 13 Aug 2026 03:25:51 +0100
+Subject: [PATCH 25/32] S3.1: duo tier registry + bundle-manifest
+ auto-discovery
+
+Pure refactor: front/expert hardcoded pair -> tier registry (tier_role,
+tier_policy, tier_state, duo_tier). Registry populated by bundle-manifest
+auto-discovery (gguf_init_from_file no_alloc metadata read), overridable by
+--tier/--tier-file/--tier-ctx/--tier-policy; --front-prefix/--expert-prefix
+become aliases for --tier front=/--tier mid=. Loading order/semantics for
+front+mid unchanged; a discovered easy tier is registered but not loaded
+(S3.3 adds that). Policy is stored, not acted on (C4 wires it).
+
+Regression gate: router/codraft/verify on bundle/muta-duo-q.gguf produce
+byte-identical stdout before and after (sha256 verified); trio bundle
+(3 tiers) auto-discovers front+easy+mid and routes correctly with mid at
+its real prefix m2.; front-prefix/expert-prefix alias run matches the
+plain run. build-noblas and the container build (all 4 targets) are clean.
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 419 ++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 369 insertions(+), 50 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index 28d4503..768f0ef 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -22,6 +22,7 @@
+ #include "log.h"
+ #include "sampling.h"
+ 
++#include <atomic>
+ #include <cinttypes>
+ #include <cstdarg>
+ #include <cmath>
+@@ -30,20 +31,28 @@
+ #include <deque>
+ #include <fstream>
+ #include <iostream>
++#include <map>
+ #include <random>
+ #include <string>
+ #include <unistd.h>
++#include <utility>
+ #include <vector>
+ 
+ struct duo_params {
+     std::string bundle        = "bundle/muta-duo.gguf";
+-    std::string front_prefix  = "m0.";
+-    std::string expert_prefix = "m1.";
+     std::string mode          = "router";
+     std::string prompt;
+     std::string prompts_file;
+     std::string json_trace;
+ 
++    // tier registry overrides, keyed by tier name (front|easy|mid|top, or legacy "expert");
++    // resolved against a role enum in build_tier_registry(). --front-prefix/--expert-prefix
++    // are aliases that populate tier_prefix_ovr directly (see parse_args).
++    std::map<std::string, std::string> tier_prefix_ovr;
++    std::map<std::string, std::string> tier_file_ovr;
++    std::map<std::string, int32_t>     tier_ctx_ovr;
++    std::map<std::string, std::string> tier_policy_ovr;
++
+     int32_t ctx_front   = 4096;
+     int32_t ctx_expert  = 8192;
+     int32_t n_threads   = common_cpu_get_num_math();
+@@ -106,6 +115,120 @@ struct duo_model {
+     int     n_full_resync = 0;
+ };
+ 
++// ---------- tier registry ----------
++//
++// A tier is one model slot in the bundle: which name it answers to (role), which
++// prefix/file it loads from, and how its weights should be kept in RAM (policy).
++// The registry replaces the old hardcoded front/expert pair so a bundle can carry
++// more than two models (S3 streaming tiers); this task only builds the registry and
++// keeps front+mid loading exactly as before -- policy is stored, not acted on, and
++// easy is registered but not loaded (S3.3 adds that).
++
++enum tier_role {
++    TIER_FRONT = 0,
++    TIER_EASY,
++    TIER_MID,
++    TIER_TOP,   // registry slot only; no bundle ships this tier yet
++};
++
++enum tier_policy {
++    POL_MLOCK = 0,
++    POL_RESIDENT,
++    POL_STREAMED,
++    POL_AUTO,
++};
++
++enum tier_state {
++    TS_UNLOADED = 0,
++    TS_LOADING,
++    TS_READY,
++};
++
++static const char * tier_role_name(tier_role role) {
++    switch (role) {
++        case TIER_FRONT: return "front";
++        case TIER_EASY:  return "easy";
++        case TIER_MID:   return "mid";
++        case TIER_TOP:   return "top";
++    }
++    return "?";
++}
++
++static bool tier_role_from_str(const std::string & s, tier_role & out) {
++    if (s == "front")  { out = TIER_FRONT; return true; }
++    if (s == "easy")   { out = TIER_EASY;  return true; }
++    if (s == "mid")    { out = TIER_MID;   return true; }
++    if (s == "top")    { out = TIER_TOP;   return true; }
++    if (s == "expert") { out = TIER_MID;   return true; } // legacy bundle-manifest role name
++    return false;
++}
++
++static bool tier_policy_from_str(const std::string & s, tier_policy & out) {
++    if (s == "mlock")    { out = POL_MLOCK;    return true; }
++    if (s == "resident") { out = POL_RESIDENT; return true; }
++    if (s == "streamed") { out = POL_STREAMED; return true; }
++    if (s == "auto")     { out = POL_AUTO;     return true; }
++    return false;
++}
++
++// role default residency policy; C4 wires these into actual mlock/streaming calls,
++// no residency/load_mode side effects happen from this yet
++static tier_policy tier_policy_default(tier_role role) {
++    switch (role) {
++        case TIER_FRONT: return POL_MLOCK;
++        case TIER_EASY:  return POL_RESIDENT;
++        case TIER_MID:
++        case TIER_TOP:
++        default:         return POL_STREAMED;
++    }
++}
++
++struct duo_tier {
++    tier_role   role  = TIER_FRONT;
++    std::string prefix;
++    std::string file;              // source gguf; defaults to p.bundle
++    tier_policy policy = POL_AUTO;
++    int32_t     n_ctx  = -1;       // -1 = role default (front 4096, easy/mid 8192)
++    float       temp   = 0.0f;
++    float       top_p  = 0.0f;
++    duo_model   m;
++    std::atomic<tier_state> state { TS_UNLOADED };
++    void *      residency = nullptr; // residency handle slot for C4
++
++    duo_tier() = default;
++
++    // std::atomic has no move constructor, so std::vector<duo_tier> needs one written
++    // by hand; state is loaded/stored rather than moved (harmless, this task never
++    // moves a tier concurrently with another thread touching its state)
++    duo_tier(duo_tier && other) noexcept
++        : role(other.role), prefix(std::move(other.prefix)), file(std::move(other.file)),
++          policy(other.policy), n_ctx(other.n_ctx), temp(other.temp), top_p(other.top_p),
++          m(std::move(other.m)), state(other.state.load()), residency(other.residency) {}
++
++    duo_tier & operator=(duo_tier && other) noexcept {
++        role = other.role; prefix = std::move(other.prefix); file = std::move(other.file);
++        policy = other.policy; n_ctx = other.n_ctx; temp = other.temp; top_p = other.top_p;
++        m = std::move(other.m); state.store(other.state.load()); residency = other.residency;
++        return *this;
++    }
++
++    duo_tier(const duo_tier &) = delete;
++    duo_tier & operator=(const duo_tier &) = delete;
++};
++
++// n_ctx == -1 resolves to the role default; front/mid stay wired to the legacy
++// --ctx-front/--ctx-expert flags so those keep working unchanged
++static int32_t tier_ctx_resolved(const duo_tier & t, const duo_params & p) {
++    if (t.n_ctx > 0) {
++        return t.n_ctx;
++    }
++    switch (t.role) {
++        case TIER_FRONT: return p.ctx_front;
++        case TIER_MID:   return p.ctx_expert;
++        default:         return 8192; // easy/top role default
++    }
++}
++
+ struct seg_stats {
+     std::string text;       // committed text of the segment
+     std::string cut;        // boundary|cap|conf|eos|limit
+@@ -178,8 +301,12 @@ static void jtrace(const char * fmt, ...) {
+ static void print_usage() {
+     printf("usage: llama-duo [options]\n\n"
+            "  --bundle PATH           bundle gguf [bundle/muta-duo.gguf]\n"
+-           "  --front-prefix STR      [m0.]\n"
+-           "  --expert-prefix STR     [m1.]\n"
++           "  --front-prefix STR      [m0.] (alias)\n"
++           "  --expert-prefix STR     [m1.] (alias)\n"
++           "  --tier NAME=PREFIX          add/override a tier's bundle prefix (repeatable)\n"
++           "  --tier-file NAME=PATH       add/override a tier's source file [bundle]\n"
++           "  --tier-ctx NAME=N           add/override a tier's context size [role default]\n"
++           "  --tier-policy NAME=mlock|resident|streamed   add/override a tier's residency policy [role default]\n"
+            "  --mode router|codraft|random|verify   [router]\n"
+            "  -p, --prompt STR        user message (one turn)\n"
+            "  --prompts-file PATH     one user message per line (multi-turn)\n"
+@@ -211,6 +338,17 @@ static void print_usage() {
+            "  --selftest-seams        verify committed tokens vs from-scratch tokenization each turn\n");
+ }
+ 
++// splits "NAME=VALUE" for --tier/--tier-file/--tier-ctx/--tier-policy
++static void parse_tier_kv(const char * flag, const std::string & raw, std::string & name, std::string & value) {
++    const size_t eq = raw.find('=');
++    if (eq == std::string::npos || eq == 0) {
++        fprintf(stderr, "error: %s expects NAME=VALUE (got '%s')\n", flag, raw.c_str());
++        exit(1);
++    }
++    name  = raw.substr(0, eq);
++    value = raw.substr(eq + 1);
++}
++
+ static bool parse_args(int argc, char ** argv, duo_params & p) {
+     for (int i = 1; i < argc; i++) {
+         std::string arg = argv[i];
+@@ -222,8 +360,12 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+             return argv[++i];
+         };
+         if      (arg == "--bundle")          { p.bundle = need("--bundle"); }
+-        else if (arg == "--front-prefix")    { p.front_prefix = need("--front-prefix"); }
+-        else if (arg == "--expert-prefix")   { p.expert_prefix = need("--expert-prefix"); }
++        else if (arg == "--front-prefix")    { p.tier_prefix_ovr["front"] = need("--front-prefix"); }
++        else if (arg == "--expert-prefix")   { p.tier_prefix_ovr["mid"]   = need("--expert-prefix"); }
++        else if (arg == "--tier")            { std::string n, v; parse_tier_kv("--tier", need("--tier"), n, v); p.tier_prefix_ovr[n] = v; }
++        else if (arg == "--tier-file")       { std::string n, v; parse_tier_kv("--tier-file", need("--tier-file"), n, v); p.tier_file_ovr[n] = v; }
++        else if (arg == "--tier-ctx")        { std::string n, v; parse_tier_kv("--tier-ctx", need("--tier-ctx"), n, v); p.tier_ctx_ovr[n] = atoi(v.c_str()); }
++        else if (arg == "--tier-policy")     { std::string n, v; parse_tier_kv("--tier-policy", need("--tier-policy"), n, v); p.tier_policy_ovr[n] = v; }
+         else if (arg == "--mode")            { p.mode = need("--mode"); }
+         else if (arg == "-p" || arg == "--prompt") { p.prompt = need("-p"); }
+         else if (arg == "--prompts-file")    { p.prompts_file = need("--prompts-file"); }
+@@ -272,17 +414,58 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+ 
+ // ---------- model plumbing ----------
+ 
++// bundle-manifest auto-discovery: reads bundle.count/bundle.{i}.prefix/bundle.{i}.role
++// with no_alloc=true, so tensor data is never touched -- metadata-only, milliseconds
++// regardless of bundle size. Returns false if the file has no manifest (not a bundle,
++// or an older file predating this scheme); callers fall back to the legacy front/expert
++// pair in that case.
++static bool discover_bundle_tiers(const std::string & bundle_path, std::vector<std::pair<tier_role, std::string>> & out) {
++    struct gguf_init_params params = {
++        /*.no_alloc =*/ true,
++        /*.ctx      =*/ NULL,
++    };
++    struct gguf_context * ctx = gguf_init_from_file(bundle_path.c_str(), params);
++    if (!ctx) {
++        return false;
++    }
++
++    const int64_t count_key = gguf_find_key(ctx, "bundle.count");
++    if (count_key < 0 || gguf_get_kv_type(ctx, count_key) != GGUF_TYPE_UINT32) {
++        gguf_free(ctx);
++        return false;
++    }
++    const uint32_t count = gguf_get_val_u32(ctx, count_key);
++
++    for (uint32_t i = 0; i < count; i++) {
++        const std::string prefix_key = "bundle." + std::to_string(i) + ".prefix";
++        const std::string role_key   = "bundle." + std::to_string(i) + ".role";
++        const int64_t pk = gguf_find_key(ctx, prefix_key.c_str());
++        const int64_t rk = gguf_find_key(ctx, role_key.c_str());
++        if (pk < 0 || rk < 0 || gguf_get_kv_type(ctx, pk) != GGUF_TYPE_STRING || gguf_get_kv_type(ctx, rk) != GGUF_TYPE_STRING) {
++            continue; // malformed manifest entry; skip rather than abort discovery
++        }
++        tier_role role;
++        if (!tier_role_from_str(gguf_get_val_str(ctx, rk), role)) {
++            continue; // unknown role string; skip
++        }
++        out.push_back({ role, gguf_get_val_str(ctx, pk) });
++    }
++
++    gguf_free(ctx);
++    return true;
++}
++
+ static bool load_duo_model(duo_model & m, const duo_params & p, const std::string & name,
+-                           const std::string & prefix, int32_t n_ctx, float temp, float top_p,
+-                           bool checkpoint_seq = false) {
++                           const std::string & file, const std::string & prefix, int32_t n_ctx,
++                           float temp, float top_p, bool checkpoint_seq = false) {
+     m.name = name;
+ 
+     llama_model_params mparams = llama_model_default_params();
+     mparams.bundle_prefix = prefix.c_str();
+ 
+-    m.model.reset(llama_model_load_from_file(p.bundle.c_str(), mparams));
++    m.model.reset(llama_model_load_from_file(file.c_str(), mparams));
+     if (!m.model) {
+-        fprintf(stderr, "error: failed to load %s (prefix '%s') from %s\n", name.c_str(), prefix.c_str(), p.bundle.c_str());
++        fprintf(stderr, "error: failed to load %s (prefix '%s') from %s\n", name.c_str(), prefix.c_str(), file.c_str());
+         return false;
+     }
+     m.vocab = llama_model_get_vocab(m.model.get());
+@@ -627,8 +810,11 @@ static float route_score(duo_model & front, const std::string & user) {
+ // ---------- turn drivers ----------
+ 
+ struct duo_state {
+-    duo_model front;
+-    duo_model expert;
++    std::vector<duo_tier> tiers;
++    duo_tier * front = nullptr;
++    duo_tier * easy  = nullptr;
++    duo_tier * mid   = nullptr;
++
+     duo_params p;
+     std::vector<chat_turn> history;
+     std::mt19937 rng;
+@@ -637,6 +823,121 @@ struct duo_state {
+     const char * sys_expert = "You are the senior tutor. Continue the answer; if the draft so far has errors or drifts, correct course and steer it right, then continue.";
+ };
+ 
++// registry population: bundle-manifest auto-discovery first (see discover_bundle_tiers),
++// then explicit --tier*/--front-prefix/--expert-prefix overrides layer on top, matching
++// by role name (legacy "expert" maps to mid) and adding a role if the manifest didn't
++// carry it (this is how a future top tier gets registered as pure data, zero code change).
++static bool build_tier_registry(duo_state & s) {
++    const duo_params & p = s.p;
++
++    std::map<tier_role, std::string> prefix_ovr;
++    for (const auto & kv : p.tier_prefix_ovr) {
++        tier_role r;
++        if (!tier_role_from_str(kv.first, r)) {
++            fprintf(stderr, "error: --tier/--front-prefix/--expert-prefix: unknown tier name '%s'\n", kv.first.c_str());
++            return false;
++        }
++        prefix_ovr[r] = kv.second;
++    }
++    std::map<tier_role, std::string> file_ovr;
++    for (const auto & kv : p.tier_file_ovr) {
++        tier_role r;
++        if (!tier_role_from_str(kv.first, r)) {
++            fprintf(stderr, "error: --tier-file: unknown tier name '%s'\n", kv.first.c_str());
++            return false;
++        }
++        file_ovr[r] = kv.second;
++    }
++    std::map<tier_role, int32_t> ctx_ovr;
++    for (const auto & kv : p.tier_ctx_ovr) {
++        tier_role r;
++        if (!tier_role_from_str(kv.first, r)) {
++            fprintf(stderr, "error: --tier-ctx: unknown tier name '%s'\n", kv.first.c_str());
++            return false;
++        }
++        ctx_ovr[r] = kv.second;
++    }
++    std::map<tier_role, tier_policy> policy_ovr;
++    for (const auto & kv : p.tier_policy_ovr) {
++        tier_role r;
++        if (!tier_role_from_str(kv.first, r)) {
++            fprintf(stderr, "error: --tier-policy: unknown tier name '%s'\n", kv.first.c_str());
++            return false;
++        }
++        tier_policy pol;
++        if (!tier_policy_from_str(kv.second, pol)) {
++            fprintf(stderr, "error: --tier-policy %s=%s: unknown policy (want mlock|resident|streamed|auto)\n",
++                    kv.first.c_str(), kv.second.c_str());
++            return false;
++        }
++        policy_ovr[r] = pol;
++    }
++
++    std::vector<std::pair<tier_role, std::string>> discovered;
++    if (!discover_bundle_tiers(p.bundle, discovered)) {
++        // no manifest (older file predating the bundle-manifest scheme): fall back to
++        // the pre-registry front/expert pair so those files keep working unchanged
++        discovered = { { TIER_FRONT, "m0." }, { TIER_MID, "m1." } };
++    }
++
++    std::vector<tier_role> order;
++    std::map<tier_role, std::string> prefix_by_role;
++    for (const auto & d : discovered) {
++        if (prefix_by_role.find(d.first) == prefix_by_role.end()) {
++            order.push_back(d.first);
++        }
++        prefix_by_role[d.first] = d.second;
++    }
++    auto ensure_role = [&](tier_role r) {
++        if (prefix_by_role.find(r) == prefix_by_role.end()) {
++            order.push_back(r);
++            prefix_by_role[r] = "";
++        }
++    };
++    for (const auto & kv : prefix_ovr) { ensure_role(kv.first); }
++    for (const auto & kv : file_ovr)   { ensure_role(kv.first); }
++    for (const auto & kv : ctx_ovr)    { ensure_role(kv.first); }
++    for (const auto & kv : policy_ovr) { ensure_role(kv.first); }
++
++    s.tiers.resize(order.size());
++    for (size_t i = 0; i < order.size(); i++) {
++        duo_tier & t = s.tiers[i];
++        t.role   = order[i];
++        t.prefix = prefix_by_role[t.role];
++        t.file   = p.bundle;
++        t.policy = tier_policy_default(t.role);
++        t.n_ctx  = -1;
++
++        auto pit = prefix_ovr.find(t.role);
++        if (pit != prefix_ovr.end()) { t.prefix = pit->second; }
++        auto fit = file_ovr.find(t.role);
++        if (fit != file_ovr.end()) { t.file = fit->second; }
++        auto cit = ctx_ovr.find(t.role);
++        if (cit != ctx_ovr.end()) { t.n_ctx = cit->second; }
++        auto plit = policy_ovr.find(t.role);
++        if (plit != policy_ovr.end()) { t.policy = plit->second; }
++
++        // role sampling defaults: front keeps the --temp-front/--top-p-front flags,
++        // every other role keeps the --temp-expert/--top-p-expert flags (easy/top have
++        // no dedicated flags yet; this task never samples from them either way)
++        switch (t.role) {
++            case TIER_FRONT: t.temp = p.temp_front;  t.top_p = p.top_p_front;  break;
++            case TIER_MID:   t.temp = p.temp_expert; t.top_p = p.top_p_expert; break;
++            default:         t.temp = p.temp_expert; t.top_p = p.top_p_expert; break;
++        }
++    }
++
++    for (auto & t : s.tiers) {
++        switch (t.role) {
++            case TIER_FRONT: s.front = &t; break;
++            case TIER_EASY:  s.easy  = &t; break;
++            case TIER_MID:   s.mid   = &t; break;
++            default: break;
++        }
++    }
++    return true;
++}
++
+ static void trace_seg(const duo_params & p, int k, const char * author, const seg_stats & st) {
+     if (p.trace) {
+         fprintf(stderr, "[seg %d] author=%s tokens=%d ms=%.1f tok/s=%.1f mean_lp=%.2f cut=%s\n",
+@@ -652,9 +953,11 @@ static std::string run_verify_turn(duo_state & s, const std::string & user);
+ static std::string run_router_turn(duo_state & s, const std::string & user) {
+     const duo_params & p = s.p;
+     const int64_t t0 = ggml_time_us();
++    duo_model & front  = s.front->m;
++    duo_model & expert = s.mid->m;
+ 
+     // route on the front model, deterministically
+-    const float score = route_score(s.front, user);
++    const float score = route_score(front, user);
+     const bool hard = score >= p.route_threshold;
+ 
+     std::string transcript;
+@@ -664,14 +967,14 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+ 
+     if (!hard) {
+         // easy path: front answers with the confidence monitor armed
+-        if (!sync_to(s.front, render_prompt(s.front, s.sys_front, s.history, user, false), true)) {
++        if (!sync_to(front, render_prompt(front, s.sys_front, s.history, user, false), true)) {
+             return transcript;
+         }
+         gen_opts opts = { /*seg_min*/ 0, /*seg_max*/ 0, p.n_predict, /*conf*/ true, p.conf_window, p.conf_threshold, /*eos_ends*/ true };
+         // conf trigger needs segmentation checks enabled: use seg budgets that never boundary-cut
+         opts.seg_min = p.n_predict + 1;
+         opts.seg_max = p.n_predict + 1;
+-        seg_stats st = gen_segment(s.front, opts);
++        seg_stats st = gen_segment(front, opts);
+         n_tokens += st.n_tokens;
+         if (st.cut == "conf" || (st.cut == "eos" && !st.turn_done)) {
+             trigger = st.cut;
+@@ -686,12 +989,12 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+                 transcript.clear();
+                 stream_marker("\n[[draft discarded; expert restarts]]\n");
+             }
+-            std::string target = render_prompt(s.expert, s.sys_expert, s.history, user, false) + transcript;
+-            if (!sync_to(s.expert, target, true)) {
++            std::string target = render_prompt(expert, s.sys_expert, s.history, user, false) + transcript;
++            if (!sync_to(expert, target, true)) {
+                 return transcript;
+             }
+             gen_opts eopts = { 0, 0, p.n_predict - n_tokens, false, p.conf_window, p.conf_threshold, true };
+-            seg_stats est = gen_segment(s.expert, eopts);
++            seg_stats est = gen_segment(expert, eopts);
+             n_tokens += est.n_tokens;
+             transcript += est.text;
+             trace_seg(p, 1, "expert", est);
+@@ -705,11 +1008,11 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+     } else {
+         // hard path: expert answers directly (lazy history sync)
+         author = "expert";
+-        if (!sync_to(s.expert, render_prompt(s.expert, s.sys_expert, s.history, user, false), true)) {
++        if (!sync_to(expert, render_prompt(expert, s.sys_expert, s.history, user, false), true)) {
+             return transcript;
+         }
+         gen_opts opts = { 0, 0, p.n_predict, false, p.conf_window, p.conf_threshold, true };
+-        seg_stats st = gen_segment(s.expert, opts);
++        seg_stats st = gen_segment(expert, opts);
+         n_tokens = st.n_tokens;
+         transcript = st.text;
+         trace_seg(p, 0, "expert", st);
+@@ -730,25 +1033,27 @@ static std::string run_router_turn(duo_state & s, const std::string & user) {
+ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+     const duo_params & p = s.p;
+     const int64_t t0 = ggml_time_us();
++    duo_model & front  = s.front->m;
++    duo_model & expert = s.mid->m;
+ 
+-    const std::string front_prompt  = render_prompt(s.front,  s.sys_front,  s.history, user, false);
+-    const std::string expert_prompt = render_prompt(s.expert, s.sys_expert, s.history, user, false);
++    const std::string front_prompt  = render_prompt(front,  s.sys_front,  s.history, user, false);
++    const std::string expert_prompt = render_prompt(expert, s.sys_expert, s.history, user, false);
+ 
+     const bool random_mode = p.mode == "random";
+     std::uniform_real_distribution<float> coin(0.0f, 1.0f);
+     std::uniform_int_distribution<int>    seg_len(p.seg_min, std::max(p.seg_min, p.seg_max));
+ 
+     std::string transcript;
+-    duo_model * active = &s.front;
++    duo_model * active = &front;
+     if (random_mode) {
+-        active = coin(s.rng) < p.p_front ? &s.front : &s.expert;
++        active = coin(s.rng) < p.p_front ? &front : &expert;
+     }
+     int k = 0;
+     int n_total = 0, n_expert = 0;
+     bool turn_open = true;
+ 
+     while (turn_open) {
+-        const std::string & prompt = (active == &s.front) ? front_prompt : expert_prompt;
++        const std::string & prompt = (active == &front) ? front_prompt : expert_prompt;
+         if (!sync_to(*active, prompt + transcript, true)) {
+             break;
+         }
+@@ -762,21 +1067,21 @@ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+             opts.random_cut = true;
+             opts.conf_monitor = false;
+         } else {
+-            const bool exp_seg = active == &s.expert && p.seg_min_expert > 0;
++            const bool exp_seg = active == &expert && p.seg_min_expert > 0;
+             opts.seg_min      = exp_seg ? p.seg_min_expert : p.seg_min;
+             opts.seg_max      = exp_seg ? p.seg_max_expert : p.seg_max;
+-            opts.conf_monitor = (active == &s.front);
++            opts.conf_monitor = (active == &front);
+         }
+         opts.n_predict      = p.n_predict - n_total;
+         opts.conf_window    = p.conf_window;
+         opts.conf_threshold = p.conf_threshold;
+         // under --closer expert a front EOS is a handoff, not an ending
+-        opts.eos_ends_turn  = (active == &s.expert) || !p.closer_expert;
++        opts.eos_ends_turn  = (active == &expert) || !p.closer_expert;
+ 
+         seg_stats st = gen_segment(*active, opts);
+         transcript += st.text;
+         n_total += st.n_tokens;
+-        if (active == &s.expert) {
++        if (active == &expert) {
+             n_expert += st.n_tokens;
+         }
+         trace_seg(p, k, active->name.c_str(), st);
+@@ -785,11 +1090,11 @@ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+         if (st.turn_done || n_total >= p.n_predict) {
+             turn_open = false;
+         } else if (st.cut == "eos" && !st.turn_done) {
+-            active = &s.expert;    // front EOS handoff
++            active = &expert;    // front EOS handoff
+         } else if (random_mode) {
+-            active = coin(s.rng) < p.p_front ? &s.front : &s.expert;
++            active = coin(s.rng) < p.p_front ? &front : &expert;
+         } else {
+-            active = (active == &s.front) ? &s.expert : &s.front;
++            active = (active == &front) ? &expert : &front;
+         }
+     }
+ 
+@@ -798,11 +1103,11 @@ static std::string run_codraft_turn(duo_state & s, const std::string & user) {
+     if (p.trace) {
+         fprintf(stderr, "[turn] mode=%s segs=%d tokens=%d expert_share=%.2f ms=%.1f tok/s=%.1f ingest_front=%.1fms ingest_expert=%.1fms resync_front=%d resync_expert=%d\n",
+                 p.mode.c_str(), k, n_total, f, t_us / 1e3, t_us > 0 ? n_total * 1e6 / (double) t_us : 0.0,
+-                s.front.t_ingest_us / 1e3, s.expert.t_ingest_us / 1e3,
+-                s.front.n_full_resync, s.expert.n_full_resync);
++                front.t_ingest_us / 1e3, expert.t_ingest_us / 1e3,
++                front.n_full_resync, expert.n_full_resync);
+     }
+     jtrace("{\"type\":\"turn\",\"mode\":\"%s\",\"segs\":%d,\"tokens\":%d,\"expert_share\":%.3f,\"ms\":%.1f,\"ingest_front_ms\":%.1f,\"ingest_expert_ms\":%.1f}",
+-           p.mode.c_str(), k, n_total, f, t_us / 1e3, s.front.t_ingest_us / 1e3, s.expert.t_ingest_us / 1e3);
++           p.mode.c_str(), k, n_total, f, t_us / 1e3, front.t_ingest_us / 1e3, expert.t_ingest_us / 1e3);
+     return transcript;
+ }
+ 
+@@ -839,8 +1144,8 @@ static double logprob_row(const float * z, int n, llama_token tok) {
+ static std::string run_verify_turn(duo_state & s, const std::string & user) {
+     const duo_params & p = s.p;
+     const int64_t t0 = ggml_time_us();
+-    duo_model & fr = s.front;
+-    duo_model & ex = s.expert;
++    duo_model & fr = s.front->m;
++    duo_model & ex = s.mid->m;
+     const int n_vocab = llama_vocab_n_tokens(ex.vocab);
+     const bool greedy = p.verify_rule == "greedy";
+ 
+@@ -1111,7 +1416,7 @@ static std::string run_verify_turn(duo_state & s, const std::string & user) {
+ // The expert's own sampled segments may legally deviate from canonical tokenization (they are
+ // never re-encoded), so expert mismatches are reported as counts, not failures.
+ static void selftest_seams(duo_state & s) {
+-    for (duo_model * m : { &s.front, &s.expert }) {
++    for (duo_model * m : { &s.front->m, &s.mid->m }) {
+         std::vector<llama_token> fresh = common_tokenize(m->vocab, m->committed_text, false, true);
+         if (fresh == m->committed_tokens) {
+             fprintf(stderr, "[selftest] %s: OK (%zu tokens)\n", m->name.c_str(), fresh.size());
+@@ -1174,33 +1479,47 @@ int main(int argc, char ** argv) {
+     duo_state s;
+     s.p = p;
+     s.rng.seed(p.seed);
+-    s.expert.append_only = true;
+-    s.front.color  = "\033[36m";   // cyan
+-    s.expert.color = "\033[33m";   // yellow
++
++    if (!build_tier_registry(s)) {
++        return 1;
++    }
++    if (!s.front || !s.mid) {
++        fprintf(stderr, "error: bundle manifest / --tier flags did not yield both a front and a mid tier\n");
++        return 1;
++    }
++
++    s.mid->m.append_only = true;
++    s.front->m.color = "\033[36m";   // cyan
++    s.mid->m.color   = "\033[33m";   // yellow
+ 
+     const bool interactive = p.prompt.empty() && p.prompts_file.empty();
+     g_stream.on    = !p.route_only && (p.stream == 1 || (p.stream == -1 && interactive));
+     g_stream.color = isatty(STDOUT_FILENO);
+ 
+     if (!p.quiet) {
+-        fprintf(stderr, "loading front  ('%s') from %s\n", p.front_prefix.c_str(), p.bundle.c_str());
++        fprintf(stderr, "loading front  ('%s') from %s\n", s.front->prefix.c_str(), s.front->file.c_str());
+     }
+-    if (!load_duo_model(s.front, p, "front", p.front_prefix, p.ctx_front, p.temp_front, p.top_p_front)) {
++    if (!load_duo_model(s.front->m, p, "front", s.front->file, s.front->prefix,
++                        tier_ctx_resolved(*s.front, p), s.front->temp, s.front->top_p)) {
+         return 1;
+     }
++    if (s.easy && !p.quiet) {
++        fprintf(stderr, "tier %s registered (loading lands in S3.3)\n", tier_role_name(s.easy->role));
++    }
+     if (!p.quiet) {
+-        fprintf(stderr, "loading expert ('%s') from %s\n", p.expert_prefix.c_str(), p.bundle.c_str());
++        fprintf(stderr, "loading expert ('%s') from %s\n", s.mid->prefix.c_str(), s.mid->file.c_str());
+     }
+     const bool need_checkpoint = p.mode == "verify" || (p.mode == "router" && p.hard_mode == "verify");
+-    if (!load_duo_model(s.expert, p, "expert", p.expert_prefix, p.ctx_expert, p.temp_expert, p.top_p_expert,
++    if (!load_duo_model(s.mid->m, p, "expert", s.mid->file, s.mid->prefix,
++                        tier_ctx_resolved(*s.mid, p), s.mid->temp, s.mid->top_p,
+                         /*checkpoint_seq*/ need_checkpoint)) {
+         return 1;
+     }
+ 
+     // resolve verdict tokens in the front vocab (bare letters follow "assistant\n")
+     {
+-        std::vector<llama_token> a = common_tokenize(s.front.vocab, "A", false, false);
+-        std::vector<llama_token> b = common_tokenize(s.front.vocab, "B", false, false);
++        std::vector<llama_token> a = common_tokenize(s.front->m.vocab, "A", false, false);
++        std::vector<llama_token> b = common_tokenize(s.front->m.vocab, "B", false, false);
+         if (a.size() != 1 || b.size() != 1) {
+             fprintf(stderr, "error: verdict strings are not single tokens (A=%zu, B=%zu)\n", a.size(), b.size());
+             return 1;
+@@ -1217,7 +1536,7 @@ int main(int argc, char ** argv) {
+             fprintf(stderr, "\n=== turn %zu: %s\n", idx, user.c_str());
+         }
+         if (p.route_only) {
+-            const float score = route_score(s.front, user);
++            const float score = route_score(s.front->m, user);
+             printf("%.4f\t%s\n", score, user.c_str());
+             fflush(stdout);
+             return;
+@@ -1276,8 +1595,8 @@ int main(int argc, char ** argv) {
+         fclose(g_json);
+     }
+     // free in reverse order of creation
+-    s.expert.smpl.reset(); s.expert.ctx.reset(); s.expert.model.reset();
+-    s.front.smpl.reset();  s.front.ctx.reset();  s.front.model.reset();
++    s.mid->m.smpl.reset();   s.mid->m.ctx.reset();   s.mid->m.model.reset();
++    s.front->m.smpl.reset(); s.front->m.ctx.reset(); s.front->m.model.reset();
+     llama_backend_free();
+     return 0;
+ }
+-- 
+2.50.1 (Apple Git-155)
+
