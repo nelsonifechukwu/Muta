@@ -705,3 +705,130 @@ commit, **`23fb79d`**, `S3.2: fix routing-state leak, opener attribution + escal
   (all clean); `--codraft-tiers easy,mid` unchanged through the readiness guard (6 segments,
   3/3 selftests OK); all five `--codraft-tiers` error paths; `llama-duo` rebuild 0 errors/
   0 warnings.
+
+### Task C3 (S3.3) — staged startup: mlocked front first, background tier loader, 2026-08-13
+
+Commit **`be69fef`** (`llama.cpp`, branch `streaming`), `S3.3: staged startup - mlocked front
+first, background tier loader` (1 file, +374/-59). `main()` now loads **only** the front tier
+and starts answering; one background thread loads easy then mid, serialized, and publishes each
+tier. This is the foundation of the TTFT mechanism — measured **first token 431-545 ms** on the
+trio versus **11 247 ms** for the same prompt with `--no-ttft-opener` (macOS, warm cache,
+`llama.cpp/build` BLAS-on arm64), a 26x cut that comes entirely from taking the two 248k-vocab
+parses off the critical path. The formal G11 gate (cold cache, in-container, under the cap) is
+still C4/Phase-gate work; these are the measurement hooks and the mechanism.
+
+- **Front-first + mlock.** `POL_MLOCK` (the front's default policy) is now acted on at load
+  time: `mparams.load_mode = LLAMA_LOAD_MODE_MMAP_MLOCK` (`duo.cpp:537`). This is the load-time
+  half of tier policy; C4 still owns the residency half.
+  - **Measured mlock size: 127 389 760 B = 121.5 MiB** for the trio front (`muta-trio.gguf`),
+    of which 98.9 MiB is SmolLM2's own tensor span and **22.6 MiB is the shared bundle
+    header/KV** in front of it — B1's loader grows the lock from the mapping base
+    (`grow_to(weight->offs + n_size)`, `llama-model-loader.cpp:1594`), so a bundle member locks
+    its own range *plus everything before it in the file*. For `muta-duo-q.gguf` (0.8B hybrid
+    front) the same figure is 560 670 336 B = 534.7 MiB. C4's `mlock_front_mib` cross-term
+    should use these numbers, not the model's tensor span.
+  - Verified three ways rather than assumed: (1) no `failed to mlock` warning at default
+    limits; (2) `ulimit -l` bracketing — at 116 MiB llama.cpp reports `failed to mlock
+    606208-byte buffer (after previously locking 121602048 bytes)` and at 128 MiB it succeeds
+    silently, bracketing the true total at 121.5 MiB; (3) the per-prefix byte ranges read out
+    of the bundle with the tree's `gguf-py` agree exactly. System-wide `vm_stat` wired-page
+    deltas were tried first and **discarded as evidence**: background activity on this machine
+    moved wired memory by ±400 MiB, swamping the signal.
+  - Degradation confirmed, not theorised: the forced-failure runs above load and answer
+    normally after the warning. Note `-q` suppresses that warning (only ERROR passes the quiet
+    callback), so a silently-unlocked front is possible in gate runs — check without `-q` when
+    residency matters.
+- **The loader thread.** `tier_loader_main` (`duo.cpp:1221`) → `tier_load_bg` (`:1178`) per
+  tier: `TS_LOADING` → `load_duo_model` (unchanged) → publish. Publication is a release store
+  **under** `tier_mu` plus `notify_all` (`tier_publish`, `:993`); consumers block in
+  `tier_acquire` (`:1004`), which fast-paths an acquire load, prints one `[tier] waiting for
+  <name> (loading) reason=...` line, and then sleeps on the cv — no spinning, one line per
+  wait. Single-writer discipline is what makes the models lock-free: main writes front's state
+  before the thread exists, the loader is the only writer of every other tier's state *and* of
+  that tier's `duo_model`, and main touches a `duo_model` only after an acquire load has
+  observed `TS_READY`. Audited every `->m` dereference in the file against that rule.
+- **`TS_FAILED` added to the tier_state enum** (`duo.cpp:177`) — a deviation from the brief's
+  three-state enum, and a necessary one: a background load that fails must wake its waiters,
+  or `tier_acquire` would sleep on a predicate that can never become true. It is also the
+  "skipped at teardown" state. A failed background load now sets the process exit code to 1.
+- **Fallbacks (the G11 overlap).**
+  - *easy not ready* → the front answers conf-monitored, **without blocking** (`duo.cpp:1317`,
+    trace `[tier] easy not ready, front answers (conf-monitored)`). Gated with a 3-turn run
+    under the slow-load hook: turn 1 `author=front` in 232 ms while easy loaded, turn 3
+    `author=easy` once it had.
+  - *mid not ready on a hard route* → the front keeps extending its opener with committed,
+    seam-cut, conf-monitored segments, polling `TS_READY` at segment boundaries only (no
+    cv-wait inside generation), then blocks on `tier_acquire`. With the opener off it is a
+    plain blocking acquire — the deterministic path the identity gates run on.
+  - **Deviation:** the brief also names the *escalation* target (easy→mid conf escalation) as
+    an overlap site. Not implemented there, deliberately: front text appended after a draft
+    that `--no-carry-draft` is about to discard would be re-ordered against what the user
+    already watched stream, and the escalation's checkpoint-restore + canonical re-ingest
+    assumes the author's own text is the only thing past the boundary. By escalation time a
+    whole easy answer has been generated, so mid is loaded in practice. Reasoning recorded at
+    `duo.cpp:1352-1359`.
+- **Extension budget — plan said `3*seg_max`, tree needed more (measured).** With the plan's
+  cap alone, the first trio gate run at `-n 128` produced `[opener] 62 + [seg 0..2] 66` front
+  tokens and handed the routed expert **a zero budget** (`[seg 3] author=expert tokens=0
+  cut=limit`): the 135M wrote the entire hard answer. The cap is now
+  `min(3*seg_max, n_predict/2)`, with a segment started only when `seg_min` tokens still fit
+  (`duo.cpp:1411`). After the fix the same run gives opener 62 / expert 66.
+- **Determinism under overlap — measured, and better than the brief expected.** Extension
+  segment *count* depends on load timing, so hard-prompt answers under the opener are not
+  guaranteed byte-identical across machines. On this machine they were: at `-n 512` two runs
+  whose mid load times differed by 2.1 s (5 785 ms vs 7 917 ms) produced **byte-identical
+  answers** (`d648b1cc…`), because the extension terminates on the *budget cap* (256 tokens:
+  62+27+33+38+40+27+29), never on mid-ready — the front's whole budget is ~0.8 s of generation
+  against a 4-9 s mid load, so the cap always binds first. What did vary is where the
+  `[tier] easy ready` line lands in the trace (between `[seg 3]` and `[seg 4]` in one run,
+  between `[seg 4]` and `[seg 5]` in the other) — real interleaving evidence with no effect on
+  text. The non-deterministic case is real but unreachable here; it needs mid to turn READY
+  *mid-extension*. **`--no-ttft-opener` is the deterministic path** and is what the identity
+  gates use.
+- **Quality finding, reported not papered over.** In that `-n 512` overlap run the front wrote
+  256 of 260 tokens and the expert closed with 4 tokens and EOS, because the front's text
+  *looked* finished. The answer is seam-clean and coherent but mathematically worse than the
+  expert-alone answer (it wanders into "solve for y" and "3x = 17"). The conf monitor does not
+  catch it — the front's mean logprob stayed at -0.09..-0.29, nowhere near the -2.5 threshold:
+  it is confidently wrong. G11 wants the overlap; whoever owns the TTFT-vs-quality trade-off
+  should know it currently costs answer quality on hard prompts at long `-n`, and that
+  `--hard-mode verify` (which re-verifies the seeded span) is the existing lever against it.
+- **Test-only hook: `MUTA_SLOW_LOAD_MS=<n>`** (`duo.cpp:1166`) sleeps n ms before each
+  *background* load so the not-ready fallbacks can be exercised deterministically. Deliberately
+  an env var and not a flag, absent from `--help`; it exists to make gate evidence
+  reproducible. Never set it in a benchmark run.
+- **Join discipline (no detached thread, no use-after-free).** The normal path sets
+  `loader_stop` and joins explicitly *before* any tier is freed (`duo.cpp:2148`). Every other
+  path is covered structurally: `duo_state`'s **last** member is a `loader_joiner` whose
+  destructor joins (`:980`), and members are destroyed in reverse declaration order, so the
+  thread is joined while `tiers`/`tier_mu`/`tier_cv` are still alive. The thread is started
+  only after every fail-fast check (`:2076`), so no argument-validation error can leave a
+  loader running. `loader_stop` lets a *not yet started* load be skipped; a load already inside
+  `llama_model_load_from_file` cannot be aborted and is joined to completion.
+- **Two races the second thread introduced, closed in the same commit.** `jtrace()` was three
+  stdio calls, so the loader's `[tier]` event could land between a turn event's payload and its
+  newline — now mutex-guarded, atomic as a *line* (`duo.cpp:344`; verified: 8/8 JSON lines
+  parse in a concurrent run). The `-q` log callback's `static ggml_log_level prev` (CONT-level
+  carry) is now `std::atomic` (`:1940`) — it runs on both threads.
+- **Gates (all serialized, macOS `llama.cpp/build` BLAS-on arm64).**
+  - (a) **Byte-identity, PASS, three times.** The three C1/C2 baselines on `muta-duo-q`
+    (`4bbb514f…` / `f726b586…` / `eb906de6…`) reproduced exactly after the first commit, after
+    the extension-budget fix, and again after the race fixes. Staged loading does not move a
+    single output byte; the `[tier]`/`[ttft]` lines are stderr, stdout is untouched.
+  - (b) **Trio overlap, PASS.** `-n 512`, hard prompt, opener on: `[opener] author=front` +
+    `[seg 0..5] author=front` with `[tier] easy ready load_ms=…` interleaved among them, then
+    `[tier] waiting for mid (loading) reason=hard route` → `[tier] mid ready load_ms=5784.8` →
+    `[seg 6] author=expert`. TTFT 430.9 ms vs 11 247.3 ms for the `--no-ttft-opener` control.
+  - (c) **easy-not-ready fallback, PASS** (3-turn run above, `MUTA_SLOW_LOAD_MS=4000`).
+  - (d) **Teardown, PASS, four ways.** `--route-only` on the trio exits in 2.99 s with mid
+    skipped; the same under the slow-load hook exits in 5.42 s with both tiers skipped;
+    immediate EOF on the trio exits in 1.24 s; immediate EOF on `muta-duo-q` exits in 9.51 s
+    because mid's load was already in flight and is joined to completion. All exit 0, no hang,
+    no crash. ASAN was skipped as agreed — the argument is structural (single-writer tiers,
+    join-before-free, joiner as last member) and the four teardown races above exercise it.
+  - (e) **Builds clean:** macOS `build` (BLAS-on) and `build-noblas`, and the 4-target GCC
+    container build (`scripts/stream_env.sh build`, exit 0, 0 `error:`, the only `warning:`
+    being cmake's ccache notice; `duo.cpp.o` visibly recompiled).
+  - Extra: `--codraft-tiers easy,mid` on the trio now **waits** where C2's I5 guard errored —
+    `[tier] waiting for easy … / waiting for mid …`, 3 segments, `[selftest] front/easy/expert:
+    OK`, 0 resyncs.
