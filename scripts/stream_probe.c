@@ -147,12 +147,14 @@ static void touch_region(void *addr, size_t len) {
 
 typedef struct {
     char name[48];
-    long long before_cur; /* cgroup memory.current before the step's action, -1 = n/a */
-    long long after_cur;  /* cgroup memory.current after,  -1 = n/a */
-    double mincore_pct;   /* resident %% of the region after the step, -1 = n/a */
-    double elapsed_ms;    /* wall time of the step's measured action */
-    long long rss_kb;     /* /proc/self/smaps_rollup Rss after the step, -1 = n/a */
-    long long stat_file;  /* cgroup memory.stat "file" after the step, -1 = n/a */
+    long long before_cur;  /* cgroup memory.current before the step's action, -1 = n/a */
+    long long after_cur;   /* cgroup memory.current after,  -1 = n/a */
+    double mincore_pct;    /* resident %% of the region after the step, -1 = n/a */
+    double elapsed_ms;     /* wall time of the step's measured action */
+    long long rss_kb;      /* /proc/self/smaps_rollup Rss after the step, -1 = n/a */
+    long long stat_file;   /* cgroup memory.stat "file" after the step, -1 = n/a */
+    double pre_mincore_pct; /* resident %% right before the step's action; -1 = not recorded
+                              * (only step 5 sets this, to show its warm-guard precondition). */
 } row_t;
 
 #define MAX_ROWS 16
@@ -174,6 +176,7 @@ static int record_row(const char *name, long long before_cur, long long after_cu
     r->elapsed_ms = elapsed_ms;
     r->rss_kb = read_smaps_rollup_rss_kb();
     r->stat_file = read_cgroup_memory_stat_file();
+    r->pre_mincore_pct = -1.0;
     return idx;
 }
 
@@ -224,6 +227,33 @@ static void *willneed_thread(void *arg_) {
     double t1 = now_ms();
     arg->rc = (rc == 0) ? 0 : errno;
     arg->call_elapsed_ms = t1 - t0;
+    return NULL;
+}
+
+/* Step 4b discriminator: does a single big WILLNEED get capped by a
+ * per-call readahead limit (force_page_cache_ra chunks against
+ * bdi->io_pages/ra_pages), one that resets on every fresh madvise() call?
+ * If so, repeated small calls should out-prefetch one big call. */
+typedef struct {
+    void *addr;
+    size_t len;
+    size_t chunk;
+    double total_elapsed_ms; /* wall time of the whole chunk loop */
+    int rc;                  /* first non-zero errno seen across all calls, else 0 */
+} willneed_chunked_arg_t;
+
+static void *willneed_chunked_thread(void *arg_) {
+    willneed_chunked_arg_t *arg = (willneed_chunked_arg_t *)arg_;
+    double t0 = now_ms();
+    arg->rc = 0;
+    for (size_t off = 0; off < arg->len; off += arg->chunk) {
+        size_t remaining = arg->len - off;
+        size_t this_len = (arg->chunk < remaining) ? arg->chunk : remaining;
+        int rc = madvise((char *)arg->addr + off, this_len, MADV_WILLNEED);
+        if (rc != 0 && arg->rc == 0) arg->rc = errno;
+    }
+    double t1 = now_ms();
+    arg->total_elapsed_ms = t1 - t0;
     return NULL;
 }
 
@@ -449,10 +479,87 @@ int main(int argc, char **argv) {
                            : "did NOT block (returned promptly, readahead continued async)");
         } else {
             printf("  [madvise(WILLNEED) call: %.2f ms; mincore never reached 95%% within "
-                   "%.0f ms timeout (last seen %.1f%%)]\n",
+                   "%.0f ms timeout (last seen %.1f%%); does not block the go/no-go, "
+                   "decided by steps 3/5 only -- see step 4b for the chunked discriminator]\n",
                    arg.call_elapsed_ms, timeout_ms, mc);
         }
     }
+
+    /* ---- Step 4b: chunked-WILLNEED discriminator. Does one big WILLNEED
+     * (step 4) stall because of a per-call readahead cap that resets on
+     * every fresh madvise() call? Evict C to a clean cold baseline, then
+     * issue WILLNEED in CHUNK-sized pieces across the whole region from a
+     * second thread while polling mincore exactly like step 4. ---- */
+    {
+        const size_t CHUNK = 2UL * 1024 * 1024;
+
+        madvise(C, region_len, MADV_DONTNEED);
+#ifndef __APPLE__
+        {
+            int rc = posix_fadvise(fd, (off_t)off_c, (off_t)region_len, POSIX_FADV_DONTNEED);
+            if (rc != 0) fprintf(stderr, "posix_fadvise(C) pre-4b evict: %s\n", strerror(rc));
+        }
+#endif
+        double mc_start = mincore_percent(C, region_len);
+
+        long long before = read_cgroup_memory_current();
+        willneed_chunked_arg_t arg = {
+            .addr = C, .len = region_len, .chunk = CHUNK, .total_elapsed_ms = 0, .rc = 0};
+        double t0 = now_ms();
+        pthread_t th;
+        if (pthread_create(&th, NULL, willneed_chunked_thread, &arg) != 0) {
+            perror("pthread_create (4b)");
+            return 1;
+        }
+        const double timeout_ms = 10000.0;
+        double t_reach95 = -1.0;
+        double mc = mc_start;
+        for (;;) {
+            mc = mincore_percent(C, region_len);
+            double elapsed = now_ms() - t0;
+            if (mc >= 95.0) {
+                t_reach95 = elapsed;
+                break;
+            }
+            if (elapsed >= timeout_ms) break;
+            struct timespec ts = {.tv_sec = 0, .tv_nsec = 50L * 1000 * 1000};
+            nanosleep(&ts, NULL);
+        }
+        pthread_join(th, NULL);
+        double t1 = now_ms();
+        long long after = read_cgroup_memory_current();
+        double mc_final = mincore_percent(C, region_len);
+        record_row("4b. chunked WILLNEED(2MiB)+poll", before, after, mc_final, t1 - t0);
+        if (arg.rc != 0)
+            fprintf(stderr, "chunked madvise(C, WILLNEED) failed: %s\n", strerror(arg.rc));
+
+        size_t nchunks = (region_len + CHUNK - 1) / CHUNK;
+        if (t_reach95 >= 0.0) {
+            double bw = t_reach95 > 0.0
+                            ? ((double)region_len / 1024.0 / 1024.0) / (t_reach95 / 1000.0)
+                            : 0.0;
+            printf("  [chunked WILLNEED: %zu calls of %zuMiB (started from %.1f%% resident); "
+                   "total call time %.2f ms; mincore>=95%% reached after: %.2f ms; "
+                   "prefetch bandwidth: %.1f MiB/s]\n",
+                   nchunks, CHUNK / 1024 / 1024, mc_start, arg.total_elapsed_ms, t_reach95, bw);
+        } else {
+            printf("  [chunked WILLNEED: %zu calls of %zuMiB (started from %.1f%% resident); "
+                   "total call time %.2f ms; mincore never reached 95%% within %.0f ms "
+                   "timeout (last seen %.1f%%); does not block the go/no-go, decided by "
+                   "steps 3/5 only]\n",
+                   nchunks, CHUNK / 1024 / 1024, mc_start, arg.total_elapsed_ms, timeout_ms, mc);
+        }
+    }
+
+    /* Ensure region C is resident before step 5's plan-B validation --
+     * step 4b above may already have warmed it; if not, fall back to an
+     * explicit touch, so step 5 always measures the fallback's real
+     * eviction behavior against a genuinely resident region rather than a
+     * confound (docs/WORKLOG.md Phase 5 / Task A3 fix). */
+    if (mincore_percent(C, region_len) < 95.0) {
+        touch_region(C, region_len);
+    }
+    double mc_pre5 = mincore_percent(C, region_len);
 
     /* ---- Step 5: plan-B evict validation on region C (now resident):
      * MAP_FIXED remap over the same mapping/offset, then fadvise. ---- */
@@ -482,6 +589,7 @@ int main(int argc, char **argv) {
         long long after = read_cgroup_memory_current();
         double mc = mincore_percent(C, region_len);
         idx5 = record_row("5. MAP_FIXED remap C + fadvise", before, after, mc, t1 - t0);
+        g_rows[idx5].pre_mincore_pct = mc_pre5;
     }
 
     print_table();
@@ -499,23 +607,30 @@ int main(int argc, char **argv) {
         double frac3 = (double)(b3 - a3) / (double)region_len;
         printf("step 3 uncharge: %lld -> %lld bytes (%.1f%% of region reclaimed)\n", b3, a3,
                frac3 * 100.0);
+
+        double frac5 = -1.0;
+        bool have5 = (b5 >= 0 && a5 >= 0);
+        if (have5) {
+            frac5 = (double)(b5 - a5) / (double)region_len;
+            printf("step 5 uncharge: %lld -> %lld bytes (%.1f%% of region reclaimed; "
+                   "pre-step residency %.1f%%)\n",
+                   b5, a5, frac5 * 100.0, g_rows[idx5].pre_mincore_pct);
+        } else {
+            printf("step 5 uncharge: data unavailable\n");
+        }
+
         if (frac3 >= 0.90) {
             printf("VERDICT: PRIMARY -- madvise(MADV_DONTNEED) then "
                    "posix_fadvise(POSIX_FADV_DONTNEED), in that order, uncharges cgroup v2 "
                    "memory.current.\n");
-        } else if (b5 >= 0 && a5 >= 0) {
-            double frac5 = (double)(b5 - a5) / (double)region_len;
-            printf("step 5 uncharge: %lld -> %lld bytes (%.1f%% of region reclaimed)\n", b5,
-                   a5, frac5 * 100.0);
-            if (frac5 >= 0.90) {
-                printf("VERDICT: FALLBACK -- MAP_FIXED remap + posix_fadvise uncharges "
-                       "cgroup v2 memory.current (the plain madvise+fadvise ordering did "
-                       "not reach 90%%).\n");
-            } else {
-                printf("VERDICT: NONE -- neither primitive uncharges >=90%% of the region "
-                       "under cgroup v2 memory.current. BLOCKED: the streaming design's "
-                       "core eviction assumption does not hold as tested.\n");
-            }
+        } else if (have5 && frac5 >= 0.90) {
+            printf("VERDICT: FALLBACK -- MAP_FIXED remap + posix_fadvise uncharges "
+                   "cgroup v2 memory.current (the plain madvise+fadvise ordering did "
+                   "not reach 90%%).\n");
+        } else if (have5) {
+            printf("VERDICT: NONE -- neither primitive uncharges >=90%% of the region "
+                   "under cgroup v2 memory.current. BLOCKED: the streaming design's "
+                   "core eviction assumption does not hold as tested.\n");
         } else {
             printf("VERDICT: NONE -- step 3 did not reach 90%% and step 5 data is "
                    "unavailable.\n");
