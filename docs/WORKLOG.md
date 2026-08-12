@@ -232,3 +232,129 @@ llama.cpp branch `streaming`: `84c4f11` (`S1c: ledger polish + flag validation`)
   - **Phase B gate re-run** (`scripts/stream_env.sh drop_caches` then `cgrun 3g /build/bin/llama-completion -m /models/Qwen3.5-4B-Q4_K_M.gguf --stream-weights --max-ram-mib 2048 --stream-disk-gbps 2.977 --residency-selftest -no-cnv -p x -n 1`): **PASS**, exit 0, `OOMKilled=false`. Ledger unchanged from the B2/B3 baseline (`config = head-pinned`, `pinned 1094.7 MiB` in 9 blk + head + misc, `streamed 1508.8 MiB`, `predicted s/token = 0.531`); selftest `pins resident 100.00% (1094.6 / 1094.6 MiB)`, evict `100.00% -> 0.00%` (hard Linux assert), prefetch `3584.5 MiB/s`, ring walk 46 steps, peak tracked == peak resident == `211.0 MiB` against limit `281.3 MiB`, `end (all asserts held)`, `PASS`. `memory.peak = 1,681,481,728 B` (1603.6 MiB) under both the 2048 MiB budget and the 3g cap; `memory.stat`: `anon 393,216 B`, `file 1,368,109,056 B`. Also newly visible in this run (item 2b's fix, at default `--residency-selftest` verbosity which was already raised, so this run doesn't by itself prove default-verbosity visibility -- that was checked separately below): `W load_tensors: stream_weights is enabled, disabling extra buffer types ...`.
   - **Repack-notice default-verbosity check, separate from the gate run above** (macOS, `--stream-weights` alone, no `-lv`, no `--residency-selftest`): `W load_tensors: stream_weights is enabled, disabling extra buffer types (repacked weights cannot be streamed)` printed before any other output -- confirms the fix holds without the selftest's verbosity override.
   - **Validation smoke** (macOS, parse-time, no model ever opened): `--max-ram-mib -1` -> `error while handling argument "--max-ram-mib": max-ram-mib must be non-negative`, exit 1.
+
+### Task MA (Milestone A checkpoint) — the run matrix, and the headline answer
+
+Engine unchanged from B4: llama.cpp `streaming` @ `84c4f11`, tree clean, never touched in this
+task (`scripts/stream_env.sh build` re-run at the top of every arm confirms current, no-ops
+fast). New: `scripts/milestone_a.sh`, the reproducibility harness for MA-1/1b/2/3, and this
+entry. **Headline: yes, Qwen3.5-4B stream-decodes under a 2 GiB cgroup cap** — 2.44 tok/s
+observed (`cgrun 3g`), 2.26 tok/s under a real kernel-enforced 2048m hard cap (within 15% of
+observed, `OOMKilled=false`). Full numbers, ledger blocks, and the environment/caveats header
+are in `bench/results.md` §5; this entry covers what plan said vs. found vs. did, per house
+style.
+
+- **`scripts/milestone_a.sh` design.** One subcommand per arm (`ma1`/`ma1b`/`ma2`/`ma3`,
+  plus `all` and `table`), each writing fixed-name `bench/.artifacts/milestone_a/<arm>.log`
+  (raw, `2>&1`-captured) and `<arm>.env` (parsed `KEY=VALUE`, sourced by `table` to render the
+  markdown results table) — overwritten on re-run, so any single arm is independently
+  re-runnable without disturbing the others, per the brief's "idempotent, safe to re-run
+  single arms." Every measurement is preceded by `scripts/stream_env.sh drop_caches`, per the
+  "drop_caches before each cap-relevant run" discipline. MA-1/MA-1b run a `bash -c` compound
+  command inside the `cgrun` container that backgrounds `scripts/memwatch.sh 1 > /tmp/memwatch.csv`,
+  runs `llama-completion`, then kills the sidecar and `cat`s the CSV (delimited by an
+  `=== memwatch.csv ===` marker) so the 1 Hz trace rides inside the same captured log as the
+  cgrun/ledger output — no `docker cp` or extra container needed. MA-2/MA-3 skip the sidecar
+  (per the brief, memwatch is specified only for MA-1/1b) and pass args straight through
+  `cgrun` without an extra `bash -c` layer.
+- **Bug found + fixed during MA-3's naive-default arm (this task, not a carried finding):**
+  the script's `set -euo pipefail` combined with several `grep`-based perf-line parsers
+  (`perf_decode_line`, `perf_load_ms`, etc., `scripts/milestone_a.sh:95-108` before the fix)
+  aborted the whole harness with a bare `exit 1` and no diagnostic the moment a `grep` found no
+  match — which is the *expected* outcome for any OOMKilled arm, since a killed process never
+  reaches llama.cpp's `common_perf_print` block at all. Root cause is a `pipefail` subtlety:
+  `grep 'foo' | grep -v 'bar'` returns pipefail's exit status from the *first* failing stage
+  (grep #1, "no match" = exit 1) even when a later stage (grep #2) exits 0, so `local x;
+  x="$(...)"` assignments built from these helpers aborted under `set -e` even though the
+  pipeline "worked" in the sense of correctly producing empty output. First reproduced live: the
+  naive-default arm's log correctly showed `OOMKilled=true` on inspection (the container-level
+  data collection was never the problem), but the harness itself died with exit 1 before
+  writing `ma3_naive.env`. Fixed by appending `|| true` to every helper function that greps for
+  an optional line, plus the few remaining standalone `var="$(grep ... | cut ...)"`
+  assignments reading from already-written `.env` files (`scripts/milestone_a.sh`, all
+  `perf_*`/`line_*`/`cgrun_*`/`majflt`/prompt-token-count helpers). Re-ran MA-3 after the fix;
+  both arms now complete and write their `.env` files regardless of outcome. Not logged as a
+  llama.cpp deviation because no llama.cpp code was touched — recorded here per the "discovery
+  beats the document" rule since it changed the harness's own behavior mid-task.
+- **MA-1 (observed).** `memory.peak` 1,720,438,784 B = 1640.7 MiB, memwatch max sampled
+  `memory.current` 1,704,964,096 B = 1626.0 MiB — both under 2048 MiB throughout (**PASS**).
+  Decode 410.33 ms/token = 2.44 tok/s vs. the ledger's own predicted 0.531 s/token = ratio
+  0.773, inside ±30% (**PASS**). Ledger unchanged from B2/B3/B4 (`config = head-pinned, pinned
+  1094.7 MiB, streamed 1508.8 MiB, W = 2`) — Milestone A reconfirms it rather than discovering
+  a new one, as expected since neither the model nor the flags changed.
+- **MA-1b (full-ubatch prefill, first ever) — closes B3 Concern 1.** Prompt: `bench/prompts/hard.txt`
+  (20 lines, 493 tokens) plus its own first 5 lines repeated (25 lines total) = **623 tokens**,
+  verified with `llama.cpp/build-noblas/bin/llama-tokenize --show-count` (host macOS build; no
+  container `llama-tokenize` target exists and none was added, to keep this task's changed-file
+  list to what the brief specified — `scripts/milestone_a.sh`'s `ensure_ma1b_prompt` re-verifies
+  this count on every run when the host binary is present, and falls back to the last-verified
+  count with a loud warning when it is not). `llama-completion`'s own prefill counted 622
+  tokens for the identical file — a 1-token discrepancy attributed to a BOS-counting difference
+  between the two binaries, not a construction bug. `ceil(622/512) = 2` ubatches (512 + 110):
+  the first full-512-token ubatch prefill this project has run. Cap held: `memory.peak`
+  1,770,143,744 B = 1688.1 MiB (**PASS**). **Reserve verdict: still conservative, not too
+  small.** Memwatch's max sampled `anon_bytes` (the non-weight charge `--stream-reserve-mib
+  640` exists to cover) peaked at 374,874,112 B = 357.5 MiB — 282.5 MiB of slack, comparable to
+  (slightly less than) B3's 306 MiB of slack at a 10-token prompt. B3's open Concern 1
+  ("the compute buffer is sized for `n_ubatch` 512 but was never more than fractionally
+  touched") is now answered by direct measurement rather than reasoning. **Finding: prefill
+  time is compute-bound, not read-bound, once the ubatch is full.** Measured prefill 14,716.48
+  ms = 14.72 s (23.66 ms/token); the read-only analytical lower bound `ceil(622/512) x 1508.8
+  MiB / 2839.5 MiB/s` (2.977 GB/s expressed in MiB/s) = 1.063 s undershoots by ~13.8x. The
+  streamed-bytes-per-ubatch term is constant regardless of ubatch token count (the ring walks
+  the same weight units once per graph either way), but FLOPs are not — a 512-token ubatch does
+  roughly 512x a 1-token decode step's compute while reading the identical 1508.8 MiB, so on
+  this `GGML_BLAS=OFF` build (no vectorized gemm) compute dominates prefill even though it is
+  negligible for decode. This is why MA-1's decode ratio (0.773) tracks the ledger's formula
+  tightly while prefill does not — the formula has no `+ compute` term, by design (it predicts
+  decode, where compute is genuinely negligible).
+- **MA-2 (enforced).** `exit 0`, `OOMKilled=false`, `memory.peak` 1,721,245,696 B = 1641.5 MiB
+  — under the *hard* 2048m cgroup cap this time, not the looser 3g container MA-1 ran in
+  (406.5 MiB headroom). Decode 442.95 ms/token = 2.26 tok/s, -7.4% vs. MA-1's 2.44 tok/s, inside
+  ±15% (**PASS**). This is the run that actually answers the headline question under real
+  kernel enforcement, not just a software budget inside a loose cap.
+- **MA-3 (unmanaged A/B, G12 preview).** Kernel-fair arm (`--no-repack -c 4096`, no
+  `--stream-weights`, the correct control per B3 Finding 4): `exit 0`, `OOMKilled=false` — ran
+  to completion, but reclaim-thrashed rather than decoding cleanly. `memory.peak`
+  2,147,483,648 B = 2048.0 MiB **exactly the cap**, held there rather than killed, because
+  every byte in play is a clean `MAP_SHARED` file page — reclaimable by simple eviction and
+  refault, so the OOM killer (reserved for memory that cannot be reclaimed) never fires. Decode
+  1701.11 ms/token = 0.59 tok/s, **3.83x slower than MA-2's managed 2.26 tok/s**. `/usr/bin/time
+  -v`: 975,286 major faults, `File system inputs` 352,386,776 sectors (x512 B = 168.0 GiB) read
+  over the ~110 s run — about 65.8x the model's own 2.6 GiB size, direct evidence of sustained
+  reclaim thrash (the kernel evicting and re-faulting the same weight bytes repeatedly because
+  nothing pins a stable working set the way the residency manager's ring does). Naive-default
+  arm (no flags beyond `-c 4096`, repack left at default ON): **OOMKilled**, `exit 137`. The log
+  shows exactly why — `load_tensors: CPU_Mapped model buffer size = 2603.50 MiB` immediately
+  followed by `load_tensors: CPU_REPACK model buffer size = 2599.83 MiB`: the default path
+  holds the *mmap* and a *separate repacked copy* simultaneously, ~5203 MiB of model-only
+  footprint against a 2048 MiB cap before KV/compute are even counted — the "default repack
+  would double-charge anyway" prediction in the brief, confirmed exactly. It survived long
+  enough to generate a handful of tokens (visible in the raw log as literal `.` characters, a
+  known Qwen3.5-at-temp-0 degenerate-greedy artifact on this prompt, unrelated to streaming)
+  before being killed at wall-clock ~16 s. Managed/unmanaged ratio: 2.26 / 0.59 = **3.83x**
+  (MA-2 vs. the kernel-fair arm; the naive-default arm never reached steady-state decode so has
+  no rate to compare).
+- **MA-4.** Satisfied by reference to `task-B3-report.md`'s fix round (Finding 1) / this
+  file's "Task B3 fix round" section above — no new runs, per the brief. Callback-invocation
+  overhead best-of-8 = -0.008% (under the host's measurement floor); the gate's own cost
+  (`gatecb` vs `noopcb`) = -7.64% on the resident SmolLM2-135M scale (0.215 ms/graph, 21
+  gates), which scales to ~0.3 ms/graph at the 4B's 23 gates and heavier graph — ~0.07% at
+  worst against this run's own 410-443 ms/token (MA-1/MA-2 above), under 0.1%.
+- **The `--no-repack` accuracy reference.** Every run in this matrix that decodes on the
+  non-repacked kernel set is meant to be compared only against others on that same set, per B3
+  Finding 4 — not against a bare/default baseline. MA-1/MA-1b/MA-2 get there via
+  `--stream-weights` itself (B2 Discovery 1: streaming forces `use_extra_bufts` off because
+  repacking would copy weights out of the mmap); MA-3's kernel-fair arm gets there by passing
+  `--no-repack` explicitly, since it deliberately does **not** pass `--stream-weights` and so
+  needs the flag to land on the same kernel set for a fair comparison. B3 measured that
+  repacked vs. non-repacked kernels diverge numerically within 16 tokens on aarch64/GCC greedy
+  decode, not just in throughput. MA-3's naive-default arm (repack ON) is deliberately the odd
+  one out, reported in one sentence precisely because its failure mode (the repack double-buffer)
+  has nothing to do with streaming. A quantified perplexity/accuracy delta between the two
+  kernel sets remains **deferred to the G-gates**, per B3 Finding 4 — Milestone A claims no
+  accuracy numbers on either kernel set, only throughput and memory.
+- **Deliverables.** `bench/results.md` §5 (full table, per-arm detail, environment header,
+  MA-4-by-reference note, `--no-repack` note); `docs/POC_REPORT.md` `## Streaming (Milestone A)`
+  stub (verdict paragraph + condensed table + pointer to `bench/results.md` §5, full
+  `## Streaming` deferred to E2); this entry.

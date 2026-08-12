@@ -99,3 +99,34 @@ Alternating authorship over one transcript. Segments cut at sentence boundaries 
 - **Grammar-forced tool tag**: the router's verdict read generalizes to grammar-constrained tool-call detection.
 - **RSS realism**: on this host, Accelerate BLAS dequantizes large matmul operands to F32 (~2.5 GB transient for the 248k-vocab output projection), inflating expert RSS; the target build (no Accelerate) will not show this. Re-measure G7 on target.
 - **Expert self-segment tokenization**: sampled segments occasionally deviate from canonical tokenization (1 case in 15 turns of testing; text identical). Harmless by construction here, but a from-scratch re-sync would canonicalize if ever needed.
+
+## Streaming (Milestone A)
+
+**Verdict: yes.** Qwen3.5-4B (2614.0 MiB Q4_K_M) stream-decodes under a 2 GiB cgroup cap —
+observed (`cgrun 3g`, software budget only) at **2.44 tok/s**, and re-confirmed under a real
+kernel-*enforced* 2048m hard cap at **2.26 tok/s** (exit 0, `OOMKilled=false`, within 15% of
+the observed number). `memory.peak` stayed under 2048 MiB in both cases, with ~400 MiB of
+headroom to spare. A first-ever full-512-token-ubatch prefill run (MA-1b) held the cap too and
+closed the one open concern carried from Phase B — `--stream-reserve-mib 640` still has
+282.5 MiB of slack under real compute buffers, not just the earlier short-prompt runs. The
+unmanaged baseline is dramatically worse under the same hard cap: a kernel-fair
+(`--no-repack`) stock load survives only by thrashing the page cache — **3.83x slower**
+(0.59 tok/s), 975k major faults, ~168 GiB re-read over one 64-token answer — and the naive
+default (repack left on) is outright **OOMKilled**, because it tries to hold the model twice
+(a 2603.5 MiB mmap plus a separate 2599.83 MiB repacked copy) against a 2048 MiB cap. The
+residency manager is not a marginal win here; it is the difference between decoding at all
+and reclaim-thrashing or dying.
+
+| arm | cap-mode | cap MiB | memory.peak MiB | decode tok/s | verdict |
+|---|---|---|---|---|---|
+| MA-1 observed | observed (3g) | 3072 | 1640.7 | 2.44 | PASS |
+| MA-1b observed, full ubatch | observed (3g) | 3072 | 1688.1 | -- (prefill 14.72 s) | PASS |
+| MA-2 enforced | enforced (2048m) | 2048 | 1641.5 | 2.26 | PASS |
+| MA-3 unmanaged, kernel-fair | enforced (2048m) | 2048 | 2048.0 (= cap) | 0.59 | ran, thrashed |
+| MA-3 unmanaged, naive-default | enforced (2048m) | 2048 | 2048.0 (= cap) | -- | OOMKilled |
+
+Full run matrix, ledger blocks verbatim, the reclaim-thrash and double-buffer evidence, the
+`--no-repack` accuracy-reference rationale, and the environment/caveats header are in
+`bench/results.md` §5. This is a checkpoint stub per the Milestone A brief; the full
+`## Streaming` section (accuracy deltas against the G-gates, tiering, S3/S4 build-out) lands
+in E2.
