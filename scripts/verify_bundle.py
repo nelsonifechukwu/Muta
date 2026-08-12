@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Byte-level verification of a DUO bundle against its source GGUFs (gate G2a).
+"""Byte-level verification of a bundle against its source GGUFs (gate G2a),
+plus two whole-bundle streaming-design gates (task A4 / S0.4).
 
 Asserts, for every source model:
   (a) every source KV appears in the bundle under its prefix with equal typed value
@@ -7,6 +8,14 @@ Asserts, for every source model:
       and byte-identical payload (sha256)
   (c) the bundle manifest (bundle.count / prefix / role / arch / source / sha256)
       matches the sources.
+
+Additionally, over the whole bundle manifest (independent of which SOURCEs this
+invocation was given, so these run the same way for a 2-model or N-model bundle):
+  (d) contiguity: each prefix's tensor payloads form a single gap-free-mod-
+      alignment interval (no gaps beyond writer padding, no overlaps).
+  (e) vocab-identity: tokens/merges/pre/special-ids compared for every prefix
+      pair; the front!=mid / easy==mid expectation is additionally asserted
+      when those three roles are present (the trio bundle).
 
 Usage: verify_bundle.py BUNDLE SOURCE [SOURCE ...]
 Sources are matched to manifest entries by file basename.
@@ -36,6 +45,31 @@ def contents(field):
     return field.contents()
 
 
+def align_up(n: int, alignment: int) -> int:
+    """Match gguf_writer.py's GGUFWriter.ggml_pad exactly: round n up to the
+    next multiple of alignment (the padding the writer inserts between
+    consecutive tensor payloads)."""
+    return ((n + alignment - 1) // alignment) * alignment
+
+
+def tokenizer_signature(reader: gguf.GGUFReader, prefix: str) -> dict:
+    """tokens/merges/pre + special-ids (bos/eos/pad), read under a bundle
+    prefix. Missing keys read as None on both sides of a comparison, which
+    is also correct for "differs" when only one side has the key."""
+    def val(key: str):
+        f = reader.get_field(prefix + key)
+        return f.contents() if f else None
+
+    return {
+        "tokens": val(gguf.Keys.Tokenizer.LIST),
+        "merges": val(gguf.Keys.Tokenizer.MERGES),
+        "pre": val(gguf.Keys.Tokenizer.PRE),
+        "bos": val(gguf.Keys.Tokenizer.BOS_ID),
+        "eos": val(gguf.Keys.Tokenizer.EOS_ID),
+        "pad": val(gguf.Keys.Tokenizer.PAD_ID),
+    }
+
+
 def main() -> int:
     if len(sys.argv) < 3:
         print(__doc__)
@@ -61,12 +95,16 @@ def main() -> int:
     count = count_f.contents() if count_f else 0
     check("bundle", f"bundle.count == {len(source_paths)}", count == len(source_paths), str(count))
 
-    # map manifest entries by source basename
+    # map manifest entries by source basename; also keep index (manifest)
+    # order for the whole-bundle gates below, which operate on every prefix
+    # in the bundle regardless of which SOURCEs this invocation was given.
     manifest: dict[str, dict] = {}
+    manifest_entries: list[dict] = []
     for i in range(count):
         entry = {k: bundle.get_field(f"bundle.{i}.{k}").contents()
                  for k in ("prefix", "role", "arch", "source", "sha256")}
         manifest[entry["source"]] = entry
+        manifest_entries.append(entry)
 
     for src_path in source_paths:
         name = src_path.name
@@ -112,6 +150,62 @@ def main() -> int:
                 n_t_bad += 1
                 print(f"    TENSOR MISMATCH: {t.name}")
         check(name, f"tensors byte-identical under prefix ({n_t})", n_t_bad == 0, f"{n_t_bad} bad")
+
+    # (d) per-prefix payload-interval contiguity: within each model's
+    # prefix group, tensor payloads must form one gap-free-mod-alignment
+    # interval -- no gaps beyond writer padding, no overlaps. Checked and
+    # printed in manifest order (bundle.0, bundle.1, ...).
+    print()
+    print(f"* Contiguity check (alignment={bundle.alignment})")
+    for entry in manifest_entries:
+        prefix = entry["prefix"]
+        tensors = sorted((t for t in bundle.tensors if t.name.startswith(prefix)),
+                          key=lambda t: t.data_offset)
+        if not tensors:
+            check(entry["source"], f"payload interval contiguous under prefix {prefix!r}",
+                  False, "no tensors found under prefix")
+            continue
+        ok = True
+        for a, b in zip(tensors, tensors[1:]):
+            a_end = a.data_offset + a.n_bytes
+            expected = align_up(a_end, bundle.alignment)
+            if b.data_offset < a_end or b.data_offset > expected:
+                ok = False
+                print(f"    GAP/OVERLAP in {prefix}: {a.name} ends {a_end:,} -> "
+                      f"{b.name} starts {b.data_offset:,} (expected <= {expected:,})")
+        lo = tensors[0].data_offset
+        hi = max(t.data_offset + t.n_bytes for t in tensors)
+        print(f"  {prefix} [{lo}, {hi - lo}]")
+        check(entry["source"], f"payload interval contiguous under prefix {prefix!r}", ok)
+
+    # (e) vocab-identity gate: tokens/merges/pre/special-ids compared for
+    # every prefix pair in the bundle (generic, works for any N). The
+    # trio-specific front!=mid / easy==mid expectation is additionally
+    # asserted when those three roles are present in this bundle.
+    print()
+    print("* Vocab-identity gate")
+    sigs = {e["prefix"]: tokenizer_signature(bundle, e["prefix"]) for e in manifest_entries}
+    role_of = {e["prefix"]: e["role"] for e in manifest_entries}
+    prefixes = [e["prefix"] for e in manifest_entries]
+
+    pair_equal: dict[tuple[str, str], bool] = {}
+    for i, p1 in enumerate(prefixes):
+        for p2 in prefixes[i + 1:]:
+            eq = sigs[p1] == sigs[p2]
+            pair_equal[(p1, p2)] = eq
+            pair_equal[(p2, p1)] = eq
+            print(f"  {p1} ({role_of[p1]}) vs {p2} ({role_of[p2]}): "
+                  f"{'EQUAL' if eq else 'DIFFERS'}")
+
+    prefix_of_role = {role: prefix for prefix, role in role_of.items()}
+    if {"front", "easy", "mid"} <= prefix_of_role.keys():
+        front, easy, mid = prefix_of_role["front"], prefix_of_role["easy"], prefix_of_role["mid"]
+        easy_mid_ok = pair_equal[(easy, mid)]
+        front_mid_ok = not pair_equal[(front, mid)]
+        print(f"vocab_gate: easy==mid {'OK' if easy_mid_ok else 'FAIL'}, "
+              f"front!=mid {'OK' if front_mid_ok else 'FAIL'}")
+        check("bundle", "vocab_gate: easy==mid", easy_mid_ok)
+        check("bundle", "vocab_gate: front!=mid", front_mid_ok)
 
     print()
     w = max(len(m) for m, _, _ in results)

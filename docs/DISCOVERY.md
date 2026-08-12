@@ -464,3 +464,120 @@ available). Task A3 status: **not blocked** — proceed with
 as the residency manager's eviction primitive; for ahead-of-decode
 prefetch, use an explicit touch/read loop, not `MADV_WILLNEED` (chunked or
 otherwise) — see step 4b.
+
+### S0.4 — Trio bundle + verification gates
+
+Task A4 (S0.4+S0.5): packed the 3-model "trio" bundle the streaming design
+streams tiers from, and extended `scripts/verify_bundle.py` with the two
+gates the design depends on (per-prefix payload contiguity, vocab-identity
+between tiers). Packed with `scripts/pack_bundle.py` (unmodified — roles are
+free-form strings that pass straight through to `bundle.{i}.role`, so
+`front`/`easy`/`mid` needed no code change, confirmed by reading
+`pack_bundle.py:96-101` before packing):
+
+```
+.venv/bin/python scripts/pack_bundle.py --out bundle/muta-trio.gguf \
+    --model models/SmolLM2-135M-Instruct-Q4_K_M.gguf:m0.:front \
+    --model models/Qwen3.5-0.8B-MTP-Q4_K_M.gguf:m1.:easy \
+    --model models/Qwen3.5-4B-Q4_K_M.gguf:m2.:mid
+```
+
+**Bundle**: `bundle/muta-trio.gguf`, 3,396,095,296 bytes (3.40 GB), sha256
+`f4b97d4439d47fc01dbe5a6abaa086060727b170c631b66fc1b3d1f8c4bb4a6e`. Matches
+the plan's ≈105,454,144 + 549,698,976 + 2,740,937,888 = 3,396,091,008 B
+expectation plus exactly 4,288 B of KV-manifest overhead (144 total KVs:
+127 prefixed KVs copied from the three sources + 17 bundle-level keys
+(top-level `general.architecture` + `bundle.count` + 3×5 `bundle.{i}.*`
+manifest fields); 1,033 tensors = 272 + 335 + 426). Alignment=32 (default,
+unset by any source). `bundle.{i}` manifest: `0` → prefix `m0.` role
+`front` arch `llama` (SmolLM2), `1` → prefix `m1.` role `easy` arch
+`qwen35` (0.8B-MTP), `2` → prefix `m2.` role `mid` arch `qwen35` (4B) —
+sha256 of each manifest entry matches its source file exactly (verified
+below).
+
+#### Per-prefix payload-interval contiguity (new gate (d) in `verify_bundle.py`)
+
+Collected every tensor's absolute `data_offset` under each prefix, sorted,
+and asserted each consecutive pair abuts within one `ggml_pad(..., 32)`
+step (the writer's own inter-tensor padding rule, `gguf_writer.py:331-332`)
+— i.e. no gap beyond alignment padding, no overlap, single interval per
+model:
+
+| prefix | role | `[file_off, len]` | end offset |
+|---|---|---|---|
+| `m0.` | front (SmolLM2) | `[23,721,280, 103,668,480]` | 127,389,760 |
+| `m1.` | easy (0.8B-MTP) | `[127,389,760, 538,735,872]` | 666,125,632 |
+| `m2.` | mid (4B) | `[666,125,632, 2,729,969,664]` | 3,396,095,296 |
+
+All three **PASS** (zero gap/overlap prints). Bonus finding beyond what the
+gate asserts: the three intervals aren't just internally contiguous, the
+whole file is one unbroken stream across prefixes too — `m0.`'s end offset
+(127,389,760) equals `m1.`'s start exactly, and `m1.`'s end
+(666,125,632) equals `m2.`'s start exactly; `m2.`'s end
+(3,396,095,296) equals the file size exactly (zero trailing slack); and the
+KV/tensor-info header section ends exactly at `m0.`'s start
+(`reader.data_offset == 23,721,280`, matching `m0.`'s first tensor offset)
+— zero padding anywhere in the file outside the per-tensor alignment
+rounding already accounted for. Consistent with Task A2's per-layer
+contiguity finding (S0.2), now confirmed at the whole-model and
+whole-bundle level too.
+
+#### Vocab-identity gate (new gate (e) in `verify_bundle.py`)
+
+Compares `tokenizer.ggml.{tokens,merges,pre}` and special-token ids
+(`bos`/`eos`/`pad`, read as `None` where absent) between every prefix pair
+in the bundle; the front/easy/mid trio expectation is asserted additionally
+when those three roles are present:
+
+```
+* Vocab-identity gate
+  m0. (front) vs m1. (easy): DIFFERS
+  m0. (front) vs m2. (mid): DIFFERS
+  m1. (easy) vs m2. (mid): EQUAL
+vocab_gate: easy==mid OK, front!=mid OK
+```
+
+Root cause (confirmed by direct field dump before writing the gate): easy
+(0.8B-MTP) and mid (4B) are both `qwen35`/`gpt2`-pre with the identical
+248,320-token list and 247,587-merge list (`tokenizer.ggml.pre = "qwen35"`
+on both), `eos=248046`/`pad=248055` on both, `bos` absent on both — i.e.
+same tokenizer, byte-for-byte. front (SmolLM2, `llama`/`smollm`-pre,
+49,152-token vocab, `bos=1`/`eos=2`/`pad=0`) differs from mid on every
+field. This is exactly the "same-family speculation pair, different-family
+draft-only front" shape the streaming design assumes (co-decode/verify
+between easy and mid requires shared vocab; front is speculation-only and
+is never asked to share logit space with mid).
+
+#### Regression: `bundle/muta-duo-q.gguf` (existing 2-model bundle)
+
+Same extended `verify_bundle.py`, unmodified pre-existing checks (a)-(c)
+plus the two new gates, run against the older duo bundle
+(`m0.`=0.8B-MTP role `front`, `m1.`=4B role `expert` — pre-trio naming, see
+S0.2):
+
+```
+* Contiguity check (alignment=32)
+  m0. [21934464, 538735872]
+  m1. [560670336, 2729969664]
+
+* Vocab-identity gate
+  m0. (front) vs m1. (expert): EQUAL
+```
+
+Both prefixes' payload intervals **PASS** contiguity; the m0/m1 (0.8B/4B)
+pair is **EQUAL** on vocab, as expected (both are Qwen3.5 with the same
+tokenizer) — no `vocab_gate:` trio-verdict line prints because duo's roles
+(`front`/`expert`) don't match the `{front, easy, mid}` trio-role set, which
+is by design (the gate is generic; the trio-specific assertion only fires
+when those three roles are present). Full `G2a: PASS` on all 14 checks (5
+pre-existing per-source checks × 2 sources + `bundle.architecture` +
+`bundle.count` + 2 new contiguity checks). Confirms the extension is
+additive: every pre-existing check on the pre-existing bundle is unaffected.
+
+#### Models volume
+
+`scripts/stream_env.sh models` (docker already warm, no retry needed)
+copied `bundle/muta-trio.gguf` into the `muta-models` named volume
+alongside the existing `Qwen3.5-4B-Q4_K_M.gguf`, confirmed present at the
+expected byte sizes via a throwaway container `ls -la /models`. Available
+for later streaming-gate tasks.
