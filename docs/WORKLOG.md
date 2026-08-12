@@ -628,3 +628,80 @@ file, `tools/duo/duo.cpp`, +228/-39.
   awkwardly. Not a default configuration — the opener is off by default for 2-tier bundles, and
   in the 3-tier case a different tier continues and the join is clean. Injecting whitespace no
   model generated would be worse, so it stands as documented behavior.
+
+### Task C2 fix round (post-review, findings I1-I5), 2026-08-13
+
+Task review of `1cdcdc2..2609120` confirmed the escalation protocol correct, leak-free and
+canonically re-decoded, with five Important findings — all small, all localized. Fixed in one
+commit, **`23fb79d`**, `S3.2: fix routing-state leak, opener attribution + escalation carry`
+(1 file, +93/-40).
+
+- **I1 — the routing decision read context it should not see (a real bug, older than C2).**
+  `route_score()` decoded its few-shot on top of whatever was resident on the front's seq 0. The
+  opener put this turn's rendered prompt (and, for a hybrid front, the committed opener text) in
+  front of the few-shot — which is what the C2 report's "opener shifts the routing score"
+  concern (`s=-1.798` vs `-2.098`) was actually measuring. The same class of pollution existed
+  **before C2** on every turn >= 2, where the previous turn's committed transcript preceded the
+  few-shot; nobody had looked. Fixed with `front_reset()` (`duo.cpp:819`) called before and
+  after the routing decode (`:852`, `:863`): it drops seq 0 **and** `committed_text`/
+  `committed_tokens` together — mandatory, because `committed_tokens` is the record of what is
+  resident and `sync_to()` only ingests the delta past it, so wiping one without the other would
+  have the front decode a fragment against an empty context (silent garbage, not a crash). The
+  old append-only checkpoint round-trip inside `route_score` is gone: with the sequence emptied
+  first, the trailing cleanup is a *full* removal, which recurrent/hybrid state supports (it is
+  the PARTIAL rewind those models cannot do).
+  - **Behavior correction, measured pre/post.** Turn 1 is unchanged — the sequence was already
+    empty there, and clearing empty bookkeeping is a no-op — which is why all three 2-tier
+    byte-identity baselines still hold (verified, not assumed: `4bbb514f...`/`f726b586...`/
+    `eb906de6...`, `diff -q` silent). Turn >= 2 verdicts **do** change, and that is the fix:
+    a 2-turn 2-tier router session gives `muta-duo-q` turn-2 `s=1.290 -> 2.084` and `muta-duo`
+    `s=0.818 -> 1.064`, both still routing hard, **stdout identical on both bundles**. The
+    post-fix turn-2 score `2.084` is exactly what a *fresh single-turn* run scores for that same
+    question on that front — i.e. routing is now a function of the question alone. On the trio
+    the opener-on score becomes `-2.098`, matching opener-off exactly (was `-1.798`), and the
+    hard prompt's `1.064` matches `muta-duo`'s clean score for the same SmolLM2 front.
+  - Consequence worth knowing: the front now re-ingests its prompt after every routing decode
+    (it no longer keeps a committed prefix across the call). At 135M/0.8B prefill speeds this is
+    negligible, and it makes the front's committed tokens the *canonical* tokenization of its
+    committed text by construction — which is why the trio's `--hard-mode verify` numbers moved
+    (`tokens=75 acc=0.62` -> `tokens=144 acc=0.71`): the front's draft context is now tokenized
+    in one piece rather than as prompt+opener deltas. Not a regression; a different and more
+    canonical starting state.
+- **I2 — opener tokens were credited to the routed tier.** `[turn] ... author=easy tokens=35`
+  where 28 of those 35 were the front's. The author label now names the front when an opener ran
+  and the front is not already the author (`duo.cpp:1177`), matching the existing `front+expert`
+  escalation convention: `front+easy`, `front+expert`, `front+easy+expert`. Same string feeds
+  the jtrace turn event.
+- **I3 — the default escalation threw away text the user had already watched stream.**
+  `--carry-draft` defaults *off*, and the `!carry_draft` branch did `transcript.clear()`, which
+  discarded the opener along with the low-confidence draft — the exact failure class that was
+  refused on the verify path with `seed_draft`. Fixed by exempting the opener span
+  (`duo.cpp:1142`, `transcript = opener_text`): `--no-carry-draft` discards the *draft*, and the
+  expert's fresh answer continues from the opener. Gated on the trio (forced-easy, conf trigger,
+  no `--carry-draft`): the returned answer begins with the committed 69-char opener, the
+  discarded easy draft is absent from it, and the expert's continuation follows — while the
+  `--carry-draft` run keeps both.
+- **I4 — the riskiest new path had no automated seam check.** `run_turn` gated
+  `--selftest-seams` on `p.mode != "router"`, so the conf-escalation seam was never verified.
+  Exclusion dropped (`duo.cpp:1799`); no scoping was needed — the round-trip holds. Escalation
+  gate re-run with `--selftest-seams`: **`front: OK (0 tokens)` / `easy: OK (186 tokens)` /
+  `expert: OK (248 tokens)`**, i.e. the append-only easy tier's committed state re-tokenizes
+  canonically after the checkpoint restore and re-decode. That is the strongest available
+  evidence the escalation protocol is seam-exact, and it is now automated.
+- **I5 — `--codraft-tiers` dereferenced tiers without a readiness check.** `run_codraft_turn`
+  took `s.cd_a->m` unconditionally; under C3's background loading that is a null-ctx crash.
+  Use-site `TS_READY` check added (`duo.cpp:1204`), mirroring the router's own test. The
+  pre-load error string was also inaccurate ("no loaded 'easy' tier" when nothing is loaded yet)
+  -> "this bundle has no 'easy' tier".
+- **Minors folded in:** M1 two stale comments (`conf_monitor`'s "front only";
+  `n_seq_max`'s "(verify mode)"); M2 verify's turn line now counts the seeded span's tokens and
+  time via a `turn_seed` struct (`duo.cpp:1027`) that replaced the loose `seed_draft`/`n_seed`
+  pair; M6 the C2 report's free-order citation `:1783` -> `:1789-1794`, corrected in the report's
+  fix-round section rather than in place.
+- **Re-run matrix, all serialized:** 3 byte-identity baselines (PASS, unchanged hashes); 2-turn
+  2-tier pre/post on both 2-model bundles (turn-1 identical, turn-2 corrected, stdout identical);
+  trio easy/hard routing with and without the opener (scores now match, authors correctly
+  attributed); escalation with `--carry-draft` and at the default, both with `--selftest-seams`
+  (all clean); `--codraft-tiers easy,mid` unchanged through the readiness guard (6 segments,
+  3/3 selftests OK); all five `--codraft-tiers` error paths; `llama-duo` rebuild 0 errors/
+  0 warnings.
