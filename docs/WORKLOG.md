@@ -515,3 +515,116 @@ the refactor with two Important findings, both fixed in one follow-up commit,
   never mentioned `auto` even though `tier_policy_from_str()` has always accepted it; folded
   into the same `1cdcdc2` commit as a one-line fix (help text only, no parsing change --
   `auto` already worked, it just wasn't documented).
+
+### Task C2 (S3.2) — three-tier routing, conf escalation easy->mid, `--ttft-opener`
+
+First behavioral change of Phase C (C1 was a pure refactor). Single commit `1cdcdc2..2609120`
+on `streaming`, `S3.2: three-tier routing + conf escalation easy->mid + --ttft-opener`; one
+file, `tools/duo/duo.cpp`, +228/-39.
+
+- **Deviation from C1's note: easy loads NOW, not in S3.3.** C1 left the easy tier
+  registered-but-not-loaded and logged `tier easy registered (loading lands in S3.3)`. C2
+  cannot route to a tier that has no context, so `main()` now loads synchronously in registry
+  order **front -> easy -> mid** and frees in reverse (`duo.cpp:1683-1700`, free at `:1783`).
+  Easy is loaded with `checkpoint_seq=true` unconditionally — it is hybrid, therefore
+  append-only, and the checkpoint sequence is precisely what makes its answer provisional
+  enough to escalate (see below). `duo_tier::state` is set to `TS_READY` after each load
+  (`front`/`easy`/`mid`), which is the flag C3 will flip from a background loader thread; the
+  code comment at `:1683` says so explicitly so C3 does not have to rediscover the intent.
+- **Router mapping.** The front stays the router in every case (verdict logits A=49/B=50,
+  unchanged). `route=easy` now picks the **easy tier** when one is loaded and falls back to the
+  front otherwise (`duo.cpp:1065`, a one-line ternary) — that fallback is exactly what keeps
+  2-model bundles byte-identical. `route=hard` still goes to mid with `hard_mode expert|verify`
+  semantics untouched.
+- **Confidence escalation easy->mid is checkpoint-provisional.** Q1's rule was "conf monitor
+  off for append-only authors" because a conf cut truncates the text buffer while the tokens
+  past the boundary have already been decoded — illegal for a model whose recurrent state
+  cannot partially rewind. C2 narrows that rule instead of removing it: the monitor is armed
+  for an append-only author **iff the caller holds a checkpoint** (`gen_opts::conf_checkpoint`,
+  `duo.cpp:661`; the gate itself at `:723`). The protocol is (`duo.cpp:1077-1103`):
+  `checkpoint_save(easy)` -> `gen_segment` with the monitor armed -> on a `conf` cut
+  `gen_segment` **does not commit** and raises `seg_stats::needs_ckpt_restore`
+  (`duo.cpp:255`, set at `:775`) -> caller does `checkpoint_restore(easy)` and re-ingests the
+  boundary-truncated text through `sync_to` (canonical delta tokenization, prefill speed at
+  0.8B) -> hand off to mid through the existing carry-draft machinery. **Invariant to preserve:
+  `needs_ckpt_restore` is a debt.** A caller that arms `conf_checkpoint` and then ignores the
+  flag leaves the model's memory ahead of its `committed_tokens` with no diagnostic; the only
+  caller today is the router easy path, and both of its exits (restore-and-re-ingest, or
+  `checkpoint_drop` on any non-conf cut) are in the same block.
+- **`--ttft-opener` defaults ON only for a 3-tier registry.** The brief's own gate exposed the
+  conflict: baseline (a) *is* a router run, so a default-on opener would have changed it. Rule
+  as implemented (`opener_enabled()`, `duo.cpp:1017`): explicit `--ttft-opener`/
+  `--no-ttft-opener` win; otherwise on iff `s.easy != nullptr`. Registry *presence*, not
+  `TS_READY`, is the auto test on purpose — under C3 the opener is the thing that covers easy's
+  load, so it must arm before easy is ready. Documented in `print_usage()` as
+  `[auto: on with a 3-tier bundle, off with 2]`. The opener runs on the first turn only
+  (`s.history.empty()`, `duo.cpp:1038`), reuses the ordinary `--seg-min/--seg-max` budgets
+  (24/96) and the seam rule, and its text is carried as a draft by whichever tier continues —
+  including into `--hard-mode verify`, which gained a `seed_draft`/`n_seed` parameter pair and
+  a local `budget` (`duo.cpp:1283`) so opener tokens are charged against `-n` instead of
+  silently exceeding it. Without a seed both default to empty/0 and verify is bit-for-bit the
+  old function.
+- **Sampling defaults for easy, decided.** C1 flagged its `default:` branch (easy reusing
+  `--temp-expert`/`--top-p-expert`) as a placeholder for C2 to settle. Settled as: easy keeps
+  the **expert-style** values (0.6/0.95 by default) rather than the front's 0.7/0.9 — it is a
+  competent 0.8B answerer, not a 135M drafter — and *inherits the flags*, not just the numbers,
+  so `--temp-expert 0` still makes the whole run greedy (which is what every determinism gate
+  below depends on). New `--temp-easy`/`--top-p-easy` (sentinel `<0` = inherit) override it
+  (`duo.cpp:980-986`).
+- **`--codraft-tiers A,B`** (`duo.cpp:1637-1671`, consumed at `:1164`) selects the codraft/
+  random author pair; resolved **before** any model load so a bad pair fails in milliseconds,
+  not after a 3 GB load. Rejects unknown names, a tier the bundle does not have (`easy,mid` on a
+  2-model bundle -> `this bundle has no loaded 'easy' tier`), the same tier twice, a malformed
+  spec, and `top` (registered-only, never loaded — the C1 fix round's point that *using* a top
+  tier is not free). With `easy,mid` the slot-A author is append-only, which is Q1's
+  hybrid-front support reached through the tier indirection: `gen_segment` commits instead of
+  rewinding and the conf monitor stays off (no checkpoint is taken in codraft). Verified below.
+- **Behavior change NOT covered by the C1 baseline set, found while self-reviewing.** The
+  narrowed conf rule also arms the monitor for a *hybrid front* on a 2-model bundle
+  (`muta-duo-q`'s front is the 0.8B, loaded with a checkpoint since Q1) — previously it was
+  silently disabled there. The three C1 baselines are a hard-prompt router run plus codraft and
+  verify, so **none of them enters the easy path**; the byte-identity gate could not have
+  caught a change there. Closed by rebuilding the C1 binary (`git checkout 1cdcdc2 --
+  tools/duo/duo.cpp`, rebuild, run, restore) and diffing an easy-prompt router run on both
+  2-model bundles: `muta-duo-q` (hybrid front) `08b884af...` and `muta-duo` (dense SmolLM2
+  front) `70426c90...`, **identical on both binaries** — the default `--conf-threshold -2.5`
+  never triggers there. The newly-reachable path does work when forced: `muta-duo-q`,
+  `--route-threshold 99 --conf-threshold -0.3 --carry-draft`, hard prompt -> front cut at 30
+  tokens, `[esc] author=front restore+redecode chars=111`, expert continued for 162 tokens,
+  coherent single answer.
+- **Gates (all serialized, macOS `llama.cpp/build` BLAS-on arm64).**
+  - (a) Regression: the three C1 baselines re-run on the C1 binary first (sha256 `4bbb514f...`
+    / `f726b586...` / `eb906de6...`, all three matching `task-C1-report.md` exactly, so the
+    baselines are regenerated-and-confirmed, not merely quoted), then on the C2 binary:
+    **byte-identical, all three** (`diff -q` silent). No `[opener]` line in the 2-tier router
+    run, confirming the defaulting rule.
+  - (b) Trio routing: easy prompt -> `route=easy ... author=easy`; hard prompt ->
+    `route=hard s=1.030 author=expert`. Both coherent.
+  - (c) Escalation: trio, `--route-threshold 99 --carry-draft`, hard prompt. At the brief's
+    `--conf-threshold -0.9` the 0.8B never triggers (its mean logprob on this prompt is ~-0.21,
+    an order of magnitude above the threshold that SmolLM2 needed in Phase 3) — recorded rather
+    than papered over. Swept to `-0.4`/`-0.3`, both trigger cleanly: `[seg 0] author=easy ...
+    cut=conf` -> `[esc] author=easy restore+redecode chars=352` -> `[seg 1] author=expert ...`,
+    coherent single answer. A 2-turn run proves the restored state is not desynced: turn 1
+    escalates, turn 2 has easy author correctly from the restored context and no opener (first
+    turn only).
+  - (d) Opener: trio + default opener -> `[opener] author=front tokens=28 ... cut=eos` then
+    `[seg 0] author=easy`; `--no-ttft-opener` -> no opener line, easy answers alone.
+  - (e) `--codraft-tiers easy,mid`, trio, hard prompt: 6 segments alternating easy/expert,
+    `[selftest] front: OK (0 tokens) / easy: OK (262) / expert: OK (321)`, 0 resyncs, coherent.
+    Also 5 codraft turns with the default `front,mid` pair on the trio: **15/15 selftests OK**,
+    `resync_front=0 resync_expert=0` on every turn (`selftest_seams` now covers easy too when
+    it is loaded).
+  - (f) Builds: macOS `llama-duo` (BLAS-on), `build-noblas` `llama-completion` *and*
+    `llama-duo`, and the 4-target GCC container build (`scripts/stream_env.sh build`) — all
+    exit 0 with **0 `error:`/`warning:` lines**; the container log shows `duo.cpp.o` actually
+    recompiling (the binary timestamps are container-UTC, one hour behind host WAT — not a
+    stale build).
+- **Known cosmetic artifact, not fixed.** Forcing `--ttft-opener` on a 2-model bundle where the
+  front both opens *and* continues can join the two spans without a space (`...today?A bit
+  more...`) when the opener ends at EOS rather than at a seam-rule boundary: the front has
+  declared its turn over and then resumes itself. Seam-exact (the delta tokenization still
+  composes; `--closer expert` treats a front EOS as a handoff by design), but the join reads
+  awkwardly. Not a default configuration — the opener is off by default for 2-tier bundles, and
+  in the 3-tier case a different tier continues and the join is clean. Injecting whitespace no
+  model generated would be worse, so it stands as documented behavior.
