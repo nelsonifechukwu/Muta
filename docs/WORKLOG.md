@@ -472,3 +472,46 @@ first task of Phase C (weight-streaming into `llama-duo`). Single commit `84c4f1
   key. Not exercised by either real bundle (both have well-formed manifests, confirmed via
   `gguf-py` dump before this task), so out of scope for a pure-refactor regression gate; noted
   here rather than silently assumed safe for a hypothetical malformed bundle.
+
+### Task C1 fix round (post-review, findings 1-2), 2026-08-13
+
+Task review of `84c4f11..50cac21` (the actual commit range this entry's earlier "`84c4f11..
+<C1>`" line left as a placeholder -- corrected here rather than edited in place, per
+append-only style; the range now extends to `50cac21..1cdcdc2` for this fix round) approved
+the refactor with two Important findings, both fixed in one follow-up commit,
+**`1cdcdc2`**, `S3.1: pointer-stable tier container + help text`.
+
+- **Finding 1 -- undocumented pointer-stability invariant.** `duo_state::front/easy/mid` are
+  raw `duo_tier *` into `s.tiers`, safe only because `build_tier_registry()` resizes the
+  container exactly once, before any pointer is taken, and is never called again for the rest
+  of the process's life. Nothing said so anywhere -- and C3 (staged/incremental tier loading)
+  is precisely the kind of task that might later `push_back()` a tier onto an already-built
+  registry, which on a `std::vector` would silently relocate every existing element on
+  reallocation and dangle all three pointers with no compiler diagnostic. Fixed by swapping
+  `std::vector<duo_tier> tiers` for `std::deque<duo_tier> tiers`: a deque's `push_back()`/
+  `resize()` never relocates existing elements (that guarantee is why deque forgoes
+  contiguous storage in the first place), so references and pointers into it survive future
+  growth -- only a middle insert/erase would invalidate neighbors, and nothing in this
+  codebase does that. Documented the invariant directly on the `duo_state::tiers` member.
+  `<deque>` was already included (used by `gen_segment`'s `lp_window`), so this needed no new
+  include. Re-ran the router regression (baseline (a) from the original C1 entry) against the
+  rebuilt binary: stdout sha256 `4bbb514f...`, unchanged -- confirms the container swap is
+  behavior-neutral, as a pure storage-strategy change should be.
+- **Finding 2 -- "zero code change" framing was overstated.** The original entry's "What
+  moved" section said a future top tier could be registered "as pure data, zero code change."
+  That is only true for *parsing and discovery*: `--tier top=X`/`--tier-file top=Y` already
+  flow through `build_tier_registry()`'s override maps and `tier_role_from_str()`'s `"top"`
+  case with no code change, and `discover_bundle_tiers()` would pick up a manifest
+  `bundle.{i}.role="top"` entry the same way. *Using* a top tier -- actually loading it and
+  dispatching turns to it -- needs at minimum a `duo_state::top` pointer (there is currently
+  none; only `front`/`easy`/`mid`) plus a new `case TIER_TOP:` wherever the code switches on
+  role today (the pointer-assignment loop at the end of `build_tier_registry()`,
+  `tier_policy_default()`, `tier_ctx_resolved()`'s `default:` branch currently doubles as
+  "easy/top role default" and would need to actually distinguish them once top has real
+  values, and any future turn-driver logic that dispatches by tier). Registering a top tier is
+  free; *using* one is C-series follow-on work, same as easy's S3.3 load path. Recorded here
+  as a correction rather than editing the original claim in place.
+- **Minor:** `--tier-policy`'s `print_usage()` help text listed `mlock|resident|streamed` but
+  never mentioned `auto` even though `tier_policy_from_str()` has always accepted it; folded
+  into the same `1cdcdc2` commit as a one-line fix (help text only, no parsing change --
+  `auto` already worked, it just wasn't documented).
