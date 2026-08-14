@@ -1,0 +1,152 @@
+"""Unit tests for the dashboard's pure logic: scoring, filename parsing, metadata rewrite."""
+import json
+import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from app import compute_scores, parse_quant, parse_params, updated_metadata, extract_metrics
+
+
+class TestComputeScores(unittest.TestCase):
+    def test_full_run_scores(self):
+        # SmolLM2 real numbers: arc 0.42, 38.27 tok/s, 232.22 MB peak
+        s = compute_scores(arc_score=0.42, tps=38.27, peak_rss_mb=232.22,
+                           throttled=False, temp_c=None, crashed=False)
+        self.assertAlmostEqual(s["s_acc"], 42.0, places=2)
+        self.assertEqual(s["s_perf"], 100.0)  # 38.27/15 capped at 1.0
+        self.assertAlmostEqual(s["s_eff"], 96.76, places=1)  # (7 - 0.2268)/7 * 100
+        self.assertEqual(s["thermal_penalty"], 0)
+        self.assertAlmostEqual(s["s_total"], 0.5 * 42.0 + 0.3 * 100.0 + 0.2 * s["s_eff"], places=2)
+
+    def test_slow_model_perf_not_capped(self):
+        s = compute_scores(arc_score=0.5, tps=7.5, peak_rss_mb=1024,
+                           throttled=False, temp_c=None, crashed=False)
+        self.assertEqual(s["s_perf"], 50.0)
+
+    def test_thermal_penalty_on_throttle(self):
+        s = compute_scores(arc_score=0.5, tps=15.0, peak_rss_mb=1024,
+                           throttled=True, temp_c=None, crashed=False)
+        self.assertEqual(s["thermal_penalty"], 10)
+
+    def test_thermal_penalty_on_high_temp(self):
+        s = compute_scores(arc_score=0.5, tps=15.0, peak_rss_mb=1024,
+                           throttled=False, temp_c=86.0, crashed=False)
+        self.assertEqual(s["thermal_penalty"], 10)
+
+    def test_crash_disqualifies(self):
+        s = compute_scores(arc_score=None, tps=None, peak_rss_mb=None,
+                           throttled=False, temp_c=None, crashed=True)
+        self.assertEqual(s["s_total"], 0.0)
+        self.assertTrue(s["disqualified"])
+
+    def test_skip_accuracy_run_has_no_total(self):
+        s = compute_scores(arc_score=None, tps=30.0, peak_rss_mb=500,
+                           throttled=False, temp_c=None, crashed=False)
+        self.assertIsNone(s["s_acc"])
+        self.assertIsNone(s["s_total"])
+        self.assertIsNotNone(s["s_perf"])
+
+    def test_ram_over_budget_floors_at_zero(self):
+        s = compute_scores(arc_score=0.5, tps=15.0, peak_rss_mb=8 * 1024,
+                           throttled=False, temp_c=None, crashed=False)
+        self.assertEqual(s["s_eff"], 0.0)
+
+
+class TestFilenameParsing(unittest.TestCase):
+    def test_quant_variants(self):
+        self.assertEqual(parse_quant("SmolLM2-135M-Instruct-Q4_K_M.gguf"), "Q4_K_M")
+        self.assertEqual(parse_quant("Qwen3.5-4B-IQ4_XS.gguf"), "IQ4_XS")
+        self.assertEqual(parse_quant("model-F16.gguf"), "F16")
+        self.assertIsNone(parse_quant("mystery-model.gguf"))
+
+    def test_params_variants(self):
+        self.assertEqual(parse_params("SmolLM2-135M-Instruct-Q4_K_M.gguf"), "135M")
+        self.assertEqual(parse_params("Qwen3.5-0.8B-MTP-Q4_K_M.gguf"), "0.8B")
+        self.assertEqual(parse_params("Qwen3.5-4B-Q4_K_M.gguf"), "4B")
+
+    def test_params_does_not_match_quant_digits(self):
+        # Phi-4-mini: the "4" is part of the family name, not a param count;
+        # Q4_K_M must not be read as "4B" either.
+        self.assertIsNone(parse_params("Phi-4-mini-reasoning-Q4_K_M.gguf"))
+
+
+class TestUpdatedMetadata(unittest.TestCase):
+    BASE = {
+        "team_id": "team-muta",
+        "test_prompts": [{"prompt_id": "tp_001", "prompt": "x"}],
+        "model": {
+            "name": "old-name",
+            "runtime": "llama.cpp",
+            "quantization": "GGUF Q4_K_M",
+            "parameters_estimate": "135M",
+            "packaging": "binary_bundle",
+        },
+        "_runtime": {"model_path": "model/old.gguf"},
+    }
+
+    def test_rewrites_model_block_and_path(self):
+        meta = updated_metadata(self.BASE, "Qwen3.5-0.8B-MTP-Q4_K_M.gguf")
+        self.assertEqual(meta["_runtime"]["model_path"], "model/Qwen3.5-0.8B-MTP-Q4_K_M.gguf")
+        self.assertEqual(meta["model"]["name"], "Qwen3.5-0.8B-MTP-Q4_K_M")
+        self.assertEqual(meta["model"]["quantization"], "GGUF Q4_K_M")
+        self.assertEqual(meta["model"]["parameters_estimate"], "0.8B")
+
+    def test_preserves_unrelated_fields_and_leaves_unknowns(self):
+        meta = updated_metadata(self.BASE, "mystery.gguf")
+        self.assertEqual(meta["team_id"], "team-muta")
+        self.assertEqual(meta["test_prompts"], self.BASE["test_prompts"])
+        # unknown quant/params: keep previous values rather than writing junk
+        self.assertEqual(meta["model"]["quantization"], "GGUF Q4_K_M")
+        self.assertEqual(meta["model"]["parameters_estimate"], "135M")
+        self.assertEqual(meta["model"]["runtime"], "llama.cpp")
+
+    def test_does_not_mutate_input(self):
+        before = json.loads(json.dumps(self.BASE))
+        updated_metadata(self.BASE, "Qwen3.5-4B-Q4_K_M.gguf")
+        self.assertEqual(self.BASE, before)
+
+
+class TestExtractMetrics(unittest.TestCase):
+    REPORT = {
+        "submission": {
+            "african_alpha_claim": True,
+            "budget_laptop_claim": True,
+        },
+        "throughput": {
+            "tokens_per_second_generation": 38.27,
+            "first_token_latency_ms": 966.56,
+        },
+        "memory": {"peak_rss_mb": 232.22},
+        "accuracy": [
+            {"benchmark": "arc_easy", "score": 0.42, "metric": "acc_norm", "samples": 50}
+        ],
+        "cpu_thermal": {"cpu_percent_p99": 86.6, "core_temp_c_peak": None, "throttled": False},
+    }
+
+    def test_extracts_flat_metrics(self):
+        m = extract_metrics(self.REPORT)
+        self.assertEqual(m["tps"], 38.27)
+        self.assertEqual(m["ttft_ms"], 966.56)
+        self.assertEqual(m["peak_rss_mb"], 232.22)
+        self.assertEqual(m["arc_score"], 0.42)
+        self.assertEqual(m["arc_samples"], 50)
+        self.assertIsNone(m["temp_c"])
+        self.assertFalse(m["throttled"])
+        self.assertTrue(m["african_claim"])
+        self.assertTrue(m["budget_claim"])
+
+    def test_empty_accuracy_list(self):
+        report = json.loads(json.dumps(self.REPORT))
+        report["accuracy"] = []
+        m = extract_metrics(report)
+        self.assertIsNone(m["arc_score"])
+
+    def test_missing_blocks_are_none(self):
+        m = extract_metrics({})
+        self.assertIsNone(m["tps"])
+        self.assertIsNone(m["arc_score"])
+        self.assertIsNone(m["african_claim"])
+
+
+if __name__ == "__main__":
+    unittest.main()

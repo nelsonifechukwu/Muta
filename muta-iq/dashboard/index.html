@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MUTA-IQ Profiler</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <h1>MUTA-IQ · ADTC profiler</h1>
+    <p class="sub" id="meta-line">loading…</p>
+  </div>
+  <div class="top-actions">
+    <label class="quick-toggle" title="Runs adtc-profiler with --skip-accuracy: fast, but no S_acc / S_total">
+      <input type="checkbox" id="quick-toggle"> Quick run (skip accuracy)
+    </label>
+    <span class="pill" id="status-pill">idle</span>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="run-card" hidden>
+    <div class="card-head row">
+      <div>
+        <h2 id="run-title">Profiling…</h2>
+        <p class="sub" id="run-sub"></p>
+      </div>
+      <div class="row-end">
+        <span class="mono elapsed" id="run-elapsed">0:00</span>
+        <button class="btn danger" data-action="cancel">Cancel run</button>
+      </div>
+    </div>
+    <pre class="log" id="run-log"></pre>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Best S_total by model</h2>
+      <p class="sub">Best fully-scored run per model · S_acc proxied locally by arc_easy × 100</p>
+    </div>
+    <div class="chart" id="chart"></div>
+    <p class="formula">
+      S_total = 0.50·S_acc + 0.30·S_perf + 0.20·S_eff − 10·thermal ·
+      S_perf = min(TPS / 15.0, 1) × 100 ·
+      S_eff = (7 GB − peak RAM) / 7 GB × 100 ·
+      crash / OOM ⇒ disqualified (0)
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Models</h2>
+      <p class="sub" id="models-sub"></p>
+    </div>
+    <div class="table-wrap">
+      <table class="models" id="models-table"></table>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title"></h3>
+      <button class="btn" data-action="modal-close">Close</button>
+    </div>
+    <pre class="log tall" id="modal-body"></pre>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script src="script.js"></script>
+</body>
+</html>
