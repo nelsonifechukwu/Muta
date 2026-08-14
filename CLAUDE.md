@@ -19,7 +19,9 @@ on **2026-08-11** as a root with no common ancestor, and **merged into `main` on
 moves again, sync with `git merge -X subtree=pilot-v2 origin/pilot/v2`). It has no
 Postgres, no `/v1` contract, and none of the rules below bind it; `pilot-v2/CLAUDE.md`
 governs work there. **The pilot was wrapped up on 2026-08-14** (Phases A–C + Milestone A
-done; Phase D/E harness descoped; one open defect, C5 — see the wrap-up entries in
+done; Phase D/E harness descoped; the carried defect C5 was diagnosed the same day —
+aarch64 repack kernels break the SmolLM2 front; route-around `--tier-policy
+front=streamed` validated under the enforced cap — see the wrap-up + C5 entries in
 `pilot-v2/docs/WORKLOG.md` and `pilot-v2/bench/results.md` §5). The dev worktree, the
 local `pilot/v2` branch, and the retired standalone repo's `.git` were all removed after
 consolidation; the llama.cpp engine history survives only as `pilot-v2/patches/0001–0032`

@@ -319,16 +319,28 @@ up) versus **11,247.3 ms** for the same prompt with `--no-ttft-opener` — a 26�
 Both figures are macOS warm-cache; the formal G11 form (cold start, `drop_caches`, inside
 the enforced container, <300 ms threshold) was never run — see wrap-up status below.
 
-**Open defect (C5, blocks G8's answer-quality half):** the SmolLM2 front produces garbage
-in the aarch64-Linux container build — opener text is token salad and every route score
-shifts strongly positive (`Say hello.` scores +2.35 in the container vs −3.16 on macOS),
-so at τ=0 everything routes hard. Proven **pre-existing** (not streaming's): a no-flag
-control at an 8 GiB cap produces byte-identical garbage. Not mlock. The easy and mid
-tiers are coherent in the same binary; suspect the aarch64 `GGML_BLAS=OFF` CPU kernels /
-Q4_K repack on this 135M llama-arch geometry. Phase C gates used `--route-threshold 3.0`
-to separate easy from hard on the shifted scale; the residency machinery under test is
-unaffected, but **no answer-quality claim is made for the container trio** until this is
-diagnosed.
+**Defect C5 — diagnosed 2026-08-14: the aarch64 repacked Q4_K kernels break the
+SmolLM2-135M forward pass.** The original symptom: the front's opener was token salad and
+every route score shifted strongly positive (`Say hello.` +2.35 in the container vs −3.16
+on macOS), so at τ=0 everything routed hard; Phase C gates worked around it with
+`--route-threshold 3.0`. Diagnosis (rung 1 of the WORKLOG ladder, no rebuild needed):
+the identical `llama-completion --bundle-prefix m0.` run flips from garbage to coherent
+on `--no-repack` alone, and `llama-duo --route-only` scores follow the kernels —
+`Say hello.` is **+2.3464** repacked vs **−3.3223** non-repacked (macOS reference −3.16).
+One defect, not two. The easy/mid qwen35 tiers were never affected; the 135M llama-arch
+geometry (n_embd 576, 9 heads) is where the repack path goes from B3's known numerical
+divergence to outright wrong — an upstream kernel bug, not this tree's patch.
+
+**Validated route-around: `--tier-policy front=streamed`** (a streamed load forces
+`use_extra_bufts` off). With it, **default τ=0 routing works in the container for the
+first time**, under the enforced cap (`cgrun 2048m`, config of record plus the policy
+flag): hard prompt → `route=hard s=1.056` (macOS reference +1.064), coherent opener,
+`switch none->mid`, correct algebra answer at 2.0 tok/s streamed, `memory.peak`
+**1763.2 MiB**; easy prompt → `route=easy s=-3.322`, coherent answer, peak ≈954 MiB.
+Both exit 0, OOMKilled=false. Cost: the front loses mlock, so first token is
+1079–1215 ms instead of 431 ms — the proper fix (plumb `use_extra_bufts=false` per tier
+through duo, or fix the upstream kernel) needs a rebuild from `patches/`. Full detail in
+`docs/WORKLOG.md` "C5 diagnosis".
 
 ### Wrap-up status (2026-08-14)
 
@@ -339,7 +351,7 @@ wrap-up** — not attempted, not partially built. Where that leaves each gate:
 
 | gate | status at wrap-up |
 |---|---|
-| G8 (cap) | **Answered in substance** for the cap half: enforced-2048m escalation run, 1755.2 MiB peak (table above). Answer-quality half **blocked by C5**. The formal per-mode × per-cap-mode matrix was not emitted. |
+| G8 (cap) | **Answered in substance**, both halves: cap half via the enforced-2048m escalation run, 1755.2 MiB peak (table above); answer-quality half via the C5 route-around (2026-08-14) — coherent, correctly-routed answers at default τ=0 under the enforced cap (`route=hard s=1.056` / `route=easy s=-3.322`, peaks 1763.2 / ≈954 MiB). The formal per-mode × per-cap-mode matrix was not emitted. |
 | G9 (latency model) | **Answered in substance**: MA-2 meas÷pred 0.834 (±30% band); trio streamed segments within ~10% of the ledger's 0.742 s/token. Formal `-n 64` forced-hard run not taken. |
 | G10 (amortization) | **Not run** — requires Phase D. No K curve, no default K chosen. |
 | G11 (TTFT) | Mechanism proven (430.9 ms vs 11,247.3 ms warm, 26×); the formal cold-start in-container <300 ms measurement was never taken, and the known KV-parse risk (bundle loads parse both 248k vocab arrays on the front's critical path) was never exercised cold. |

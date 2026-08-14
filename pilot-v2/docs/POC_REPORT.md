@@ -152,10 +152,15 @@ Milestone A, and C (multi-tier duo integration), through llama.cpp branch `strea
 amortizer, S4) and the formal Phase E gate harness (`stream_gates.sh`, G-gate matrix,
 default K). Gate-by-gate: G9 and G12 are answered in substance (meas÷pred 0.834 single-
 model / ~10% trio; 3.83× managed-vs-unmanaged, OOM-kill vs completion at trio level);
-G8's cap half is answered (1755.2 MiB enforced) but its answer-quality half is **blocked
-by one open defect** — the SmolLM2 front generates garbage in the aarch64-Linux container
-build (proven pre-existing via a no-flag 8 GiB control; easy/mid coherent in the same
-binary; suspect the aarch64 CPU kernels/repack on the 135M geometry); G10 was never run;
+G8 is answered in substance in both halves: the cap half (1755.2 MiB enforced) and — after
+the carried C5 defect was diagnosed on 2026-08-14 — the answer-quality half. C5 turned out
+to be the aarch64 repacked Q4_K kernels breaking the SmolLM2-135M forward pass (the same
+run flips garbage→coherent on `--no-repack` alone; route scores follow the kernels,
++2.35 → −3.32 on "Say hello.", macOS reference −3.16); with the validated route-around
+`--tier-policy front=streamed` (streamed loads force repack off), default-τ routing
+produces coherent, correctly-routed answers under the enforced 2048m cap (peaks 1763.2 /
+≈954 MiB), at the cost of TTFT rising to ~1.1–1.2 s until the proper per-tier
+`use_extra_bufts` plumbing or an upstream kernel fix lands. G10 was never run;
 G11's mechanism is proven but its formal cold-start <300 ms measurement was never taken.
 Everything measured here is aarch64-Linux-on-Apple-Silicon — architecture-comparative,
 to be re-measured on the x86-64 ADTC target. The dev worktree is gone; the surviving

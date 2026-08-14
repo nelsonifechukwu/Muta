@@ -1174,3 +1174,56 @@ of what was descoped, what remains open, and where the artifacts now live.
 - **Standing constraints that outlive the pilot:** the llama.cpp fork is never pushed
   anywhere (patches are the export); `models/` is never modified; `MUTA_SLOW_LOAD_MS` is
   test-only and must never be set in a benchmark run; measurement runs are serialized.
+
+## C5 diagnosis, 2026-08-14 (post-wrap-up addendum)
+
+Rung 1 of the ladder above discriminated on the first try, using only the surviving
+volumes (no rebuild): **the aarch64 repacked Q4_K kernels break the SmolLM2-135M forward
+pass.** All runs in the `muta-stream` container, binaries from `muta-build` (branch
+`streaming` @ `7593921`), trio bundle from `muta-models`, serialized.
+
+- **Reproduction (default kernels, repack ON):** `cgrun 8g llama-completion -m
+  /models/muta-trio.gguf --bundle-prefix m0. --temp 0 --seed 42 -n 32 -p "Say hello."` →
+  token salad (`s\`): n))[icidesWestorneys …`), byte-for-byte the C4 symptom, with no
+  streaming flags and a roomy cap.
+- **Rung 1 (`--no-repack`, same command otherwise):** coherent text. That is the whole
+  discrimination: same binary, same bundle, same prompt; the only variable is
+  `use_extra_bufts`.
+- **Route scores follow the kernels** (`llama-duo --route-only`): default kernels score
+  `Say hello.` **+2.3464** and the solve-3x+5 prompt **+4.1581** (matching C4's recorded
+  +2.35 / 4.158); with a non-repacked front, `Say hello.` scores **−3.3223** — the macOS
+  reference is −3.16. The "container routes everything hard at τ=0" symptom and the
+  garbage opener are one defect, not two.
+- **Why only the front:** the easy/mid (qwen35) tiers were always coherent on the same
+  default-kernel binary, and B3 had already measured the repacked q4_K/q6_K kernels as
+  *numerically divergent* (different greedy token within 16) on the 4B without being
+  *broken*. The 135M llama-arch geometry (n_embd 576, 9 heads) is where the repack path
+  goes from divergent to wrong; upstream-fixable, not this tree's patch.
+- **Route-around, validated end-to-end (no rebuild): `--tier-policy front=streamed`.**
+  A streamed-policy load forces `use_extra_bufts` off (B2 Discovery 1), so the front
+  lands on the sane kernel set. Under `cgrun 2048m` (enforced), `--stream-weights
+  --max-ram-mib 2048 --ctx-expert 4096 --tier-ctx easy=4096 -ub 128 --tier-policy
+  front=streamed`, **default `--route-threshold 0.0`** — the first time τ=0 works in the
+  container:
+  - hard prompt (`-n 64`): `route=hard s=1.056` (macOS reference for this prompt:
+    +1.064), coherent front opener (24 tokens, cut=boundary), `switch none->mid`, ledger
+    `active=mid pinned=567.7MiB streamed=2035.8MiB W=2`, correct isolate-x algebra
+    answer at 2.0 tok/s streamed — exit 0, OOMKilled=false, `memory.peak`
+    1,848,791,040 B = **1763.2 MiB**.
+  - easy prompt (`-n 48`): `route=easy s=-3.322`, opener answers to EOS ("Hello! What
+    can I help you with today?"), `switch none->front`, exit 0, `memory.peak`
+    ≈ **954 MiB**.
+  The route-around composes with the sticky demote: front (streamed, active-switching),
+  easy (demoted → fully pinned 500.8 MiB), and mid (windowed) coexist under the one cap
+  with occupancy serialization intact.
+- **Cost of the route-around, and the remaining work:** a streamed front loses the mlock
+  guarantee, so TTFT is **1079–1215 ms** first token (vs 431 ms with the mlocked front) —
+  still ~10× better than the 11.2 s no-opener control, but the G11 <300 ms target needs
+  the proper fix. That fix is one of: (a) plumb `use_extra_bufts=false` per tier through
+  duo (small `duo.cpp` change — needs the tree rebuilt from `patches/`), or (b) fix the
+  upstream aarch64 repack kernel for this geometry (report upstream with the
+  `--no-repack` discrimination above). Until then: container trio runs use
+  `--tier-policy front=streamed`; macOS is unaffected.
+- G8's answer-quality half is hereby **unblocked in substance** (coherent, correctly
+  routed answers under the enforced cap); the formal per-mode gate matrix remains
+  descoped as recorded in the wrap-up entry.
