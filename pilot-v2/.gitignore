@@ -265,3 +265,6 @@ bundle/
 
 # archived experiment weights (TinyStories-1M and its ChatML fine-tune)
 archive/*/models/
+
+# nested engine clone (reconstructed from patches/; never pushed)
+llama.cpp/

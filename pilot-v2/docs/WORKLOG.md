@@ -1227,3 +1227,28 @@ pass.** All runs in the `muta-stream` container, binaries from `muta-build` (bra
 - G8's answer-quality half is hereby **unblocked in substance** (coherent, correctly
   routed answers under the enforced cap); the formal per-mode gate matrix remains
   descoped as recorded in the wrap-up entry.
+
+## Task D1 (S4.0): spec-mechanism probe, 2026-08-14
+
+Prereqs rebuilt first (the dev worktree was gone): upstream clone at `7ba604f` +
+`git am` patches 0001–0032 (clean, zero conflicts) = branch `streaming`, tip content-
+identical to old `7593921`; container build into a fresh `muta-build-r` volume;
+faithfulness proven against the surviving `muta-build` binaries (route score 2.3464
+identical; streamed-4B greedy output byte-identical). S3.5 (`ae51b8a3b`,
+`--no-repack` for all tier loads) landed as the C5 proper fix before the probe:
+mlocked front now routes sanely (−3.49 easy / +1.05 hard) with first token 623 ms
+in-container. The standalone 0.8B for `-md` was recovered from the trio bundle with
+the new `scripts/extract_bundle.py` — sha256 equals the manifest's recorded source
+hash, i.e. bit-identical to the original unsloth file.
+
+Probe matrix and verdict: see `docs/DISCOVERY.md` "S4.0 — spec-mechanism probe".
+Headline: **Path A (in-tree `draft-simple`) wins** — acceptance 0.74/0.78/0.81
+(prose/math/physics) vs duo verify's 0.60/0.60/0.81 with no repair-span re-decode;
+b10331's `common/speculative.cpp` already checkpoint-handles the hybrid target;
+`draft-mtp` is structurally N/A cross-model (width assert, recorded); greedy
+divergence vs the single-token baseline was proven to be batched-verify numerics,
+not rollback breakage (K=1 / 100%-accept / zero-restore run reproduces the same flip
+— the plan's "divergence = rollback broken" clause is retired as a deviation, with
+the discriminating evidence in DISCOVERY).
+
+Raw logs: `bench/.artifacts/d1/` (gitignored).

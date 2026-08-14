@@ -581,3 +581,43 @@ copied `bundle/muta-trio.gguf` into the `muta-models` named volume
 alongside the existing `Qwen3.5-4B-Q4_K_M.gguf`, confirmed present at the
 expected byte sizes via a throwaway container `ls -la /models`. Available
 for later streaming-gate tasks.
+
+## S4.0 — spec-mechanism probe (D1, 2026-08-14)
+
+Environment: `muta-stream` container, reconstructed tree (upstream `7ba604f` + patches
+0001–0032 + S3.5) in `muta-build-r`, standalone 0.8B extracted bit-identically from the
+trio bundle (`scripts/extract_bundle.py`, sha256 = manifest's `ac7c9d7a…`). All arms
+`--no-repack --temp 0 --seed 42 -c 4096 -t 6 -n 128`, 8 GiB cap (resident; correctness
+probe, not a cap measurement).
+
+- **The in-tree speculative path supports the qwen35 hybrid pair out of the box.**
+  `common/speculative.cpp` detects that the target context cannot do partial sequence
+  removal and switches to checkpoint save/restore ("speculative decoding will use
+  checkpoints"). No crash, no assert, coherent output on all three probe prompts.
+- **Leg A acceptance (`llama-speculative-simple`, K=8, 4B target / 0.8B draft):**
+  prose 0.737, math 0.778, physics 0.806 — every arm ≥ the 0.50 math bar.
+- **`draft-mtp` is structurally N/A for a cross-model pair,** not a bug to fix:
+  `GGML_ASSERT` at `speculative.cpp:1294` — the MTP impl feeds the TARGET's post-norm
+  rows into the draft's MTP head, and the 4B's width (2560) cannot enter the 0.8B's
+  head. MTP drafting needs a self-drafting MTP target; the 4B has no MTP head. The
+  0.8B's own MTP head remains unused (same as the duo verify path).
+- **Greedy identity vs the one-token-at-a-time baseline: NOT byte-identical, and the
+  plan's inference ("any divergence = qwen35 rollback broken = in-tree path dead") is
+  DISPROVEN on this build.** p2 (math) is prefix-identical; p1/p3 flip one word at a
+  near-tie ("rain/snow"→"rain, snow", "Here"→"Given") and stay coherent. The
+  discriminating run: at `--spec-draft-n-max 1` acceptance was **100%** — zero
+  rejections, therefore **zero checkpoint restores** — yet the output reproduces the
+  IDENTICAL flip at the IDENTICAL character. With no rollback events, the divergence
+  can only be batch-shape numerics (the target verifies 2–9 tokens per decode vs the
+  baseline's 1; different FP reduction order flips a near-tie argmax). Same tolerance
+  class as B3's repack/no-repack kernel divergence, already accepted for this build.
+  Rollback corruption is separately excluded by behavior: acceptance holds at 0.74–0.81
+  across many restore events and output never derails.
+- **Leg B (duo `--mode verify`, 0.8B drafter via `--tier front=m1.`, `--draft 8
+  --draft-max 8`, logprob rule):** acc prose 0.60, math 0.60, physics 0.81, with
+  65–68% of tokens expert-authored (repair spans re-decoded by the 33 ms/token mid).
+- **Verdict: Path A — in-tree `draft-simple`.** Decision rule: leg A passes and math
+  acceptance 0.778 ≥ verify math 0.60 − 0.05. Path A also reads the streamed region
+  once per (K+1)-token verify batch natively and has no repair-span re-decode.
+  (`--spec-type none` in `llama-speculative-simple` generates nothing — harness quirk,
+  K=0 baselines come from plain `llama-completion` / `--draft-tier none` instead.)
