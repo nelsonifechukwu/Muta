@@ -1,10 +1,29 @@
 """Unit tests for the dashboard's pure logic: scoring, filename parsing, metadata rewrite."""
 import json
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from app import compute_scores, parse_quant, parse_params, updated_metadata, extract_metrics
+import app
+from app import (compute_scores, parse_quant, parse_params, updated_metadata,
+                 extract_metrics, model_listing)
+
+
+@contextmanager
+def tmp_app_env():
+    """Point app's module-level paths at a throwaway dir with a fresh DB."""
+    with TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "model").mkdir()
+        saved = (app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION)
+        app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION = (
+            tmp / "model", tmp / "profiler.db", tmp / "metadata.json", tmp / "submission.json")
+        try:
+            app.init_db()
+            yield tmp
+        finally:
+            app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION = saved
 
 
 class TestComputeScores(unittest.TestCase):
@@ -146,6 +165,105 @@ class TestExtractMetrics(unittest.TestCase):
         self.assertIsNone(m["tps"])
         self.assertIsNone(m["arc_score"])
         self.assertIsNone(m["african_claim"])
+
+
+class TestModelListing(unittest.TestCase):
+    def test_merges_disk_and_db_only_models(self):
+        # a is both on disk and in the DB, b is disk-only, c is history-only:
+        # present models first (sorted), then deleted-but-profiled ones.
+        out = model_listing(["b.gguf", "a.gguf"], ["c.gguf", "a.gguf"])
+        self.assertEqual(out, [("a.gguf", True), ("b.gguf", True), ("c.gguf", False)])
+
+    def test_no_history_means_no_ghost_entries(self):
+        self.assertEqual(model_listing(["a.gguf"], []), [("a.gguf", True)])
+
+    def test_empty_model_dir_still_lists_history(self):
+        self.assertEqual(model_listing([], ["gone.gguf"]), [("gone.gguf", False)])
+
+
+class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
+    """Deleting a .gguf from model/ must not hide its profile runs."""
+
+    def test_deleted_model_keeps_history(self):
+        with tmp_app_env() as tmp:
+            (tmp / "model" / "OnDisk-1B-Q4_K_M.gguf").write_bytes(b"\0" * 16)
+            with app.db() as conn:
+                conn.execute(
+                    "INSERT INTO runs (model_file, started_at, status, tps)"
+                    " VALUES (?,?,?,?)",
+                    ("Deleted-1B-Q4_K_M.gguf", "2026-08-14T00:00:00", "ok", 20.0))
+            models = {m["file"]: m for m in app.state_payload()["models"]}
+
+            self.assertIn("Deleted-1B-Q4_K_M.gguf", models)
+            ghost = models["Deleted-1B-Q4_K_M.gguf"]
+            self.assertFalse(ghost["present"])
+            self.assertIsNone(ghost["size_bytes"])
+            self.assertEqual(ghost["runs_count"], 1)
+            self.assertEqual(ghost["latest"]["tps"], 20.0)
+            self.assertTrue(models["OnDisk-1B-Q4_K_M.gguf"]["present"])
+
+
+class TestInitDbStaleRunCleanup(unittest.TestCase):
+    """A daemon-thread death (Ctrl-C mid-profile) leaves status='running' rows
+    behind forever; init_db must fail them at startup or they become
+    undeletable zombie entries."""
+
+    def test_init_db_fails_stale_running_rows(self):
+        with tmp_app_env():
+            with app.db() as conn:
+                conn.execute(
+                    "INSERT INTO runs (model_file, started_at, status)"
+                    " VALUES (?,?,?)", ("Gone.gguf", "2026-08-14T00:00:00", "running"))
+            app.init_db()  # server restart
+            with app.db() as conn:
+                row = conn.execute("SELECT * FROM runs").fetchone()
+            self.assertEqual(row["status"], "failed")
+            self.assertIsNotNone(row["finished_at"])
+            self.assertIn("interrupted", row["error"])
+
+
+class TestPromoteRun(unittest.TestCase):
+    METADATA = {"team_id": "team-muta", "model": {"name": "old"},
+                "_runtime": {"model_path": "model/old.gguf"}}
+
+    def _insert_run(self, model_file: str) -> int:
+        with app.db() as conn:
+            cur = conn.execute(
+                "INSERT INTO runs (model_file, started_at, status, report_json)"
+                " VALUES (?,?,?,?)",
+                (model_file, "2026-08-14T00:00:00", "ok",
+                 json.dumps({"throughput": {"tokens_per_second_generation": 20.0}})))
+            return cur.lastrowid
+
+    def test_promote_refuses_deleted_model(self):
+        with tmp_app_env():
+            app.METADATA.write_text(json.dumps(self.METADATA))
+            run_id = self._insert_run("Deleted-1B-Q4_K_M.gguf")
+            result, err = app.promote_run(run_id)
+            self.assertIsNone(result)
+            self.assertIn("no longer exists", err)
+            self.assertFalse(app.SUBMISSION.exists())
+            self.assertEqual(json.loads(app.METADATA.read_text()), self.METADATA)
+
+    def test_promote_writes_submission_for_present_model(self):
+        with tmp_app_env() as tmp:
+            app.METADATA.write_text(json.dumps(self.METADATA))
+            (tmp / "model" / "OnDisk-1B-Q4_K_M.gguf").write_bytes(b"\0" * 16)
+            run_id = self._insert_run("OnDisk-1B-Q4_K_M.gguf")
+            result, err = app.promote_run(run_id)
+            self.assertIsNone(err)
+            self.assertTrue(result["promoted"])
+            self.assertEqual(
+                json.loads(app.SUBMISSION.read_text())["throughput"]
+                ["tokens_per_second_generation"], 20.0)
+            meta = json.loads(app.METADATA.read_text())
+            self.assertEqual(meta["_runtime"]["model_path"], "model/OnDisk-1B-Q4_K_M.gguf")
+
+    def test_promote_refuses_run_without_report(self):
+        with tmp_app_env():
+            result, err = app.promote_run(999)
+            self.assertIsNone(result)
+            self.assertEqual(err, "run has no report")
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ const fmt = {
   score: (x, d = 1) => (x == null ? "—" : x.toFixed(d)),
   num: (x, d = 1) => (x == null ? "—" : Number(x).toFixed(d)),
   int: (x) => (x == null ? "—" : String(Math.round(x))),
-  gb: (b) => (b / 2 ** 30).toFixed(2) + " GB",
+  gb: (b) => (b == null ? "—" : (b / 2 ** 30).toFixed(2) + " GB"),
   mb: (x) => (x == null ? "—" : Math.round(x).toLocaleString() + " MB"),
   when: (iso) => iso == null ? "—" :
     new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
@@ -160,9 +160,12 @@ function shortName(file) { return file.replace(/\.gguf$/i, ""); }
 
 function renderTable(d) {
   const busy = !!d.current;
+  const present = d.models.filter((m) => m.present).length;
+  const gone = d.models.length - present;
   $("models-sub").textContent =
-    `${d.models.length} GGUF file${d.models.length === 1 ? "" : "s"} in model/ · ` +
-    `latest run shown per model · click History for all runs`;
+    `${present} GGUF file${present === 1 ? "" : "s"} in model/` +
+    (gone ? ` · ${gone} deleted model${gone === 1 ? "" : "s"} with saved runs` : "") +
+    ` · latest run shown per model · click History for all runs`;
   const head = `<thead><tr>
     <th>Model</th><th>S_total</th><th>S_acc</th><th>S_perf</th><th>S_eff</th>
     <th>arc_easy</th><th>tok/s</th><th>TTFT ms</th><th>Peak RAM</th><th>CPU temp</th>
@@ -171,18 +174,21 @@ function renderTable(d) {
   const rows = d.models.map((m) => {
     const r = m.latest, s = r ? r.scores : null;
     const running = d.current && d.current.model_file === m.file;
-    const sub = [fmt.gb(m.size_bytes), m.quant, m.params].filter(Boolean).join(" · ") +
+    const info = m.present
+      ? [fmt.gb(m.size_bytes), m.quant, m.params]
+      : ["file deleted — runs kept", m.quant, m.params];
+    const sub = info.filter(Boolean).join(" · ") +
       (m.runs_count
         ? ` · ${m.runs_count} run${m.runs_count === 1 ? "" : "s"} · last ${fmt.when(r && (r.finished_at || r.started_at))}`
         : " · never profiled");
     const arc = r && r.arc_score != null ? `${r.arc_score.toFixed(3)}` : "—";
     const main = `<tr class="model-row" data-model="${esc(m.file)}">
       <td>
-        <div class="model-name">${esc(shortName(m.file))}</div>
+        <div class="model-name${m.present ? "" : " dim"}">${esc(shortName(m.file))}</div>
         <div class="model-sub">${esc(sub)}</div>
         <div class="model-actions">
           <button class="btn primary small" data-action="profile" data-model="${esc(m.file)}"
-            ${busy ? "disabled" : ""}>${running ? "Running…" : "Profile"}</button>
+            ${busy || !m.present ? "disabled" : ""}>${running ? "Running…" : "Profile"}</button>
           <button class="btn small" data-action="history" data-model="${esc(m.file)}"
             ${m.runs_count ? "" : "disabled"}>History ${state.expanded.has(m.file) ? "▴" : "▾"}</button>
         </div>
@@ -207,6 +213,8 @@ function renderTable(d) {
 
 function historyRow(file) {
   const runs = state.runsCache[file] || [];
+  const model = (state.data ? state.data.models : []).find((m) => m.file === file);
+  const gone = !!model && !model.present;
   const rows = runs.filter((r) => r.status !== "running").map((r) => {
     const s = r.scores || {};
     return `<tr>
@@ -221,7 +229,9 @@ function historyRow(file) {
       <td>${fmt.mb(r.peak_rss_mb)}</td>
       <td>
         <button class="btn small" data-action="json" data-id="${r.id}">Report</button>
-        <button class="btn small" data-action="promote" data-id="${r.id}" ${r.status === "ok" ? "" : "disabled"}>→ submission.json</button>
+        <button class="btn small" data-action="promote" data-id="${r.id}"
+          ${r.status === "ok" && !gone ? "" : "disabled"}
+          ${gone ? 'title="model file deleted — cannot promote"' : ""}>→ submission.json</button>
         <button class="btn small danger" data-action="delete" data-id="${r.id}">Delete</button>
       </td>
     </tr>`;

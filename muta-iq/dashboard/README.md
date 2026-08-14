@@ -20,7 +20,9 @@ env var).
 ## What it does
 
 - Lists every `*.gguf` in `model/` with size, quant, and param count parsed
-  from the filename.
+  from the filename. Models whose file was deleted but that still have runs in
+  the database stay listed (marked "file deleted — runs kept", profiling
+  disabled) — deleting a model never deletes its profile records.
 - **Profile** button per model: rewrites the repo's `metadata.json`
   (`_runtime.model_path` + model block) for that model, then runs
   `adtc-profiler run --submission . --mode participant` with live log output.

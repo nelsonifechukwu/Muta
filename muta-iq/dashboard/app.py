@@ -78,6 +78,17 @@ def updated_metadata(base: dict, model_file: str) -> dict:
     return meta
 
 
+def model_listing(disk_files: list[str], run_files: list[str]) -> list[tuple[str, bool]]:
+    """Model files to display with a present-on-disk flag.
+
+    On-disk models first; models whose .gguf was deleted but that still have
+    run history in the DB follow, so profile records outlive the file.
+    """
+    on_disk = sorted(set(disk_files))
+    ghosts = sorted(set(run_files) - set(disk_files))
+    return [(f, True) for f in on_disk] + [(f, False) for f in ghosts]
+
+
 def extract_metrics(report: dict) -> dict:
     """Flatten the metrics the dashboard tracks out of a profiler report."""
     sub = report.get("submission") or {}
@@ -154,6 +165,31 @@ def init_db() -> None:
                 african_claim INTEGER, budget_claim INTEGER
             )
         """)
+        # A daemon-thread death (Ctrl-C mid-profile) skips _run_profile's
+        # finally, stranding rows at 'running'; nothing can be running at boot.
+        conn.execute(
+            "UPDATE runs SET status='failed', finished_at=?,"
+            " error='interrupted: server stopped mid-run' WHERE status='running'",
+            (now_iso(),))
+
+
+def promote_run(run_id: int) -> tuple[dict | None, str | None]:
+    """Promote a stored run's report to submission.json + metadata.json.
+
+    Refuses when the model file is gone: metadata.json must never point at a
+    .gguf that no longer exists. Returns (result, None) or (None, error).
+    """
+    with db() as conn:
+        row = conn.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()
+    if row is None or not row["report_json"]:
+        return None, "run has no report"
+    if not (MODEL_DIR / row["model_file"]).is_file():
+        return None, f"model file no longer exists: {row['model_file']}"
+    report = json.loads(row["report_json"])
+    SUBMISSION.write_text(json.dumps(report, indent=2) + "\n")
+    meta = json.loads(METADATA.read_text())
+    METADATA.write_text(json.dumps(updated_metadata(meta, row["model_file"]), indent=2) + "\n")
+    return {"promoted": True, "submission": str(SUBMISSION)}, None
 
 
 def run_row_public(row: sqlite3.Row, include_report: bool = False) -> dict:
@@ -312,19 +348,22 @@ def cancel_current() -> bool:
 
 def state_payload() -> dict:
     models = []
-    files = sorted(p for p in MODEL_DIR.glob("*.gguf") if p.is_file())
+    disk = {p.name: p for p in MODEL_DIR.glob("*.gguf") if p.is_file()}
     with db() as conn:
-        for p in files:
+        run_files = [r["model_file"] for r in
+                     conn.execute("SELECT DISTINCT model_file FROM runs").fetchall()]
+        for name, present in model_listing(list(disk), run_files):
             rows = conn.execute(
                 "SELECT * FROM runs WHERE model_file=? AND status!='running' ORDER BY id DESC",
-                (p.name,)).fetchall()
+                (name,)).fetchall()
             runs = [run_row_public(r) for r in rows]
             latest = runs[0] if runs else None
             scored = [r for r in runs if r["scores"] and r["scores"]["s_total"] is not None]
             best = max(scored, key=lambda r: r["scores"]["s_total"], default=None)
             models.append({
-                "file": p.name, "size_bytes": p.stat().st_size,
-                "quant": parse_quant(p.name), "params": parse_params(p.name),
+                "file": name, "present": present,
+                "size_bytes": disk[name].stat().st_size if present else None,
+                "quant": parse_quant(name), "params": parse_params(name),
                 "runs_count": len(runs), "latest": latest, "best": best,
             })
     with STATE_LOCK:
@@ -442,15 +481,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"cancelled": cancel_current()})
         m = _PROMOTE_RE.match(url.path)
         if m:
-            with db() as conn:
-                row = conn.execute("SELECT * FROM runs WHERE id=?", (int(m.group(1)),)).fetchone()
-            if row is None or not row["report_json"]:
-                return self._json({"error": "run has no report"}, 404)
-            report = json.loads(row["report_json"])
-            SUBMISSION.write_text(json.dumps(report, indent=2) + "\n")
-            meta = json.loads(METADATA.read_text())
-            METADATA.write_text(json.dumps(updated_metadata(meta, row["model_file"]), indent=2) + "\n")
-            return self._json({"promoted": True, "submission": str(SUBMISSION)})
+            result, err = promote_run(int(m.group(1)))
+            if err:
+                return self._json({"error": err}, 404 if err == "run has no report" else 409)
+            return self._json(result)
         self._json({"error": "not found"}, 404)
 
     def do_DELETE(self):
