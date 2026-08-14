@@ -144,26 +144,34 @@ token from **11,247 ms to 431 ms** (26×, macOS warm-cache). Mechanics (occupanc
 serialization, sticky demote, the ledger of record) and the cap-run table are in
 `bench/results.md` §5.
 
-### Wrap-up status (2026-08-14) — what is proven, what is open
+### Final status (2026-08-14) — every phase executed, all gates run
 
-Executed: Phases A (discovery/probes/bundle), B (residency manager + cb_eval scheduler),
-Milestone A, and C (multi-tier duo integration), through llama.cpp branch `streaming` @
-`7593921` = `patches/0032`. **Descoped at wrap-up, not attempted:** Phase D (spec-decode
-amortizer, S4) and the formal Phase E gate harness (`stream_gates.sh`, G-gate matrix,
-default K). Gate-by-gate: G9 and G12 are answered in substance (meas÷pred 0.834 single-
-model / ~10% trio; 3.83× managed-vs-unmanaged, OOM-kill vs completion at trio level);
-G8 is answered in substance in both halves: the cap half (1755.2 MiB enforced) and — after
-the carried C5 defect was diagnosed on 2026-08-14 — the answer-quality half. C5 turned out
-to be the aarch64 repacked Q4_K kernels breaking the SmolLM2-135M forward pass (the same
-run flips garbage→coherent on `--no-repack` alone; route scores follow the kernels,
-+2.35 → −3.32 on "Say hello.", macOS reference −3.16); with the validated route-around
-`--tier-policy front=streamed` (streamed loads force repack off), default-τ routing
-produces coherent, correctly-routed answers under the enforced 2048m cap (peaks 1763.2 /
-≈954 MiB), at the cost of TTFT rising to ~1.1–1.2 s until the proper per-tier
-`use_extra_bufts` plumbing or an upstream kernel fix lands. G10 was never run;
-G11's mechanism is proven but its formal cold-start <300 ms measurement was never taken.
-Everything measured here is aarch64-Linux-on-Apple-Silicon — architecture-comparative,
-to be re-measured on the x86-64 ADTC target. The dev worktree is gone; the surviving
-`muta-stream` image + `muta-build`/`muta-models` volumes were re-verified on 2026-08-14
-(streamed 4B, enforced 2048m: 1638.7 MiB peak, 2.23 tok/s — MA-2 within noise), and the
-engine tree is reconstructable from `patches/0001–0032`.
+The plan is complete: Phases A (discovery/probes/bundle), B (residency manager +
+cb_eval scheduler), Milestone A, C (multi-tier duo integration), D (spec-decode
+amortizer), and E (formal gates G8–G12). Engine tip = `patches/0035` (S3.5 `--no-repack`
+= the C5 proper fix; S4.1 amortizer; S4.3 default K=16), rebuilt from `patches/` after
+the dev worktree was removed and proven faithful against the surviving binaries.
+
+Gate results (full tables, configs, and logs pointer in `bench/results.md` §5 "The
+formal gates"): **G8 PASS** — five modes × observed-3g/enforced-2048m, all exit 0, no
+OOM, peaks 964.9–1723.2 MiB, coherent answers at default τ=0 (the C5 fix made honest
+routing possible in the container; the conf-escalation arm demonstrates
+`switch none->mid reason=conf` with a carried draft at 1705.3 MiB enforced). **G9
+PASS** — expert streamed decode 811.2 ms/token vs the ledger's own 742 predicted,
+meas÷pred 1.093 (±30% band). **G10** — K curve on the amortizer config (whole 4B
+streamed, 0 pinned): mean turn tok/s 1.74/1.78/2.14 at K=4/8/16; acceptance ratio falls
+(0.74→0.35) but accepted-tokens-per-round rises (3.0→5.7); **default K=16**; best
+prompt 3.94 tok/s vs ~0.8 draftless (~5× on structured content, ~1.6× averaged). **G11
+PASS at 124.9 ms** cold external first-byte via the plan's rung-1 fallback
+(`--tier-file front=<standalone>`; the bundle-front floor is 725.3 ms, the delta being
+the two 248k-vocab bundle-KV parses). **G12** — managed 1.69× over unmanaged at the
+trio level (2.2 vs 1.3 turn tok/s; unmanaged pegged at peak = cap), no S6 trigger.
+
+C5 is closed (diagnosed: aarch64 repacked-Q4_K kernels break the 135M forward pass;
+fixed properly by S4.1-era `--no-repack` plumbing — mlocked front, sane scores, 623 ms
+warm TTFT). Everything measured here is aarch64-Linux-on-Apple-Silicon — architecture-
+comparative, to be re-measured on the x86-64 ADTC target. The engine lives at
+`pilot-v2/llama.cpp` (nested clone, never pushed; reconstructable = upstream `7ba604f`
++ `git am patches/0001–0035`); `muta-build`/`muta-build-r` volumes carry the final
+binaries, `muta-models` the trio bundle plus the bit-identically recovered standalone
+0.8B and SmolLM2 files (`scripts/extract_bundle.py`).

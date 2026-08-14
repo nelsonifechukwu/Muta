@@ -338,33 +338,85 @@ flag): hard prompt → `route=hard s=1.056` (macOS reference +1.064), coherent o
 `switch none->mid`, correct algebra answer at 2.0 tok/s streamed, `memory.peak`
 **1763.2 MiB**; easy prompt → `route=easy s=-3.322`, coherent answer, peak ≈954 MiB.
 Both exit 0, OOMKilled=false. Cost: the front loses mlock, so first token is
-1079–1215 ms instead of 431 ms — the proper fix (plumb `use_extra_bufts=false` per tier
-through duo, or fix the upstream kernel) needs a rebuild from `patches/`. Full detail in
-`docs/WORKLOG.md` "C5 diagnosis".
+1079–1215 ms instead of 431 ms. **Superseded later the same day by the proper fix:**
+S3.5 (`patches/0033`) plumbs `--no-repack` through every tier load — mlocked front,
+sane τ=0 scores, 623 ms warm first token — and the formal gates below all run on it.
+Full detail in `docs/WORKLOG.md` "C5 diagnosis".
 
-### Wrap-up status (2026-08-14)
+### The formal gates, G8–G12 (2026-08-14, Phase D + E completed)
 
-Execution stopped after Phase C + Milestone A. Phase D (S4 spec-decode amortizer:
-mechanism probe, `--draft-tier`/`--draft-k`, acceptance harness) and the formal Phase E
-gate harness (`scripts/stream_gates.sh`, default-K selection) were **descoped at
-wrap-up** — not attempted, not partially built. Where that leaves each gate:
+The wrap-up earlier the same day had descoped Phase D and the gate harness; both were
+subsequently completed. Engine tree reconstructed from `patches/` (upstream `7ba604f` +
+0001–0032, faithfulness proven: route score and streamed greedy output byte-identical to
+the surviving binaries), then extended by S3.5 (`--no-repack` for all tiers — the C5
+proper fix), S4.1 (`--draft-tier`/`--draft-k` amortizer, Path A per the D1 probe), and
+S4.3 (default K=16) — `patches/0033–0035`. Standalone 0.8B and SmolLM2 files recovered
+**bit-identically** from the trio bundle (`scripts/extract_bundle.py`; sha256 equal to
+the manifest's recorded source hashes). Harness: `scripts/stream_gates.sh` (S5.1), all
+in-container, serialized, `drop_caches` before every cap-relevant run; every run below
+uses `--no-repack` (accuracy-reference kernels + the C5 fix), **default τ=0 routing** —
+possible for the first time in the container. Raw logs + `gates.tsv` + `acceptance.tsv`
+in `bench/.runs/stream/` (gitignored). Record config `--ctx-expert 4096 --tier-ctx
+easy=4096 -ub 128` draftless; amortizer config `--ctx-expert 2048 --tier-ctx easy=2048
+--ctx-front 2048 -ub 32 --draft-tier easy`.
 
-| gate | status at wrap-up |
-|---|---|
-| G8 (cap) | **Answered in substance**, both halves: cap half via the enforced-2048m escalation run, 1755.2 MiB peak (table above); answer-quality half via the C5 route-around (2026-08-14) — coherent, correctly-routed answers at default τ=0 under the enforced cap (`route=hard s=1.056` / `route=easy s=-3.322`, peaks 1763.2 / ≈954 MiB). The formal per-mode × per-cap-mode matrix was not emitted. |
-| G9 (latency model) | **Answered in substance**: MA-2 meas÷pred 0.834 (±30% band); trio streamed segments within ~10% of the ledger's 0.742 s/token. Formal `-n 64` forced-hard run not taken. |
-| G10 (amortization) | **Not run** — requires Phase D. No K curve, no default K chosen. |
-| G11 (TTFT) | Mechanism proven (430.9 ms vs 11,247.3 ms warm, 26×); the formal cold-start in-container <300 ms measurement was never taken, and the known KV-parse risk (bundle loads parse both 248k vocab arrays on the front's critical path) was never exercised cold. |
-| G12 (managed/unmanaged A/B) | **Answered in substance**: 3.83× at the single-model level (MA-2 vs MA-3 kernel-fair), OOM-kill vs completion at the trio level (Phase C control). Formal same-prompt `-n 32` duo A/B not taken. |
+**G8 (cap) — PASS, all five modes × both cap modes.** Every arm exit 0, OOMKilled=false,
+coherent output:
 
-**Artifacts and reproducibility.** The development worktree (with the llama.cpp checkout,
-branch `streaming` @ `7593921`) was removed after the work was consolidated into `main`.
-What survives, verified 2026-08-14: the `muta-stream` image and the `muta-build` /
-`muta-models` Docker volumes still reproduce the result — a fresh
-`scripts/stream_env.sh cgrun 2048m` streamed-4B run gave exit 0, OOMKilled=false,
-`memory.peak` 1638.7 MiB, decode 447.66 ms/token = 2.23 tok/s, matching MA-2
-(1641.5 MiB, 2.26 tok/s) within host noise. The engine tree itself is reconstructable
-from `patches/`: `0001–0016` are the duo/bundle series (upstream base `7ba604f`,
-2026-08-09 master), `0017–0032` the streaming series on top (exported from
-`01f58cd..streaming`; `0032` **is** the final commit `7593921`, so the in-tree series is
-current through the last engine change).
+| mode | observed (3g) peak MiB | enforced (2048m) peak MiB |
+|---|---|---|
+| router-easy | 1703.5 | 1703.8 |
+| router-hard | 1705.0 | 1704.6 |
+| forced conf-escalation (τ=99 + carry) | 965.8 | 964.9 → re-run with `--conf-threshold -0.5` so the trigger actually fires: **1705.3**, `[seg 0] author=front cut=conf` → `switch none->mid reason=conf` → expert continues the carried draft, `trigger=conf` |
+| codraft easy,mid | 1714.3 | 1714.1 |
+| 6-turn perf.txt multiturn | 1723.2 | 1722.5 |
+
+(The first escalation arm routed easy and the front stayed above the default confidence
+threshold — a correct non-escalation, kept for the record; the re-run is the arm that
+exercises the trigger. perf.txt has 6 prompts; the plan's "10-turn" is recorded as a
+deviation.)
+
+**G9 (latency model) — PASS.** Enforced, forced-hard, draftless, `-n 64`: expert segment
+**811.2 ms/token** (40 tokens / 32,448 ms) vs the run's own ledger prediction **742
+ms/token** (2106.2 MiB streamed / 2.977 GB/s) → **meas÷pred = 1.093**, inside the ±30%
+band.
+
+**G10 (amortization) — the K curve, streamed, enforced 2048m, perf.txt (all 6 prompts
+forced hard, `-n 128`):**
+
+| K | acceptance mean [min–max] | accepted tokens/round | mean turn tok/s | total-tokens ÷ total-time |
+|---|---|---|---|---|
+| none (draftless, same config) | — | — | 1.3 (single hard prompt; seg-level 0.8) | — |
+| 4 | 0.743 [0.545–0.944] | 3.0 | 1.74 | 1.41 |
+| 8 | 0.544 [0.344–0.696] | 4.4 | 1.78 | 1.58 |
+| **16** | 0.354 [0.188–0.672] | 5.7 | **2.14** | **1.63** |
+
+Acceptance RATIO falls with K but accepted-tokens-per-round rises, so throughput climbs
+monotonically; every arm completed under the enforced cap. **Default K = 16** (S4.3,
+`patches/0035`). The amortizer's ledger solves **head-streamed: 0 pinned, the whole 4B
+(2603.5 MiB) streamed** — the configuration the plan's S4 envelope predicted — and the
+best per-prompt result is 3.94 tok/s (solve-3x at K=16) vs ~0.8 tok/s seg-level
+draftless: the round-per-K amortization is worth up to ~5× on structured content and
+~1.6× averaged across domains. Per-domain acceptance rows: `acceptance.tsv`.
+
+**G11 (TTFT) — PASS via the plan's fallback rung 1.** Cold start (`drop_caches`),
+enforced container, external exec→first-stdout-byte probe: bundle front **725.3 ms**
+(in-process `[ttft] front_ready_ms=527.9 first_token_ms=597.3` — the floor is the
+bundle-KV parse: both 248k vocab arrays parse on the front's critical path, adversarial
+M3 confirmed). Rung 1, `--tier-file front=/models/SmolLM2-135M-Instruct-Q4_K_M.gguf`
+(standalone 33-KV file, recovered bit-identically from the bundle): **124.9 ms — under
+the 300 ms target.** The registry supported per-tier files all along; the bundle still
+ships all three tiers.
+
+**G12 (managed/unmanaged A/B) — managed wins, no S6 trigger.** Enforced 2048m, forced
+hard, same prompt, `-n 32`, record config: with `--stream-weights` turn 2.2 tok/s (seg
+1.4), peak 1703.3 MiB; without, turn 1.3 tok/s (seg 0.8), peak **2048.0 = the cap**
+(clean-page reclaim thrash, as in MA-3) — **1.69× managed/unmanaged at the trio level**
+(seg-level 1.75×), on top of MA's 3.83× single-model result.
+
+**Artifacts and reproducibility.** The engine tree now lives at `pilot-v2/llama.cpp`
+(gitignored nested clone, never pushed): upstream `7ba604f` + `git am patches/0001–0035`,
+branch `streaming`. Both the `muta-build` (default) and `muta-build-r` volumes carry the
+final binaries; `muta-models` carries the trio bundle plus the two recovered standalone
+files. The earlier same-day re-verification of MA-2 from surviving artifacts (exit 0,
+1638.7 MiB, 2.23 tok/s) still stands.

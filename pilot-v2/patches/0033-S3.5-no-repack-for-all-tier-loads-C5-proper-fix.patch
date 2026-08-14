@@ -1,0 +1,68 @@
+From ae51b8a3b99acc2e1ce564e437b2cd44fb4a8291 Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Fri, 14 Aug 2026 09:26:43 +0100
+Subject: [PATCH 33/35] S3.5: --no-repack for all tier loads (C5 proper fix)
+
+Plumbs use_extra_bufts=false through every duo tier load. Streamed tiers
+were already non-repacked by construction; this extends the sane kernel
+set to mlock/resident tiers. Fixes C5 without giving up the mlocked
+front: route scores return to the macOS scale (-3.49 easy / +1.05 hard
+at tau=0) and first token drops to ~623 ms in-container (vs ~1.1-1.2 s
+under the front=streamed route-around).
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index f4bb86505..fa19a6a2a 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -118,6 +118,15 @@ struct duo_params {
+ 
+     uint32_t seed = 42;
+ 
++    // Mirrors common's --no-repack (use_extra_bufts=false) for EVERY tier load.
++    // Two reasons to pass it: (1) the non-repacked kernel set is the accuracy/
++    // identity reference (B3: repacked q4_K/q6_K diverges within 16 greedy
++    // tokens); (2) C5: on aarch64-Linux the repacked path is outright WRONG for
++    // the SmolLM2-135M geometry (n_embd 576, 9 heads) -- garbage output, route
++    // scores shifted ~+5. Streamed-policy tiers are already non-repacked by
++    // construction; this flag extends that to mlock/resident tiers.
++    bool no_repack = false;
++
+     // ---- weight streaming (S3.4). Mirrors common's --stream-* semantics; every
+     // one of these is inert unless --stream-weights is given, which is what keeps
+     // the no-flag regression baselines byte-identical.
+@@ -439,6 +448,8 @@ static void print_usage() {
+            "  --pin-budget auto|MIB   cap on a streamed tier's pinned set [auto]\n"
+            "  --stream-reserve-mib N  per-tier slack beyond the itemized kv+compute [256]\n"
+            "  --disk-gbps F           measured disk bandwidth, for the s/token prediction [0]\n"
++           "  --no-repack             disable weight-repacking kernels for all tiers (accuracy reference;\n"
++           "                          required for a correct SmolLM2 front on aarch64-Linux, see C5)\n"
+            "  --mode router|codraft|random|verify   [router]\n"
+            "  -p, --prompt STR        user message (one turn)\n"
+            "  --prompts-file PATH     one user message per line (multi-turn)\n"
+@@ -506,6 +517,7 @@ static bool parse_args(int argc, char ** argv, duo_params & p) {
+         else if (arg == "--tier-ctx")        { std::string n, v; parse_tier_kv("--tier-ctx", need("--tier-ctx"), n, v); p.tier_ctx_ovr[n] = atoi(v.c_str()); }
+         else if (arg == "--tier-policy")     { std::string n, v; parse_tier_kv("--tier-policy", need("--tier-policy"), n, v); p.tier_policy_ovr[n] = v; }
+         else if (arg == "--stream-weights")  { p.stream_weights = true; }
++        else if (arg == "--no-repack")       { p.no_repack = true; }
+         else if (arg == "--max-ram-mib")     { p.max_ram_mib = atoi(need("--max-ram-mib")); }
+         else if (arg == "--prefetch-layers") { p.prefetch_layers = atoi(need("--prefetch-layers")); }
+         else if (arg == "--pin-budget")      { p.pin_budget = need("--pin-budget"); }
+@@ -806,6 +818,10 @@ static bool load_duo_model(duo_model & m, const duo_params & p, const std::strin
+ 
+     llama_model_params mparams = llama_model_default_params();
+     mparams.bundle_prefix = prefix.c_str();
++    if (p.no_repack) {
++        // kernel-set selection, not a memory policy: see duo_params::no_repack
++        mparams.use_extra_bufts = false;
++    }
+     if (policy == POL_STREAMED && st) {
+         // Load-time half of the streamed policy: suppress the load's own
+         // prefetch/populate and switch the mapping to the random-access advice the
+-- 
+2.50.1 (Apple Git-155)
+

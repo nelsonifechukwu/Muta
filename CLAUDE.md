@@ -18,16 +18,16 @@ on **2026-08-11** as a root with no common ancestor, and **merged into `main` on
 2026-08-13 as a subtree at `pilot-v2/`** (full history grafted; if `origin/pilot/v2` ever
 moves again, sync with `git merge -X subtree=pilot-v2 origin/pilot/v2`). It has no
 Postgres, no `/v1` contract, and none of the rules below bind it; `pilot-v2/CLAUDE.md`
-governs work there. **The pilot was wrapped up on 2026-08-14** (Phases A–C + Milestone A
-done; Phase D/E harness descoped; the carried defect C5 was diagnosed the same day —
-aarch64 repack kernels break the SmolLM2 front; route-around `--tier-policy
-front=streamed` validated under the enforced cap — see the wrap-up + C5 entries in
-`pilot-v2/docs/WORKLOG.md` and `pilot-v2/bench/results.md` §5). The dev worktree, the
+governs work there. **The pilot was completed on 2026-08-14** — all phases through
+D (spec-decode amortizer, default K=16) and E (gates G8–G12: G8/G9/G11 PASS, G11 at
+124.9 ms cold TTFT via per-tier files, G12 managed 1.69×), C5 root-caused (aarch64
+repack kernels break the SmolLM2 front) and properly fixed (`--no-repack`, patch 0033).
+Results of record: `pilot-v2/bench/results.md` §5 and `pilot-v2/docs/POC_REPORT.md`. The dev worktree, the
 local `pilot/v2` branch, and the retired standalone repo's `.git` were all removed after
-consolidation; the llama.cpp engine history survives only as `pilot-v2/patches/0001–0032`
-(never pushed anywhere as a fork — that is deliberate), and the runnable state survives
-in the `muta-stream` Docker image + `muta-build`/`muta-models` volumes (re-verified
-2026-08-14).
+consolidation; the llama.cpp engine lives as `pilot-v2/patches/0001–0035` plus a
+gitignored nested clone at `pilot-v2/llama.cpp` reconstructed from them (never pushed
+anywhere as a fork — that is deliberate), and the runnable state lives in the
+`muta-stream` Docker image + `muta-build`/`muta-models` volumes.
 
 The older single-container competition build (SQLite, systemd units, flash-drive `deploy/`
 and `bundle/` tooling, the TUI and the REPL CLI) was **retired on 2026-08-05**. It is not

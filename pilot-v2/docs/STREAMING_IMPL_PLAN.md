@@ -1,11 +1,11 @@
 # Weight Streaming under a RAM Cap — Implementation Plan (pilot/v2)
 
-> **STATUS (2026-08-14): execution closed.** Phases A, B, Milestone A, and C are complete
-> (engine tip = `patches/0032` = llama.cpp branch `streaming` @ `7593921`). Phase D and the
-> formal Phase E harness were descoped at wrap-up; one defect (C5, SmolLM2 container
-> garbage) remains open. Results of record: `bench/results.md` §5 (incl. "Wrap-up status"
-> gate table) and `docs/POC_REPORT.md` §Streaming; closing entry in `docs/WORKLOG.md`.
-> Unchecked boxes below are historical, not a to-do list.
+> **STATUS (2026-08-14, final): the plan is COMPLETE.** Phases A, B, Milestone A, C, D,
+> and E all executed; gates G8–G12 all run (G8/G9/G11 PASS, G10 curve → default K=16,
+> G12 managed 1.69×); C5 diagnosed AND properly fixed (S3.5 `--no-repack`). Engine tip =
+> `patches/0035`. An earlier same-day wrap-up had descoped D/E — that note is superseded.
+> Results of record: `bench/results.md` §5 ("The formal gates") and
+> `docs/POC_REPORT.md` §Streaming; per-task entries in `docs/WORKLOG.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. On execution start, copy this plan to `docs/STREAMING_IMPL_PLAN.md` in the worktree (house convention: plans live in `docs/`).
 

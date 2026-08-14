@@ -1,0 +1,46 @@
+From 00604285f55bdef594455ef4a49bce21f4e8aabb Mon Sep 17 00:00:00 2001
+From: iitimii <timiiowolabi@gmail.com>
+Date: Fri, 14 Aug 2026 20:46:58 +0100
+Subject: [PATCH 35/35] S4.3: default --draft-k 16, chosen by G10
+
+Streamed K-curve (perf.txt, enforced 2048m cgroup, amortizer config):
+mean turn tok/s 1.74 / 1.78 / 2.14 at K = 4 / 8 / 16; total-tokens over
+total-time agrees (1.41 / 1.58 / 1.63). Acceptance ratio falls with K
+(0.743 -> 0.544 -> 0.354) but accepted tokens per round rises (3.0 ->
+4.4 -> 5.7), and every K arm completed under the cap, so argmax tok/s
+subject to G8 holding = 16.
+
+Assisted-by: Claude Fable 5
+---
+ tools/duo/duo.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/tools/duo/duo.cpp b/tools/duo/duo.cpp
+index 6653b9875..c249e5751 100644
+--- a/tools/duo/duo.cpp
++++ b/tools/duo/duo.cpp
+@@ -134,7 +134,11 @@ struct duo_params {
+     // round instead of once per token. draft_k is a FIXED round size (adaptivity
+     // off) so G10's K-curve stays clean.
+     std::string draft_tier = "none";  // none | easy
+-    int32_t     draft_k    = 8;
++    // Default K from G10's streamed curve (perf.txt, enforced 2048m): mean turn tok/s
++    // 1.74 / 1.78 / 2.14 at K = 4 / 8 / 16 -- acceptance RATIO falls with K (0.74 ->
++    // 0.35) but accepted tokens per round rises (3.0 -> 5.7), and every K held the
++    // cap, so argmax tok/s subject to G8 = 16 (S4.3).
++    int32_t     draft_k    = 16;
+ 
+     // ---- weight streaming (S3.4). Mirrors common's --stream-* semantics; every
+     // one of these is inert unless --stream-weights is given, which is what keeps
+@@ -461,7 +465,7 @@ static void print_usage() {
+            "                          required for a correct SmolLM2 front on aarch64-Linux, see C5)\n"
+            "  --draft-tier none|easy  amortizer: easy drafts K tokens, mid batch-verifies them in one\n"
+            "                          decode (one streamed read per round). Implies easy=resident. [none]\n"
+-           "  --draft-k N             fixed draft length per amortizer round [8]\n"
++           "  --draft-k N             fixed draft length per amortizer round [16, from G10]\n"
+            "  --mode router|codraft|random|verify   [router]\n"
+            "  -p, --prompt STR        user message (one turn)\n"
+            "  --prompts-file PATH     one user message per line (multi-turn)\n"
+-- 
+2.50.1 (Apple Git-155)
+

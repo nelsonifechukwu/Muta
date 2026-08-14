@@ -1317,3 +1317,32 @@ file, `--json-trace` routed back through the container run (in-container temp fi
 a per-domain mean/min/max summary in `bench/.runs/stream/acceptance.tsv`.
 Smoke-verified: easy-routed prompts correctly produce no spec rounds (acc n/a);
 hard prompts parse (acc 0.388 on the capital-of-Nigeria probe at K=8 resident).
+
+## Task E1 (S5.1/S4.3): formal gates G8–G12 + default K, 2026-08-14
+
+`scripts/stream_gates.sh` (commit `d960e18`) ran the full matrix in-container,
+serialized, `drop_caches` before every cap-relevant run; ~2 h wall. Full tables in
+`bench/results.md` §5 "The formal gates"; raw logs + `gates.tsv` + `acceptance.tsv`
+under `bench/.runs/stream/`. Headlines: G8 PASS (5 modes × 3g/2048m, peaks
+964.9–1723.2 MiB, all exit 0, coherent at default τ=0); G9 PASS (meas÷pred 1.093);
+G10 K-curve → **default K=16** (S4.3, engine commit `00604285f`); G11 **PASS at
+124.9 ms** cold via rung 1 (`--tier-file front=<standalone>`; bundle-front floor
+725.3 ms = the two 248k-vocab KV parses); G12 managed 1.69× at the trio level, no S6.
+
+Two honest notes. (1) The first conf-escalation arm did not escalate — the front
+stayed above the default confidence threshold on coherent (post-C5-fix) kernels; a
+re-run with `--conf-threshold -0.5` demonstrates the real trigger under the enforced
+cap (1705.3 MiB, `switch none->mid reason=conf`, carried draft). (2) perf.txt has 6
+prompts, not the plan's "10-turn"; recorded as a deviation. G11's rung-1 file (and the
+0.8B for D1's `-md`) were recovered from the trio bundle bit-identically —
+`scripts/extract_bundle.py`, sha256 equal to `models/MANIFEST.json`'s recorded source
+hashes — honoring the no-downloads constraint.
+
+## Final patches export + closing, 2026-08-14
+
+`patches/0033–0035` = S3.5 / S4.1 / S4.3 (`git format-patch` of the three engine
+commits atop the reconstructed 0001–0032 series). The default `muta-build` volume
+rebuilt from the final tree (`muta-build-r` kept as the gate-run volume of record).
+The engine remains never-pushed; `pilot-v2/llama.cpp` is a gitignored nested clone.
+With Phases D and E complete, the earlier same-day wrap-up's descope note is
+superseded; `bench/results.md` §5 and `docs/POC_REPORT.md` carry the final story.
