@@ -127,6 +127,38 @@ and reclaim-thrashing or dying.
 
 Full run matrix, ledger blocks verbatim, the reclaim-thrash and double-buffer evidence, the
 `--no-repack` accuracy-reference rationale, and the environment/caveats header are in
-`bench/results.md` §5. This is a checkpoint stub per the Milestone A brief; the full
-`## Streaming` section (accuracy deltas against the G-gates, tiering, S3/S4 build-out) lands
-in E2.
+`bench/results.md` §5.
+
+### Multi-tier (Phase C): the whole trio under one enforced cap
+
+The full three-tier system — mlocked SmolLM2-135M front, resident Qwen3.5-0.8B easy,
+streamed Qwen3.5-4B mid, all loaded by prefix from one `muta-trio.gguf` — completes a real
+confidence-triggered easy→mid escalation under a kernel-enforced 2048 MiB cgroup cap:
+exit 0, OOMKilled=false, `memory.peak` **1755.2 MiB** (292.8 MiB headroom). The same trio
+without `--stream-weights` is OOM-killed at 3 GiB. Configuration of record:
+`--ctx-expert 4096 --tier-ctx easy=4096 --ubatch 128` — the biggest Phase C discovery is
+that the per-context compute buffer (`n_vocab × n_ubatch` f32; 505 MiB at ubatch 512 for
+one 248k-vocab tier) had to join the residency ledger, and at duo's defaults the ledger
+correctly *refuses* rather than OOMs. Staged startup plus the `--ttft-opener` cuts first
+token from **11,247 ms to 431 ms** (26×, macOS warm-cache). Mechanics (occupancy
+serialization, sticky demote, the ledger of record) and the cap-run table are in
+`bench/results.md` §5.
+
+### Wrap-up status (2026-08-14) — what is proven, what is open
+
+Executed: Phases A (discovery/probes/bundle), B (residency manager + cb_eval scheduler),
+Milestone A, and C (multi-tier duo integration), through llama.cpp branch `streaming` @
+`7593921` = `patches/0032`. **Descoped at wrap-up, not attempted:** Phase D (spec-decode
+amortizer, S4) and the formal Phase E gate harness (`stream_gates.sh`, G-gate matrix,
+default K). Gate-by-gate: G9 and G12 are answered in substance (meas÷pred 0.834 single-
+model / ~10% trio; 3.83× managed-vs-unmanaged, OOM-kill vs completion at trio level);
+G8's cap half is answered (1755.2 MiB enforced) but its answer-quality half is **blocked
+by one open defect** — the SmolLM2 front generates garbage in the aarch64-Linux container
+build (proven pre-existing via a no-flag 8 GiB control; easy/mid coherent in the same
+binary; suspect the aarch64 CPU kernels/repack on the 135M geometry); G10 was never run;
+G11's mechanism is proven but its formal cold-start <300 ms measurement was never taken.
+Everything measured here is aarch64-Linux-on-Apple-Silicon — architecture-comparative,
+to be re-measured on the x86-64 ADTC target. The dev worktree is gone; the surviving
+`muta-stream` image + `muta-build`/`muta-models` volumes were re-verified on 2026-08-14
+(streamed 4B, enforced 2048m: 1638.7 MiB peak, 2.23 tok/s — MA-2 within noise), and the
+engine tree is reconstructable from `patches/0001–0032`.

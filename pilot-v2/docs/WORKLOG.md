@@ -1135,3 +1135,42 @@ Code fixed in one commit, **`7593921`**, `S3.4: fatal unknown-facts + refusal, F
   smoke **PASS** (answer byte-identical to the pre-fix streamed run, DEMOTE + `switch
   none->mid` intact); I1 smoke **PASS**; I3 smoke **PASS**; I6 2048 MiB run **PASS**; macOS
   `build` + `build-noblas` **clean, 0 warnings**; container build **clean, 0 errors**.
+
+## Wrap-up, 2026-08-14
+
+The streaming pilot is closed here, after Phase C + Milestone A. This entry is the record
+of what was descoped, what remains open, and where the artifacts now live.
+
+- **Descoped, not attempted:** Phase D (S4.0 spec-mechanism probe, S4.1 `--draft-tier`/
+  `--draft-k` amortizer wiring with the vocab gate, S4.2 `scripts/spec_accept.py`) and the
+  formal Phase E harness (S5.1 `scripts/stream_gates.sh`, the emitted G-gate matrix, S4.3
+  default-K commit). No partial code for any of these exists on any branch. The
+  gate-by-gate status table (what existing evidence already answers vs what was never
+  measured) is in `bench/results.md` §5 "Wrap-up status".
+- **Open defect (C5), diagnosis never started:** the SmolLM2-135M front generates garbage
+  in the aarch64-Linux container build (C4 entry above has the full evidence: shifted
+  route scores, byte-identical no-flag control at 8 GiB, easy/mid coherent in the same
+  binary). The planned discrimination ladder, recorded here so it survives: (1) container
+  run with `--no-repack` — if output goes coherent, it is the aarch64 repacked Q4_K
+  kernels on this 9-head 135M geometry; (2) rebuild with `-DGGML_CPU_ARM_ARCH` variants
+  (drop `+i8mm`, then `+dotprod`) to isolate an ISA-extension kernel; (3) toggle flash
+  attention; (4) rebuild at `-O2`; (5) if still standing, bisect by comparing first-token
+  logits macOS-vs-container on a fixed prompt, layer by layer via `cb_eval`. Until
+  diagnosed, no answer-quality claim for the container trio (G8's quality half, G11's
+  quality overlap).
+- **Artifact state after consolidation.** The pilot now lives as the `pilot-v2/` subtree
+  on `main` (github.com/nelsonifechukwu/Muta; the linked dev worktree and the retired
+  standalone `Muta_v2` repo's `.git` were both removed after the merge). The llama.cpp
+  checkout went with the worktree; its full history is preserved as `patches/0001–0032`
+  (`0001–0016` duo/bundle series, upstream base `7ba604f`; `0017–0032` streaming series
+  from the fork point `01f58cd`, tip `7593921` = `0032`). The `muta-stream` image and
+  `muta-build`/`muta-models` Docker volumes survive and were **re-verified today**:
+  `scripts/stream_env.sh cgrun 2048m /build/bin/llama-completion -m
+  /models/Qwen3.5-4B-Q4_K_M.gguf --stream-weights --max-ram-mib 2048 --stream-disk-gbps
+  2.977 -no-cnv --temp 0 --seed 42 -c 4096 -t 6 -n 8` → exit 0, OOMKilled=false,
+  `memory.peak` 1,718,337,536 B = 1638.7 MiB, decode 447.66 ms/token = 2.23 tok/s —
+  MA-2's numbers within host noise, with no source tree on disk. Rebuilding from source
+  = re-clone upstream, apply the patch series in order, then `stream_env.sh build`.
+- **Standing constraints that outlive the pilot:** the llama.cpp fork is never pushed
+  anywhere (patches are the export); `models/` is never modified; `MUTA_SLOW_LOAD_MS` is
+  test-only and must never be set in a benchmark run; measurement runs are serialized.

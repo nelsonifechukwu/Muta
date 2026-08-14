@@ -263,3 +263,96 @@ repack double-buffer rather than by anything streaming-specific. A **quantified*
 delta between the repacked and non-repacked kernel sets (perplexity, or a small accuracy set
 run both ways) is **deferred to the G-gates**, per B3 Finding 4 and `docs/WORKLOG.md` — no
 accuracy numbers are claimed here, on either kernel set.
+
+### Multi-tier under the cap (Phase C, S3.1–S3.4 — the informal G8 preview)
+
+Same environment as the Milestone A header above, llama.cpp branch `streaming` @ `7593921`
+(the C4 fix commit, final). The trio bundle is `muta-trio.gguf` (3.2 GB): front =
+SmolLM2-135M (`m0.`), easy = Qwen3.5-0.8B (`m1.`), mid = Qwen3.5-4B (`m2.`).
+
+**Configuration of record: `--stream-weights --max-ram-mib 2048 --ctx-expert 4096
+--tier-ctx easy=4096 --ubatch 128`.** The trio *cannot* fit 2048 MiB at duo's default
+`--ctx-expert 8192` + n_ubatch 512: the compute buffer is `n_vocab × n_ubatch` f32 per
+context (measured 505.02 MiB at ubatch 512 for one 248k-vocab tier, held for the process
+lifetime), so the fixed non-weight cost alone is ~2.6 GiB before one weight byte of mid.
+The ledger says so and **refuses** (exit 1, inequality printed, no OOM) — degradation,
+not errors. `-ub 128` costs ~123 MiB per 248k-vocab tier instead and is the single
+largest non-weight RAM lever in the process. Full compute-buffer measurement matrix and
+the flash-attention caveat (the estimator has no n_ctx term, valid only with FA ON, so
+`--stream-weights` forces `LLAMA_FLASH_ATTN_TYPE_ENABLED`) are in `docs/WORKLOG.md` Task C4.
+
+**Ledger of record, trio @ 2048 MiB, ctx 4096, ubatch 128** (identical macOS and
+container): mid = **head-pinned**, head 497.3 MiB pinned, 0 blk pinned, **2106.2 MiB
+streamed** over 32 ring units, W = 2, predicted **0.742 s/token** at D = 2.977 GB/s.
+Container measured **1.3–1.7 tok/s** on the streamed mid segments — within ~10% of the
+prediction. Two mechanisms make the cross-terms add up:
+
+- **Occupancy serialization:** at most one STREAMED tier is ACTIVE. `duo_switch_to()`
+  suspends the outgoing tier, and suspend bulk-evicts *including its pins*; a manager is
+  parked the moment it is built, so two tiers' pins are never installed at once. A
+  suspended streamed tier charges another tier's ledger for its KV + compute buffer and
+  **nothing** for its weights.
+- **Sticky demote, observed every run at 2048:** with easy resident the ledger refuses
+  (`R_pin` negative at W=1, both head configs); `[ledger] DEMOTE easy resident->streamed`
+  fires once, mid re-solves feasible, and easy's own manager then pins its entire
+  500.8 MiB (0 streamed) because a suspended mid charges it only KV + compute.
+
+**Cap runs** (all exit 0, OOMKilled=false; fresh container per run):
+
+| run | cgroup `memory.max` | `memory.peak` | vs 2048 |
+|---|---|---|---|
+| (i) easy prompt, easy answers | 3 GiB (observed mode) | 1417.9 MiB | −630 |
+| (ii) hard prompt, mid streams (`-n 96`) | 3 GiB (observed mode) | 1640.7 MiB | −407 |
+| (iii) forced easy→mid conf escalation | 3 GiB (observed mode) | 1656.9 MiB | −391 |
+| (iv) 3-turn alternating easy/hard/easy | 3 GiB (observed mode) | 1653.8 MiB | −394 |
+| **(iii) re-run, G8's own condition** | **2048 MiB (enforced)** | **1755.2 MiB** | **−293** |
+
+The last row is the multi-tier headline: the whole trio — mlocked front, resident easy,
+streamed mid — completes a real conf-triggered easy→mid escalation under a
+kernel-enforced 2048 MiB cap with 292.8 MiB of headroom, `[tier] switch easy->mid
+reason=conf` intact. Control: the same trio **without** `--stream-weights` is OOM-killed
+at 3 GiB (exit 137).
+
+**TTFT (staged startup + opener, C3):** first token in **430.9 ms** with the
+`--ttft-opener` (front mlocks and speaks first while the background loader brings tiers
+up) versus **11,247.3 ms** for the same prompt with `--no-ttft-opener` — a 26× reduction.
+Both figures are macOS warm-cache; the formal G11 form (cold start, `drop_caches`, inside
+the enforced container, <300 ms threshold) was never run — see wrap-up status below.
+
+**Open defect (C5, blocks G8's answer-quality half):** the SmolLM2 front produces garbage
+in the aarch64-Linux container build — opener text is token salad and every route score
+shifts strongly positive (`Say hello.` scores +2.35 in the container vs −3.16 on macOS),
+so at τ=0 everything routes hard. Proven **pre-existing** (not streaming's): a no-flag
+control at an 8 GiB cap produces byte-identical garbage. Not mlock. The easy and mid
+tiers are coherent in the same binary; suspect the aarch64 `GGML_BLAS=OFF` CPU kernels /
+Q4_K repack on this 135M llama-arch geometry. Phase C gates used `--route-threshold 3.0`
+to separate easy from hard on the shifted scale; the residency machinery under test is
+unaffected, but **no answer-quality claim is made for the container trio** until this is
+diagnosed.
+
+### Wrap-up status (2026-08-14)
+
+Execution stopped after Phase C + Milestone A. Phase D (S4 spec-decode amortizer:
+mechanism probe, `--draft-tier`/`--draft-k`, acceptance harness) and the formal Phase E
+gate harness (`scripts/stream_gates.sh`, default-K selection) were **descoped at
+wrap-up** — not attempted, not partially built. Where that leaves each gate:
+
+| gate | status at wrap-up |
+|---|---|
+| G8 (cap) | **Answered in substance** for the cap half: enforced-2048m escalation run, 1755.2 MiB peak (table above). Answer-quality half **blocked by C5**. The formal per-mode × per-cap-mode matrix was not emitted. |
+| G9 (latency model) | **Answered in substance**: MA-2 meas÷pred 0.834 (±30% band); trio streamed segments within ~10% of the ledger's 0.742 s/token. Formal `-n 64` forced-hard run not taken. |
+| G10 (amortization) | **Not run** — requires Phase D. No K curve, no default K chosen. |
+| G11 (TTFT) | Mechanism proven (430.9 ms vs 11,247.3 ms warm, 26×); the formal cold-start in-container <300 ms measurement was never taken, and the known KV-parse risk (bundle loads parse both 248k vocab arrays on the front's critical path) was never exercised cold. |
+| G12 (managed/unmanaged A/B) | **Answered in substance**: 3.83× at the single-model level (MA-2 vs MA-3 kernel-fair), OOM-kill vs completion at the trio level (Phase C control). Formal same-prompt `-n 32` duo A/B not taken. |
+
+**Artifacts and reproducibility.** The development worktree (with the llama.cpp checkout,
+branch `streaming` @ `7593921`) was removed after the work was consolidated into `main`.
+What survives, verified 2026-08-14: the `muta-stream` image and the `muta-build` /
+`muta-models` Docker volumes still reproduce the result — a fresh
+`scripts/stream_env.sh cgrun 2048m` streamed-4B run gave exit 0, OOMKilled=false,
+`memory.peak` 1638.7 MiB, decode 447.66 ms/token = 2.23 tok/s, matching MA-2
+(1641.5 MiB, 2.26 tok/s) within host noise. The engine tree itself is reconstructable
+from `patches/`: `0001–0016` are the duo/bundle series (upstream base `7ba604f`,
+2026-08-09 master), `0017–0032` the streaming series on top (exported from
+`01f58cd..streaming`; `0032` **is** the final commit `7593921`, so the in-tree series is
+current through the last engine change).

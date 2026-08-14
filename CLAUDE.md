@@ -15,14 +15,17 @@ front/expert co-decode, verify mode, single-file model bundles, and — since 20
 window, three-tier registry, staged startup; see `pilot-v2/docs/STREAMING_IMPL_PLAN.md`
 and `pilot-v2/bench/results.md` §5). Developed in a standalone `Muta_v2` repo, folded in
 on **2026-08-11** as a root with no common ancestor, and **merged into `main` on
-2026-08-13 as a subtree at `pilot-v2/`** (full history grafted; future merges from the
-still-live branch use `git merge -X subtree=pilot-v2 pilot/v2`). It has no Postgres, no
-`/v1` contract, and none of the rules below bind it; `pilot-v2/CLAUDE.md` governs work
-there. Active development stays in the linked worktree `.worktrees/pilot-v2` (gitignored;
-carries ~12G of untracked `llama.cpp/` — its `streaming` branch holds the engine patches,
-mirrored in-tree at `pilot-v2/patches/` — plus `models/`, `bundle/` and `.venv/`). The
-retired standalone repo's `.git` is kept at `../Muta_v2-standalone.git` and its remote is
-`github.com/iitimii/Muta_v2`.
+2026-08-13 as a subtree at `pilot-v2/`** (full history grafted; if `origin/pilot/v2` ever
+moves again, sync with `git merge -X subtree=pilot-v2 origin/pilot/v2`). It has no
+Postgres, no `/v1` contract, and none of the rules below bind it; `pilot-v2/CLAUDE.md`
+governs work there. **The pilot was wrapped up on 2026-08-14** (Phases A–C + Milestone A
+done; Phase D/E harness descoped; one open defect, C5 — see the wrap-up entries in
+`pilot-v2/docs/WORKLOG.md` and `pilot-v2/bench/results.md` §5). The dev worktree, the
+local `pilot/v2` branch, and the retired standalone repo's `.git` were all removed after
+consolidation; the llama.cpp engine history survives only as `pilot-v2/patches/0001–0032`
+(never pushed anywhere as a fork — that is deliberate), and the runnable state survives
+in the `muta-stream` Docker image + `muta-build`/`muta-models` volumes (re-verified
+2026-08-14).
 
 The older single-container competition build (SQLite, systemd units, flash-drive `deploy/`
 and `bundle/` tooling, the TUI and the REPL CLI) was **retired on 2026-08-05**. It is not

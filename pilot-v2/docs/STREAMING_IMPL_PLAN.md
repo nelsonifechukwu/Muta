@@ -1,5 +1,12 @@
 # Weight Streaming under a RAM Cap — Implementation Plan (pilot/v2)
 
+> **STATUS (2026-08-14): execution closed.** Phases A, B, Milestone A, and C are complete
+> (engine tip = `patches/0032` = llama.cpp branch `streaming` @ `7593921`). Phase D and the
+> formal Phase E harness were descoped at wrap-up; one defect (C5, SmolLM2 container
+> garbage) remains open. Results of record: `bench/results.md` §5 (incl. "Wrap-up status"
+> gate table) and `docs/POC_REPORT.md` §Streaming; closing entry in `docs/WORKLOG.md`.
+> Unchecked boxes below are historical, not a to-do list.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. On execution start, copy this plan to `docs/STREAMING_IMPL_PLAN.md` in the worktree (house convention: plans live in `docs/`).
 
 **Goal:** Implement `docs/STREAMING_PLAN.md` (Phase 5) on `pilot/v2` with the three existing models (no downloads): no streamed model's weights ever fully resident, total charged memory held under `--max-ram-mib` (default **2048**, configurable), verified by cgroup v2 — and answer the headline question: **can Qwen3.5-4B (2.61 GiB Q4_K_M) stream-decode under a 2 GiB cap, and at what tok/s?**
