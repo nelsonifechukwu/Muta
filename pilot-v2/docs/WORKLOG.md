@@ -1252,3 +1252,68 @@ not rollback breakage (K=1 / 100%-accept / zero-restore run reproduces the same 
 the discriminating evidence in DISCOVERY).
 
 Raw logs: `bench/.artifacts/d1/` (gitignored).
+
+## Task D2 (S4.1): amortizer wiring, 2026-08-14
+
+Engine commit `ab5ba43f3` (duo.cpp only). Path A per D1: the in-tree `draft-simple`
+speculator wired into `gen_segment` for unsegmented expert answers (router-hard and
+escalation continuations; codraft/verify segments never arm it).
+
+- **Design.** A `spec_run` session lives in `duo_state`, re-armed per expert segment.
+  Invariant mirrored from `examples/speculative-simple`: the seed token is never in the
+  target state when a round starts; one round decodes `[seed, draft…]` as ONE batch on
+  mid AND on `ctx_draft` (a plain 1-seq context on easy's model at mid's context size)
+  — under `--stream-weights` that is one streamed ring walk per round. Accepted tokens
+  stay decoded and are CONSUMED one at a time through gen_segment's existing cut
+  checks (peek-first, so a cut token is never half-taken); the correction token seeds
+  the next round undecoded. A segment that cuts mid-queue (EOS in the queue, token
+  limit) restores the pre-round checkpoint and batch-replays exactly the consumed
+  prefix — state always equals committed + emitted, the Q1 rule. Partial acceptance
+  uses the in-tree restore-and-replay (accepted ids become the next draft) because a
+  hybrid context cannot rewind partially.
+- **Bug found while gating: the draft context must be restored after drafting.**
+  `common_speculative_draft` decodes its candidate tokens into ctx_draft
+  autoregressively; without the example's `load_dft` + suffix `seq_rm` step the verify
+  batch re-decodes the same positions and qwen35's M-RoPE position validation refuses
+  the batch (`for M-RoPE, it is required that the position satisfies: X < Y`,
+  `decode: failed to initialize batch`). One-hunk fix inside the drafting branch.
+- **Guards shipped:** vocab gate at activation (`llama_vocab_n_tokens` equality + a
+  mixed-content probe string tokenized identically on both contexts; `--draft-tier
+  front` rejected at startup naming 49,152 vs 248,320); the draft is never silently
+  demoted — the ledger refusal names `--draft-tier none`; an explicit conflicting
+  `--tier-policy easy=streamed|mlock` refuses at startup. **RS8 deviation, logged at
+  activation:** rollback capability is derived from `duo_model::append_only` (both
+  pair members are qwen35 hybrids) instead of `common_context_can_seq_rm`'s
+  capability probe, which decodes 2 tokens — on a streamed mid before residency
+  activation that would pull an unbounded working set.
+- **Ledger.** `ctx_draft` KV + compute are new itemized resident terms (estimated by
+  `tier_read_facts` with a new `force_plain_ctx` flag — the draft context is 1-seq,
+  NOT checkpoint-doubled). At the G8 record config the amortizer does NOT fit
+  2048 MiB: resident cross-terms reach 1088 MiB (easy weights forced resident 513.8 +
+  easy kv/compute + ctx_draft 194.5 + front) and both head configs need ~708 MiB
+  free — the ledger refuses, correctly. **The amortizer config of record** is
+  therefore `--ctx-expert 2048 --tier-ctx easy=2048 --ctx-front 2048 -ub 32`: the
+  ledger solves **head-streamed, 0 pinned, whole 4B (2603.5 MiB) streamed, W=1**
+  — exactly the configuration the plan's S4 envelope predicted ("easy-resident is
+  forced and HEAD streams").
+- **Measured (container, enforced `cgrun 2048m`, hard prompt, K=8):** math segment
+  acc = 1.000 (4 rounds, 32/32), streamed decode **3.2 tok/s** vs ~1.1 tok/s
+  draftless at the same full-model-streamed ledger, `memory.peak` 1975.8 MiB,
+  exit 0, OOMKilled=false. Resident 8g run: acc 0.352 at forced K=8 on the same
+  prompt — far below D1's 0.778 because D1's tool stopped drafting at its default
+  `p-min 0.75` (adaptive length) while duo fixes the round size per the plan
+  ("adaptivity off for a clean curve"); acceptance-per-drafted-token is the wrong
+  lens for fixed K — tokens-per-round and tok/s are what G10 measures. An adaptive
+  `p_min` draft is a plausible post-G10 win; noted, not built.
+- **Inertness:** without `--draft-tier` the S3.5 record run reproduces exactly
+  (`route=hard s=1.056`, no spec lines); `--draft-tier front` and the policy
+  conflict both refuse with named remedies.
+
+## Task D3 (S4.2): acceptance harness, 2026-08-14
+
+`scripts/spec_accept.py` (commit `45dcc8b`): one duo process per prompt per domain
+file, `--json-trace` routed back through the container run (in-container temp file +
+`JSONTRACE-BEGIN` marker + cat), spec/turn events aggregated into per-prompt rows and
+a per-domain mean/min/max summary in `bench/.runs/stream/acceptance.tsv`.
+Smoke-verified: easy-routed prompts correctly produce no spec rounds (acc n/a);
+hard prompts parse (acc 0.388 on the capital-of-Nigeria probe at K=8 resident).
