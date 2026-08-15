@@ -44,7 +44,7 @@
     <div class="chart" id="chart"></div>
     <p class="formula">
       S_total = 0.50·S_acc + 0.30·S_perf + 0.20·S_eff − 10·thermal ·
-      S_perf = min(TPS / 15.0, 1) × 100 ·
+      S_perf = min(TPS / TPS_max, 1) × 100 · <span id="tps-ref">TPS_max = fastest stored run</span> ·
       S_eff = (7 GB − peak RAM) / 7 GB × 100 ·
       crash / OOM ⇒ disqualified (0)
     </p>

@@ -41,14 +41,22 @@ Computed from the ADTC 2026 rules (profiler README):
 
 ```
 S_total = 0.50·S_acc + 0.30·S_perf + 0.20·S_eff − P_thermal
-S_perf  = min(TPS / 15.0, 1.0) × 100
+S_perf  = min(TPS / TPS_max, 1.0) × 100     TPS_max = fastest tok/s among all stored runs
 S_eff   = max(0, (7 GB − peak RSS) / 7 GB) × 100
 P_thermal = 10 if throttled or core temp > 85 °C
 crash / OOM ⇒ disqualified (S_total = 0)
 ```
 
 `S_acc` is proxied locally by the arc_easy benchmark score × 100 — the real
-S_acc adds a judges' panel component that only exists at audit time. The
+S_acc adds a judges' panel component that only exists at audit time.
+`TPS_max` follows the official site's formula (`100·TPS/TPS_max`, TPS_max =
+the fastest submission) rather than the profiler README's fixed 15 tok/s: the
+fastest run in the database — quick runs and deleted models' kept runs
+included — stands in for the fastest submission. That run scores S_perf = 100
+and every other run, including the same model's other runs, is scored
+relative to it (so a model's full run can sit below 100 when its own quick
+run was faster). The legend under the chart shows the current TPS_max and
+which run set it; S_perf values shift whenever a faster run lands. The
 African-language and budget-laptop claims are shown as badges; their +15% /
 +10% multipliers apply to the judges' panel score, so they are not folded
 into the local S_total.

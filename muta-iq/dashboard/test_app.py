@@ -30,7 +30,7 @@ class TestComputeScores(unittest.TestCase):
     def test_full_run_scores(self):
         # SmolLM2 real numbers: arc 0.42, 38.27 tok/s, 232.22 MB peak
         s = compute_scores(arc_score=0.42, tps=38.27, peak_rss_mb=232.22,
-                           throttled=False, temp_c=None, crashed=False)
+                           throttled=False, temp_c=None, crashed=False, tps_reference=15.0)
         self.assertAlmostEqual(s["s_acc"], 42.0, places=2)
         self.assertEqual(s["s_perf"], 100.0)  # 38.27/15 capped at 1.0
         self.assertAlmostEqual(s["s_eff"], 96.76, places=1)  # (7 - 0.2268)/7 * 100
@@ -39,36 +39,54 @@ class TestComputeScores(unittest.TestCase):
 
     def test_slow_model_perf_not_capped(self):
         s = compute_scores(arc_score=0.5, tps=7.5, peak_rss_mb=1024,
-                           throttled=False, temp_c=None, crashed=False)
+                           throttled=False, temp_c=None, crashed=False, tps_reference=15.0)
         self.assertEqual(s["s_perf"], 50.0)
 
     def test_thermal_penalty_on_throttle(self):
         s = compute_scores(arc_score=0.5, tps=15.0, peak_rss_mb=1024,
-                           throttled=True, temp_c=None, crashed=False)
+                           throttled=True, temp_c=None, crashed=False, tps_reference=15.0)
         self.assertEqual(s["thermal_penalty"], 10)
 
     def test_thermal_penalty_on_high_temp(self):
         s = compute_scores(arc_score=0.5, tps=15.0, peak_rss_mb=1024,
-                           throttled=False, temp_c=86.0, crashed=False)
+                           throttled=False, temp_c=86.0, crashed=False, tps_reference=15.0)
         self.assertEqual(s["thermal_penalty"], 10)
 
     def test_crash_disqualifies(self):
         s = compute_scores(arc_score=None, tps=None, peak_rss_mb=None,
-                           throttled=False, temp_c=None, crashed=True)
+                           throttled=False, temp_c=None, crashed=True, tps_reference=15.0)
         self.assertEqual(s["s_total"], 0.0)
         self.assertTrue(s["disqualified"])
 
     def test_skip_accuracy_run_has_no_total(self):
         s = compute_scores(arc_score=None, tps=30.0, peak_rss_mb=500,
-                           throttled=False, temp_c=None, crashed=False)
+                           throttled=False, temp_c=None, crashed=False, tps_reference=15.0)
         self.assertIsNone(s["s_acc"])
         self.assertIsNone(s["s_total"])
         self.assertIsNotNone(s["s_perf"])
 
     def test_ram_over_budget_floors_at_zero(self):
         s = compute_scores(arc_score=0.5, tps=15.0, peak_rss_mb=8 * 1024,
-                           throttled=False, temp_c=None, crashed=False)
+                           throttled=False, temp_c=None, crashed=False, tps_reference=15.0)
         self.assertEqual(s["s_eff"], 0.0)
+
+    def test_perf_is_relative_to_reference(self):
+        # reference = fastest stored run; half its speed scores 50, matching it scores 100
+        half = compute_scores(arc_score=0.5, tps=20.0, peak_rss_mb=1024,
+                              throttled=False, temp_c=None, crashed=False, tps_reference=40.0)
+        self.assertEqual(half["s_perf"], 50.0)
+        top = compute_scores(arc_score=0.5, tps=40.0, peak_rss_mb=1024,
+                             throttled=False, temp_c=None, crashed=False, tps_reference=40.0)
+        self.assertEqual(top["s_perf"], 100.0)
+
+    def test_perf_none_without_reference(self):
+        s = compute_scores(arc_score=0.5, tps=20.0, peak_rss_mb=1024,
+                           throttled=False, temp_c=None, crashed=False, tps_reference=None)
+        self.assertIsNone(s["s_perf"])
+        self.assertIsNone(s["s_total"])
+        s0 = compute_scores(arc_score=0.5, tps=0.0, peak_rss_mb=1024,
+                            throttled=False, temp_c=None, crashed=False, tps_reference=0.0)
+        self.assertIsNone(s0["s_perf"])
 
 
 class TestFilenameParsing(unittest.TestCase):
@@ -201,6 +219,64 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             self.assertEqual(ghost["runs_count"], 1)
             self.assertEqual(ghost["latest"]["tps"], 20.0)
             self.assertTrue(models["OnDisk-1B-Q4_K_M.gguf"]["present"])
+
+
+class TestTpsReferenceFromRuns(unittest.TestCase):
+    """S_perf's reference is the fastest tok/s among all stored runs."""
+
+    def _run(self, model_file, tps, status="ok"):
+        with app.db() as conn:
+            return conn.execute(
+                "INSERT INTO runs (model_file, started_at, status, tps) VALUES (?,?,?,?)",
+                (model_file, "2026-08-14T00:00:00", status, tps)).lastrowid
+
+    def test_fastest_run_sets_reference_for_all_models(self):
+        with tmp_app_env() as tmp:
+            for f in ("Fast.gguf", "Slow.gguf"):
+                (tmp / "model" / f).write_bytes(b"\0")
+            fast_id = self._run("Fast.gguf", 40.0)
+            self._run("Slow.gguf", 20.0)
+            d = app.state_payload()
+            models = {m["file"]: m for m in d["models"]}
+            self.assertEqual(models["Fast.gguf"]["latest"]["scores"]["s_perf"], 100.0)
+            self.assertEqual(models["Slow.gguf"]["latest"]["scores"]["s_perf"], 50.0)
+            self.assertEqual(d["scoring"]["tps_reference"], 40.0)
+            self.assertEqual(d["scoring"]["tps_reference_run"]["id"], fast_id)
+            self.assertEqual(d["scoring"]["tps_reference_run"]["model_file"], "Fast.gguf")
+
+    def test_deleted_models_kept_runs_still_count(self):
+        with tmp_app_env() as tmp:
+            (tmp / "model" / "OnDisk.gguf").write_bytes(b"\0")
+            self._run("OnDisk.gguf", 20.0)
+            self._run("Deleted.gguf", 50.0)
+            d = app.state_payload()
+            self.assertEqual(d["scoring"]["tps_reference"], 50.0)
+            on_disk = next(m for m in d["models"] if m["file"] == "OnDisk.gguf")
+            self.assertEqual(on_disk["latest"]["scores"]["s_perf"], 40.0)
+
+    def test_quick_runs_count_and_ties_go_to_earliest(self):
+        with tmp_app_env() as tmp:
+            (tmp / "model" / "M.gguf").write_bytes(b"\0")
+            with app.db() as conn:
+                quick_id = conn.execute(
+                    "INSERT INTO runs (model_file, started_at, status, skip_accuracy, tps)"
+                    " VALUES (?,?,?,?,?)", ("M.gguf", "2026-08-14T00:00:00", "ok", 1, 41.0)).lastrowid
+            self._run("M.gguf", 41.0)   # full run, same speed, later id
+            self._run("M.gguf", 38.7)
+            d = app.state_payload()
+            ref = d["scoring"]["tps_reference_run"]
+            self.assertEqual(d["scoring"]["tps_reference"], 41.0)
+            self.assertEqual(ref["id"], quick_id)
+            self.assertTrue(ref["quick"])
+            # the model's latest (slower) run is scored against its own best run
+            self.assertEqual(d["models"][0]["latest"]["scores"]["s_perf"], 94.39)
+
+    def test_no_measured_runs_means_no_reference(self):
+        with tmp_app_env():
+            self._run("Crashed.gguf", None, status="failed")
+            d = app.state_payload()
+            self.assertIsNone(d["scoring"]["tps_reference"])
+            self.assertIsNone(d["scoring"]["tps_reference_run"])
 
 
 class TestInitDbStaleRunCleanup(unittest.TestCase):

@@ -34,7 +34,9 @@ DB_PATH = DASH_DIR / "profiler.db"
 RUNS_DIR = DASH_DIR / "runs"                # raw profiler output files (gitignored)
 
 # Scoring constants from the adtc-profiler README / challenge rules.
-TPS_REFERENCE = 15.0
+# S_perf has no fixed reference: the official site scores 100*TPS/TPS_max with
+# TPS_max = the fastest submission, so locally the fastest stored run stands in
+# for it (see tps_reference()). The profiler README's fixed 15 tok/s is NOT used.
 RAM_LIMIT_GB = 7.0
 TEMP_LIMIT_C = 85.0
 THERMAL_PENALTY_PTS = 10
@@ -113,17 +115,21 @@ def extract_metrics(report: dict) -> dict:
     }
 
 
-def compute_scores(arc_score, tps, peak_rss_mb, throttled, temp_c, crashed) -> dict:
+def compute_scores(arc_score, tps, peak_rss_mb, throttled, temp_c, crashed,
+                   tps_reference) -> dict:
     """ADTC scoring: S_total = 0.5*S_acc + 0.3*S_perf + 0.2*S_eff - P_thermal.
 
     S_acc is proxied locally by the arc_easy benchmark score (the judges' panel
-    component only exists at audit time). A crashed/OOM run is disqualified.
+    component only exists at audit time). S_perf = min(tps/tps_reference, 1)*100
+    where tps_reference is the fastest tok/s among all stored runs (None/0 →
+    no S_perf). A crashed/OOM run is disqualified.
     """
     if crashed:
         return {"s_acc": None, "s_perf": None, "s_eff": None,
                 "thermal_penalty": 0, "s_total": 0.0, "disqualified": True}
     s_acc = round(arc_score * 100, 2) if arc_score is not None else None
-    s_perf = round(min(tps / TPS_REFERENCE, 1.0) * 100, 2) if tps is not None else None
+    s_perf = (round(min(tps / tps_reference, 1.0) * 100, 2)
+              if tps is not None and tps_reference else None)
     s_eff = (round(max(0.0, (RAM_LIMIT_GB - peak_rss_mb / 1024) / RAM_LIMIT_GB) * 100, 2)
              if peak_rss_mb is not None else None)
     penalty = THERMAL_PENALTY_PTS if (throttled or (temp_c is not None and temp_c > TEMP_LIMIT_C)) else 0
@@ -173,6 +179,22 @@ def init_db() -> None:
             (now_iso(),))
 
 
+def tps_reference(conn: sqlite3.Connection) -> tuple[float | None, dict | None]:
+    """(fastest tok/s across all stored runs, {id, model_file} of that run).
+
+    Every finished run with a measured tps counts — quick runs and runs of
+    since-deleted models included — so the reference is the best speed this
+    machine has actually produced. (None, None) when nothing has been measured.
+    """
+    row = conn.execute(
+        "SELECT id, model_file, tps, skip_accuracy FROM runs WHERE tps IS NOT NULL"
+        " ORDER BY tps DESC, id ASC LIMIT 1").fetchone()
+    if row is None:
+        return None, None
+    return row["tps"], {"id": row["id"], "model_file": row["model_file"],
+                        "quick": bool(row["skip_accuracy"])}
+
+
 def promote_run(run_id: int) -> tuple[dict | None, str | None]:
     """Promote a stored run's report to submission.json + metadata.json.
 
@@ -192,7 +214,8 @@ def promote_run(run_id: int) -> tuple[dict | None, str | None]:
     return {"promoted": True, "submission": str(SUBMISSION)}, None
 
 
-def run_row_public(row: sqlite3.Row, include_report: bool = False) -> dict:
+def run_row_public(row: sqlite3.Row, *, tps_reference: float | None,
+                   include_report: bool = False) -> dict:
     d = dict(row)
     d["skip_accuracy"] = bool(d["skip_accuracy"])
     d["oom"] = bool(d["oom"])
@@ -201,7 +224,7 @@ def run_row_public(row: sqlite3.Row, include_report: bool = False) -> dict:
     d["scores"] = compute_scores(
         arc_score=d["arc_score"], tps=d["tps"], peak_rss_mb=d["peak_rss_mb"],
         throttled=bool(d["throttled"]), temp_c=d["temp_c"],
-        crashed=(d["status"] == "failed"),
+        crashed=(d["status"] == "failed"), tps_reference=tps_reference,
     ) if d["status"] != "running" else None
     if not include_report:
         d.pop("report_json", None)
@@ -350,13 +373,15 @@ def state_payload() -> dict:
     models = []
     disk = {p.name: p for p in MODEL_DIR.glob("*.gguf") if p.is_file()}
     with db() as conn:
+        conn.execute("BEGIN")  # one snapshot for the reference and the rows
+        ref_tps, ref_run = tps_reference(conn)
         run_files = [r["model_file"] for r in
                      conn.execute("SELECT DISTINCT model_file FROM runs").fetchall()]
         for name, present in model_listing(list(disk), run_files):
             rows = conn.execute(
                 "SELECT * FROM runs WHERE model_file=? AND status!='running' ORDER BY id DESC",
                 (name,)).fetchall()
-            runs = [run_row_public(r) for r in rows]
+            runs = [run_row_public(r, tps_reference=ref_tps) for r in rows]
             latest = runs[0] if runs else None
             scored = [r for r in runs if r["scores"] and r["scores"]["s_total"] is not None]
             best = max(scored, key=lambda r: r["scores"]["s_total"], default=None)
@@ -389,7 +414,8 @@ def state_payload() -> dict:
             "budget_laptop_claim": meta.get("budget_laptop_claim"),
             "current_model_path": (meta.get("_runtime") or {}).get("model_path"),
         },
-        "scoring": {"tps_reference": TPS_REFERENCE, "ram_limit_gb": RAM_LIMIT_GB,
+        "scoring": {"tps_reference": ref_tps, "tps_reference_run": ref_run,
+                    "ram_limit_gb": RAM_LIMIT_GB,
                     "temp_limit_c": TEMP_LIMIT_C, "thermal_penalty_pts": THERMAL_PENALTY_PTS},
     }
 
@@ -449,19 +475,23 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/api/runs":
             model = (parse_qs(url.query).get("model") or [None])[0]
             with db() as conn:
+                conn.execute("BEGIN")
+                ref_tps, _ = tps_reference(conn)
                 if model:
                     rows = conn.execute(
                         "SELECT * FROM runs WHERE model_file=? ORDER BY id DESC", (model,)).fetchall()
                 else:
                     rows = conn.execute("SELECT * FROM runs ORDER BY id DESC").fetchall()
-            return self._json({"runs": [run_row_public(r) for r in rows]})
+            return self._json({"runs": [run_row_public(r, tps_reference=ref_tps) for r in rows]})
         m = _RUN_ID_RE.match(url.path)
         if m:
             with db() as conn:
+                conn.execute("BEGIN")
+                ref_tps, _ = tps_reference(conn)
                 row = conn.execute("SELECT * FROM runs WHERE id=?", (int(m.group(1)),)).fetchone()
             if row is None:
                 return self._json({"error": "run not found"}, 404)
-            d = run_row_public(row, include_report=True)
+            d = run_row_public(row, tps_reference=ref_tps, include_report=True)
             if d.get("report_json"):
                 d["report"] = json.loads(d.pop("report_json"))
             return self._json(d)

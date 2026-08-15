@@ -59,9 +59,25 @@ function render() {
   const d = state.data;
   if (!d) return;
   renderHeader(d);
+  renderTpsRef(d);
   renderRunCard(d);
   renderChart(d);
   renderTable(d);
+}
+
+function renderTpsRef(d) {
+  const sc = d.scoring || {};
+  const el = $("tps-ref");
+  if (!el) return;
+  if (sc.tps_reference == null) {
+    el.textContent = "TPS_max = fastest stored run (none measured yet)";
+    return;
+  }
+  const run = sc.tps_reference_run || {};
+  el.textContent = `TPS_max = ${fmt.num(sc.tps_reference)} tok/s` +
+    (run.model_file
+      ? ` (${shortName(run.model_file)} · run #${run.id}${run.quick ? " · quick" : ""})`
+      : "");
 }
 
 function renderHeader(d) {
