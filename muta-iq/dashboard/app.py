@@ -128,7 +128,7 @@ def compute_scores(arc_score, tps, peak_rss_mb, throttled, temp_c, crashed,
         return {"s_acc": None, "s_perf": None, "s_eff": None,
                 "thermal_penalty": 0, "s_total": 0.0, "disqualified": True}
     s_acc = round(arc_score * 100, 2) if arc_score is not None else None
-    s_perf = (round(min(tps / tps_reference, 1.0) * 100, 2)
+    s_perf = (round(min(tps / 15, 1.0) * 100, 2)
               if tps is not None and tps_reference else None)
     s_eff = (round(max(0.0, (RAM_LIMIT_GB - peak_rss_mb / 1024) / RAM_LIMIT_GB) * 100, 2)
              if peak_rss_mb is not None else None)

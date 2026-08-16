@@ -27,13 +27,13 @@
     }
   ],
   "model": {
-    "name": "muta-duo-q",
+    "name": "bitcpm4-8b-tq2_0",
     "runtime": "llama.cpp",
-    "quantization": "GGUF IQ4_XS",
-    "parameters_estimate": "4B",
+    "quantization": "GGUF Q4_K_M",
+    "parameters_estimate": "8B",
     "packaging": "binary_bundle"
   },
   "_runtime": {
-    "model_path": "model/muta-duo-q.gguf"
+    "model_path": "model/bitcpm4-8b-tq2_0.gguf"
   }
 }
