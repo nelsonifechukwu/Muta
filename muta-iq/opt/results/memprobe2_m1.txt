@@ -1,0 +1,19 @@
+bytes=2264 MB
+warm pass: 5964.6 ms 0.40 GB/s rss=2217
+warm pass2: 263.5 ms 9.01 GB/s rss=2265
+after remap rss=1
+(a) madvise(WILLNEED) whole: ret=0 117.9 ms (20.13 GB/s) rss=2265 MB
+    read after WILLNEED: 86.1 ms 27.58 GB/s rss=2265
+(a2) WILLNEED in 64MB chunks: 126.4 ms (18.78 GB/s) rss=2265
+(b) mlock whole: ret=0 79.1 ms (30.02 GB/s) rss=2265 MB
+    read after mlock: 43.1 ms 55.07 GB/s
+    munlock: ret=0 305.7 ms rss=2265
+    remap after munlock: 12.4 ms rss=1
+(c) BG-QoS touch 1 thr with 4 spinners: 469.3 ms (5.06 GB/s) rss=2265 | spinner rate 0 it/s
+(c) BG-QoS touch 2 thr with 4 spinners: 146.7 ms (16.18 GB/s) rss=2265 | spinner rate 0 it/s
+(c) BG-QoS touch 4 thr with 4 spinners: 114.6 ms (20.71 GB/s) rss=2265 | spinner rate 0 it/s
+    spinner baseline rate 0 it/s
+(c2) default-QoS touch 1 thr with 4 spinners: 458.2 ms (5.18 GB/s) | spinner rate 0 it/s
+(c2) default-QoS touch 2 thr with 4 spinners: 102.8 ms (23.08 GB/s) | spinner rate 0 it/s
+(c2) default-QoS touch 4 thr with 4 spinners: 63.2 ms (37.54 GB/s) | spinner rate 0 it/s
+(d) 200 x 64MB MAP_FIXED remaps in 12.1 ms (0.060 ms each) | spinner rate during 0 it/s

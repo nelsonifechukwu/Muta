@@ -1,0 +1,3 @@
+checked=288 identical=288 different=0
+output.weight: Q6_K 246785280 -> Q5_K 206829568
+token_embd.weight: Q4_K 169224192 -> Q4_K 169224192

@@ -1,0 +1,17 @@
+[with_lock] memprobe4 waited 544s for the machine lock
+warm pass: 5653.9 ms 0.42 GB/s
+warm pass2: 57.7 ms 41.16 GB/s
+remap + none       (hint 0.0 ms): fault+read 4thr 73.7 ms 32.19 GB/s
+remap + NORMAL     (hint 0.0 ms): fault+read 4thr 75.1 ms 31.62 GB/s
+remap + SEQUENTIAL (hint 0.0 ms): fault+read 4thr 72.9 ms 32.55 GB/s
+remap + RANDOM     (hint 0.0 ms): fault+read 4thr 75.7 ms 31.37 GB/s
+remap + WILLNEED   (hint 123.7 ms): fault+read 4thr 89.5 ms 26.52 GB/s
+remap + none       (hint 0.0 ms): fault+read 4thr 74.1 ms 32.04 GB/s
+remap + NORMAL     (hint 0.0 ms): fault+read 4thr 75.2 ms 31.56 GB/s
+remap + SEQUENTIAL (hint 0.0 ms): fault+read 4thr 77.0 ms 30.81 GB/s
+remap + RANDOM     (hint 0.0 ms): fault+read 4thr 75.5 ms 31.45 GB/s
+remap + WILLNEED   (hint 120.9 ms): fault+read 4thr 90.9 ms 26.11 GB/s
+remap + none: fault+read 8thr 71.5 ms 33.22 GB/s
+per-unit remap+read (no hint): 2.21 ms/unit 30.4 GB/s
+per-unit remap+SEQ+read: 2.32 ms/unit 28.9 GB/s
+per-unit read resident: 1.45 ms/unit 46.4 GB/s

@@ -1,0 +1,86 @@
+diff --git a/ggml/src/ggml-cpu/arch/arm/quants.c b/ggml/src/ggml-cpu/arch/arm/quants.c
+index b988abf..d6933b5 100644
+--- a/ggml/src/ggml-cpu/arch/arm/quants.c
++++ b/ggml/src/ggml-cpu/arch/arm/quants.c
+@@ -15,6 +15,26 @@
+ #include <stdlib.h> // for qsort
+ #include <stdio.h>  // for GGML_ASSERT
+ 
++
++// [muta-audit-proxy] force the portable C kernels (what an x86 build with
++// GGML_AVX/AVX2/FMA/F16C=OFF uses) when MUTA_FORCE_GENERIC is set in the env.
++static inline int muta_force_generic(void) {
++    static int v = -1;
++    if (v < 0) { v = getenv("MUTA_FORCE_GENERIC") != NULL; if (v) { fprintf(stderr, "[muta-audit-proxy] MUTA_FORCE_GENERIC set: tq1_0/tq2_0/q4_K/q6_K vec_dot -> *_generic C kernels\n"); } }
++    return v;
++}
++#define MUTA_GENERIC_FALLBACK(GENERIC_FN)                                                              \
++    if (muta_force_generic()) {                                                                        \
++        for (int muta_i = 0; muta_i < nrc; ++muta_i) {                                                 \
++            for (int muta_j = 0; muta_j < nrc; ++muta_j) {                                             \
++                GENERIC_FN(n, s + muta_j * bs + muta_i, 0,                                             \
++                           (const char *) vx + muta_i * bx, 0,                                         \
++                           (const char *) vy + muta_j * by, 0, 1);                                     \
++            }                                                                                          \
++        }                                                                                              \
++        return;                                                                                        \
++    }
++
+ #define GROUP_MAX_EPS 1e-15f
+ #define GROUP_MAX_EPS_IQ3_XXS 1e-8f
+ #define GROUP_MAX_EPS_IQ2_S 1e-8f
+@@ -1395,6 +1415,7 @@ void ggml_vec_dot_q8_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
+ }
+ 
+ void ggml_vec_dot_tq1_0_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
++    MUTA_GENERIC_FALLBACK(ggml_vec_dot_tq1_0_q8_K_generic)
+     assert(nrc == 1);
+     UNUSED(nrc);
+     UNUSED(bx);
+@@ -1572,6 +1593,7 @@ void ggml_vec_dot_tq1_0_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const vo
+ }
+ 
+ void ggml_vec_dot_tq2_0_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
++    MUTA_GENERIC_FALLBACK(ggml_vec_dot_tq2_0_q8_K_generic)
+     assert(nrc == 1);
+     UNUSED(nrc);
+     UNUSED(bx);
+@@ -2332,6 +2354,7 @@ static inline svuint32_t ggml_decode_q4scales_and_mins_for_mmla(const uint32_t *
+ #endif
+ 
+ void ggml_vec_dot_q4_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
++    MUTA_GENERIC_FALLBACK(ggml_vec_dot_q4_K_q8_K_generic)
+     assert(n % QK_K == 0);
+ #ifdef __ARM_FEATURE_MATMUL_INT8
+     assert((nrc == 2) || (nrc == 1));
+@@ -2962,6 +2985,7 @@ void ggml_vec_dot_q5_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
+ }
+ 
+ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
++    MUTA_GENERIC_FALLBACK(ggml_vec_dot_q6_K_q8_K_generic)
+     assert(n % QK_K == 0);
+ #ifdef __ARM_FEATURE_MATMUL_INT8
+     assert((nrc == 2) || (nrc == 1));
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.cpp b/ggml/src/ggml-cpu/ggml-cpu.cpp
+index 16cc511..627fc50 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu.cpp
++++ b/ggml/src/ggml-cpu/ggml-cpu.cpp
+@@ -1,6 +1,7 @@
+ #include "ggml-backend.h"
+ #include "ggml-backend-impl.h"
+ #include "ggml-cpu.h"
++#include <cstdlib>
+ #include "repack.h"
+ #include "traits.h"
+ #include "ggml-impl.h"
+@@ -62,7 +63,9 @@ std::vector<ggml_backend_buffer_type_t> & ggml_backend_cpu_get_extra_buffer_type
+ #endif
+ 
+ #ifdef GGML_USE_CPU_REPACK
+-        if (ggml_backend_cpu_repack_buffer_type()) {
++        // [muta-audit-proxy] MUTA_NO_REPACK=1 disables the CPU_REPACK extra buffer type
++        // (mimics an audit build where no repack kernel matches: x86 without AVX2).
++        if (getenv("MUTA_NO_REPACK") == nullptr && ggml_backend_cpu_repack_buffer_type()) {
+             bufts.push_back(ggml_backend_cpu_repack_buffer_type());
+         }
+ #endif

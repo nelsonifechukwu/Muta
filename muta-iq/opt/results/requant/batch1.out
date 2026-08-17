@@ -1,0 +1,40 @@
+== bitcpm4-8b-tq2_0-oq5_k-eq4_k.gguf  file=2333883904 B (2225.8 MiB)  tensors=2224.1 MiB
+   TQ2_0    n= 224     1864.5 MiB
+   Q5_K     n=   1      197.2 MiB
+   Q4_K     n=   1      161.4 MiB
+   F32      n=  67        1.0 MiB
+   body(blk.*)=1865.5 MiB  output[Q5_K]=197.2 MiB  embd[Q4_K]=161.4 MiB  other=0.0 MiB
+   body by type: {'TQ2_0': '1864.5', 'F32': '1.0'}
+4.46.934.397 I Final estimate: PPL = 10.5725 +/- 0.50966
+tg128 avg_ts=19.76 +/- 0.28 tok/s
+[bitcpm4-8b-tq2_0-oq5_k-eq4_k] done 02:32:23
+== bitcpm4-8b-tq2_0-oq4_k-eq4_k.gguf  file=2296278528 B (2189.9 MiB)  tensors=2188.3 MiB
+   TQ2_0    n= 224     1864.5 MiB
+   Q4_K     n=   2      322.8 MiB
+   F32      n=  67        1.0 MiB
+   body(blk.*)=1865.5 MiB  output[Q4_K]=161.4 MiB  embd[Q4_K]=161.4 MiB  other=0.0 MiB
+   body by type: {'TQ2_0': '1864.5', 'F32': '1.0'}
+5.46.308.914 I Final estimate: PPL = 10.5722 +/- 0.50925
+tg128 avg_ts=18.32 +/- 0.43 tok/s
+[bitcpm4-8b-tq2_0-oq4_k-eq4_k] done 02:53:56
+== bitcpm4-8b-tq2_0-oiq4_xs-eq4_k.gguf  file=2286877184 B (2180.9 MiB)  tensors=2179.3 MiB
+   TQ2_0    n= 224     1864.5 MiB
+   Q4_K     n=   1      161.4 MiB
+   IQ4_XS   n=   1      152.4 MiB
+   F32      n=  67        1.0 MiB
+   body(blk.*)=1865.5 MiB  output[IQ4_XS]=152.4 MiB  embd[Q4_K]=161.4 MiB  other=0.0 MiB
+   body by type: {'TQ2_0': '1864.5', 'F32': '1.0'}
+4.33.398.209 I Final estimate: PPL = 10.5985 +/- 0.51023
+tg128 avg_ts=18.94 +/- 0.82 tok/s
+[bitcpm4-8b-tq2_0-oiq4_xs-eq4_k] done 03:42:33
+== bitcpm4-8b-tq2_0-oq5_0-eq4_k.gguf  file=2333883904 B (2225.8 MiB)  tensors=2224.1 MiB
+   TQ2_0    n= 224     1864.5 MiB
+   Q5_0     n=   1      197.2 MiB
+   Q4_K     n=   1      161.4 MiB
+   F32      n=  67        1.0 MiB
+   body(blk.*)=1865.5 MiB  output[Q5_0]=197.2 MiB  embd[Q4_K]=161.4 MiB  other=0.0 MiB
+   body by type: {'TQ2_0': '1864.5', 'F32': '1.0'}
+4.35.241.285 I Final estimate: PPL = 10.5625 +/- 0.50932
+tg128 avg_ts=18.29 +/- 0.07 tok/s
+[bitcpm4-8b-tq2_0-oq5_0-eq4_k] done 04:00:33
+BATCH1 DONE 04:00:33

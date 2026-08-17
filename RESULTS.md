@@ -27,6 +27,161 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-17 (day) — model re-selection for the audit binary; submission is now Muta Tutor (Qwen3-1.7B, pure Q4_0)
+
+**Hardware context:** `native` (Apple M1, 8 GB, 4 threads) for every measurement; the audit box
+(4-vCPU x86, llama.cpp b10175 built without AVX) is characterised by kernel analysis
+(`muta-iq/opt/research/r4_x86_kernels.md`) and by other teams' published runs on that exact build
+(`r7_competitors.md`): **Q4_0 is the only quant type with a SIMD kernel there; TQ2_0/k-quants/i-quants
+run generic C at 3–7× fewer tok/s per byte** (Qwen3-1.7B Q4_0 9.4 tok/s vs 1.5B Q4_K_M 3.5 tok/s).
+Only the GGUF reaches the audit; judges chat with the bare GGUF through stock llama-server (Jinja
+template on, no system prompt, sampling from `general.sampling.*`) — `r2_judging.md`.
+
+**Config change of record:** `muta-iq/metadata.json` → `model/muta-tutor-qwen3-1.7b-q4_0.gguf`
+(974 MB, sha256 `ff8ceb29…4f37`): Qwen/Qwen3-1.7B (Apache-2.0) from bartowski's Q4_0 GGUF →
+`llama-quantize --allow-requantize --pure Q4_0 --output-tensor-type q4_0 --token-embedding-type q4_0`
+(kills the Q6_K head and three imatrix Q4_1 layers) → duplicated `output.weight` dropped (tied
+embedding used as head; `opt/scripts/drop_tensor.py`) → chat template replaced by ChatML with the
+Muta tutoring persona (injected when the client sends no system message, merged in front of one it
+does send) and an unconditional empty `<think></think>` block (direct answers under any `--reasoning`
+setting), `general.sampling` temp 0.4 / top_p 0.9 / min_p 0.05 / repeat 1.05, `general.name`
+(`opt/scripts/bake_system_prompt.py`, `opt/scripts/finalize_model.sh`). Verified on both judge
+paths (minja via `llama-completion --jinja`; llama-cpp-python jinja2). `download_model.sh` fetches
+it from `huggingface.co/timiiowolabi/muta-tutor-qwen3-1.7b-q4_0` (sha256-pinned). New root
+`REPORT.md` follows the ADTC template (it is scored: "quality of documentation" sits inside S_acc).
+Test prompts: tp_001 crate-profit (naira), tp_002 fraction-addition misconception.
+
+**Bake-off (`opt/results/bakeoff.tsv`; stock Homebrew llama-bench for tg/RSS, forced-generic build
+as audit proxy, GSM8K-40 greedy with the persona, profiler arc_easy(50)):**
+
+| candidate | file MB | Mac tg | Mac peak RSS | generic tg | GSM8K-40 | arc50 |
+|---|---|---|---|---|---|---|
+| BitCPM4-8B TQ2_0 pruned (yesterday's ship) | 2209 | 18.6 | 2065 | 3.9 | 0.775 | 0.84 |
+| BitCPM-CANN-3B / 1B TQ2_0 pruned | 992 / 468 | 39 / 86 | 1241 / 664 | 9.1 / 21.0 | 0.225 / 0.250 | 0.62 / 0.60 |
+| Qwen3-1.7B Q4_0 (bartowski) | 1232 | 38.5 | 1971* | (Q4_0 stays NEON) | 0.65 | 0.72 |
+| **Qwen3-1.7B pure Q4_0, tied head → shipped** | **974** | 49.6 | 2067* | — | 0.60–0.625 | 0.70–0.74 |
+| LFM2.5-1.2B-Instruct Q4_0 | 696 | 39.1 | 1212 | — | 0.575 | 0.56 |
+| MiniCPM5-1B Q4_0 (two head variants) | 613–714 | 81–85 | 1104–1273 | — | 0.00–0.03 (template breaks minja/jinja2; think-off unsupported) | 0.48–0.52 |
+| Qwen2.5-Math-1.5B Q4_0 (bartowski, sha-verified re-download 18:15) | 938 | 54.9 | 1944 | 44 (Q4_0 stays NEON) | **0.000** | **0.24** (chance) |
+
+\*Homebrew's ARM build repacks Q4_0 into an anonymous copy (double charge); the audit binary has no repack.
+
+**Official `adtc-profiler run --mode participant` on the shipped file:**
+
+| binary on PATH | pp512 | tg128 | TTFT | peak RSS | arc_easy(50) | throttled |
+|---|---|---|---|---|---|---|
+| **our CPU-only b10360, repack off (= audit behaviour) → `submission.json`** | — | **51.22** | 3954 ms | **1133 MB** | **0.70** | no |
+| Homebrew b10360 (repack + BLAS + Metal init) | — | 52.2 | 2232 ms | 2029 MB | 0.70 | no |
+
+Expected on the audit build: ~9–13 tok/s, ~1.2 GB RSS (S_perf ≈ 60–90 under min(TPS/15,1), S_eff ≈ 83).
+For comparison the 8 B ternary file would score S_perf ≈ 15, S_eff ≈ 65 there.
+
+**Qwen2.5-Math-1.5B, retried on request (evening):** the sha256-verified bartowski Q4_0 file is *not*
+corrupt, yet it degenerates numerically: raw completion `888888…` on our CPU-only b10360 build (with
+and without repack), `!!!!!!` in llama-cpp-python 0.3.34 (the profiler's accuracy stack → arc_easy 0.24
+= chance, GSM8K 0), while Homebrew's build gives a coherent continuation; a pure-Q4_0 requant fixes
+raw completion but chat still collapses to `@@@@…`. Consistent with this model's known extreme
+activations overflowing the default f16 KV/attention path — the exact configuration the audit and
+the accuracy benchmark use with no flags to change. Withdrawn: it would score at chance on the
+automated MC channel and is unpredictable on the audit build.
+
+**Rejected/withdrawn today with data:** BitCPM-CANN 3B/1B (GSM8K 22–25 %); MiniCPM5-1B (best
+accuracy-per-byte on paper, but its shipped template breaks both Jinja engines and it degenerates
+with a system prompt or a no-think prefix); LFM2.5-1.2B (arc 0.56, non-OSI licence); Qwen3-1.7B with
+thinking on (300–800-token traces at audit speed); Qwen3.5-2B (GDN hybrid on generic C — download
+pending at close of session; bake-off auto-runs when it lands).
+
+**Adversarial package review (`opt/results/review_package.md`): READY-with-fixes** — GGUF passes every
+check (schema, all-Q4_0/tied, template on a real b10175 llama-server: `thinking = 0`, sampling from
+file, both test prompts correct with `finish_reason: stop`; llama-cpp-python path OK). Blocking items
+are hosting (HF upload in progress at close), the public-repo layout/`team_id`, and a clean re-profile
+(the 43.4 tok/s run overlapped an upload; a re-run is queued to fire after the upload). GSM8K-40 on
+the shipped file = 0.70 (28/40).
+
+**Still open (for the user):** push `opt/audit-bench/` to a public GitHub repo and run the workflow —
+it rebuilds the exact audit binary on a free x86 runner and prints real tg/RSS for any GGUF (the
+sandbox blocked me from creating the repo); confirm the HF upload finished
+(`opt/results/hf_upload.log`) and run `bash download_model.sh` from a clean checkout; record the
+2-minute video; ask the organisers whether the audit image will get AVX2 (if it does, the 8 B ternary
+file becomes competitive again — it is kept at `model/bitcpm4-8b-tq2_0-envocab.gguf`).
+
+## 2026-08-17
+
+### 0. BitCPM4-8B TQ2_0 (`muta-iq/`) — overnight S_eff/S_perf study: what is scored, what moved, what was rejected
+
+**Hardware context:** `native` — Apple M1 (4P+4E), 8 GB, 16 KiB pages, macOS 27.0; CPU-only
+(`-ngl 0`), 4 threads (llama-bench default). Homebrew llama.cpp b10360 = the profiler's stock
+path; `muta-iq/opt/llama.cpp` = our patched b10360 (CPU-only build). Every heavy run was
+serialized (`opt/scripts/with_lock.py`); numbers taken while other agents held the machine are
+marked. Full write-up: `muta-iq/opt/docs/REPORT.md`; engine: `opt/docs/STREAMING_ENGINE.md`.
+
+**What the profiler measures (read `adtc_profiler` 0.1.0 source):** stock `llama-bench -m <gguf>
+-p 512 -n 128 -ngl 0` (no other flags), peak = summed RSS of profiler + `llama-bench` at 10 Hz.
+**Gate-2 audit** re-runs it inside the profiler's Docker image: llama.cpp **b10175 built with
+AVX/AVX2/FMA/F16C OFF** on a 4-vCPU x86 VM — TQ/k-quant kernels run generic C there, Linux
+`MAP_POPULATE` makes RSS ≈ file + buffers, and no engine/flags can be shipped. So only GGUF bytes
+reach the scored run; engine work shapes participant numbers, the report, and the app footprint.
+
+**Config change of record (submission):** `metadata.json` now points at
+`model/bitcpm4-8b-tq2_0-envocab.gguf` — the official openbmb BitCPM-CANN-8B TQ2_0 GGUF with the
+CJK-script vocabulary pruned (73,448 → 44,416 tokens, padded to ×64; `opt/scripts/prune_vocab.py`,
+verified by `opt/scripts/verify_prune.py`: kept embedding/output rows byte-identical, English
+tokenization identical on 20,464 tokens). `metadata.json`'s quantization string was also
+corrected (it claimed Q4_K_M). `download_model.sh` fetches/derives it (sha256 pinned).
+
+| measurement (profiler-identical llama-bench, Homebrew stock) | pp512 | tg128 | peak RSS |
+|---|---|---|---|
+| base `bitcpm4-8b-tq2_0.gguf` (2372 MB), calm | 36.6 | 19.12 | 2567 MB |
+| **pruned `…-envocab.gguf` (2208 MB), calm** | 34.3 | **19.61** | **2465 MB** |
+| pruned, unpadded 44,397 rows (loses ARM q6_K repack) | 36.9 | 17.61 | 2602 |
+| **official `adtc-profiler run --mode participant`** on the pruned model (with arc_easy) | 33.9 | **18.21** | **2462 MB** (steady 2253) |
+
+PPL (12×512-token English chunks): base 10.558 ± 0.51 → pruned **10.473 ± 0.50** (softmax mass no
+longer leaks to CJK rows). Official run: arc_easy(50) **0.84** (unchanged), params 7.947 B
+(`params_match` true), TTFT 15.1 s, no throttle → `muta-iq/submission.json`. The 2026-08-16
+official runs (2126–2224 MB, 14.7–15.8 tok/s) were taken on a memory-pressured Mac (pages being
+evicted); tonight's calm-machine pair (2567 → 2462 MB, 19.1 → 18.2/19.6 tok/s) is the
+like-for-like comparison, and the audit's Linux `MAP_POPULATE` will see the full −164 MB.
+
+**Rejected with data (all in `opt/results/`):**
+- TQ1_0 body (lossless, −340 MB): −22 % tg on generic C (2.88 vs 3.70 tok/s, the audit
+  analogue), −25–35 % on NEON (13.1 vs 15.9–20.5). Loses under both S_perf formulas.
+- Head Q6_K→Q5_K/Q4_K/IQ4_XS: PPL-neutral (+0.13–0.38 %, inside noise), −24…−47 MB — ≤0.13
+  S_total; not worth touching the judged accuracy. Kept Q6_K/Q4_K.
+- SVD low-rank factor pairs (2026-08-16 plan): ternary FFN spectra are within a few % of an
+  i.i.d. random matrix; the proposed rank-2048 TQ2_0 pair reconstructs `ffn_down` at 0.80
+  relative error (llama.cpp's own TQ2_0 quantizer on the factors: > 1). Dropped
+  (`opt/results/svd/svd_report.md`).
+- Disk-fed weight streaming: cold SSD 1.35 GB/s (single/4-stream) → ~1 % of the model per
+  token at 15 tok/s. Nothing to gain.
+
+**Engine (`opt/llama.cpp`, env-configured; byte-identical greedy output):** residency-window
+streaming (`MUTA_STREAM=1`; evict by `MAP_FIXED` remap on Darwin, `madvise(DONTNEED)` is a
+no-op there; compute threads fault pages inline — helper prefetch never keeps up), plus
+`MUTA_MMAP_LAZY`, `MUTA_NO_REPACK`, `MUTA_UBATCH`. Profiler-style runs on the pruned model:
+
+| engine config | pp512 | tg128 | peak RSS |
+|---|---|---|---|
+| no streaming, lazy mmap, ub128 | 24.0 | 18.7 | 2129 MB |
+| pin 1500 MB, stream rest | 23.5 | **15.35** | **1636 MB** |
+| pin 1300 / 1000 MB | 23.6 / 23.4 | 14.0 / 13.0 | 1408 / 1136 |
+| **stream everything** | 19.8 | **10.47** | **279 MB** |
+
+Real `adtc-profiler run` with this engine first on PATH (`opt/results/submission_engine_*.json`,
+labelled non-official): stream-all **10.49 tok/s @ 354 MB peak** (profiler process included),
+pin 1500 MB **15.42 tok/s @ 1676 MB**.
+
+Curve: t_token ≈ 48 ms + ~25 ms per streamed GB (soft-fault cost of 16 KiB pages at
+≈32–40 GB/s vs 54 GB/s mapped). Two engine bugs found and fixed tonight: a background-QoS
+evict helper starves for tens of ms and RSS balloons by the layers computed meanwhile (spikes
+to 1.1–2.1 GB; fixed with user-initiated QoS + inline back-pressure), and cold starts faulting at
+0.3 GB/s (fixed by warming the page cache with `pread`, never `WILLNEED`, which populates RSS on
+Darwin). These numbers are **not** what the audit will see (stock binary); they are the app's
+runtime footprint and the answer to "how much can be streamed".
+
+**Audit-box expectation (proxy, ±40 %):** generic-C TQ2_0 ≈ 2.4 GB/s per core → 2–3.3 tok/s
+tg on a 4-vCPU no-AVX x86 VM for any 2.2 GB ternary file; RSS ≈ 2208 + ~250 MB.
+
 ## 2026-08-08
 
 ### -2. Streaming durability: a reply no longer depends on the GC (no decode-path change)

@@ -1,0 +1,70 @@
+{
+ "tag": "smoke-8b",
+ "model": "model/bitcpm4-8b-tq2_0-envocab.gguf",
+ "n": 3,
+ "seed": 7,
+ "system_prompt": "You are Muta, a patient mathematics and science tutor for secondary-school students in Africa (WASSCE, JAMB, KCSE level). Rules:\n1. Be correct first. Work carefully step by step, check arithmetic and units, and state the final answer clearly.\n2. Teach, don't just answer: name the concept, show each step with a short reason, and finish with a one-line takeaway or a check the student can do themselves.\n3. If the student's reasoning contains a mistake, say precisely what is right, what is wrong, and why; then give the correct idea.\n4. Use everyday local examples (naira, cedis, shillings, markets, farming, transport) when they help.\n5. Keep answers focused: no filler, no repetition. Use plain text with simple math notation (x^2, 3/4, ×, ÷); use short numbered steps.\n6. If a question is unclear or outside math/science, ask one clarifying question or say what you can help with.",
+ "max_tokens": 320,
+ "gsm8k_acc": 0.6666666666666666,
+ "correct": 2,
+ "gen_tok_s": 10.129295804452596,
+ "avg_tokens": 248.33333333333334,
+ "records": [
+  {
+   "i": 0,
+   "question": "Pat has a flower bed that is 111 feet long.  Pat wants to fill her flower bed with plants.  Pat's flowers grow 12 inches wide so she needs to leave 1.5 feet between every plant.  Pat already owns 17 flowers.  Each flowering plant costs $6 at the store,  how much money will Pat spend at the store to fill up her flower bed?",
+   "gold": 342.0,
+   "pred": 17.0,
+   "ok": false,
+   "tokens": 320,
+   "secs": 34.96,
+   "response": "Step 1: Convert the width of the flower bed to inches.\nThe flower bed is 111 feet long.\n1 foot = 12 inches\nSo, 111 feet = 111 * 12 inches = 1332 inches.\n\nStep 2: Determine the effective width for planting.\nThe flowers grow 12 inches wide.\nPat needs to leave 1.5 feet between every plant.\n1.5 feet = 1.5 * 12 inches = 18 inches.\n\nStep 3: Calculate the number of plants that can be placed in the flower bed.\nThe total width of the flower bed is 1332 inches.\nThe space occupied by one plant and the space between it is 12 inches (plant width) + 18 inches (space) = 30 inches.\nNumber of plants = Total width / (Plant width + Space)\nNumber of plants = 1332 inches / 30 inches/plant = 44.4 plants.\n\nSince we cannot have a fraction of a plant, we can only place 44 plants.\n\nStep 4: Calculate the number of additional plants needed.\nPat already owns 17 flowers.\nNumber of additional plants needed = Total plants needed - Plants already owned\nNumber of additional plants needed = 44 - 17 = "
+  },
+  {
+   "i": 1,
+   "question": "Joey has 214 points before his turn in Scrabble. He scores 26 points. Then Marcy, who has 225 points, scores 10 points. By how many points is Joey now winning?",
+   "gold": 5.0,
+   "pred": 5.0,
+   "ok": true,
+   "tokens": 180,
+   "secs": 15.59,
+   "response": "Step 1: Calculate Joey's new score.\nJoey starts with 214 points and scores 26 points.\nJoey's new score = 214 + 26 = 240 points.\n\nStep 2: Calculate Marcy's new score.\nMarcy starts with 225 points and scores 10 points.\nMarcy's new score = 225 + 10 = 235 points.\n\nStep 3: Find the difference between Joey's and Marcy's scores.\nDifference = Joey's new score - Marcy's new score\nDifference = 240 - 235 = 5 points.\n\nFinal answer: 5"
+  },
+  {
+   "i": 2,
+   "question": "Aleena subscribed to a streaming service that charges her $140 per month. If the streaming company charged her the initial amount for the first half of the year and then charged her 10% less money on the other half of the year, calculate the total amount she had paid for the streaming service by the end of the year.",
+   "gold": 1596.0,
+   "pred": 1596.0,
+   "ok": true,
+   "tokens": 245,
+   "secs": 23.0,
+   "response": "Step 1: Calculate the cost for the first half of the year.\nThe first half of the year is 6 months.\nThe monthly charge is $140.\nCost for the first half = 6 months * $140/month = $840.\n\nStep 2: Calculate the cost for the second half of the year.\nThe second half of the year is also 6 months.\nThe charge is 10% less than the initial amount.\n10% of $140 = 0.10 * $140 = $14.\nThe reduced amount = $140 - $14 = $126.\nCost for the second half = 6 months * $126/month = $756.\n\nStep 3: Calculate the total amount paid for the year.\nTotal amount = Cost for the first half + Cost for the second half\nTotal amount = $840 + $756 = $1596.\n\nFinal answer: $1596"
+  }
+ ],
+ "tutor_samples": [
+  {
+   "prompt": "A trader buys 24 identical crates for 18000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+   "response": "Step 1: Calculate the total cost of the crates.\nThe total cost is given as 18000 naira.\n\nStep 2: Calculate the profit.\nThe profit is 25% of the total cost.\nProfit = 25% of 18000\nProfit = (25/100) * 18000\nProfit = 0.25 * 18000\nProfit = 4500 naira\n\nStep 3: Calculate the total selling price.\nThe total selling price is the total cost plus the profit.\nTotal Selling Price = Total Cost + Profit\nTotal Selling Price = 18000 + 4500\nTotal Selling Price = 22500 naira\n\nStep 4: Calculate the selling price of one crate.\nThe total selling price is for 24 crates.\nSelling Price per crate = Total Selling Price / Number of crates\nSelling Price per crate = 22500 / 24\nSelling Price per crate = 937.50 naira\n\nThe selling price of one crate is 937.50 naira.\n\nCheck:\nCost per crate = 18000 / 24 = 750 n",
+   "tokens": 320,
+   "secs": 26.62
+  },
+  {
+   "prompt": "A student writes: \"A heavier ball falls faster than a lighter one, because gravity pulls harder on it.\" Identify exactly what is correct and what is mistaken in that reasoning, explain what actually determines how fast each ball accelerates, and describe an observation the student could make to test it.",
+   "response": "Step 1: Identify the correct part of the reasoning.\nThe student correctly states that \"A heavier ball falls faster than a lighter one.\" This is a common misconception, but in the absence of air resistance, heavier objects do fall faster than lighter ones.\n\nStep 2: Identify the mistaken part of the reasoning.\nThe student incorrectly attributes the difference in fall speed to \"gravity pulls harder on it.\" This is a common misconception. Gravity does not pull harder on heavier objects; it pulls with the same acceleration on all objects regardless of their mass.\n\nStep 3: Explain what actually determines the acceleration of a falling object.\nThe acceleration of a falling object is determined by the gravitational acceleration (g), which is approximately 9.8 m/s² on Earth. This value is the same for all objects in a vacuum (or in the absence of air resistance). The mass of the object does not affect its acceleration.\n\nStep 4: Explain why heavier objects fall faster in the presence of air resistance.\nIn the real world, air resistance (or drag) is a factor. Air resistance depends on the object's shape, size, and velocity. A heavier object has a greater mass, which means it has a greater inertia. This inertia helps it resist the force of air resistance, allowing it to accelerate faster than a lighter object with the same air resistance.\n\nStep 5: Describe an observation the student could make to test the misconception.\nThe student could drop two objects of",
+   "tokens": 320,
+   "secs": 25.46
+  },
+  {
+   "prompt": "I keep getting the derivative of x^2 wrong. I think it's x. Can you help me see why that's wrong without just giving me the answer?",
+   "response": "Let's break down the derivative of \\( x^2 \\) step by step.\n\n### Step 1: Understand the concept of a derivative\nThe derivative of a function tells us the rate at which the function's value changes as its input changes. For \\( x^2 \\), we want to find how \\( x^2 \\) changes as \\( x \\) changes.\n\n### Step 2: Use the definition of the derivative\nThe derivative of \\( x^2 \\) can be calculated using the limit definition:\n\\[\n\\frac{d}{dx}(x^2) = \\lim_{h \\to 0} \\frac{(x+h)^2 - x^2}{h}\n\\]\n\n### Step 3: Expand \\( (x+h)^2 \\)\n\\[\n(x+h)^2 = x^2 + 2xh + h^2\n\\]\n\n### Step 4: Substitute into the limit definition\n\\[\n\\frac{d}{dx}(x^2) = \\lim_{h \\to 0} \\frac{(x^2 + 2xh + h^2) - x^2}{h}\n\\]\n\n### Step 5: Simplify the numerator\n\\[\n\\frac{d}{dx}(x^2) = \\lim_{h \\to 0} \\frac{2xh ",
+   "tokens": 320,
+   "secs": 25.56
+  },
+  {
+   "prompt": "In a WASSCE chemistry question: 20 cm³ of 0.1 mol/dm³ NaOH neutralises 25 cm³ of HCl. Find the concentration of the HCl and explain each step like a teacher would.",
+   "response": "Let's solve this step by step.\n\n### Step 1: Understand the neutralization reaction\nThe neutralization reaction between NaOH (a base) and HCl (an acid) is:\n\\[\n\\text{NaOH} + \\text{HCl} \\rightarrow \\text{NaCl} + \\text{H}_2\\text{O}\n\\]\nThis reaction shows that one mole of NaOH reacts with one mole of HCl.\n\n### Step 2: Calculate the moles of NaOH\nThe volume of NaOH is 20 cm³, which is equivalent to 0.020 dm³ (since 1 dm³ = 1000 cm³). The concentration of NaOH is 0.1 mol/dm³.\n\n\\[\n\\text{Moles of NaOH} = \\text{Concentration} \\times \\text{Volume}\n\\]\n\\[\n\\text{Moles of NaOH} = 0.1 \\, \\text{mol/dm}^3 \\times 0.020 \\, \\text{dm}^3 = 0.002 \\, \\text{mol}\n\\]\n\n### Step 3: Determine the moles of HCl\nSince the reaction is 1:1, the moles of HCl must also be 0.002 mol.\n\n### Step 4: Calculate the concentration",
+   "tokens": 320,
+   "secs": 23.74
+  }
+ ]
+}

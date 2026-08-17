@@ -1,0 +1,6 @@
+blk.0.attn_output.weight: TQ2_0->TQ1_0 shape=(4096, 4096) identical_dequant=True maxabsdiff=0 nonzero_frac=0.643 bytes 4325376->3538944
+blk.0.ffn_gate.weight: TQ2_0->TQ1_0 shape=(16384, 4096) identical_dequant=True maxabsdiff=0 nonzero_frac=0.675 bytes 17301504->14155776
+blk.15.ffn_down.weight: TQ2_0->TQ1_0 shape=(4096, 16384) identical_dequant=True maxabsdiff=0 nonzero_frac=0.600 bytes 17301504->14155776
+blk.31.attn_q.weight: TQ2_0->TQ1_0 shape=(4096, 4096) identical_dequant=True maxabsdiff=0 nonzero_frac=0.573 bytes 4325376->3538944
+blk.20.attn_v.weight: TQ2_0->TQ1_0 shape=(256, 4096) identical_dequant=True maxabsdiff=0 nonzero_frac=0.546 bytes 270336->221184
+blk.31.ffn_up.weight: TQ2_0->TQ1_0 shape=(16384, 4096) identical_dequant=True maxabsdiff=0 nonzero_frac=0.613 bytes 17301504->14155776

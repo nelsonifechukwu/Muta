@@ -1,0 +1,34 @@
+file=model/bitcpm4-8b-tq2_0.gguf bytes=2373828608 (2264 MB) pagesize=16384 rss0=2 MB
+  memcpy 512MB x4: inf GB/s (copy bw, counts bytes copied)
+[warm] first full read (may include disk):
+  mmap sum, cold-ish                           4 thr:  5625.6 ms      0.42 GB/s (full read)   rss=2265 MB
+  mmap sum, warm                               1 thr:   139.2 ms     17.06 GB/s (full read)   rss=2265 MB
+  mmap sum, warm                               4 thr:    43.7 ms     54.35 GB/s (full read)   rss=2265 MB
+  mmap sum, warm                               8 thr:    44.8 ms     53.03 GB/s (full read)   rss=2265 MB
+  rss after warm = 2265 MB
+  madvise(DONTNEED) whole: ret=0 26.10 ms rss=2265 MB
+  touch after DONTNEED                         1 thr:   128.2 ms     18.52 GB/s (page-touch)  rss=2265 MB
+  madvise(FREE_REUSABLE) whole: ret=-1 0.00 ms rss=2265 MB
+  touch after FREE_REUSABLE                    1 thr:     1.7 ms   1402.93 GB/s (page-touch)  rss=2265 MB
+  MAP_FIXED remap: 13.67 ms rss=1 MB
+  soft-fault touch (1B/page) after remap       1 thr:   392.8 ms      6.04 GB/s (page-touch)  rss=2265 MB
+  MAP_FIXED remap: 12.86 ms rss=1 MB
+  soft-fault touch (1B/page) after remap       2 thr:    57.4 ms     41.33 GB/s (page-touch)  rss=2265 MB
+  MAP_FIXED remap: 12.67 ms rss=1 MB
+  soft-fault touch (1B/page) after remap       4 thr:    39.7 ms     59.80 GB/s (page-touch)  rss=2265 MB
+  MAP_FIXED remap: 13.46 ms rss=1 MB
+  soft-fault touch (1B/page) after remap       8 thr:    48.0 ms     49.45 GB/s (page-touch)  rss=2265 MB
+  soft-fault + full read after remap           1 thr:   435.7 ms      5.45 GB/s (full read)   rss=2265 MB
+  soft-fault + full read after remap           2 thr:   105.0 ms     22.61 GB/s (full read)   rss=2265 MB
+  soft-fault + full read after remap           4 thr:    72.7 ms     32.65 GB/s (full read)   rss=2265 MB
+  soft-fault + full read after remap           8 thr:    72.1 ms     32.94 GB/s (full read)   rss=2265 MB
+    (window)                                   4 thr:     2.7 ms     25.21 GB/s (full read)   rss=2265 MB
+    (window)                                   4 thr:     2.3 ms     29.66 GB/s (full read)   rss=2265 MB
+    (window)                                   4 thr:     2.1 ms     32.14 GB/s (full read)   rss=2265 MB
+    (window)                                   4 thr:     1.9 ms     35.28 GB/s (full read)   rss=2265 MB
+    (window)                                   4 thr:     2.7 ms     24.72 GB/s (full read)   rss=2265 MB
+    (window)                                   4 thr:     1.9 ms     35.62 GB/s (full read)   rss=2265 MB
+  sliding 64MB windows (remap+read, incl. prints): 25.03 GB/s
+  pread 64MB chunks (page-cache hot), 1 thr: 7.02 GB/s rss=2329 MB
+  F_NOCACHE pread 8MB chunks (SSD, uncached), 1 thr: 10.26 GB/s over 1024 MB
+  minflt=1188780 majflt=144888

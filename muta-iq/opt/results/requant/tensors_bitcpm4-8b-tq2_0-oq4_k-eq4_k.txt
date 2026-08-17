@@ -1,0 +1,6 @@
+== bitcpm4-8b-tq2_0-oq4_k-eq4_k.gguf  file=2296278528 B (2189.9 MiB)  tensors=2188.3 MiB
+   TQ2_0    n= 224     1864.5 MiB
+   Q4_K     n=   2      322.8 MiB
+   F32      n=  67        1.0 MiB
+   body(blk.*)=1865.5 MiB  output[Q4_K]=161.4 MiB  embd[Q4_K]=161.4 MiB  other=0.0 MiB
+   body by type: {'TQ2_0': '1864.5', 'F32': '1.0'}

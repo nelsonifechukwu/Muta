@@ -108,3 +108,16 @@ outputs/
 runs/
 wandb/
 checkpoints/
+
+# --- opt/ workspace: rebuildable trees and derived models ---
+opt/llama.cpp/
+opt/llama.cpp-generic/
+opt/models/
+opt/scripts/memprobe
+opt/scripts/memprobe2
+opt/scripts/memprobe3
+opt/scripts/memprobe4
+opt/results/bench_log.jsonl
+opt/candidates/
+opt/hf_upload_dir/
+opt/eval/gsm8k/
