@@ -1,0 +1,35 @@
+{
+ "tag": "smoke-1b",
+ "model": "opt/candidates/bitcpm4-1b-tq2_0-envocab.gguf",
+ "n": 2,
+ "seed": 7,
+ "system_prompt": "You are Muta, a patient mathematics and science tutor for secondary-school students in Africa (WASSCE, JAMB, KCSE level). Rules:\n1. Be correct first. Work carefully step by step, check arithmetic and units, and state the final answer clearly.\n2. Teach, don't just answer: name the concept, show each step with a short reason, and finish with a one-line takeaway or a check the student can do themselves.\n3. If the student's reasoning contains a mistake, say precisely what is right, what is wrong, and why; then give the correct idea.\n4. Use everyday local examples (naira, cedis, shillings, markets, farming, transport) when they help.\n5. Keep answers focused: no filler, no repetition. Use plain text with simple math notation (x^2, 3/4, ×, ÷); use short numbered steps.\n6. If a question is unclear or outside math/science, ask one clarifying question or say what you can help with.",
+ "max_tokens": 320,
+ "gsm8k_acc": 0.0,
+ "correct": 0,
+ "gen_tok_s": 48.77864335526197,
+ "avg_tokens": 209.0,
+ "records": [
+  {
+   "i": 0,
+   "question": "Pat has a flower bed that is 111 feet long.  Pat wants to fill her flower bed with plants.  Pat's flowers grow 12 inches wide so she needs to leave 1.5 feet between every plant.  Pat already owns 17 flowers.  Each flowering plant costs $6 at the store,  how much money will Pat spend at the store to fill up her flower bed?",
+   "gold": 342.0,
+   "pred": 36.0,
+   "ok": false,
+   "tokens": 232,
+   "secs": 5.15,
+   "response": "Let's break down the problem step by step.\n\n**Step 1: Calculate the total length of the flower bed**\n\nThe flower bed is 111 feet long.\n\n**Step 2: Calculate the total width of the flower bed**\n\nThe flowers grow 12 inches wide, which is equivalent to 1 foot.\n\n**Step 3: Calculate the total number of spaces between the flowers**\n\nSince there are 111 feet of flower bed and each flower is 1 foot wide, there are 111 spaces between the flowers.\n\n**Step 4: Calculate the total number of plants**\n\nSince each plant is 1 foot wide, the total number of plants is equal to the total number of spaces between the flowers.\n\n**Step 5: Calculate the total cost of the plants**\n\nSince each plant costs $6, the total cost of the plants is equal to the total number of plants multiplied by the cost of each plant.\n\n**Final answer:**\n\nThe total cost of the plants is $36."
+  },
+  {
+   "i": 1,
+   "question": "Joey has 214 points before his turn in Scrabble. He scores 26 points. Then Marcy, who has 225 points, scores 10 points. By how many points is Joey now winning?",
+   "gold": 5.0,
+   "pred": -5.0,
+   "ok": false,
+   "tokens": 186,
+   "secs": 3.42,
+   "response": "Step 1: Calculate Joey's current score after scoring 26 points.\nJoey's current score = 214 + 26 = 240.\n\nStep 2: Calculate Marcy's current score after scoring 10 points.\nMarcy's current score = 225 + 10 = 235.\n\nStep 3: Calculate the difference between Marcy's and Joey's scores to determine by how many points Joey is winning.\nDifference = Marcy's score - Joey's score\nDifference = 235 - 240\nDifference = -5\n\nSince the difference is negative, it means Joey is losing by 5 points.\n\nFinal answer: -5"
+  }
+ ],
+ "tutor_samples": []
+}

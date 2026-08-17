@@ -1,0 +1,12 @@
+{
+ "tq2_neon_repack": 15.915189,
+ "tq2_neon_norepack": 20.452567,
+ "tq2_gen_repack": 3.838062,
+ "tq2_gen_norepack": 3.697593,
+ "tq1_neon_repack": 13.189818,
+ "tq1_neon_norepack": 13.12377,
+ "tq1_gen_repack": 2.998951,
+ "tq1_gen_norepack": 2.883432,
+ "tq2_gen_norepack_t1": 1.090441,
+ "tq2_gen_norepack_pp512": 4.125157
+}

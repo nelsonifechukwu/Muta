@@ -1,0 +1,255 @@
+# Can SVD low-rank factorization shrink bitcpm4-8b-tq2_0? — No (measured)
+
+Model: `/Users/timii/Developer/Muta/muta-iq/model/bitcpm4-8b-tq2_0.gguf` (minicpm, 32 layers, 4096 hidden, 16384 ffn, GQA k/v 4096->256; blk.* TQ2_0 with one f16 scale per row; output Q6_K, token_embd Q4_K, vocab 73448). Bytes per token read: FFN 1584 MiB (70%), attention 280 MiB (12%), output head 235 MiB (10%); token_embd (161 MiB) is only read row-wise.
+
+## Verdict per tensor class
+
+| class | evidence | verdict |
+|---|---|---|
+| **FFN** (gate/up/down, TQ2_0, 16384x4096) | spectra are flat and indistinguishable from an i.i.d. random matrix (E@2048 = 0.67-0.78 vs Marchenko-Pastur 0.71; effective rank 2301-3448 of 4096; all 4096 s.v. > 1e-3 s_max). Break-even for TQ2_0 factor pairs is r*=3276 (no byte saving below it) and even there the FP32-optimal error is 0.23-0.31; at the FP16-factor break-even r*=422 the error is 0.81-0.89. Real ternary factors are far worse: blk.16.ffn_down @ r=2048 (62% of dense bytes) -> rel. Frobenius error 0.80 (BitNet absmean) / 1.07 (llama.cpp TQ2_0 quantizer, i.e. worse than an all-zero matrix); FP16 factors 0.47 at 4.85x the bytes. | **NO.** Not a rank problem that SVD can exploit; any rank that saves bytes destroys the matrix. |
+| **Attention** (attn_q / attn_output, TQ2_0, 4096x4096) | slightly more structured than random (E@2048 = 0.93-0.99 vs MP 0.89; eff. rank 1105-1835), but numerically full-rank (3678-4068 s.v. > 1e-3 s_max). Break-even r*=2048 (TQ2_0 factors) gives error 0.18-0.26 for zero saving; r=1024 (half the bytes) error 0.40-0.52; FP16 factors break even at r*=264 (error 0.69-0.82). blk.0.attn_output looks low-rank (E@256=0.87, stable rank 1.4) only because <=8 rows carry ~50x the median row scale and 73% of the Frobenius energy - a scale artifact: with rows normalized to the pure ternary pattern it is ordinary (E@256=0.50, eff. rank 1186, err 0.22 at break-even). Attention is only 12% of per-token bytes anyway. | **NO.** |
+| **Output head** (Q6_K, 73448x4096, read fully every token) | more structured than random (E@1024 = 0.51, E@2048 = 0.74 vs MP 0.33/0.60; one dominant direction with 5% of the energy) but numerically full-rank (all 4096 s.v. > 1e-3 s_max, eff. rank 2643). vs Q6_K storage (235 MiB): FP16 factors break even at r*=1591 with error 0.59; Q8_0 factors at r*=2995 with error 0.33. A 'useful' saving (r=1024: 151 MiB FP16 / 80 MiB Q8_0) costs error 0.70. | **NO** for the head as a bandwidth lever. (Cheaper route to the same MiB is a lower K-quant of the head, e.g. Q4_K/Q5_K, ~5-10% error class - being tested elsewhere in this repo.) |
+| **Token embedding** (Q4_K, 73448x4096, only touched rows read) | same picture (E@1024 = 0.53, E@2048 = 0.73, eff. rank 2802); FP16 factors break even at r*=1091 (error 0.68), Q8_0 at r*=2053 (error 0.52). Does not affect per-token bandwidth at all (get_rows), only file size / RSS if mmapped-and-touched. | **NO** (and irrelevant to tok/s). |
+
+Bottom line: every tensor class is numerically full-rank with a flat spectrum (the row-normalized pure {-1,0,1} patterns - the thing a TQ2_0 factor pair would have to reproduce, since scales are stored anyway - are within a few % of an i.i.d. random matrix: FFN E@2048 0.75 vs 0.71 random, attention 0.94 vs 0.89). The only ranks that reduce bytes (r < r*) sit at 25-90% relative Frobenius error, versus a 0% baseline (TQ2_0 stores the trained ternary weights exactly). SVD factor pairs cannot reduce bytes/token or RAM for this model without wrecking it. Drop the SVD line of work.
+
+## Method
+
+- Dequantize with `gguf.quants.dequantize` (numpy shape = [out, in]; verified per-row scale: 1 unique f16 scale per row for TQ2_0). Singular values from the float64 Gram matrix (W^T W or W W^T, accumulated over 4096-row/column chunks) + `np.linalg.eigvalsh`; validated against `np.linalg.svd(compute_uv=False)` on blk.0.attn_q and blk.0.ffn_gate (energy@1024 agrees to 1e-6, singular values median rel. diff 2e-6, tail max 2e-4). Chosen because gesdd on 16384x4096 f32 peaked at 1.6 GB RSS and the vocab matrices would need ~2.5 GB.
+- Peak RSS: layer passes 1.75 GB (transient temporaries in the wide 4096x16384 ffn_down case - a float64 copy and the ternary-stat arrays; both row-chunked in the script afterwards, so future runs peak ~1.0 GB), vocab 1.3 GB, recon 1.4 GB. Wall: 25 layer matrices 6 min (x2 passes), vocab 40 s, recon 30 s. All heavy runs under `with_lock.py --tag svd` (waited 8-9 min per lock acquisition behind bench/quantize/perplexity jobs).
+- energy_r = sum_{i<=r} s_i^2 / sum s_i^2; rel. Frobenius error = sqrt(1-energy_r) (this is the FP32-optimal error - any quantized factor is worse). Bytes: dense = out*in*bpw/8; factor pair = (out+in)*r*bpw_f/8; break-even r* = out*in*bpw_dense/((out+in)*bpw_f) -> FFN 3276 (TQ2_0 factors) / 422 (F16); attn 2048 / 264; output.weight vs Q6_K 6.5625 bpw: 1591 (F16) / 2995 (Q8_0); token_embd vs Q4_K 4.5 bpw: 1091 / 2053.
+- Random baseline: Marchenko-Pastur top-r energy for an i.i.d. matrix of the same shape (`mp_baseline.py`), i.e. what "no structure at all" looks like.
+- Ternary stats from sign(W / row scale). Zero fraction 0.28-0.43 (rises with depth), +1/-1 balanced to 3 decimals; no all-zero rows or columns.
+
+## Compact tables
+
+Per-class means (energy captured at rank r; MP = i.i.d. random matrix of the same shape):
+
+| class | E@256 | E@512 | E@1024 | E@1536 | E@2048 | E@2560 | E@3072 | E@3584 | stable rank | eff. rank | err @ r*(TQ2_0 factors) | err @ r*(F16 factors) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| FFN (15) | 0.208 | 0.322 | 0.503 | 0.643 | 0.755 | 0.844 | 0.914 | 0.966 | 150 | 2969 | 0.251 | 0.846 |
+| *MP random 16384x4096* | 0.127 | 0.238 | 0.427 | 0.582 | 0.709 | 0.812 | 0.894 | 0.956 | 1820 | - | - | - |
+| ATTN (10) | 0.469 | 0.622 | 0.798 | 0.896 | 0.951 | 0.981 | 0.995 | 0.999 | 39 | 1347 | 0.218 | 0.714 |
+| *MP random 4096x4096* | 0.209 | 0.375 | 0.622 | 0.787 | 0.893 | 0.955 | 0.987 | 0.998 | 1024 | - | - | - |
+| output.weight | 0.247 | 0.352 | 0.510 | 0.636 | 0.740 | 0.827 | 0.900 | 0.959 | 19 | 2643 | F16 r*=1591: 0.594 | Q8_0 r*=2995: 0.331 |
+| token_embd.weight | 0.300 | 0.392 | 0.526 | 0.636 | 0.731 | 0.814 | 0.887 | 0.949 | 84 | 2802 | F16 r*=1091: 0.677 | Q8_0 r*=2053: 0.518 |
+| *MP random 73448x4096* | 0.090 | 0.175 | 0.330 | 0.471 | 0.600 | 0.717 | 0.823 | 0.918 | 2681 | - | - | - |
+
+Per-tensor (rel. Frobenius error at selected ranks; err@r*: FP32-optimal error at the TQ2_0-factor break-even rank; nrank: # s.v. > 1e-3 s_max):
+
+| tensor | err@1024 | err@2048 | err@3072 | err@r*(TQ2) | err@r*(F16) | stable rk | eff. rk | nrank | zero frac |
+|---|---|---|---|---|---|---|---|---|---|
+| L0.ffn_gate | 0.683 | 0.471 | 0.276 | 0.237 | 0.824 | 14 | 2301 | 4096 | 0.325 |
+| L0.ffn_up | 0.749 | 0.547 | 0.336 | 0.290 | 0.873 | 29 | 3150 | 4096 | 0.288 |
+| L0.ffn_down | 0.772 | 0.576 | 0.360 | 0.309 | 0.887 | 24 | 3169 | 4096 | 0.277 |
+| L0.attn_q | 0.490 | 0.248 | 0.085 | 0.248 | 0.771 | 39 | 1578 | 4059 | 0.339 |
+| L0.attn_output | 0.223 | 0.112 | 0.038 | 0.112 | 0.362 | 1 | 13 | 3678 | 0.357 |
+| L8.ffn_gate | 0.669 | 0.468 | 0.278 | 0.239 | 0.807 | 38 | 2689 | 4096 | 0.400 |
+| L8.ffn_up | 0.732 | 0.512 | 0.304 | 0.261 | 0.877 | 678 | 3448 | 4096 | 0.388 |
+| L8.ffn_down | 0.696 | 0.486 | 0.289 | 0.248 | 0.837 | 34 | 2912 | 4096 | 0.392 |
+| L8.attn_q | 0.461 | 0.228 | 0.076 | 0.228 | 0.735 | 29 | 1351 | 4048 | 0.384 |
+| L8.attn_output | 0.517 | 0.258 | 0.087 | 0.258 | 0.817 | 35 | 1835 | 4059 | 0.390 |
+| L16.ffn_gate | 0.671 | 0.465 | 0.274 | 0.235 | 0.814 | 37 | 2726 | 4096 | 0.414 |
+| L16.ffn_up | 0.713 | 0.494 | 0.291 | 0.249 | 0.862 | 698 | 3319 | 4096 | 0.398 |
+| L16.ffn_down | 0.688 | 0.470 | 0.269 | 0.228 | 0.837 | 59 | 2986 | 4096 | 0.405 |
+| L16.attn_q | 0.401 | 0.185 | 0.057 | 0.185 | 0.686 | 33 | 1105 | 4034 | 0.402 |
+| L16.attn_output | 0.475 | 0.229 | 0.075 | 0.229 | 0.778 | 53 | 1639 | 4059 | 0.396 |
+| L24.ffn_gate | 0.697 | 0.484 | 0.286 | 0.246 | 0.843 | 69 | 3072 | 4096 | 0.424 |
+| L24.ffn_up | 0.714 | 0.500 | 0.297 | 0.256 | 0.859 | 360 | 3303 | 4096 | 0.407 |
+| L24.ffn_down | 0.695 | 0.479 | 0.280 | 0.239 | 0.842 | 74 | 3069 | 4096 | 0.408 |
+| L24.attn_q | 0.437 | 0.211 | 0.069 | 0.211 | 0.722 | 28 | 1281 | 4042 | 0.419 |
+| L24.attn_output | 0.465 | 0.229 | 0.077 | 0.229 | 0.762 | 86 | 1602 | 4068 | 0.398 |
+| L31.ffn_gate | 0.703 | 0.486 | 0.284 | 0.243 | 0.847 | 76 | 3071 | 4096 | 0.406 |
+| L31.ffn_up | 0.701 | 0.488 | 0.288 | 0.247 | 0.844 | 45 | 3003 | 4096 | 0.387 |
+| L31.ffn_down | 0.689 | 0.478 | 0.280 | 0.240 | 0.830 | 13 | 2323 | 4096 | 0.402 |
+| L31.attn_q | 0.487 | 0.247 | 0.084 | 0.247 | 0.754 | 55 | 1538 | 4064 | 0.427 |
+| L31.attn_output | 0.467 | 0.234 | 0.079 | 0.234 | 0.757 | 33 | 1526 | 4052 | 0.364 |
+
+Sanity check, `blk.16.ffn_down` [4096x16384] reconstructed at rank r (factors from the exact SVD; ternary = per-row absmean BitNet quantizer on A=U*sqrt(S), B=sqrt(S)*Vt; 'TQ2_0-style' = llama.cpp `quantize_row_tq2_0` per-256-block absmax, which is what `llama-quantize` would actually do to FP factors):
+
+| r | bytes vs dense TQ2_0 (TQ2_0 factors / F16 factors) | FP32 factors | FP16 factors | ternary absmean (both) | ternary A only | ternary B only | TQ2_0-style ternary |
+|---|---|---|---|---|---|---|---|
+| 2048 | 0.62x / 4.85x | 0.470 | 0.470 | 0.797 (US/Vt split 0.802) | 0.672 | 0.656 | 1.067 |
+| 3072 | 0.94x / 7.27x | 0.269 | 0.269 | 0.757 (US/Vt split 0.766) | 0.597 | 0.567 | 1.082 |
+
+Reading: FP16 factors reproduce the SVD-optimal error exactly (0.47 @ 2048) but cost 4.85x the bytes; ternary factors at r=2048 (0.62x bytes) lose 80% of the matrix norm; the llama.cpp TQ2_0 quantizer applied to real-valued factors zeroes ~85% of entries (absmax/2 threshold) and gives error > 1. Ternarizing either factor alone already costs 0.57-0.67. There is no rank at which a ternary factor pair is both smaller and recognisable.
+
+Row-normalized (pure {-1,0,1} pattern, i.e. what a TQ2_0 factor pair must reproduce since scales are free) - per-class means:
+
+| class | E@256 | E@512 | E@1024 | E@1536 | E@2048 | E@2560 | E@3072 | E@3584 | stable rank | eff. rank | err @ r*(TQ2_0) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| FFN row-normalized (15) | 0.201 | 0.314 | 0.493 | 0.634 | 0.747 | 0.838 | 0.909 | 0.963 | 271 | 3092 | 0.259 |
+| ATTN row-normalized (10) | 0.403 | 0.567 | 0.761 | 0.873 | 0.939 | 0.975 | 0.993 | 0.999 | 143 | 1624 | 0.247 |
+| L0.attn_output row-normalized | 0.500 | 0.647 | 0.810 | 0.900 | 0.952 | 0.980 | 0.994 | 0.999 | 41 | 1186 | 0.220 |
+
+## Files
+
+Scripts (`/Users/timii/Developer/Muta/muta-iq/opt/scripts/svd/`): `svd_spectrum.py` (spectra/energy/ternary stats/break-even, `--row-normalize`), `recon_check.py` (rank-r reconstruction with FP16/ternary factors), `mp_baseline.py` (Marchenko-Pastur baseline), `probe_timing.py` (svd-vs-Gram validation), `run_all.sh` / `run_rownorm.sh` (locked runs), `make_report.py` (full tables), `write_report.py` (this file).
+Results (`/Users/timii/Developer/Muta/muta-iq/opt/results/svd/`): `layers.jsonl`, `vocab.jsonl`, `recon.json`, `mp_baseline.json`, `sv/*.npy` (all singular values), `run_all.log`, `svd_report_tables.md` (full per-tensor energy/error tables), this report.
+
+## Appendix: full tables
+
+## 1. Layer matrices (TQ2_0): Frobenius energy captured at rank r
+
+| tensor | shape | E@256 | E@512 | E@1024 | E@1536 | E@2048 | E@2560 | E@3072 | E@3584 | E@4096 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| L0.ffn_gate | 16384x4096 | 0.249 | 0.358 | 0.534 | 0.671 | 0.778 | 0.861 | 0.924 | 0.970 | 1.000 |
+| L0.ffn_up | 16384x4096 | 0.174 | 0.271 | 0.439 | 0.580 | 0.701 | 0.803 | 0.887 | 0.954 | 1.000 |
+| L0.ffn_down | 4096x16384 | 0.155 | 0.244 | 0.404 | 0.544 | 0.668 | 0.776 | 0.871 | 0.950 | 1.000 |
+| L0.attn_q | 4096x4096 | 0.399 | 0.564 | 0.760 | 0.873 | 0.939 | 0.975 | 0.993 | 0.999 | 1.000 |
+| L0.attn_output | 4096x4096 | 0.867 | 0.907 | 0.950 | 0.974 | 0.987 | 0.995 | 0.999 | 1.000 | 1.000 |
+| L8.ffn_gate | 16384x4096 | 0.272 | 0.384 | 0.552 | 0.680 | 0.781 | 0.861 | 0.923 | 0.969 | 1.000 |
+| L8.ffn_up | 16384x4096 | 0.152 | 0.270 | 0.464 | 0.617 | 0.738 | 0.834 | 0.908 | 0.963 | 1.000 |
+| L8.ffn_down | 4096x16384 | 0.221 | 0.336 | 0.516 | 0.654 | 0.764 | 0.850 | 0.917 | 0.967 | 1.000 |
+| L8.attn_q | 4096x4096 | 0.454 | 0.607 | 0.788 | 0.890 | 0.948 | 0.980 | 0.994 | 0.999 | 1.000 |
+| L8.attn_output | 4096x4096 | 0.326 | 0.508 | 0.733 | 0.860 | 0.934 | 0.973 | 0.992 | 0.999 | 1.000 |
+| L16.ffn_gate | 16384x4096 | 0.257 | 0.375 | 0.550 | 0.682 | 0.784 | 0.864 | 0.925 | 0.970 | 1.000 |
+| L16.ffn_up | 16384x4096 | 0.173 | 0.298 | 0.492 | 0.640 | 0.756 | 0.846 | 0.915 | 0.966 | 1.000 |
+| L16.ffn_down | 4096x16384 | 0.216 | 0.339 | 0.527 | 0.669 | 0.779 | 0.864 | 0.928 | 0.973 | 1.000 |
+| L16.attn_q | 4096x4096 | 0.523 | 0.676 | 0.839 | 0.922 | 0.966 | 0.988 | 0.997 | 1.000 | 1.000 |
+| L16.attn_output | 4096x4096 | 0.388 | 0.566 | 0.774 | 0.886 | 0.948 | 0.980 | 0.994 | 0.999 | 1.000 |
+| L24.ffn_gate | 16384x4096 | 0.208 | 0.328 | 0.514 | 0.655 | 0.766 | 0.852 | 0.918 | 0.967 | 1.000 |
+| L24.ffn_up | 16384x4096 | 0.183 | 0.302 | 0.490 | 0.635 | 0.750 | 0.841 | 0.912 | 0.964 | 1.000 |
+| L24.ffn_down | 4096x16384 | 0.208 | 0.330 | 0.518 | 0.660 | 0.770 | 0.856 | 0.922 | 0.970 | 1.000 |
+| L24.attn_q | 4096x4096 | 0.473 | 0.633 | 0.809 | 0.903 | 0.956 | 0.983 | 0.995 | 0.999 | 1.000 |
+| L24.attn_output | 4096x4096 | 0.412 | 0.589 | 0.784 | 0.888 | 0.947 | 0.979 | 0.994 | 0.999 | 1.000 |
+| L31.ffn_gate | 16384x4096 | 0.207 | 0.321 | 0.506 | 0.651 | 0.764 | 0.852 | 0.919 | 0.968 | 1.000 |
+| L31.ffn_up | 16384x4096 | 0.210 | 0.326 | 0.508 | 0.650 | 0.762 | 0.850 | 0.917 | 0.967 | 1.000 |
+| L31.ffn_down | 4096x16384 | 0.237 | 0.348 | 0.525 | 0.663 | 0.771 | 0.856 | 0.921 | 0.970 | 1.000 |
+| L31.attn_q | 4096x4096 | 0.425 | 0.577 | 0.763 | 0.873 | 0.939 | 0.975 | 0.993 | 0.999 | 1.000 |
+| L31.attn_output | 4096x4096 | 0.419 | 0.596 | 0.782 | 0.886 | 0.945 | 0.978 | 0.994 | 0.999 | 1.000 |
+| *i.i.d. random baseline (Marchenko-Pastur)* | 4096x4096 | 0.209 | 0.375 | 0.622 | 0.787 | 0.893 | 0.955 | 0.987 | 0.998 | 1.000 |
+| *i.i.d. random baseline (Marchenko-Pastur)* | 16384x4096 | 0.127 | 0.238 | 0.427 | 0.582 | 0.709 | 0.812 | 0.894 | 0.956 | 1.000 |
+
+Relative Frobenius reconstruction error sqrt(1-E) at the same ranks:
+
+| tensor | err@256 | err@512 | err@1024 | err@1536 | err@2048 | err@2560 | err@3072 | err@3584 | err@4096 |
+|---|---|---|---|---|---|---|---|---|---|
+| L0.ffn_gate | 0.866 | 0.801 | 0.683 | 0.574 | 0.471 | 0.373 | 0.276 | 0.174 | 0.000 |
+| L0.ffn_up | 0.909 | 0.854 | 0.749 | 0.648 | 0.547 | 0.444 | 0.336 | 0.214 | 0.000 |
+| L0.ffn_down | 0.919 | 0.869 | 0.772 | 0.675 | 0.576 | 0.473 | 0.360 | 0.223 | 0.000 |
+| L0.attn_q | 0.775 | 0.661 | 0.490 | 0.357 | 0.248 | 0.158 | 0.085 | 0.030 | 0.000 |
+| L0.attn_output | 0.365 | 0.305 | 0.223 | 0.162 | 0.112 | 0.072 | 0.038 | 0.013 | 0.000 |
+| L8.ffn_gate | 0.853 | 0.785 | 0.669 | 0.566 | 0.468 | 0.373 | 0.278 | 0.176 | 0.000 |
+| L8.ffn_up | 0.921 | 0.854 | 0.732 | 0.619 | 0.512 | 0.408 | 0.304 | 0.192 | 0.000 |
+| L8.ffn_down | 0.882 | 0.815 | 0.696 | 0.588 | 0.486 | 0.388 | 0.289 | 0.183 | 0.000 |
+| L8.attn_q | 0.739 | 0.627 | 0.461 | 0.332 | 0.228 | 0.143 | 0.076 | 0.026 | 0.000 |
+| L8.attn_output | 0.821 | 0.702 | 0.517 | 0.374 | 0.258 | 0.163 | 0.087 | 0.030 | 0.000 |
+| L16.ffn_gate | 0.862 | 0.791 | 0.671 | 0.564 | 0.465 | 0.369 | 0.274 | 0.173 | 0.000 |
+| L16.ffn_up | 0.909 | 0.838 | 0.713 | 0.600 | 0.494 | 0.392 | 0.291 | 0.183 | 0.000 |
+| L16.ffn_down | 0.885 | 0.813 | 0.688 | 0.575 | 0.470 | 0.369 | 0.269 | 0.164 | 0.000 |
+| L16.attn_q | 0.691 | 0.569 | 0.401 | 0.279 | 0.185 | 0.112 | 0.057 | 0.019 | 0.000 |
+| L16.attn_output | 0.783 | 0.659 | 0.475 | 0.338 | 0.229 | 0.142 | 0.075 | 0.026 | 0.000 |
+| L24.ffn_gate | 0.890 | 0.820 | 0.697 | 0.587 | 0.484 | 0.385 | 0.286 | 0.181 | 0.000 |
+| L24.ffn_up | 0.904 | 0.835 | 0.714 | 0.604 | 0.500 | 0.398 | 0.297 | 0.189 | 0.000 |
+| L24.ffn_down | 0.890 | 0.818 | 0.695 | 0.583 | 0.479 | 0.379 | 0.280 | 0.174 | 0.000 |
+| L24.attn_q | 0.726 | 0.606 | 0.437 | 0.311 | 0.211 | 0.131 | 0.069 | 0.024 | 0.000 |
+| L24.attn_output | 0.767 | 0.641 | 0.465 | 0.334 | 0.229 | 0.144 | 0.077 | 0.027 | 0.000 |
+| L31.ffn_gate | 0.891 | 0.824 | 0.703 | 0.591 | 0.486 | 0.384 | 0.284 | 0.178 | 0.000 |
+| L31.ffn_up | 0.889 | 0.821 | 0.701 | 0.592 | 0.488 | 0.388 | 0.288 | 0.181 | 0.000 |
+| L31.ffn_down | 0.873 | 0.808 | 0.689 | 0.581 | 0.478 | 0.379 | 0.280 | 0.174 | 0.000 |
+| L31.attn_q | 0.758 | 0.651 | 0.487 | 0.356 | 0.247 | 0.157 | 0.084 | 0.029 | 0.000 |
+| L31.attn_output | 0.762 | 0.636 | 0.467 | 0.338 | 0.234 | 0.148 | 0.079 | 0.027 | 0.000 |
+
+## 2. Rank statistics, ternary statistics, break-even
+
+| tensor | s_max | s_min | stable rank | eff. rank (entropy) | num.rank (s>1e-3 s_max) | zero frac | +1 frac | -1 frac | zero rows/cols | r* TQ2_0 factors (err) | r* F16 factors (err) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| L0.ffn_gate | 194.4 | 2.1999 | 14.2 | 2301 | 4096 | 0.325 | 0.339 | 0.337 | 0/0 | 3276 (0.237) | 422 (0.824) |
+| L0.ffn_up | 172.8 | 3.4203 | 28.6 | 3150 | 4096 | 0.288 | 0.356 | 0.356 | 0/0 | 3276 (0.290) | 422 (0.873) |
+| L0.ffn_down | 206.8 | 4.8556 | 23.9 | 3169 | 4096 | 0.277 | 0.362 | 0.361 | 0/0 | 3276 (0.309) | 422 (0.887) |
+| L0.attn_q | 53.6 | 0.0001 | 38.7 | 1578 | 4059 | 0.339 | 0.330 | 0.331 | 0/0 | 2048 (0.248) | 264 (0.771) |
+| L0.attn_output | 372.3 | 0.0001 | 1.4 | 13 | 3678 | 0.357 | 0.322 | 0.321 | 0/0 | 2048 (0.112) | 264 (0.362) |
+| L8.ffn_gate | 260.8 | 2.5197 | 38.3 | 2689 | 4096 | 0.400 | 0.301 | 0.299 | 0/0 | 3276 (0.239) | 422 (0.807) |
+| L8.ffn_up | 63.3 | 1.8372 | 678.2 | 3448 | 4096 | 0.388 | 0.306 | 0.306 | 0/0 | 3276 (0.261) | 422 (0.877) |
+| L8.ffn_down | 328.4 | 11.1848 | 34.4 | 2912 | 4096 | 0.392 | 0.304 | 0.304 | 0/0 | 3276 (0.248) | 422 (0.837) |
+| L8.attn_q | 135.0 | 0.0006 | 29.4 | 1351 | 4048 | 0.384 | 0.308 | 0.308 | 0/0 | 2048 (0.228) | 264 (0.735) |
+| L8.attn_output | 156.5 | 0.0035 | 34.6 | 1835 | 4059 | 0.390 | 0.305 | 0.305 | 0/0 | 2048 (0.258) | 264 (0.817) |
+| L16.ffn_gate | 314.8 | 1.5813 | 36.9 | 2726 | 4096 | 0.414 | 0.294 | 0.292 | 0/0 | 3276 (0.235) | 422 (0.814) |
+| L16.ffn_up | 74.9 | 1.1884 | 697.8 | 3319 | 4096 | 0.398 | 0.301 | 0.301 | 0/0 | 3276 (0.249) | 422 (0.862) |
+| L16.ffn_down | 306.9 | 11.2787 | 58.9 | 2986 | 4096 | 0.405 | 0.298 | 0.298 | 0/0 | 3276 (0.228) | 422 (0.837) |
+| L16.attn_q | 173.7 | 0.0020 | 32.8 | 1105 | 4034 | 0.402 | 0.299 | 0.299 | 0/0 | 2048 (0.185) | 264 (0.686) |
+| L16.attn_output | 155.3 | 0.0030 | 53.3 | 1639 | 4059 | 0.396 | 0.302 | 0.302 | 0/0 | 2048 (0.229) | 264 (0.778) |
+| L24.ffn_gate | 274.7 | 8.7463 | 69.2 | 3072 | 4096 | 0.424 | 0.288 | 0.287 | 0/0 | 3276 (0.246) | 422 (0.843) |
+| L24.ffn_up | 127.9 | 5.9560 | 360.0 | 3303 | 4096 | 0.407 | 0.297 | 0.297 | 0/0 | 3276 (0.256) | 422 (0.859) |
+| L24.ffn_down | 300.1 | 14.6183 | 74.4 | 3069 | 4096 | 0.408 | 0.296 | 0.296 | 0/0 | 3276 (0.239) | 422 (0.842) |
+| L24.attn_q | 186.2 | 0.0025 | 28.2 | 1281 | 4042 | 0.419 | 0.291 | 0.291 | 0/0 | 2048 (0.211) | 264 (0.722) |
+| L24.attn_output | 133.8 | 0.0021 | 86.5 | 1602 | 4068 | 0.398 | 0.301 | 0.301 | 0/0 | 2048 (0.229) | 264 (0.762) |
+| L31.ffn_gate | 358.0 | 0.3908 | 75.6 | 3071 | 4096 | 0.406 | 0.297 | 0.297 | 0/0 | 3276 (0.243) | 422 (0.847) |
+| L31.ffn_up | 471.1 | 0.6115 | 44.7 | 3003 | 4096 | 0.387 | 0.306 | 0.306 | 0/0 | 3276 (0.247) | 422 (0.844) |
+| L31.ffn_down | 723.5 | 7.8867 | 13.0 | 2323 | 4096 | 0.402 | 0.299 | 0.299 | 0/0 | 3276 (0.240) | 422 (0.830) |
+| L31.attn_q | 90.6 | 0.0022 | 54.6 | 1538 | 4064 | 0.427 | 0.286 | 0.287 | 0/0 | 2048 (0.247) | 264 (0.754) |
+| L31.attn_output | 183.0 | 0.0020 | 32.8 | 1526 | 4052 | 0.364 | 0.318 | 0.318 | 0/0 | 2048 (0.234) | 264 (0.757) |
+
+Per-class averages (energy at rank r, and error at the TQ2_0-factor break-even rank):
+
+| class | n | E@256 | E@512 | E@1024 | E@1536 | E@2048 | E@2560 | E@3072 | E@3584 | E@4096 | mean stable rank | mean eff. rank | mean err @ r*_TQ2 | mean err @ r*_F16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| FFN | 15 | 0.208 | 0.322 | 0.503 | 0.643 | 0.755 | 0.844 | 0.914 | 0.966 | 1.000 | 149.9 | 2969 | 0.251 | 0.846 |
+| ATTN | 10 | 0.469 | 0.622 | 0.798 | 0.896 | 0.951 | 0.981 | 0.995 | 0.999 | 1.000 | 39.2 | 1347 | 0.218 | 0.714 |
+
+## 2b. Same matrices with every row divided by its per-row scale (pure {-1,0,1} ternary pattern)
+
+TQ2_0 stores the scales anyway, so this is the structure a ternary factor pair must actually reproduce; it removes the effect of a few huge-scale rows on the Frobenius energy.
+
+| tensor | E@256 | E@512 | E@1024 | E@1536 | E@2048 | E@2560 | E@3072 | E@3584 | E@4096 | stable rank | eff. rank | err @ r*_TQ2 | err @ r*_F16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| L0.ffn_gate | 0.261 | 0.362 | 0.528 | 0.660 | 0.767 | 0.851 | 0.917 | 0.967 | 1.000 | 10 | 1967 | 0.248 | 0.820 |
+| L0.ffn_up | 0.193 | 0.288 | 0.450 | 0.588 | 0.705 | 0.804 | 0.887 | 0.953 | 1.000 | 17 | 2795 | 0.291 | 0.863 |
+| L0.ffn_down | 0.118 | 0.211 | 0.376 | 0.520 | 0.647 | 0.759 | 0.857 | 0.939 | 1.000 | 505 | 3806 | 0.329 | 0.906 |
+| L0.attn_q | 0.363 | 0.523 | 0.730 | 0.854 | 0.929 | 0.971 | 0.992 | 0.999 | 1.000 | 44 | 1757 | 0.267 | 0.794 |
+| L0.attn_output | 0.500 | 0.647 | 0.810 | 0.900 | 0.952 | 0.980 | 0.994 | 0.999 | 1.000 | 41 | 1186 | 0.220 | 0.703 |
+| L8.ffn_gate | 0.265 | 0.377 | 0.545 | 0.674 | 0.777 | 0.858 | 0.921 | 0.968 | 1.000 | 42 | 2751 | 0.242 | 0.812 |
+| L8.ffn_up | 0.154 | 0.272 | 0.463 | 0.614 | 0.735 | 0.831 | 0.906 | 0.962 | 1.000 | 676 | 3452 | 0.263 | 0.876 |
+| L8.ffn_down | 0.196 | 0.313 | 0.498 | 0.640 | 0.753 | 0.843 | 0.912 | 0.965 | 1.000 | 399 | 3249 | 0.255 | 0.852 |
+| L8.attn_q | 0.419 | 0.571 | 0.758 | 0.869 | 0.936 | 0.974 | 0.992 | 0.999 | 1.000 | 44 | 1535 | 0.253 | 0.758 |
+| L8.attn_output | 0.303 | 0.488 | 0.720 | 0.853 | 0.930 | 0.972 | 0.992 | 0.999 | 1.000 | 353 | 2031 | 0.265 | 0.831 |
+| L16.ffn_gate | 0.251 | 0.369 | 0.544 | 0.676 | 0.780 | 0.860 | 0.923 | 0.969 | 1.000 | 41 | 2786 | 0.239 | 0.818 |
+| L16.ffn_up | 0.175 | 0.298 | 0.491 | 0.639 | 0.755 | 0.845 | 0.915 | 0.966 | 1.000 | 674 | 3321 | 0.251 | 0.862 |
+| L16.ffn_down | 0.194 | 0.316 | 0.504 | 0.648 | 0.760 | 0.848 | 0.916 | 0.966 | 1.000 | 354 | 3235 | 0.249 | 0.851 |
+| L16.attn_q | 0.465 | 0.612 | 0.784 | 0.885 | 0.944 | 0.977 | 0.993 | 0.999 | 1.000 | 41 | 1365 | 0.236 | 0.728 |
+| L16.attn_output | 0.363 | 0.541 | 0.754 | 0.873 | 0.940 | 0.976 | 0.993 | 0.999 | 1.000 | 264 | 1798 | 0.245 | 0.794 |
+| L24.ffn_gate | 0.212 | 0.328 | 0.509 | 0.649 | 0.760 | 0.847 | 0.915 | 0.966 | 1.000 | 68 | 3071 | 0.251 | 0.842 |
+| L24.ffn_up | 0.187 | 0.305 | 0.490 | 0.635 | 0.749 | 0.840 | 0.911 | 0.964 | 1.000 | 340 | 3295 | 0.257 | 0.857 |
+| L24.ffn_down | 0.197 | 0.319 | 0.506 | 0.649 | 0.760 | 0.848 | 0.916 | 0.966 | 1.000 | 383 | 3218 | 0.250 | 0.849 |
+| L24.attn_q | 0.425 | 0.581 | 0.766 | 0.874 | 0.939 | 0.975 | 0.993 | 0.999 | 1.000 | 43 | 1537 | 0.248 | 0.754 |
+| L24.attn_output | 0.401 | 0.578 | 0.775 | 0.882 | 0.944 | 0.977 | 0.994 | 0.999 | 1.000 | 247 | 1669 | 0.237 | 0.769 |
+| L31.ffn_gate | 0.228 | 0.338 | 0.511 | 0.647 | 0.757 | 0.845 | 0.914 | 0.965 | 1.000 | 114 | 3032 | 0.252 | 0.836 |
+| L31.ffn_up | 0.209 | 0.324 | 0.506 | 0.646 | 0.758 | 0.846 | 0.915 | 0.966 | 1.000 | 58 | 3063 | 0.250 | 0.845 |
+| L31.ffn_down | 0.174 | 0.292 | 0.482 | 0.630 | 0.747 | 0.839 | 0.911 | 0.964 | 1.000 | 382 | 3332 | 0.257 | 0.864 |
+| L31.attn_q | 0.391 | 0.545 | 0.741 | 0.859 | 0.931 | 0.972 | 0.992 | 0.999 | 1.000 | 63 | 1692 | 0.262 | 0.777 |
+| L31.attn_output | 0.402 | 0.582 | 0.774 | 0.881 | 0.943 | 0.977 | 0.993 | 0.999 | 1.000 | 294 | 1674 | 0.239 | 0.769 |
+| *i.i.d. random 4096x4096* | 0.209 | 0.375 | 0.622 | 0.787 | 0.893 | 0.955 | 0.987 | 0.998 | 1.000 | 1024 | - | - | - |
+| *i.i.d. random 16384x4096* | 0.127 | 0.238 | 0.427 | 0.582 | 0.709 | 0.812 | 0.894 | 0.956 | 1.000 | 1820 | - | - | - |
+
+| class | n | E@256 | E@512 | E@1024 | E@1536 | E@2048 | E@2560 | E@3072 | E@3584 | E@4096 | mean stable rank | mean eff. rank | mean err @ r*_TQ2 | mean err @ r*_F16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| FFN (row-normalized) | 15 | 0.201 | 0.314 | 0.493 | 0.634 | 0.747 | 0.838 | 0.909 | 0.963 | 1.000 | 271 | 3092 | 0.259 | 0.850 |
+| ATTN (row-normalized) | 10 | 0.403 | 0.567 | 0.761 | 0.873 | 0.939 | 0.975 | 0.993 | 0.999 | 1.000 | 143 | 1624 | 0.247 | 0.768 |
+
+## 3. output.weight (Q6_K) and token_embd.weight (Q4_K), 73448x4096
+
+| tensor | E@256 | E@512 | E@1024 | E@1536 | E@2048 | E@2560 | E@3072 | E@3584 | E@4096 | stable rank | eff. rank | num.rank |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| output.weight | 0.247 | 0.352 | 0.510 | 0.636 | 0.740 | 0.827 | 0.900 | 0.959 | 1.000 | 18.9 | 2643 | 4096 |
+| token_embd.weight | 0.300 | 0.392 | 0.526 | 0.636 | 0.731 | 0.814 | 0.887 | 0.949 | 1.000 | 83.8 | 2802 | 4096 |
+| *i.i.d. random 73448x4096* | 0.090 | 0.175 | 0.330 | 0.471 | 0.600 | 0.717 | 0.823 | 0.918 | 1.000 | 2681 | - | - |
+
+| tensor | err@256 | err@512 | err@1024 | err@1536 | err@2048 | err@2560 | err@3072 | err@3584 | err@4096 |
+|---|---|---|---|---|---|---|---|---|---|
+| output.weight | 0.868 | 0.805 | 0.700 | 0.604 | 0.510 | 0.416 | 0.316 | 0.201 | 0.000 |
+| token_embd.weight | 0.837 | 0.780 | 0.689 | 0.603 | 0.518 | 0.431 | 0.337 | 0.226 | 0.000 |
+
+Break-even vs current storage (dense bytes / MiB, r*, and error at r*):
+
+| tensor | dense | F16 factors r* (err) | Q8_0 factors r* (err) | bytes at r=1024 F16 / Q8_0 | err@1024 |
+|---|---|---|---|---|---|
+| output.weight (Q6_K) | 235 MiB | 1591 (0.594) | 2995 (0.331) | 151 / 80 MiB | 0.700 |
+| token_embd.weight (Q4_K) | 161 MiB | 1091 (0.677) | 2053 (0.518) | 151 / 80 MiB | 0.689 |
+
+## 4. Sanity check: blk.16.ffn_down.weight [4096x16384] rank-r reconstruction with quantized factors
+
+| rank | SVD-optimal err (theory) | FP32 factors | FP16 factors | ternary absmean, A=US,B=Vt | ternary absmean, balanced sqrt(S) | ternary TQ2_0-style (per-256 absmax), balanced | ternary A only | ternary B only | bytes ratio TQ2_0 factors / dense | bytes ratio F16 factors / dense |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2048 | 0.470 | 0.470 | 0.470 | 0.802 | 0.797 | 1.067 | 0.672 | 0.656 | 0.62 | 4.85 |
+| 3072 | 0.269 | 0.269 | 0.269 | 0.766 | 0.757 | 1.082 | 0.597 | 0.567 | 0.94 | 7.27 |

@@ -1,0 +1,4 @@
+tag	file	pp_tok_s	tg_tok_s	tg_std	peak_rss_mb	steady_rss_mb	wall_s
+bitcpm4-8b-tq2_0-bin	bitcpm4-8b-tq2_0.gguf	36.63	19.12	0.15	2567.0	2397.0	138.5
+bitcpm4-8b-tq2_0-envocab-bin	bitcpm4-8b-tq2_0-envocab.gguf	36.90	17.61	0.11	2602.0	2290.7	122.4
+bitcpm4-8b-tq2_0-envocab64-bin	bitcpm4-8b-tq2_0-envocab64.gguf	34.30	19.61	0.24	2465.0	2353.7	128.2

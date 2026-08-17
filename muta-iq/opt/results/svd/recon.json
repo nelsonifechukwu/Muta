@@ -1,0 +1,42 @@
+{
+ "name": "blk.16.ffn_down.weight",
+ "out": 4096,
+ "in": 16384,
+ "fro": 2354.5349666549164,
+ "ranks": {
+  "2048": {
+   "energy": 0.7792217353455987,
+   "err_svd_theory": 0.46987047646601643,
+   "err_fp32_factors": 0.46987047637185275,
+   "err_fp16_factors": 0.4698705480498044,
+   "err_tern_absmean_US_Vt": 0.8022407548628182,
+   "err_tern_tq2_0_US_Vt": 1.066106866829762,
+   "err_tern_absmean_balanced": 0.7974700032534414,
+   "err_tern_tq2_0_balanced": 1.0673640033331975,
+   "err_tern_absmean_A_only": 0.6724677676389682,
+   "err_tern_absmean_B_only": 0.6558986169902548,
+   "bytes_dense_TQ2_0": 17301504.0,
+   "bytes_factors_TQ2_0": 10813440.0,
+   "bytes_factors_F16": 83886080.0,
+   "bytes_ratio_TQ2_0": 0.625,
+   "bytes_ratio_F16": 4.848484848484849
+  },
+  "3072": {
+   "energy": 0.9275962299443792,
+   "err_svd_theory": 0.2690794865009609,
+   "err_fp32_factors": 0.2690794863873094,
+   "err_fp16_factors": 0.2690796353638755,
+   "err_tern_absmean_US_Vt": 0.7660586774531105,
+   "err_tern_tq2_0_US_Vt": 1.0808483714325905,
+   "err_tern_absmean_balanced": 0.7569338749633648,
+   "err_tern_tq2_0_balanced": 1.0820847128608415,
+   "err_tern_absmean_A_only": 0.5972551812136857,
+   "err_tern_absmean_B_only": 0.5667766826452472,
+   "bytes_dense_TQ2_0": 17301504.0,
+   "bytes_factors_TQ2_0": 16220160.0,
+   "bytes_factors_F16": 125829120.0,
+   "bytes_ratio_TQ2_0": 0.9375,
+   "bytes_ratio_F16": 7.2727272727272725
+  }
+ }
+}

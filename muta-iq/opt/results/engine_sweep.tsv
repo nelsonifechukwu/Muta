@@ -1,0 +1,17 @@
+tag	model	tg_tok_s	tg_std	peak_rss_mb	steady_rss_mb	wall_s	stats
+base-nostream	bitcpm4-8b-tq2_0.gguf	20.96	0.19	2288.0	2287.7	10.5	
+base-nostream-norepack	bitcpm4-8b-tq2_0.gguf	20.45	0.02	2317.8	2317.7	6.6	
+f1-noprefetch-W0-H1	bitcpm4-8b-tq2_0.gguf	10.44	0.26	685.0	312.9	18.5	muta-residency: graphs=0 gates=4128 populate=1 (0.0 ms, 0.01 ms/op) evict=4127 (4369.0 ms, 1.06 ms/op) populate_fail=0 gate_missed=4128
+f1-noprefetch-W0-H1-norepack	bitcpm4-8b-tq2_0.gguf	10.49	0.17	385.0	313.3	13.0	muta-residency: graphs=129 gates=4257 populate=1 (0.0 ms, 0.01 ms/op) evict=4128 (4313.1 ms, 1.04 ms/op) populate_fail=0 gate_missed=4257
+f1-touch-W2-H2	bitcpm4-8b-tq2_0.gguf	9.97	0.16	443.9	356.8	13.4	muta-residency: graphs=0 gates=4128 populate=4131 (21490.8 ms, 5.20 ms/op) evict=4127 (4332.3 ms, 1.05 ms/op) populate_fail=0 gate_missed=4103
+f1-touch-W0-H1	bitcpm4-8b-tq2_0.gguf	10.27	0.13	1024.2	385.4	14.0	muta-residency: graphs=0 gates=4128 populate=3937 (7757.4 ms, 1.97 ms/op) evict=3935 (4252.8 ms, 1.08 ms/op) populate_fail=0 gate_missed=4128
+f1-touch-W0-H1-norepack	bitcpm4-8b-tq2_0.gguf	10.26	0.16	537.4	375.9	13.1	muta-residency: graphs=129 gates=4257 populate=4015 (7734.3 ms, 1.93 ms/op) evict=4014 (4222.5 ms, 1.05 ms/op) populate_fail=0 gate_missed=4257
+f1-mlock-W6-H2	bitcpm4-8b-tq2_0.gguf	4.48	0.10	626.0	358.3	29.4	muta-residency: graphs=0 gates=4128 populate=4132 (38080.9 ms, 9.22 ms/op) evict=4126 (19401.1 ms, 4.70 ms/op) populate_fail=0 gate_missed=2728
+pin600-touch-W6-H2	bitcpm4-8b-tq2_0.gguf	12.38	0.15	1260.5	999.2	11.6	muta-residency: graphs=0 gates=2838 populate=2848 (17838.1 ms, 6.26 ms/op) evict=2834 (3153.5 ms, 1.11 ms/op) populate_fail=0 gate_missed=2256
+pin900-touch-W6-H2	bitcpm4-8b-tq2_0.gguf	13.57	0.03	1568.9	1361.3	10.3	muta-residency: graphs=0 gates=2193 populate=2203 (16300.3 ms, 7.40 ms/op) evict=2184 (2558.4 ms, 1.17 ms/op) populate_fail=0 gate_missed=1432
+pin1200-touch-W6-H2	bitcpm4-8b-tq2_0.gguf	15.04	0.10	1909.6	1704.9	10.0	muta-residency: graphs=0 gates=1548 populate=1554 (13927.8 ms, 8.96 ms/op) evict=1530 (1832.9 ms, 1.20 ms/op) populate_fail=0 gate_missed=734
+pin1500-touch-W6-H2	bitcpm4-8b-tq2_0.gguf	17.12	0.15	2146.2	2145.4	8.4	muta-residency: graphs=0 gates=903 populate=33 (189.7 ms, 5.75 ms/op) evict=0 (0.0 ms, 0.00 ms/op) populate_fail=0 gate_missed=7
+pin1200-mlock-W6-H2	bitcpm4-8b-tq2_0.gguf	9.20	0.08	1956.7	1665.9	15.5	muta-residency: graphs=0 gates=1548 populate=1552 (14641.1 ms, 9.43 ms/op) evict=1527 (7786.6 ms, 5.10 ms/op) populate_fail=0 gate_missed=490
+pin1200-touch-W8-H3-qos0	bitcpm4-8b-tq2_0.gguf	15.54	1.31	1989.3	1837.4	9.2	muta-residency: graphs=0 gates=1548 populate=1532 (14667.5 ms, 9.57 ms/op) evict=1505 (1863.4 ms, 1.24 ms/op) populate_fail=0 gate_missed=103
+pin600-noprefetch	bitcpm4-8b-tq2_0.gguf	12.53	0.24	993.2	885.8	10.8	muta-residency: graphs=0 gates=2838 populate=11 (18.4 ms, 1.67 ms/op) evict=2837 (3493.7 ms, 1.23 ms/op) populate_fail=0 gate_missed=2838
+pin1200-noprefetch	bitcpm4-8b-tq2_0.gguf	14.85	0.96	1522.2	1472.9	9.9	muta-residency: graphs=0 gates=1548 populate=21 (71.3 ms, 3.40 ms/op) evict=1547 (1993.0 ms, 1.29 ms/op) populate_fail=0 gate_missed=1548

@@ -1,0 +1,88 @@
+name: audit-bench
+# Reproduces the ADTC 2026 profiler audit binary (llama.cpp b10175, no AVX/AVX2/FMA/F16C, debian bookworm GCC 12)
+# on a free x86 GitHub runner and benches GGUF candidates with llama-bench exactly as the profiler invokes it.
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: 'JSON list of {name,url} to bench'
+        required: true
+        default: '[{"name":"qwen3-1.7b-q4_0","url":"https://huggingface.co/bartowski/Qwen_Qwen3-1.7B-GGUF/resolve/main/Qwen_Qwen3-1.7B-Q4_0.gguf"}]'
+      ngen:
+        description: 'tg tokens'
+        default: '128'
+      pprompt:
+        description: 'pp tokens (0 = skip)'
+        default: '128'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: debian:bookworm-slim
+    steps:
+      - name: deps
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential cmake git ca-certificates curl && rm -rf /var/lib/apt/lists/*
+      - name: build llama.cpp b10175 exactly like the profiler Dockerfile
+        run: |
+          git clone --depth 1 --branch b10175 https://github.com/ggerganov/llama.cpp.git /src/llama.cpp
+          cd /src/llama.cpp
+          cmake -B build -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_AVX512=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF -DGGML_BLAS=OFF -DGGML_CUDA=OFF -DGGML_METAL=OFF -DLLAMA_CURL=OFF
+          cmake --build build --config Release --target llama-bench llama-cli -j4
+          mkdir -p /out && cp build/bin/llama-bench /out/ && (cp build/bin/llama-cli /out/ || true)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: llama-bench-b10175-noavx
+          path: /out/
+  bench:
+    needs: build
+    runs-on: ubuntu-latest
+    container: debian:bookworm-slim
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        model: ${{ fromJson(github.event.inputs.models) }}
+    name: bench-${{ matrix.model.name }}
+    steps:
+      - name: deps
+        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl time procps && rm -rf /var/lib/apt/lists/*
+      - uses: actions/download-artifact@v4
+        with:
+          name: llama-bench-b10175-noavx
+          path: /bin-llama
+      - name: cpu info
+        run: |
+          chmod +x /bin-llama/llama-bench
+          nproc; grep -m1 'model name' /proc/cpuinfo; grep -c processor /proc/cpuinfo
+          grep -m1 flags /proc/cpuinfo | tr ' ' '\n' | grep -E '^(avx|avx2|avx512f|sse4_2|ssse3|fma|f16c)$' | tr '\n' ' '; echo; free -m
+      - name: download model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          curl -sSL --fail -H "Authorization: Bearer ${HF_TOKEN}" -o /model.gguf "${{ matrix.model.url }}"
+          ls -la /model.gguf
+      - name: bench (default threads = physical cores, like the profiler)
+        run: |
+          echo "== ${{ matrix.model.name }} =="
+          /usr/bin/time -v /bin-llama/llama-bench -m /model.gguf -p ${{ github.event.inputs.pprompt }} -n ${{ github.event.inputs.ngen }} -r 3 -ngl 0 -o json 2> /time_default.txt | tee /bench_default.json
+          grep -E "Maximum resident|Elapsed" /time_default.txt
+      - name: bench (-t 4)
+        run: |
+          /usr/bin/time -v /bin-llama/llama-bench -m /model.gguf -p 0 -n ${{ github.event.inputs.ngen }} -r 3 -t 4 -ngl 0 -o json 2> /time_t4.txt | tee /bench_t4.json
+          grep -E "Maximum resident|Elapsed" /time_t4.txt
+      - name: summary
+        run: |
+          echo "### ${{ matrix.model.name }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /bench_default.json >> $GITHUB_STEP_SUMMARY
+          echo '--- t4' >> $GITHUB_STEP_SUMMARY
+          cat /bench_t4.json >> $GITHUB_STEP_SUMMARY
+          grep -E "Maximum resident" /time_default.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ matrix.model.name }}
+          path: |
+            /bench_default.json
+            /bench_t4.json
+            /time_default.txt
+            /time_t4.txt

@@ -1,0 +1,7 @@
+{'benchmark': 'arc_easy', 'dataset_version': 'lm-eval-harness', 'language': 'en', 'samples': 50, 'score': 0.84, 'metric': 'acc_norm'}
+EXIT 0
+{'benchmark': 'arc_easy', 'dataset_version': 'lm-eval-harness', 'language': 'en', 'samples': 50, 'score': 0.84, 'metric': 'acc_norm'}
+EXIT 0
+{'benchmark': 'arc_easy', 'dataset_version': 'lm-eval-harness', 'language': 'en', 'samples': 50, 'score': 0.84, 'metric': 'acc_norm'}
+EXIT 0
+ACC DONE 05:28:02

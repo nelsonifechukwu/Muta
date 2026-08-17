@@ -1,0 +1,724 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 24f05cc..51411cf 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -32,6 +32,7 @@ add_library(llama
+             llama-memory-hybrid-iswa.cpp
+             llama-memory-recurrent.cpp
+             llama-mmap.cpp
++            llama-residency-lite.cpp
+             llama-model-loader.cpp
+             llama-model-saver.cpp
+             llama-model.cpp
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index 0de3a68..509110a 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -1,4 +1,5 @@
+ #include "llama-context.h"
++#include "llama-residency-lite.h"
+ 
+ #include "ggml.h"
+ #include "llama-arch.h"
+@@ -3556,6 +3557,16 @@ llama_context * llama_init_from_model(
+         return nullptr;
+     }
+ 
++    // [muta] engine-side defaults that llama-bench cannot pass: n_ubatch cap + residency window
++    muta_apply_context_overrides(params);
++    if (muta_stream_enabled() && params.cb_eval == nullptr) {
++        void * res = muta_residency_get_or_create(*model);
++        if (res) {
++            params.cb_eval           = muta_residency_cb_eval;
++            params.cb_eval_user_data = res;
++        }
++    }
++
+     if (params.flash_attn_type != LLAMA_FLASH_ATTN_TYPE_DISABLED && model->arch == LLM_ARCH_GROK) {
+         LLAMA_LOG_WARN("%s: flash_attn is not compatible with Grok - forcing off\n", __func__);
+         params.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;
+diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
+index ed572da..e03aaaa 100644
+--- a/src/llama-mmap.cpp
++++ b/src/llama-mmap.cpp
+@@ -442,6 +442,8 @@ struct llama_mmap::impl {
+ #ifdef _POSIX_MAPPED_FILES
+     std::vector<std::pair<size_t, size_t>> mapped_fragments;
+ 
++    int fd_dup = -1; // [muta] kept for MAP_FIXED remaps by the residency manager
++
+     impl(struct llama_file * file, size_t prefetch, bool numa) {
+         size = file->size();
+         int fd = file->file_id();
+@@ -458,6 +460,7 @@ struct llama_mmap::impl {
+         if (addr == MAP_FAILED) {
+             throw std::runtime_error(format("mmap failed: %s", strerror(errno)));
+         }
++        fd_dup = dup(fd); // [muta] after a successful mmap so nothing leaks on the throw above
+ 
+         if (prefetch > 0) {
+             if (posix_madvise(addr, std::min(file->size(), prefetch), POSIX_MADV_WILLNEED)) {
+@@ -524,6 +527,8 @@ struct llama_mmap::impl {
+     }
+ 
+     ~impl() {
++        if (fd_dup >= 0) { close(fd_dup); fd_dup = -1; }
++
+         for (const auto & frag : mapped_fragments) {
+             if (munmap((char *) addr + frag.first, frag.second - frag.first)) {
+                 LLAMA_LOG_WARN("warning: munmap failed: %s\n", strerror(errno));
+@@ -622,6 +627,13 @@ llama_mmap::~llama_mmap() = default;
+ 
+ size_t llama_mmap::size() const { return pimpl->size; }
+ void * llama_mmap::addr() const { return pimpl->addr; }
++int    llama_mmap::fd()   const {
++#ifdef _POSIX_MAPPED_FILES
++    return pimpl->fd_dup;
++#else
++    return -1;
++#endif
++}
+ 
+ void llama_mmap::unmap_fragment(size_t first, size_t last) { pimpl->unmap_fragment(first, last); }
+ 
+diff --git a/src/llama-mmap.h b/src/llama-mmap.h
+index b7d5c61..3495613 100644
+--- a/src/llama-mmap.h
++++ b/src/llama-mmap.h
+@@ -47,6 +47,7 @@ struct llama_mmap {
+ 
+     size_t size() const;
+     void * addr() const;
++    int    fd()   const; // dup'd descriptor of the mapped file (-1 if unavailable) [muta]
+ 
+     void unmap_fragment(size_t first, size_t last);
+ 
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 3bf3a22..2e4538a 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -1,4 +1,5 @@
+ #include "llama-model.h"
++#include "llama-residency-lite.h"
+ 
+ #include "llama-arch.h"
+ #include "llama-ext.h"
+@@ -1535,7 +1536,7 @@ bool llama_model_base::load_tensors(llama_model_loader & ml) {
+         }
+     }
+ 
+-    ml.init_mappings(true, use_mlock ? &pimpl->mlock_mmaps : nullptr);
++    ml.init_mappings(!muta_stream_enabled() && !muta_mmap_lazy() /* [muta] no populate/WILLNEED when streaming or MUTA_MMAP_LAZY=1 */, use_mlock ? &pimpl->mlock_mmaps : nullptr);
+     pimpl->mappings.reserve(ml.mappings.size());
+ 
+     // create the backend buffers
+@@ -2478,6 +2479,7 @@ void llama_free_model(llama_model * model) {
+ }
+ 
+ void llama_model_free(llama_model * model) {
++    muta_residency_release(model);
+     delete model;
+ }
+ 
+@@ -2973,3 +2975,5 @@ uint32_t llama_model_get_tok_embd(const struct llama_model * model, float * out)
+ 
+     return (uint32_t) nelements;
+ }
++
++const std::vector<std::unique_ptr<struct llama_mmap>> & llama_model::mappings() const { return pimpl->mappings; }
+diff --git a/src/llama-model.h b/src/llama-model.h
+index 1dd0904..33b986e 100644
+--- a/src/llama-model.h
++++ b/src/llama-model.h
+@@ -654,6 +654,10 @@ struct llama_model {
+     // for quantize-stats only
+     std::vector<std::pair<std::string, struct ggml_tensor *>> tensors_by_name;
+ 
++    // [muta] read-only access to the file mappings / load mode (residency manager)
++    const std::vector<std::unique_ptr<struct llama_mmap>> & mappings() const;
++    enum llama_load_mode load_mode() const { return params.load_mode; }
++
+     // for keeping track of associated LoRA adapters
+     std::unordered_set<llama_adapter_lora *> loras;
+ 
+diff --git a/src/llama-residency-lite.cpp b/src/llama-residency-lite.cpp
+new file mode 100644
+index 0000000..ee3c056
+--- /dev/null
++++ b/src/llama-residency-lite.cpp
+@@ -0,0 +1,514 @@
++// [muta] Residency-window weight streaming. See llama-residency-lite.h for the contract.
++#include "llama-residency-lite.h"
++
++#include "llama-impl.h"
++#include "llama-model.h"
++#include "llama-mmap.h"
++
++#include "ggml.h"
++#include "ggml-backend.h"
++
++#include <algorithm>
++#include <atomic>
++#include <cerrno>
++#include <chrono>
++#include <condition_variable>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <deque>
++#include <map>
++#include <mutex>
++#include <string>
++#include <thread>
++#include <unordered_map>
++#include <vector>
++
++#if defined(_WIN32)
++// not supported: everything below compiles to no-ops
++#else
++#include <sys/mman.h>
++#include <unistd.h>
++#ifdef __APPLE__
++#include <pthread/qos.h>
++#endif
++#endif
++
++#ifndef MUTA_STREAM_DEFAULT
++#define MUTA_STREAM_DEFAULT 0
++#endif
++
++namespace {
++
++static int env_int(const char * k, int def) {
++    const char * v = getenv(k);
++    if (!v || !*v) return def;
++    return atoi(v);
++}
++
++enum unit_state { ST_EVICTED = 0, ST_RESIDENT = 1 };
++
++struct interval {
++    int    map;   // mapping index
++    size_t first; // page-aligned byte offset in the mapping
++    size_t last;  // exclusive
++};
++
++struct unit {
++    int id = -1;             // 0..n_layer-1 = layers, n_layer = HEAD, n_layer+1 = MISC
++    std::string label;
++    std::vector<interval> ivals;
++    size_t bytes = 0;        // sum of aligned interval bytes
++    bool pinned = false;
++    bool streamed = false;   // participates in the ring
++    int  ring_pos = -1;
++    // state (guarded by residency::mu)
++    int desired = ST_EVICTED;
++    int actual  = ST_EVICTED;
++    bool queued = false;
++    bool locked = false;     // mlock'd (Linux needs munlock before DONTNEED)
++    int  n_populate = 0, n_evict = 0;
++};
++
++struct residency {
++    const llama_model * model = nullptr;
++    std::vector<uint8_t *> bases;
++    std::vector<size_t>    sizes;
++    std::vector<int>       fds;
++    size_t page = 4096;
++    int n_layer = 0;
++    int HEAD = -1, MISC = -1;
++    std::vector<unit> units;
++    std::vector<int>  ring;                              // streamed unit ids in graph order
++    std::unordered_map<const ggml_tensor *, int> unit_of; // weight tensor -> unit id
++
++    int  W = 2;
++    int  n_helpers = 3;
++    bool use_mlock = true;
++    bool verbose = false;
++    int  qos_bg = 1;
++    bool prefetch = true;   // false: helpers only evict; compute threads fault pages in themselves
++    bool trace = false;
++    int  max_lag = 2;       // gate back-pressure: if more evictions than this are pending, the compute thread evicts one inline
++    bool warm = true;       // at init: WILLNEED the whole file (page cache) then unmap the streamed set
++
++    // helper machinery
++    std::mutex mu;
++    std::condition_variable cv;
++    std::deque<int> q_evict, q_prefetch;
++    std::vector<std::thread> helpers;
++    bool stop = false;
++
++    // gate state (compute thread only)
++    int cur_ask_unit = -1;
++
++    // stats
++    std::atomic<uint64_t> n_gates{0}, n_graphs{0};
++    std::atomic<uint64_t> t_populate_us{0}, t_evict_us{0};
++    std::atomic<uint64_t> n_populate{0}, n_evict{0}, n_populate_fail{0};
++    std::atomic<uint64_t> n_gate_missed{0}; // gate reached with unit not yet resident (compute will soft-fault)
++    std::atomic<uint64_t> n_inline_evict{0};
++    std::atomic<uint64_t> n_evict_fail{0};
++
++    ~residency() { shutdown(); }
++
++    void shutdown() {
++        {
++            std::lock_guard<std::mutex> lk(mu);
++            if (stop) return;
++            stop = true;
++        }
++        cv.notify_all();
++        for (auto & t : helpers) if (t.joinable()) t.join();
++        helpers.clear();
++    }
++
++    // --- primitives -----------------------------------------------------------------
++    bool populate(unit & u) {
++        auto t0 = std::chrono::steady_clock::now();
++        bool ok = true;
++        for (const auto & iv : u.ivals) {
++            uint8_t * p = bases[iv.map] + iv.first;
++            size_t len = iv.last - iv.first;
++            if (len == 0) continue;
++            bool done = false;
++#if !defined(_WIN32)
++            if (use_mlock) {
++                if (mlock(p, len) == 0) { done = true; u.locked = true; }
++                else { n_populate_fail++; }
++            }
++#if defined(__linux__) && defined(MADV_POPULATE_READ)
++            if (!done) {
++                if (madvise(p, len, MADV_POPULATE_READ) == 0) done = true;
++            }
++#endif
++            if (!done) {
++                madvise(p, len, MADV_WILLNEED);
++                volatile uint8_t sink = 0;
++                for (size_t o = 0; o < len; o += page) sink += p[o];
++                (void) sink;
++                done = true;
++            }
++#endif
++            ok = ok && done;
++        }
++        auto t1 = std::chrono::steady_clock::now();
++        t_populate_us += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
++        n_populate++;
++        return ok;
++    }
++
++    bool evict(unit & u) {
++        auto t0 = std::chrono::steady_clock::now();
++        bool ok = true;
++        for (const auto & iv : u.ivals) {
++            uint8_t * p = bases[iv.map] + iv.first;
++            size_t len = iv.last - iv.first;
++            if (len == 0) continue;
++#if defined(__APPLE__)
++            // Darwin: madvise(DONTNEED) is advisory-only for file mappings; a MAP_FIXED remap of the
++            // same file range atomically replaces the PTEs (data identical, so concurrent readers are safe).
++            void * r = mmap(p, len, PROT_READ, MAP_SHARED | MAP_FIXED, fds[iv.map], (off_t) iv.first);
++            if (r == MAP_FAILED) { ok = false; fprintf(stderr, "muta-residency: evict remap failed for unit %s: %s\n", u.label.c_str(), strerror(errno)); }
++#elif defined(__linux__)
++            if (u.locked) munlock(p, len);
++            if (madvise(p, len, MADV_DONTNEED) != 0) ok = false;
++#else
++            (void) p; (void) len;
++#endif
++        }
++        u.locked = false;
++        auto t1 = std::chrono::steady_clock::now();
++        t_evict_us += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
++        n_evict++;
++        return ok;
++    }
++
++    // --- helper thread --------------------------------------------------------------
++    void helper_main() {
++#if defined(__APPLE__)
++        // Eviction must never lag behind compute (a starved helper lets RSS balloon by the layers computed
++        // during the stall). Default = user-initiated; MUTA_STREAM_QOS=1 background, 0 utility.
++        if (qos_bg == 1) pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
++        else if (qos_bg == 0) pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
++        else pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0);
++#endif
++        std::unique_lock<std::mutex> lk(mu);
++        while (true) {
++            cv.wait(lk, [&] { return stop || !q_evict.empty() || !q_prefetch.empty(); });
++            if (stop) return;
++            int uid;
++            if (!q_evict.empty()) { uid = q_evict.front(); q_evict.pop_front(); }
++            else                  { uid = q_prefetch.front(); q_prefetch.pop_front(); }
++            unit & u = units[uid];
++            int want = u.desired;
++            if (want == u.actual) { u.queued = false; continue; }
++            lk.unlock();
++            bool ok = (want == ST_RESIDENT) ? populate(u) : evict(u);
++            lk.lock();
++            if (ok) u.actual = want; else if (want == ST_EVICTED) n_evict_fail++;
++            if (u.desired != u.actual && (prefetch || u.desired == ST_EVICTED)) {
++                // changed while we worked (or failed): requeue with the current intent
++                if (u.desired == ST_RESIDENT) q_prefetch.push_back(uid); else q_evict.push_back(uid);
++            } else {
++                u.queued = false;
++            }
++        }
++    }
++
++    // called under mu
++    void want(int uid, int st, bool front = false) {
++        unit & u = units[uid];
++        if (u.pinned) return;
++        u.desired = st;
++        if (u.actual == st || u.queued) return;
++        u.queued = true;
++        if (st == ST_RESIDENT) { if (front) q_prefetch.push_front(uid); else q_prefetch.push_back(uid); }
++        else                   { q_evict.push_back(uid); }
++    }
++
++    // --- gate ------------------------------------------------------------------------
++    void on_gate(int uid) {
++        n_gates++;
++        unit & u = units[uid];
++        if (!u.streamed) return;
++        const int n = (int) ring.size();
++        const int i = u.ring_pos;
++        std::unique_lock<std::mutex> lk(mu);
++        if (u.actual != ST_RESIDENT) n_gate_missed++;
++        // window: ring[i .. i+W] resident; everything else evicted. HEAD (last ring unit) is complete at
++        // its own POST (its gate node is the logits matmul itself), so it is evicted immediately.
++        std::vector<char> keep(n, 0);
++        for (int k = 0; k <= W && k < n; ++k) keep[(i + k) % n] = 1;
++        const bool self_done = (uid == HEAD);
++        if (self_done) { keep[i] = 0; n_graphs++; }
++        if (trace) {
++            auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
++            fprintf(stderr, "muta-trace: t=%lld gate=%d graphs=%llu\n", (long long) now, uid, (unsigned long long) n_graphs.load());
++        }
++        for (int k = 0; k < n; ++k) {
++            if (!keep[k]) want(ring[k], ST_EVICTED);
++        }
++        // prefetch: current first (if missed), then ahead in order
++        if (prefetch) {
++            if (!self_done) want(uid, ST_RESIDENT, /*front*/ true);
++            for (int k = 1; k <= W && k < n; ++k) want(ring[(i + k) % n], ST_RESIDENT);
++        } else {
++            // no helper populate: mark the window units as "resident" once compute passes through them
++            // (they were faulted in by the compute threads); the evict logic above handles the rest.
++            if (!self_done) { unit & cu = units[uid]; cu.desired = ST_RESIDENT; cu.actual = ST_RESIDENT; }
++        }
++        cv.notify_all();
++        // back-pressure: never let the helper fall more than max_lag units behind
++        int inline_uid = -1;
++        if ((int) q_evict.size() > max_lag) { inline_uid = q_evict.front(); q_evict.pop_front(); }
++        if (inline_uid >= 0) {
++            unit & eu = units[inline_uid];
++            if (eu.desired == ST_EVICTED && eu.actual != ST_EVICTED) {
++                mu.unlock();
++                bool ok = evict(eu);
++                mu.lock();
++                if (ok) eu.actual = ST_EVICTED; else n_evict_fail++;
++                n_inline_evict++;
++            }
++            eu.queued = false;
++            if (eu.desired != eu.actual) want(inline_uid, eu.desired);
++        }
++    }
++
++    int unit_of_node(const ggml_tensor * t) const {
++        for (int s = 0; s < GGML_MAX_SRC; ++s) {
++            const ggml_tensor * src = t->src[s];
++            if (!src) break;
++            auto it = unit_of.find(src);
++            if (it != unit_of.end()) return it->second;
++            if (src->view_src) {
++                it = unit_of.find(src->view_src);
++                if (it != unit_of.end()) return it->second;
++            }
++        }
++        return -1;
++    }
++
++    void print_plan() const {
++        size_t pinned_b = 0, streamed_b = 0; int np = 0, ns = 0;
++        for (const auto & u : units) { if (u.pinned) { pinned_b += u.bytes; np++; } if (u.streamed) { streamed_b += u.bytes; ns++; } }
++        fprintf(stderr, "muta-residency: page %zu B, %d units (%d layers + head + misc), W=%d, helpers=%d, prefetch=%d, mode=%s, qos=%d\n",
++            page, (int) units.size(), n_layer, W, n_helpers, prefetch ? 1 : 0, use_mlock ? "mlock" : "touch", qos_bg);
++        fprintf(stderr, "muta-residency: pinned %.1f MiB in %d units; streamed %.1f MiB in %d ring units; window ~%.1f MiB\n",
++            pinned_b / 1048576.0, np, streamed_b / 1048576.0, ns,
++            (ns ? (double) streamed_b / ns * (W + 1) : 0.0) / 1048576.0);
++    }
++};
++
++static std::mutex g_reg_mu;
++static std::map<const llama_model *, residency *> g_reg;
++
++static bool parse_pin_spec(residency & r, const char * spec) {
++    // "head", "L3", "L0-L11", comma separated
++    std::string s(spec);
++    size_t pos = 0;
++    while (pos < s.size()) {
++        size_t c = s.find(',', pos);
++        std::string tok = s.substr(pos, c == std::string::npos ? std::string::npos : c - pos);
++        pos = (c == std::string::npos) ? s.size() : c + 1;
++        if (tok.empty()) continue;
++        if (tok == "head") { if (r.HEAD >= 0) r.units[r.HEAD].pinned = true; continue; }
++        if (tok[0] == 'L' || tok[0] == 'l') {
++            int a = -1, b = -1;
++            if (sscanf(tok.c_str(), "%*c%d-%*c%d", &a, &b) == 2 || sscanf(tok.c_str(), "%*c%d-%d", &a, &b) == 2) {
++            } else if (sscanf(tok.c_str(), "%*c%d", &a) == 1) { b = a; }
++            for (int i = a; i >= 0 && i <= b && i < r.n_layer; ++i) r.units[i].pinned = true;
++        }
++    }
++    return true;
++}
++
++} // namespace
++
++bool muta_stream_enabled() {
++    static int cached = -1;
++    if (cached < 0) cached = env_int("MUTA_STREAM", MUTA_STREAM_DEFAULT) ? 1 : 0;
++    return cached == 1;
++}
++
++bool muta_mmap_lazy() {
++    static int cached = -1;
++    if (cached < 0) cached = env_int("MUTA_MMAP_LAZY", 0) ? 1 : 0;
++    return cached == 1;
++}
++
++void muta_apply_context_overrides(llama_context_params & params) {
++    int ub = env_int("MUTA_UBATCH", 0);
++    if (ub > 0 && (uint32_t) ub < params.n_ubatch) {
++        LLAMA_LOG_INFO("muta: capping n_ubatch %u -> %d (MUTA_UBATCH)\n", params.n_ubatch, ub);
++        params.n_ubatch = ub;
++    }
++    int nb = env_int("MUTA_BATCH", 0);
++    if (nb > 0 && (uint32_t) nb < params.n_batch) {
++        params.n_batch = std::max<uint32_t>(nb, params.n_ubatch);
++    }
++}
++
++void * muta_residency_get_or_create(const llama_model & model) {
++#if defined(_WIN32)
++    (void) model; return nullptr;
++#else
++    std::lock_guard<std::mutex> lk(g_reg_mu);
++    auto it = g_reg.find(&model);
++    if (it != g_reg.end()) return it->second;
++
++    const auto & maps = model.mappings();
++    if (maps.empty()) {
++        LLAMA_LOG_WARN("muta-residency: model is not mmap'd; streaming disabled\n");
++        return nullptr;
++    }
++    if (model.load_mode() == LLAMA_LOAD_MODE_MMAP_MLOCK) {
++        LLAMA_LOG_WARN("muta-residency: --mlock wires the whole mapping; streaming disabled\n");
++        return nullptr;
++    }
++    for (const auto & m : maps) {
++        if (m->fd() < 0) {
++            LLAMA_LOG_WARN("muta-residency: no file descriptor for a mapping; streaming disabled\n");
++            return nullptr;
++        }
++    }
++    auto * r = new residency();
++    r->model = &model;
++    r->page = (size_t) sysconf(_SC_PAGESIZE);
++    for (const auto & m : maps) {
++        r->bases.push_back((uint8_t *) m->addr());
++        r->sizes.push_back(m->size());
++        r->fds.push_back(m->fd());
++    }
++    r->W         = std::max(0, env_int("MUTA_STREAM_W", 0));
++    r->n_helpers = std::max(1, env_int("MUTA_STREAM_HELPERS", 1));
++    r->verbose   = env_int("MUTA_STREAM_VERBOSE", 0) != 0;
++    r->qos_bg    = env_int("MUTA_STREAM_QOS", 2);
++    r->max_lag   = std::max(0, env_int("MUTA_STREAM_MAXLAG", 2));
++    r->warm      = env_int("MUTA_STREAM_WARM", 1) != 0;
++    r->prefetch  = env_int("MUTA_STREAM_PREFETCH", 0) != 0; // measured: compute threads faulting inline is the fastest populate
++    r->trace     = env_int("MUTA_STREAM_TRACE", 0) != 0;
++    const char * mode = getenv("MUTA_STREAM_MODE");
++    r->use_mlock = (mode && strcmp(mode, "mlock") == 0); // default touch: mlock is pathological under concurrent faults
++    r->n_layer   = (int) model.hparams.n_layer();
++    r->HEAD = r->n_layer;
++    r->MISC = r->n_layer + 1;
++    r->units.resize(r->n_layer + 2);
++    for (int i = 0; i < r->n_layer; ++i) { r->units[i].id = i; r->units[i].label = "blk." + std::to_string(i); }
++    r->units[r->HEAD].id = r->HEAD; r->units[r->HEAD].label = "head";
++    r->units[r->MISC].id = r->MISC; r->units[r->MISC].label = "misc"; r->units[r->MISC].pinned = true;
++
++    // classify tensors
++    for (const auto & [name, t] : model.tensors_by_name) {
++        if (!t || !t->data) continue;
++        if (t->buffer && !ggml_backend_buffer_is_host(t->buffer)) continue; // never touch device-mapped buffers
++        int map = -1; size_t off = 0;
++        for (size_t mi = 0; mi < r->bases.size(); ++mi) {
++            const uint8_t * p = (const uint8_t *) t->data;
++            if (p >= r->bases[mi] && p < r->bases[mi] + r->sizes[mi]) { map = (int) mi; off = p - r->bases[mi]; break; }
++        }
++        if (map < 0) continue; // not in a mapping (e.g. repacked / copied) — never streamed
++        int uid;
++        int layer = -1;
++        if (sscanf(name.c_str(), "blk.%d.", &layer) == 1 && layer >= 0) {
++            if (layer >= r->n_layer) continue; // nextn/MTP layers: leave alone (never a unit, never pinned)
++            uid = layer;
++        }
++        else if (name == "output.weight") uid = r->HEAD;
++        else if (name == "token_embd.weight") continue; // rows fault on demand; never a unit
++        else uid = r->MISC;
++        const size_t nb = ggml_nbytes(t);
++        interval iv;
++        iv.map = map;
++        iv.first = off & ~(r->page - 1);
++        iv.last  = (off + nb + r->page - 1) & ~(r->page - 1);
++        if (iv.last > r->sizes[map]) iv.last = r->sizes[map];
++        r->units[uid].ivals.push_back(iv);
++        r->unit_of[t] = uid;
++    }
++    // merge intervals per unit
++    for (auto & u : r->units) {
++        auto & v = u.ivals;
++        std::sort(v.begin(), v.end(), [](const interval & a, const interval & b) { return a.map != b.map ? a.map < b.map : a.first < b.first; });
++        std::vector<interval> m;
++        for (const auto & iv : v) {
++            if (!m.empty() && m.back().map == iv.map && iv.first <= m.back().last) m.back().last = std::max(m.back().last, iv.last);
++            else m.push_back(iv);
++        }
++        v.swap(m);
++        u.bytes = 0;
++        for (const auto & iv : v) u.bytes += iv.last - iv.first;
++        if (u.bytes == 0) u.pinned = true; // empty unit (e.g. no separate output.weight) — nothing to do
++    }
++    // pins
++    if (const char * spec = getenv("MUTA_STREAM_PIN")) parse_pin_spec(*r, spec);
++    if (int mb = env_int("MUTA_STREAM_PIN_MB", 0); mb > 0) {
++        size_t budget = (size_t) mb << 20;
++        // head first, then layers 0.. upward
++        if (r->HEAD >= 0 && r->units[r->HEAD].bytes <= budget) { r->units[r->HEAD].pinned = true; budget -= r->units[r->HEAD].bytes; }
++        for (int i = 0; i < r->n_layer; ++i) {
++            if (r->units[i].bytes <= budget) { r->units[i].pinned = true; budget -= r->units[i].bytes; } else break;
++        }
++    }
++    // ring = streamed units in graph order
++    for (int i = 0; i < r->n_layer; ++i) if (!r->units[i].pinned) { r->units[i].streamed = true; r->units[i].ring_pos = (int) r->ring.size(); r->ring.push_back(i); }
++    if (!r->units[r->HEAD].pinned && r->units[r->HEAD].bytes > 0) { r->units[r->HEAD].streamed = true; r->units[r->HEAD].ring_pos = (int) r->ring.size(); r->ring.push_back(r->HEAD); }
++    if (r->ring.empty()) {
++        fprintf(stderr, "muta-residency: nothing to stream (all pinned)\n");
++    }
++    // warm the page cache once (cold soft-faults through compute threads run at ~0.3 GB/s; WILLNEED at disk speed),
++    // then drop the streamed set from RSS again
++    if (r->warm) {
++        // pread into a scratch buffer: warms the page cache without ever mapping the pages (RSS +8 MB, not +2 GB)
++        std::vector<uint8_t> buf(8u << 20);
++        for (size_t mi = 0; mi < r->bases.size(); ++mi) {
++            if (r->fds[mi] < 0) continue;
++            for (size_t off = 0; off < r->sizes[mi]; off += buf.size()) {
++                ssize_t n = pread(r->fds[mi], buf.data(), buf.size(), (off_t) off);
++                if (n <= 0) break;
++            }
++        }
++    }
++    // populate pinned units now (they are resident forever; do it once, synchronously)
++    for (auto & u : r->units) if (u.pinned && u.bytes) { r->populate(u); u.actual = u.desired = ST_RESIDENT; }
++
++    r->print_plan();
++    for (int i = 0; i < r->n_helpers; ++i) r->helpers.emplace_back([r] { r->helper_main(); });
++    g_reg[&model] = r;
++    return r;
++#endif
++}
++
++void muta_residency_release(const llama_model * model) {
++    residency * r = nullptr;
++    {
++        std::lock_guard<std::mutex> lk(g_reg_mu);
++        auto it = g_reg.find(model);
++        if (it == g_reg.end()) return;
++        r = it->second;
++        g_reg.erase(it);
++    }
++    r->shutdown();
++    if (r->verbose || env_int("MUTA_STREAM_STATS", 0)) {
++        fprintf(stderr, "muta-residency: graphs=%llu gates=%llu populate=%llu (%.1f ms, %.2f ms/op) evict=%llu (%.1f ms, %.2f ms/op) populate_fail=%llu evict_fail=%llu gate_missed=%llu inline_evict=%llu\n",
++            (unsigned long long) r->n_graphs.load(), (unsigned long long) r->n_gates.load(),
++            (unsigned long long) r->n_populate.load(), r->t_populate_us.load() / 1000.0, r->n_populate.load() ? r->t_populate_us.load() / 1000.0 / r->n_populate.load() : 0.0,
++            (unsigned long long) r->n_evict.load(), r->t_evict_us.load() / 1000.0, r->n_evict.load() ? r->t_evict_us.load() / 1000.0 / r->n_evict.load() : 0.0,
++            (unsigned long long) r->n_populate_fail.load(), (unsigned long long) r->n_evict_fail.load(), (unsigned long long) r->n_gate_missed.load(), (unsigned long long) r->n_inline_evict.load());
++    }
++    delete r;
++}
++
++bool muta_residency_cb_eval(struct ggml_tensor * t, bool ask, void * user_data) {
++    residency * r = (residency *) user_data;
++    if (!r) return false;
++    const int u = r->unit_of_node(t);
++    if (u < 0 || !r->units[u].streamed) return false;
++    if (ask) {
++        if (u != r->cur_ask_unit) { r->cur_ask_unit = u; return true; }
++        return false;
++    }
++    r->on_gate(u);
++    return true;
++}
+diff --git a/src/llama-residency-lite.h b/src/llama-residency-lite.h
+new file mode 100644
+index 0000000..3060c6b
+--- /dev/null
++++ b/src/llama-residency-lite.h
+@@ -0,0 +1,31 @@
++// [muta] Residency-window weight streaming ("partial weight streaming") for mmap'd models.
++//
++// Keeps only a sliding window of layers mapped+resident (RSS) while the rest of the file
++// lives in the OS page cache (not charged to the process). A pool of low-priority helper
++// threads populates layers ahead of compute (mlock on Darwin/Linux, MADV_POPULATE_READ on
++// Linux) and evicts layers behind it (MAP_FIXED remap on Darwin, MADV_DONTNEED on Linux).
++// Gates come from the ggml scheduler eval callback: the first node touching layer N is a
++// gate; at its POST all of layer N-1 is provably complete.
++//
++// Configuration is by environment (llama-bench passes no flags):
++//   MUTA_STREAM=0|1        enable (default MUTA_STREAM_DEFAULT, compile-time)
++//   MUTA_STREAM_W=<n>      layers prefetched ahead of the current one (default 2)
++//   MUTA_STREAM_HELPERS=n  helper threads (default 3)
++//   MUTA_STREAM_PIN=<spec> comma list of units to keep resident forever: "head", "L0-L11", "L5"
++//   MUTA_STREAM_PIN_MB=<n> alternative: pin budget in MB (head first, then layers 0.. upward)
++//   MUTA_STREAM_MODE=mlock|touch   populate primitive (default mlock)
++//   MUTA_STREAM_VERBOSE=1  print the plan and per-token counters
++//   MUTA_UBATCH=<n>        cap n_ubatch (compute-buffer size lever; llama-bench passes 512)
++#pragma once
++
++#include "llama.h"
++
++struct llama_model;
++struct ggml_tensor;
++
++bool   muta_stream_enabled();
++bool   muta_mmap_lazy();      // MUTA_MMAP_LAZY=1: mmap without WILLNEED/MAP_POPULATE (untouched bytes never resident)
++void   muta_apply_context_overrides(llama_context_params & params);
++void * muta_residency_get_or_create(const llama_model & model);
++void   muta_residency_release(const llama_model * model);
++bool   muta_residency_cb_eval(struct ggml_tensor * t, bool ask, void * user_data);
+diff --git a/src/llama.cpp b/src/llama.cpp
+index d6e0bbf..e64a388 100644
+--- a/src/llama.cpp
++++ b/src/llama.cpp
+@@ -9,6 +9,7 @@
+ #include "llama-model-loader.h"
+ #include "llama-model-saver.h"
+ #include "llama-model.h"
++#include <cstdlib>
+ 
+ #include "ggml.h"
+ #include "ggml-cpp.h"
+@@ -371,6 +372,11 @@ static struct llama_model * llama_model_load_from_file_impl(
+         std::vector<std::string> & splits,
+         FILE * file,
+         struct llama_model_params params) {
++    // [muta] engine-side default: MUTA_NO_REPACK=1 keeps weights in the mmap (no anonymous repack copies)
++    if (const char * v = getenv("MUTA_NO_REPACK"); v && *v && atoi(v)) {
++        params.use_extra_bufts = false;
++    }
++
+     {
+         int n_sources_defined = 0;
+         if (metadata != nullptr) {
