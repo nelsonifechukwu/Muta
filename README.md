@@ -152,7 +152,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Khan Academy
 - [Brilliant](brilliant.org)
 - [Opennote.com](https://withmarble.com/)
-- [Marble](https://withmarble.com/)
+- [Marble](https://withmarble.com/): [solar-system](https://withmarble.com/solar-system/), [ecosystem](https://withmarble.com/ecosystem-simulator), [heat](https://withmarble.com/water-lab)
 - [Khanmigo](https://www.khanmigo.ai/)
 - [RACHEL](https://worldpossible.org/products/rachel-5-500)
 - [HEY CLICKY](https://www.heyclicky.com/)
