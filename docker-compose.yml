@@ -41,6 +41,10 @@ services:
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
+      args:
+        # run.sh / make build provide a content identity that includes uncommitted source.
+        # Direct bare `docker compose build` stamps unknown, which native export refuses.
+        MUTA_GIT_SHA: ${MUTA_BUILD_GIT_SHA:-unknown}
     platform: linux/amd64
     # tini as PID 1: reaps orphaned engine/vision grandchildren and forwards signals.
     init: true

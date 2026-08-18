@@ -3,8 +3,11 @@
 #
 #   ./run.sh            build (cached), provision models, start db + backend + frontend,
 #                       print the UI URL
-#   ./run.sh --native   dev mode: gateway + llama-server run on this host (arm64), db +
+#   ./run.sh --native   macOS dev: gateway + llama-server run on this host (arm64), db +
 #                       frontend stay in docker — skips the amd64 emulation tax
+#   ./run.sh export-linux       one-time verified extraction from the backend image
+#   ./run.sh --native-linux     Docker-free Linux gateway + engine + SQLite
+#   ./run.sh --native-engine    Docker-free Linux engine only
 #   ./run.sh down       stop the stack (data survives in the muta-pgdata volume)
 #   ./run.sh logs       follow logs
 #   ./run.sh --build    force a clean image rebuild first
@@ -23,14 +26,26 @@ die()  { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
     cat <<'EOF'
-Usage: ./run.sh [--native] [--gpu|--cpu] [--build] [--model PATH] | plan | update | down | logs
+Usage: ./run.sh [--native|--native-linux|--native-engine] [--model PATH]
+       ./run.sh export-linux | plan | update | down | logs
 
   (no args)   docker mode (default): bring up db + backend + frontend, print the UI URL
-  --native    dev mode: db + frontend stay in docker; the gateway and an arm64
+  --native    macOS dev mode: db + frontend stay in docker; the gateway and an arm64
               llama-server run on THIS host in the foreground (Ctrl-C stops them;
               './run.sh down' stops the containers). No slow amd64 emulation.
               Native CPU is the ~10x-over-emulation path of record; --gpu adds Metal
               offload, which measured NEUTRAL for Qwen3.5-4B (docs/gpu.md).
+  --native-linux
+              Linux x86-64: run the full product without Docker. The gateway supervises
+              the extracted AVX2 engine, persists to data/muta.sqlite3, and serves the UI
+              at http://127.0.0.1:8000/ui/. Run export-linux once first.
+  --native-engine
+              Linux x86-64: run only the extracted llama-server with the product flags.
+              This is the clean engine-experiment path; Ctrl-C stops it.
+  export-linux
+              One-time: extract llama-server + llama-bench from muta-backend:latest,
+              verify Linux x86-64 ELF, b10035/602f828 and no forbidden AVX-512 signatures,
+              then write runtime/build/native-linux-manifest.json.
   --gpu       native mode: export MUTA_RT_N_GPU_LAYERS=all (Metal). Experimental —
               measured no faster than native CPU for the default model at this pin.
   --cpu       force CPU everywhere (suppresses GPU detection and suggestions)
@@ -48,9 +63,9 @@ Usage: ./run.sh [--native] [--gpu|--cpu] [--build] [--model PATH] | plan | updat
   logs        docker compose logs -f
 
 The first docker run compiles llama.cpp (slow) and downloads ~4 GB of models into
-./models (kept for every later run). Later runs start in seconds. Native mode needs
-'make install' (an importable venv) and downloads the pinned llama.cpp arm64 release
-into runtime/build/bin on first use.
+./models (kept for every later run). Later runs start in seconds. macOS native mode needs
+'make install' and downloads the pinned arm64 release. Linux native mode needs an importable
+venv plus the one-time export-linux step; subsequent starts need neither Docker nor network.
 EOF
 }
 
@@ -137,6 +152,9 @@ update_stack() {
     docker compose run --rm --no-deps backend \
         python3.10 scripts/fetch_models.py --with-draft --mmproj-precision f16 \
         || warn "model refresh failed — the stack still runs on the current files"
+    # update_stack returns before the normal Docker path derives this value below. Stamp the
+    # just-pulled source tree explicitly so a later native export can never inherit `unknown`.
+    export MUTA_BUILD_GIT_SHA="${MUTA_BUILD_GIT_SHA:-$("${PY:-python3}" scripts/source_identity.py --id)}"
     info "rebuilding images"
     docker compose build || die "image rebuild failed"
     info "restarting"
@@ -188,6 +206,84 @@ native_up() {
     exec "${PY:-python3}" -m uvicorn orchestrator.main:app --host 0.0.0.0 --port 8000
 }
 
+native_python() {
+    if [ -n "${PY:-}" ]; then
+        NATIVE_PY="$PY"
+    elif [ -x .venv/bin/python ]; then
+        NATIVE_PY=.venv/bin/python
+    else
+        NATIVE_PY=python3
+    fi
+}
+
+require_native_port_free() {
+    port="$1"
+    label="$2"
+    "$NATIVE_PY" -c 'import socket,sys; s=socket.socket(); s.bind(("127.0.0.1", int(sys.argv[1]))); s.close()' \
+        "$port" >/dev/null 2>&1 || die "$label port $port is already occupied — stop the old native/control process first"
+}
+
+native_linux_env() {
+    [ "$(uname -s)/$(uname -m)" = "Linux/x86_64" ] \
+        || die "Linux native mode requires a Linux/x86_64 host"
+    native_python
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+        running_containers=$(docker compose ps -q 2>/dev/null || true)
+        [ -z "$running_containers" ] \
+            || die "Compose services are running — stop the control with './run.sh down' first"
+    fi
+    require_native_port_free "${MUTA_RT_SERVER_PORT:-8080}" "engine"
+    "$NATIVE_PY" scripts/export_native_linux.py --verify-only \
+        || die "native engine verification failed — rebuild the control and run './run.sh export-linux'"
+    "$NATIVE_PY" -c "import orchestrator, uvicorn" >/dev/null 2>&1 \
+        || die "project not importable by $NATIVE_PY — create a venv and run 'make install'"
+    [ -f "$MODEL" ] || die "model not found: $MODEL — provision it before offline/native use"
+
+    export MUTA_RT_LLAMA_SERVER_BIN="$PWD/runtime/build/bin/llama-server"
+    case "$MODEL_DIR" in
+        /*) native_model_dir="$MODEL_DIR" ;;
+        *) native_model_dir="$PWD/$MODEL_DIR" ;;
+    esac
+    export MUTA_RT_MODEL_DIR="$native_model_dir"
+    export MUTA_RT_MODEL_FILE="$MODEL_FILE"
+    export MUTA_RT_MODEL_ALIAS="$MODEL_ALIAS"
+    export MUTA_RT_N_CTX="${MUTA_RT_N_CTX:-2048}"
+    export MUTA_RT_N_GPU_LAYERS=0
+    export MUTA_RT_ENABLE_THINKING="${MUTA_RT_ENABLE_THINKING:-1}"
+    export MUTA_RT_AUTO_DOWNLOAD=0
+    export MUTA_RT_DRAFT_MODEL="$PWD/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf"
+    export MUTA_RT_SPEC_TYPE="${MUTA_RT_SPEC_TYPE:-none}"
+    export MUTA_RT_STARTUP_TIMEOUT_S="${MUTA_RT_STARTUP_TIMEOUT_S:-300}"
+    export MUTA_RT_REQUEST_TIMEOUT_S="${MUTA_RT_REQUEST_TIMEOUT_S:-600}"
+    # Native experiments model the delivered offline laptop. This prevents even the optional
+    # connectivity HEAD probe; override with MUTA_OFFLINE=0 only for deliberate cloud tests.
+    export MUTA_OFFLINE="${MUTA_OFFLINE:-1}"
+    export TUTOR_ROOT="$PWD"
+    export MUTA_GIT_SHA="${MUTA_GIT_SHA:-$("$NATIVE_PY" scripts/source_identity.py --id)}"
+}
+
+native_linux_up() {
+    native_linux_env
+    require_native_port_free "${MUTA_NATIVE_PORT:-8000}" "gateway"
+    export MUTA_RT_AUTOSTART=1
+    export MUTA_RT_DB_URL="${MUTA_RT_DB_URL:-sqlite:///data/muta.sqlite3}"
+    bold "Native Linux mode — no Docker, PostgreSQL, nginx, or network required."
+    info "UI:        http://127.0.0.1:8000/ui/"
+    info "API:       http://127.0.0.1:8000/v1  (docs at http://127.0.0.1:8000/docs)"
+    info "data:      ${MUTA_RT_DB_URL}"
+    info "Ctrl-C stops the gateway and its supervised llama-server child."
+    exec "$NATIVE_PY" -m uvicorn orchestrator.main:app \
+        --host "${MUTA_NATIVE_HOST:-127.0.0.1}" --port "${MUTA_NATIVE_PORT:-8000}"
+}
+
+native_engine_up() {
+    native_linux_env
+    export MUTA_RT_AUTOSTART=0
+    bold "Native Linux engine mode — verified AVX2 b10035/602f828; no Docker."
+    info "engine:    http://127.0.0.1:${MUTA_RT_SERVER_PORT:-8080}"
+    exec "$NATIVE_PY" -m runtime.server
+}
+
 MODE=docker
 NO_CACHE=0
 FORCE_CPU=0
@@ -197,6 +293,9 @@ MODEL="$DEFAULT_MODEL"
 while [ $# -gt 0 ]; do
     case "$1" in
         --native)   MODE=native ;;
+        --native-linux) MODE=native_linux ;;
+        --native-engine) MODE=native_engine ;;
+        export-linux) MODE=export_linux ;;
         --cpu)      FORCE_CPU=1 ;;
         --gpu)      GPU_OPT=1 ;;
         plan)       MODE=plan ;;
@@ -223,6 +322,15 @@ if [ "$MODE" = update ]; then
     update_stack
     exit 0
 fi
+if [ "$MODE" = export_linux ]; then
+    [ "$(uname -s)/$(uname -m)" = "Linux/x86_64" ] \
+        || die "export-linux requires a Linux/x86_64 host"
+    command -v docker >/dev/null 2>&1 || die "docker is required for the one-time extraction"
+    docker info >/dev/null 2>&1 || die "docker daemon isn't running"
+    docker image inspect muta-backend:latest muta-frontend:latest >/dev/null 2>&1 \
+        || die "backend/frontend images are missing — build the Docker control first"
+    exec "${PY:-python3}" scripts/export_native_linux.py
+fi
 
 # --- Core-model selection (hot-swap seam) --------------------------------------------
 # The identity of the served model lives in MUTA_RT_MODEL_DIR/FILE/ALIAS and nowhere
@@ -236,7 +344,7 @@ if [ "$MODEL" != "$DEFAULT_MODEL" ]; then
 (pinned candidates: scripts/fetch_models.py --quant-variants / --with-draft)"
     case "$MODEL" in
         models/*) ;;
-        *) [ "$MODE" = native ] \
+        *) [ "$MODE" = native ] || [ "$MODE" = native_linux ] || [ "$MODE" = native_engine ] \
             || die "docker mode mounts only ./models into the container — pass a repo-relative path under models/ (got: $MODEL)" ;;
     esac
     warn "custom core model: $MODEL"
@@ -256,9 +364,22 @@ if [ "$MODE" = docker ]; then
     export MUTA_MODEL_ALIAS="$MODEL_ALIAS"
 fi
 
+# Linux native starts are deliberately handled before any Docker or network probe. Once the
+# verified export, model and venv exist, these paths remain truly offline and daemon-free.
+if [ "$MODE" = native_linux ]; then
+    native_linux_up
+fi
+if [ "$MODE" = native_engine ]; then
+    native_engine_up
+fi
+
 command -v docker >/dev/null 2>&1 || die "docker not found — install Docker Desktop / Engine."
 docker info >/dev/null 2>&1 || die "docker daemon isn't running — start it."
 docker compose version >/dev/null 2>&1 || die "docker compose v2 not found — update Docker."
+
+# A commit SHA alone lies for dirty pre-commit deployments. Stamp the content identity used by
+# native health/bench artifacts; export-linux refuses images built with the `unknown` fallback.
+export MUTA_BUILD_GIT_SHA="${MUTA_BUILD_GIT_SHA:-$("${PY:-python3}" scripts/source_identity.py --id)}"
 
 mkdir -p models
 

@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""Extract and verify the pinned Linux x86-64 llama.cpp tools from the backend image.
+
+Docker is used only as the reproducible build/export boundary.  The resulting binaries are
+run directly by the native Linux gateway and benchmark workflows.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_IMAGE = "muta-backend:latest"
+DEFAULT_FRONTEND_IMAGE = "muta-frontend:latest"
+DEFAULT_OUTPUT = ROOT / "runtime" / "build"
+DEFAULT_UI_OUTPUT = ROOT / "ui" / "dist"
+EXPECTED_TAG = "b10035"
+EXPECTED_COMMIT = "602f828"
+BINARIES = ("llama-server", "llama-bench")
+UI_REQUIRED = (
+    "index.html",
+    "app.js",
+    "audio.js",
+    "worklet.js",
+    "styles.css",
+    "vendor/marked.min.js",
+    "vendor/purify.min.js",
+    "vendor/katex/katex.min.js",
+    "vendor/katex/katex.min.css",
+    "vendor/katex/contrib/auto-render.min.js",
+)
+FORBIDDEN_AVX512 = re.compile(rb"\s(vpxord|vpternlogd|kmovw|vpbroadcastmw2d)\s")
+
+
+class ExportError(RuntimeError):
+    pass
+
+
+def _run(args: list[str], *, text: bool = True) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(args, check=True, capture_output=True, text=text)
+    except FileNotFoundError as exc:
+        raise ExportError(f"required command not found: {args[0]}") from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip() if isinstance(exc.stderr, str) else ""
+        raise ExportError(f"command failed ({' '.join(args)}): {stderr}") from exc
+
+
+def _version(path: Path) -> str:
+    # llama-server supports --version; llama-bench does not. A zero-work invocation against
+    # /dev/null exits nonzero after printing its build identity, which is all we need here.
+    args = [str(path), "--version"]
+    if path.name == "llama-bench":
+        args = [str(path), "-m", "/dev/null", "-p", "0", "-n", "0"]
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=20, check=False)
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        raise ExportError(f"cannot read {path.name} build identity: {exc}") from exc
+    output = (result.stdout + result.stderr).strip()
+    line = next((item.strip() for item in output.splitlines() if EXPECTED_COMMIT in item), "")
+    if not line:
+        raise ExportError(
+            f"{path.name} is not the pinned {EXPECTED_TAG}/{EXPECTED_COMMIT}: {output[:300]}"
+        )
+    return line
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_sha() -> str | None:
+    try:
+        return _run(["git", "rev-parse", "HEAD"]).stdout.strip()
+    except ExportError:
+        return None
+
+
+def _image_info(image: str) -> dict:
+    raw = _run(["docker", "image", "inspect", image]).stdout
+    info = json.loads(raw)[0]
+    env = {}
+    for item in info.get("Config", {}).get("Env", []):
+        key, _, value = item.partition("=")
+        env[key] = value
+    return {
+        "reference": image,
+        "id": info.get("Id"),
+        "repo_digests": info.get("RepoDigests") or [],
+        "platform": f"{info.get('Os')}/{info.get('Architecture')}",
+        "muta_git_sha": env.get("MUTA_GIT_SHA"),
+    }
+
+
+def _copy_from_image(image: str, source_path: str, destination: Path) -> None:
+    container = _run(["docker", "create", image]).stdout.strip()
+    try:
+        source = f"{container}:{source_path.rstrip('/')}/."
+        _run(["docker", "cp", source, str(destination)])
+    finally:
+        subprocess.run(
+            ["docker", "rm", "-f", container], capture_output=True, text=True, check=False
+        )
+
+
+def _verify_binary(path: Path) -> dict:
+    if not path.is_file():
+        raise ExportError(f"image did not contain {path.name}")
+    path.chmod(path.stat().st_mode | 0o111)
+    file_description = _run(["file", "-b", str(path)]).stdout.strip()
+    if "ELF 64-bit LSB" not in file_description or "x86-64" not in file_description:
+        raise ExportError(f"{path.name} is not a Linux x86-64 ELF: {file_description}")
+
+    version = _version(path)
+
+    disassembly = _run(["objdump", "-d", str(path)], text=False).stdout
+    match = FORBIDDEN_AVX512.search(disassembly)
+    if match:
+        raise ExportError(
+            f"forbidden AVX-512 instruction {match.group(1).decode()} found in {path.name}"
+        )
+    dependencies = _run(["ldd", str(path)]).stdout.strip()
+    if "not found" in dependencies:
+        raise ExportError(f"unresolved shared-library dependency for {path.name}: {dependencies}")
+    return {
+        # Staged paths live under /tmp and are replaced with the installed repo-relative
+        # path by export(); keeping this valid here also makes verification independently
+        # testable.
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "sha256": _sha256(path),
+        "file": file_description,
+        "version": version,
+        "expected_tag": EXPECTED_TAG,
+        "expected_commit": EXPECTED_COMMIT,
+        "avx512_signature_scan": "pass",
+        "ldd": dependencies.splitlines(),
+        "dependency_closure": "resolved-on-export-host",
+    }
+
+
+def _verify_ui(path: Path) -> dict:
+    missing = [relative for relative in UI_REQUIRED if not (path / relative).is_file()]
+    if missing:
+        raise ExportError(f"frontend image is missing native UI assets: {', '.join(missing)}")
+    index = (path / "index.html").read_text()
+    absolute_assets = re.findall(r'(?:src|href)="/(?!v1/)([^"]+)"', index)
+    if absolute_assets:
+        raise ExportError(
+            "native UI contains root-absolute asset URLs: " + ", ".join(absolute_assets)
+        )
+    files = {}
+    for file_path in sorted(item for item in path.rglob("*") if item.is_file()):
+        relative = file_path.relative_to(path).as_posix()
+        files[relative] = {"bytes": file_path.stat().st_size, "sha256": _sha256(file_path)}
+    return {"required_assets": list(UI_REQUIRED), "files": files}
+
+
+def _install_ui(stage: Path, destination: Path) -> None:
+    destination = destination.resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    pending = destination.with_name(f".{destination.name}.pending")
+    backup = destination.with_name(f".{destination.name}.previous")
+    shutil.rmtree(pending, ignore_errors=True)
+    shutil.rmtree(backup, ignore_errors=True)
+    shutil.copytree(stage, pending)
+    if destination.exists():
+        os.replace(destination, backup)
+    os.replace(pending, destination)
+    shutil.rmtree(backup, ignore_errors=True)
+
+
+def export(image: str, frontend_image: str, output: Path, ui_output: Path) -> Path:
+    if platform.system() != "Linux" or platform.machine() not in {"x86_64", "amd64"}:
+        raise ExportError("native Linux export must run on a Linux x86-64 host")
+    if shutil.which("docker") is None:
+        raise ExportError("docker is required for the one-time image extraction")
+
+    image_info = _image_info(image)
+    if image_info["platform"] != "linux/amd64":
+        raise ExportError(f"image platform is {image_info['platform']}, expected linux/amd64")
+    if not image_info.get("muta_git_sha") or image_info["muta_git_sha"] == "unknown":
+        raise ExportError("backend image has unknown source identity; rebuild through run.sh/make")
+    frontend_info = _image_info(frontend_image)
+    if frontend_info["platform"] != "linux/amd64":
+        raise ExportError(
+            f"frontend image platform is {frontend_info['platform']}, expected linux/amd64"
+        )
+
+    output = output.resolve()
+    bin_dir = output / "bin"
+    output.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="muta-native-export-") as temp:
+        stage = Path(temp)
+        _copy_from_image(image, "/app/runtime/build/bin", stage)
+        verified = {name: _verify_binary(stage / name) for name in BINARIES}
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        for name in BINARIES:
+            os.replace(stage / name, bin_dir / name)
+            verified[name]["path"] = str((bin_dir / name).relative_to(ROOT))
+
+    with tempfile.TemporaryDirectory(prefix="muta-native-ui-") as temp:
+        ui_stage = Path(temp)
+        _copy_from_image(frontend_image, "/usr/share/nginx/html", ui_stage)
+        ui_verified = _verify_ui(ui_stage)
+        _install_ui(ui_stage, ui_output)
+
+    manifest = {
+        "schema": 2,
+        "kind": "muta-native-linux-engine",
+        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "host": {"system": platform.system(), "machine": platform.machine()},
+        "source_image": image_info,
+        "frontend_image": frontend_info,
+        "checkout_git_sha": _git_sha(),
+        "binaries": verified,
+        "ui": {
+            "path": str(ui_output.resolve().relative_to(ROOT)),
+            **ui_verified,
+        },
+        "verification": {
+            "linux_x86_64_elf": True,
+            "llama_cpp_pin": f"{EXPECTED_TAG}/{EXPECTED_COMMIT}",
+            "avx512_signature_scan": "pass",
+        },
+    }
+    manifest_path = output / "native-linux-manifest.json"
+    pending = manifest_path.with_suffix(".json.tmp")
+    pending.write_text(json.dumps(manifest, indent=2) + "\n")
+    os.replace(pending, manifest_path)
+    return manifest_path
+
+
+def verify_manifest(output: Path) -> Path:
+    """Re-check installed binary hashes and the recorded pin without invoking Docker."""
+    manifest_path = output.resolve() / "native-linux-manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ExportError(f"missing or invalid native manifest: {manifest_path}") from exc
+    verification = manifest.get("verification", {})
+    if manifest.get("schema") != 2:
+        raise ExportError("native manifest predates the complete engine + UI export")
+    if verification.get("llama_cpp_pin") != f"{EXPECTED_TAG}/{EXPECTED_COMMIT}":
+        raise ExportError("native manifest does not carry the expected llama.cpp pin")
+    for name in BINARIES:
+        binary = output.resolve() / "bin" / name
+        expected = manifest.get("binaries", {}).get(name, {}).get("sha256")
+        if not binary.is_file() or not expected:
+            raise ExportError(f"native artifact is incomplete: {name}")
+        actual = _sha256(binary)
+        if actual != expected:
+            raise ExportError(f"native artifact hash mismatch for {name}: {actual} != {expected}")
+    ui = manifest.get("ui", {})
+    ui_path = ROOT / ui.get("path", "ui/dist")
+    for relative, metadata in ui.get("files", {}).items():
+        asset = ui_path / relative
+        if not asset.is_file() or _sha256(asset) != metadata.get("sha256"):
+            raise ExportError(f"native UI artifact hash mismatch for {relative}")
+    if not ui.get("files") or any(not (ui_path / item).is_file() for item in UI_REQUIRED):
+        raise ExportError("native UI artifact is incomplete")
+    return manifest_path
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--image", default=DEFAULT_IMAGE)
+    parser.add_argument("--frontend-image", default=DEFAULT_FRONTEND_IMAGE)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--ui-output", type=Path, default=DEFAULT_UI_OUTPUT)
+    parser.add_argument(
+        "--verify-only", action="store_true", help="verify the installed artifact without Docker"
+    )
+    args = parser.parse_args(argv)
+    try:
+        manifest = (
+            verify_manifest(args.output)
+            if args.verify_only
+            else export(args.image, args.frontend_image, args.output, args.ui_output)
+        )
+    except ExportError as exc:
+        parser.exit(1, f"error: {exc}\n")
+    print(f"verified native Linux engine: {manifest}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -193,14 +194,18 @@ def main() -> int:
         return 0
     server = LlamaServer(cfg)
     server.start()
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    signal.signal(signal.SIGTERM, lambda *_: server.stop())
     print(f"\nllama-server running at {server.base_url}  (Ctrl-C to stop)\n")
     try:
-        assert server.process is not None
-        server.process.wait()
+        process = server.process
+        assert process is not None
+        process.wait()
     except KeyboardInterrupt:
         pass
     finally:
         server.stop()
+        signal.signal(signal.SIGTERM, previous_sigterm)
     return 0
 
 
