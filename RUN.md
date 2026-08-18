@@ -1,4 +1,4 @@
-# Running Muta (dev branch — the 3-container stack)
+# Running Muta
 
 ## Start here
 
@@ -19,7 +19,7 @@ dependency order, waits for health, and prints the UI URL:
 ./run.sh logs       # follow all three containers' logs
 ./run.sh --build    # force a clean image rebuild first
 ./run.sh --model models/core/candidates/Qwen3.5-4B-UD-Q3_K_XL.gguf
-                    # hot-swap the core GGUF (default models/core/Qwen3.5-4B-Q4_K_M.gguf)
+                    # hot-swap the core GGUF (default models/core/Qwen3.5-4B-IQ4_XS.gguf)
 ```
 
 **`--model PATH`** (works with docker and `--native` modes) serves a different core GGUF
@@ -51,10 +51,61 @@ use, so engine parity with the container is kept. Requires `make install` (impor
 venv). Ctrl-C stops the backend; `./run.sh down` stops the containers. Audio degrades
 to text-only unless sherpa-onnx is installed on the host — expected in native mode.
 
-Docker (`./run.sh`, no flag) remains the default and the shape that ships: linux/amd64,
-compose-gated health, the compiled AVX2 engine. Use it for anything you are about to
-call a measurement of the real system, and re-verify there after native-mode iteration.
-Mac-native numbers are dev signals only (`bench/optimization-log.md` rule).
+Docker (`./run.sh`, no flag) remains the reproducible Linux/amd64 control and the build
+boundary for the compiled AVX2 engine. The extracted native Linux two-process topology is
+the portable product shape. Re-verify changes against the control, but record final report
+measurements only on the native x86 target laptop. Mac-native numbers remain dev signals
+only (`bench/optimization-log.md` rule).
+
+## Native Linux mode (GCP experiment VM / portable topology)
+
+The Compose stack remains the reproducible control, but it is not required while native
+experiments run. Build the control once, then extract the exact verified engine from it:
+
+```bash
+make build
+./run.sh export-linux
+```
+
+The exporter installs `llama-server` and `llama-bench` under `runtime/build/bin/`, exports the
+complete offline browser bundle from the frontend image into `ui/dist/`, and writes
+`runtime/build/native-linux-manifest.json`. It refuses a non-x86-64 ELF, the wrong llama.cpp
+pin (must be b10035 / 602f828), unresolved shared libraries, unknown image provenance, forbidden
+AVX-512 signatures, or incomplete UI assets. The manifest records source-image identities,
+source-tree/Git identity, engine version, dependencies, and binary/UI hashes. Docker is only the
+one-time build/extraction boundary.
+
+After the host venv is installed (`python3 -m venv .venv`, then
+`.venv/bin/pip install -e '.[dev]'`), both launch paths are Docker- and network-free:
+
+```bash
+./run.sh down                    # stop the control before measuring
+./run.sh --native-engine         # llama-server only, http://127.0.0.1:8080
+./run.sh --native-linux          # gateway + supervised engine + SQLite
+```
+
+Full native mode serves the UI itself at <http://127.0.0.1:8000/ui/> and stores conversations
+in `data/muta.sqlite3`; it does not start PostgreSQL or nginx. `MUTA_OFFLINE=1` is set by
+default, disabling even the connectivity probe (set it to `0` only for an intentional cloud
+test). Bind stays on loopback. From a
+Mac, use an SSH tunnel rather than opening a public firewall rule:
+
+```bash
+gcloud compute ssh muta-vm --zone=us-west1-b -- -L 8000:127.0.0.1:8000
+```
+
+The exploratory VM engine benchmark is:
+
+```bash
+make bench-native-linux
+make bench-native-linux ARGS="--sweep LINUX-PRODUCT"
+```
+
+It refuses enabled host swap or a running Compose backend, verifies the engine manifest, hashes
+the model, and writes a fingerprinted artifact under `bench/.artifacts/gcp-cloud-proxy/` labelled
+`x86 cloud proxy (GCP n2-custom-4-8192, 2C/4T)`. These measurements guide experiments but are
+**not report-grade**: the cloud Xeon exposes AVX-512 (the binary does not use it), memory bandwidth
+is provider-dependent, and package temperature is unavailable.
 
 ## The three containers
 
@@ -94,7 +145,7 @@ The roster (all under `./models`, volume-mounted into the backend, never baked):
 
 | Role | File |
 |---|---|
-| Core LLM | `models/core/Qwen3.5-4B-Q4_K_M.gguf` |
+| Core LLM | `models/core/Qwen3.5-4B-IQ4_XS.gguf` |
 | Vision projector | `models/core/mmproj-F16.gguf` |
 | ASR | `models/asr/moonshine-tiny-en-int8/` |
 | VAD | `models/asr/silero_vad.onnx` |
@@ -163,9 +214,13 @@ The mic needs a secure context: **http://localhost:3000 works, a LAN IP does not
 
 ## Persistence
 
-Conversations, messages and attachments live in Postgres, in the named volume
-`muta-pgdata`. `./run.sh down` / `docker compose down` **keeps** them;
+In the Compose control, conversations, messages and attachments live in Postgres, in the named
+volume `muta-pgdata`. `./run.sh down` / `docker compose down` **keeps** them;
 `docker compose down -v` is the only thing that deletes them.
+
+Native Linux uses the portable SQLite file `data/muta.sqlite3`. Copying that file while the
+native app is stopped backs it up; deleting it erases only native-mode conversations. The two
+stores are intentionally separate, so control data cannot contaminate native experiments.
 
 Host-side tests reach the same db on `127.0.0.1:15432`
 (`MUTA_TEST_DB_URL` overrides; store tests skip cleanly when it's down).
@@ -176,8 +231,8 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 
 | Variable | Default (compose) | Meaning |
 |---|---|---|
-| `MUTA_RT_DB_URL` | `postgresql://muta:muta@db:5432/muta` | Postgres DSN |
-| `MUTA_RT_MODEL_DIR` / `_FILE` | `/app/models/core` / `Qwen3.5-4B-Q4_K_M.gguf` | core GGUF |
+| `MUTA_RT_DB_URL` | host/native: `sqlite:///data/muta.sqlite3`; compose: `postgresql://muta:muta@db:5432/muta` | persistence URL |
+| `MUTA_RT_MODEL_DIR` / `_FILE` | `/app/models/core` / `Qwen3.5-4B-IQ4_XS.gguf` | core GGUF |
 | `MUTA_RT_DRAFT_MODEL` | `/app/models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` | speculative draft (Qwen3.5 family only — Qwen3 vocab is incompatible; skipped if absent) |
 | `MUTA_RT_AUTOSTART` | `1` | gateway lifespan starts/supervises llama-server |
 | `MUTA_RT_STARTUP_TIMEOUT_S` | `900` | model-load allowance (emulation is slow) |

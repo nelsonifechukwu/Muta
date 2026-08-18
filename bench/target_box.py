@@ -43,7 +43,15 @@ from bench.sampler import sample_tree
 ROOT = Path(__file__).resolve().parents[1]
 BENCH_BIN = SERVER_BIN.with_name("llama-bench")
 PINS = ROOT / "models" / "pins.lock.json"
-ARTIFACTS = Path(__file__).resolve().parent / ".artifacts" / "target-box"
+ARTIFACTS = Path(
+    os.environ.get(
+        "MUTA_BENCH_ARTIFACT_DIR",
+        Path(__file__).resolve().parent / ".artifacts" / "target-box",
+    )
+)
+CONTEXT = os.environ.get("MUTA_BENCH_CONTEXT", "x86 target-box-shaped container")
+REPORT_GRADE = os.environ.get("MUTA_BENCH_REPORT_GRADE", "0") == "1"
+NATIVE_MANIFEST = ROOT / "runtime" / "build" / "native-linux-manifest.json"
 
 _ISA_FLAGS = ("avx2", "avx512f", "f16c", "fma", "sse4_2")
 
@@ -107,6 +115,39 @@ def _pinned_core_bytes() -> int | None:
         return None
 
 
+def _meminfo_bytes(field: str) -> int | None:
+    meminfo = _read("/proc/meminfo")
+    if not meminfo:
+        return None
+    match = re.search(rf"^{re.escape(field)}:\s+(\d+)\s+kB$", meminfo, re.MULTILINE)
+    return int(match.group(1)) * 1024 if match else None
+
+
+def _host_swap_total_bytes() -> int | None:
+    return _meminfo_bytes("SwapTotal")
+
+
+def _host_memory_total_bytes() -> int | None:
+    return _meminfo_bytes("MemTotal")
+
+
+def _physical_cores(affinity: list[int]) -> int | None:
+    cores = set()
+    for cpu in affinity:
+        package = _read(f"/sys/devices/system/cpu/cpu{cpu}/topology/physical_package_id")
+        core = _read(f"/sys/devices/system/cpu/cpu{cpu}/topology/core_id")
+        if package is None or core is None:
+            return None
+        cores.add((package, core))
+    return len(cores)
+
+
+def _affinity() -> list[int]:
+    if hasattr(os, "sched_getaffinity"):
+        return sorted(os.sched_getaffinity(0))
+    return list(range(os.cpu_count() or 1))
+
+
 def fingerprint(hash_model: bool = False) -> dict:
     cpuinfo = _read("/proc/cpuinfo") or ""
     flags = set()
@@ -146,21 +187,45 @@ def fingerprint(hash_model: bool = False) -> dict:
     mem_limit = _cgroup_bytes(
         "/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"
     )
-    affinity = sorted(os.sched_getaffinity(0))
+    affinity = _affinity()
+    native_manifest = None
+    try:
+        native_manifest = json.loads(NATIVE_MANIFEST.read_text())
+    except (OSError, json.JSONDecodeError):
+        pass
+    source_identity = None
+    try:
+        from scripts.source_identity import source_identity as identify_source
+
+        source_identity = identify_source()
+    except Exception as exc:  # noqa: BLE001 — provenance absence is benchmark metadata
+        source_identity = {"error": f"{type(exc).__name__}: {exc}"}
     return {
+        "context": CONTEXT,
+        "report_grade": REPORT_GRADE,
+        "interpretation": (
+            "competition target measurement"
+            if REPORT_GRADE
+            else "exploratory proxy only; do not cite as report-grade"
+        ),
         "cpu_model": model_name,
         "isa": {f: (f in flags) for f in _ISA_FLAGS},
         "cpus_allowed": len(affinity),
+        "physical_cores_allowed": _physical_cores(affinity),
         # the list, not just the count: a bad cpuset (cross-socket, mixed P/E) must be
         # diagnosable from the artifact alone, months later
         "cpus_allowed_list": affinity,
         "cpu_quota": _cpu_quota(),
         "mem_limit_bytes": mem_limit,
         "swap_limit_bytes": _swap_limit_bytes(mem_limit),
+        "host_memory_total_bytes": _host_memory_total_bytes(),
+        "host_swap_total_bytes": _host_swap_total_bytes(),
         "kernel": platform.release(),
         "os": pretty.group(1) if pretty else None,
         "engine": engine,
         "muta_git_sha": os.environ.get("MUTA_GIT_SHA"),
+        "native_engine_manifest": native_manifest,
+        "source_identity": source_identity,
         "model": model,
     }
 
@@ -257,8 +322,19 @@ def run_sweeps(names: list[str]) -> dict:
             out[name] = {"error": "unknown config (see native_sweep --list)"}
             continue
         extra, suite = native_sweep.CONFIGS[name]
+        if CONTEXT.startswith("x86 cloud proxy") and "--threads" in extra:
+            thread_pin = int(extra[extra.index("--threads") + 1])
+            if thread_pin > len(_affinity()):
+                out[name] = {
+                    "error": (
+                        f"thread pin {thread_pin} exceeds {len(_affinity())} allowed CPUs; "
+                        "this is an M2/other-host config, not a valid cloud-proxy run"
+                    )
+                }
+                continue
         result = native_sweep.run_config(name, extra, suite=suite)
-        result["context"] = "x86 container-proxy"
+        result["context"] = CONTEXT
+        result["report_grade"] = REPORT_GRADE
         out[name] = result
     return out
 
@@ -268,8 +344,18 @@ def _default_threads() -> list[int]:
     # RESULTS.md finding that decode wants physical cores while prefill can use SMT.
     # Only a fallback: the driver always passes --threads. Under a bare quota (affinity
     # shows every host CPU) these defaults oversubscribe — pass --threads explicitly.
-    n = len(os.sched_getaffinity(0))
+    n = len(_affinity())
     return sorted({max(1, n // 2), n})
+
+
+def _report_failed(report: dict) -> bool:
+    bench = report.get("llama_bench")
+    if isinstance(bench, dict) and bench.get("rc", 0) != 0:
+        return True
+    for sweep in report.get("sweeps", {}).values():
+        if sweep.get("error") or sweep.get("ok") is False:
+            return True
+    return False
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -318,10 +404,14 @@ def main(argv: list[str] | None = None) -> int:
     out_path.write_text(json.dumps(report, indent=1) + "\n")
 
     fp, bw = report["fingerprint"], report["bandwidth"]
-    mem = fp["mem_limit_bytes"]
+    mem = fp["mem_limit_bytes"] or fp["host_memory_total_bytes"]
+    mem_kind = "cgroup cap" if fp["mem_limit_bytes"] else "host total"
     print("\n=== target-box summary ===")
+    print(f"context:    {fp['context']}")
+    print(f"report:     {'grade' if fp['report_grade'] else 'EXPLORATORY ONLY'}")
     print(
-        f"cpu:        {fp['cpu_model']}  ({fp['cpus_allowed']} allowed"
+        f"cpu:        {fp['cpu_model']}  ({fp['physical_cores_allowed']}C/"
+        f"{fp['cpus_allowed']}T allowed"
         + (f", quota {fp['cpu_quota']}" if fp["cpu_quota"] else "")
         + ")"
     )
@@ -330,12 +420,14 @@ def main(argv: list[str] | None = None) -> int:
         f" (engine is AVX2-only by build)"
     )
     swap = fp["swap_limit_bytes"]
-    swap_txt = (
-        "unlimited/unknown"
-        if swap is None
-        else ("denied" if swap == 0 else f"{round(swap / 2**30, 1)} GiB")
-    )
-    print(f"mem cap:    {round(mem / 2**30, 1) if mem else 'unlimited'} GiB (swap: {swap_txt})")
+    host_swap = fp["host_swap_total_bytes"]
+    if swap is not None:
+        swap_txt = "denied" if swap == 0 else f"{round(swap / 2**30, 1)} GiB cgroup"
+    elif host_swap is not None:
+        swap_txt = "disabled on host" if host_swap == 0 else f"{round(host_swap / 2**30, 1)} GiB host"
+    else:
+        swap_txt = "unknown"
+    print(f"memory:     {round(mem / 2**30, 1) if mem else 'unknown'} GiB {mem_kind} (swap: {swap_txt})")
     print(f"os/engine:  {fp['os']} / {fp['engine']}")
     print(f"model:      {'present' if fp['model']['present'] else 'ABSENT'}")
     if "memcpy_gibps" in bw:
@@ -353,7 +445,7 @@ def main(argv: list[str] | None = None) -> int:
             f"{row['avg_ts']:.2f} ± {row['stddev_ts'] or 0:.2f} tok/s"
         )
     print(f"artifact:   {out_path}")
-    return 0
+    return 1 if _report_failed(report) else 0
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import threading
@@ -39,8 +40,10 @@ import httpx
 import psutil
 
 ROOT = Path(__file__).resolve().parents[1]
-BIN = ROOT / "runtime" / "build" / "bin" / "llama-server"
-MODEL = ROOT / "models" / "core" / "Qwen3.5-4B-Q4_K_M.gguf"
+BIN = Path(os.environ.get("MUTA_BENCH_SERVER_BIN", ROOT / "runtime/build/bin/llama-server"))
+MODEL = Path(
+    os.environ.get("MUTA_BENCH_MODEL", ROOT / "models/core/Qwen3.5-4B-IQ4_XS.gguf")
+)
 DRAFT = ROOT / "models" / "draft" / "Qwen3.5-0.8B-Q4_K_M.gguf"
 PORT = 8089  # off the 8080/8000 defaults so a running stack never collides
 BASE = f"http://127.0.0.1:{PORT}"
@@ -138,7 +141,7 @@ class RssSampler:
                 self.peak = max(self.peak, rss)
             time.sleep(self.interval)
 
-    def start(self) -> "RssSampler":
+    def start(self) -> RssSampler:
         self._thread.start()
         return self
 
@@ -151,7 +154,11 @@ def phys_footprint_mib(pid: int) -> float | None:
     """macOS phys_footprint — anonymous + compressed, immune to mmap-eviction noise."""
     try:
         out = subprocess.run(
-            ["/usr/bin/footprint", str(pid)], capture_output=True, text=True, timeout=15
+            ["/usr/bin/footprint", str(pid)],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
         ).stdout
         m = re.search(r"phys_footprint:\s+([\d.]+)\s*(KB|MB|GB)", out)
         if m:
@@ -283,6 +290,13 @@ _T6 = ["--threads", "6", "--threads-batch", "6"]  # M2 Pro P-core count; see RES
 
 #: name -> (extra flags appended after BASE_FLAGS, suite). The 2026-08-01 sweep set.
 CONFIGS: dict[str, tuple[list[str], str]] = {
+    # Exact Linux product config: llama.cpp chooses physical cores; do not inherit the M2
+    # Pro's six-P-core pin below. BASE_FLAGS already carries every other product default.
+    "LINUX-PRODUCT": (["--kv-unified", "--ctx-checkpoints", "2"], "full"),
+    "LINUX-NOREPACK": (
+        ["--kv-unified", "--ctx-checkpoints", "2", "--no-repack"],
+        "full",
+    ),
     "B0-baseline": ([], "full"),
     "T4": (["--threads", "4", "--threads-batch", "4"], "speed"),
     "T6": (_T6, "speed"),
@@ -311,7 +325,7 @@ CONFIGS: dict[str, tuple[list[str], str]] = {
                   "--spec-draft-p-min", "0.75"], "speed"),
     "T6-NGRAM": (_T6 + ["--spec-type", "ngram-simple", "--spec-ngram-simple-size-n", "4",
                  "--spec-ngram-simple-size-m", "12"], "speed"),
-    # What RuntimeConfig ships since 2026-08-01: P-core threads + unified KV + 2 checkpoints.
+    # Historical M2-native winner (six P-cores), not a generic Linux product config.
     "WINNER": (_T6 + ["--kv-unified", "--ctx-checkpoints", "2"], "full"),
     # Cactus GEMV policy: their macOS decode path caps at 4-5 threads even on big
     # cores (sync overhead beats bandwidth once saturated). Decode here is

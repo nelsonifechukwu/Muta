@@ -5,7 +5,8 @@ PY ?= python3
 
 .PHONY: help install dev test lint fmt contract contract-test build up down smoke \
 	model fetch-models verify-models serve profiles core-cmd kv-budget index audio \
-	bench profile monitor bench-target eval backup restore
+	bench profile monitor bench-target eval backup restore \
+	bench-native-linux export-native-linux
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -14,10 +15,10 @@ help: ## List targets
 install: ## Install the app + dev tooling (editable)
 	$(PY) -m pip install -e ".[dev]"
 
-dev: ## Run the gateway with reload on the host (http://127.0.0.1:8000; needs `make up` for db)
+dev: ## Run the gateway with reload on the host (SQLite; http://127.0.0.1:8000)
 	TUTOR_ROOT=$(CURDIR) $(PY) -m uvicorn orchestrator.main:app --reload --port 8000
 
-test: ## Run the test suite (Postgres tests use the compose db on 127.0.0.1:15432; else skip)
+test: ## Run tests (portable SQLite always; Postgres parity tests use compose db or skip)
 	$(PY) -m pytest
 
 lint: ## Lint (ruff)
@@ -34,7 +35,7 @@ contract-test: ## Property-fuzz a running server against the contract (needs `ma
 
 # --- The 3-container stack ---
 build: ## Build the db/backend/frontend images (linux/amd64)
-	docker compose build
+	MUTA_BUILD_GIT_SHA=$$($(PY) scripts/source_identity.py --id) docker compose build
 
 up: ## Start the stack and wait for health (db -> backend -> frontend)
 	docker compose up -d --wait
@@ -90,6 +91,12 @@ monitor: ## Live scored-metrics HUD against a running app. Args: ARGS="--pid <n>
 
 bench-target: ## Engine bench in a target-box-shaped container (8 GiB, 6C+SMT). Args: ARGS="-- --sweep WINNER"
 	scripts/bench_target_box.sh $(ARGS)
+
+export-native-linux: ## One-time verified engine extraction from muta-backend:latest (Linux x86-64)
+	./run.sh export-linux
+
+bench-native-linux: ## Bare GCP x86 cloud-proxy bench; exploratory. Args: ARGS="--sweep LINUX-PRODUCT"
+	scripts/bench_native_linux.sh $(ARGS)
 
 eval: ## Tutoring-quality eval (the 50% S_acc term) against a running stack. Args: ARGS="--base http://localhost:3000"
 	$(PY) -m bench.eval $(ARGS)

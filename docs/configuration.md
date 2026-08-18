@@ -120,7 +120,7 @@ are the class defaults; the `Qwen3-0.6B` smoke-fixture defaults are what ship in
 
 | Variable | Default | What it does | Where read |
 |---|---|---|---|
-| `MUTA_RT_DB_URL` | `postgresql://muta:muta@127.0.0.1:15432/muta` *(compose: `…@db:5432/muta`)* | Postgres DSN for all student data | `config.py:150`, `memory.py:78`, compose `:48` |
+| `MUTA_RT_DB_URL` | `sqlite:///data/muta.sqlite3` *(compose overrides: `postgresql://muta:muta@db:5432/muta`)* | Persistence URL. SQLite is the daemon-free host/portable default; PostgreSQL remains the explicit Compose control. | `config.py`, `memory.py`, `sqlite_memory.py`, compose, `run.sh` |
 | `MUTA_RT_MAX_HISTORY_MESSAGES` | `20` | multi-turn context trim; **also the max turns cloud boost sends off-device** | `config.py:151` |
 
 ### `MUTA_RT_`-prefixed but **not** RuntimeConfig fields
@@ -132,6 +132,11 @@ These carry the `MUTA_RT_` prefix but are read directly from `os.environ`, not t
 |---|---|---|---|
 | `MUTA_RT_VISION_STARTUP_S` | `60.0` *(compose: `300`)* | cold-spawn wait for the vision `llama-server` | `runtime/vision.py:53`, compose `:92` |
 | `MUTA_RT_LLAMA_CLI_BIN` | `None` | `llama-cli` path used by `verify_models` | `scripts/verify_models.py:53` |
+
+`MUTA_OFFLINE=1` is set automatically by the Linux-native launcher. It forces the cached
+connectivity verdict to `false` without making an HTTP probe, so the portable/experiment path
+does not emit background network traffic. Compose leaves it unset for deliberate online-feature
+testing.
 
 ---
 
