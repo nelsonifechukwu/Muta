@@ -19,7 +19,14 @@
         <button id="new-chat" class="ghost" title="New chat">+ New chat</button>
       </div>
       <nav id="conversation-list" aria-label="Conversations"></nav>
-      <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span>offline tutor · Qwen3.5-4B</div>
+      <div class="model-picker">
+        <label for="model-select">Tutor model</label>
+        <select id="model-select" aria-describedby="model-note" disabled>
+          <option>Loading local models…</option>
+        </select>
+        <small id="model-note">The recommended model is selected by default.</small>
+      </div>
+      <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label">offline · local CPU</span></div>
     </aside>
 
     <main id="main">

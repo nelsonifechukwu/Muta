@@ -50,6 +50,7 @@ let telemetryCloseTimer = null;
 let thinkingLevel = localStorage.getItem("muta-thinking") || "auto";
 let currentItem = null; // the item the active stream is answering (for "Answer now")
 let pendingRegen = null; // set by "Answer now": re-dispatch this item with thinking off
+let modelCatalog = null;
 
 const $ = (sel) => document.querySelector(sel);
 const messagesEl = $("#messages");
@@ -533,12 +534,21 @@ function viewingLiveStream() {
 function syncComposerState() {
   const busy = readingAnImage();
   const streaming = viewingLiveStream();
-  $("#btn-image").disabled = busy;
+  const switchingModel = $("#model-select")?.dataset.switching === "true";
+  $("#btn-image").disabled = busy || switchingModel;
+  $("#btn-audio").disabled = switchingModel;
+  $("#btn-mic").disabled = switchingModel;
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
   // voice reply (generating without a chat stream) the mic button owns interruption.
-  sendBtn.disabled = busy || (generating && !streaming);
+  sendBtn.disabled = switchingModel || busy || (generating && !streaming);
   sendBtn.classList.toggle("stop", streaming);
   sendBtn.title = streaming ? "Stop the reply (Esc)" : "Send";
+  const modelSelect = $("#model-select");
+  if (modelSelect) {
+    const hasChoice = modelCatalog?.selection_enabled
+      && modelCatalog.models?.some((model) => model.available);
+    modelSelect.disabled = generating || modelSelect.dataset.switching === "true" || !hasChoice;
+  }
 }
 
 function stopGeneration() {
@@ -784,6 +794,9 @@ function drainQueue() {
 }
 
 function send(steer = false) {
+  if ($("#model-select")?.dataset.switching === "true") {
+    return toast("The selected model is still loading — your draft is safe.");
+  }
   const typed = inputEl.value.trim();
   if (readingAnImage()) return toast("Still reading your image — one moment.");
   if (!typed && !pendingAttachments.some((a) => a.transcription)) return;
@@ -1140,3 +1153,102 @@ async function refreshNetDot() {
 }
 refreshNetDot();
 setInterval(refreshNetDot, 60_000);
+
+// --- local model registry ---------------------------------------------------------------
+const modelSelect = $("#model-select");
+const modelNote = $("#model-note");
+
+function modelSummary(model) {
+  const metrics = [];
+  if (model.arc_easy != null) metrics.push(`ARC-Easy ${(100 * model.arc_easy).toFixed(0)}%`);
+  if (model.audit_proxy_tps != null) {
+    metrics.push(`audit proxy ${model.audit_proxy_tps.toFixed(1)} tok/s`);
+  }
+  return [model.description, metrics.join(" · ")].filter(Boolean).join(" ");
+}
+
+function renderModelCatalog(catalog) {
+  modelCatalog = catalog;
+  const models = catalog.models || [];
+  const active = models.find((model) => model.id === catalog.active_id);
+  modelSelect.innerHTML = "";
+  // A custom --model path can be healthy without belonging to the fixed registry. Keep the
+  // visible value honest and give the first catalog item its own selectable transition.
+  if (!active) {
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = catalog.active_id
+      ? "Current engine · outside registry"
+      : "Select a local model…";
+    placeholder.selected = true;
+    placeholder.disabled = true;
+    modelSelect.append(placeholder);
+  }
+  for (const model of models) {
+    const option = document.createElement("option");
+    option.value = model.id;
+    option.textContent = model.label + (model.recommended ? " · recommended" : "");
+    option.disabled = !model.available;
+    if (model.disabled_reason) option.textContent += ` — ${model.disabled_reason}`;
+    option.selected = model.id === catalog.active_id;
+    modelSelect.append(option);
+  }
+  const hasChoice = catalog.selection_enabled && models.some((model) => model.available);
+  modelNote.textContent = active
+    ? modelSummary(active)
+    : hasChoice
+      ? "The current engine is outside this registry. Choose an installed tutor model."
+      : catalog.selection_enabled
+        ? "No verified optional model is installed."
+        : "Only the laptop operator can change the shared tutor model.";
+  modelSelect.dataset.switching = String(catalog.switching === true);
+  modelSelect.disabled = generating || catalog.switching === true || !hasChoice;
+}
+
+async function refreshModelCatalog() {
+  try {
+    const response = await fetch("/v1/models");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    renderModelCatalog(await response.json());
+  } catch {
+    modelSelect.disabled = true;
+    modelNote.textContent = "Could not read the local model registry.";
+  }
+}
+
+modelSelect.addEventListener("change", async () => {
+  const target = modelSelect.value;
+  const prior = modelCatalog && modelCatalog.active_id;
+  if (!target || target === prior) return;
+  if (generating) {
+    modelSelect.value = prior;
+    toast("Stop the current reply before changing models.");
+    return;
+  }
+  const chosen = modelCatalog.models.find((model) => model.id === target);
+  modelSelect.dataset.switching = "true";
+  modelSelect.disabled = true;
+  syncComposerState();
+  modelNote.textContent = `Loading ${chosen.label}… The chat and saved conversations will stay open.`;
+  toast(`Switching to ${chosen.label}…`, 120000);
+  try {
+    const response = await fetch("/v1/models/select", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model_id: target }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    renderModelCatalog(body);
+    toast(`${chosen.label} is ready. New replies will use it.`);
+    announce(`${chosen.label} is ready.`);
+  } catch (error) {
+    toast(`Model switch failed: ${error.message}`);
+    await refreshModelCatalog();
+  } finally {
+    modelSelect.dataset.switching = "false";
+    syncComposerState();
+  }
+});
+
+refreshModelCatalog();
