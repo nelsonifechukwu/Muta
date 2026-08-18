@@ -38,7 +38,9 @@ Usage: ./run.sh [--native|--native-linux|--native-engine] [--model PATH]
   --native-linux
               Linux x86-64: run the full product without Docker. The gateway supervises
               the extracted AVX2 engine, persists to data/muta.sqlite3, and serves the UI
-              at http://127.0.0.1:8000/ui/. Run export-linux once first.
+              at http://127.0.0.1:8000/ui/. Uses Muta Tutor Qwen3-1.7B when provisioned;
+              its UI model menu can hot-switch to the verified BitCPM-CANN-8B artifact.
+              Run export-linux once first.
   --native-engine
               Linux x86-64: run only the extracted llama-server with the product flags.
               This is the clean engine-experiment path; Ctrl-C stops it.
@@ -267,6 +269,9 @@ native_linux_up() {
     require_native_port_free "${MUTA_NATIVE_PORT:-8000}" "gateway"
     export MUTA_RT_AUTOSTART=1
     export MUTA_RT_DB_URL="${MUTA_RT_DB_URL:-sqlite:///data/muta.sqlite3}"
+    # Model replacement is a machine-wide operator action. The API also verifies that the
+    # socket peer is loopback, so LAN classroom clients cannot restart the shared engine.
+    export MUTA_ALLOW_MODEL_SWITCH="${MUTA_ALLOW_MODEL_SWITCH:-1}"
     bold "Native Linux mode — no Docker, PostgreSQL, nginx, or network required."
     info "UI:        http://127.0.0.1:8000/ui/"
     info "API:       http://127.0.0.1:8000/v1  (docs at http://127.0.0.1:8000/docs)"
@@ -289,7 +294,9 @@ NO_CACHE=0
 FORCE_CPU=0
 GPU_OPT=0
 DEFAULT_MODEL="models/core/Qwen3.5-4B-IQ4_XS.gguf"
+NATIVE_WINNER_MODEL="muta-iq/model/muta-tutor-qwen3-1.7b-q4_0.gguf"
 MODEL="$DEFAULT_MODEL"
+MODEL_EXPLICIT=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --native)   MODE=native ;;
@@ -302,8 +309,8 @@ while [ $# -gt 0 ]; do
         update)     MODE=update ;;
         --build)    NO_CACHE=1 ;;
         --model)    [ $# -ge 2 ] || die "--model needs a path  (try --help)"
-                    MODEL="$2"; shift ;;
-        --model=*)  MODEL="${1#--model=}" ;;
+                    MODEL="$2"; MODEL_EXPLICIT=1; shift ;;
+        --model=*)  MODEL="${1#--model=}"; MODEL_EXPLICIT=1 ;;
         down)       exec docker compose down ;;
         logs)       exec docker compose logs -f ;;
         -h|--help)  usage; exit 0 ;;
@@ -335,6 +342,11 @@ fi
 # --- Core-model selection (hot-swap seam) --------------------------------------------
 # The identity of the served model lives in MUTA_RT_MODEL_DIR/FILE/ALIAS and nowhere
 # else; everything below only derives those three values from $MODEL.
+if [ "$MODEL_EXPLICIT" = 0 ] \
+    && { [ "$MODE" = native_linux ] || [ "$MODE" = native_engine ]; } \
+    && [ -f "$NATIVE_WINNER_MODEL" ]; then
+    MODEL="$NATIVE_WINNER_MODEL"
+fi
 MODEL="${MODEL#./}"
 if [ "$MODEL" != "$DEFAULT_MODEL" ]; then
     # A custom model is never auto-provisioned: fetch_models.py only knows the pinned

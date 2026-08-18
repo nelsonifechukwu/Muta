@@ -133,6 +133,25 @@ class SnapshotReaper:
             return True
         return False
 
+    def clear(self) -> list[Path]:
+        """Remove all saved KV state after a model replacement.
+
+        Slot snapshots encode the old model's KV tensors and are never compatible with the
+        replacement, even when context geometry happens to match. Conversation messages stay
+        in SQLite and are re-prefilled normally.
+        """
+        removed: list[Path] = []
+        for path in self._snapshots():
+            try:
+                path.unlink(missing_ok=True)
+            except OSError as exc:
+                # The new SessionManager starts with no suspended ids, so even a file that
+                # cannot be removed is ineligible for restore. Keep the model switch healthy.
+                log.warning("could not remove stale KV snapshot %s: %s", path, exc)
+                continue
+            removed.append(path)
+        return removed
+
     def touch(self, session_id: str) -> None:
         """Mark a snapshot as recently used so LRU order reflects sessions, not writes."""
         path = self.directory / snapshot_name(session_id)

@@ -10,7 +10,7 @@ Usage: bake_system_prompt.py in.gguf out.gguf --system FILE [--strip-default-qwe
 """
 import argparse, sys, json
 from pathlib import Path
-sys.path.insert(0, "/Users/timii/Developer/Muta/muta-iq/opt/llama.cpp/gguf-py")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "llama.cpp" / "gguf-py"))
 import numpy as np
 import gguf
 from gguf import GGUFReader, GGUFWriter, GGUFValueType

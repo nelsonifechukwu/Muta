@@ -139,6 +139,13 @@ def test_touch_and_drop(tmp_path):
     assert reaper.drop("a") is True and reaper.drop("a") is False
 
 
+def test_clear_invalidates_every_model_specific_snapshot(tmp_path):
+    directory = make_snapshots(tmp_path / "kv-slots", {"a": 10, "b": 20})
+    removed = SnapshotReaper(directory).clear()
+    assert {path.name for path in removed} == {"a.bin", "b.bin"}
+    assert list(directory.glob("*.bin")) == []
+
+
 def test_missing_directory_is_not_an_error(tmp_path):
     reaper = SnapshotReaper(tmp_path / "never-created")
     assert reaper.reap() == [] and reaper.total_bytes() == 0

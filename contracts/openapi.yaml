@@ -36,6 +36,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReadyResponse'
+  /v1/models:
+    get:
+      tags:
+      - runtime
+      summary: Models
+      operationId: models_v1_models_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelCatalogResponse'
+  /v1/models/select:
+    post:
+      tags:
+      - runtime
+      summary: Select Model
+      operationId: select_model_v1_models_select_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelSelectRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelSelectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/chat:
     post:
       tags:
@@ -1407,6 +1445,118 @@ components:
       - content
       - created_at
       title: MessageOut
+    ModelBackend:
+      properties:
+        id:
+          type: string
+          title: Id
+        label:
+          type: string
+          title: Label
+        kind:
+          type: string
+          enum:
+          - local
+          - cloud
+          title: Kind
+        description:
+          type: string
+          title: Description
+        available:
+          type: boolean
+          title: Available
+        active:
+          type: boolean
+          title: Active
+        disabled_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Disabled Reason
+        size_bytes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Size Bytes
+        arc_easy:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Arc Easy
+        audit_proxy_tps:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Audit Proxy Tps
+        recommended:
+          type: boolean
+          title: Recommended
+          default: false
+      type: object
+      required:
+      - id
+      - label
+      - kind
+      - description
+      - available
+      - active
+      title: ModelBackend
+      description: One fixed backend from the local model registry; browser clients never send paths.
+    ModelCatalogResponse:
+      properties:
+        active_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Active Id
+        switching:
+          type: boolean
+          title: Switching
+          default: false
+        selection_enabled:
+          type: boolean
+          title: Selection Enabled
+          default: false
+        models:
+          items:
+            $ref: '#/components/schemas/ModelBackend'
+          type: array
+          title: Models
+      type: object
+      title: ModelCatalogResponse
+    ModelSelectRequest:
+      properties:
+        model_id:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Model Id
+      type: object
+      required:
+      - model_id
+      title: ModelSelectRequest
+    ModelSelectResponse:
+      properties:
+        active_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Active Id
+        switching:
+          type: boolean
+          title: Switching
+          default: false
+        selection_enabled:
+          type: boolean
+          title: Selection Enabled
+          default: false
+        models:
+          items:
+            $ref: '#/components/schemas/ModelBackend'
+          type: array
+          title: Models
+      type: object
+      title: ModelSelectResponse
     Persona:
       type: string
       enum:

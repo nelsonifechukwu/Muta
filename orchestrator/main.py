@@ -30,7 +30,7 @@ from orchestrator.bench_metrics import PIDFILE
 from orchestrator.bench_metrics import app as bench_app
 from orchestrator.exam.app import app as exam_app
 from orchestrator.gateway.audio_routes import router as audio_router
-from orchestrator.gateway.deps import get_vision
+from orchestrator.gateway.deps import get_vision, set_model_manager
 from orchestrator.gateway.routes import router as gateway_router
 from orchestrator.logging_config import configure_logging
 from orchestrator.math.app import app as math_app
@@ -38,6 +38,7 @@ from orchestrator.pedagogy.app import app as pedagogy_app
 from orchestrator.retrieval.app import app as retrieval_app
 from orchestrator.telemetry import get_hub
 from runtime.config import RuntimeConfig
+from runtime.model_catalog import ModelManager
 from runtime.server import LlamaServer
 
 configure_logging()  # make muta.* logs visible in the container before anything logs
@@ -104,6 +105,10 @@ def _start_engine_thread(
                 _engine_state["last_exit_code"] = code
                 if stop.is_set():
                     return
+                planned = getattr(server, "consume_planned_exit", lambda _: False)(proc)
+                if planned:
+                    log.info("llama-server stopped for a requested model change")
+                    break
                 _engine_state["restarts"] = int(_engine_state["restarts"]) + 1  # type: ignore[arg-type]
                 log.error(
                     "llama-server exited with code %s — respawning (restart #%s)",
@@ -155,7 +160,7 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         get_preamble_writer()
 
     cfg = RuntimeConfig()
-    engine_server: LlamaServer | None = None
+    engine_server: ModelManager | None = None
     engine_stop: threading.Event | None = None
     reaper_task: asyncio.Task | None = None
     if cfg.autostart:
@@ -164,7 +169,13 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
             # CORE-VISION's --log-file dies at startup if data/logs is missing.
             with contextlib.suppress(OSError):
                 (root / sub).mkdir(parents=True, exist_ok=True)
-        engine_server = LlamaServer(cfg)
+        engine_server = ModelManager(
+            cfg,
+            root=root,
+            log_file=root / "data" / "logs" / "llama-server.log",
+            server_factory=LlamaServer,
+        )
+        set_model_manager(engine_server)
         _, engine_stop = _start_engine_thread(
             engine_server, root / "data" / "logs" / "llama-server.log"
         )
@@ -187,6 +198,7 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         if engine_server is not None:
             with contextlib.suppress(Exception):
                 engine_server.stop()  # no-op when we only attached to an external engine
+        set_model_manager(None)
         with contextlib.suppress(OSError):
             if PIDFILE.is_file() and PIDFILE.read_text().strip() == str(os.getpid()):
                 PIDFILE.unlink()

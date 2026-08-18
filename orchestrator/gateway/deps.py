@@ -26,6 +26,7 @@ from runtime.chat import ChatEngine
 from runtime.client import InferenceClient
 from runtime.config import RuntimeConfig
 from runtime.memory import ConversationStore
+from runtime.model_catalog import ModelManager
 from runtime.profiles import BundlePaths
 from runtime.slots import SlotClient, SnapshotReaper
 from runtime.ttft import PreambleWriter
@@ -35,6 +36,27 @@ log = logging.getLogger("muta.gateway.deps")
 
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_model_manager: ModelManager | None = None
+
+
+def set_model_manager(manager: ModelManager | None) -> None:
+    global _model_manager
+    _model_manager = manager
+
+
+def get_model_manager() -> ModelManager | None:
+    return _model_manager
+
+
+def refresh_engine_dependencies() -> None:
+    """Drop every cache whose state belongs to the replaced llama-server process."""
+    # ChatEngine stays: it owns the durable DB pool and addresses the same loopback URL plus
+    # stable launch alias retained by ModelManager. Rebuilding it on every switch would
+    # leak/interrupt persistence for no model-specific benefit.
+    get_sessions.cache_clear()
+    removed = get_reaper().clear()
+    if removed:
+        log.info("removed %d model-specific KV snapshots after engine switch", len(removed))
 
 
 @lru_cache(maxsize=8)

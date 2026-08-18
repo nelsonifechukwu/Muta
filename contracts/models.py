@@ -56,6 +56,37 @@ class ReadyResponse(BaseModel):
     )
 
 
+class ModelBackend(BaseModel):
+    """One fixed backend from the local model registry; browser clients never send paths."""
+
+    id: str
+    label: str
+    kind: Literal["local", "cloud"]
+    description: str
+    available: bool
+    active: bool
+    disabled_reason: str | None = None
+    size_bytes: int | None = None
+    arc_easy: float | None = None
+    audit_proxy_tps: float | None = None
+    recommended: bool = False
+
+
+class ModelCatalogResponse(BaseModel):
+    active_id: str | None = None
+    switching: bool = False
+    selection_enabled: bool = False
+    models: list[ModelBackend] = Field(default_factory=list)
+
+
+class ModelSelectRequest(BaseModel):
+    model_id: str = Field(min_length=1, max_length=128)
+
+
+class ModelSelectResponse(ModelCatalogResponse):
+    pass
+
+
 # --- /chat -----------------------------------------------------------------------------
 
 

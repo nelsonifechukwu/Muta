@@ -3,7 +3,9 @@
 uses the tied `token_embd.weight` as the LM head). Metadata copied verbatim.
 Usage: drop_tensor.py in.gguf out.gguf output.weight [more...]"""
 import sys
-sys.path.insert(0, "/Users/timii/Developer/Muta/muta-iq/opt/llama.cpp/gguf-py")
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "llama.cpp" / "gguf-py"))
 import gguf
 from gguf import GGUFReader, GGUFWriter, GGUFValueType
 

@@ -11,6 +11,7 @@ their own stubs, but nothing on the public `/v1` surface returns 501.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
 import os
@@ -19,7 +20,7 @@ import time
 from functools import lru_cache
 
 import httpx
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response, StreamingResponse
 
@@ -45,6 +46,9 @@ from contracts.models import (
     MasteryResponse,
     MessageList,
     MessageOut,
+    ModelCatalogResponse,
+    ModelSelectRequest,
+    ModelSelectResponse,
     ReadyResponse,
     RenderRequest,
     RenderResponse,
@@ -64,6 +68,7 @@ from orchestrator.gateway.auth import caller_from_token, mint_token, require_cal
 from orchestrator.gateway.deps import (
     get_engine,
     get_ladder,
+    get_model_manager,
     get_preamble_writer,
     get_renderer,
     get_sessions,
@@ -72,6 +77,7 @@ from orchestrator.gateway.deps import (
     get_verifier,
     get_vision,
     load_prompt,
+    refresh_engine_dependencies,
 )
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
@@ -87,6 +93,7 @@ from orchestrator.tools.verifier import AnswerVerifier
 from runtime.chat import ChatEngine
 from runtime.client import Generation
 from runtime.config import RuntimeConfig
+from runtime.model_catalog import ModelSwitchError
 from runtime.slots import SlotError
 from runtime.ttft import PreambleWriter
 from runtime.vision import VisionDenied, VisionManager
@@ -163,6 +170,46 @@ def ready() -> ReadyResponse:
     return ReadyResponse(
         ready=all(checks.values()), checks=checks, online=get_connectivity().online()
     )
+
+
+def _model_switch_allowed(peer_host: str) -> bool:
+    if os.environ.get("MUTA_ALLOW_MODEL_SWITCH") != "1":
+        return False
+    try:
+        return ipaddress.ip_address(peer_host).is_loopback
+    except ValueError:
+        return False
+
+
+@router.get("/models", response_model=ModelCatalogResponse, tags=["runtime"])
+def models(request: Request) -> ModelCatalogResponse:
+    manager = get_model_manager()
+    if manager is None:
+        return ModelCatalogResponse()
+    status = manager.status()
+    peer = request.client.host if request.client else ""
+    status["selection_enabled"] = _model_switch_allowed(peer)
+    return ModelCatalogResponse.model_validate(status)
+
+
+@router.post("/models/select", response_model=ModelSelectResponse, tags=["runtime"])
+def select_model(request: Request, req: ModelSelectRequest) -> ModelSelectResponse:
+    manager = get_model_manager()
+    if manager is None:
+        raise HTTPException(status_code=409, detail="model switching is unavailable in this mode")
+    peer = request.client.host if request.client else ""
+    if not _model_switch_allowed(peer):
+        raise HTTPException(
+            status_code=403,
+            detail="only the laptop operator can change the shared tutor model",
+        )
+    try:
+        status = manager.switch(req.model_id)
+    except ModelSwitchError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    refresh_engine_dependencies()
+    status["selection_enabled"] = True
+    return ModelSelectResponse.model_validate(status)
 
 
 def _url_up(url: str) -> bool:

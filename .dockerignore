@@ -10,6 +10,11 @@ data/
 # Weights never enter the build context: they are provisioned onto the host and volume-
 # mounted at runtime (./models:/app/models). Without this the context carries ~13 GB.
 models
+muta-iq/model/
+muta-iq/opt/candidates/
+muta-iq/opt/models/
+muta-iq/opt/llama.cpp/
+muta-iq/opt/llama.cpp-generic/
 bench/.venv-profiler/
 bench/.artifacts/
 runtime/build/

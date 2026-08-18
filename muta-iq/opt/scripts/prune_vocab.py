@@ -12,7 +12,10 @@ Usage: prune_vocab.py in.gguf out.gguf [--dry-run] [--extra-drop-regex REGEX]
 import argparse, re, sys, time
 from pathlib import Path
 
-sys.path.insert(0, "/Users/timii/Developer/Muta/muta-iq/opt/llama.cpp/gguf-py")
+# Resolve the pinned workspace clone on macOS, Linux and a relocated checkout. The old
+# developer-absolute path made the recorded "reproduce the submission model" command fail
+# everywhere except its author's laptop.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "llama.cpp" / "gguf-py"))
 import numpy as np
 import gguf
 from gguf import GGUFReader, GGUFWriter, GGUFValueType

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "models": [
+    {
+      "id": "muta-tutor-qwen3-1.7b-q4_0",
+      "label": "Muta Tutor · Qwen3 1.7B",
+      "kind": "local",
+      "path": "muta-iq/model/muta-tutor-qwen3-1.7b-q4_0.gguf",
+      "sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+      "size_bytes": 974198528,
+      "description": "Overall competition winner: fast pure Q4_0 with a tied head.",
+      "arc_easy": 0.70,
+      "recommended": true
+    },
+    {
+      "id": "bitcpm4-8b-tq2_0-envocab",
+      "label": "BitCPM-CANN 8B · TQ2_0",
+      "kind": "local",
+      "path": "muta-iq/model/bitcpm4-8b-tq2_0-envocab.gguf",
+      "sha256": "069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d",
+      "size_bytes": 2208746208,
+      "description": "Accuracy experiment: highest ARC-Easy, but much slower on the generic audit proxy.",
+      "arc_easy": 0.84,
+      "audit_proxy_tps": 3.92,
+      "recommended": false
+    },
+    {
+      "id": "cloud",
+      "label": "Cloud model",
+      "kind": "cloud",
+      "description": "Unavailable in offline mode; local models keep every prompt on this machine.",
+      "recommended": false
+    }
+  ]
+}
