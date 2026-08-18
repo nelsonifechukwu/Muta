@@ -22,7 +22,10 @@ class ConnectivityProbe:
     def __init__(self) -> None:
         self.url = os.environ.get("MUTA_NET_PROBE_URL", "https://huggingface.co")
         self.interval_s = float(os.environ.get("MUTA_NET_PROBE_INTERVAL_S", "60"))
-        self._online: bool | None = None
+        self.forced_offline = os.environ.get("MUTA_OFFLINE", "0").lower() in {
+            "1", "true", "yes", "on"
+        }
+        self._online: bool | None = False if self.forced_offline else None
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -31,6 +34,9 @@ class ConnectivityProbe:
         return self._online
 
     def probe_once(self) -> bool:
+        if self.forced_offline:
+            self._online = False
+            return False
         try:
             # Any HTTP status proves routing (captive portals 302, rate limits 403 — the
             # packets still made it out); only transport failure means offline.
@@ -41,6 +47,9 @@ class ConnectivityProbe:
         return self._online
 
     def start(self) -> None:
+        if self.forced_offline:
+            self._online = False
+            return
         if self._thread is not None:
             return
 

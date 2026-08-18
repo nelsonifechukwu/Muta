@@ -51,6 +51,19 @@ def test_any_http_status_counts_as_online(monkeypatch):
     assert ConnectivityProbe().probe_once() is True
 
 
+def test_forced_offline_never_touches_the_network(monkeypatch):
+    def unexpected_network(*args, **kwargs):
+        raise AssertionError("forced-offline probe touched the network")
+
+    monkeypatch.setenv("MUTA_OFFLINE", "1")
+    monkeypatch.setattr(httpx, "head", unexpected_network)
+    probe = ConnectivityProbe()
+    probe.start()
+    assert probe.online() is False
+    assert probe.probe_once() is False
+    assert probe._thread is None
+
+
 def test_ready_reports_the_connectivity_verdict():
     from fastapi.testclient import TestClient
 

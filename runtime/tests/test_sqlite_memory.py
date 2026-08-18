@@ -1,0 +1,91 @@
+"""The portable SQLite store must match the Postgres ConversationStore contract."""
+
+from __future__ import annotations
+
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from runtime.memory import ConversationStore
+from runtime.sqlite_memory import _LATEST_SCHEMA_VERSION, SQLiteConversationStore, path_from_dsn
+from runtime.tests import test_memory as contract
+
+
+@pytest.fixture
+def store(tmp_path):
+    instance = ConversationStore(f"sqlite:///{tmp_path / 'muta.sqlite3'}")
+    yield instance
+    instance.close()
+
+
+def test_factory_selects_sqlite(store):
+    assert isinstance(store, SQLiteConversationStore)
+    assert store.ping() is True
+
+
+def test_relative_and_absolute_dsn_paths(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert path_from_dsn("sqlite:///data/muta.sqlite3") == "data/muta.sqlite3"
+    assert path_from_dsn("sqlite:////tmp/muta.sqlite3") == "/tmp/muta.sqlite3"
+    relative = ConversationStore("sqlite:///data/muta.sqlite3")
+    try:
+        assert Path("data/muta.sqlite3").is_file()
+    finally:
+        relative.close()
+
+
+def test_migrates_original_sqlite_database_in_place(tmp_path):
+    path = tmp_path / "legacy.sqlite3"
+    connection = sqlite3.connect(path)
+    connection.executescript(
+        """
+        CREATE TABLE conversations (
+            id TEXT PRIMARY KEY, student_id TEXT NOT NULL, mode TEXT, persona TEXT,
+            subject TEXT, language TEXT, title TEXT, created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+            role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        """
+    )
+    connection.close()
+
+    store = ConversationStore(f"sqlite:///{path}")
+    try:
+        attachment = store.add_attachment("image", "image/png", b"png", owner_id="alice")
+        assert store.get_attachment(attachment, owner_id="alice") is not None
+        versions = store._conn.execute(
+            "SELECT version FROM schema_migrations ORDER BY version"
+        ).fetchall()
+        assert [row[0] for row in versions] == list(range(1, _LATEST_SCHEMA_VERSION + 1))
+    finally:
+        store.close()
+
+
+# Re-run the exact behavioral tests used by Postgres against SQLite. Keeping aliases rather
+# than a second hand-written suite makes future store-contract additions fail here by default.
+test_messages_round_trip_in_order = contract.test_messages_round_trip_in_order
+test_recent_limit_returns_last_n_chronologically = contract.test_recent_limit_returns_last_n_chronologically
+test_conversations_scoped_to_student = contract.test_conversations_scoped_to_student
+test_persists_across_reconnect = contract.test_persists_across_reconnect
+test_add_message_returns_monotonic_ids_and_bumps_updated_at = (
+    contract.test_add_message_returns_monotonic_ids_and_bumps_updated_at
+)
+test_delete_conversation_cascades = contract.test_delete_conversation_cascades
+test_attachment_round_trip_and_linking = contract.test_attachment_round_trip_and_linking
+test_list_messages_includes_ids_and_attachment_refs = (
+    contract.test_list_messages_includes_ids_and_attachment_refs
+)
+test_set_title_only_when_unset = contract.test_set_title_only_when_unset
+test_settings_round_trip = contract.test_settings_round_trip
+test_get_attachment_owner_scoping = contract.test_get_attachment_owner_scoping
+test_get_attachment_owner_via_linked_conversation = (
+    contract.test_get_attachment_owner_via_linked_conversation
+)
+test_delete_conversation_owner_scoped = contract.test_delete_conversation_owner_scoped
+test_delete_student_erases_all_owned_data = contract.test_delete_student_erases_all_owned_data
+test_reap_orphan_attachments_only_unlinked = contract.test_reap_orphan_attachments_only_unlinked

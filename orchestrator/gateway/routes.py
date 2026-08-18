@@ -173,6 +173,17 @@ def _url_up(url: str) -> bool:
 
 
 def _db_up(dsn: str) -> bool:
+    if dsn.startswith("sqlite:///"):
+        try:
+            from runtime.sqlite_memory import SQLiteConversationStore
+
+            store = SQLiteConversationStore(dsn)
+            try:
+                return store.ping()
+            finally:
+                store.close()
+        except Exception:  # noqa: BLE001 — malformed/unwritable DB means not ready
+            return False
     try:
         import psycopg
 

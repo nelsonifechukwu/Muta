@@ -171,9 +171,10 @@ class RuntimeConfig(BaseSettings):
     ttft_seed_text: str = "Once upon a time"
 
     # --- Persistent memory ------------------------------------------------------------
-    # Postgres DSN. Default points at the compose `db` service as published on the host
-    # (127.0.0.1:15432); inside the backend container compose overrides it to db:5432.
-    db_url: str = "postgresql://muta:muta@127.0.0.1:15432/muta"
+    # Daemon-free portable default. Compose explicitly overrides this with its Postgres DSN,
+    # keeping the three-container control unchanged while host/native starts need no database
+    # service. Relative SQLite paths resolve from TUTOR_ROOT/the repo launch directory.
+    db_url: str = "sqlite:///data/muta.sqlite3"
     max_history_messages: int = 20  # multi-turn context window trim (excludes system)
 
     @field_validator("n_threads", "n_threads_batch", mode="before")

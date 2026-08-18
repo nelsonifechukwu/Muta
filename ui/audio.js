@@ -71,7 +71,7 @@
     await audioCtx.resume();
     sourceNode = audioCtx.createMediaStreamSource(mediaStream);
     if (audioCtx.audioWorklet) {
-      await audioCtx.audioWorklet.addModule("/worklet.js");
+      await audioCtx.audioWorklet.addModule(new URL("worklet.js", document.baseURI));
       captureNode = new AudioWorkletNode(audioCtx, "muta-capture");
       captureNode.port.onmessage = (ev) => onCapture(ev.data);
       sourceNode.connect(captureNode);

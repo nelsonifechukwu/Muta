@@ -243,6 +243,8 @@ def root() -> JSONResponse:
 
 # Static UI, served only once built (ROADMAP 18 Jul: bundled, no CDN). Mounted last so it
 # can never shadow the API. The browser UI is the first client of /v1, not a privileged one.
-_ui_dist = Path(__file__).resolve().parent.parent / "ui" / "dist"
-if _ui_dist.is_dir():
-    app.mount("/ui", StaticFiles(directory=str(_ui_dist), html=True), name="ui")
+_ui_root = Path(__file__).resolve().parent.parent / "ui"
+_ui_dist = _ui_root / "dist"
+_ui_assets = _ui_dist if _ui_dist.is_dir() else _ui_root
+if (_ui_assets / "index.html").is_file():
+    app.mount("/ui", StaticFiles(directory=str(_ui_assets), html=True), name="ui")

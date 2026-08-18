@@ -1,4 +1,4 @@
-"""Persistent conversation memory over Postgres.
+"""Persistent conversation memory, with Postgres control and portable SQLite backends.
 
 Tables: `conversations` (one per chat thread), `messages` (the turns), `attachments`
 (images/audio bound to a conversation/message), `user_settings` (one JSONB blob per
@@ -111,11 +111,21 @@ def _now() -> str:
 
 
 class ConversationStore:
-    """Postgres-backed store. Concurrency comes from the connection pool: every method
-    checks a connection out for just its own statement(s), so FastAPI threadpool handlers
-    never contend on a shared lock."""
+    """Store selector plus the Postgres implementation used by the Compose control.
 
-    def __init__(self, dsn: str = "postgresql://muta:muta@127.0.0.1:15432/muta") -> None:
+    A ``sqlite:///`` DSN returns the API-compatible portable implementation. PostgreSQL
+    concurrency comes from the connection pool: every method checks out a connection only for
+    its own statement(s), so FastAPI threadpool handlers never share one connection.
+    """
+
+    def __new__(cls, dsn: str = "sqlite:///data/muta.sqlite3"):
+        if cls is ConversationStore and str(dsn).startswith("sqlite:///"):
+            from runtime.sqlite_memory import SQLiteConversationStore
+
+            return SQLiteConversationStore(str(dsn))
+        return super().__new__(cls)
+
+    def __init__(self, dsn: str = "sqlite:///data/muta.sqlite3") -> None:
         self.dsn = str(dsn)
         self._pool = ConnectionPool(
             self.dsn,
