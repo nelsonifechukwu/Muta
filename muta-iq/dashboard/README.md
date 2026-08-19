@@ -19,13 +19,16 @@ env var).
 
 ## What it does
 
-- Displays the provenance-complete 19 August GGUF campaign from
-  `../../bench/measurements/campaign-20260819/summary.json`: exact model and binary hashes,
-  interleaved rounds/internal samples, task sample counts and confidence intervals, and the
-  official profiler-capped score at `TPS_REFERENCE = 15`. Override the path with
-  `MUTA_CAMPAIGN_SUMMARY`.
+- Displays the bundled profiler's full participant-mode reports from
+  `../../bench/measurements/campaign-20260819/official-profiler/summary.json`: direct profiler
+  peak RSS, generation throughput, ARC-Easy-50, exact model/report/binary hashes, and the capped
+  score at `TPS_REFERENCE = 15`. Override the path with `MUTA_CAMPAIGN_SUMMARY`.
 
-- Preserves the conflicting public-webpage interpretation in a second, non-blended panel loaded
+- Keeps the broader time-boxed profiler-parity promotion screens in a second panel loaded from
+  `../../bench/measurements/campaign-20260819/summary.json`. Those rows retain their raw timing
+  vectors but estimate the profiler root's RSS overhead. Override with `MUTA_CAMPAIGN_PARITY`.
+
+- Preserves the conflicting public-webpage interpretation in a third, non-blended panel loaded
   from `avx2-website-relative-summary.json`. It shows the same-host AVX2 deployment measurements
   under cohort-relative `100 × TPS/TPS_max` at every recorded pre-entry cohort floor. Because
   the candidate joins the cohort, the effective denominator is `max(floor, candidate TPS)`.
@@ -61,10 +64,9 @@ crash / OOM ⇒ disqualified (S_total = 0)
 
 The competition webpage separately describes a cohort-relative denominator. No public dated
 clarification resolves that contradiction; this dashboard follows the code that will execute.
-`S_acc` remains an ARC-Easy proxy; the real score also includes judging-panel quality.
-Campaign RSS cards add a clearly labelled 45 MiB estimate for the profiler Python root to the
-measured llama-bench child-tree peak; consequently the displayed efficiency and composite are
-estimates, while throughput is directly measured.
+`S_acc` remains an ARC-Easy proxy; the real score also includes judging-panel quality. The first
+campaign card uses peak RSS directly emitted by the profiler. Only the explicitly labelled
+promotion-screen card adds the 45 MiB profiler-root estimate to measured child-tree RSS.
 
 The SQLite chart/table below it is deliberately labelled **Historical profiler archive**.
 It retains the dashboard's old capped local-reference calculation for reconstructing past

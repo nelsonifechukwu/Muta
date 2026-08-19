@@ -35,6 +35,10 @@ DB_PATH = DASH_DIR / "profiler.db"
 RUNS_DIR = DASH_DIR / "runs"                # raw profiler output files (gitignored)
 CAMPAIGN_SUMMARY = Path(os.environ.get(
     "MUTA_CAMPAIGN_SUMMARY",
+    REPO_ROOT / "bench/measurements/campaign-20260819/official-profiler/summary.json",
+))
+CAMPAIGN_PARITY = Path(os.environ.get(
+    "MUTA_CAMPAIGN_PARITY",
     REPO_ROOT / "bench/measurements/campaign-20260819/summary.json",
 ))
 CAMPAIGN_ALTERNATIVE = Path(os.environ.get(
@@ -419,6 +423,10 @@ def state_payload() -> dict:
     except (OSError, json.JSONDecodeError):
         campaign = None
     try:
+        campaign_parity = json.loads(CAMPAIGN_PARITY.read_text())
+    except (OSError, json.JSONDecodeError):
+        campaign_parity = None
+    try:
         campaign_alternative = json.loads(CAMPAIGN_ALTERNATIVE.read_text())
     except (OSError, json.JSONDecodeError):
         campaign_alternative = None
@@ -435,6 +443,7 @@ def state_payload() -> dict:
                     "ram_limit_gb": RAM_LIMIT_GB,
                     "temp_limit_c": TEMP_LIMIT_C, "thermal_penalty_pts": THERMAL_PENALTY_PTS},
         "campaign": campaign,
+        "campaign_parity": campaign_parity,
         "campaign_alternative": campaign_alternative,
     }
 

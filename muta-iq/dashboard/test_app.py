@@ -18,11 +18,12 @@ def tmp_app_env():
         (tmp / "model").mkdir()
         saved = (
             app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION,
-            app.CAMPAIGN_SUMMARY, app.CAMPAIGN_ALTERNATIVE,
+            app.CAMPAIGN_SUMMARY, app.CAMPAIGN_PARITY, app.CAMPAIGN_ALTERNATIVE,
         )
-        app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION, app.CAMPAIGN_SUMMARY, app.CAMPAIGN_ALTERNATIVE = (
+        app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION, app.CAMPAIGN_SUMMARY, app.CAMPAIGN_PARITY, app.CAMPAIGN_ALTERNATIVE = (
             tmp / "model", tmp / "profiler.db", tmp / "metadata.json",
             tmp / "submission.json", tmp / "campaign-summary.json",
+            tmp / "campaign-parity.json",
             tmp / "campaign-alternative.json",
         )
         try:
@@ -31,7 +32,7 @@ def tmp_app_env():
         finally:
             (
                 app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION,
-                app.CAMPAIGN_SUMMARY, app.CAMPAIGN_ALTERNATIVE,
+                app.CAMPAIGN_SUMMARY, app.CAMPAIGN_PARITY, app.CAMPAIGN_ALTERNATIVE,
             ) = saved
 
 
@@ -241,6 +242,14 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             app.CAMPAIGN_ALTERNATIVE.write_text(json.dumps(alternative))
             payload = app.state_payload()
             self.assertEqual(payload["campaign_alternative"], alternative)
+            self.assertIsNone(payload["campaign"])
+
+    def test_profiler_parity_campaign_is_exposed_separately(self):
+        with tmp_app_env():
+            parity = {"schema_version": 1, "models": [{"model": "screen.gguf"}]}
+            app.CAMPAIGN_PARITY.write_text(json.dumps(parity))
+            payload = app.state_payload()
+            self.assertEqual(payload["campaign_parity"], parity)
             self.assertIsNone(payload["campaign"])
 
 

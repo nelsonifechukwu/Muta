@@ -60,6 +60,7 @@ function render() {
   if (!d) return;
   renderHeader(d);
   renderCampaign(d.campaign, "campaign");
+  renderCampaign(d.campaign_parity, "campaign-parity");
   renderCampaign(d.campaign_alternative, "campaign-alternative");
   renderTpsRef(d);
   renderRunCard(d);
@@ -79,6 +80,7 @@ function renderCampaign(campaign, prefix) {
   }
   const denominators = campaign.tps_max_sensitivity || [];
   const isWebsiteAlternative = String(campaign.performance_formula || "").includes("public challenge");
+  const isOfficialFullRun = campaign.evidence_tier === "official_profiler_full_run";
   const lookupDenominator = (mapping, denominator) => {
     if (!mapping) return null;
     return mapping[String(denominator)] || mapping[Number(denominator).toFixed(1)] || null;
@@ -91,13 +93,21 @@ function renderCampaign(campaign, prefix) {
     if (aScore != null && bScore != null) return bScore - aScore;
     return (b.tg_tps_mean || 0) - (a.tg_tps_mean || 0);
   });
+  const throughputLabel = isOfficialFullRun ? "Profiler generation tok/s" : "tok/s mean ± SD";
+  const rssLabel = isOfficialFullRun
+    ? "Profiler peak RSS"
+    : isWebsiteAlternative
+    ? "Measured process-tree RSS mean ± SD"
+    : models.some((model) => model.rss_estimated)
+      ? "Est. profiler RSS mean ± SD"
+      : "Profiler peak RSS mean ± SD";
   sub.textContent = `${campaign.hardware_context || "unknown host"} · ` +
     `${models.length} exact GGUF artifacts · binary ${String(campaign.benchmark_binary_sha256 || "unknown").slice(0, 12)}…`;
   const scoreHeads = denominators.map((d) =>
     `<th>S @ ${isWebsiteAlternative ? "TPS_max floor" : "profiler ref"} ${esc(d)}</th>`
   ).join("");
-  const head = `<thead><tr><th>Exact model</th><th>Size</th><th>tok/s mean ± SD</th>` +
-    `<th>Est. profiler RSS mean ± SD</th><th>Accuracy proxies</th>` +
+  const head = `<thead><tr><th>Exact model</th><th>Size</th><th>${throughputLabel}</th>` +
+    `<th>${rssLabel}</th><th>Accuracy proxies</th>` +
     `${scoreHeads}</tr></thead>`;
   const rows = models.map((m) => {
     const scoreCells = denominators.map((d) => {
@@ -111,11 +121,20 @@ function renderCampaign(campaign, prefix) {
         : "";
       return `${esc(task)} ${fmt.num(result.score_percent, 1)}% (n=${esc(result.samples)})${interval}`;
     }).join("<br>");
+    const sampleLabel = m.measurement_tier === "official_profiler_full_run"
+      ? `${esc(m.throughput_rounds)} full profiler run / ${esc(m.throughput_repetitions)} internal benchmark samples`
+      : `${esc(m.throughput_rounds)} interleaved rounds / ${esc(m.throughput_repetitions)} timed samples`;
+    const throughputCell = isOfficialFullRun
+      ? fmt.num(m.tg_tps_mean, 2)
+      : `${fmt.num(m.tg_tps_mean, 2)} ± ${fmt.num(m.tg_tps_sd, 2)}`;
+    const rssCell = isOfficialFullRun
+      ? fmt.mb(m.peak_rss_mib_mean)
+      : `${fmt.mb(m.peak_rss_mib_mean)} ± ${fmt.mb(m.peak_rss_mib_sd)}`;
     return `<tr><td><div class="model-name">${esc(shortName(m.model))}</div>` +
-      `<div class="model-sub mono">sha256:${esc(String(m.model_sha256 || "unknown").slice(0, 16))}… · ${esc(m.measurement_tier || "unlabelled")} · ${esc(m.throughput_rounds)} interleaved rounds / ${esc(m.throughput_repetitions)} timed samples</div></td>` +
+      `<div class="model-sub mono">sha256:${esc(String(m.model_sha256 || "unknown").slice(0, 16))}… · ${esc(m.measurement_tier || "unlabelled")} · ${sampleLabel}</div></td>` +
       `<td>${fmt.gb(m.model_bytes)}</td>` +
-      `<td>${fmt.num(m.tg_tps_mean, 2)} ± ${fmt.num(m.tg_tps_sd, 2)}</td>` +
-      `<td>${fmt.mb(m.peak_rss_mib_mean)} ± ${fmt.mb(m.peak_rss_mib_sd)}</td>` +
+      `<td>${throughputCell}</td>` +
+      `<td>${rssCell}</td>` +
       `<td>${accuracyEntries || "pending"}</td>` +
       scoreCells + `</tr>`;
   }).join("");
