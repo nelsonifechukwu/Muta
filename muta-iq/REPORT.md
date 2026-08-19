@@ -63,7 +63,7 @@ memory accounting, weight streaming, SVD low-rank compression, requantisation an
 pruning. Two facts from that work drove the final choice:
 
 1. **The scored run is the audit's `llama-bench` on a 4-vCPU x86 VM with the profiler image's
-   llama.cpp build (b10175, no AVX/AVX2/FMA/F16C).** On that binary only **Q4_0** has a hand-written
+   llama.cpp build (b10175, no AVX/AVX2/FMA/F16C).** On that binary only Q4_0 has a hand-written
    SIMD kernel; TQ2_0, every k-quant and every i-quant fall back to generic C and run 3–7× slower per
    byte. An 8 B ternary file that does 18 tok/s on a laptop does ~2 tok/s there. Only the GGUF file
    reaches that run, with no flags and no engine of ours, so the *file* has to be right for that
@@ -84,14 +84,14 @@ profiler's own arc_easy(50) path, and ten saved tutoring transcripts read by han
 | BitCPM-CANN-3B / 1B TQ2_0 (pruned) | 992 / 468 MB | 0.225 / 0.250 | 0.62 / 0.60 | too weak for maths |
 | MiniCPM5-1B (Q4_0) | 613–714 MB | 0.00–0.03 (template failure) | 0.48–0.52 | shipped Jinja template breaks both llama.cpp's and jinja2's renderers; fragile with system prompts |
 | LFM2.5-1.2B-Instruct Q4_0 | 696 MB | 0.575 | 0.56 | fast, weak on multiple-choice; non-OSI licence |
-| **Qwen3-1.7B, pure Q4_0, tied head** | **974 MB** | **0.70** (0.60–0.65 with a longer draft persona) | **0.70** (0.74 before the head drop) | chosen |
+| **Qwen3-1.7B, pure Q4_0, tied head** | 974 MB | 0.70 (0.60–0.65 with a longer draft persona) | 0.70 (0.74 before the head drop) | chosen |
 | Qwen3-1.7B Q4_0 (bartowski, Q6_K head + Q4_1 layers) | 1232 MB | 0.65 | 0.72 | source file |
 
 Qwen3-1.7B is the smallest model in the study that is *both* a solid multiple-choice reasoner and a
 correct, readable tutor (its transcripts get the crate-profit problem, the falling-ball
 misconception, titration and simple interest right and explain them in numbered steps).
 
-**Quantisation — pure Q4_0, tied Q4_0 embedding/LM head (974 MB).** Every matrix is Q4_0 so 100 %
+**Quantisation — pure Q4_0, tied Q4_0 embedding/LM head (974 MB).** Every matrix is Q4_0 so 100%
 of the token time runs the SSSE3 kernel on the audit build (the source GGUF's Q6_K head and three
 imatrix-induced Q4_1 layers would have run scalar generic C for a quarter of the bytes). The model's
 embedding and LM head are tied, so we drop the duplicated `output.weight` and let llama.cpp use the
@@ -115,14 +115,14 @@ prompts answered correctly with `finish_reason: stop`) and llama-cpp-python's ji
 
 **Vocabulary pruning and streaming (from the 8 B track, kept for the classroom runtime).** For the
 ternary model we built a byte-exact CJK vocabulary pruner (73,448 → 44,416 tokens, −164 MB, identical
-English tokenization and logits) and a residency-window streaming engine for llama.cpp that holds a
+English tokenisation and logits) and a residency-window streaming engine for llama.cpp that holds a
 1.7–2.4 GB model at 0.3–1.6 GB of RSS (10.5–15.4 tok/s on an M1). Neither reaches the audit binary,
 so neither is claimed in the scored numbers; both are documented in `opt/docs/` and power the
 shared-laptop deployment.
 
 **Alternatives considered and rejected with data:** SVD low-rank factor pairs (ternary matrices are
 numerically full-rank; the proposed rank-2048 pair reconstructs at 0.80 relative error), TQ1_0
-(−22 % speed on generic C), disk-fed weight streaming (1.35 GB/s SSD → 1 % of a model per token at
+(−22% speed on generic C), disk-fed weight streaming (1.35 GB/s SSD → 1% of a model per token at
 15 tok/s), layer pruning (accuracy is half the score).
 
 ---
@@ -162,10 +162,10 @@ Homebrew ARM build's numbers are given in parentheses for reference (`opt/result
 | Generation speed | 43.4 tok/s in the final `submission.json` (51.2 tok/s in an earlier run of the same file, recorded in the repo's RESULTS.md, and 52.2 with the Homebrew build; the final run overlapped a background upload) |
 | arc_easy (50, profiler's own path) | 0.70 acc_norm |
 | GSM8K-40 (greedy, baked persona, no-think, shipped file) | **0.70 (28/40)**, ~170 generated tokens per answer (`opt/eval/results/muta-tutor-ship.json`) |
-| Thermal throttling | None observed (cpu p99 65 %) |
+| Thermal throttling | None observed (cpu p99 65%) |
 
 Expected on the audit build (no-AVX x86, 4 vCPU): ~9–13 tok/s (Q4_0 SSSE3 kernel; other teams'
-published audit-build runs give 9.4 tok/s for a ≈1.2 GB Q4_0 Qwen3-1.7B, ours is 21 % smaller) and
+published audit-build runs give 9.4 tok/s for a ≈1.2 GB Q4_0 Qwen3-1.7B, ours is 21% smaller) and
 ~1.2 GB peak RSS. A ready-to-run GitHub-Actions workflow that reproduces the audit binary on a free
 x86 runner is in `opt/audit-bench/`.
 
@@ -312,11 +312,12 @@ Official scores are measured by the ADTC profiler on the standard evaluation mac
 
 ## African use case
 
-`african_alpha_claim: true` in `metadata.json` is a **use-case** claim (Devpost/template: "true only if
+`african_alpha_claim: true` in `metadata.json` is a use-case claim (Devpost/template: "true only if
 claiming the African Use Case Bonus"), not an African-language claim: `language_scope` is `["en"]`
-and the model is evaluated in English. Muta is built for the shared-laptop classroom: one 8 GB machine, ~30 students on phones over the
-local network, no internet. The persona teaches in the exam formats students actually sit
-(WASSCE/JAMB/KCSE), uses local currencies and contexts, and diagnoses misconceptions rather than
-just answering. Those are the behaviours a scarce teacher cannot give thirty students at once. The streaming
+and the model is evaluated in English. Muta is built for the shared-laptop classroom: one 8 GB
+machine, ~30 students on phones over the local network, no internet. The persona teaches in the exam
+formats students actually sit (WASSCE/JAMB/KCSE), uses local currencies and contexts, and diagnoses
+misconceptions rather than just answering. Those are the behaviours a scarce teacher cannot give
+thirty students at once. The streaming
 runtime in `opt/` exists so that the same file also fits beside a browser and a classroom server on
 that laptop.

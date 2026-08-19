@@ -85,7 +85,7 @@
         <div><p class="eyebrow">The judging problem</p><h2 id="brief-title">Four terms, and one way to score zero</h2></div>
       </header>
 
-      <p class="lead">The challenge runs a GGUF model through <code>llama.cpp</code> on an Ubuntu laptop: four CPU cores, 8 GB of RAM, no discrete GPU, a 7 GB memory ceiling. Accuracy, speed, and memory each carry weight, so a model can lose on any one of them. A crash, an out-of-memory kill, or an illegal instruction scores zero for the entire run.<span class="sidenote-number"></span><span class="sidenote">This is why the engine build pins <code>GGML_AVX512=OFF</code> and the Dockerfile greps the disassembly for AVX-512 mnemonics. An illegal instruction on the audit box is not a slow score, it is no score.</span></p>
+      <p class="lead">The challenge runs a GGUF model through <code>llama.cpp</code> on an Ubuntu laptop: four CPU cores, 8 GB of RAM, no discrete GPU, a 7 GB memory ceiling. Accuracy, speed, and memory each carry weight, so a model can lose on any one of them. A crash, an out-of-memory kill, or an illegal instruction scores zero for the entire run.<span class="sidenote-number"></span><span class="sidenote">This is why the engine build pins <code>GGML_AVX512=OFF</code> and the Dockerfile greps the disassembly for AVX-512 mnemonics. Much of the target field, including Zen 3 and 12th-generation consumer Intel, faults on AVX-512.</span></p>
 
       <figure class="equation-figure">
         <div class="equation" role="math" aria-label="Total score equals one half accuracy plus three tenths performance plus two tenths efficiency minus the thermal penalty">
@@ -210,7 +210,7 @@
       <p class="lead">The search narrowed twice. The first pass asked how much scientific reasoning disappears below four billion parameters. The second asked which tensor layout still runs fast when the official binary turns off the CPU features we had been building for.</p>
 
       <figure class="report-figure wide-figure">
-        <div class="figure-head"><div><p class="figure-kicker">Mixed evidence — labelled by phase</p><h3>The candidate funnel</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
+        <div class="figure-head"><div><p class="figure-kicker">Mixed evidence, labelled by phase</p><h3>The candidate funnel</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
         <div class="svg-chart tall-chart" id="model-funnel-chart" role="img" aria-label="Model size, accuracy proxy, and campaign status for evaluated candidate models" aria-describedby="model-funnel-summary"></div>
         <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy: Qwen3 1.7B is 0.91 GiB at 72%; Qwen3.5 0.8B is 0.50 GiB at 68%; BitCPM4 8B is 2.06 GiB at 88%; Qwen3.5 4B is 2.31 GiB at 76%; LFM2.5 1.2B is 0.65 GiB at 56%; and Qwen2.5 Math 1.5B is 0.87 GiB at 24%.</p>
         <figcaption><span>Fig. 3</span> The 4B studies established the strongest tested Qwen3.5 quality baseline. The later audit found that a smaller pure-Q4_0 model could score better because its matrices stayed on the official binary's available SIMD path.</figcaption>
@@ -220,11 +220,11 @@
       <p>On a four-task reasoning set, Qwen3.5 4B averaged 73.3, the 2B model 64.8, and the 0.8B model 51.3. The gap widened on college maths, high-school maths, and college physics: 4B led 2B by 15.7 points, 95% CI 7.8–23.5. That justified a 4B baseline, right up until the audit kernel regime changed the cost side of the equation.</p>
 
       <h3 class="section-title">The second narrowing: nine audit candidates</h3>
-      <p>The August audit covered Qwen3 and Qwen3.5 models, BitCPM ternary models, LFM2.5, MiniCPM5, and Qwen2.5 Math. Several promising files failed outright: MiniCPM's template path dropped GSM8K to 0–3%; Qwen2.5 Math collapsed under the audit configuration;<span class="sidenote-number"></span><span class="sidenote">A maths-specialised 1.5B scoring 24% on ARC-Easy is below chance-adjacent for a four-choice task. The model expects its own prompt scaffolding, which the bare-GGUF judging path does not supply.</span> the 1B and 3B ternary variants were compact but weak; and the 8B ternary model was accurate but slow in the generic kernel.</p>
+      <p>The August audit covered Qwen3 and Qwen3.5 models, BitCPM ternary models, LFM2.5, MiniCPM5, and Qwen2.5 Math. Several promising files failed outright: MiniCPM's template path dropped GSM8K to 0–3%; Qwen2.5 Math collapsed under the audit configuration;<span class="sidenote-number"></span><span class="sidenote">A maths-specialised 1.5B scoring 24% on ARC-Easy is at chance for a four-choice task. The model expects its own prompt scaffolding, which the bare-GGUF judging path does not supply.</span> the 1B and 3B ternary variants were compact but weak; and the 8B ternary model was accurate but slow in the generic kernel.</p>
 
       <aside class="design-note">
         <p class="design-note-label">Why the 1.7B model moved ahead</p>
-        <p>Pure Q4_0 routes every matrix through an SSSE3-capable kernel in the no-AVX audit build. Tying the output head removes a duplicated weight matrix and saved about 175 MB in the final control comparison. Those two properties, not parameter count, moved this exact artifact ahead.</p>
+        <p>Pure Q4_0 routes every matrix through an SSSE3-capable kernel in the no-AVX audit build. Tying the output head removes a duplicated weight matrix and saved about 175 MB in the final control comparison. Those two properties, not parameter count, moved this artifact ahead.</p>
       </aside>
     </section>
 
@@ -288,7 +288,7 @@
           <text class="kd-box-sub" x="0" y="272">Same weights, same host, same profiler. The quant type alone decides which of these two code paths runs.</text>
         </svg>
         <p class="sr-only" id="kernel-diagram-summary">On the audit build, Q4_0 tensors reach a hand-written SSSE3 kernel and the shipped artifact decodes at 9.79 tokens per second. K-quants, i-quants, and ternary types fall back to a scalar generic C implementation, and the 4B and 8B campaign entries decode at 0.8 to 1.1 tokens per second.</p>
-        <figcaption><span>Fig. 4</span> The whole quantisation argument in one picture. Under AVX2 every one of these types has a vectorised kernel, which is why the usual format advice inverts here.</figcaption>
+        <figcaption><span>Fig. 4</span> Every one of these types has a vectorised kernel under AVX2, which is why the usual format advice inverts on the audit build.</figcaption>
       </figure>
 
       <p>That single dispatch decision is why the shipped file is pure Q4_0 rather than the Q4_K_M a laptop deployment would normally prefer. The source GGUF's Q6_K head and three imatrix-induced Q4_1 layers would have run scalar C for about a quarter of the bytes.</p>
@@ -426,7 +426,7 @@
         </figure>
       </div>
 
-      <p>The budget control above assumes 48 ms of compute per token.<span class="sidenote-number"></span><span class="sidenote">Measured on the development host for the 2.2 GB ternary model. At 15 tok/s a token lasts 66.7 ms, which leaves 18.7 ms of slack — about 25 MB at 1.35 GB/s, or 1.1% of the model.</span> At the target rate and a typical SSD, the disk can deliver roughly one percent of the model per token. Streaming can only pay when the working set is already small.</p>
+      <p>The budget control above assumes 48 ms of compute per token.<span class="sidenote-number"></span><span class="sidenote">Measured on the development host for the 2.2 GB ternary model. At 15 tok/s a token lasts 66.7 ms, which leaves 18.7 ms of slack: about 25 MB at 1.35 GB/s, or 1.1% of the model.</span> At the target rate and a typical SSD, the disk can deliver roughly one percent of the model per token. Streaming can only pay when the working set is already small.</p>
 
       <h3 class="section-title">What actually reaches the judge</h3>
       <p>Streaming is one of several engineering wins that stop at the submission boundary. Naming that boundary explicitly kept product decisions and scoring decisions from contaminating each other.</p>
@@ -452,7 +452,7 @@
             </marker>
           </defs>
 
-          <text class="bd-zone" x="0" y="14">Muta, the product — everything we control</text>
+          <text class="bd-zone" x="0" y="14">Muta, the product: everything we control</text>
           <text class="bd-zone" x="530" y="14">The judge’s run</text>
 
           <!-- engine wins: measured, real, and stopped at the wall -->
@@ -500,7 +500,7 @@
           <text class="bd-note" x="530" y="88">and worth zero points here.</text>
         </svg>
         <p class="sr-only" id="boundary-summary">Four engineering results stop at the submission boundary: the residency streaming engine which cuts peak memory from 2,129 to 279 MiB, disabling repack which cuts a 4B footprint from 3,236 to 602 MiB, the six-thread cap and unified KV cache, and the lazy mmap policy. Three properties cross because they are encoded in the file: the pure Q4_0 tensor layout, the tied output head saving 255 MB, and the ChatML template with persona and sampling defaults. The judge runs stock llama.cpp b10175 with llama-bench and four threads.</p>
-        <figcaption><span>Fig. 7</span> The rule that settled several arguments. A result can be true, measured, and valuable to Muta as software while contributing nothing to the score.</figcaption>
+        <figcaption><span>Fig. 7</span> Streaming, no-repack and the thread cap all die at this wall; the quant layout, the tied head and the chat template do not. A result can be true, measured, and valuable to Muta as software while contributing nothing to the score.</figcaption>
       </figure>
 
       <aside class="design-note warning-note">
@@ -540,7 +540,7 @@
       </table></div>
       <p>The 0.8B model produced its first token 7.11 seconds sooner than the current winner.<span class="sidenote-number"></span><span class="sidenote">First-token latency carries no weight in the profiler score, but it is the first thing a student notices. It is tracked here so a future tie is broken by something a classroom would feel.</span> The 4B and 8B waits, about 6.6 and 9.7 minutes, rule out no-AVX deployment before total score enters the argument.</p>
 
-      <h3 class="section-title">How sensitive is that answer?</h3>
+      <h3 class="section-title">Sensitivity to the scoring formula</h3>
       <p>The direct campaign uses the executable's 15 tok/s cap, while the public webpage describes performance relative to the fastest cohort model. We rescored the AVX2 deployment measurements at several possible cohort floors. This does not revise the official result; it shows where the choice would change if the public formula governed.</p>
 
       <div class="sensitivity-lab">
