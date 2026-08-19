@@ -217,3 +217,5 @@ def test_cli_imports_only_accuracy_rows_from_separate_evidence(tmp_path):
     assert result["hardware_context"] == "gcp"
     assert result["accuracy_hardware_contexts"] == ["profiler-accuracy-wheel"]
     assert result["models"][0]["accuracy_proxy"] == 70.0
+    assert b"\r\n" not in output_tsv.read_bytes()
+    assert all(not line.endswith(("\t", " ")) for line in output_tsv.read_text().splitlines())

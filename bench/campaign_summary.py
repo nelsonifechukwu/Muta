@@ -282,12 +282,14 @@ def write_tsv(summary: dict, path: Path) -> None:
     ] + [f"score_tpsmax_{value}" for value in denominators]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fields, delimiter="\t")
+        writer = csv.DictWriter(f, fieldnames=fields, delimiter="\t", lineterminator="\n")
         writer.writeheader()
         for model in summary["models"]:
             row = {key: model.get(key) for key in fields}
             for value in denominators:
-                row[f"score_tpsmax_{value}"] = model.get("scores", {}).get(value, {}).get("s_total")
+                row[f"score_tpsmax_{value}"] = (
+                    model.get("scores", {}).get(value, {}).get("s_total", "NA")
+                )
             writer.writerow(row)
 
 
