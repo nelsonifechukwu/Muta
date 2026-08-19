@@ -1,0 +1,265 @@
+{
+  "avx2_binary_sha256": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8",
+  "hardware_contexts": {
+    "avx2": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
+    "scalar": "adtc_profiler_reference_cloud_vm_proxy_no_avx_2c4t"
+  },
+  "models": [
+    {
+      "accuracy_proxy": 72.0,
+      "accuracy_proxy_task": "arc_easy",
+      "avx2": {
+        "estimated_profiler_rss_mib": 2049.4,
+        "internal_repetitions": 5,
+        "pp512_sd": 0.310451,
+        "pp512_tps": 47.071575,
+        "score": {
+          "s_acc": 72.0,
+          "s_eff": 71.409,
+          "s_perf": 100.0,
+          "s_total": 80.2818,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.164245,
+        "tg128_tps": 16.892685,
+        "tree_rss_mib": 2004.4,
+        "wall_s": 104.4
+      },
+      "delta": {
+        "decode_speedup": 1.691492,
+        "decode_tps": 6.90583,
+        "estimated_profiler_rss_mib": 916.3,
+        "s_total": 7.4696
+      },
+      "model": "muta-tutor-qwen3-1.7b-q4_0.gguf",
+      "model_sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+      "scalar": {
+        "estimated_profiler_rss_mib": 1133.1,
+        "internal_repetitions": 5,
+        "pp512_sd": 0.040258,
+        "pp512_tps": 14.716567,
+        "score": {
+          "s_acc": 72.0,
+          "s_eff": 84.1922,
+          "s_perf": 66.579,
+          "s_total": 72.8122,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.038532,
+        "tg128_tps": 9.986855,
+        "tree_rss_mib": 1088.1,
+        "wall_s": 273.4
+      }
+    },
+    {
+      "accuracy_proxy": 72.0,
+      "accuracy_proxy_task": "arc_easy",
+      "avx2": {
+        "estimated_profiler_rss_mib": 1989.7,
+        "internal_repetitions": 5,
+        "pp512_sd": 0.58681,
+        "pp512_tps": 55.455439,
+        "score": {
+          "s_acc": 72.0,
+          "s_eff": 72.2419,
+          "s_perf": 100.0,
+          "s_total": 80.4484,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 1.236432,
+        "tg128_tps": 15.671438,
+        "tree_rss_mib": 1944.7,
+        "wall_s": 100.4
+      },
+      "delta": {
+        "decode_speedup": 2.959424,
+        "decode_tps": 10.376002,
+        "estimated_profiler_rss_mib": 806.2,
+        "s_total": 17.1597
+      },
+      "model": "Q4_K_M-tied.gguf",
+      "model_sha256": "e8a4133261be39c07f73c8d40e1c8334aae90ece9cae9f1cce75a8347f64c315",
+      "scalar": {
+        "estimated_profiler_rss_mib": 1183.5,
+        "internal_repetitions": 1,
+        "pp512_sd": 0.0,
+        "pp512_tps": 7.185898,
+        "score": {
+          "s_acc": 72.0,
+          "s_eff": 83.4891,
+          "s_perf": 35.3029,
+          "s_total": 63.2887,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.0,
+        "tg128_tps": 5.295436,
+        "tree_rss_mib": 1138.5,
+        "wall_s": 167.2
+      }
+    },
+    {
+      "accuracy_proxy": 76.0,
+      "accuracy_proxy_task": "arc_easy",
+      "avx2": {
+        "estimated_profiler_rss_mib": 1364.6,
+        "internal_repetitions": 5,
+        "pp512_sd": 0.133524,
+        "pp512_tps": 24.323134,
+        "score": {
+          "s_acc": 76.0,
+          "s_eff": 80.9626,
+          "s_perf": 84.7941,
+          "s_total": 79.6307,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.078446,
+        "tg128_tps": 12.719111,
+        "tree_rss_mib": 1319.6,
+        "wall_s": 183.6
+      },
+      "delta": {
+        "decode_speedup": 2.658723,
+        "decode_tps": 7.935194,
+        "estimated_profiler_rss_mib": 0.1,
+        "s_total": 15.8701
+      },
+      "model": "Q5_K_M-tied.gguf",
+      "model_sha256": "17ddf7b5b135bc9fe0ce5449b8f506f91586447f73bf145f14b52b5b4bbe0647",
+      "scalar": {
+        "estimated_profiler_rss_mib": 1364.5,
+        "internal_repetitions": 1,
+        "pp512_sd": 0.0,
+        "pp512_tps": 6.561304,
+        "score": {
+          "s_acc": 76.0,
+          "s_eff": 80.964,
+          "s_perf": 31.8928,
+          "s_total": 63.7606,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.0,
+        "tg128_tps": 4.783917,
+        "tree_rss_mib": 1319.5,
+        "wall_s": 185.5
+      }
+    },
+    {
+      "accuracy_proxy": 70.0,
+      "accuracy_proxy_task": "arc_easy",
+      "avx2": {
+        "estimated_profiler_rss_mib": 1082.3,
+        "internal_repetitions": 5,
+        "pp512_sd": 0.132911,
+        "pp512_tps": 23.936428,
+        "score": {
+          "s_acc": 70.0,
+          "s_eff": 84.9009,
+          "s_perf": 93.7624,
+          "s_total": 80.1089,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.094193,
+        "tg128_tps": 14.064354,
+        "tree_rss_mib": 1037.3,
+        "wall_s": 179.2
+      },
+      "delta": {
+        "decode_speedup": 5.634563,
+        "decode_tps": 11.568268,
+        "estimated_profiler_rss_mib": 0.5,
+        "s_total": 23.1351
+      },
+      "model": "IQ4_XS-tied.gguf",
+      "model_sha256": "aea3cb60c57cc93f74f45c36c85c80ae34d65396ec563cfba4742f89b10b6fa3",
+      "scalar": {
+        "estimated_profiler_rss_mib": 1081.8,
+        "internal_repetitions": 1,
+        "pp512_sd": 0.0,
+        "pp512_tps": 3.206277,
+        "score": {
+          "s_acc": 70.0,
+          "s_eff": 84.9079,
+          "s_perf": 16.6406,
+          "s_total": 56.9738,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.0,
+        "tg128_tps": 2.496086,
+        "tree_rss_mib": 1036.8,
+        "wall_s": 369.1
+      }
+    },
+    {
+      "accuracy_proxy": 88.0,
+      "accuracy_proxy_task": "arc_easy",
+      "avx2": {
+        "estimated_profiler_rss_mib": 2316.4,
+        "internal_repetitions": 5,
+        "pp512_sd": 0.231359,
+        "pp512_tps": 13.656857,
+        "score": {
+          "s_acc": 88.0,
+          "s_eff": 67.6842,
+          "s_perf": 49.9177,
+          "s_total": 72.5121,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.056174,
+        "tg128_tps": 7.487648,
+        "tree_rss_mib": 2271.4,
+        "wall_s": 310.6
+      },
+      "delta": {
+        "decode_speedup": 9.234707,
+        "decode_tps": 6.676832,
+        "estimated_profiler_rss_mib": 0.1,
+        "s_total": 13.3534
+      },
+      "model": "bitcpm4-8b-tq2_0-envocab.gguf",
+      "model_sha256": "069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d",
+      "scalar": {
+        "estimated_profiler_rss_mib": 2316.3,
+        "internal_repetitions": 1,
+        "pp512_sd": 0.0,
+        "pp512_tps": 0.876186,
+        "score": {
+          "s_acc": 88.0,
+          "s_eff": 67.6855,
+          "s_perf": 5.4054,
+          "s_total": 59.1587,
+          "thermal_penalty": 0.0,
+          "thermal_unknown": true
+        },
+        "tg128_sd": 0.0,
+        "tg128_tps": 0.810816,
+        "tree_rss_mib": 2271.3,
+        "wall_s": 1326.4
+      }
+    }
+  ],
+  "performance_formula": "100 * min(TPS / 15, 1)",
+  "rss_accounting": "llama-bench child-tree peak plus the raw row's 45 MiB profiler-root estimate",
+  "scalar_binary_sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+  "schema_version": 1,
+  "thermal_notice": "GCP exposes no package-temperature sensor; no penalty applied, thermal unknown",
+  "tps_reference": 15.0,
+  "winners": {
+    "avx2": {
+      "model": "Q4_K_M-tied.gguf",
+      "s_total": 80.4484
+    },
+    "scalar": {
+      "model": "muta-tutor-qwen3-1.7b-q4_0.gguf",
+      "s_total": 72.8122
+    }
+  }
+}

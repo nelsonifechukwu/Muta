@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-08-19T21:25:34Z",
+  "vm_repo_head_at_measurement": "61480eea3bbc24c8027155c1497d459d6a971e9a",
+  "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
+  "llama_cpp": {
+    "tag": "b10175",
+    "commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+    "compiler": "GNU 11.4.0",
+    "cmake": "3.22.1",
+    "scalar_binary_sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+    "avx2_binary_sha256": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8",
+    "avx2_cpu_backend_sha256": "49a5c9cfee33d198ac8e6305005dd548692077c714437c2997cfabc0fffd4277"
+  },
+  "build_policy": {
+    "GGML_NATIVE": false,
+    "GGML_AVX": true,
+    "GGML_AVX2": true,
+    "GGML_FMA": true,
+    "GGML_F16C": true,
+    "GGML_AVX512": false,
+    "GGML_AVX512_BF16": false,
+    "GGML_AVX512_VBMI": false,
+    "GGML_AVX512_VNNI": false,
+    "GGML_OPENMP": true,
+    "LLAMA_CURL": false,
+    "BUILD_SHARED_LIBS": false
+  },
+  "benchmark": {
+    "harness": "bench/adtc_bakeoff.py",
+    "geometry": "p512/tg128",
+    "n_gpu_layers": 0,
+    "thread_override": null,
+    "selected_threads": 2,
+    "internal_repetitions": 5,
+    "outer_rounds": 1,
+    "rss": "100 ms child-tree sampler plus 45 MiB profiler-root estimate",
+    "accuracy": "reused ARC-Easy-50 proxy by immutable GGUF hash",
+    "score": "100 * min(TPS / 15, 1) with 7 GiB RSS budget; temperature unknown"
+  },
+  "models": {
+    "muta-tutor-qwen3-1.7b-q4_0.gguf": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+    "Q4_K_M-tied.gguf": "e8a4133261be39c07f73c8d40e1c8334aae90ece9cae9f1cce75a8347f64c315",
+    "Q5_K_M-tied.gguf": "17ddf7b5b135bc9fe0ce5449b8f506f91586447f73bf145f14b52b5b4bbe0647",
+    "IQ4_XS-tied.gguf": "aea3cb60c57cc93f74f45c36c85c80ae34d65396ec563cfba4742f89b10b6fa3",
+    "bitcpm4-8b-tq2_0-envocab.gguf": "069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d"
+  },
+  "files": {
+    "README.md": "7f4b80adbd2a388a0d80f8dfa181d9068c5b4dc6a16b8fc240bc7a1ccd7f6c7e",
+    "CMakeCache.txt": "e9d069d266ecb2b942169798c63d98445204a635f29cffb155ff713a7a71050e",
+    "avx2-system-trace.txt": "1f73f9eb023808603dcaaf165e204e144fb5e0e54ef73113871949b4b47d24a4",
+    "binary-verification.txt": "0c781208bc265ed399ed2aacfd9f9d4aef7dba08e81a51ea2944fac87b1402d0",
+    "build.log": "81ffa64bb34d7d5e7b3277264a85f3fabc18265e81d9af03f0498a48a1cc1d0c",
+    "cmake-cache.txt": "885c0918eb84d94c07b154a6ce9382ea401b70b16d87404503d28b39c76987aa",
+    "comparison.json": "89cd93e9c1598525120f8bf9c62eb61efad5f8463f678b4f195ab4dc2b298234",
+    "comparison.tsv": "ec6f7b865da54fda9d83e0ddbf41522e37b99e576f1f92439b6ba9c7efa5f368",
+    "configure.log": "2607bff474f6e0195e76af1edfb8a27705ed353570e512383da3b5ce3d1bdbe7",
+    "cpu.txt": "ac33a8c3e954f49e7b938f380e733b2d789d2d1c6329d30ba3e4d3ca8c7b24f7",
+    "model-hashes.txt": "70bd651585460740b0a9b873444c63469b854acd13cecff1f00b5a7790569bc7",
+    "results.jsonl": "0bb4c80ab5cf3ef49044d8c82856a2b19e07a0b715d8c12601cc29d43a03d3e5",
+    "run.log": "516a251b85dedd4c83a561e90564e3c234e7d0c7a9c335b6fbb5bc1116f58432",
+    "scalar-system-trace.txt": "f43c0ece985034e55353e6d2093b589c74d90e3c0f2ca93987233ac2e66a85a7"
+  }
+}

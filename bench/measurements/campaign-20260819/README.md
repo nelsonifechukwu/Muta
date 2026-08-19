@@ -4,7 +4,7 @@
 
 This directory is the decision record for the seven-hour GGUF-only campaign. A 19 August
 provenance audit retracted the repository's unsupported claim of a private 6 August organiser
-clarification. The current official sources conflict, so this record deliberately preserves three
+clarification. The current official sources conflict, so this record deliberately preserves four
 non-interchangeable evidence lanes:
 
 1. `official-profiler/`: complete participant-mode runs emitted and schema-validated by the
@@ -21,6 +21,16 @@ non-interchangeable evidence lanes:
    pre-entry cohort floor. Because the submitted candidate joins the cohort, its effective
    denominator is `max(floor, candidate TPS)`. This is a labelled alternative, never blended
    with the primary ranking.
+4. `avx2-score-of-record/`: a fresh five-model ISA-controlled rerun using the same capped-15
+   score as the scalar lane. Every AVX2 candidate has five internal samples; complete CPU/build
+   provenance and scalar-versus-AVX2 deltas are retained beside the raw JSONL.
+
+The fresh capped-15 AVX2 rerun nominally selects **Qwen3-1.7B Q4_K_M tied** at 80.4484,
+versus 80.2818 for Muta Tutor pure Q4_0, 80.1089 for IQ4_XS, 79.6307 for Q5_K_M and
+72.5121 for BitCPM. The Q4_K_M lead is only 0.1666 points and its decode variance is much
+higher, so this is a proxy winner rather than a submission promotion. BitCPM recovers from
+0.8108 to 7.4876 tok/s (9.235×), proving the scalar kernel caused most of its collapse, but it
+still does not win the capped score.
 
 The AVX2/webpage alternative produced **four denominator-dependent finalists**:
 

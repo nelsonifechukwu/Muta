@@ -1,0 +1,5 @@
+a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e  muta-iq/model/muta-tutor-qwen3-1.7b-q4_0.gguf
+e8a4133261be39c07f73c8d40e1c8334aae90ece9cae9f1cce75a8347f64c315  muta-iq/opt/campaign/candidates/Q4_K_M-tied.gguf
+17ddf7b5b135bc9fe0ce5449b8f506f91586447f73bf145f14b52b5b4bbe0647  muta-iq/opt/campaign/candidates/Q5_K_M-tied.gguf
+aea3cb60c57cc93f74f45c36c85c80ae34d65396ec563cfba4742f89b10b6fa3  muta-iq/opt/campaign/candidates/IQ4_XS-tied.gguf
+069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d  muta-iq/model/bitcpm4-8b-tq2_0-envocab.gguf

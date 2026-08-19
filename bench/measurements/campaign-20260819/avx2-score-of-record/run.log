@@ -1,0 +1,10 @@
+[throughput] round 1 muta-tutor-qwen3-1.7b-q4_0.gguf via b10175-avx2-rerun
+  -> 16.892685 tok/s, peak 2004.4 MB
+[throughput] round 1 Q4_K_M-tied.gguf via b10175-avx2-rerun
+  -> 15.671438 tok/s, peak 1944.7 MB
+[throughput] round 1 Q5_K_M-tied.gguf via b10175-avx2-rerun
+  -> 12.719111 tok/s, peak 1319.6 MB
+[throughput] round 1 IQ4_XS-tied.gguf via b10175-avx2-rerun
+  -> 14.064354 tok/s, peak 1037.3 MB
+[throughput] round 1 bitcpm4-8b-tq2_0-envocab.gguf via b10175-avx2-rerun
+  -> 7.487648 tok/s, peak 2271.4 MB

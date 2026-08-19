@@ -27,6 +27,61 @@ floor and using `max(floor, candidate TPS)` as the effective denominator, it sel
 15, Q4_K_S at 30, Q5_K_M at 45, and BitCPM4-8B at 60/100/150. That alternative is useful if
 the webpage, rather than the published profiler image, turns out to govern the final audit.
 
+## AVX2/FMA/F16C CPU benchmark regime
+
+We reran the same five score-of-record artifacts on the same GCP 2C/4T proxy to isolate one
+variable: portable x86 SIMD. The original scalar binary remains untouched and reproducible at
+SHA-256 `7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370`.
+The new binary is a separate deterministic build at
+`4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8`, from the same llama.cpp
+b10175 commit `60bccc3763395e01b039aa1ddeacc8cc0ea69f70`, CMake 3.22.1 and GNU 11.4.0.
+
+The VM exposes AVX, AVX2, FMA and F16C. Configuration was explicit: `GGML_NATIVE=OFF`,
+`GGML_AVX=ON`, `GGML_AVX2=ON`, `GGML_FMA=ON`, `GGML_F16C=ON`, with `GGML_AVX512=OFF`,
+`GGML_AVX512_VBMI=OFF` and `GGML_AVX512_VNNI=OFF`. GGML's runtime trace reports
+`AVX=1 | AVX2=1 | F16C=1 | FMA=1`; the scalar trace reports none of them. The backend archive
+and llama-bench reproduce an independent AVX2 build byte-for-byte, and a disassembly scan found
+zero ZMM/opmask or selected AVX-512 signatures. The full CMake cache, CPU flags, compiler output,
+feature traces and build logs are retained with the result.
+
+Every artifact hash matched the scalar record. Each AVX2 invocation used the unchanged workload:
+
+```text
+llama-bench -m MODEL -p 512 -n 128 -o json -ngl 0 -r 5
+```
+
+No thread override was supplied; llama-bench selected the two physical cores. The same 100 ms
+child-tree RSS sampler and 45 MiB profiler-root estimate were used. ARC-Easy was reused by exact
+GGUF hash because the weights did not change. All AVX2 rows contain five internal timing samples;
+the scalar incumbent also has five, while the four retained scalar challenger rows remain clearly
+labelled one-repetition promotion screens.
+
+| Artifact | Scalar pp512 / tg128 | AVX2 pp512 / tg128 ± decode sd | Decode speedup | Scalar → AVX2 est. RSS | ARC-Easy | Scalar → AVX2 S_total |
+|---|---:|---:|---:|---:|---:|---:|
+| Muta Tutor Qwen3-1.7B Q4_0 tied `a98ce3…` | 14.7166 / 9.9869 | 47.0716 / 16.8927 ± 0.1642 | **1.691×** | 1133.1 → 2049.4 MiB | 72% | **72.8122 → 80.2818** |
+| **Qwen3-1.7B Q4_K_M tied `e8a413…`** | 7.1859 / 5.2954 | **55.4554 / 15.6714 ± 1.2364** | **2.959×** | 1183.5 → 1989.7 MiB | 72% | **63.2887 → 80.4484** |
+| Qwen3-1.7B Q5_K_M tied `17ddf7…` | 6.5613 / 4.7839 | 24.3231 / 12.7191 ± 0.0784 | 2.659× | 1364.5 → 1364.6 MiB | 76% | 63.7606 → 79.6307 |
+| Qwen3-1.7B IQ4_XS tied `aea3cb…` | 3.2063 / 2.4961 | 23.9364 / 14.0644 ± 0.0942 | 5.635× | 1081.8 → 1082.3 MiB | 70% | 56.9738 → 80.1089 |
+| BitCPM4-8B TQ2_0 envocab `069621…` | 0.8762 / 0.8108 | 13.6569 / 7.4876 ± 0.0562 | **9.235×** | 2316.3 → 2316.4 MiB | 88% | 59.1587 → 72.5121 |
+
+The scalar winner is Muta Tutor pure Q4_0 tied. The nominal AVX2 winner is Q4_K_M tied: both
+Q4 variants clear the 15 tok/s performance cap, and Q4_K_M's estimated RSS is 59.7 MiB lower,
+producing a 0.1666-point lead. That is not a robust promotion margin: Q4_K_M has one 13.6101
+tok/s internal outlier and substantially higher decode variance. IQ4_XS is only 0.3395 points
+behind the nominal winner with essentially no repacking-RSS increase.
+
+BitCPM's old 0.8108 tok/s result was primarily a scalar-kernel failure: AVX2 makes it 9.235×
+faster and operationally viable. The conclusion still does not flip under the capped score. At
+7.49 tok/s and about 2.26 GiB estimated profiler RSS, its 88% Easy proxy reaches 72.5121—7.94
+points behind Q4_K_M. It remains the accuracy experiment, not the capped-15 submission winner.
+
+Therefore the executable-profiler submission stays Muta Tutor pure Q4_0 tied. If the final audit
+instead supplies a portable AVX2 build, optimization direction changes toward Q4_K_M, with
+IQ4_XS close enough to confirm on the physical target before switching. The GCP host exposes no
+temperature sensor, so thermal is unknown and these are cloud-proxy, not physical-laptop, scores.
+The complete evidence is in
+`bench/measurements/campaign-20260819/avx2-score-of-record/`.
+
 ---
 
 ## Historical 17 August report (superseded where it conflicts with the correction above)

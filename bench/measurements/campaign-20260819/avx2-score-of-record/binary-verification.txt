@@ -1,0 +1,22 @@
+COMMIT=60bccc3763395e01b039aa1ddeacc8cc0ea69f70
+SCALAR_SHA=7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370
+AVX2_SHA=4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8
+bench/.artifacts/llama.cpp-b10175/build/bin/llama-bench:                     ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=c2dcad373eb577787db11f0f74e5d9e95c060bed, for GNU/Linux 3.2.0, not stripped
+bench/.artifacts/llama.cpp-b10175/build-avx2-rerun-20260819/bin/llama-bench: ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=e126337d84a9780daaf1e38f9f4f98c5ebd23319, for GNU/Linux 3.2.0, not stripped
+CMAKE_FEATURES
+BUILD_SHARED_LIBS:BOOL=OFF
+CMAKE_BUILD_TYPE:STRING=Release
+GGML_AVX:BOOL=ON
+GGML_AVX2:BOOL=ON
+GGML_AVX512:BOOL=OFF
+GGML_AVX512_VBMI:BOOL=OFF
+GGML_AVX512_VNNI:BOOL=OFF
+GGML_F16C:BOOL=ON
+GGML_FMA:BOOL=ON
+GGML_NATIVE:BOOL=OFF
+GGML_OPENMP:BOOL=ON
+LLAMA_CURL:UNINITIALIZED=OFF
+AVX512_DISASSEMBLY_COUNT
+0
+ZMM_OR_OPMASK_COUNT
+0

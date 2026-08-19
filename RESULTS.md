@@ -56,6 +56,26 @@ lead cannot repay its 8.98 tok/s deficit. These are ARC-proxy, sensorless cloud 
 panel or physical-laptop thermal scores. The broader quant-ladder promotion screens remain in the
 campaign root summary rather than being overwritten by this four-model confirmation set.
 
+**Controlled AVX2/FMA/F16C rerun** — same five scalar score-of-record artifacts, hashes,
+`p512/tg128`, `-ngl 0`, two default physical-core threads, RSS accounting, ARC-Easy proxies and
+capped-15 formula. The separate deterministic b10175 binary is SHA-256 `4abfa11a…2fd8`, built
+with native and every AVX-512 option off; GGML reports AVX/AVX2/FMA/F16C on. Every AVX2 row has
+five internal samples.
+
+| GGUF | scalar → AVX2 tg | speedup | scalar → AVX2 est. profiler RSS | AVX2 S_total |
+|---|---:|---:|---:|---:|
+| Muta Tutor Q4_0 tied | 9.9869 → 16.8927 | 1.691× | 1133.1 → 2049.4 MiB | 80.2818 |
+| **Q4_K_M tied** | 5.2954 → 15.6714 | 2.959× | 1183.5 → 1989.7 MiB | **80.4484** |
+| Q5_K_M tied | 4.7839 → 12.7191 | 2.659× | 1364.5 → 1364.6 MiB | 79.6307 |
+| IQ4_XS tied | 2.4961 → 14.0644 | 5.635× | 1081.8 → 1082.3 MiB | 80.1089 |
+| BitCPM4-8B TQ2 envocab | 0.8108 → 7.4876 | **9.235×** | 2316.3 → 2316.4 MiB | 72.5121 |
+
+Q4_K_M is the nominal AVX2 winner, but only 0.1666 points ahead of Q4_0 and with one
+13.6101 tok/s internal outlier. That does not overturn the executable scalar-profiler submission
+choice without a physical target confirmation. BitCPM becomes operationally viable, proving its
+old collapse was primarily the scalar TQ2 path, but remains 7.94 points behind the AVX2 winner.
+Exact vectors and build/CPU provenance are in `avx2-score-of-record/`.
+
 **Preserved webpage alternative:** the full AVX2 ladder remains in
 `bench/measurements/campaign-20260819/avx2*`. Treating 15/30/45/60/100/150 as pre-entry
 cohort floors and using `max(floor, candidate TPS)` as the effective denominator, the proxy

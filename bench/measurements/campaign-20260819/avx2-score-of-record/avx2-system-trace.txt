@@ -1,0 +1,37 @@
+
+
+Loading model... |0.00.011.654 I cmn  common_param: common_params_print_info: build 1 (60bccc3) with GNU 11.4.0 for Linux x86_64
+0.00.011.655 I cmn  common_param: common_params_print_info: verbosity = 5 (adjust with the `-lv N` CLI arg)
+0.00.011.655 I cmn  common_param: device_info:
+0.00.011.661 I cmn  common_param:   - CPU     : Intel(R) Xeon(R) CPU @ 2.80GHz (7938 MiB, 7938 MiB free)
+0.00.011.720 I cmn  common_param: system_info: n_threads = 2 (n_threads_batch = 2) / 4 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 |
+0.00.013.986 I srv          init: using 5 threads for HTTP server
+0.00.014.034 D srv          init: serve nocache for _app/version.json
+0.00.014.437 D srv          init: serve nocache for build.json
+0.00.014.460 D srv          init: serve nocache for manifest.webmanifest
+0.00.014.526 D srv          init: serve nocache for sw.js
+0.00.014.777 W srv  llama_server: -----------------
+0.00.014.779 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.014.779 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.014.779 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.014.780 W srv  llama_server: -----------------
+0.00.015.515 I srv         start: binding port with default address family
+0.00.016.764 I srv    load_model: loading model '/nonexistent/muta.gguf'
+0.00.016.769 I srv    load_model: local path '/nonexistent/muta.gguf'
+0.00.016.777 I cmn  common_init_: fitting params to device memory ...
+0.00.016.777 I cmn  common_init_: (for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on)
+0.00.016.788 I common_params_fit_impl: getting device memory data for initial parameters:
+0.00.017.495 E gguf_init_from_file: failed to open GGUF file '/nonexistent/muta.gguf' (No such file or directory)
+0.00.021.286 E llama_model_load: error loading model: llama_model_loader: failed to load model from /nonexistent/muta.gguf
+0.00.021.296 E llama_model_load_from_file_impl: failed to load model
+0.00.023.440 E common_fit_params: encountered an error while trying to fit params to free device memory: failed to load model
+0.00.023.447 I common_fit_params: fitting params to free memory took 0.01 seconds
+0.00.023.460 E gguf_init_from_file: failed to open GGUF file '/nonexistent/muta.gguf' (No such file or directory)
+0.00.023.468 E llama_model_load: error loading model: llama_model_loader: failed to load model from /nonexistent/muta.gguf
+0.00.023.469 E llama_model_load_from_file_impl: failed to load model
+0.00.023.470 E cmn  common_init_: failed to load model '/nonexistent/muta.gguf'
+0.00.023.475 E srv    load_model: failed to load model, '/nonexistent/muta.gguf'
+0.00.023.476 I srv    operator(): operator(): cleaning up before exit...
+0.00.024.178 E srv  llama_server: exiting due to model loading error
+llama_server exited with code 1
+-\ Error: the server exited before becoming ready
