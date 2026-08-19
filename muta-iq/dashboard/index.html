@@ -41,7 +41,6 @@
       <li><a href="#avx2-campaign">AVX2 comparison</a></li>
       <li><a href="#ledger">Experiment decisions</a></li>
       <li><a href="#faq">Challenge requirements</a></li>
-      <li><a href="#current-state">Required validation</a></li>
       <li><a href="#profiler">Profiler data</a></li>
     </ol>
     <div class="contents-note">
@@ -55,13 +54,13 @@
     <header class="hero" id="overview">
       <p class="eyebrow">Muta model optimisation report · July–August 2026</p>
       <h1>Model selection for the 8 GB CPU target</h1>
-      <p class="dek">Muta is an offline tutor for mathematics and scientific reasoning. The submitted GGUF must run on an 8 GB CPU-only laptop. This report compares model accuracy, generation throughput, peak resident memory, and compatibility with the evaluator's runtime.</p>
+      <p class="dek">The submitted GGUF must run on an 8 GB CPU-only laptop. This report compares accuracy, generation throughput, peak RSS, and evaluator compatibility.</p>
 
       <div class="verdict">
         <div>
           <p class="verdict-label">Selected model · portable AVX2 configuration</p>
           <h2><code>Q4_K_M-tied.gguf</code></h2>
-          <p>With AVX, AVX2, FMA, and F16C enabled, Q4_K_M has the highest measured total, 80.4484. It exceeds the 15 tok/s performance threshold, records the same 72% ARC-Easy proxy as Q4_0, and has 59.7 MiB lower estimated profiler RSS. The published scalar profiler instead selects Q4_0. Model selection is therefore conditional on the runtime's CPU kernels.</p>
+          <p>Q4_K_M records 80.4484 with portable AVX2: 72% ARC-Easy, 15.67 tok/s, and 1,989.7 MiB estimated RSS. The published scalar profiler instead selects Q4_0.</p>
         </div>
         <div class="regime-result-grid">
           <article class="avx2-result">
@@ -75,7 +74,7 @@
         </div>
       </div>
 
-      <p class="hero-caveat"><strong>Selection condition:</strong> Use Q4_K_M when the evaluator enables portable AVX2 kernels. Use Q4_0 with the published scalar participant image. The GCP host did not expose package temperature. The 50-item accuracy sample does not establish a statistically precise capability difference between these two artifacts.</p>
+      <p class="hero-caveat"><strong>Selection condition:</strong> Use Q4_K_M with portable AVX2 kernels. Use Q4_0 with the published scalar participant image. Physical-target temperature and a larger accuracy evaluation remain unmeasured.</p>
       <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from this snapshot.</strong> The static text reports the 19 August campaign; the operational appendix shows the configured override.</p>
 
       <dl class="artifact-line">
@@ -92,7 +91,7 @@
         <div><p class="eyebrow">Scoring function</p><h2 id="brief-title">Score components and disqualification conditions</h2></div>
       </header>
 
-      <p class="lead">The evaluator runs one GGUF with <code>llama.cpp</code> on an Ubuntu laptop with four CPU cores, 8 GB of RAM, no discrete GPU, and a 7 GB memory limit. The total combines accuracy, generation throughput, peak RSS, and a thermal penalty. A crash, out-of-memory termination, or illegal instruction disqualifies the run.<span class="sidenote-number"></span><span class="sidenote">The engine build sets <code>GGML_AVX512=OFF</code>, and the Docker build checks the disassembly for AVX-512 instructions. Zen 3 and several consumer Intel processors do not support AVX-512.</span></p>
+      <p class="lead">The evaluator runs one GGUF with <code>llama.cpp</code> on a four-core, 8 GB Ubuntu laptop. Accuracy, generation throughput, peak RSS, and temperature determine the score. A crash, OOM, or illegal instruction disqualifies the run.<span class="sidenote-number"></span><span class="sidenote">The engine disables AVX-512 and checks the disassembly because several eligible consumer CPUs do not support it.</span></p>
 
       <figure class="equation-figure">
         <div class="equation" role="math" aria-label="Total score equals one half accuracy plus three tenths performance plus two tenths efficiency minus the thermal penalty">
@@ -109,7 +108,7 @@
         <figcaption><span>Fig. 1</span> Fixed-15 profiler score. Below 15 tok/s, an increase of 1 tok/s adds 2.00 total points. One accuracy point adds 0.50. A reduction of 1 GB in peak RSS adds 2.86.</figcaption>
       </figure>
 
-      <p>Performance is capped at 15 tok/s, and efficiency is zero at or above 7 GB RSS.<span class="sidenote-number"></span><span class="sidenote"><code>S_perf = min(TPS/15, 1) × 100</code> and <code>S_eff = max(0, (7 GB − RSS)/7 GB) × 100</code>.</span> All evaluated candidates remained below the memory limit. Accuracy is uncapped and contributes 50% of the total. Additional memory is beneficial only when the associated accuracy or throughput increase exceeds its efficiency cost.</p>
+      <p>Performance is capped at 15 tok/s; efficiency reaches zero at 7 GB RSS.<span class="sidenote-number"></span><span class="sidenote"><code>S_perf = min(TPS/15, 1) × 100</code> and <code>S_eff = max(0, (7 GB − RSS)/7 GB) × 100</code>.</span> All candidates remained below the limit.</p>
 
       <div class="score-lab" id="score-lab">
         <div class="figure-head">
@@ -134,7 +133,7 @@
 
       <aside class="design-note">
         <p class="design-note-label">Decision rule</p>
-        <p>An additional 1 GB of RSS requires either 1.43 tok/s or 5.7 accuracy points to preserve the same total. This threshold is applied only within measurements that use the same hardware, binary, and scoring formula.</p>
+        <p>An additional 1 GB RSS requires 1.43 tok/s or 5.7 accuracy points to break even. Apply this only within one hardware, binary, and scoring configuration.</p>
       </aside>
     </section>
 
@@ -143,33 +142,33 @@
         <span class="chapter-number">02</span>
         <div><p class="eyebrow">Evidence categories</p><h2 id="evidence-title">Five non-comparable measurement categories</h2></div>
       </header>
-      <p class="lead">The measurements use different machines, binaries, and performance formulas. Results are grouped into five categories. Rankings are computed only within a category unless the comparison controls those differences explicitly.</p>
+      <p class="lead">Results are ranked only within the same machine, binary, and performance formula.</p>
 
       <div class="evidence-grid">
         <article class="evidence-card official">
           <p class="evidence-label"><span></span>Official profiler result</p>
           <h3>Full profiler execution</h3>
-          <p>The published participant executable measures generation throughput and root-plus-child peak RSS. Q4_0 has the highest total under this executable's scalar kernel configuration.</p>
+          <p>The participant executable measures throughput and root-plus-child RSS. Q4_0 leads its scalar configuration.</p>
         </article>
         <article class="evidence-card parity">
           <p class="evidence-label"><span></span>Profiler-parity estimate</p>
           <h3>No-AVX reconstruction</h3>
-          <p>This configuration reproduces the no-AVX engine policy. Throughput is measured in timed samples. Profiler RSS is estimated by adding a documented 45 MiB root-process allowance to the measured child tree.<span class="sidenote-number"></span><span class="sidenote">The allowance represents the Python interpreter and lm-eval imports in the profiler root process. It is an estimate, not a direct measurement.</span></p>
+          <p>Timed no-AVX samples plus measured child-tree RSS and a 45 MiB profiler-root estimate.<span class="sidenote-number"></span><span class="sidenote">The allowance covers the Python interpreter and lm-eval imports; it is estimated, not directly measured.</span></p>
         </article>
         <article class="evidence-card avx2">
           <p class="evidence-label"><span></span>Controlled AVX2 proxy</p>
           <h3>Paired ISA benchmark</h3>
-          <p>The same five GGUF hashes were measured with AVX, AVX2, FMA, and F16C enabled, with native tuning and AVX-512 disabled. Q4_K_M has the highest fixed-15 total in this category.</p>
+          <p>The same five hashes were tested with portable AVX2 and no AVX-512. Q4_K_M has the highest fixed-15 total.</p>
         </article>
         <article class="evidence-card sensitivity">
           <p class="evidence-label"><span></span>Website sensitivity</p>
           <h3>Cohort-relative sensitivity</h3>
-          <p>The AVX2 measurements are also evaluated with the public website's cohort-relative denominator. These calculations test denominator sensitivity and do not replace the direct profiler result.</p>
+          <p>The AVX2 rows are recalculated with a cohort-relative denominator. This is sensitivity analysis, not a profiler result.</p>
         </article>
         <article class="evidence-card development">
           <p class="evidence-label"><span></span>Development result</p>
           <h3>Development experiments</h3>
-          <p>Mac, Docker, GCP, and custom-engine measurements are used to evaluate implementation changes. They are excluded from submission-artifact rankings.</p>
+          <p>Mac, Docker, GCP, and custom-engine tests guide implementation but do not rank submission artifacts.</p>
         </article>
       </div>
 
@@ -190,14 +189,7 @@
         <span class="chapter-number">03</span>
         <div><p class="eyebrow">Runtime benchmarks</p><h2 id="runtime-title">Controlled runtime baseline</h2></div>
       </header>
-      <p class="lead">The initial July Docker configuration generated approximately 5.3 tok/s and reached at least 4.77 GB. Concurrency, cache size, and checkpoint count were fixed before subsequent single-variable comparisons.</p>
-
-      <div class="milestones">
-        <article><time>30 Jul</time><h3>Baseline</h3><p>Approximately 5.3 tok/s and at least 4.77 GB. Used for smoke-test comparisons.</p></article>
-        <article><time>31 Jul</time><h3>Resource caps</h3><p>Parallel slots 2, four checkpoints, 256 MiB cache: 6.72 tok/s and 4.44 GB.</p></article>
-        <article><time>1 Aug</time><h3>Native sweep</h3><p>Six batch and six decode threads, unified KV, two checkpoints: 31.09 tok/s and 3,137 MiB physical footprint.</p></article>
-        <article><time>1 Aug</time><h3>Bandwidth estimate</h3><p>31.1 tok/s was 83% of the 37.3 tok/s weight-bandwidth estimate. Additional threads did not increase throughput.</p></article>
-      </div>
+      <p class="lead">Runtime controls were fixed before model comparisons. Six threads, unified KV, and two checkpoints produced 31.09 tok/s at 3,137 MiB, 83% of the estimated weight-bandwidth limit.</p>
 
       <figure class="report-figure">
         <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Selected runtime configurations</h3></div><span class="evidence-badge development">Development</span></div>
@@ -207,12 +199,11 @@
       </figure>
 
       <div class="finding-pair">
-        <article><p class="result-tag rejected">Rejected</p><h3>Draft-model speculation</h3><p>A 0.8B draft accepted 98.4% of proposals yet slowed native generation from 30.84 to 24.72 tok/s. Host memory was not reliable in that run, so the rejection rests on measured throughput alone.</p></article>
-        <article><p class="result-tag rejected">Rejected</p><h3>N-gram speculation</h3><p>The tested acceptance rate was 12–22%. Lookup and verification overhead exceeded the throughput benefit. The feature remains disabled pending evaluation on representative tutoring traces.</p></article>
-        <article><p class="result-tag adopted">Adopted</p><h3>Thread cap</h3><p>Increasing the thread count from six to ten reduced decode throughput to approximately 4.4 tok/s. Temperature was not measured, so the thermal effect of the thread cap is unknown.</p></article>
-        <article><p class="result-tag adopted">Adopted</p><h3>Unified KV and fewer checkpoints</h3><p>This configuration reduced retained state and improved prefill without reducing decode throughput.<span class="sidenote-number"></span><span class="sidenote">A unified KV cache allocates capacity across active slots instead of reserving a fixed block for each slot.</span> The context budget was set explicitly for subsequent comparisons.</p></article>
+        <article><p class="result-tag rejected">Rejected</p><h3>Draft-model speculation</h3><p>98.4% acceptance still reduced generation from 30.84 to 24.72 tok/s.</p></article>
+        <article><p class="result-tag rejected">Rejected</p><h3>N-gram speculation</h3><p>Acceptance was 12–22%; lookup and verification overhead exceeded the gain.</p></article>
+        <article><p class="result-tag adopted">Adopted</p><h3>Six-thread cap</h3><p>Ten threads reduced decode to approximately 4.4 tok/s. Temperature was unavailable.</p></article>
+        <article><p class="result-tag adopted">Adopted</p><h3>Unified KV, two checkpoints</h3><p>Reduced retained state and improved prefill without reducing decode.<span class="sidenote-number"></span><span class="sidenote">Unified KV shares capacity across active slots instead of reserving a fixed block per slot.</span></p></article>
       </div>
-      <p>The selected runtime reached 83% of the estimated weight-bandwidth limit. Subsequent optimisation therefore focused on reducing model bytes processed per generated token rather than increasing the thread count.</p>
     </section>
 
     <section class="chapter" id="funnel" aria-labelledby="funnel-title">
@@ -220,7 +211,7 @@
         <span class="chapter-number">04</span>
         <div><p class="eyebrow">Candidate evaluation</p><h2 id="funnel-title">Model-scale and runtime-specific selection</h2></div>
       </header>
-      <p class="lead">Candidate selection used two evaluations. The first measured reasoning accuracy across model scales. The second measured GGUF artifacts under the scalar participant binary and the portable AVX2 configuration.</p>
+      <p class="lead">A four-task study compared model scales; the audit campaign then compared exact GGUFs under scalar and portable AVX2 kernels.</p>
 
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Separate accuracy evaluations</p><h3>Candidate measurements</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
@@ -229,16 +220,7 @@
         <figcaption><span>Fig. 3</span> Qwen3.5 4B had the highest result in the four-task reasoning study. In the audit comparison, Q4_0 had the highest scalar total and Q4_K_M had the highest portable AVX2 total.</figcaption>
       </figure>
 
-      <h3 class="section-title">Model-scale comparison</h3>
-      <p>On the four-task reasoning set, Qwen3.5 4B averaged 73.3, the 2B model 64.8, and the 0.8B model 51.3. Across college mathematics, high-school mathematics, and college physics, the 4B model exceeded the 2B model by 15.7 points, with a 95% confidence interval of 7.8–23.5. The 4B model was retained as the accuracy baseline for the audit candidates.</p>
-
-      <h3 class="section-title">Audit candidate comparison</h3>
-      <p>The August audit included Qwen3, Qwen3.5, BitCPM, LFM2.5, MiniCPM5, and Qwen2.5 Math. MiniCPM recorded 0–3% on GSM8K with the evaluated template path. Qwen2.5 Math recorded 24% on ARC-Easy under the audit configuration.<span class="sidenote-number"></span><span class="sidenote">A score of 24% is approximately chance performance on a four-choice task. The evaluated bare-GGUF path did not include the model-specific prompt structure.</span> The 1B and 3B BitCPM variants had lower accuracy. The 8B BitCPM variant had higher accuracy but lower scalar-kernel throughput.</p>
-
-      <aside class="design-note">
-        <p class="design-note-label">Runtime-dependent selection</p>
-        <p>Pure Q4_0 uses an SSSE3-capable kernel in the scalar audit build. The portable AVX2 backend provides vector kernels for Q4_K_M, Q5_K_M, IQ4_XS, and TQ2_0. Q4_0 has the highest scalar total; Q4_K_M has the highest portable AVX2 total.</p>
-      </aside>
+      <p>Qwen3.5 4B led the 2B model by 15.7 points across mathematics and physics and remained the accuracy baseline. MiniCPM recorded 0–3% on GSM8K, and Qwen2.5 Math recorded 24% on ARC-Easy with the tested prompt path. BitCPM 8B had the highest ARC-Easy result but low scalar throughput.</p>
     </section>
 
     <section class="chapter" id="quantization" aria-labelledby="quant-title">
@@ -246,7 +228,7 @@
         <span class="chapter-number">05</span>
         <div><p class="eyebrow">Quantization and kernel dispatch</p><h2 id="quant-title">Quantization type affects throughput and RSS</h2></div>
       </header>
-      <p class="lead">A GGUF quantization type determines the stored tensor size and the kernel used by <code>llama.cpp</code>. It can also enable runtime tensor repacking.<span class="sidenote-number"></span><span class="sidenote">In the paired campaign, Q4_0 estimated profiler RSS increased from 1,133.1 to 2,049.4 MiB when AVX2 repacking was enabled. Q4_K_M increased from 1,183.5 to 1,989.7 MiB. Q5_K_M and IQ4_XS increased throughput with less than 1 MiB additional RSS.</span> File size alone is therefore insufficient for predicting throughput or peak RSS.</p>
+      <p class="lead">Quantization determines stored size, kernel dispatch, and possible tensor repacking. File size alone does not predict throughput or RSS.<span class="sidenote-number"></span><span class="sidenote">With AVX2 repacking, estimated RSS rose by 916.3 MiB for Q4_0 and 806.2 MiB for Q4_K_M, but by less than 1 MiB for Q5_K_M and IQ4_XS.</span></p>
 
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Scalar profiler configuration</p><h3>Kernel dispatch by tensor type</h3></div><span class="evidence-badge official">Scalar audit build</span></div>
@@ -306,13 +288,8 @@
 
       <p>Under the scalar configuration, Q4_0 reached 9.99 tok/s and Q4_K_M reached 5.30 tok/s. Under the portable AVX2 configuration, Q4_K_M reached 15.67 tok/s and scored 80.4484. Q4_0 reached 16.89 tok/s and scored 80.2818 because its estimated repacking RSS was 59.7 MiB higher.</p>
 
-      <div class="concept-grid">
-        <article><span>IQ4_XS</span><h3>File size and runtime conversion</h3><p>The 4B IQ4_XS accuracy result remained stable, while throughput and resident memory varied with the engine's conversion path. Scored memory must therefore be measured at runtime.</p></article>
-        <article><span>Importance matrix</span><h3>No reliable gain</h3><p>The tested imatrix build changed ARC-Easy, GSM8K, college mathematics, and physics results by approximately one or two items in opposing directions. No repeatable accuracy improvement was measured.</p></article>
-      </div>
-
       <h3 class="section-title">Artifact derivation</h3>
-      <p>The scripts in <code>opt/scripts/</code> reproduce the promoted SHA-256 from a pinned public source file.</p>
+      <p><code>opt/scripts/</code> reproduces the promoted SHA-256 from a pinned source.</p>
 
       <figure class="report-figure wide-figure">
         <svg viewBox="0 0 720 264" role="img" aria-labelledby="derivation-title" aria-describedby="derivation-summary">
@@ -372,7 +349,7 @@
         <figcaption><span>Fig. 5</span> The source-to-artifact change combines requantisation and head tying. The separate A/B control attributes about 175 MB to the tied head alone.</figcaption>
       </figure>
 
-      <details class="reasoning-check" open>
+      <details class="reasoning-check">
         <summary>mmap is controlled by the evaluator's runtime</summary>
         <div>
           <p>The stock Linux audit runtime opens the GGUF with eager page population, so RSS includes file-backed weight pages and runtime buffers. A custom lazy-mmap engine can reduce deployment memory, but mmap policy is not encoded in the submitted GGUF.</p>
@@ -392,7 +369,7 @@
         <span class="chapter-number">06</span>
         <div><p class="eyebrow">BitCPM4-8B evaluation</p><h2 id="ternary-title">Accuracy, throughput, and model-size results</h2></div>
       </header>
-      <p class="lead">BitCPM4-8B-TQ2_0 recorded 88% on 50 ARC-Easy items, the highest accuracy proxy among the compact candidates. Vocabulary pruning reduced the artifact to approximately 2.2 GB.<span class="sidenote-number"></span><span class="sidenote">TQ2_0 represents weights with three values at approximately 2 bits per weight. The scalar binary produced 0.81 tok/s; the portable AVX2 backend produced 7.49 tok/s.</span> AVX2 increased decode throughput by 9.235× and increased the total from 59.1587 to 72.5121. The result remained below the Qwen quantization results above 79 points.</p>
+      <p class="lead">BitCPM4-8B-TQ2_0 recorded 88% ARC-Easy. AVX2 raised decode from 0.81 to 7.49 tok/s and the total from 59.1587 to 72.5121, below the Qwen results above 79.</p>
 
       <div class="experiment-sequence" aria-label="BitCPM optimisation sequence">
         <article><span>01</span><h3>Vocabulary pruning</h3><p>The vocabulary decreased from 73,448 to 44,416 tokens and was padded to a multiple of 64. File size decreased by 164 MB. English tokenisation matched across 20,464 checked tokens; perplexity decreased from 10.558 to 10.473.</p><strong>Kept</strong></article>
@@ -401,7 +378,6 @@
         <article><span>04</span><h3>Factorisation and sparsity tests</h3><p>The ternary matrices were full-rank. Rank-2048 factorisation error was approximately 0.80 before quantization. Dense GGUF storage and kernels did not reduce storage or multiplication for unstructured zeros.</p><strong>Rejected</strong></article>
       </div>
 
-      <p>Vocabulary pruning was retained because English tokenization matched across 20,464 checked tokens and perplexity changed from 10.558 to 10.473. BitCPM did not have the highest total in either CPU configuration. Under AVX2 it remained below 15 tok/s with 2,316.4 MiB estimated profiler RSS.</p>
     </section>
 
     <section class="chapter" id="streaming" aria-labelledby="streaming-title">
@@ -409,7 +385,7 @@
         <span class="chapter-number">07</span>
         <div><p class="eyebrow">Runtime-only memory optimisation</p><h2 id="streaming-title">Weight streaming measurements and submission exclusion</h2></div>
       </header>
-      <p class="lead">The custom engine reduced peak RSS by loading weights from storage during inference. Streaming all weights measured 279 MiB peak RSS and 10.47 tok/s. It did not meet the 15 tok/s threshold, and the required engine changes are not included in a GGUF-only submission.</p>
+      <p class="lead">Full weight streaming measured 279 MiB RSS and 10.47 tok/s. It missed the 15 tok/s threshold and requires runtime changes that a GGUF cannot contain.</p>
 
       <div class="streaming-lab">
         <div class="controls-column">
@@ -435,10 +411,10 @@
         </figure>
       </div>
 
-      <p>The calculation assumes 48 ms of compute per token.<span class="sidenote-number"></span><span class="sidenote">This value was measured on the development host with the 2.2 GB ternary model. At 15 tok/s, the 66.7 ms token interval leaves 18.7 ms for storage reads. At 1.35 GB/s this is approximately 25 MB, or 1.1% of the model.</span> This storage bandwidth is insufficient to stream a large fraction of the model at 15 tok/s.</p>
+      <p>The 48 ms compute time leaves 18.7 ms for storage reads at 15 tok/s: about 25 MB, or 1.1% of the model, at 1.35 GB/s.</p>
 
       <h3 class="section-title">Properties included in the submitted artifact</h3>
-      <p>Streaming, repacking policy, lazy mmap, thread count, and KV-cache configuration require runtime control. The submitted artifact contains the tensor quantization, tied output head, metadata, and chat template.</p>
+      <p>The GGUF contains tensors, quantization, the tied head, metadata, and chat template. Streaming, repacking, mmap, threads, and KV configuration belong to the runtime.</p>
 
       <figure class="report-figure wide-figure">
         <div class="svg-chart submission-classification">
@@ -487,7 +463,6 @@
         <p class="design-note-label">Submission constraint</p>
         <p>The custom page-cache engine can be used in the Muta application. It is excluded from the competition score because the organiser evaluates the GGUF with its own runtime.</p>
       </aside>
-      <p>Runtime changes and GGUF changes are evaluated separately. The submitted quantization still interacts with the evaluator's available kernels: Q4_0 has the highest total in the scalar configuration, while Q4_K_M has the highest total in the portable AVX2 configuration.</p>
     </section>
 
     <section class="chapter" id="campaign" aria-labelledby="campaign-title">
@@ -510,7 +485,9 @@
         </figure>
       </div>
 
-      <div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="official-data-table" aria-label="Official profiler campaign summary">
+      <details class="reasoning-check measurement-disclosure">
+        <summary>Exact scalar measurements</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="official-data-table" aria-label="Official profiler campaign summary">
         <thead><tr><th>Exact artifact</th><th>tok/s</th><th>First token</th><th>Peak RSS</th><th>ARC-Easy</th><th>Total</th></tr></thead>
         <tbody>
           <tr class="selected-row"><td><strong><code>muta-tutor-qwen3-1.7b-q4_0.gguf</code></strong><small>Scalar participant choice · 974,198,528 bytes · SHA-256 a98ce36e…fd63e</small></td><td>9.79</td><td>35.37 s</td><td>1,116 MiB</td><td>72% <small>58.3–82.5</small></td><td><strong>72.47</strong></td></tr>
@@ -518,11 +495,12 @@
           <tr><td><code>bitcpm4-8b-tq2_0-envocab.gguf</code></td><td>0.81</td><td>584.15 s</td><td>2,307 MiB</td><td>88% <small>76.2–94.4</small></td><td>59.18</td></tr>
           <tr><td><code>qwen3.5-4b-iq4_xs.gguf</code></td><td>1.13</td><td>395.19 s</td><td>2,627 MiB</td><td>76% <small>62.6–85.7</small></td><td>52.93</td></tr>
         </tbody>
-      </table></div>
-      <p>The 0.8B model produced its first token 7.11 seconds earlier than Q4_0.<span class="sidenote-number"></span><span class="sidenote">First-token latency is not included in the profiler score. It is retained as a separate interaction-latency measurement.</span> First-token latency was approximately 6.6 minutes for the 4B model and 9.7 minutes for the 8B model under the scalar executable.</p>
+        </table></div>
+        <p>The 0.8B model produced its first token 7.11 seconds earlier than Q4_0. First-token latency was approximately 6.6 minutes for the 4B model and 9.7 minutes for the 8B model; latency is not scored.</p></div>
+      </details>
 
       <h3 class="section-title">Sensitivity to the scoring formula</h3>
-      <p>The executable caps performance at 15 tok/s. The public webpage instead defines performance relative to the fastest qualifying submission. The paired ISA comparison uses the fixed-15 formula. The control below applies the cohort-relative formula to test how the denominator changes candidate ordering.</p>
+      <p>The control below recalculates the AVX2 rows with the public website's cohort-relative denominator. It does not alter the profiler result.</p>
 
       <div class="sensitivity-lab">
         <label>Cohort <code>TPS_max</code> floor <output id="sensitivity-floor-value">15</output> tok/s
@@ -548,7 +526,7 @@
         <span class="chapter-number">09</span>
         <div><p class="eyebrow">Paired scalar and portable AVX2 benchmark</p><h2 id="avx2-title">Effect of CPU instruction configuration</h2></div>
       </header>
-      <p class="lead">The same five GGUF hashes were measured on the same GCP 2-core, 4-thread proxy under two instruction configurations. Enabling AVX, AVX2, FMA, and F16C increased throughput for every artifact. Q4_K_M recorded the highest AVX2 total, 80.4484. Q4_0 recorded 80.2818, a difference of 0.1666 points.</p>
+      <p class="lead">The same five hashes were measured on one GCP 2-core, 4-thread proxy. Portable AVX2 improved every artifact; Q4_K_M scored 80.4484 and Q4_0 scored 80.2818.</p>
 
       <div class="isa-policy" aria-label="AVX2 campaign build policy">
         <span><code>AVX</code><strong>ON</strong></span>
@@ -569,13 +547,6 @@
         <figcaption><span>Fig. 10</span> Each model has one scalar and one portable AVX2 bar. The label on each bar is the complete fixed-15 total. The outlined bars have the highest total in their respective CPU configurations.</figcaption>
       </figure>
 
-      <dl class="avx2-verdict-grid">
-        <div><dt>Highest AVX2 total</dt><dd>Q4_K_M tied</dd><small>80.4484 total</small></div>
-        <div><dt>Second-highest total</dt><dd>Q4_0 tied</dd><small>80.2818 · −0.1666</small></div>
-        <div><dt>Largest decode ratio</dt><dd>BitCPM TQ2_0</dd><small>9.235× decode</small></div>
-        <div><dt>Lowest-RSS result above 80</dt><dd>IQ4_XS tied</dd><small>80.1089 · 1,082.3 MiB</small></div>
-      </dl>
-
       <details class="reasoning-check measurement-disclosure">
         <summary>Exact scalar and AVX2 measurements</summary>
         <div><div class="table-wrap editorial-table-wrap avx2-table-wrap"><table class="editorial-table avx2-table" aria-label="Controlled AVX2 FMA F16C campaign results">
@@ -592,11 +563,9 @@
       </details>
 
       <aside class="design-note avx2-note">
-        <p class="design-note-label">Effect of AVX2</p>
-        <p>Every non-Q4_0 artifact recorded higher throughput under AVX2. BitCPM increased from 0.81 to 7.49 tok/s, a factor of 9.235. Its total was 72.5121 because throughput remained below 15 tok/s and estimated profiler RSS was 2,316.4 MiB.</p>
+        <p class="design-note-label">Result</p>
+        <p>Q4_K_M and Q4_0 both exceed 15 tok/s. Q4_K_M leads by 0.1666 points because its estimated RSS is 59.7 MiB lower. IQ4_XS scores 80.1089 at 1,082.3 MiB; BitCPM gains 9.235× decode but reaches only 72.5121.</p>
       </aside>
-
-      <p>Q4_K_M and Q4_0 both exceed the 15 tok/s performance threshold. Their total-score difference is determined by estimated profiler RSS: Q4_K_M is 59.7 MiB lower. The Q4_K_M decode samples have higher variance than the Q4_0 samples. IQ4_XS records 80.1089, 0.3395 points below Q4_K_M, with 1,082.3 MiB estimated profiler RSS.</p>
 
       <details class="reasoning-check">
         <summary>Benchmark configuration and evidence limits</summary>
@@ -604,6 +573,11 @@
           <p><span class="evidence-badge avx2">Controlled AVX2 proxy</span> llama.cpp b10175 at commit <code>60bccc3763395e01b039aa1ddeacc8cc0ea69f70</code>; benchmark binary SHA-256 <code>4abfa11a…12fd8</code>. Every model used <code>p512/tg128</code>, <code>-ngl 0</code>, two automatically selected physical-core threads, and five internal samples. RSS is the measured child-tree peak plus the retained 45 MiB profiler-root estimate. Accuracy was reused by immutable GGUF hash. The GCP host has no package-temperature sensor, so thermal remains unknown. These results use the fixed/capped 15 tok/s score; they are neither an official participant-profiler run nor the website-relative sensitivity sweep.</p>
         </div>
       </details>
+
+      <aside class="design-note warning-note" id="current-state">
+        <p class="design-note-label">Required validation</p>
+        <p>Run Q4_K_M and Q4_0 with the organiser's exact binary on the physical target, recording repeated throughput, whole-tree RSS, temperature, and throttling. Replace the 50-item ARC-Easy proxy with a tutoring-aware accuracy evaluation before final submission.</p>
+      </aside>
     </section>
 
     <section class="chapter" id="ledger" aria-labelledby="ledger-title">
@@ -611,10 +585,10 @@
         <span class="chapter-number">10</span>
         <div><p class="eyebrow">Experiment decisions</p><h2 id="ledger-title">Adopted, rejected, and deferred tests</h2></div>
       </header>
-      <p class="lead">Each entry records the evaluated configuration, measured result, decision, and evidence source. Rejected and deferred tests remain listed because their applicability depends on runtime, prompt distribution, and submission rules.</p>
+      <p class="lead">Adopted decisions appear first. Use the filters to inspect rejected, neutral, and deferred tests.</p>
       <div class="filter-row" role="group" aria-label="Filter experiment ledger">
-        <button class="filter-button active" data-ledger-filter="all" aria-pressed="true">All</button>
-        <button class="filter-button" data-ledger-filter="adopted" aria-pressed="false">Adopted</button>
+        <button class="filter-button" data-ledger-filter="all" aria-pressed="false">All</button>
+        <button class="filter-button active" data-ledger-filter="adopted" aria-pressed="true">Adopted</button>
         <button class="filter-button" data-ledger-filter="rejected" aria-pressed="false">Rejected</button>
         <button class="filter-button" data-ledger-filter="neutral" aria-pressed="false">No clear gain</button>
         <button class="filter-button" data-ledger-filter="deferred" aria-pressed="false">Deferred</button>
@@ -627,21 +601,9 @@
         <span class="chapter-number">11</span>
         <div><p class="eyebrow">Challenge requirements</p><h2 id="faq-title">Requirement status</h2></div>
       </header>
-      <p class="lead">The entries below separate the published challenge requirement from the corresponding Muta implementation status. An empty status indicates that no project evidence has been recorded.</p>
+      <p class="lead">Each entry pairs a published requirement with Muta's recorded implementation status.</p>
       <div class="faq-list" id="faq-list"></div>
       <p class="source-note">Challenge requirements checked against the <a href="https://africadeeptech.org/challenge-2026/" target="_blank" rel="noreferrer">Africa Deep Tech Challenge 2026 page</a> on 19 August 2026.</p>
-    </section>
-
-    <section class="chapter conclusion" id="current-state" aria-labelledby="current-title">
-      <header class="chapter-head">
-        <span class="chapter-number">12</span>
-        <div><p class="eyebrow">Required validation</p><h2 id="current-title">Model selection and unresolved measurements</h2></div>
-      </header>
-      <p class="lead">Q4_K_M tied has the highest portable AVX2 total, 80.4484. Q4_0 tied has the highest scalar total: 72.47 in the direct profiler run and 72.8122 in the paired scalar benchmark. Final selection requires the organiser's exact executable and physical target hardware.</p>
-      <ol class="next-tests">
-          <li><span>01</span><div><strong>Run Q4_K_M and Q4_0 on the physical competition-class laptop.</strong><p>Use the organiser's exact binary and record whole-tree RSS, package temperature, throttling, and repeated throughput. Select the model with the higher validated total.</p></div></li>
-        <li><span>02</span><div><strong>Replace the 50-item proxy with a tutoring-aware accuracy evaluation.</strong><p>Test mathematical correctness, explanation quality, calibrated hints, and failure handling. ARC-Easy cannot measure the full 50% term.</p></div></li>
-      </ol>
     </section>
 
     <section class="chapter profiler-workspace" id="profiler" aria-labelledby="profiler-title">
@@ -658,45 +620,45 @@
         </label>
       </div>
 
-      <section class="card" id="campaign-card">
-        <div class="card-head"><div><span class="evidence-badge official">Official profiler result</span><h3>19 August direct GGUF campaign</h3><p class="sub" id="campaign-sub">Loading campaign evidence…</p></div></div>
+      <details class="card workspace-disclosure" id="campaign-card">
+        <summary><span class="evidence-badge official">Official profiler result</span><strong>19 August direct GGUF campaign</strong><small class="sub" id="campaign-sub">Loading campaign evidence…</small></summary>
         <div class="table-wrap"><table class="models" id="campaign-table"></table></div>
         <p class="formula" id="campaign-formula"></p>
-      </section>
+      </details>
 
-      <section class="card" id="campaign-parity-card">
-        <div class="card-head"><div><span class="evidence-badge parity">Profiler-parity estimate</span><h3>Candidate screening with the scalar audit kernel</h3><p class="sub" id="campaign-parity-sub">Loading reconstructed profiler evidence…</p></div></div>
+      <details class="card workspace-disclosure" id="campaign-parity-card">
+        <summary><span class="evidence-badge parity">Profiler-parity estimate</span><strong>Candidate screening with the scalar audit kernel</strong><small class="sub" id="campaign-parity-sub">Loading reconstructed profiler evidence…</small></summary>
         <div class="table-wrap"><table class="models" id="campaign-parity-table"></table></div>
         <p class="formula" id="campaign-parity-formula"></p>
-      </section>
+      </details>
 
-      <section class="card" id="campaign-avx2-score-card">
-        <div class="card-head"><div><span class="evidence-badge avx2">Controlled AVX2 proxy</span><h3>Paired scalar and AVX2 measurements</h3><p class="sub" id="campaign-avx2-score-sub">Loading five-artifact instruction-set comparison…</p></div></div>
+      <details class="card workspace-disclosure" id="campaign-avx2-score-card">
+        <summary><span class="evidence-badge avx2">Controlled AVX2 proxy</span><strong>Paired scalar and AVX2 measurements</strong><small class="sub" id="campaign-avx2-score-sub">Loading five-artifact instruction-set comparison…</small></summary>
         <div class="table-wrap"><table class="models" id="campaign-avx2-score-table"></table></div>
         <p class="formula" id="campaign-avx2-score-formula"></p>
-      </section>
+      </details>
 
-      <section class="card" id="campaign-alternative-card">
-        <div class="card-head"><div><span class="evidence-badge sensitivity">Website-relative sensitivity</span><h3>AVX2 measurements with the cohort-relative formula</h3><p class="sub" id="campaign-alternative-sub">Loading sensitivity data…</p></div></div>
+      <details class="card workspace-disclosure" id="campaign-alternative-card">
+        <summary><span class="evidence-badge sensitivity">Website-relative sensitivity</span><strong>AVX2 measurements with the cohort-relative formula</strong><small class="sub" id="campaign-alternative-sub">Loading sensitivity data…</small></summary>
         <div class="table-wrap"><table class="models" id="campaign-alternative-table"></table></div>
         <p class="formula" id="campaign-alternative-formula"></p>
-      </section>
+      </details>
 
       <section class="card" id="run-card" hidden>
         <div class="card-head row"><div><h3 id="run-title">Profiling…</h3><p class="sub" id="run-sub"></p></div><div class="row-end"><span class="mono elapsed" id="run-elapsed">0:00</span><button class="btn danger" data-action="cancel">Cancel run</button></div></div>
         <pre class="log" id="run-log"></pre>
       </section>
 
-      <section class="card">
-        <div class="card-head"><div><span class="evidence-badge archive">Mixed-machine archive</span><h3>Historical profiler archive</h3><p class="sub">These legacy runs use different machines and engine configurations. They are excluded from the August campaign ranking.</p></div></div>
+      <details class="card workspace-disclosure">
+        <summary><span class="evidence-badge archive">Mixed-machine archive</span><strong>Historical profiler archive</strong><small class="sub">Different machines and engine configurations; excluded from the campaign ranking.</small></summary>
         <div class="chart" id="chart"></div>
         <p class="formula">Historical display only: S_total = 0.50·S_acc + 0.30·S_perf + 0.20·S_eff − 10·thermal · legacy S_perf = min(TPS / TPS_max, 1) × 100 · <span id="tps-ref">TPS_max = fastest stored run</span> · S_eff = (7 GB − peak RAM) / 7 GB × 100 · crash or OOM ⇒ disqualified (0).</p>
-      </section>
+      </details>
 
-      <section class="card">
-        <div class="card-head"><div><h3>Stored model runs</h3><p class="sub" id="models-sub"></p></div></div>
+      <details class="card workspace-disclosure">
+        <summary><strong>Stored model runs</strong><small class="sub" id="models-sub"></small></summary>
         <div class="table-wrap"><table class="models" id="models-table"></table></div>
-      </section>
+      </details>
     </section>
 
     <footer class="report-footer">

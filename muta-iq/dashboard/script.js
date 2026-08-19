@@ -139,7 +139,7 @@ function initReport() {
   renderModelFunnelChart();
   renderStreamingChart();
   renderOfficialCharts();
-  renderLedger("all");
+  renderLedger("adopted");
   renderFaq();
   updateStreamingBudget();
   updateReadingProgress();

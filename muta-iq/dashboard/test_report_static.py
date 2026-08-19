@@ -150,3 +150,14 @@ def test_dual_regime_chart_and_current_choice_are_explicit() -> None:
     assert "highest AVX2 total" in script
     assert "item.scalar.score.s_total" in script
     assert "item.avx2.score.s_total" in script
+
+
+def test_compact_report_defaults_to_adopted_ledger_entries() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert 'data-ledger-filter="adopted" aria-pressed="true"' in html
+    assert 'data-ledger-filter="all" aria-pressed="false"' in html
+    assert 'renderLedger("adopted")' in script
+    assert '<details class="card workspace-disclosure" id="campaign-card">' in html
+    assert '<details class="card workspace-disclosure" id="campaign-avx2-score-card">' in html
