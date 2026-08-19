@@ -26,7 +26,12 @@ default; set `ADTC_PROFILER` to use another executable.
   ternary branch, weight-streaming tests, and the 19 August model decision.
 - Interactive score, disk-budget, and website-sensitivity controls. These controls are read-only:
   they do not change campaign data or stored runs.
-- Native HTML and SVG figures that work without a network connection.
+- Native HTML and SVG figures that work without a network connection, including three hand-drawn
+  mechanism diagrams: the audit binary's two kernel paths, the artifact derivation chain, and the
+  submission boundary that decides which optimisations can score.
+- Tufte-style margin notes in the right rail. Above 1180 px they float beside the paragraph that
+  cites them; below that they fall into the flow as indented blocks (they are `<span>`s, so the
+  narrow-width rule must set `display: block` or they land mid-sentence).
 - A filterable experiment ledger covering adopted, rejected, inconclusive, and deferred work.
 - A progress check against the Africa Deep Tech Challenge FAQ.
 - The original profiler dashboard as an operational appendix, including live logs, run history,

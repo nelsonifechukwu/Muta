@@ -152,10 +152,10 @@ function renderScoreLab() {
   const sPerf = Math.min(tps / 15, 1) * 100;
   const sEff = Math.max(0, (7 - ram) / 7) * 100;
   const parts = [
-    { label: "Accuracy × 0.50", value: accuracy * .5, color: "#2463a5" },
-    { label: "Performance × 0.30", value: sPerf * .3, color: "#1b6b4a" },
-    { label: "Efficiency × 0.20", value: sEff * .2, color: "#9a6213" },
-    { label: "Thermal penalty", value: -penalty, color: "#9b3b32" },
+    { label: "Accuracy × 0.50", value: accuracy * .5, color: "#1b6ca8" },
+    { label: "Performance × 0.30", value: sPerf * .3, color: "#427b58" },
+    { label: "Efficiency × 0.20", value: sEff * .2, color: "#b57614" },
+    { label: "Thermal penalty", value: -penalty, color: "#ad2111" },
   ];
   $("score-accuracy-value").value = accuracy.toFixed(0);
   $("score-tps-value").value = tps.toFixed(2);
@@ -177,7 +177,7 @@ function renderRuntimeChart() {
       ${svgText(left, y + 29, `Memory: ${item.memory}`, 'class="svg-value muted"')}`;
   }).join("");
   el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-    .svg-label{font-size:11px;fill:#34423b}.svg-value{font-size:9px;fill:#1b6b4a;font-weight:700}.svg-value.muted{fill:#7a817c;font-weight:400}.svg-throughput{fill:#2e8a61}
+    .svg-label{font-size:11px;fill:#3c3836}.svg-value{font-size:9px;fill:#427b58;font-weight:700}.svg-value.muted{fill:#8a8580;font-weight:400}.svg-throughput{fill:#427b58}
   </style>${bars}${svgText(left, height - 8, "Generation bars share one scale; memory text preserves each source's recorded unit and caveat.", 'class="svg-foot"')}</svg>`;
 }
 
@@ -203,7 +203,7 @@ function renderModelFunnelChart() {
   }).join("");
   const points = renderRows(reasoning, 82, 40, "reasoning") + renderRows(audit, 245, 29, "audit");
   el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-    .svg-grid{stroke:#e3dccf;stroke-width:1}.svg-tick{font-size:9px;fill:#7f877f}.panel-title{font-size:9px;fill:#596861;font-weight:800;letter-spacing:1px}.panel-note{font-size:8px;fill:#8b8f8b}.svg-row-label{font-size:8.5px;fill:#34423b}.lollipop-line{stroke:#6aa384;stroke-width:2}.lollipop-line.audit{stroke:#79a1c5}.lollipop-line.muted{stroke:#bbb9b1}.lollipop-line.selected{stroke:#d16835}.svg-point{fill:#1b6b4a;stroke:#fffdf8;stroke-width:2}.svg-point.audit{fill:#2463a5}.svg-point.selected{fill:#d16835;stroke:#74391e}.svg-point.muted{fill:#aaa9a0}.svg-score-label{font-size:8px;fill:#1b6b4a}.svg-score-label.audit{fill:#2463a5}.svg-score-label.selected{fill:#8a3f1d;font-weight:800}.svg-score-label.muted{fill:#8b8b84}
+    .svg-grid{stroke:#e6e2db;stroke-width:1}.svg-tick{font-size:9px;fill:#8a8580}.panel-title{font-size:9px;fill:#504945;font-weight:800;letter-spacing:1px}.panel-note{font-size:8px;fill:#8a8580}.svg-row-label{font-size:8.5px;fill:#3c3836}.lollipop-line{stroke:#9dbcac;stroke-width:2}.lollipop-line.audit{stroke:#9dbcd5}.lollipop-line.muted{stroke:#cec8be}.lollipop-line.selected{stroke:#af3a03}.svg-point{fill:#427b58;stroke:#ffffff;stroke-width:2}.svg-point.audit{fill:#1b6ca8}.svg-point.selected{fill:#af3a03;stroke:#ffffff}.svg-point.muted{fill:#aaa49d}.svg-score-label{font-size:8px;fill:#427b58}.svg-score-label.audit{fill:#1b6ca8}.svg-score-label.selected{fill:#af3a03;font-weight:800}.svg-score-label.muted{fill:#aaa49d}
   </style>${grid}${svgText(0, 20, "REASONING STUDY", 'class="panel-title"')}${svgText(0, 34, "Four-task mean; development host", 'class="panel-note"')}${svgText(0, 196, "AUDIT CANDIDATES", 'class="panel-title"')}${svgText(0, 210, "ARC-Easy proxy; separate task and engine regime", 'class="panel-note"')}<line x1="0" y1="180" x2="${width}" y2="180" class="svg-grid"/>${points}</svg>`;
 }
 
@@ -218,7 +218,7 @@ function renderStreamingChart() {
   const path = REPORT_STREAMING.map((d,i)=>`${i?'L':'M'} ${x(d.rss)} ${y(d.tps)}`).join(" ");
   const points = REPORT_STREAMING.map((d,i)=>`<circle cx="${x(d.rss)}" cy="${y(d.tps)}" r="5" class="svg-stream-point"/><title>${esc(d.name)}: ${d.tps} tok/s at ${d.rss} MiB</title>${svgText(x(d.rss)+(i===4?-4:6),y(d.tps)+(i===4?16:-8),d.name,`text-anchor="${i===4?'end':'start'}" class="svg-point-label"`)}`).join("");
   el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-    .svg-grid{stroke:#ddd5c8}.svg-grid.target{stroke:#9a6213;stroke-dasharray:4 4}.svg-tick{font-size:8px;fill:#7f877f}.svg-path{fill:none;stroke:#1b6b4a;stroke-width:2}.svg-stream-point{fill:#1b6b4a;stroke:white;stroke-width:2}.svg-point-label{font-size:7.5px;fill:#4f5e56}
+    .svg-grid{stroke:#e6e2db}.svg-grid.target{stroke:#b57614;stroke-dasharray:4 4}.svg-tick{font-size:8px;fill:#8a8580}.svg-path{fill:none;stroke:#427b58;stroke-width:2}.svg-stream-point{fill:#427b58;stroke:#ffffff;stroke-width:2}.svg-point-label{font-size:7.5px;fill:#504945}
   </style>${grid}<path d="${path}" class="svg-path"/>${points}${svgText(width/2,height-2,"Peak RSS (MiB)",'text-anchor="middle" class="svg-axis"')}</svg>`;
 }
 
@@ -231,7 +231,7 @@ function renderOfficialCharts() {
     const a = item.sAcc * .5 / 80 * plotW, p = item.sPerf * .3 / 80 * plotW, e = item.sEff * .2 / 80 * plotW;
     return `${svgText(left-7,y+15,item.name,'text-anchor="end" class="svg-label"')}<rect x="${left}" y="${y}" width="${a}" height="20" class="seg acc"/><rect x="${left+a}" y="${y}" width="${p}" height="20" class="seg perf"/><rect x="${left+a+p}" y="${y}" width="${e}" height="20" class="seg eff"/>${svgText(left+(item.total/80*plotW)+5,y+15,item.total.toFixed(2),'class="svg-total"')}`;
   }).join("");
-  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.svg-label{font-size:8px;fill:#465149}.seg.acc{fill:#2463a5}.seg.perf{fill:#2e8a61}.seg.eff{fill:#d29837}.svg-total{font-size:9px;fill:#1d2924;font-weight:800}.legend{font-size:8px;fill:#6b746e}</style>${rows}<rect x="${left}" y="${height-35}" width="8" height="8" class="seg acc"/>${svgText(left+12,height-28,"Accuracy",'class="legend"')}<rect x="${left+65}" y="${height-35}" width="8" height="8" class="seg perf"/>${svgText(left+77,height-28,"Performance",'class="legend"')}<rect x="${left+145}" y="${height-35}" width="8" height="8" class="seg eff"/>${svgText(left+157,height-28,"Efficiency",'class="legend"')}</svg>`;
+  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.svg-label{font-size:8px;fill:#504945}.seg.acc{fill:#1b6ca8}.seg.perf{fill:#427b58}.seg.eff{fill:#b57614}.svg-total{font-size:9px;fill:#282828;font-weight:800}.legend{font-size:8px;fill:#6b6866}</style>${rows}<rect x="${left}" y="${height-35}" width="8" height="8" class="seg acc"/>${svgText(left+12,height-28,"Accuracy",'class="legend"')}<rect x="${left+65}" y="${height-35}" width="8" height="8" class="seg perf"/>${svgText(left+77,height-28,"Performance",'class="legend"')}<rect x="${left+145}" y="${height-35}" width="8" height="8" class="seg eff"/>${svgText(left+157,height-28,"Efficiency",'class="legend"')}</svg>`;
 
   const scatterEl = $("official-scatter-chart");
   const sw=360, sh=330, sl=46, sr=20, st=25, sb=48;
@@ -246,7 +246,7 @@ function renderOfficialCharts() {
     { dx: -7, dy: 17, anchor: "end" },
   ];
   const pts=REPORT_OFFICIAL.map((d,i)=>{const label=labelOffsets[i];return `<circle cx="${sx(d.rss)}" cy="${sy(d.tps)}" r="${4+d.acc/25}" class="scatter-point ${i===0?'selected':''}"/><title>${esc(d.name)}: ${d.tps} tok/s, ${d.rss.toFixed(0)} MiB, ${d.acc}% ARC-Easy</title>${svgText(sx(d.rss)+label.dx,sy(d.tps)+label.dy,d.name,`text-anchor="${label.anchor}" class="scatter-label ${i===0?'selected':''}"`)}`}).join("");
-  scatterEl.innerHTML=`<svg viewBox="0 0 ${sw} ${sh}" aria-hidden="true"><style>.svg-grid{stroke:#ded7cb}.svg-tick{font-size:8px;fill:#7f877f}.scatter-point{fill:#7698b7;fill-opacity:.82;stroke:#fff;stroke-width:2}.scatter-point.selected{fill:#d16835}.scatter-label{font-size:7.5px;fill:#596861}.scatter-label.selected{fill:#8a3f1d;font-weight:800}</style>${grid}${pts}${svgText(sw/2,sh-3,"Peak RSS (MiB)",'text-anchor="middle" class="svg-axis"')}</svg>`;
+  scatterEl.innerHTML=`<svg viewBox="0 0 ${sw} ${sh}" aria-hidden="true"><style>.svg-grid{stroke:#e6e2db}.svg-tick{font-size:8px;fill:#8a8580}.scatter-point{fill:#9dbcd5;fill-opacity:.9;stroke:#fff;stroke-width:2}.scatter-point.selected{fill:#af3a03}.scatter-label{font-size:7.5px;fill:#6b6866}.scatter-label.selected{fill:#af3a03;font-weight:800}</style>${grid}${pts}${svgText(sw/2,sh-3,"Peak RSS (MiB)",'text-anchor="middle" class="svg-axis"')}</svg>`;
 }
 
 function updateStreamingBudget() {
@@ -287,7 +287,7 @@ function renderSensitivity(campaign) {
   const el = $("sensitivity-chart");
   const width=700, left=190, right=42, rowH=30, height=Math.max(130,models.length*rowH+35), plotW=width-left-right;
   const rows=models.map((entry,i)=>{const y=8+i*rowH, w=Math.min(100,entry.score.s_total)/100*plotW;return `${svgText(left-8,y+13,shortName(entry.model.model),'text-anchor="end" class="sens-label"')}<rect x="${left}" y="${y}" width="${w}" height="17" rx="2" class="sens-bar ${i===0?'winner':''}"/>${svgText(left+w+6,y+13,Number(entry.score.s_total).toFixed(2),'class="sens-value"')}`}).join("");
-  el.innerHTML=`<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.sens-label{font-size:8px;fill:#596861}.sens-bar{fill:#b8a4c8}.sens-bar.winner{fill:#7547a5}.sens-value{font-size:8px;fill:#4b4650;font-weight:700}</style>${rows}</svg>`;
+  el.innerHTML=`<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.sens-label{font-size:8px;fill:#6b6866}.sens-bar{fill:#d3bdca}.sens-bar.winner{fill:#8f3f71}.sens-value{font-size:8px;fill:#504945;font-weight:700}</style>${rows}</svg>`;
   $("sensitivity-chart-summary").textContent = models.length
     ? `At a ${floor} token-per-second cohort floor: ` + models.map((entry) =>
       `${shortName(entry.model.model)} scores ${Number(entry.score.s_total).toFixed(2)}`).join("; ") + "."

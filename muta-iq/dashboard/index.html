@@ -13,8 +13,7 @@
 
 <header class="topbar">
   <a class="wordmark" href="#overview" aria-label="Muta IQ experiment report home">
-    <span class="wordmark-mark">M</span>
-    <span><strong>MUTA-IQ</strong><small>Experiment report · 19 August 2026</small></span>
+    <strong>Muta IQ</strong><small>Experiment report, 19 August 2026</small>
   </a>
   <nav class="topnav" aria-label="Report shortcuts">
     <a href="#campaign">Current result</a>
@@ -53,13 +52,13 @@
     <header class="hero" id="overview">
       <p class="eyebrow">Muta technical field report · July–August 2026</p>
       <h1>Finding the model that survives the laptop</h1>
-      <p class="dek">Muta is an offline tutor for maths and scientific reasoning. Its model must fit into 8 GB while retaining enough teaching ability to survive the judge’s speed, memory, heat, and failure checks.</p>
+      <p class="dek">Muta is an offline tutor for maths and scientific reasoning. The model has to fit an 8 GB classroom laptop and still teach well enough to pass the judge's accuracy, speed, memory, and thermal checks.</p>
 
       <div class="verdict">
         <div>
-          <p class="verdict-label">Current model choice — for now</p>
+          <p class="verdict-label">Current model choice</p>
           <h2><code>muta-tutor-qwen3-1.7b-q4_0.gguf</code></h2>
-          <p>A pure Q4_0 Qwen3 1.7B build with tied output weights. It leads the four-model direct profiler campaign by 0.92 points, while remaining close enough to the 0.8B runner-up that a larger accuracy sample or the physical target laptop could reverse the order.</p>
+          <p>A pure Q4_0 Qwen3 1.7B build with tied output weights. It leads the four-model direct profiler campaign by 0.92 points. That margin is smaller than the uncertainty in a 50-question accuracy sample, so a larger evaluation or a run on the physical laptop could reverse the order.</p>
         </div>
         <dl class="verdict-stats">
           <div><dt>Direct profiler score</dt><dd>72.47</dd></div>
@@ -69,7 +68,7 @@
         </dl>
       </div>
 
-      <p class="hero-caveat"><strong>What this result does not prove:</strong> the GCP host could not provide the target laptop’s package temperature, and 50 ARC-Easy items leave wide confidence intervals. The artifact is the current promotion candidate, not a final declaration.</p>
+      <p class="hero-caveat"><strong>What this result does not prove:</strong> the GCP host could not report the target laptop's package temperature, and 50 ARC-Easy items leave wide confidence intervals. This is the current promotion candidate, not a settled answer.</p>
       <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from this snapshot.</strong> The narrative is fixed to the 19 August campaign; the operational appendix shows the configured override.</p>
 
       <dl class="artifact-line">
@@ -83,10 +82,10 @@
     <section class="chapter" id="brief" aria-labelledby="brief-title">
       <header class="chapter-head">
         <span class="chapter-number">01</span>
-        <div><p class="eyebrow">The judging problem</p><h2 id="brief-title">Four terms, one constrained machine</h2></div>
+        <div><p class="eyebrow">The judging problem</p><h2 id="brief-title">Four terms, and one way to score zero</h2></div>
       </header>
 
-      <p class="lead">The challenge evaluates a GGUF model through <code>llama.cpp</code> on an Ubuntu laptop with four CPU cores, 8 GB of RAM, no discrete GPU, and a 7 GB memory ceiling. A fast model can still lose on tutoring quality. A capable model can still lose on memory or throughput. A crash, out-of-memory event, or illegal instruction is worse than a low score: it disqualifies the run.</p>
+      <p class="lead">The challenge runs a GGUF model through <code>llama.cpp</code> on an Ubuntu laptop: four CPU cores, 8 GB of RAM, no discrete GPU, a 7 GB memory ceiling. Accuracy, speed, and memory each carry weight, so a model can lose on any one of them. A crash, an out-of-memory kill, or an illegal instruction scores zero for the entire run.<span class="sidenote-number"></span><span class="sidenote">This is why the engine build pins <code>GGML_AVX512=OFF</code> and the Dockerfile greps the disassembly for AVX-512 mnemonics. An illegal instruction on the audit box is not a slow score, it is no score.</span></p>
 
       <figure class="equation-figure">
         <div class="equation" role="math" aria-label="Total score equals one half accuracy plus three tenths performance plus two tenths efficiency minus the thermal penalty">
@@ -100,8 +99,10 @@
             </mrow>
           </math>
         </div>
-        <figcaption><span>Fig. 1</span> The executable profiler’s score. Below the 15 tok/s cap, one more token per second is worth 2.00 total points. One accuracy point is worth 0.50. Saving 1 GB of peak RSS is worth 2.86.</figcaption>
+        <figcaption><span>Fig. 1</span> The executable profiler's score. Below the 15 tok/s cap, one more token per second is worth 2.00 total points. One accuracy point is worth 0.50. Saving 1 GB of peak RSS is worth 2.86.</figcaption>
       </figure>
+
+      <p>Two of the terms saturate.<span class="sidenote-number"></span><span class="sidenote"><code>S_perf = min(TPS/15, 1) × 100</code> and <code>S_eff = max(0, (7 GB − RSS)/7 GB) × 100</code>. Past 15 tok/s, speed stops paying. Below roughly 1 GB, memory savings pay less than they cost in capability.</span> Speed stops earning points at 15 tok/s, and efficiency is measured against a 7 GB ceiling that none of our candidates came close to. Accuracy never saturates, which is what makes the 50% term worth protecting.</p>
 
       <div class="score-lab" id="score-lab">
         <div class="figure-head">
@@ -121,12 +122,12 @@
           <label class="toggle-control"><input id="score-thermal" type="checkbox"> Apply the 10-point thermal penalty</label>
         </div>
         <div class="score-breakdown" id="score-breakdown" aria-label="Score contribution breakdown"></div>
-        <p class="fine-print">This teaching control reproduces the published profiler formula. It does not write to the run database or alter campaign results.</p>
+        <p class="fine-print">This control reproduces the published profiler formula. It does not write to the run database or alter campaign results.</p>
       </div>
 
       <aside class="design-note">
         <p class="design-note-label">Decision rule</p>
-        <p>On this score, spending 1 GB of memory must buy at least 1.43 tok/s or 5.7 accuracy points just to break even. That exchange rate turned “bigger is better” into a testable claim.</p>
+        <p>Spending 1 GB of memory has to buy at least 1.43 tok/s or 5.7 accuracy points to break even. That exchange rate turned "bigger is better" into a testable claim, and it is the rule every model below was measured against.</p>
       </aside>
     </section>
 
@@ -135,7 +136,7 @@
         <span class="chapter-number">02</span>
         <div><p class="eyebrow">Evidence rules</p><h2 id="evidence-title">Four lanes that must not be blended</h2></div>
       </header>
-      <p class="lead">The project contains measurements from several machines, binaries, and score interpretations. They answer different questions. Every result in this report carries a provenance label so a fast Mac run cannot quietly become an official laptop claim.</p>
+      <p class="lead">The project holds measurements from several machines, binaries, and score interpretations, and they answer different questions. Every result here carries a provenance label so a fast Mac run cannot quietly become an official laptop claim.</p>
 
       <div class="evidence-grid">
         <article class="evidence-card official">
@@ -146,12 +147,12 @@
         <article class="evidence-card parity">
           <p class="evidence-label"><span></span>Profiler-parity estimate</p>
           <h3>Controlled reconstruction</h3>
-          <p>The same no-AVX engine regime, with interleaved timing. Throughput is measured; profiler-root RSS is estimated from a documented 45 MiB offset.</p>
+          <p>The same no-AVX engine regime, with interleaved timing. Throughput is measured; profiler-root RSS is estimated from a documented 45 MiB offset.<span class="sidenote-number"></span><span class="sidenote">The profiler's root process holds the Python interpreter and lm-eval imports on top of the <code>llama-bench</code> child. Across paired runs that overhead sat at 45 MiB, stable enough to add as a constant but not a substitute for measuring it.</span></p>
         </article>
         <article class="evidence-card sensitivity">
           <p class="evidence-label"><span></span>Website sensitivity</p>
           <h3>Alternative scoring</h3>
-          <p>AVX2 deployment measurements rescored with the public website’s cohort-relative denominator. This tests whether the winner depends on an unknown field.</p>
+          <p>AVX2 deployment measurements rescored with the public website's cohort-relative denominator. This tests whether the winner depends on an unknown field.</p>
         </article>
         <article class="evidence-card development">
           <p class="evidence-label"><span></span>Development result</p>
@@ -163,12 +164,12 @@
       <details class="reasoning-check">
         <summary>Why are there two performance formulas?</summary>
         <div>
-          <p>The executable profiler fixes the speed reference at 15 tok/s: <code>S_perf = min(TPS / 15, 1) × 100</code>. The public challenge page describes a cohort-relative denominator, where <code>TPS_max</code> is the fastest qualifying submission. We use the executable formula for the direct campaign and keep the website formula only as a labelled sensitivity sweep. Combining the two would manufacture precision.</p>
+          <p>The executable profiler fixes the speed reference at 15 tok/s: <code>S_perf = min(TPS / 15, 1) × 100</code>. The public challenge page describes a cohort-relative denominator, where <code>TPS_max</code> is the fastest qualifying submission. We use the executable formula for the direct campaign and keep the website formula as a labelled sensitivity sweep. Combining the two would manufacture precision neither one has.</p>
         </div>
       </details>
       <aside class="design-note warning-note">
         <p class="design-note-label">Accuracy extraction warning</p>
-        <p>The pinned profiler’s generic score extractor returns the sample count as the score for some generative lm-eval tasks. ARC-Easy uses a different, valid multiple-choice metric. Generative results in this report come from the project’s explicit metric extractor and never enter the direct profiler total.</p>
+        <p>The pinned profiler's generic score extractor returns the sample count as the score for some generative lm-eval tasks. ARC-Easy uses a different, valid multiple-choice metric. Generative results in this report come from the project's explicit metric extractor and never enter the direct profiler total.</p>
       </aside>
     </section>
 
@@ -177,7 +178,7 @@
         <span class="chapter-number">03</span>
         <div><p class="eyebrow">Runtime baseline</p><h2 id="runtime-title">First make the system measurable</h2></div>
       </header>
-      <p class="lead">The first July build could answer questions, but it was not a stable benchmark. Under Docker on the development machine it generated about 5.3 tok/s while memory climbed toward 4.77 GB. Before comparing models, we capped concurrency, cache, and checkpoints; then we measured one change at a time.</p>
+      <p class="lead">The first July build could answer questions, but it was not a stable benchmark. Under Docker on the development machine it generated about 5.3 tok/s while memory climbed toward 4.77 GB. We capped concurrency, cache, and checkpoints first, then measured one change at a time.</p>
 
       <div class="milestones">
         <article><time>30 Jul</time><h3>Baseline</h3><p>≈5.3 tok/s, 4.77 GB and rising. Useful as a smoke test, not a scoring result.</p></article>
@@ -194,10 +195,10 @@
       </figure>
 
       <div class="finding-pair">
-        <article><p class="result-tag rejected">Rejected</p><h3>Draft-model speculation</h3><p>A 0.8B draft accepted 98.4% of proposals yet slowed native generation from 30.84 to 24.72 tok/s. Host memory was not reliable in that run, so the rejection rests on measured throughput, not an inferred RAM cost.</p></article>
-        <article><p class="result-tag rejected">Rejected</p><h3>N-gram speculation</h3><p>Zero-cost in model memory, but the tested acceptance rate of 12–22% did not pay for the extra work. The feature stays off by default until a tutoring trace gives it enough repeated text.</p></article>
-        <article><p class="result-tag adopted">Adopted</p><h3>Thread cap</h3><p>Ten threads collapsed decode to about 4.4 tok/s. Six saturated useful bandwidth without spending more power on contention. The cap is also protection against the thermal cliff.</p></article>
-        <article><p class="result-tag adopted">Adopted</p><h3>Unified KV and fewer checkpoints</h3><p>The winning runtime reduced retained state and improved prefill without giving up decode. The context budget became explicit instead of being left to defaults.</p></article>
+        <article><p class="result-tag rejected">Rejected</p><h3>Draft-model speculation</h3><p>A 0.8B draft accepted 98.4% of proposals yet slowed native generation from 30.84 to 24.72 tok/s. Host memory was not reliable in that run, so the rejection rests on measured throughput alone.</p></article>
+        <article><p class="result-tag rejected">Rejected</p><h3>N-gram speculation</h3><p>Zero cost in model memory, but the tested acceptance rate of 12–22% did not pay for the extra work. The feature stays off until a tutoring trace gives it enough repeated text.</p></article>
+        <article><p class="result-tag adopted">Adopted</p><h3>Thread cap</h3><p>Ten threads collapsed decode to about 4.4 tok/s. Six saturated useful bandwidth without spending more power on contention. The cap also keeps the machine off the thermal cliff.</p></article>
+        <article><p class="result-tag adopted">Adopted</p><h3>Unified KV and fewer checkpoints</h3><p>The winning runtime retained less state and prefilled faster without giving up decode.<span class="sidenote-number"></span><span class="sidenote">A unified KV cache lets all slots draw from one pool instead of reserving a fixed block each, so an idle slot no longer holds memory a busy one needs.</span> The context budget became explicit instead of being left to defaults.</p></article>
       </div>
     </section>
 
@@ -206,24 +207,24 @@
         <span class="chapter-number">04</span>
         <div><p class="eyebrow">Model funnel</p><h2 id="funnel-title">Capability first, then audit fit</h2></div>
       </header>
-      <p class="lead">The search narrowed twice. The first pass asked how much scientific reasoning disappeared below four billion parameters. The second asked a stranger but more important question: which tensor layout runs well when the official binary disables native CPU features?</p>
+      <p class="lead">The search narrowed twice. The first pass asked how much scientific reasoning disappears below four billion parameters. The second asked which tensor layout still runs fast when the official binary turns off the CPU features we had been building for.</p>
 
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Mixed evidence — labelled by phase</p><h3>The candidate funnel</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
         <div class="svg-chart tall-chart" id="model-funnel-chart" role="img" aria-label="Model size, accuracy proxy, and campaign status for evaluated candidate models" aria-describedby="model-funnel-summary"></div>
         <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy: Qwen3 1.7B is 0.91 GiB at 72%; Qwen3.5 0.8B is 0.50 GiB at 68%; BitCPM4 8B is 2.06 GiB at 88%; Qwen3.5 4B is 2.31 GiB at 76%; LFM2.5 1.2B is 0.65 GiB at 56%; and Qwen2.5 Math 1.5B is 0.87 GiB at 24%.</p>
-        <figcaption><span>Fig. 3</span> The 4B studies established the strongest tested Qwen3.5 quality baseline. The later audit found that a smaller pure-Q4_0 model could score better because its matrices stayed on the official binary’s available SIMD path.</figcaption>
+        <figcaption><span>Fig. 3</span> The 4B studies established the strongest tested Qwen3.5 quality baseline. The later audit found that a smaller pure-Q4_0 model could score better because its matrices stayed on the official binary's available SIMD path.</figcaption>
       </figure>
 
       <h3 class="section-title">The first narrowing: quality by scale</h3>
-      <p>On a four-task reasoning set, Qwen3.5 4B averaged 73.3, the 2B model 64.8, and the 0.8B model 51.3. The difference grew on college maths, high-school maths, and college physics: 4B led 2B by 15.7 points with a 95% confidence interval of 7.8–23.5. That result justified a 4B baseline before the official kernel regime changed the cost side of the equation.</p>
+      <p>On a four-task reasoning set, Qwen3.5 4B averaged 73.3, the 2B model 64.8, and the 0.8B model 51.3. The gap widened on college maths, high-school maths, and college physics: 4B led 2B by 15.7 points, 95% CI 7.8–23.5. That justified a 4B baseline, right up until the audit kernel regime changed the cost side of the equation.</p>
 
       <h3 class="section-title">The second narrowing: nine audit candidates</h3>
-      <p>The August audit included Qwen3 and Qwen3.5 models, BitCPM ternary models, LFM2.5, MiniCPM5, and Qwen2.5 Math. Several nominally attractive files failed for concrete reasons: MiniCPM’s template path reduced GSM8K to 0–3%; Qwen2.5 Math collapsed under the audit configuration; the 1B and 3B ternary variants were compact but weak; and the 8B ternary model was accurate but slow in the generic kernel.</p>
+      <p>The August audit covered Qwen3 and Qwen3.5 models, BitCPM ternary models, LFM2.5, MiniCPM5, and Qwen2.5 Math. Several promising files failed outright: MiniCPM's template path dropped GSM8K to 0–3%; Qwen2.5 Math collapsed under the audit configuration;<span class="sidenote-number"></span><span class="sidenote">A maths-specialised 1.5B scoring 24% on ARC-Easy is below chance-adjacent for a four-choice task. The model expects its own prompt scaffolding, which the bare-GGUF judging path does not supply.</span> the 1B and 3B ternary variants were compact but weak; and the 8B ternary model was accurate but slow in the generic kernel.</p>
 
       <aside class="design-note">
         <p class="design-note-label">Why the 1.7B model moved ahead</p>
-        <p>Pure Q4_0 routes every matrix through an SSSE3-capable kernel in the no-AVX audit build. Tying the output head removes a duplicated weight matrix and saved about 175 MB in the final control comparison. Those two properties moved this exact artifact ahead.</p>
+        <p>Pure Q4_0 routes every matrix through an SSSE3-capable kernel in the no-AVX audit build. Tying the output head removes a duplicated weight matrix and saved about 175 MB in the final control comparison. Those two properties, not parameter count, moved this exact artifact ahead.</p>
       </aside>
     </section>
 
@@ -232,26 +233,147 @@
         <span class="chapter-number">05</span>
         <div><p class="eyebrow">GGUF and quantisation</p><h2 id="quant-title">File size is not the same as scored memory</h2></div>
       </header>
-      <p class="lead">Quantisation decides more than bits per weight. It selects kernels, changes whether the engine repacks tensors, and can make a smaller file occupy more RSS. Because the submission is a GGUF artifact rather than a custom runtime, only effects encoded in that file can reach the judge.</p>
+      <p class="lead">Quantisation decides more than bits per weight. It selects which kernel runs, changes whether the engine repacks tensors,<span class="sidenote-number"></span><span class="sidenote">Repacking rewrites quantised weights into a layout a specific SIMD path prefers. It is fast, and it costs a second full-size copy of the weights in RSS. The audit image does not repack; Homebrew's ARM build does, which is why the same file reports 1,133 MiB in one and 2,029 MiB in the other.</span> and can make a smaller file occupy more resident memory. Because the submission is a GGUF artifact rather than a runtime, only the effects encoded in that file reach the judge.</p>
+
+      <figure class="report-figure wide-figure">
+        <div class="figure-head"><div><p class="figure-kicker">Why Q4_0</p><h3>One binary, two kernel paths</h3></div><span class="evidence-badge official">Audit build</span></div>
+        <svg viewBox="0 0 720 286" role="img" aria-labelledby="kernel-diagram-title" aria-describedby="kernel-diagram-summary">
+          <title id="kernel-diagram-title">Tensor quantisation type determines which kernel the audit binary can use</title>
+          <style>
+            .kd-head { font: 500 12px var(--sans, sans-serif); fill: #6b6866; }
+            .kd-type { font: 500 13px var(--mono, monospace); fill: #282828; }
+            .kd-type-note { font: 11px var(--sans, sans-serif); fill: #8a8580; }
+            .kd-box-label { font: 500 13px var(--sans, sans-serif); }
+            .kd-box-sub { font: 11.5px var(--sans, sans-serif); fill: #6b6866; }
+            .kd-rate { font: 500 15px var(--sans, sans-serif); }
+            .kd-rate-note { font: 11px var(--sans, sans-serif); fill: #8a8580; }
+            .kd-wire { fill: none; stroke: #cec8be; stroke-width: 1.5; }
+            .kd-wire.fast { stroke: #1b6ca8; stroke-width: 2; }
+            .kd-band { fill: #f4f2ee; }
+            .kd-band-text { font: 12px var(--sans, sans-serif); fill: #504945; }
+          </style>
+          <rect class="kd-band" x="0" y="0" width="720" height="30" rx="2"/>
+          <text class="kd-band-text" x="12" y="19">Audit binary · llama.cpp b10175 · built with no AVX, AVX2, FMA or F16C</text>
+
+          <text class="kd-head" x="0" y="58">Tensor type in the GGUF</text>
+          <text class="kd-head" x="330" y="58">Kernel the binary can reach</text>
+          <text class="kd-head" x="600" y="58">Measured decode</text>
+
+          <!-- fast path -->
+          <text class="kd-type" x="0" y="98">Q4_0</text>
+          <text class="kd-type-note" x="52" y="98">every matrix, tied head</text>
+          <path class="kd-wire fast" d="M 190 93 H 330"/>
+          <rect x="330" y="76" width="230" height="38" fill="#eaf1f8" stroke="#1b6ca8" stroke-width="1.5"/>
+          <text class="kd-box-label" x="344" y="93" fill="#1b6ca8">Hand-written SSSE3 kernel</text>
+          <text class="kd-box-sub" x="344" y="107">vectorised, 16 bytes per instruction</text>
+          <text class="kd-rate" x="586" y="93" fill="#1b6ca8">9.79 tok/s</text>
+          <text class="kd-rate-note" x="586" y="107">shipped artifact</text>
+
+          <!-- slow path -->
+          <text class="kd-type" x="0" y="160">Q4_K_M, Q5_K_M</text>
+          <text class="kd-type" x="0" y="186">IQ4_XS</text>
+          <text class="kd-type" x="0" y="212">TQ2_0, TQ1_0</text>
+          <text class="kd-type-note" x="0" y="234">k-quants, i-quants, ternary</text>
+          <path class="kd-wire" d="M 190 155 H 250 Q 262 155 262 167 V 190"/>
+          <path class="kd-wire" d="M 190 181 H 250 Q 262 181 262 190"/>
+          <path class="kd-wire" d="M 190 207 H 250 Q 262 207 262 195 V 190"/>
+          <path class="kd-wire" d="M 262 190 H 330"/>
+          <rect x="330" y="171" width="230" height="38" fill="#f4f2ee" stroke="#cec8be" stroke-width="1.5"/>
+          <text class="kd-box-label" x="344" y="188" fill="#504945">Generic C fallback</text>
+          <text class="kd-box-sub" x="344" y="202">scalar, one weight at a time</text>
+          <text class="kd-rate" x="586" y="188" fill="#6b6866">0.8–1.1 tok/s</text>
+          <text class="kd-rate-note" x="586" y="202">4B and 8B rows</text>
+
+          <line x1="0" y1="252" x2="720" y2="252" stroke="#e6e2db"/>
+          <text class="kd-box-sub" x="0" y="272">Same weights, same host, same profiler. The quant type alone decides which of these two code paths runs.</text>
+        </svg>
+        <p class="sr-only" id="kernel-diagram-summary">On the audit build, Q4_0 tensors reach a hand-written SSSE3 kernel and the shipped artifact decodes at 9.79 tokens per second. K-quants, i-quants, and ternary types fall back to a scalar generic C implementation, and the 4B and 8B campaign entries decode at 0.8 to 1.1 tokens per second.</p>
+        <figcaption><span>Fig. 4</span> The whole quantisation argument in one picture. Under AVX2 every one of these types has a vectorised kernel, which is why the usual format advice inverts here.</figcaption>
+      </figure>
+
+      <p>That single dispatch decision is why the shipped file is pure Q4_0 rather than the Q4_K_M a laptop deployment would normally prefer. The source GGUF's Q6_K head and three imatrix-induced Q4_1 layers would have run scalar C for about a quarter of the bytes.</p>
 
       <div class="concept-grid">
-        <article><span>Q4_K_M</span><h3>Strong default, wrong audit path</h3><p>A good general-purpose compromise under AVX2. In the no-AVX binary, its K-quant matrices fell onto slower generic work than pure Q4_0.</p></article>
-        <article><span>Q4_0</span><h3>Older format, useful kernel</h3><p>Slightly blunt as a quantiser, but consistently supported by the audit CPU path. For Qwen3 1.7B, that systems property outweighed the usual format preference.</p></article>
-        <article><span>IQ4_XS</span><h3>Compact file, possible repack</h3><p>The 4B IQ4_XS file kept good reasoning scores, yet throughput and resident memory depended on the engine’s conversion path. File bytes alone were a poor proxy.</p></article>
-        <article><span>Importance matrix</span><h3>No reliable gain</h3><p>The tested imatrix build moved ARC-Easy, GSM8K, college maths, and physics by roughly one or two items in opposing directions. We found no repeatable accuracy improvement.</p></article>
+        <article><span>IQ4_XS</span><h3>Compact file, possible repack</h3><p>The 4B IQ4_XS file kept good reasoning scores, yet throughput and resident memory depended on the engine's conversion path. File bytes alone were a poor proxy for scored memory.</p></article>
+        <article><span>Importance matrix</span><h3>No reliable gain</h3><p>The tested imatrix build moved ARC-Easy, GSM8K, college maths, and physics by roughly one or two items in opposing directions. No repeatable accuracy improvement.</p></article>
       </div>
+
+      <h3 class="section-title">How the artifact was derived</h3>
+      <p>Every step below is scripted in <code>opt/scripts/</code> and reproduces the promoted SHA-256 from a pinned public source file.</p>
+
+      <figure class="report-figure wide-figure">
+        <svg viewBox="0 0 720 218" role="img" aria-labelledby="derivation-title" aria-describedby="derivation-summary">
+          <title id="derivation-title">Derivation of the shipped GGUF from the public source file</title>
+          <style>
+            .dv-stage { fill: #ffffff; stroke: #cec8be; stroke-width: 1.5; }
+            .dv-stage.final { stroke: #1b6ca8; fill: #eaf1f8; }
+            .dv-name { font: 500 12px var(--sans, sans-serif); fill: #282828; }
+            .dv-meta { font: 11px var(--mono, monospace); fill: #6b6866; }
+            .dv-size { font: 500 15px var(--sans, sans-serif); fill: #282828; }
+            .dv-op { font: 11.5px var(--sans, sans-serif); fill: #504945; }
+            .dv-delta { font: 500 11.5px var(--sans, sans-serif); fill: #427b58; }
+            .dv-arrow { fill: none; stroke: #8a8580; stroke-width: 1.5; }
+          </style>
+          <defs>
+            <marker id="dv-tip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M 0 0 L 8 4 L 0 8 z" fill="#8a8580"/>
+            </marker>
+          </defs>
+
+          <rect class="dv-stage" x="0" y="52" width="150" height="66"/>
+          <text class="dv-name" x="12" y="72">bartowski source</text>
+          <text class="dv-meta" x="12" y="88">Q6_K head + Q4_1</text>
+          <text class="dv-size" x="12" y="108">1,232 MB</text>
+
+          <path class="dv-arrow" d="M 150 85 H 188" marker-end="url(#dv-tip)"/>
+          <text class="dv-op" x="152" y="30">llama-quantize</text>
+          <text class="dv-op" x="152" y="44">--pure, q4_0 head</text>
+
+          <rect class="dv-stage" x="192" y="52" width="150" height="66"/>
+          <text class="dv-name" x="204" y="72">Uniform Q4_0</text>
+          <text class="dv-meta" x="204" y="88">all matrices Q4_0</text>
+          <text class="dv-size" x="204" y="108">1,229 MB</text>
+          <text class="dv-delta" x="204" y="136">100% on the SSSE3 path</text>
+
+          <path class="dv-arrow" d="M 342 85 H 380" marker-end="url(#dv-tip)"/>
+          <text class="dv-op" x="344" y="30">drop_tensor.py</text>
+          <text class="dv-op" x="344" y="44">output.weight</text>
+
+          <rect class="dv-stage" x="384" y="52" width="150" height="66"/>
+          <text class="dv-name" x="396" y="72">Tied head</text>
+          <text class="dv-meta" x="396" y="88">tied to embedding</text>
+          <text class="dv-size" x="396" y="108">974 MB</text>
+          <text class="dv-delta" x="396" y="136">−255 MB, accuracy unchanged</text>
+
+          <path class="dv-arrow" d="M 534 85 H 572" marker-end="url(#dv-tip)"/>
+          <text class="dv-op" x="536" y="30">bake_system_prompt.py</text>
+          <text class="dv-op" x="536" y="44">template · persona · sampling</text>
+
+          <rect class="dv-stage final" x="576" y="52" width="144" height="66"/>
+          <text class="dv-name" x="588" y="72" fill="#1b6ca8">Shipped artifact</text>
+          <text class="dv-meta" x="588" y="88">a98ce36e…fd63e</text>
+          <text class="dv-size" x="588" y="108" fill="#1b6ca8">974,198,528 B</text>
+          <text class="dv-delta" x="720" y="136" text-anchor="end" fill="#1b6ca8">behaviour ships in the file</text>
+
+          <line x1="0" y1="170" x2="720" y2="170" stroke="#e6e2db"/>
+          <text class="dv-op" x="0" y="190">The judge receives only the rightmost box.</text>
+          <text class="dv-op" x="0" y="206">Flags, engine patches, and application code do not exist at judging time.</text>
+        </svg>
+        <p class="sr-only" id="derivation-summary">The bartowski source file at 1,232 MB with a Q6_K head and Q4_1 layers is requantised to uniform Q4_0 at 1,229 MB, putting all matrices on the SSSE3 path. Dropping the duplicated tied output weight brings it to 974 MB with no accuracy change. Baking the chat template, tutoring persona, and sampling defaults produces the shipped 974,198,528-byte artifact.</p>
+        <figcaption><span>Fig. 5</span> Four scripted steps from a public GGUF to the promoted artifact. Two change the kernel path and the byte count; one changes how the model behaves for a judge chatting with the bare file.</figcaption>
+      </figure>
 
       <details class="reasoning-check" open>
         <summary>Why mmap cannot solve the judged RSS problem</summary>
         <div>
-          <p>The stock Linux audit runtime opens the GGUF with eager page population. Its RSS therefore includes file-backed weight pages plus runtime buffers. A custom lazy-mmap engine can reduce product memory, but we submit only the GGUF. The file cannot tell the judge’s executable to change its mmap policy. For the competition path, mmap is an engine decision outside the artifact boundary.</p>
+          <p>The stock Linux audit runtime opens the GGUF with eager page population, so its RSS includes file-backed weight pages plus runtime buffers. A custom lazy-mmap engine can reduce product memory, but we submit only the GGUF, and the file cannot tell the judge's executable to change its mmap policy. For the competition path, mmap sits outside the artifact boundary.</p>
         </div>
       </details>
 
       <details class="reasoning-check">
-        <summary>Why “no repack” remains a product result</summary>
+        <summary>Why "no repack" remains a product result</summary>
         <div>
-          <p>On the development runtime, avoiding repack cut one 4B model’s native footprint from roughly 3,236 to 602 MiB. That is valuable for Muta as software. It is not a legal model-only optimisation unless the official executable exposes the same choice, so it does not enter the campaign score.</p>
+          <p>On the development runtime, avoiding repack cut one 4B model's native footprint from roughly 3,236 to 602 MiB. That is worth having in Muta the software. It is not a model-only optimisation unless the official executable exposes the same choice, so it does not enter the campaign score.</p>
         </div>
       </details>
     </section>
@@ -261,7 +383,7 @@
         <span class="chapter-number">06</span>
         <div><p class="eyebrow">The ternary branch</p><h2 id="ternary-title">An accurate 8B model that taught us where not to cut</h2></div>
       </header>
-      <p class="lead">BitCPM4-8B-TQ2_0 was the most accurate compact candidate: 88% on the 50-item ARC-Easy proxy. Its ternary body fit in about 2.2 GB after vocabulary pruning. It still generated only 0.81 tok/s in the direct no-AVX run, so accuracy could not recover the performance term.</p>
+      <p class="lead">BitCPM4-8B-TQ2_0 was the most accurate compact candidate: 88% on the 50-item ARC-Easy proxy. Its ternary body fit in about 2.2 GB after vocabulary pruning.<span class="sidenote-number"></span><span class="sidenote">TQ2_0 stores each weight as one of three values in roughly 2 bits, so an 8B model reaches the file size of a 2B k-quant. On hardware with a matching kernel it is fast. The audit binary has no such kernel.</span> It still generated only 0.81 tok/s in the direct no-AVX run, so accuracy could not recover the performance term.</p>
 
       <div class="experiment-sequence" aria-label="BitCPM optimisation sequence">
         <article><span>01</span><h3>Prune the vocabulary</h3><p>73,448 tokens became 44,416, padded to a multiple of 64. The file lost 164 MB. English tokenisation stayed identical across 20,464 checked tokens; perplexity moved from 10.558 to 10.473.</p><strong>Kept</strong></article>
@@ -270,7 +392,7 @@
         <article><span>04</span><h3>Factor or sparsify</h3><p>The ternary matrices were full-rank; rank-2048 factorisation error was about 0.80 before quantisation. Dense GGUF also stores and multiplies zeros, so unstructured sparsity saved no scored work.</p><strong>Rejected</strong></article>
       </div>
 
-      <p>The branch remains useful. It established that vocabulary pruning can be lossless when validated at the token level, and that exotic compression only helps when the evaluator has a matching kernel.</p>
+      <p>The branch still earned its place. It established that vocabulary pruning can be lossless when validated at the token level, and that exotic compression only helps when the evaluator has a matching kernel.</p>
     </section>
 
     <section class="chapter" id="streaming" aria-labelledby="streaming-title">
@@ -278,7 +400,7 @@
         <span class="chapter-number">07</span>
         <div><p class="eyebrow">Weight streaming</p><h2 id="streaming-title">Memory saved, score lost</h2></div>
       </header>
-      <p class="lead">Weight streaming was the most direct attempt to trade SSD bandwidth for RAM. It worked as an engine feature: the fully streamed model held only about 313 MiB steady. It failed as a competition strategy because storage could not feed enough weights inside a token interval—and the custom engine cannot be submitted with a GGUF-only entry.</p>
+      <p class="lead">Weight streaming was the most direct attempt to trade SSD bandwidth for RAM, and it worked as an engine feature: the fully streamed model held only about 313 MiB steady. It failed as a competition strategy for two reasons. Storage cannot feed enough weights inside a token interval, and a custom engine cannot accompany a GGUF-only entry.</p>
 
       <div class="streaming-lab">
         <div class="controls-column">
@@ -300,13 +422,90 @@
           <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Measured residency frontier</h3></div><span class="evidence-badge development">Custom engine</span></div>
           <div class="svg-chart" id="streaming-chart" role="img" aria-label="Weight streaming throughput plotted against peak memory" aria-describedby="streaming-chart-summary"></div>
           <p class="sr-only" id="streaming-chart-summary">Stream all: 10.47 tokens per second at 279 MiB peak RSS. Pin 1,000 MB: 13.04 at 1,136 MiB. Pin 1,300 MB: 14.04 at 1,408 MiB. Pin 1,500 MB: 15.35 at 1,636 MiB. Fully resident: 18.70 at 2,129 MiB.</p>
-          <figcaption><span>Fig. 4</span> Each point pins more of the 2.2 GB model. The curve approaches 15 tok/s only after most of the weights are resident.</figcaption>
+          <figcaption><span>Fig. 6</span> Each point pins more of the 2.2 GB model. The curve reaches 15 tok/s only after most of the weights are already resident.</figcaption>
         </figure>
       </div>
 
+      <p>The budget control above assumes 48 ms of compute per token.<span class="sidenote-number"></span><span class="sidenote">Measured on the development host for the 2.2 GB ternary model. At 15 tok/s a token lasts 66.7 ms, which leaves 18.7 ms of slack — about 25 MB at 1.35 GB/s, or 1.1% of the model.</span> At the target rate and a typical SSD, the disk can deliver roughly one percent of the model per token. Streaming can only pay when the working set is already small.</p>
+
+      <h3 class="section-title">What actually reaches the judge</h3>
+      <p>Streaming is one of several engineering wins that stop at the submission boundary. Naming that boundary explicitly kept product decisions and scoring decisions from contaminating each other.</p>
+
+      <figure class="report-figure wide-figure">
+        <svg viewBox="0 0 720 344" role="img" aria-labelledby="boundary-title" aria-describedby="boundary-summary">
+          <title id="boundary-title">Which optimisations cross the submission boundary</title>
+          <style>
+            .bd-zone { font: 500 12px var(--sans, sans-serif); fill: #6b6866; }
+            .bd-item { font: 13px var(--sans, sans-serif); fill: #282828; }
+            .bd-gain { font: 11.5px var(--mono, monospace); fill: #8a8580; }
+            .bd-cross { font: 13px var(--sans, sans-serif); fill: #1b6ca8; }
+            .bd-wall { stroke: #282828; stroke-width: 2; }
+            .bd-stop { stroke: #ad2111; stroke-width: 1.75; }
+            .bd-dead { fill: none; stroke: #e6e2db; stroke-width: 1.5; }
+            .bd-flow { fill: none; stroke: #1b6ca8; stroke-width: 1.75; }
+            .bd-note { font: 11.5px var(--sans, sans-serif); fill: #6b6866; }
+            .bd-gate { font: 500 12px var(--sans, sans-serif); fill: #282828; }
+          </style>
+          <defs>
+            <marker id="bd-tip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M 0 0 L 8 4 L 0 8 z" fill="#1b6ca8"/>
+            </marker>
+          </defs>
+
+          <text class="bd-zone" x="0" y="14">Muta, the product — everything we control</text>
+          <text class="bd-zone" x="530" y="14">The judge’s run</text>
+
+          <!-- engine wins: measured, real, and stopped at the wall -->
+          <text class="bd-item" x="0" y="56">Residency streaming engine</text>
+          <text class="bd-gain" x="0" y="72">2,129 → 279 MiB</text>
+          <path class="bd-dead" d="M 384 52 H 424"/>
+          <line class="bd-stop" x1="434" y1="46" x2="446" y2="58"/><line class="bd-stop" x1="446" y1="46" x2="434" y2="58"/>
+
+          <text class="bd-item" x="0" y="102">Repack disabled</text>
+          <text class="bd-gain" x="0" y="118">3,236 → 602 MiB</text>
+          <path class="bd-dead" d="M 384 98 H 424"/>
+          <line class="bd-stop" x1="434" y1="92" x2="446" y2="104"/><line class="bd-stop" x1="446" y1="92" x2="434" y2="104"/>
+
+          <text class="bd-item" x="0" y="148">Six-thread cap, unified KV</text>
+          <text class="bd-gain" x="0" y="164">5.3 → 31.1 tok/s on the dev host</text>
+          <path class="bd-dead" d="M 384 144 H 424"/>
+          <line class="bd-stop" x1="434" y1="138" x2="446" y2="150"/><line class="bd-stop" x1="446" y1="138" x2="434" y2="150"/>
+
+          <text class="bd-item" x="0" y="194">Lazy mmap policy</text>
+          <text class="bd-gain" x="0" y="210">engine flag, not file metadata</text>
+          <path class="bd-dead" d="M 384 190 H 424"/>
+          <line class="bd-stop" x1="434" y1="184" x2="446" y2="196"/><line class="bd-stop" x1="446" y1="184" x2="434" y2="196"/>
+
+          <!-- file properties: the only things that cross -->
+          <text class="bd-cross" x="0" y="252">Pure Q4_0 tensor layout</text>
+          <text class="bd-cross" x="0" y="274">Tied output head, −255 MB</text>
+          <text class="bd-cross" x="0" y="296">ChatML template, persona, sampling</text>
+          <path class="bd-flow" d="M 300 248 H 348 Q 360 248 360 260 V 270"/>
+          <path class="bd-flow" d="M 300 270 H 360"/>
+          <path class="bd-flow" d="M 300 292 H 348 Q 360 292 360 280 V 270"/>
+          <path class="bd-flow" d="M 360 270 H 516" marker-end="url(#bd-tip)"/>
+          <text class="bd-gate" x="390" y="258">one GGUF file</text>
+
+          <!-- the wall, open only at the gate -->
+          <line class="bd-wall" x1="440" y1="28" x2="440" y2="232"/>
+          <line class="bd-wall" x1="440" y1="300" x2="440" y2="318"/>
+          <text class="bd-note" x="390" y="334">submission boundary</text>
+
+          <rect x="520" y="240" width="200" height="62" fill="#eaf1f8" stroke="#1b6ca8" stroke-width="1.5"/>
+          <text class="bd-item" x="532" y="262" fill="#1b6ca8">Stock llama.cpp b10175</text>
+          <text class="bd-gain" x="532" y="278">llama-bench -p 512 -n 128</text>
+          <text class="bd-gain" x="532" y="292">4 threads, no extra flags</text>
+          <text class="bd-note" x="530" y="56">Every win on the left is real</text>
+          <text class="bd-note" x="530" y="72">for the classroom deployment</text>
+          <text class="bd-note" x="530" y="88">and worth zero points here.</text>
+        </svg>
+        <p class="sr-only" id="boundary-summary">Four engineering results stop at the submission boundary: the residency streaming engine which cuts peak memory from 2,129 to 279 MiB, disabling repack which cuts a 4B footprint from 3,236 to 602 MiB, the six-thread cap and unified KV cache, and the lazy mmap policy. Three properties cross because they are encoded in the file: the pure Q4_0 tensor layout, the tied output head saving 255 MB, and the ChatML template with persona and sampling defaults. The judge runs stock llama.cpp b10175 with llama-bench and four threads.</p>
+        <figcaption><span>Fig. 7</span> The rule that settled several arguments. A result can be true, measured, and valuable to Muta as software while contributing nothing to the score.</figcaption>
+      </figure>
+
       <aside class="design-note warning-note">
         <p class="design-note-label">Submission boundary</p>
-        <p>The custom page-cache engine remains relevant to the offline product. It is excluded from the submission argument because the challenge asks for a GGUF model evaluated by the organiser’s runtime. The report keeps both conclusions.</p>
+        <p>The custom page-cache engine stays in the offline product. It is excluded from the submission argument because the challenge asks for a GGUF model evaluated by the organiser's runtime. The report keeps both conclusions rather than choosing the flattering one.</p>
       </aside>
     </section>
 
@@ -315,18 +514,18 @@
         <span class="chapter-number">08</span>
         <div><p class="eyebrow">19 August campaign</p><h2 id="campaign-title">The first direct profiler decision</h2></div>
       </header>
-      <p class="lead">Four exact artifacts completed full participant runs on the GCP proxy. Qwen3 1.7B Q4_0 won because it paired a 72% accuracy proxy with nearly the same no-AVX speed as the 0.8B model. The 4B Qwen was more accurate at 76% but generated only 1.13 tok/s. BitCPM led accuracy at 88% but fell to 0.81 tok/s. Neither repaid its speed cost under the fixed-15 formula.</p>
+      <p class="lead">Four exact artifacts completed full participant runs on the GCP proxy. Qwen3 1.7B Q4_0 won by pairing a 72% accuracy proxy with nearly the same no-AVX speed as the 0.8B model. The 4B Qwen was more accurate at 76% but generated 1.13 tok/s; BitCPM led accuracy at 88% and fell to 0.81 tok/s. Neither repaid its speed cost under the fixed-15 formula.</p>
 
       <div class="campaign-summary-grid">
         <figure class="report-figure">
           <div class="figure-head"><div><p class="figure-kicker">Official profiler result</p><h3>Score by component</h3></div><span class="evidence-badge official">Direct</span></div>
           <div class="svg-chart tall-chart" id="official-score-chart" role="img" aria-label="Official profiler total score and component contributions by model" aria-describedby="official-data-table"></div>
-          <figcaption><span>Fig. 5</span> Contributions use the executable profiler’s fixed 15 tok/s reference. Accuracy is an ARC-Easy proxy, not the judging panel score.</figcaption>
+          <figcaption><span>Fig. 8</span> Contributions use the executable profiler's fixed 15 tok/s reference. Accuracy is an ARC-Easy proxy, not the judging panel score.</figcaption>
         </figure>
         <figure class="report-figure">
           <div class="figure-head"><div><p class="figure-kicker">Official profiler result</p><h3>Speed against memory</h3></div><span class="evidence-badge official">Direct</span></div>
           <div class="svg-chart tall-chart" id="official-scatter-chart" role="img" aria-label="Official profiler throughput plotted against peak RSS" aria-describedby="official-data-table"></div>
-          <figcaption><span>Fig. 6</span> Upper left is better: more generation with less peak RSS. Circle area follows the ARC-Easy proxy.</figcaption>
+          <figcaption><span>Fig. 9</span> Upper left is better: more generation with less peak RSS. Circle area follows the ARC-Easy proxy.</figcaption>
         </figure>
       </div>
 
@@ -339,10 +538,10 @@
           <tr><td><code>qwen3.5-4b-iq4_xs.gguf</code></td><td>1.13</td><td>395.19 s</td><td>2,627 MiB</td><td>76% <small>62.6–85.7</small></td><td>52.93</td></tr>
         </tbody>
       </table></div>
-      <p>The 0.8B model produced its first token 7.11 seconds sooner than the current winner. The fixed score does not include first-token latency, but a 35-second wait still matters to a tutor. The 4B and 8B waits—about 6.6 and 9.7 minutes—make their no-AVX deployments impractical even before total score.</p>
+      <p>The 0.8B model produced its first token 7.11 seconds sooner than the current winner.<span class="sidenote-number"></span><span class="sidenote">First-token latency carries no weight in the profiler score, but it is the first thing a student notices. It is tracked here so a future tie is broken by something a classroom would feel.</span> The 4B and 8B waits, about 6.6 and 9.7 minutes, rule out no-AVX deployment before total score enters the argument.</p>
 
       <h3 class="section-title">How sensitive is that answer?</h3>
-      <p>The direct campaign uses the executable’s 15 tok/s cap. The public webpage describes performance relative to the fastest cohort model. We therefore rescored the AVX2 deployment measurements at several possible cohort floors. This does not revise the official result; it shows where the choice would change if the public formula governed.</p>
+      <p>The direct campaign uses the executable's 15 tok/s cap, while the public webpage describes performance relative to the fastest cohort model. We rescored the AVX2 deployment measurements at several possible cohort floors. This does not revise the official result; it shows where the choice would change if the public formula governed.</p>
 
       <div class="sensitivity-lab">
         <label>Cohort <code>TPS_max</code> floor <output id="sensitivity-floor-value">15</output> tok/s
@@ -358,7 +557,7 @@
       <details class="reasoning-check">
         <summary>What could change the current choice?</summary>
         <div>
-          <p>The 0.92-point lead is smaller than the uncertainty implied by 50 accuracy questions. The next decisive tests are a larger, tutoring-aware accuracy evaluation and a full run on the physical target with package temperature. Either test could legitimately reorder the candidates because the present choice is conditional on the measurements we have.</p>
+          <p>The 0.92-point lead is smaller than the uncertainty implied by 50 accuracy questions.<span class="sidenote-number"></span><span class="sidenote">The winner's 72% carries a 58.3–82.5 interval; the runner-up's 68% carries 54.2–79.2. Those overlap almost entirely. Fifty items can separate 72% from 24%, not 72% from 68%.</span> The next decisive tests are a larger, tutoring-aware accuracy evaluation and a full run on the physical target with package temperature. Either could legitimately reorder the candidates.</p>
         </div>
       </details>
     </section>
@@ -368,7 +567,7 @@
         <span class="chapter-number">09</span>
         <div><p class="eyebrow">Experiment ledger</p><h2 id="ledger-title">What we kept, rejected, or deferred</h2></div>
       </header>
-      <p class="lead">A rejected idea is recorded with the condition that rejected it. That matters because a different runtime, prompt distribution, or submission rule can make the same idea worth testing again.</p>
+      <p class="lead">Each rejected idea is recorded with the condition that rejected it, because a different runtime, prompt distribution, or submission rule can make the same idea worth testing again.</p>
       <div class="filter-row" role="group" aria-label="Filter experiment ledger">
         <button class="filter-button active" data-ledger-filter="all" aria-pressed="true">All</button>
         <button class="filter-button" data-ledger-filter="adopted" aria-pressed="false">Adopted</button>
@@ -384,7 +583,7 @@
         <span class="chapter-number">10</span>
         <div><p class="eyebrow">Challenge FAQ</p><h2 id="faq-title">What is ready, and what remains open</h2></div>
       </header>
-      <p class="lead">The challenge FAQ is translated below into project checks. Empty progress fields are intentional: the corresponding eligibility or language-bonus question does not yet have a Muta experiment to report.</p>
+      <p class="lead">The challenge FAQ is translated below into project checks. Empty progress fields are deliberate: the corresponding eligibility or language-bonus question does not yet have a Muta experiment to report.</p>
       <div class="faq-list" id="faq-list"></div>
       <p class="source-note">Challenge requirements checked against the <a href="https://africadeeptech.org/challenge-2026/" target="_blank" rel="noreferrer">Africa Deep Tech Challenge 2026 page</a> on 19 August 2026.</p>
     </section>
@@ -394,7 +593,7 @@
         <span class="chapter-number">11</span>
         <div><p class="eyebrow">Current state</p><h2 id="current-title">A reproducible candidate, with two decisive tests left</h2></div>
       </header>
-      <p class="lead">The project now has an exact GGUF candidate, a pinned audit binary, a direct profiler campaign, and an evidence trail for the ideas that did not survive measurement. The remaining uncertainty is concentrated rather than vague.</p>
+      <p class="lead">The project has an exact GGUF candidate, a pinned audit binary, a direct profiler campaign, and an evidence trail for the ideas that did not survive measurement. Two measurements are still missing, and both are named below.</p>
       <ol class="next-tests">
         <li><span>01</span><div><strong>Run the exact artifact on the physical competition-class laptop.</strong><p>Measure whole-tree RSS, package temperature, throttling, and repeated throughput under the submitted runtime.</p></div></li>
         <li><span>02</span><div><strong>Replace the 50-item proxy with a tutoring-aware accuracy evaluation.</strong><p>Test mathematical correctness, explanation quality, calibrated hints, and failure handling. ARC-Easy cannot measure the full 50% term.</p></div></li>
@@ -406,7 +605,7 @@
         <span class="chapter-number">A</span>
         <div><p class="eyebrow">Operational appendix</p><h2 id="profiler-title">Profiler workspace and raw campaign tables</h2></div>
       </header>
-      <p class="lead">The report above is the interpretation layer. This appendix keeps the underlying dashboard: exact campaign records, live profiling controls, stored reports, and the mixed-machine archive.</p>
+      <p class="lead">This appendix keeps the underlying dashboard: exact campaign records, live profiling controls, stored reports, and the mixed-machine archive.</p>
 
       <div class="workspace-bar">
         <div><strong>Profiler metadata</strong><p id="meta-line">Loading metadata…</p></div>
@@ -451,7 +650,7 @@
     </section>
 
     <footer class="report-footer">
-      <p><strong>MUTA-IQ</strong> · Offline adaptive tutoring for maths and scientific reasoning.</p>
+      <p><strong>Muta IQ</strong> · Offline adaptive tutoring for maths and scientific reasoning.</p>
       <p>Primary repository evidence: <code>RESULTS.md</code>, <code>muta-iq/REPORT.md</code>, <code>muta-iq/opt/docs/REPORT.md</code>, <code>muta-iq/opt/docs/STREAMING_ENGINE.md</code>, and <code>bench/measurements/campaign-20260819/</code>.</p>
     </footer>
   </article>
