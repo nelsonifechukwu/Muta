@@ -22,6 +22,28 @@
 </header>
 
 <main>
+  <section class="card" id="campaign-card">
+    <div class="card-head">
+      <h2>2026-08-19 official-profiler GGUF campaign</h2>
+      <p class="sub" id="campaign-sub">loading provenance-complete campaign evidence…</p>
+    </div>
+    <div class="table-wrap">
+      <table class="models" id="campaign-table"></table>
+    </div>
+    <p class="formula" id="campaign-formula"></p>
+  </section>
+
+  <section class="card" id="campaign-alternative-card">
+    <div class="card-head">
+      <h2>Alternative: AVX2 + webpage-relative scoring</h2>
+      <p class="sub" id="campaign-alternative-sub">loading preserved alternative evidence…</p>
+    </div>
+    <div class="table-wrap">
+      <table class="models" id="campaign-alternative-table"></table>
+    </div>
+    <p class="formula" id="campaign-alternative-formula"></p>
+  </section>
+
   <section class="card" id="run-card" hidden>
     <div class="card-head row">
       <div>
@@ -38,13 +60,13 @@
 
   <section class="card">
     <div class="card-head">
-      <h2>Best S_total by model</h2>
-      <p class="sub">Best fully-scored run per model · S_acc proxied locally by arc_easy × 100</p>
+      <h2>Historical profiler archive</h2>
+      <p class="sub">Legacy runs mix machines and engine regimes. They are retained for inspection, not campaign ranking.</p>
     </div>
     <div class="chart" id="chart"></div>
     <p class="formula">
       S_total = 0.50·S_acc + 0.30·S_perf + 0.20·S_eff − 10·thermal ·
-      S_perf = min(TPS / TPS_max, 1) × 100 · <span id="tps-ref">TPS_max = fastest stored run</span> ·
+      legacy S_perf = min(TPS / TPS_max, 1) × 100 · <span id="tps-ref">TPS_max = fastest stored run</span> ·
       S_eff = (7 GB − peak RAM) / 7 GB × 100 ·
       crash / OOM ⇒ disqualified (0)
     </p>

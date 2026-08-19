@@ -23,20 +23,28 @@ from collections import deque
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 DASH_DIR = Path(__file__).resolve().parent
 ROOT = DASH_DIR.parent                      # submission repo root (holds metadata.json)
+REPO_ROOT = ROOT.parent
 MODEL_DIR = ROOT / "model"
 METADATA = ROOT / "metadata.json"
 SUBMISSION = ROOT / "submission.json"
 DB_PATH = DASH_DIR / "profiler.db"
 RUNS_DIR = DASH_DIR / "runs"                # raw profiler output files (gitignored)
+CAMPAIGN_SUMMARY = Path(os.environ.get(
+    "MUTA_CAMPAIGN_SUMMARY",
+    REPO_ROOT / "bench/measurements/campaign-20260819/summary.json",
+))
+CAMPAIGN_ALTERNATIVE = Path(os.environ.get(
+    "MUTA_CAMPAIGN_ALTERNATIVE",
+    REPO_ROOT / "bench/measurements/campaign-20260819/avx2-website-relative-summary.json",
+))
 
-# Scoring constants from the adtc-profiler README / challenge rules.
-# S_perf has no fixed reference: the official site scores 100*TPS/TPS_max with
-# TPS_max = the fastest submission, so locally the fastest stored run stands in
-# for it (see tps_reference()). The profiler README's fixed 15 tok/s is NOT used.
+# Historical archive constants. New campaign evidence is scored by bench/score.py and loaded
+# from CAMPAIGN_SUMMARY. The SQLite archive preserves its old capped fastest-local-run proxy
+# solely so past rows remain reconstructible; it is not a current competition ranking.
 RAM_LIMIT_GB = 7.0
 TEMP_LIMIT_C = 85.0
 THERMAL_PENALTY_PTS = 10
@@ -119,10 +127,11 @@ def compute_scores(arc_score, tps, peak_rss_mb, throttled, temp_c, crashed,
                    tps_reference) -> dict:
     """ADTC scoring: S_total = 0.5*S_acc + 0.3*S_perf + 0.2*S_eff - P_thermal.
 
-    S_acc is proxied locally by the arc_easy benchmark score (the judges' panel
-    component only exists at audit time). S_perf = min(tps/tps_reference, 1)*100
-    where tps_reference is the fastest tok/s among all stored runs (None/0 →
-    no S_perf). A crashed/OOM run is disqualified.
+    Historical-only calculation: S_acc is proxied by arc_easy and S_perf is
+    min(tps/tps_reference, 1)*100, with the fastest stored local run as reference.
+    The campaign view uses the official profiler's fixed 15 tok/s cap. The archive's
+    fastest-local-run denominator is retained only to reconstruct old records.
+    A crashed/OOM run is disqualified.
     """
     if crashed:
         return {"s_acc": None, "s_perf": None, "s_eff": None,
@@ -405,6 +414,14 @@ def state_payload() -> dict:
         meta = json.loads(METADATA.read_text())
     except Exception:
         meta = {}
+    try:
+        campaign = json.loads(CAMPAIGN_SUMMARY.read_text())
+    except (OSError, json.JSONDecodeError):
+        campaign = None
+    try:
+        campaign_alternative = json.loads(CAMPAIGN_ALTERNATIVE.read_text())
+    except (OSError, json.JSONDecodeError):
+        campaign_alternative = None
     return {
         "models": models,
         "current": current,
@@ -417,6 +434,8 @@ def state_payload() -> dict:
         "scoring": {"tps_reference": ref_tps, "tps_reference_run": ref_run,
                     "ram_limit_gb": RAM_LIMIT_GB,
                     "temp_limit_c": TEMP_LIMIT_C, "thermal_penalty_pts": THERMAL_PENALTY_PTS},
+        "campaign": campaign,
+        "campaign_alternative": campaign_alternative,
     }
 
 

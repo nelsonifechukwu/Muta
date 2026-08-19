@@ -16,14 +16,23 @@ def tmp_app_env():
     with TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         (tmp / "model").mkdir()
-        saved = (app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION)
-        app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION = (
-            tmp / "model", tmp / "profiler.db", tmp / "metadata.json", tmp / "submission.json")
+        saved = (
+            app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION,
+            app.CAMPAIGN_SUMMARY, app.CAMPAIGN_ALTERNATIVE,
+        )
+        app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION, app.CAMPAIGN_SUMMARY, app.CAMPAIGN_ALTERNATIVE = (
+            tmp / "model", tmp / "profiler.db", tmp / "metadata.json",
+            tmp / "submission.json", tmp / "campaign-summary.json",
+            tmp / "campaign-alternative.json",
+        )
         try:
             app.init_db()
             yield tmp
         finally:
-            app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION = saved
+            (
+                app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION,
+                app.CAMPAIGN_SUMMARY, app.CAMPAIGN_ALTERNATIVE,
+            ) = saved
 
 
 class TestComputeScores(unittest.TestCase):
@@ -219,6 +228,20 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             self.assertEqual(ghost["runs_count"], 1)
             self.assertEqual(ghost["latest"]["tps"], 20.0)
             self.assertTrue(models["OnDisk-1B-Q4_K_M.gguf"]["present"])
+
+    def test_campaign_summary_is_exposed_without_entering_legacy_db(self):
+        with tmp_app_env():
+            campaign = {"schema_version": 1, "models": [{"model": "exact.gguf"}]}
+            app.CAMPAIGN_SUMMARY.write_text(json.dumps(campaign))
+            self.assertEqual(app.state_payload()["campaign"], campaign)
+
+    def test_alternative_campaign_is_exposed_separately(self):
+        with tmp_app_env():
+            alternative = {"schema_version": 1, "performance_formula": "website"}
+            app.CAMPAIGN_ALTERNATIVE.write_text(json.dumps(alternative))
+            payload = app.state_payload()
+            self.assertEqual(payload["campaign_alternative"], alternative)
+            self.assertIsNone(payload["campaign"])
 
 
 class TestTpsReferenceFromRuns(unittest.TestCase):

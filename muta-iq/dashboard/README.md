@@ -19,6 +19,18 @@ env var).
 
 ## What it does
 
+- Displays the provenance-complete 19 August GGUF campaign from
+  `../../bench/measurements/campaign-20260819/summary.json`: exact model and binary hashes,
+  interleaved rounds/internal samples, task sample counts and confidence intervals, and the
+  official profiler-capped score at `TPS_REFERENCE = 15`. Override the path with
+  `MUTA_CAMPAIGN_SUMMARY`.
+
+- Preserves the conflicting public-webpage interpretation in a second, non-blended panel loaded
+  from `avx2-website-relative-summary.json`. It shows the same-host AVX2 deployment measurements
+  under cohort-relative `100 × TPS/TPS_max` at every recorded pre-entry cohort floor. Because
+  the candidate joins the cohort, the effective denominator is `max(floor, candidate TPS)`.
+  Override that path with `MUTA_CAMPAIGN_ALTERNATIVE`.
+
 - Lists every `*.gguf` in `model/` with size, quant, and param count parsed
   from the filename. Models whose file was deleted but that still have runs in
   the database stay listed (marked "file deleted — runs kept", profiling
@@ -35,31 +47,31 @@ env var).
   **→ submission.json** to promote a run's report to the repo root
   (also re-points `metadata.json` at that model).
 
-## Scores
+## Scores and the historical archive
 
-Computed from the ADTC 2026 rules (profiler README):
+The executable official profiler implements:
 
 ```
 S_total = 0.50·S_acc + 0.30·S_perf + 0.20·S_eff − P_thermal
-S_perf  = min(TPS / TPS_max, 1.0) × 100     TPS_max = fastest tok/s among all stored runs
+S_perf  = min(TPS / 15, 1) × 100
 S_eff   = max(0, (7 GB − peak RSS) / 7 GB) × 100
 P_thermal = 10 if throttled or core temp > 85 °C
 crash / OOM ⇒ disqualified (S_total = 0)
 ```
 
-`S_acc` is proxied locally by the arc_easy benchmark score × 100 — the real
-S_acc adds a judges' panel component that only exists at audit time.
-`TPS_max` follows the official site's formula (`100·TPS/TPS_max`, TPS_max =
-the fastest submission) rather than the profiler README's fixed 15 tok/s: the
-fastest run in the database — quick runs and deleted models' kept runs
-included — stands in for the fastest submission. That run scores S_perf = 100
-and every other run, including the same model's other runs, is scored
-relative to it (so a model's full run can sit below 100 when its own quick
-run was faster). The legend under the chart shows the current TPS_max and
-which run set it; S_perf values shift whenever a faster run lands. The
-African-language and budget-laptop claims are shown as badges; their +15% /
-+10% multipliers apply to the judges' panel score, so they are not folded
-into the local S_total.
+The competition webpage separately describes a cohort-relative denominator. No public dated
+clarification resolves that contradiction; this dashboard follows the code that will execute.
+`S_acc` remains an ARC-Easy proxy; the real score also includes judging-panel quality.
+Campaign RSS cards add a clearly labelled 45 MiB estimate for the profiler Python root to the
+measured llama-bench child-tree peak; consequently the displayed efficiency and composite are
+estimates, while throughput is directly measured.
+
+The SQLite chart/table below it is deliberately labelled **Historical profiler archive**.
+It retains the dashboard's old capped local-reference calculation for reconstructing past
+runs, including records from different Macs and engine regimes. Its fastest stored run is
+not a defensible competition denominator, so archive totals must not be used to rank the new
+campaign. The African-language and budget-laptop badges are also shown only as claims; their
+judging-panel multipliers are not folded into local totals.
 
 ## Tests
 

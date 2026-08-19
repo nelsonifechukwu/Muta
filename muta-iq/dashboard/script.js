@@ -59,10 +59,75 @@ function render() {
   const d = state.data;
   if (!d) return;
   renderHeader(d);
+  renderCampaign(d.campaign, "campaign");
+  renderCampaign(d.campaign_alternative, "campaign-alternative");
   renderTpsRef(d);
   renderRunCard(d);
   renderChart(d);
   renderTable(d);
+}
+
+function renderCampaign(campaign, prefix) {
+  const sub = $(`${prefix}-sub`);
+  const table = $(`${prefix}-table`);
+  const formula = $(`${prefix}-formula`);
+  if (!campaign) {
+    sub.textContent = "No campaign summary has been generated yet.";
+    table.innerHTML = "";
+    formula.textContent = "";
+    return;
+  }
+  const denominators = campaign.tps_max_sensitivity || [];
+  const isWebsiteAlternative = String(campaign.performance_formula || "").includes("public challenge");
+  const lookupDenominator = (mapping, denominator) => {
+    if (!mapping) return null;
+    return mapping[String(denominator)] || mapping[Number(denominator).toFixed(1)] || null;
+  };
+  const models = [...(campaign.models || [])].sort((a, b) => {
+    const aResult = lookupDenominator(a.scores, denominators[0]);
+    const bResult = lookupDenominator(b.scores, denominators[0]);
+    const aScore = aResult ? aResult.s_total : null;
+    const bScore = bResult ? bResult.s_total : null;
+    if (aScore != null && bScore != null) return bScore - aScore;
+    return (b.tg_tps_mean || 0) - (a.tg_tps_mean || 0);
+  });
+  sub.textContent = `${campaign.hardware_context || "unknown host"} · ` +
+    `${models.length} exact GGUF artifacts · binary ${String(campaign.benchmark_binary_sha256 || "unknown").slice(0, 12)}…`;
+  const scoreHeads = denominators.map((d) =>
+    `<th>S @ ${isWebsiteAlternative ? "TPS_max floor" : "profiler ref"} ${esc(d)}</th>`
+  ).join("");
+  const head = `<thead><tr><th>Exact model</th><th>Size</th><th>tok/s mean ± SD</th>` +
+    `<th>Est. profiler RSS mean ± SD</th><th>Accuracy proxies</th>` +
+    `${scoreHeads}</tr></thead>`;
+  const rows = models.map((m) => {
+    const scoreCells = denominators.map((d) => {
+      const score = lookupDenominator(m.scores, d);
+      return `<td class="total">${score ? fmt.score(score.s_total, 2) : "—"}</td>`;
+    }).join("");
+    const accuracyEntries = Object.entries(m.accuracy_tasks || {}).map(([task, result]) => {
+      const ci = result.ci95_percent || [];
+      const interval = ci.length === 2
+        ? ` · 95% CI ${fmt.num(ci[0], 1)}–${fmt.num(ci[1], 1)}`
+        : "";
+      return `${esc(task)} ${fmt.num(result.score_percent, 1)}% (n=${esc(result.samples)})${interval}`;
+    }).join("<br>");
+    return `<tr><td><div class="model-name">${esc(shortName(m.model))}</div>` +
+      `<div class="model-sub mono">sha256:${esc(String(m.model_sha256 || "unknown").slice(0, 16))}… · ${esc(m.measurement_tier || "unlabelled")} · ${esc(m.throughput_rounds)} interleaved rounds / ${esc(m.throughput_repetitions)} timed samples</div></td>` +
+      `<td>${fmt.gb(m.model_bytes)}</td>` +
+      `<td>${fmt.num(m.tg_tps_mean, 2)} ± ${fmt.num(m.tg_tps_sd, 2)}</td>` +
+      `<td>${fmt.mb(m.peak_rss_mib_mean)} ± ${fmt.mb(m.peak_rss_mib_sd)}</td>` +
+      `<td>${accuracyEntries || "pending"}</td>` +
+      scoreCells + `</tr>`;
+  }).join("");
+  table.innerHTML = head + `<tbody>${rows}</tbody>`;
+  const winnerText = denominators.map((d) => {
+    const winner = lookupDenominator(campaign.winners, d);
+    return winner ? `${d}→${shortName(winner.model)} (${fmt.num(winner.s_total, 2)})` : null;
+  }).filter(Boolean).join(" · ");
+  formula.textContent = `${campaign.performance_formula}. ${campaign.accuracy_notice}. ` +
+    `${campaign.rss_notice || ""}. ${campaign.thermal_notice}. ${campaign.tps_max_scenario_notice || ""}.` + (winnerText
+      ? ` Winner by ${isWebsiteAlternative ? "TPS_max floor scenario" : "profiler reference"}: ${winnerText}.`
+      : "");
 }
 
 function renderTpsRef(d) {
