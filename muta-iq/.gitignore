@@ -1,5 +1,9 @@
 # --- Model weights (fetched via download_model.sh, too large for git) ---
 model/
+# Reproducible GCP campaign workspace. Curated measurements and manifests live
+# under bench/measurements/; the multi-gigabyte sources, candidates, and raw
+# staging files remain on the benchmark host.
+opt/campaign/
 *.gguf
 *.ggml
 *.bin
