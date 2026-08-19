@@ -105,6 +105,8 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Teachers can even share their resources on the app (their curriculum via RAG - which each student can tailor to themselves) and even monitor students' progress. See [RACHEL](https://worldpossible.org/products/rachel-5-500).
 - [Guided discovery approach](https://youtu.be/6rkSPPyz_Bo) and [demonstrative learning](https://youtube.com/shorts/SHec9Qv8u3E?si=AULeO-BnjXIUC6au)
 - Make the entire WAEC (or other African education) curriculum like [ANATOMY](https://anatomy-livid.vercel.app/)
+- Connect the model to the internet to search for more info and improve correctness (it can download more info routinely and fine-tune itself periodically)
+- 
 
 ## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
