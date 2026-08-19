@@ -4,7 +4,9 @@
 Serves the dashboard UI, scans ../model/*.gguf, runs adtc-profiler on demand
 (one run at a time, in the `ai` conda env), and persists every run to SQLite.
 
-Usage: python3 app.py [port] [--no-open]     (default port 8765)
+Usage: python3 app.py [port] [--no-open] [--lan]     (default port 8765)
+
+``--lan`` listens on every local interface and automatically disables mutating API routes.
 """
 from __future__ import annotations
 
@@ -536,6 +538,8 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"error": "The requested dashboard route was not found."}, 404)
 
     def do_POST(self):
+        if getattr(self.server, "read_only", False):
+            return self._json({"error": "The LAN report is read-only."}, 403)
         url = urlparse(self.path)
         if url.path == "/api/profile":
             body = self._read_body()
@@ -556,6 +560,8 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"error": "The requested dashboard route was not found."}, 404)
 
     def do_DELETE(self):
+        if getattr(self.server, "read_only", False):
+            return self._json({"error": "The LAN report is read-only."}, 403)
         m = _RUN_ID_RE.match(urlparse(self.path).path)
         if m:
             with db() as conn:
@@ -565,16 +571,26 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"error": "The requested dashboard route was not found."}, 404)
 
 
-def main() -> None:
-    args = [a for a in sys.argv[1:]]
+def server_options(args: list[str]) -> tuple[str, int, bool, bool]:
     open_browser = "--no-open" not in args
     ports = [int(a) for a in args if a.isdigit()]
     port = ports[0] if ports else 8765
+    lan = "--lan" in args
+    return ("0.0.0.0" if lan else "127.0.0.1", port, open_browser, lan)
+
+
+def main() -> None:
+    host, port, open_browser, read_only = server_options(sys.argv[1:])
     RUNS_DIR.mkdir(exist_ok=True)
     init_db()
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = ThreadingHTTPServer((host, port), Handler)
+    server.read_only = read_only
     url = f"http://127.0.0.1:{port}"
-    print(f"Muta IQ experiment report: {url}  (models: {MODEL_DIR}, database: {DB_PATH})")
+    mode = "LAN read-only" if read_only else "local"
+    print(f"Muta IQ experiment report ({mode}): {url}")
+    if read_only:
+        print(f"Open http://<this-mac-ip>:{port} from another device on the same network.")
+    print(f"Models: {MODEL_DIR}  Database: {DB_PATH}")
     print(f"Profiler command: {' '.join(PROFILER_CMD)}")
     if open_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()

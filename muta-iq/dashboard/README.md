@@ -16,6 +16,15 @@ Run these commands from `muta-iq/`:
 ./dashboard/start.sh --no-open
 ```
 
+To share the report with other devices on the same trusted Wi-Fi network, use read-only LAN mode:
+
+```bash
+./dashboard/start.sh --lan --no-open
+```
+
+Open `http://<this-mac-ip>:8765` on the other device. LAN mode serves the report and its evidence
+API but rejects profiling, cancellation, promotion, and deletion requests.
+
 The report server uses only the Python 3 standard library (`http.server` and `sqlite3`). Profiling
 still requires `adtc-profiler`. The launcher checks `~/miniforge3/envs/ai/bin/adtc-profiler` by
 default; set `ADTC_PROFILER` to use another executable.

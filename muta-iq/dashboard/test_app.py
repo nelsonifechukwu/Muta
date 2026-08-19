@@ -12,6 +12,7 @@ from app import (
     model_listing,
     parse_params,
     parse_quant,
+    server_options,
     updated_metadata,
 )
 
@@ -275,6 +276,7 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             self.assertEqual(payload["campaign_alternative"], alternative)
             self.assertIsNone(payload["campaign"])
 
+
     def test_profiler_parity_campaign_is_exposed_separately(self):
         with tmp_app_env():
             parity = {"schema_version": 1, "models": [{"model": "screen.gguf"}]}
@@ -290,6 +292,29 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             payload = app.state_payload()
             self.assertEqual(payload["campaign_avx2_score"], avx2_score)
             self.assertIsNone(payload["campaign"])
+
+
+class TestServerOptions(unittest.TestCase):
+    def test_default_is_loopback_and_writable(self):
+        self.assertEqual(server_options([]), ("127.0.0.1", 8765, True, False))
+
+    def test_lan_mode_is_read_only(self):
+        self.assertEqual(server_options(["9000", "--lan", "--no-open"]),
+                         ("0.0.0.0", 9000, False, True))
+
+    def test_lan_handler_rejects_mutations(self):
+        handler = app.Handler.__new__(app.Handler)
+        handler.server = type("Server", (), {"read_only": True})()
+        responses = []
+        handler._json = lambda body, code=200: responses.append((body, code))
+
+        handler.do_POST()
+        handler.do_DELETE()
+
+        self.assertEqual(responses, [
+            ({"error": "The LAN report is read-only."}, 403),
+            ({"error": "The LAN report is read-only."}, 403),
+        ])
 
 
 class TestTpsReferenceFromRuns(unittest.TestCase):
