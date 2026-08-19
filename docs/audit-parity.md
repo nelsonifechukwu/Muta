@@ -4,24 +4,20 @@
 HEAD `7adbe08`), llama.cpp b10175 source, and the official pages. Companion to the
 2026-08-05 addendum in [rules-digest.md](rules-digest.md).
 
-## Which numbers actually score — settled 2026-08-06
+## Which numbers actually score — corrected 2026-08-19
 
-Organizer answers, recorded here because two of them invalidate earlier reasoning:
+The previous version claimed that organisers privately resolved the formula and hardware on
+6 August. That claim has no attached email, link, quote, issue, or forum message, and later
+project research explicitly records that no public clarification exists. Do not treat it as
+evidence.
 
-- **`S_perf = TPS/TPS_max`, uncapped and cohort-relative** — not the profiler README's
-  `min(TPS/15, 1)`. Throughput scales linearly into the score with no saturation point,
-  so there is no "fast enough" threshold to stop at.
-- **The audit runs on the physical Standard Laptop** (i5 10th-12th gen / Ryzen 5
-  3000-5000, 8 GB DDR4, Ubuntu 22.04), **not** the SIMD-less reference container.
-- Gate 1 is **August 25**.
+Two current official sources conflict. The challenge webpage describes a physical Standard
+Laptop and cohort-relative `100·TPS/TPS_max`. The official profiler README/code describe audit
+mode in secure cloud VMs and implement `min(TPS/15, 1)·100`. For reproducible campaign
+decisions, the executable profiler is the score-of-record: **fixed 15 tok/s, capped, reference
+cloud-VM binary**. The webpage interpretation remains a labelled sensitivity only.
 
-The second answer changes the engineering target completely, because a normal laptop
-build has AVX2 — which means **weight repack runs**, and repack is the dominant term in
-peak RSS. See "The repack composition rule" below. The container analysis that used to
-live in this section is retained only as the contingency case, in case a cloud-VM audit
-reappears at Gate 2.
-
-## The repack composition rule — the single most important fact for S_eff
+## AVX2 repack composition — product/physical-laptop evidence, not audit parity
 
 llama.cpp copies repackable tensors into private anonymous memory at load. On x86 **only
 Q4_0 and Q4_K repack**; Q5_K, Q6_K, Q3_K and IQ4_XS never do (`repack.cpp` registers
@@ -29,7 +25,7 @@ Q4_0 and Q4_K repack**; Q5_K, Q6_K, Q3_K and IQ4_XS never do (`repack.cpp` regis
 
 > **peak RSS ≈ file size + the repackable fraction of the file**
 
-Measured on the audit-pin engine built with AVX2 (2026-08-06, `/usr/bin/time -l`):
+Measured on the b10175 engine built with AVX2 (2026-08-06, `/usr/bin/time -l`):
 
 | model | file GiB | peak RSS GB | overhead |
 |---|---|---|---|
@@ -45,41 +41,24 @@ size alone predicts it badly — the smallest file here is the heaviest in RAM.
 
 ## The self-report build (what `llama-bench` on our PATH must be)
 
-**Match a stock laptop build — do not tune it.** The audit measures on their machine with
-their binary, and reconciliation compares the two readings:
+**Match the published reference Dockerfile.** At b10175 that disables native, AVX, AVX2,
+AVX-512, FMA and F16C. No repack executes and Q4_0 retains its SSSE3 kernel:
 
 ```bash
-cmake -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DBUILD_SHARED_LIBS=OFF \
+      -DGGML_NATIVE=OFF -DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_AVX512=OFF \
+      -DGGML_FMA=OFF -DGGML_F16C=OFF -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target llama-bench
 ```
 
-That is deliberately the plainest possible invocation: `GGML_NATIVE` defaults on, AVX2/FMA
-/F16C/BMI2 come along, and **repack stays enabled**. Every temptation to be clever here is
-a reconciliation risk rather than a score gain:
-
-- `-DGGML_CPU_REPACK=OFF` would cut our reported RSS by 1.5-2.6 GB — and the audit, running
-  a stock build, would measure the full figure. Delta `(audit − sub)/sub` of +50% or more is
-  an outright **fail**, not a lower score. The same logic kills cgroup memory caps and any
-  other footprint suppression.
-- `-march=native` on our machine is fine for the *product*, but tuning past the audit box's
-  ISA inflates a number they cannot reproduce.
-
-**Consequence worth stating plainly: build flags cannot buy S_eff any more.** With the
-audit on real hardware running a stock binary, the only lever left on peak RSS is the
-**quant composition of the submitted file** — see the repack composition rule above. That
-is now the primary model-selection criterion, ahead of file size.
-
-*Contingency:* if a Gate-2 audit reappears in the SIMD-less reference container, the
-matching self-report build is the all-SIMD-off one (AVX/AVX2/FMA/F16C `OFF`), where no
-repack occurs and Q4_0 is the only vectorized weight kernel. Keep that build around; it
-is the reason `Qwen3.5-4B-Q4_0-EH` exists.
+An AVX2 build remains useful to predict deployment UX, but its TPS/RSS must not be mixed with
+the score-of-record. If ADTF publishes a versioned audit image that enables AVX2, rerun and
+promote that evidence; until then the reference image wins the provenance tie.
 
 ## Launch posture for the measurement run
 
-- Bare metal Ubuntu 22.04, the real 8 GB laptop (`environment.ram_gb` reads host meminfo —
-  a bigger box betrays itself), AC power, idle, network down, performance governor
-  (`cpupower frequency-set -g performance`), dual-channel RAM verified via
-  `dmidecode -t memory` (single-channel halves bandwidth-bound tg).
+- Reference container on an x86 host, 7.5 GiB cgroup limit, no swap, otherwise idle. Record
+  the host as a cloud proxy; do not call it the physical target laptop.
 - **Never launch the profiler under a cgroup cpuset** (docker `--cpuset-cpus`,
   systemd `AllowedCPUs`): llama-bench's thread-count probe fails EINVAL on excluded CPUs
   and falls back to ALL physical cores — guaranteed oversubscription. Plain `taskset` is
@@ -87,9 +66,7 @@ is the reason `Qwen3.5-4B-Q4_0-EH` exists.
   Intel (the sibling-skip logic then halves the P-core count).
 - `nice -n -10` on the profiler is cheap insurance for the 5-rep average; avoid RT
   scheduling (`--prio 2` measured pathological).
-- Thermal: the tg row runs after all pp reps, thermally soaked; a cool chassis and a
-  cold start protect both the scored tg and the self-reported `core_temp_c_peak`
-  (P_thermal fires at ≥85 °C, read from our own report on bare metal).
+- Thermal sensors may be unavailable in a cloud VM. Record unknown; never rewrite it as cool.
 - Do not suppress RSS artificially (cgroup memory.high, zram tricks): audit RSS ≈ file
   size plus ~0.4 GB; a submitted value below audit/1.15 flags, below audit/1.5 fails,
   and a near-zero value is an automatic structural fail.

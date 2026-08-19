@@ -61,15 +61,18 @@ now lives at `bench/adtc-profiler/` (verified = origin/main, zero commits since)
 5. **`-ngl 0` is now pinned** in the profiler's llama-bench call (cf3432cf had no `-ngl`),
    and TTFT is `n_prompt/pp_rate`, not `1/pp_rate`. Still no `-t` — the binary's default
    thread count rules (llama-bench = physical/P cores; cgroup-oblivious in Docker).
-6. **Scoring-formula ambiguity stands**: profiler README/code say
-   `min(TPS/15, 1)·100` (capped); the challenge page says `100·TPS/TPS_max` with TPS_max =
-   fastest submission. Unresolved — plan candidates under both readings.
+6. **Correction, 2026-08-19: there is no sourced 6 August clarification.** The public
+   challenge page says cohort-relative `100·TPS/TPS_max`, but the official profiler README
+   and executable code use `min(TPS/15, 1)·100`. The profiler also describes audit mode as
+   running in secure cloud VMs. Until ADTF publishes a versioned resolution, campaign
+   decisions use the profiler implementation: fixed 15 tok/s, capped.
 7. **Deadline**: devpost says Aug 24, 2026 23:45 PDT; the site says Aug 25. Treat Aug 24
    as binding. `>7 GB peak RSS = disqualification (S_total = 0)`, per the official page.
 
 Strategy consequence: **the submitted GGUF file is the only lever the scored path sees**
-(model, quant recipe, file size). Self-reported TPS/RSS must be measured through an
-audit-parity build (SSE-only b10175) or reconciliation risks flag/fail. See
+(model, quant recipe, file size). Self-reported TPS/RSS must be rehearsed through the exact
+b10175 reference image/binary; AVX2 laptop measurements remain a separately labelled product
+proxy, not the audit score-of-record. See
 `bench/.artifacts/campaign-20260805.md` for the running bake-off.
 
 ---
@@ -97,19 +100,21 @@ overhead cost **zero** `S_perf`. The roadmap's premise — that `profile.py` mea
 through the product (what gets scored)" and that the profile-vs-bench gap "is worth 12 points
 of `S_perf`" — does not hold. That gap is a product-UX metric, not a scoring metric.
 
-### 2. Is TPS_max fixed at 15, or set by the fastest submission? — **FASTEST SUBMISSION**
+### 2. Is TPS_max fixed at 15, or set by the fastest submission? — **PUBLICLY CONTRADICTORY; USE PROFILER 15**
 
 Official challenge page, on `S_perf`:
 
 > "TPSact: actual tokens/sec during audit · **TPSmax: highest speed across all submissions**"
 
-Devpost carries `TPS_REFERENCE = 15.0` explicitly marked **"provisional"**.
+The official profiler README and code instead implement:
 
-**Consequence:** `S_perf` is *relative to the cohort*, so **the exchange rate is not a
-constant.** `pts_per_tps = 30 / TPS_max` — it equals 2.00 only when `TPS_max == 15`. The
-much-quoted "1 GB = 1.43 tok/s" break-even holds **only at 15**; if the fastest submission
-lands at 30 tok/s, the break-even doubles to 2.86 tok/s per GB and several RAM-spending
-optimizations flip sign. `bench/score.py` computes this from `tps_max` and never hardcodes it.
+> `min(TPS / TPS_REFERENCE, 1.0) * 100`, with `TPS_REFERENCE = 15.0`
+
+No public dated organiser reply resolves the conflict. The old 6 August repository entry
+claiming one existed has no link, quote, email, or issue reference; later project research
+correctly marked the question unresolved. **Decision:** match the executable profiler. Below
+15 tok/s, one tok/s contributes 2.00 total points and 1 GB costs 2.86 points; at and above
+15, further speed contributes zero under this rule.
 
 ### 3. Is peak RAM RSS or PSS? Whole tree or single PID? — **RSS, WHOLE TREE**
 
@@ -202,7 +207,7 @@ here** — recording, not re-deciding.
 |---|---|---|
 | `S_acc` (50%) is *tutoring quality*, so Phase 4 pedagogy feeds the heaviest term | `accuracy.py` = lm-eval on the GGUF; the product is never invoked | The strategic case for Phase 4's weighting. Pedagogy is likely a judging/report asset, not a profiler-score asset |
 | Measure and report peak RAM as **PSS** | Profiler reads **RSS**; no `smaps_rollup` anywhere | Optimising an unscored metric. RSS ≥ PSS with `mmap`, so we'd under-report our own scored number |
-| `TPS_max ≈ 15`, so exchange rate ≈ 2.00 pts per tok/s | "highest speed across all submissions"; 15 is "provisional" | Every break-even in the optimisation ladder. At a cohort max of 30, "1 GB = 1.43 tok/s" becomes 2.86 |
+| Profiler: cap at fixed 15; challenge page: relative to fastest submission | Both are current official public sources; no sourced clarification resolves them | Every break-even. Use the executable profiler for decisions and label webpage-relative numbers sensitivity-only |
 | `profile.py` measures "end-to-end through the product (**what gets scored**)"; the profile-vs-bench gap is worth ~12 pts | `llama-bench` *is* the scored path | Effort spent shaving orchestration overhead for `S_perf` points that don't exist |
 
 One more, not a contradiction but a gap: the roadmap plans a single **12 Aug** submission. The

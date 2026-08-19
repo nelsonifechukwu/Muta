@@ -29,13 +29,19 @@ from bench.score import (
 
 def _ok(**overrides) -> ScoreResult:
     """A healthy baseline run; override one field per test."""
-    kwargs = dict(accuracy=60.0, tps_actual=10.0, peak_rss_gb=4.0, max_temp_c=70.0)
+    kwargs = {"accuracy": 60.0, "tps_actual": 10.0, "peak_rss_gb": 4.0, "max_temp_c": 70.0}
     kwargs.update(overrides)
     return score(**kwargs)  # type: ignore[arg-type]
 
 
 def _crashed(**overrides) -> ScoreResult:
-    kwargs = dict(accuracy=99.0, tps_actual=99.0, peak_rss_gb=1.0, oom_or_crash=True, label="crashed")
+    kwargs = {
+        "accuracy": 99.0,
+        "tps_actual": 99.0,
+        "peak_rss_gb": 1.0,
+        "oom_or_crash": True,
+        "label": "crashed",
+    }
     kwargs.update(overrides)
     return score(**kwargs)  # type: ignore[arg-type]
 
@@ -81,14 +87,14 @@ def test_roadmap_worked_example_4gb_to_3gb():
 
 
 def test_peak_rss_over_budget_clamps_but_flags():
-    """Over 7 GB: S_eff clamps at 0, but the run must not look merely mediocre."""
+    """Over 7 GB is a hard failure, never a rankable zero-efficiency score."""
     r = _ok(peak_rss_gb=8.5)
-    assert r.s_eff == 0.0
+    assert r.s_eff is None
     assert r.over_budget is True
     assert r.raw_s_eff is not None and r.raw_s_eff < 0  # the truth is preserved
-    assert r.pts_from_eff == 0.0
-    assert not r.disqualified  # over budget is a *risk*, not itself a disqualification
-    assert "raw_eff=-21.4" in r.summary()  # and the distance over is visible
+    assert r.pts_from_eff is None
+    assert r.disqualified
+    assert "hard budget" in (r.disqualification_reason or "")
 
 
 def test_ram_exactly_at_budget_is_not_over():
@@ -97,8 +103,28 @@ def test_ram_exactly_at_budget_is_not_over():
     assert r.over_budget is False  # boundary: == budget is within budget
 
 
-def test_tps_above_tps_max_clamps_at_100():
-    """Beating the fastest observed submission must not score above 100."""
+def test_website_relative_formula_is_available_only_when_explicit():
+    """The conflicting challenge-page formula remains available for sensitivity."""
+    r = _ok(
+        tps_actual=10.0,
+        performance_formula="website_relative",
+        tps_max_provenance="cohort_observed",
+    )
+    assert r.s_perf == pytest.approx(100 * 10 / 15)
+    assert r.pts_from_perf == pytest.approx(20.0)
+
+
+def test_website_relative_rejects_candidate_faster_than_declared_cohort_max():
+    with pytest.raises(ValueError, match="candidate is part of the cohort"):
+        _ok(
+            tps_actual=16.0,
+            tps_max=15.0,
+            performance_formula="website_relative",
+            tps_max_provenance="cohort_observed",
+        )
+
+
+def test_profiler_formula_is_capped_by_default():
     r = _ok(tps_actual=100.0)
     assert r.s_perf == 100.0
     assert r.pts_from_perf == pytest.approx(30.0)
@@ -218,14 +244,24 @@ def test_infinite_inputs_are_rejected():
 
 
 def test_verdict_honours_the_clamp_at_the_projects_actual_operating_point():
-    """The tier-3 draft-model decision, at the 12-15 tok/s the target actually hits.
+    """The official-profiler cap changes the optimization verdict.
 
     A flat rate prices +5 tok/s at +10 pts and says ship it. But S_perf clamps at tps_max=15,
     so only 1 of those 5 tok/s is worth anything, and the 1 GB costs 2.86. It's a LOSS.
     """
     rate = exchange_rate()
-    base = _ok(tps_actual=14.0, peak_rss_gb=4.0, label="base")
-    draft = _ok(tps_actual=19.0, peak_rss_gb=5.0, label="+draft")
+    base = _ok(
+        tps_actual=14.0,
+        peak_rss_gb=4.0,
+        label="base",
+        performance_formula="profiler_capped",
+    )
+    draft = _ok(
+        tps_actual=19.0,
+        peak_rss_gb=5.0,
+        label="+draft",
+        performance_formula="profiler_capped",
+    )
 
     actual = draft.s_total - base.s_total  # type: ignore[operator]
     assert actual == pytest.approx(-0.857, abs=1e-2)  # a real loss
@@ -241,11 +277,18 @@ def test_verdict_honours_the_clamp_at_the_projects_actual_operating_point():
 def test_delta_points_reproduces_the_actual_score_delta():
     """The predictor must equal the measurement, or it isn't a compass."""
     rate = exchange_rate()
-    for tps_before, dtps, dram in [(5.0, 2.0, 1.0), (14.0, 5.0, 1.0), (10.0, -1.0, -0.5), (16.0, 3.0, 0.5)]:
+    for tps_before, dtps, dram in [
+        (5.0, 2.0, 1.0),
+        (14.0, 5.0, 1.0),
+        (10.0, -1.0, -0.5),
+        (16.0, 3.0, 0.5),
+    ]:
         a = _ok(tps_actual=tps_before, peak_rss_gb=4.0)
         b = _ok(tps_actual=tps_before + dtps, peak_rss_gb=4.0 + dram)
         actual = b.s_total - a.s_total  # type: ignore[operator]
-        assert rate.delta_points(tps_before=tps_before, delta_tps=dtps, delta_ram_gb=dram) == pytest.approx(actual, abs=1e-9)
+        assert rate.delta_points(
+            tps_before=tps_before, delta_tps=dtps, delta_ram_gb=dram
+        ) == pytest.approx(actual, abs=1e-9)
 
 
 def test_break_even_is_infinite_when_perf_is_already_capped():
@@ -256,6 +299,13 @@ def test_break_even_is_infinite_when_perf_is_already_capped():
     assert rate.break_even_tps(1.0, tps_before=5.0) == pytest.approx(1.4286, abs=1e-3)
     # Without an operating point you get the linear-region figure — valid only below the clamp.
     assert rate.break_even_tps(1.0) == pytest.approx(1.4286, abs=1e-3)
+
+
+def test_website_relative_break_even_never_saturates():
+    rate = exchange_rate(
+        performance_formula="website_relative", tps_max_provenance="cohort_observed"
+    )
+    assert rate.break_even_tps(1.0, tps_before=1000.0) == pytest.approx(1.4286, abs=1e-3)
 
 
 def test_accuracy_can_be_traded_against_throughput():
@@ -297,21 +347,23 @@ def test_delta_components_sum_to_delta_total():
 def test_driver_names_the_biggest_mover():
     base = _ok(accuracy=50.0, tps_actual=10.0, peak_rss_gb=4.0, label="base")
     assert compare(base, _ok(accuracy=90.0, tps_actual=10.0, peak_rss_gb=4.0)).driver == "accuracy"
-    assert compare(base, _ok(accuracy=50.0, tps_actual=14.0, peak_rss_gb=4.0)).driver == "throughput"
+    assert (
+        compare(base, _ok(accuracy=50.0, tps_actual=14.0, peak_rss_gb=4.0)).driver == "throughput"
+    )
     assert compare(base, _ok(accuracy=50.0, tps_actual=10.0, peak_rss_gb=1.0)).driver == "memory"
 
 
 # --- The findings from docs/rules-digest.md ------------------------------------------------
 
 
-def test_exchange_rate_varies_with_tps_max():
-    """TPS_max is 'highest speed across all submissions', not a constant.
-
-    The famous 1.43 break-even holds ONLY at the provisional 15. Hardcoding 2.0 pts/tok-s
-    would misprice every RAM-spending optimization once the real cohort max is known.
-    """
-    at15 = exchange_rate(15.0)
-    at30 = exchange_rate(30.0)
+def test_website_relative_sensitivity_varies_with_tps_max():
+    """The conflicting webpage interpretation remains testable without becoming default."""
+    at15 = exchange_rate(
+        15.0, tps_max_provenance="cohort_observed", performance_formula="website_relative"
+    )
+    at30 = exchange_rate(
+        30.0, tps_max_provenance="cohort_observed", performance_formula="website_relative"
+    )
     assert at15.pts_per_tps == pytest.approx(2.0)
     assert at30.pts_per_tps == pytest.approx(1.0)  # a tok/s is worth half as much
     assert at30.break_even_tps(1.0) == pytest.approx(2.857, abs=1e-3)  # break-even doubles
@@ -327,14 +379,29 @@ def test_exchange_rate_varies_with_tps_max():
 
 def test_tps_max_provenance_is_carried_and_enforced():
     """A number must not silently claim authority it doesn't have."""
-    assert exchange_rate().tps_max_provenance == "provisional_reference"
+    assert exchange_rate().tps_max_provenance == "profiler_reference"
     r = score(
-        accuracy=50.0, tps_actual=5.0, peak_rss_gb=3.0, tps_max=22.0,
+        accuracy=50.0,
+        tps_actual=5.0,
+        peak_rss_gb=3.0,
+        tps_max=22.0,
         tps_max_provenance="cohort_observed",
+        performance_formula="website_relative",
     )
     assert r.exchange.tps_max_provenance == "cohort_observed"
     with pytest.raises(ValueError, match="provenance"):
         exchange_rate(tps_max_provenance="totally_made_up")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="performance_formula"):
+        exchange_rate(performance_formula="invented")  # type: ignore[arg-type]
+
+
+def test_formula_provenance_combinations_fail_closed():
+    with pytest.raises(ValueError, match="profiler_capped requires"):
+        exchange_rate(tps_max=30)
+    with pytest.raises(ValueError, match="profiler_capped requires"):
+        exchange_rate(tps_max_provenance="cohort_observed")
+    with pytest.raises(ValueError, match="website_relative requires"):
+        exchange_rate(performance_formula="website_relative")
 
 
 def test_unknown_temperature_is_flagged_not_assumed_safe():
@@ -393,8 +460,9 @@ def test_inputs_record_is_immutable():
 
 
 def test_compare_warns_across_different_tps_max(caplog):
-    a = score(accuracy=50.0, tps_actual=10.0, peak_rss_gb=3.0, tps_max=15.0, label="a")
-    b = score(accuracy=50.0, tps_actual=10.0, peak_rss_gb=3.0, tps_max=30.0, label="b")
+    kwargs = {"tps_max_provenance": "cohort_observed", "performance_formula": "website_relative"}
+    a = score(accuracy=50.0, tps_actual=10.0, peak_rss_gb=3.0, tps_max=15.0, label="a", **kwargs)
+    b = score(accuracy=50.0, tps_actual=10.0, peak_rss_gb=3.0, tps_max=30.0, label="b", **kwargs)
     with caplog.at_level("WARNING"):
         compare(a, b)
     assert "not on the same scale" in caplog.text
@@ -410,11 +478,11 @@ def test_compare_warns_across_different_ram_budget(caplog):
     assert c.delta_total > 0  # the phantom win the warning exists to explain
 
 
-def test_over_budget_logs_a_warning(caplog):
-    with caplog.at_level("WARNING"):
-        _ok(peak_rss_gb=9.0, label="fat")
-    assert "EXCEEDS" in caplog.text
-    assert "disqualification risk" in caplog.text
+def test_over_budget_logs_disqualification(caplog):
+    with caplog.at_level("ERROR"):
+        result = _ok(peak_rss_gb=9.0, label="fat")
+    assert result.disqualified
+    assert "DISQUALIFIED" in caplog.text
 
 
 def test_defaults_are_the_documented_constants():

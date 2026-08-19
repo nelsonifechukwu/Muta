@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import hashlib
 import json
 import platform
 import resource
@@ -66,6 +67,26 @@ def _append(out: Path, row: dict) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("a") as f:
         f.write(json.dumps(row, sort_keys=True) + "\n")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _binary_identity(path: Path) -> dict:
+    proc = subprocess.run(
+        [str(path), "--version"], capture_output=True, text=True, timeout=30, check=False
+    )
+    return {
+        "path": str(path.resolve()),
+        "sha256": _sha256(path),
+        "version_output": (proc.stdout + proc.stderr).strip()[-2000:],
+        "version_rc": proc.returncode,
+    }
 
 
 def _sample_tree(proc: psutil.Process, stats: dict, stop: threading.Event) -> None:
@@ -100,10 +121,38 @@ def run_throughput(bench_bin: Path, model: Path, reps: int | None = None) -> dic
     sampler.join(timeout=2.0)
     wall = time.monotonic() - t0
     if popen.returncode != 0:
-        return {"ok": False, "rc": popen.returncode, "stderr": stderr[-2000:], "wall_s": round(wall, 1)}
-    rows = json.loads(stdout)
+        return {
+            "ok": False,
+            "rc": popen.returncode,
+            "command": cmd,
+            "stdout_tail": stdout[-2000:],
+            "stderr_tail": stderr[-4000:],
+            "wall_s": round(wall, 1),
+        }
+    try:
+        rows = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        return {
+            "ok": False,
+            "rc": popen.returncode,
+            "command": cmd,
+            "stdout_tail": stdout[-4000:],
+            "stderr_tail": stderr[-4000:],
+            "parse_error": str(exc),
+            "wall_s": round(wall, 1),
+        }
     pp = next((r for r in rows if r.get("n_prompt") and not r.get("n_gen")), None)
     tg = next((r for r in rows if r.get("n_gen") and not r.get("n_prompt")), None)
+    if pp is None or tg is None:
+        return {
+            "ok": False,
+            "rc": popen.returncode,
+            "command": cmd,
+            "raw_bench_rows": rows,
+            "stderr_tail": stderr[-4000:],
+            "parse_error": "llama-bench JSON lacks a pp or tg row",
+            "wall_s": round(wall, 1),
+        }
     ru = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
     # ru_maxrss: bytes on macOS, KiB on Linux. RUSAGE_CHILDREN is a high-water
     # mark across ALL children this process ever had — only trust it when it
@@ -116,6 +165,9 @@ def run_throughput(bench_bin: Path, model: Path, reps: int | None = None) -> dic
     mib = 1024**2
     return {
         "ok": True,
+        "command": cmd,
+        "raw_bench_rows": rows,
+        "stderr_tail": stderr[-4000:],
         "tg_avg_ts": tg.get("avg_ts") if tg else None,
         "tg_stddev_ts": tg.get("stddev_ts") if tg else None,
         "pp_avg_ts": pp.get("avg_ts") if pp else None,
@@ -180,6 +232,7 @@ def run_accuracy(venv_py: Path, model: Path, task: str, limit: int, timeout_s: i
             capture_output=True,
             text=True,
             timeout=timeout_s,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return {
@@ -196,7 +249,12 @@ def run_accuracy(venv_py: Path, model: Path, task: str, limit: int, timeout_s: i
         (ln for ln in reversed(proc.stdout.strip().splitlines()) if ln.startswith("{")), None
     )
     if line is None:
-        return {"ok": False, "task": task, "stderr": "no JSON row in stdout", "wall_s": round(wall, 1)}
+        return {
+            "ok": False,
+            "task": task,
+            "stderr": "no JSON row in stdout",
+            "wall_s": round(wall, 1),
+        }
     row = json.loads(line)
     row.update({"ok": True, "wall_s": round(wall, 1)})
     return row
@@ -229,6 +287,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--tasks", default=DEFAULT_TASKS, help="task:limit list for --accuracy")
     ap.add_argument("--venv-python", type=Path, default=DEFAULT_VENV_PY)
     ap.add_argument("--out", type=Path, required=True, help="JSONL to append rows to")
+    ap.add_argument(
+        "--hardware-context",
+        default="dev_host_provisional",
+        help="explicit evidence class; e.g. x86_cloud_proxy_gcp_n2_2c4t",
+    )
     args = ap.parse_args(argv)
 
     models = [Path(m) for m in args.models]
@@ -244,10 +307,16 @@ def main(argv: list[str] | None = None) -> int:
             ap.error(f"--bench binary not found: {path}")
         benches.append((name, Path(path)))
 
+    model_sha = {model: _sha256(model) for model in models}
+    bench_identity = {name: _binary_identity(path) for name, path in benches}
     base = {
         "harness": "bench/adtc_bakeoff.py",
         "host": platform.platform(),
-        "hardware_context": "dev_host_provisional",
+        "machine": platform.machine(),
+        "physical_cores": psutil.cpu_count(logical=False),
+        "logical_cpus": psutil.cpu_count(logical=True),
+        "host_ram_bytes": psutil.virtual_memory().total,
+        "hardware_context": args.hardware_context,
     }
 
     for rnd in range(1, args.rounds + 1) if benches else []:
@@ -257,25 +326,52 @@ def main(argv: list[str] | None = None) -> int:
                 res = run_throughput(bbin, model, reps=args.reps)
                 _append(
                     args.out,
-                    {**base, "ts": _now(), "kind": "throughput", "round": rnd,
-                     "model": model.name, "model_bytes": model.stat().st_size,
-                     "bench": bname, **res},
+                    {
+                        **base,
+                        "ts": _now(),
+                        "kind": "throughput",
+                        "round": rnd,
+                        "model": model.name,
+                        "model_path": str(model.resolve()),
+                        "model_bytes": model.stat().st_size,
+                        "model_sha256": model_sha[model],
+                        "bench": bname,
+                        "bench_identity": bench_identity[bname],
+                        **res,
+                    },
                 )
-                print(f"  -> {res.get('tg_avg_ts')} tok/s, peak {res.get('peak_rss_tree_mb')} MB", flush=True)
+                print(
+                    f"  -> {res.get('tg_avg_ts')} tok/s, peak {res.get('peak_rss_tree_mb')} MB",
+                    flush=True,
+                )
 
     if args.accuracy:
         if not args.venv_python.exists():
-            ap.error(f"venv python not found: {args.venv_python} (create bench/.venv-profiler first)")
+            ap.error(
+                f"venv python not found: {args.venv_python} (create bench/.venv-profiler first)"
+            )
         for model in models:
             for task, limit in parse_tasks(args.tasks):
                 print(f"[accuracy] {model.name} {task}:{limit}", flush=True)
                 res = run_accuracy(args.venv_python, model, task, limit)
                 _append(
                     args.out,
-                    {**base, "ts": _now(), "kind": "accuracy", "model": model.name,
-                     "model_bytes": model.stat().st_size, "limit": limit, **res},
+                    {
+                        **base,
+                        "ts": _now(),
+                        "kind": "accuracy",
+                        "model": model.name,
+                        "model_path": str(model.resolve()),
+                        "model_bytes": model.stat().st_size,
+                        "model_sha256": model_sha[model],
+                        "limit": limit,
+                        **res,
+                    },
                 )
-                print(f"  -> {res.get('score')} ({res.get('metric')}) in {res.get('wall_s')}s", flush=True)
+                print(
+                    f"  -> {res.get('score')} ({res.get('metric')}) in {res.get('wall_s')}s",
+                    flush=True,
+                )
 
     return 0
 

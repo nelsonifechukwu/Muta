@@ -98,7 +98,7 @@ def resolve_pid(explicit: int | None = None, *, port: int = DEFAULT_PORT) -> int
         "could not find a running Muta gateway.\n"
         f"  tried:  --pid (not given), {PIDFILE} (absent or stale), "
         f"port {port} (nothing listening)\n"
-        '  fix:    start the app with `make dev` or `./run.sh --serve`, '
+        "  fix:    start the app with `make dev` or `./run.sh --serve`, "
         'or pass `make monitor ARGS="--pid <n>"`'
     )
 
@@ -160,11 +160,13 @@ def render_lines(
     )
     penalty = "   −10 THERMAL" if result.p_thermal else ""
     budget = f"   OVER BUDGET (raw_eff={result.raw_s_eff:.1f})" if result.over_budget else ""
+    s_eff_text = f"{result.s_eff:5.1f}" if result.s_eff is not None else "   DQ"
+    s_perf_text = f"{result.s_perf:5.1f}" if result.s_perf is not None else "   DQ"
 
     if metrics is not None:
         tps_line = (
             f"TPS    {last_tps:6.1f} t/s last  {avg_tps:5.1f} avg/{count:<3d}"
-            f"  tps_max {PROVISIONAL_TPS_MAX:.0f} prov   S_perf {result.s_perf:5.1f}"
+            f"  tps_max {PROVISIONAL_TPS_MAX:.0f} prov   S_perf {s_perf_text}"
         )
     else:
         tps_line = "TPS    —  no /internal/bench/metrics (RSS only; is the app on port 8000?)"
@@ -172,7 +174,7 @@ def render_lines(
     return [
         f"muta ⏻ pid {pid}   tree: {tree_desc}    elapsed {_fmt_elapsed(elapsed_s)}",
         f"RSS    peak {memory.peak_rss_gb:5.2f} GB  steady {memory.steady_state_rss_gb:5.2f} GB"
-        f"  budget {RAM_BUDGET_GB:.2f} GB   S_eff  {result.s_eff:5.1f}{budget}",
+        f"  budget {RAM_BUDGET_GB:.2f} GB   S_eff  {s_eff_text}{budget}",
         tps_line,
         f"TEMP   {temp}   cpu p99 {thermal.cpu_percent_p99:.0f}%{penalty}",
     ]
@@ -228,8 +230,7 @@ def _run_loop(pids: list[int], base_url: str, interval: float) -> None:
         thermal.stop()
         final = memory.report()
         print(
-            f"\nfinal: peak {final.peak_rss_gb:.2f} GB  "
-            f"steady {final.steady_state_rss_gb:.2f} GB",
+            f"\nfinal: peak {final.peak_rss_gb:.2f} GB  steady {final.steady_state_rss_gb:.2f} GB",
             file=sys.stderr,
         )
 
