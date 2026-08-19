@@ -15,8 +15,8 @@ labelled AVX2 product rows. Exact reports, timing vectors, task intervals and ha
 public rule interpretations.
 
 In the full profiler reports, the shipped Muta Tutor Q4_0 tied-head file remains the winner:
-9.79 tok/s, 1116.31 MiB directly measured profiler peak RSS, 72% ARC-Easy-50 and a **72.4653
-composite**. The Qwen3.5-0.8B hedge is close at 71.5416 (9.74 tok/s, 694.73 MiB, 68%); its
+9.79 tok/s, 1116.31 MiB directly measured profiler peak RSS, 72% ARC-Easy-50 and a 72.4653
+composite. The Qwen3.5-0.8B hedge is close at 71.5416 (9.74 tok/s, 694.73 MiB, 68%); its
 421.58 MiB saving almost repays the four-point accuracy gap, but historical maths/tutoring gates
 remain below the product bar. BitCPM4-8B scores 59.1843 despite 88% Easy because scalar TQ2_0
 decode is 0.81 tok/s; Qwen3.5-4B IQ4_XS scores 52.9293. Thermal is unknown on GCP and the
@@ -25,7 +25,7 @@ accuracy term is a small diagnostic proxy, not a claim about the hidden panel.
 The AVX2/webpage-relative panel is still preserved. Treating each scenario as a pre-entry cohort
 floor and using `max(floor, candidate TPS)` as the effective denominator, it selects Q3_K_M at
 15, Q4_K_S at 30, Q5_K_M at 45, and BitCPM4-8B at 60/100/150. That alternative is useful if
-the webpage—not the published profiler image—turns out to govern the final audit.
+the webpage, rather than the published profiler image, turns out to govern the final audit.
 
 ---
 
@@ -41,7 +41,7 @@ the webpage—not the published profiler image—turns out to govern the final a
 
 Secondary-school students across West and East Africa sit high-stakes exams (WASSCE, JAMB, NECO,
 KCSE) with very few teachers per student and, outside the cities, unreliable connectivity and no
-budget for cloud AI. What they do have — increasingly — is a shared, low-cost laptop in a classroom
+budget for cloud AI. What they increasingly do have is a shared, low-cost laptop in a classroom
 or a community centre. Muta is a tutor that runs entirely on that machine: it solves and *explains*
 maths and science problems step by step, diagnoses a student's misconception ("a heavier ball falls
 faster because gravity pulls harder"), and speaks in the student's world (naira, cedis, shillings,
@@ -50,8 +50,8 @@ laptop can serve a whole class over the local network with no internet, no subsc
 leaving the room.
 
 Target users: students aged ~14–19 and their teachers; the "shared-laptop classroom" is the
-deployment we design for, so peak RAM and tokens per second are not abstract scores — they decide
-how many students one machine can serve at once.
+deployment we design for, so peak RAM and tokens per second decide how many students one machine
+can serve at once.
 
 ---
 
@@ -66,7 +66,8 @@ pruning. Two facts from that work drove the final choice:
    llama.cpp build (b10175, no AVX/AVX2/FMA/F16C).** On that binary only **Q4_0** has a hand-written
    SIMD kernel; TQ2_0, every k-quant and every i-quant fall back to generic C and run 3–7× slower per
    byte. An 8 B ternary file that does 18 tok/s on a laptop does ~2 tok/s there. Only the GGUF file
-   reaches that run — no flags, no engine — so the *file* has to be right for that binary.
+   reaches that run, with no flags and no engine of ours, so the *file* has to be right for that
+   binary.
 2. **Accuracy is half the score and it is judged two ways**: an automated multiple-choice benchmark
    through llama-cpp-python (raw text, no template) and a live judge chat with the *bare* GGUF
    through stock llama-server (Jinja template on by default, no system prompt, sampling seeded from
@@ -108,7 +109,7 @@ front of a client-supplied system message, and (b) always opens the assistant tu
 temp 0.4, top_p 0.9, min_p 0.05, repeat_penalty 1.05 (honoured by llama-server); `general.name`
 identifies the tutor. The persona is ~130 tokens so a judge's first turn pays little extra prefill.
 Verified on both paths the judges can use: llama.cpp's own Jinja engine (the code llama-server
-and llama-cli use — the shipped file was probed on a stock **b10175** llama-server with zero flags:
+and llama-cli use; the shipped file was probed on a stock b10175 llama-server with zero flags:
 persona injected, `chat template, thinking = 0`, `/props` sampling read from the file, both test
 prompts answered correctly with `finish_reason: stop`) and llama-cpp-python's jinja2 path.
 
@@ -140,7 +141,7 @@ numerically full-rank; the proposed rank-2048 pair reconstructs at 0.80 relative
 - Data: no student data leaves the machine; the tutor uses local currencies/examples in its
   persona rather than any personal data.
 - Development machine is an Apple M1 (8 GB); all timing/RSS below are from it and are marked as
-  such — the audit box will be slower (different ISA/kernels) and that is expected.
+  such. The audit box will be slower (different ISA/kernels), and that is expected.
 
 ---
 
@@ -148,15 +149,15 @@ numerically full-rank; the proposed rank-2048 pair reconstructs at 0.80 relative
 
 Self-reported development benchmarks (Apple M1, 8 GB, macOS 27; `adtc-profiler run --mode
 participant`, i.e. `llama-bench -p 512 -n 128 -ngl 0`, 4 threads, plus the profiler's arc_easy).
-`submission.json` was produced with a CPU-only llama.cpp b10360 build with weight repacking disabled
-— the same behaviour as the audit image, which has no repack — so its RSS is comparable to the audit
-box; the Homebrew ARM build's numbers are given in parentheses for reference (`opt/results/`).
+`submission.json` was produced with a CPU-only llama.cpp b10360 build with weight repacking
+disabled, the same behaviour as the audit image, so its RSS is comparable to the audit box. The
+Homebrew ARM build's numbers are given in parentheses for reference (`opt/results/`).
 
 | Metric | Value |
 |---|---|
 | Machine | MacBook Air M1 (4P+4E), 8 GB, macOS 27.0 |
 | Model file | 974 MB (Q4_0 pure, tied head), 1.72 B parameters |
-| RAM at peak (profiler process tree) | 1133 MB (llama.cpp CPU build with weight repacking off — the audit image's behaviour); 2029 MB with Homebrew's ARM build, which additionally copies the Q4_0 weights into a repacked buffer |
+| RAM at peak (profiler process tree) | 1133 MB (llama.cpp CPU build with weight repacking off, the audit image's behaviour); 2029 MB with Homebrew's ARM build, which additionally copies the Q4_0 weights into a repacked buffer |
 | Time to first token (512-token prompt) | 3810 ms (2232 ms with the Homebrew build's BLAS prompt path) |
 | Generation speed | 43.4 tok/s in the final `submission.json` (51.2 tok/s in an earlier run of the same file, recorded in the repo's RESULTS.md, and 52.2 with the Homebrew build; the final run overlapped a background upload) |
 | arc_easy (50, profiler's own path) | 0.70 acc_norm |
@@ -168,8 +169,7 @@ published audit-build runs give 9.4 tok/s for a ≈1.2 GB Q4_0 Qwen3-1.7B, ours 
 ~1.2 GB peak RSS. A ready-to-run GitHub-Actions workflow that reproduces the audit binary on a free
 x86 runner is in `opt/audit-bench/`.
 
-These are self-reported development benchmarks. Official scores are measured by the ADTC profiler on
-the standard evaluation machine.
+Official scores are measured by the ADTC profiler on the standard evaluation machine.
 
 ### Sample transcripts (bare GGUF, stock llama.cpp, no client system prompt)
 
@@ -313,10 +313,10 @@ the standard evaluation machine.
 ## African use case
 
 `african_alpha_claim: true` in `metadata.json` is a **use-case** claim (Devpost/template: "true only if
-claiming the African Use Case Bonus"), not an African-language claim — `language_scope` is `["en"]`
+claiming the African Use Case Bonus"), not an African-language claim: `language_scope` is `["en"]`
 and the model is evaluated in English. Muta is built for the shared-laptop classroom: one 8 GB machine, ~30 students on phones over the
 local network, no internet. The persona teaches in the exam formats students actually sit
-(WASSCE/JAMB/KCSE), uses local currencies and contexts, and diagnoses misconceptions rather than just
-answering — the behaviours a scarce teacher cannot give thirty students at once. The streaming
+(WASSCE/JAMB/KCSE), uses local currencies and contexts, and diagnoses misconceptions rather than
+just answering. Those are the behaviours a scarce teacher cannot give thirty students at once. The streaming
 runtime in `opt/` exists so that the same file also fits beside a browser and a classroom server on
 that laptop.
