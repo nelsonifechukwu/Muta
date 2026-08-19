@@ -25,6 +25,8 @@ default; set `ADTC_PROFILER` to use another executable.
 - A chaptered account of the score, runtime baseline, model funnel, GGUF and quantisation work,
   ternary branch, weight-streaming tests, the direct 19 August decision, and the controlled
   AVX2/FMA/F16C rerun.
+- A paired total-score figure with scalar and portable AVX2 bars for every shared artifact. The
+  chart prints each total on the bar and outlines the winner under each CPU policy.
 - Interactive score, disk-budget, and website-sensitivity controls. These controls are read-only:
   they do not change campaign data or stored runs.
 - Native HTML and SVG figures that work without a network connection, including three hand-drawn
@@ -70,6 +72,8 @@ The report never treats all benchmark rows as interchangeable.
    fixed/capped 15 tok/s score so the ISA effect can be compared with the retained scalar screen,
    but it is not an official participant-profiler run. The source is
    `../../bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json`.
+   The dashboard state API exposes this artifact as `campaign_avx2_score`; override its source
+   with `MUTA_CAMPAIGN_AVX2_SCORE`.
 
 5. **Development result.** Earlier Mac, Docker, GCP, or custom-engine evidence used to accept or
    reject an engineering idea. It explains the decision history but is not ranked against the

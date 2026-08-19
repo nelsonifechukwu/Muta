@@ -32,6 +32,8 @@ def test_operational_profiler_controls_remain_present() -> None:
         "campaign-table",
         "campaign-parity-table",
         "campaign-alternative-table",
+        "campaign-avx2-score-table",
+        "isa-score-chart",
         "run-card",
         "run-log",
         "chart",
@@ -86,7 +88,7 @@ def test_avx2_campaign_section_matches_comparison_artifact() -> None:
     html = (DASHBOARD / "index.html").read_text()
 
     assert 'id="avx2-campaign"' in html
-    assert "AVX2 changes the quantization order" in html
+    assert "Five artifacts, two CPU policies" in html
     for feature in ("AVX", "AVX2", "FMA", "F16C"):
         assert f"<code>{feature}</code><strong>ON</strong>" in html
     for feature in ("NATIVE", "AVX-512"):
@@ -109,3 +111,18 @@ def test_avx2_campaign_section_matches_comparison_artifact() -> None:
     assert "0.1666 points" in html
     assert comparison["avx2_binary_sha256"][:8] in html
     assert comparison["avx2_binary_sha256"][-5:] in html
+
+
+def test_dual_regime_chart_and_current_choice_are_explicit() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert "Current optimisation choice · portable AVX2 policy" in html
+    assert "Q4_K_M-tied.gguf" in html
+    assert "Q4_0 remains the fallback" in html
+    assert 'class="isa-bar scalar' in script
+    assert 'class="isa-bar avx2' in script
+    assert "scalar winner" in script
+    assert "AVX2 winner" in script
+    assert "item.scalar.score.s_total" in script
+    assert "item.avx2.score.s_total" in script

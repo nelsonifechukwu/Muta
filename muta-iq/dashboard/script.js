@@ -52,7 +52,8 @@ const REPORT_FUNNEL = [
   { name: "Qwen3.5 4B", gb: 2.55, acc: 73.3, lane: "reasoning" },
   { name: "Qwen3.5 2B", gb: 1.19, acc: 64.8, lane: "reasoning" },
   { name: "Qwen3.5 0.8B", gb: 0.50, acc: 51.3, lane: "reasoning" },
-  { name: "Qwen3 1.7B Q4_0", gb: 0.91, acc: 72, lane: "audit", selected: true },
+  { name: "Qwen3 1.7B Q4_0", gb: 0.91, acc: 72, lane: "audit" },
+  { name: "Qwen3 1.7B Q4_K_M", gb: 0.96, acc: 72, lane: "audit", selected: true },
   { name: "Qwen3.5 0.8B Q4_K_M", gb: 0.50, acc: 68, lane: "audit" },
   { name: "BitCPM4 8B TQ2_0", gb: 2.06, acc: 88, lane: "audit" },
   { name: "Qwen3.5 4B IQ4_XS", gb: 2.31, acc: 76, lane: "audit" },
@@ -97,10 +98,11 @@ const EXPERIMENTS = [
   { status: "rejected", name: "Custom tensor layout", finding: "The stock quantiser layout was retained. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "GGUF campaign · 19 Aug" },
   { status: "adopted", name: "Embedded chat template", finding: "The GGUF carries the chat template and tutoring persona, both checked on a live server. They shape judged behaviour but receive no credit in raw ARC or throughput telemetry.", source: "muta-iq/REPORT.md" },
   { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "muta-iq/opt/docs/STREAMING_ENGINE.md" },
-  { status: "adopted", name: "Pure Q4_0 audit layout", finding: "Every matrix reaches a supported SSSE3 path in the no-AVX binary. That dispatch made the 1.7B model competitive with the 0.8B file.", source: "GGUF campaign · 19 Aug" },
+  { status: "adopted", name: "Runtime-conditional quant choice", finding: "Pure Q4_0 wins the scalar participant regime. With AVX2/FMA/F16C enabled, Q4_K_M reaches the cap with 59.7 MiB less estimated RSS and leads by 0.1666 points.", source: "avx2-score-of-record · 19 Aug" },
   { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "GGUF campaign · 19 Aug" },
   { status: "adopted", name: "Exact-hash rebuild", finding: "The candidate was rebuilt from pinned source and matched the promoted SHA-256 after correcting a 32-byte metadata-name difference.", source: "Set up Muta on GCP VM" },
   { status: "adopted", name: "Direct official-profiler campaign", finding: "Four exact artifacts completed full participant runs. The current 1.7B winner leads the 0.8B runner-up by 0.92 total points.", source: "campaign-20260819/official-profiler" },
+  { status: "adopted", name: "Portable AVX2 score of record", finding: "Five exact hashes were rerun with AVX2/FMA/F16C on and AVX-512 off. Q4_K_M leads Q4_0 80.4484 to 80.2818; BitCPM recovers 9.235× but remains below the top cluster.", source: "campaign-20260819/avx2-score-of-record" },
   { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "muta-iq/opt/docs/REPORT.md" },
 ];
 
@@ -110,7 +112,7 @@ const CHALLENGE_FAQ = [
   { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is judged on the standard laptop profile.", progress: "We developed on an M2 Mac and a GCP x86 proxy. Mac results remain in the development-evidence lane." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
   { q: "What does cross-disciplinary integration require?", rule: "The model must connect to another deep-tech discipline in a meaningful, load-bearing way.", progress: "Muta plans to combine scientific tutoring with verified maths and local retrieval. Several relevant routes remain incomplete or return 501, so we do not yet claim a load-bearing integration." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The current model is a reproducible Qwen3-derived GGUF. QAT and distillation remain deferred because neither completed a controlled training run." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The current AVX2 choice and scalar fallback are reproducible Qwen3-derived GGUFs. QAT and distillation remain deferred because neither completed a controlled training run." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
@@ -120,7 +122,7 @@ const CHALLENGE_FAQ = [
   { q: "What is the maximum model size?", rule: "The practical limit is the 7 GB memory ceiling on the standard machine.", progress: "The direct campaign spans about 0.50–2.31 GiB peak model footprints, all below the ceiling. Whole-tree RSS remains the unit of record." },
   { q: "Where should the final benchmark be run?", rule: "The organiser judges on its standard hardware; local results are preparatory.", progress: "Full participant runs exist on a four-vCPU GCP x86 proxy with the pinned audit binary. Package temperature and physical-laptop bandwidth remain unmeasured." },
   { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "We have recorded the exact model metadata, reproducible campaign, runtime, and this report in the repository. Final packaging, the two submission prompts, and the video remain." },
-  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "Under the executable profiler formula, the current candidate records S_perf 65.27 and S_eff 84.43. Its 72% ARC-Easy result remains an internal accuracy proxy, not a submitted S_acc value." },
+  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "Q4_K_M under the portable AVX2 policy records S_perf 100.00 and estimated S_eff 72.24. The direct scalar participant run for Q4_0 records S_perf 65.27 and S_eff 84.43. Its 72% ARC-Easy result remains an internal accuracy proxy, not a submitted S_acc value." },
   { q: "Is the whole application judged, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "Muta tracks product improvements separately from model-only evidence. Retrieval, the custom streamer, and UI work do not inflate the GGUF campaign score." },
   { q: "How many prompts are visible before submission?", rule: "The FAQ describes two visible prompts plus hidden tests.", progress: "The local profiler path covers the visible task shape and accuracy proxies. Hidden-prompt performance remains unknown by design." },
   { q: "How is temperature handled?", rule: "Temperature is checked around evaluation and can trigger a 10-point penalty above the threshold or when throttling is detected.", progress: "The GCP host exposed no usable package sensor and reported no throttling. We therefore record temperature as unavailable rather than infer a thermal result." },
@@ -341,6 +343,7 @@ function render() {
   renderCampaign(d.campaign, "campaign");
   renderCampaign(d.campaign_parity, "campaign-parity");
   renderCampaign(d.campaign_alternative, "campaign-alternative");
+  renderIsaComparison(d.campaign_avx2_score);
   renderCampaignSnapshotWarning(d.campaign);
   renderTpsRef(d);
   renderRunCard(d);
@@ -433,6 +436,77 @@ function renderCampaign(campaign, prefix) {
     `${sentenceCase(campaign.rss_notice)}. ${sentenceCase(campaign.thermal_notice)}.` + (winnerText
       ? ` Highest score by ${isWebsiteAlternative ? "website-relative floor" : "profiler reference"}: ${winnerText}.`
       : "");
+}
+
+function renderIsaComparison(comparison) {
+  const chart = $("isa-score-chart");
+  const summary = $("isa-score-summary");
+  const sub = $("campaign-avx2-score-sub");
+  const table = $("campaign-avx2-score-table");
+  const formula = $("campaign-avx2-score-formula");
+  if (!comparison || !Array.isArray(comparison.models)) {
+    if (chart) chart.innerHTML = '<p class="chart-empty">The paired ISA comparison is unavailable.</p>';
+    if (summary) summary.textContent = "The paired ISA comparison is unavailable.";
+    if (sub) sub.textContent = "No AVX2 score-of-record artifact is available at the configured path.";
+    if (table) table.innerHTML = "";
+    if (formula) formula.textContent = "";
+    return;
+  }
+
+  const label = (file) => ({
+    "muta-tutor-qwen3-1.7b-q4_0.gguf": "Q4_0 tied",
+    "Q4_K_M-tied.gguf": "Q4_K_M tied",
+    "Q5_K_M-tied.gguf": "Q5_K_M tied",
+    "IQ4_XS-tied.gguf": "IQ4_XS tied",
+    "bitcpm4-8b-tq2_0-envocab.gguf": "BitCPM TQ2_0",
+  }[file] || shortName(file));
+  const models = [...comparison.models];
+  const scalarWinner = comparison.winners && comparison.winners.scalar || {};
+  const avx2Winner = comparison.winners && comparison.winners.avx2 || {};
+
+  if (chart) {
+    const width = 820, left = 174, right = 54, top = 40, groupH = 64, barH = 17;
+    const height = top + models.length * groupH + 38;
+    const plotW = width - left - right;
+    const x = (score) => left + Number(score) / 85 * plotW;
+    let grid = "";
+    [0, 20, 40, 60, 80].forEach((tick) => {
+      const px = x(tick);
+      grid += `<line x1="${px}" y1="${top - 12}" x2="${px}" y2="${height - 34}" class="isa-grid"/>` +
+        svgText(px, height - 14, tick, 'text-anchor="middle" class="isa-tick"');
+    });
+    const rows = models.map((item, index) => {
+      const y = top + index * groupH;
+      const scalar = Number(item.scalar.score.s_total);
+      const avx2 = Number(item.avx2.score.s_total);
+      const scalarIsWinner = item.model === scalarWinner.model;
+      const avx2IsWinner = item.model === avx2Winner.model;
+      return `${svgText(left - 12, y + 25, label(item.model), 'text-anchor="end" class="isa-model"')}
+        <rect x="${left}" y="${y}" width="${x(scalar) - left}" height="${barH}" rx="2" class="isa-bar scalar ${scalarIsWinner ? "winner" : ""}"/>
+        ${svgText(x(scalar) - 6, y + 12, scalar.toFixed(4), 'text-anchor="end" class="isa-total"')}
+        <rect x="${left}" y="${y + 22}" width="${x(avx2) - left}" height="${barH}" rx="2" class="isa-bar avx2 ${avx2IsWinner ? "winner" : ""}"/>
+        ${svgText(x(avx2) - 6, y + 34, avx2.toFixed(4), 'text-anchor="end" class="isa-total"')}
+        ${scalarIsWinner ? svgText(x(scalar) + 7, y + 12, "scalar winner", 'class="isa-winner-label"') : ""}
+        ${avx2IsWinner ? svgText(x(avx2) + 7, y + 34, "AVX2 winner", 'class="isa-winner-label"') : ""}`;
+    }).join("");
+    chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
+      .isa-grid{stroke:#e6e2db;stroke-width:1}.isa-tick{font-size:9px;fill:#8a8580}.isa-model{font-size:10px;fill:#3c3836}.isa-bar.scalar{fill:#b57614}.isa-bar.avx2{fill:#31714f}.isa-bar.winner{stroke:#282828;stroke-width:2}.isa-total{font-size:8.5px;fill:#fff;font-weight:700}.isa-winner-label{font-size:8px;fill:#282828;font-weight:700}
+    </style>${grid}${rows}${svgText(left + plotW / 2, height - 1, "Capped-15 total score", 'text-anchor="middle" class="svg-axis"')}</svg>`;
+  }
+  if (summary) {
+    summary.textContent = models.map((item) =>
+      `${label(item.model)}: scalar ${item.scalar.score.s_total.toFixed(4)}, portable AVX2 ${item.avx2.score.s_total.toFixed(4)}`
+    ).join("; ") + `. Scalar winner: ${label(scalarWinner.model)}. AVX2 winner: ${label(avx2Winner.model)}.`;
+  }
+
+  if (sub && table && formula) {
+    const ranked = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total);
+    sub.textContent = `${comparison.hardware_contexts.avx2} · ${ranked.length} exact GGUF artifacts · AVX2 binary SHA-256 ${String(comparison.avx2_binary_sha256).slice(0, 12)}…`;
+    table.innerHTML = `<thead><tr><th>Exact model</th><th>Scalar total</th><th>AVX2 total</th><th>Scalar → AVX2 tg128</th><th>Scalar → AVX2 est. RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
+      ranked.map((item) => `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td><div class="model-name">${esc(label(item.model))}</div><div class="model-sub mono">SHA-256 ${esc(item.model_sha256.slice(0, 16))}…</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.scalar.estimated_profiler_rss_mib, 1)} → ${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy</td></tr>`).join("") +
+      `</tbody>`;
+    formula.textContent = `Controlled paired evidence · S_perf = 100 × min(TPS / 15, 1) · estimated profiler RSS = measured child tree + 45 MiB root allowance · thermal unknown. Scalar winner: ${label(scalarWinner.model)} (${fmt.num(scalarWinner.s_total, 4)}). Portable AVX2 winner: ${label(avx2Winner.model)} (${fmt.num(avx2Winner.s_total, 4)}).`;
+  }
 }
 
 function renderCampaignSnapshotWarning(campaign) {

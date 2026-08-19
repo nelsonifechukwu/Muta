@@ -214,6 +214,16 @@ code { color: var(--rejected); overflow-wrap: anywhere; }
 .verdict h2 { margin: 0; font: 500 20px/1.4 var(--mono); letter-spacing: -.01em; }
 .verdict h2 code { font-size: .95em; }
 .verdict > div:first-child > p:last-child { margin: 14px 0 24px; color: var(--fg1); font-size: 16.5px; }
+.regime-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 18px; background: var(--rule); border-top: 1px solid var(--rule); }
+.regime-result-grid article { padding: 16px; background: var(--bg); }
+.regime-result-grid article.avx2-result { box-shadow: inset 0 2px var(--avx2); }
+.regime-result-grid article.scalar-result { box-shadow: inset 0 2px var(--official); }
+.regime-result-grid article > p { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; font-family: var(--sans); }
+.regime-result-grid article > p strong { font-size: 14px; }
+.regime-result-grid dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
+.regime-result-grid dl div { min-width: 0; }
+.regime-result-grid dt { color: var(--fg4); font: 11px var(--sans); }
+.regime-result-grid dd { margin: 3px 0 0; font: 500 16px/1.2 var(--sans); }
 .verdict-stats {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
   margin: 0; border-top: 1px solid var(--rule);
@@ -289,6 +299,8 @@ math { font-family: var(--serif); }
   margin-right: 5px; border-radius: 50%; background: var(--adopted);
 }
 .chart-legend .audit::before { background: var(--official); }
+.chart-legend .scalar::before { background: var(--parity); }
+.chart-legend .avx2::before { background: var(--avx2); }
 
 /* figures that need more than the measure reach into the note rail */
 .wide-figure, .campaign-summary-grid, .editorial-table-wrap, .profiler-workspace {
@@ -356,11 +368,13 @@ input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var
 .evidence-card.official { border-top-color: var(--official); }
 .evidence-card.parity { border-top-color: var(--parity); }
 .evidence-card.sensitivity { border-top-color: var(--sensitivity); }
+.evidence-card.avx2 { border-top-color: var(--avx2); }
 .evidence-card h3 { margin: 6px 0 6px; font: 600 17px var(--serif); }
 .evidence-card > p:last-child { margin: 0; color: var(--fg2); font-size: 14.5px; line-height: 1.5; }
 .evidence-label { margin: 0; color: var(--development); font: 12px var(--sans); }
 .evidence-label span { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: currentColor; }
 .evidence-card.official .evidence-label { color: var(--official); }
+.evidence-card.avx2 .evidence-label { color: var(--avx2); }
 .evidence-card.parity .evidence-label { color: var(--parity); }
 .evidence-card.sensitivity .evidence-label { color: var(--sensitivity); }
 
@@ -453,6 +467,10 @@ input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var
 .editorial-table .avx2-selected-row td { border-color: color-mix(in srgb, var(--avx2) 25%, var(--rule)); }
 .avx2-note { border-top-color: var(--avx2); }
 .avx2-note .design-note-label { color: var(--avx2); }
+.measurement-disclosure > div { padding: 0 0 16px; }
+.measurement-disclosure .table-wrap { padding: 0; }
+.models .avx2-winner-row { background: var(--avx2-soft); }
+.models .avx2-winner-row td { border-color: color-mix(in srgb, var(--avx2) 25%, var(--rule)); }
 
 .sensitivity-lab > label { display: block; }
 .sensitivity-result {
@@ -661,10 +679,12 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .chapter { padding-top: 48px; }
   .controls-grid, .score-breakdown, .evidence-grid, .finding-pair,
   .concept-grid, .campaign-summary-grid, .streaming-lab, .avx2-verdict-grid { grid-template-columns: 1fr; }
+  .regime-result-grid { grid-template-columns: 1fr; }
   .score-breakdown { gap: 1px; }
   .finding-pair { gap: 0; }
   .svg-chart { overflow-x: auto; overscroll-behavior-inline: contain; }
   #runtime-chart svg, #model-funnel-chart svg, #sensitivity-chart svg { min-width: 600px; }
+  #isa-score-chart svg { min-width: 760px; }
   #streaming-chart svg { min-width: 420px; }
   .experiment-sequence article { grid-template-columns: 26px 1fr 62px; }
   .experiment-sequence p { grid-column: 2 / -1; }

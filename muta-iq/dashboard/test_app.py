@@ -6,8 +6,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import app
-from app import (compute_scores, parse_quant, parse_params, updated_metadata,
-                 extract_metrics, model_listing)
+from app import (
+    compute_scores,
+    extract_metrics,
+    model_listing,
+    parse_params,
+    parse_quant,
+    updated_metadata,
+)
 
 
 @contextmanager
@@ -17,22 +23,47 @@ def tmp_app_env():
         tmp = Path(tmp)
         (tmp / "model").mkdir()
         saved = (
-            app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION,
-            app.CAMPAIGN_SUMMARY, app.CAMPAIGN_PARITY, app.CAMPAIGN_ALTERNATIVE,
+            app.MODEL_DIR,
+            app.DB_PATH,
+            app.METADATA,
+            app.SUBMISSION,
+            app.CAMPAIGN_SUMMARY,
+            app.CAMPAIGN_PARITY,
+            app.CAMPAIGN_ALTERNATIVE,
+            app.CAMPAIGN_AVX2_SCORE,
         )
-        app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION, app.CAMPAIGN_SUMMARY, app.CAMPAIGN_PARITY, app.CAMPAIGN_ALTERNATIVE = (
-            tmp / "model", tmp / "profiler.db", tmp / "metadata.json",
-            tmp / "submission.json", tmp / "campaign-summary.json",
+        (
+            app.MODEL_DIR,
+            app.DB_PATH,
+            app.METADATA,
+            app.SUBMISSION,
+            app.CAMPAIGN_SUMMARY,
+            app.CAMPAIGN_PARITY,
+            app.CAMPAIGN_ALTERNATIVE,
+            app.CAMPAIGN_AVX2_SCORE,
+        ) = (
+            tmp / "model",
+            tmp / "profiler.db",
+            tmp / "metadata.json",
+            tmp / "submission.json",
+            tmp / "campaign-summary.json",
             tmp / "campaign-parity.json",
             tmp / "campaign-alternative.json",
+            tmp / "campaign-avx2-score.json",
         )
         try:
             app.init_db()
             yield tmp
         finally:
             (
-                app.MODEL_DIR, app.DB_PATH, app.METADATA, app.SUBMISSION,
-                app.CAMPAIGN_SUMMARY, app.CAMPAIGN_PARITY, app.CAMPAIGN_ALTERNATIVE,
+                app.MODEL_DIR,
+                app.DB_PATH,
+                app.METADATA,
+                app.SUBMISSION,
+                app.CAMPAIGN_SUMMARY,
+                app.CAMPAIGN_PARITY,
+                app.CAMPAIGN_ALTERNATIVE,
+                app.CAMPAIGN_AVX2_SCORE,
             ) = saved
 
 
@@ -250,6 +281,14 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             app.CAMPAIGN_PARITY.write_text(json.dumps(parity))
             payload = app.state_payload()
             self.assertEqual(payload["campaign_parity"], parity)
+            self.assertIsNone(payload["campaign"])
+
+    def test_avx2_score_of_record_is_exposed_separately(self):
+        with tmp_app_env():
+            avx2_score = {"schema_version": 1, "winners": {"avx2": {"model": "q4km"}}}
+            app.CAMPAIGN_AVX2_SCORE.write_text(json.dumps(avx2_score))
+            payload = app.state_payload()
+            self.assertEqual(payload["campaign_avx2_score"], avx2_score)
             self.assertIsNone(payload["campaign"])
 
 
