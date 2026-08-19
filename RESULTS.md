@@ -27,6 +27,46 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-19 — seven-hour GGUF campaign, corrected profiler score-of-record
+
+**Provenance correction:** the project had no primary evidence for its claimed private
+6 August organiser clarification. The current official challenge webpage describes a physical
+Standard Laptop with a 10th–12th-generation Intel Core i5 and cohort-relative
+`100 × TPS/TPS_max`; the executable profiler instead uses
+a no-AVX b10175 cloud-VM image and `min(TPS/15, 1) × 100`. Both result sets are now retained,
+labelled, and never averaged.
+
+**Primary profiler-reference result** — GCP `n2-custom-4-8192`, 2C/4T, exact b10175 commit
+`60bccc…`, no native/AVX/AVX2/AVX-512/FMA/F16C, binary sha256 `7f01dc…9370`, whole-tree RSS:
+
+| GGUF | tg tok/s | est. profiler RSS MiB | ARC-Easy proxy | est. S_total @ capped 15 | tier |
+|---|---:|---:|---:|---:|---|
+| **Muta Tutor Qwen3-1.7B pure Q4_0 tied** `a98ce3…` | **9.9869** | **1133.1** | **72%** | **72.81** | profiler-default 5 samples |
+| Qwen3-1.7B Q4_K_M tied `e8a413…` | 5.2954 | 1183.5 | 72% | 63.29 | one-sample promotion screen |
+| Qwen3-1.7B Q5_K_M tied `17ddf7…` | 4.7839 | 1364.5 | 76% | 63.76 | one-sample promotion screen |
+| Qwen3-1.7B IQ4_XS tied `aea3cb…` | 2.4961 | 1081.8 | 70% | 56.97 | one-sample promotion screen |
+| BitCPM4-8B TQ2_0 envocab `069621…` | 0.8108 | 2316.3 | 88% | 59.16 | one-sample promotion screen |
+
+RSS above adds a 45 MiB estimate for the profiler Python root process to the measured
+llama-bench child-tree peak, so the efficiency terms and composites are estimates. The primary
+winner remains **Muta Tutor / Qwen3-1.7B pure Q4_0 with tied head**. Its SSSE3
+Q4_0 kernel is worth much more than the modest file/RSS savings of scalar k/i-quants in the
+published reference build. BitCPM's 16-point ARC-Easy lead cannot repay its 9.18 tok/s deficit.
+These totals use the small ARC-Easy gate as an explicit `S_acc` proxy and no thermal penalty
+because GCP exposes no package sensor; they are not hidden-panel or target-laptop scores.
+
+**Preserved webpage alternative:** the full AVX2 ladder remains in
+`bench/measurements/campaign-20260819/avx2*`. Treating 15/30/45/60/100/150 as pre-entry
+cohort floors and using `max(floor, candidate TPS)` as the effective denominator, the proxy
+winners are Q3_K_M at 15, Q4_K_S at 30, Q5_K_M at 45, and BitCPM4-8B at 60/100/150. This is
+exactly why the two public interpretations must remain independently inspectable.
+
+All exact hashes, commands, internal timing vectors, accuracy sample counts, confidence
+intervals, recipes and rejected techniques are in `bench/measurements/campaign-20260819/`
+and `docs/gguf-optimization-campaign.md`.
+
+---
+
 ## 2026-08-17 (day) — model re-selection for the audit binary; submission is now Muta Tutor (Qwen3-1.7B, pure Q4_0)
 
 **Hardware context:** `native` (Apple M1, 8 GB, 4 threads) for every measurement; the audit box
@@ -505,11 +545,19 @@ GPU/Internet plan (offline-resilient boot + digest-pinned db image).
 
 ---
 
-## 2026-08-06
+## 2026-08-06 — historical claim retracted on 2026-08-19
 
-### A. Organizer answers land, and they invert the quant verdict
+### A. Unsourced organizer answers — do not use as the score of record
 
-Two answers from the organizers changed the optimization target:
+This entry originally asserted two private organizer answers, but the repository contains no
+email, issue, Discord permalink, quote, or other primary evidence for either one. A 19 August
+cross-examination found that the current public challenge page describes the two claims below,
+while the executable official profiler instead uses a cloud-VM/no-AVX path and caps performance
+at 15 tok/s. Until the organizers publish a versioned resolution, the campaign score of record is
+the profiler implementation and these AVX2/cohort-relative results are retained as a separately
+labelled alternative only.
+
+The two **unverified assumptions** used by the historical analysis were:
 
 1. **S_perf is `TPS/TPS_max` uncapped** (cohort-relative), not the profiler README's
    `min(TPS/15, 1)`. Throughput now scales linearly into the score with no saturation.

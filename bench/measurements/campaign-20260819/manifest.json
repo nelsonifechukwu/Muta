@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "campaign": "2026-08-19-gguf-only",
+  "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
+  "target_note": "Same-host comparison proxy only; target-laptop DDR4 bandwidth and thermals are unmeasured.",
+  "source": {
+    "repository": "bartowski/Qwen_Qwen3-1.7B-GGUF",
+    "revision": "dcb19155b962dbb6389f4691a982043a8e651022",
+    "file": "Qwen_Qwen3-1.7B-bf16.gguf",
+    "bytes": 4069679264,
+    "sha256": "199b4df12194e24ac097d4fcbd279ce62bd4959bed9f0d4719d05a6ab1501861"
+  },
+  "importance_matrix": {
+    "chunks": 137,
+    "sha256": "34b14260809a8d7b307637a37b2a4d576feaff626be5fba23a6d1df1b243a6f2",
+    "limitation": "The artifact names calibration_datav3.txt, but the source corpus was not published, so evaluation-set disjointness cannot be independently proved."
+  },
+  "quantizer": {
+    "llama_cpp_commit": "48d22e295e2b86b47366c16390794f3e05ba970a",
+    "tag": "b10360",
+    "binary_sha256": "dea1cace012c3e6ed7589fa2cab130497859156c7233c4958363c7d72d5a31d7"
+  },
+  "benchmark_primary": {
+    "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+    "tag": "b10175",
+    "binary_sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+    "build": "GGML_NATIVE=OFF, AVX=OFF, AVX2=OFF, AVX-512=OFF, FMA=OFF, F16C=OFF",
+    "command_shape": "llama-bench -p 512 -n 128 -ngl 0",
+    "threads": 2,
+    "performance_formula": "min(TPS / 15, 1) * 100",
+    "evidence": "scalar15.jsonl and summary.*"
+  },
+  "benchmark_alternative": {
+    "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+    "tag": "b10175",
+    "binary_sha256": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8",
+    "build": "GGML_NATIVE=OFF, AVX2 baseline, AVX-512 disabled",
+    "command_shape": "llama-bench -p 512 -n 128 -ngl 0",
+    "threads": 2,
+    "performance_formula": "100 * TPS / max(pre-entry cohort floor, candidate TPS) at floors 15,30,45,60,100,150",
+    "evidence": "avx2.jsonl and avx2-website-relative-summary.*"
+  },
+  "evidence_files": {
+    "scalar15.jsonl": "aa79871fa5a4f8c8d5d5d4fcf9ca15bb6f1fb682484feeb9821a158279ce951e",
+    "avx2.jsonl": "6e1dab1429894b9e1a7c2611e540f411390f473fe8279a440e48451160fd0c39",
+    "summary.json": "3089521bec4c6948eee369b22fef8148edc25f83382d49669ea67b7a1f30d9de",
+    "summary.tsv": "3b8f3c18faf039a809447ce3f68e65cee63353d6616dcc70a75825d0a53e347b",
+    "avx2-website-relative-summary.json": "e62d07628342eb849b605fa7de67603613f911fb866cb95650f04e90da4eb63f",
+    "avx2-website-relative-summary.tsv": "cc053b5da8c48e11c766310675c347e9b52315ccc44eb098205bdffdb477d8b5"
+  },
+  "artifacts": {
+    "muta-tutor-qwen3-1.7b-q4_0.gguf": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+    "Qwen3-1.7B-Q4_0-pure.gguf": "a9ffec7c462d6e8d5ab79f22a1ebb71ad23468d8ce92688cea19da74f5b3252f",
+    "Q3_K_M-tied.gguf": "455de7e1fe116b10b7b34ce5577bfdddb766e86029952e9aa9fc4fa744100e3c",
+    "Q3_K_M-EQ6_K-tied.gguf": "233203bbcb9a79d0262d5671fb5eb54bd2b1d690741a881a8a590eeee5195479",
+    "IQ4_XS-tied.gguf": "aea3cb60c57cc93f74f45c36c85c80ae34d65396ec563cfba4742f89b10b6fa3",
+    "IQ4_XS-EQ6_K-tied.gguf": "d0126ff98ad40f8c542dee5b443217b65b6560ff8a6d9b5d80e1b953bff4ef2d",
+    "Q4_K_S-tied.gguf": "bff602f561af481da0e837e6f14277f9fc89cc4d90a86f92eafcb4aad9bf3195",
+    "Q4_K_M-tied.gguf": "e8a4133261be39c07f73c8d40e1c8334aae90ece9cae9f1cce75a8347f64c315",
+    "Q5_0-tied.gguf": "1fd040bfcaaa6d94f773ef64aeb454a7dd3b3384b3daf5b550dd76e3dd7fab7e",
+    "Q5_K_M-tied.gguf": "17ddf7b5b135bc9fe0ce5449b8f506f91586447f73bf145f14b52b5b4bbe0647",
+    "Q6_K-tied.gguf": "72b40f27740f09837e8de40afd97ea71f5839839e839eea9c9aadf64f753264a",
+    "Q4_0-prune-L14-tied.gguf": "3a142d96183773b3bb5520e754d28b2f3281c81a5227b3cc6396cdc7c76bd4ff",
+    "bitcpm4-8b-tq2_0-envocab.gguf": "069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d",
+    "Qwen3.5-0.8B-Q4_K_M.gguf": "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517"
+  },
+  "recipe": "bench/build_gguf_candidates.sh"
+}

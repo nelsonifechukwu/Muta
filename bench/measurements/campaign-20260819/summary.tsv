@@ -1,0 +1,6 @@
+model	model_sha256	model_bytes	throughput_rounds	throughput_repetitions	tg_tps_mean	tg_tps_sd	peak_rss_mib_mean	peak_rss_mib_sd	accuracy_proxy_task	accuracy_proxy	accuracy_samples	score_tpsmax_15.0
+IQ4_XS-tied.gguf	aea3cb60c57cc93f74f45c36c85c80ae34d65396ec563cfba4742f89b10b6fa3	920437088	1	1	2.4961	0.0	1081.8	0.0	arc_easy	70.0	50	56.9738
+Q4_K_M-tied.gguf	e8a4133261be39c07f73c8d40e1c8334aae90ece9cae9f1cce75a8347f64c315	1027187040	1	1	5.2954	0.0	1183.5	0.0	arc_easy	72.0	50	63.2887
+Q5_K_M-tied.gguf	17ddf7b5b135bc9fe0ce5449b8f506f91586447f73bf145f14b52b5b4bbe0647	1216553312	1	1	4.7839	0.0	1364.5	0.0	arc_easy	76.0	50	63.7606
+bitcpm4-8b-tq2_0-envocab.gguf	069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d	2208746208	1	1	0.8108	0.0	2316.3	0.0	arc_easy	88.0	50	59.1587
+muta-tutor-qwen3-1.7b-q4_0.gguf	a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e	974198528	1	5	9.9869	0.0385	1133.1	0.0	arc_easy	72.0	50	72.8122

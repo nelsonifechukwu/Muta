@@ -1,5 +1,37 @@
 # Technical Report — Muta Tutor: an offline maths & science tutor for the 8 GB classroom laptop
 
+> **19 August 2026 provenance correction.** An old repository entry claimed that organisers
+> privately confirmed a physical AVX2 audit and uncapped cohort-relative score on 6 August.
+> No source for that claim exists in the repository or online. The public challenge page and
+> official profiler conflict; this report follows the executable profiler: secure cloud-VM
+> audit mode and `min(TPS/15, 1)·100`. AVX2 results are deployment evidence only.
+
+## Corrected 19 August decision
+
+The seven-hour campaign therefore keeps two evidence lanes: profiler-reference no-AVX b10175 rows scored at
+the profiler's fixed 15 tok/s cap, and separately labelled AVX2 product rows. Exact timing
+vectors, whole-tree RSS, task intervals and hashes live in
+`bench/measurements/campaign-20260819/`; unlike the earlier decision, no score averages the two
+public rule interpretations.
+
+On the profiler-reference binary, the shipped Muta Tutor Q4_0 tied-head file remains the winner:
+9.9869 tok/s, an estimated profiler-parity peak RSS of 1133.1 MiB, 72% ARC-Easy-50 proxy and
+an **estimated 72.81 composite**. RSS accounting adds a 45 MiB estimate for the profiler Python
+root to the measured child-tree peak. The strongest
+balanced Qwen alternative, Q4_K_M, scored 63.29 (5.2954 tok/s, 1183.5 MiB, 72%); IQ4_XS scored
+56.97; Q5_K_M scored 63.76 despite its 76% Easy proxy; and the BitCPM4-8B accuracy leader scored 59.16 because its scalar TQ2_0 decode fell to
+0.8108 tok/s. Thermal is unknown on GCP and the accuracy term is a small diagnostic proxy, not a
+claim about the hidden panel.
+
+The AVX2/webpage-relative panel is still preserved. Treating each scenario as a pre-entry cohort
+floor and using `max(floor, candidate TPS)` as the effective denominator, it selects Q3_K_M at
+15, Q4_K_S at 30, Q5_K_M at 45, and BitCPM4-8B at 60/100/150. That alternative is useful if
+the webpage—not the published profiler image—turns out to govern the final audit.
+
+---
+
+## Historical 17 August report (superseded where it conflicts with the correction above)
+
 **Team ID:** team-muta  
 **Domain:** math_scientific_reasoning  
 **Model:** muta-tutor-qwen3-1.7b-q4_0 (Qwen3-1.7B, pure Q4_0, tied Q4_0 LM head, tutoring persona baked into the GGUF; 974,198,528 bytes, sha256 `a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e`)

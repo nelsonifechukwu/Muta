@@ -28,17 +28,22 @@ At the provisional `TPS_max = 15`: **+2.00 pts per tok/s · −2.86 pts per GB �
 accuracy point.** So **1 GB = 1.43 tok/s = 5.7 accuracy points**, and any RAM-spending change
 must clear `ΔTPS ≥ 1.43 × ΔRAM_GB` to be worth it.
 
-> **Caveat, and it will bite.** [`docs/rules-digest.md`](../docs/rules-digest.md) establishes
-> that `TPS_max` is **"highest speed across all submissions"**, not a fixed 15. The exchange
-> rate is therefore a function of the cohort: at a cohort max of 30 a tok/s is worth **1.00**
-> pt and the break-even **doubles to 2.86 tok/s per GB**. Some verdicts below could flip sign
-> when the real `TPS_max` is known. Record the `tps_max` each row was scored against — do not
-> assume 15 forever. `score.py` carries `tps_max_provenance` for exactly this reason.
+> **19 August provenance correction.** The repository never retained evidence for its claimed
+> private organiser clarification. The current public challenge page says “highest speed across
+> all submissions,” while the official profiler README/code implement the fixed, capped 15.
+> New score-of-record rows use the executable profiler. Cohort-relative results are still saved
+> as an explicitly separate alternative because that interpretation can flip the verdict.
+> `score.py` now requires the formula and denominator provenance to be machine-readable.
 
 ## Log
 
 | Date | Change | Harness | tps_max | Before (TPS / RAM / Acc) | After (TPS / RAM / Acc) | ΔTPS | ΔRAM | ΔAcc | ΔS_total | Verdict |
 |---|---|---|---|---|---|---|---|---|---|---|
+| 2026-08-19 | pure Q4_0 tied → Q4_K_M tied | b10175 profiler-reference no-AVX on GCP 2C/4T; default-5 incumbent vs transparent one-sample promotion screen; RSS adds a 45 MiB profiler-root estimate | profiler fixed/capped 15 | 9.9869 / 1.1065 GiB / 72 | 5.2954 / 1.1558 GiB / 72 | −4.6915 | +0.049 GiB | 0 | **−9.52** | reject; scalar k-quant kernel loses decisively |
+| 2026-08-19 | pure Q4_0 tied → Q5_K_M tied | same | profiler fixed/capped 15 | 9.9869 / 1.1065 GiB / 72 | 4.7839 / 1.3325 GiB / 76 | −5.2030 | +0.226 GiB | +4 | **−9.05** | reject; Easy gain does not generalize to hard probes or repay scalar decode/RSS |
+| 2026-08-19 | pure Q4_0 tied → IQ4_XS tied | same | profiler fixed/capped 15 | 9.9869 / 1.1065 GiB / 72 | 2.4961 / 1.0564 GiB / 70 | −7.4908 | −0.050 GiB | −2 | **−15.84** | reject; 51 MiB saved cannot repay scalar IQ kernel + accuracy |
+| 2026-08-19 | pure Q4_0 tied → BitCPM4-8B TQ2 envocab | same | profiler fixed/capped 15 | 9.9869 / 1.1065 GiB / 72 | 0.8108 / 2.2620 GiB / 88 | −9.1761 | +1.155 GiB | +16 | **−13.65** | reject under profiler rule; accuracy leader remains selectable in UI and wins high-denominator AVX2 alternative |
+| 2026-08-19 | scoring provenance: unsupported 6-Aug claim → dual evidence lanes | official page + profiler README/code/Dockerfile; source and git-history audit | 15 primary; 15/30/45/60/100/150 alternative | one blended/contradictory narrative | capped no-AVX primary + AVX2/webpage alternative, separately hashed | — | — | — | not a model delta | keep; prevents optimizing the wrong objective while preserving every result |
 | 2026-07-31 | RSS ceilings: -np 2, --ctx-checkpoints 4, --cache-ram 256 (was auto-4/32/8192) | two-turn probe, docker/emulated | 15 | ~6.72 / 4.8 GB / — | 6.72 / 4.44 GB / — | ~0 | -0.36 GB | 0 | dev_host_provisional — RAM row only | keep |
 | 2026-07-31 | speculation ON: --spec-type draft-simple + Qwen3.5-0.8B (dead flags + incompatible 0.6B before) | two-turn probe, docker/emulated | 15 | 6.72 / — / — | 4.77 / +1.02 GB / — | -1.95 | +1.02 GB | 0 | dev_host_provisional — acceptance 98.4% ; target-box row pending | park (needs x86 numbers) |
 | 2026-07-31 | run.sh --native (pinned arm64 b10035 on host; docker default unchanged) | two-turn probe, native | 15 | 6.72 tok/s docker-emulated | 24.72 tok/s native (draft off: 30.84 tok/s; acceptance 98.41%) | +18.00 | ~0 | 0 | dev_host_provisional — dev-loop only, never report-grade | keep |

@@ -1,0 +1,293 @@
+{
+  "accuracy_hardware_contexts": [
+    "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t"
+  ],
+  "accuracy_notice": "S_acc is a measured arc_easy proxy, not the unavailable judging-panel score",
+  "benchmark_binary_sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+  "hardware_context": "adtc_profiler_reference_cloud_vm_proxy_no_avx_2c4t",
+  "models": [
+    {
+      "accuracy_proxy": 70.0,
+      "accuracy_proxy_task": "arc_easy",
+      "accuracy_samples": 50,
+      "accuracy_tasks": {
+        "arc_easy": {
+          "ci95_percent": [
+            56.25,
+            80.9
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 70.0
+        }
+      },
+      "commands": [
+        [
+          "bench/.artifacts/llama.cpp-b10175/build/bin/llama-bench",
+          "-m",
+          "muta-iq/opt/campaign/candidates/IQ4_XS-tied.gguf",
+          "-p",
+          "512",
+          "-n",
+          "128",
+          "-o",
+          "json",
+          "-ngl",
+          "0",
+          "-r",
+          "1"
+        ]
+      ],
+      "measurement_tier": "single_repeat_screen",
+      "model": "IQ4_XS-tied.gguf",
+      "model_bytes": 920437088,
+      "model_sha256": "aea3cb60c57cc93f74f45c36c85c80ae34d65396ec563cfba4742f89b10b6fa3",
+      "peak_rss_mib_mean": 1081.8,
+      "peak_rss_mib_sd": 0.0,
+      "rss_accounting": "measured llama-bench child-tree peak plus the raw row's 45 MiB official-profiler-root estimate",
+      "rss_estimated": true,
+      "scores": {
+        "15.0": {
+          "effective_tps_max": 15.0,
+          "s_acc": 70.0,
+          "s_eff": 84.9079,
+          "s_perf": 16.6406,
+          "s_total": 56.9738
+        }
+      },
+      "tg_tps_mean": 2.4961,
+      "tg_tps_sd": 0.0,
+      "throughput_repetitions": 1,
+      "throughput_rounds": 1
+    },
+    {
+      "accuracy_proxy": 72.0,
+      "accuracy_proxy_task": "arc_easy",
+      "accuracy_samples": 50,
+      "accuracy_tasks": {
+        "arc_easy": {
+          "ci95_percent": [
+            58.33,
+            82.53
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 72.0
+        }
+      },
+      "commands": [
+        [
+          "bench/.artifacts/llama.cpp-b10175/build/bin/llama-bench",
+          "-m",
+          "muta-iq/opt/campaign/candidates/Q4_K_M-tied.gguf",
+          "-p",
+          "512",
+          "-n",
+          "128",
+          "-o",
+          "json",
+          "-ngl",
+          "0",
+          "-r",
+          "1"
+        ]
+      ],
+      "measurement_tier": "single_repeat_screen",
+      "model": "Q4_K_M-tied.gguf",
+      "model_bytes": 1027187040,
+      "model_sha256": "e8a4133261be39c07f73c8d40e1c8334aae90ece9cae9f1cce75a8347f64c315",
+      "peak_rss_mib_mean": 1183.5,
+      "peak_rss_mib_sd": 0.0,
+      "rss_accounting": "measured llama-bench child-tree peak plus the raw row's 45 MiB official-profiler-root estimate",
+      "rss_estimated": true,
+      "scores": {
+        "15.0": {
+          "effective_tps_max": 15.0,
+          "s_acc": 72.0,
+          "s_eff": 83.4891,
+          "s_perf": 35.3029,
+          "s_total": 63.2887
+        }
+      },
+      "tg_tps_mean": 5.2954,
+      "tg_tps_sd": 0.0,
+      "throughput_repetitions": 1,
+      "throughput_rounds": 1
+    },
+    {
+      "accuracy_proxy": 76.0,
+      "accuracy_proxy_task": "arc_easy",
+      "accuracy_samples": 50,
+      "accuracy_tasks": {
+        "arc_easy": {
+          "ci95_percent": [
+            62.59,
+            85.7
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 76.0
+        }
+      },
+      "commands": [
+        [
+          "bench/.artifacts/llama.cpp-b10175/build/bin/llama-bench",
+          "-m",
+          "muta-iq/opt/campaign/candidates/Q5_K_M-tied.gguf",
+          "-p",
+          "512",
+          "-n",
+          "128",
+          "-o",
+          "json",
+          "-ngl",
+          "0",
+          "-r",
+          "1"
+        ]
+      ],
+      "measurement_tier": "single_repeat_screen",
+      "model": "Q5_K_M-tied.gguf",
+      "model_bytes": 1216553312,
+      "model_sha256": "17ddf7b5b135bc9fe0ce5449b8f506f91586447f73bf145f14b52b5b4bbe0647",
+      "peak_rss_mib_mean": 1364.5,
+      "peak_rss_mib_sd": 0.0,
+      "rss_accounting": "measured llama-bench child-tree peak plus the raw row's 45 MiB official-profiler-root estimate",
+      "rss_estimated": true,
+      "scores": {
+        "15.0": {
+          "effective_tps_max": 15.0,
+          "s_acc": 76.0,
+          "s_eff": 80.964,
+          "s_perf": 31.8928,
+          "s_total": 63.7606
+        }
+      },
+      "tg_tps_mean": 4.7839,
+      "tg_tps_sd": 0.0,
+      "throughput_repetitions": 1,
+      "throughput_rounds": 1
+    },
+    {
+      "accuracy_proxy": 88.0,
+      "accuracy_proxy_task": "arc_easy",
+      "accuracy_samples": 50,
+      "accuracy_tasks": {
+        "arc_easy": {
+          "ci95_percent": [
+            76.2,
+            94.38
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 88.0
+        }
+      },
+      "commands": [
+        [
+          "bench/.artifacts/llama.cpp-b10175/build/bin/llama-bench",
+          "-m",
+          "muta-iq/model/bitcpm4-8b-tq2_0-envocab.gguf",
+          "-p",
+          "512",
+          "-n",
+          "128",
+          "-o",
+          "json",
+          "-ngl",
+          "0",
+          "-r",
+          "1"
+        ]
+      ],
+      "measurement_tier": "single_repeat_screen",
+      "model": "bitcpm4-8b-tq2_0-envocab.gguf",
+      "model_bytes": 2208746208,
+      "model_sha256": "069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d",
+      "peak_rss_mib_mean": 2316.3,
+      "peak_rss_mib_sd": 0.0,
+      "rss_accounting": "measured llama-bench child-tree peak plus the raw row's 45 MiB official-profiler-root estimate",
+      "rss_estimated": true,
+      "scores": {
+        "15.0": {
+          "effective_tps_max": 15.0,
+          "s_acc": 88.0,
+          "s_eff": 67.6855,
+          "s_perf": 5.4054,
+          "s_total": 59.1587
+        }
+      },
+      "tg_tps_mean": 0.8108,
+      "tg_tps_sd": 0.0,
+      "throughput_repetitions": 1,
+      "throughput_rounds": 1
+    },
+    {
+      "accuracy_proxy": 72.0,
+      "accuracy_proxy_task": "arc_easy",
+      "accuracy_samples": 50,
+      "accuracy_tasks": {
+        "arc_easy": {
+          "ci95_percent": [
+            58.33,
+            82.53
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 72.0
+        }
+      },
+      "commands": [
+        [
+          "bench/.artifacts/llama.cpp-b10175/build/bin/llama-bench",
+          "-m",
+          "muta-iq/model/muta-tutor-qwen3-1.7b-q4_0.gguf",
+          "-p",
+          "512",
+          "-n",
+          "128",
+          "-o",
+          "json",
+          "-ngl",
+          "0"
+        ]
+      ],
+      "measurement_tier": "profiler_default_repetitions",
+      "model": "muta-tutor-qwen3-1.7b-q4_0.gguf",
+      "model_bytes": 974198528,
+      "model_sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+      "peak_rss_mib_mean": 1133.1,
+      "peak_rss_mib_sd": 0.0,
+      "rss_accounting": "measured llama-bench child-tree peak plus the raw row's 45 MiB official-profiler-root estimate",
+      "rss_estimated": true,
+      "scores": {
+        "15.0": {
+          "effective_tps_max": 15.0,
+          "s_acc": 72.0,
+          "s_eff": 84.1922,
+          "s_perf": 66.579,
+          "s_total": 72.8122
+        }
+      },
+      "tg_tps_mean": 9.9869,
+      "tg_tps_sd": 0.0385,
+      "throughput_repetitions": 5,
+      "throughput_rounds": 1
+    }
+  ],
+  "performance_formula": "S_perf = min(TPS / 15, 1) * 100 (official profiler)",
+  "rss_notice": "peak RSS adds a 45 MiB estimate for the official profiler Python root to the measured llama-bench child-tree peak",
+  "schema_version": 1,
+  "thermal_notice": "temperature unavailable on GCP; no penalty applied",
+  "tps_max_scenario_notice": "the executable profiler fixes TPS_REFERENCE at 15",
+  "tps_max_sensitivity": [
+    15.0
+  ],
+  "winners": {
+    "15.0": {
+      "model": "muta-tutor-qwen3-1.7b-q4_0.gguf",
+      "model_sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+      "s_total": 72.8122
+    }
+  }
+}
