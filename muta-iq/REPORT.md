@@ -8,20 +8,19 @@
 
 ## Corrected 19 August decision
 
-The seven-hour campaign therefore keeps two evidence lanes: profiler-reference no-AVX b10175 rows scored at
-the profiler's fixed 15 tok/s cap, and separately labelled AVX2 product rows. Exact timing
-vectors, whole-tree RSS, task intervals and hashes live in
+The seven-hour campaign keeps three non-blended evidence lanes: direct bundled-profiler reports,
+broader no-AVX b10175 promotion screens scored at the profiler's fixed 15 tok/s cap, and separately
+labelled AVX2 product rows. Exact reports, timing vectors, task intervals and hashes live in
 `bench/measurements/campaign-20260819/`; unlike the earlier decision, no score averages the two
 public rule interpretations.
 
-On the profiler-reference binary, the shipped Muta Tutor Q4_0 tied-head file remains the winner:
-9.9869 tok/s, an estimated profiler-parity peak RSS of 1133.1 MiB, 72% ARC-Easy-50 proxy and
-an **estimated 72.81 composite**. RSS accounting adds a 45 MiB estimate for the profiler Python
-root to the measured child-tree peak. The strongest
-balanced Qwen alternative, Q4_K_M, scored 63.29 (5.2954 tok/s, 1183.5 MiB, 72%); IQ4_XS scored
-56.97; Q5_K_M scored 63.76 despite its 76% Easy proxy; and the BitCPM4-8B accuracy leader scored 59.16 because its scalar TQ2_0 decode fell to
-0.8108 tok/s. Thermal is unknown on GCP and the accuracy term is a small diagnostic proxy, not a
-claim about the hidden panel.
+In the full profiler reports, the shipped Muta Tutor Q4_0 tied-head file remains the winner:
+9.79 tok/s, 1116.31 MiB directly measured profiler peak RSS, 72% ARC-Easy-50 and a **72.4653
+composite**. The Qwen3.5-0.8B hedge is close at 71.5416 (9.74 tok/s, 694.73 MiB, 68%); its
+421.58 MiB saving almost repays the four-point accuracy gap, but historical maths/tutoring gates
+remain below the product bar. BitCPM4-8B scores 59.1843 despite 88% Easy because scalar TQ2_0
+decode is 0.81 tok/s; Qwen3.5-4B IQ4_XS scores 52.9293. Thermal is unknown on GCP and the
+accuracy term is a small diagnostic proxy, not a claim about the hidden panel.
 
 The AVX2/webpage-relative panel is still preserved. Treating each scenario as a pre-entry cohort
 floor and using `max(floor, candidate TPS)` as the effective denominator, it selects Q3_K_M at

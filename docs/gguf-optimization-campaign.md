@@ -17,7 +17,10 @@ bandwidth or thermal penalty. No cloud result is report-grade target evidence.
 - One BF16 source revision per quantization ladder; no low-bit up-quantization.
 - One exact b10175 reference binary (native/AVX/AVX2/FMA/F16C disabled) and binary SHA for
   every scored timed row. AVX2 rows are retained as a separate deployment comparison.
-- Interleaved repetitions, append-only JSONL, whole-process-tree RSS at 100 ms.
+- Full bundled-profiler confirmation runs are the primary fixed-15 evidence. They directly
+  measure root-plus-child peak RSS and emit schema-validated reports.
+- The broader promotion screens retain interleaved repetitions, append-only JSONL and
+  whole-process-tree RSS at 100 ms; their profiler-root RSS adjustment remains labelled estimated.
 - Accuracy tasks, sample counts, templates and seeds remain separate; missing tasks are never
   borrowed from another quant or model.
 - Scores use the profiler's fixed 15 tok/s cap. The conflicting webpage-relative formula is
@@ -70,32 +73,29 @@ Once a candidate reaches 15 tok/s, additional throughput is worth zero under thi
 
 ## Campaign artifacts
 
-Raw rows, a scored summary, candidate recipes, source/tool hashes and the final decision are
-stored under `bench/measurements/campaign-20260819/`. GGUF files remain untracked and are
-identified exclusively by immutable SHA-256.
+Raw rows, direct bundled-profiler reports, scored summaries, candidate recipes, source/tool hashes
+and the final decision are stored under `bench/measurements/campaign-20260819/`. GGUF files remain
+untracked and are identified exclusively by immutable SHA-256.
 
-## Primary profiler-reference verdict
+## Primary direct-profiler verdict
 
-The score-of-record comparison used b10175 commit `60bccc…`, binary sha256 `7f01dc…9370`,
-with native/AVX/AVX2/AVX-512/FMA/F16C disabled on the GCP 2C/4T proxy. The incumbent retained
-llama-bench's five default internal repetitions; slow scalar challengers used a clearly labelled
-one-repetition promotion screen. All used `p512/tg128`, `-ngl 0`, the same binary and whole-tree
-RSS sampler.
+Four exact artifacts then ran through the bundled `adtc-profiler 0.1.0` at source commit
+`7adbe08…`. The profiler itself performed the default five-sample b10175 throughput workload,
+direct root-plus-child RSS measurement, ARC-Easy-50, schema validation and parameter-count check.
 
-| Artifact | Decode TPS | Est. profiler RSS MiB | ARC-Easy proxy | Est. S_total, capped 15 | Verdict |
+| Artifact | Decode TPS | Direct profiler RSS MiB | ARC-Easy proxy | S_total, capped 15 | Verdict |
 |---|---:|---:|---:|---:|---|
-| **Muta Tutor Qwen3-1.7B Q4_0 tied** `a98ce3…` | **9.9869** | **1133.1** | **72%** | **72.81** | **keep / submission winner** |
-| Qwen3-1.7B Q4_K_M tied `e8a413…` | 5.2954 | 1183.5 | 72% | 63.29 | reject |
-| Qwen3-1.7B Q5_K_M tied `17ddf7…` | 4.7839 | 1364.5 | 76% | 63.76 | reject; Easy gain does not repay scalar decode/RSS |
-| Qwen3-1.7B IQ4_XS tied `aea3cb…` | 2.4961 | 1081.8 | 70% | 56.97 | reject |
-| BitCPM4-8B TQ2_0 envocab `069621…` | 0.8108 | 2316.3 | 88% | 59.16 | reject under profiler rule; retain as UI/alternative candidate |
+| **Muta Tutor Qwen3-1.7B Q4_0 tied** `a98ce3…` | **9.79** | **1116.31** | **72%** | **72.4653** | **keep / submission winner** |
+| Qwen3.5-0.8B Q4_K_M `bd2587…` | 9.74 | 694.73 | 68% | 71.5416 | close efficiency hedge; do not promote without harder tutoring gate |
+| BitCPM4-8B TQ2_0 envocab `069621…` | 0.81 | 2306.56 | 88% | 59.1843 | accuracy leader; reject under profiler rule, retain in UI |
+| Qwen3.5-4B IQ4_XS `658a9e…` | 1.13 | 2627.34 | 76% | 52.9293 | reject under profiler rule |
 
-RSS adds a 45 MiB estimate for the profiler Python root process to the measured llama-bench
-child-tree peak. The resulting efficiency term and composite are therefore estimates. The
-winner is decisive on this objective. Q4_K_M preserves Easy accuracy but loses 4.69 tok/s;
-IQ4_XS saves only 51 MiB while losing 7.49 tok/s and two accuracy points; BitCPM gains 16
-accuracy points but loses 9.18 tok/s and adds 1.16 GiB. The score uses ARC-Easy as a labelled
-proxy for the unavailable judging-panel `S_acc`, and thermal is unknown on GCP.
+The winner leads the 0.8B hedge by 0.9237 points. Their decode rates are effectively tied in
+the profiler report; the 1.7B model's four-point ARC-Easy advantage narrowly repays 421.58 MiB of
+additional RSS. The score still uses ARC-Easy as a labelled proxy for the unavailable judging-panel
+`S_acc`, and thermal remains unknown on GCP. The broader one-sample scalar promotion screens remain
+available in the root campaign summary: Q4_K_M scored 63.29, Q5_K_M 63.76 and IQ4_XS 56.97 there,
+so no expensive full run was spent on already dominated Qwen quant variants.
 
 ## Supplemental AVX2 result (not the score-of-record)
 

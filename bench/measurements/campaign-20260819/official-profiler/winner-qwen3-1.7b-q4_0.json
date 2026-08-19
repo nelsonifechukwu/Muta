@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.1.0",
+  "profiler_version": "adtc-profiler 0.1.0",
+  "submission": {
+    "team_id": "muta",
+    "domain": "math_scientific_reasoning",
+    "language_scope": [
+      "en"
+    ],
+    "african_alpha_claim": true,
+    "budget_laptop_claim": true,
+    "submitter": {
+      "name": "iitimii",
+      "email": "nelson.ifechukwu@gmail.com",
+      "github_handle": "iitimii"
+    },
+    "cross_disciplinary_pairing": {
+      "discipline": "education",
+      "load_bearing": true,
+      "description": "Adaptive Socratic tutoring for secondary-school mathematics and scientific reasoning, designed for offline classroom use on a shared 8 GB laptop."
+    },
+    "test_prompts": [
+      {
+        "prompt_id": "tp_001",
+        "prompt": "A trader buys 24 identical crates for 18000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working."
+      },
+      {
+        "prompt_id": "tp_002",
+        "prompt": "A student writes: \"A heavier ball falls faster than a lighter one, because gravity pulls harder on it.\" Identify exactly what is correct and what is mistaken in that reasoning, explain what actually determines how fast each ball accelerates, and describe an observation the student could make to test it."
+      }
+    ],
+    "model": {
+      "name": "Muta Tutor Qwen3-1.7B pure Q4_0 tied",
+      "runtime": "llama.cpp",
+      "quantization": "GGUF Q4_0 tied head",
+      "parameters_estimate": "1.8B",
+      "packaging": "docker_build_from_repo"
+    }
+  },
+  "environment": {
+    "measured_on": "participant_laptop",
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.80GHz",
+    "ram_gb": 7.8,
+    "gpu": "none",
+    "os": "Ubuntu 22.04.5 LTS"
+  },
+  "throughput": {
+    "tokens_per_second_generation": 9.79,
+    "first_token_latency_ms": 35372.22,
+    "prompt_tokens": 512,
+    "generated_tokens": 128
+  },
+  "memory": {
+    "peak_rss_mb": 1116.31,
+    "steady_state_rss_mb": 1031.97,
+    "peak_vms_mb": 1589.63
+  },
+  "accuracy": [
+    {
+      "benchmark": "arc_easy",
+      "dataset_version": "lm-eval-harness",
+      "language": "en",
+      "samples": 50,
+      "score": 0.72,
+      "metric": "acc_norm"
+    }
+  ],
+  "cpu_thermal": {
+    "cpu_percent_p99": 55.0,
+    "core_temp_c_peak": null,
+    "throttled": false
+  },
+  "reproducibility": {
+    "git_commit_sha": "7f4ab4a22f9e",
+    "docker_image_digest": "unknown",
+    "random_seed": 42
+  },
+  "model_info": {
+    "params_count": 1720574976,
+    "context_length": 32768,
+    "architecture": "qwen3",
+    "claimed_params_estimate": "1.8B",
+    "params_match": true
+  }
+}

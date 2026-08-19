@@ -46,7 +46,10 @@
     "summary.json": "3089521bec4c6948eee369b22fef8148edc25f83382d49669ea67b7a1f30d9de",
     "summary.tsv": "c1b2ac0c0ec3a36c89276b75b7246a63a5b85f1898d47a51977cc5454a310e54",
     "avx2-website-relative-summary.json": "e62d07628342eb849b605fa7de67603613f911fb866cb95650f04e90da4eb63f",
-    "avx2-website-relative-summary.tsv": "aee21df6ec143f3be2cdb57c6262c52e3943c6566b1b6868590aa84c8d161128"
+    "avx2-website-relative-summary.tsv": "aee21df6ec143f3be2cdb57c6262c52e3943c6566b1b6868590aa84c8d161128",
+    "official-profiler/manifest.json": "59bc01c2ef02d5a0ccceb69d8783e1e9a6dba20ece1d8cfe34bc59a2e7285e2e",
+    "official-profiler/summary.json": "c4213df1a14820e1ffe63017bc9c1d663b5edf8d467b02e39c0d52d51c7dfb50",
+    "official-profiler/summary.tsv": "f04eb7a58f9d4879bbc93daed4cdad8ee096e66678312a1b5a9884d63b4cfd8f"
   },
   "artifacts": {
     "muta-tutor-qwen3-1.7b-q4_0.gguf": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",

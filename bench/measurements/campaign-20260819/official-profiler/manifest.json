@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "hardware_context": "official_profiler_participant_gcp_n2_custom_4_8192_2c4t",
+  "run_mode": "participant",
+  "vm_checkout": "7f4ab4a22f9e1b17f3c445e1aaeed26ea9cbd279+dirty",
+  "profiler_source_commit": "7adbe08f157e9b96a670426339aca2a519706bdc",
+  "benchmark_binary": {
+    "sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+    "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+    "build": "GGML_NATIVE/AVX/AVX2/AVX512/FMA/F16C OFF; static; CUDA OFF"
+  },
+  "accuracy_stack": {
+    "llama_cpp_python": "0.3.35",
+    "libllama_sha256": "113665710f3103712eb24bf2c897b83beb0029fc93df62cd99123b77b7911047",
+    "lm_eval": "0.4.12",
+    "numpy": "2.4.6",
+    "datasets": "5.0.1"
+  },
+  "models": [
+    {
+      "model": "muta-tutor-qwen3-1.7b-q4_0.gguf",
+      "model_sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+      "model_bytes": 974198528,
+      "report": "winner-qwen3-1.7b-q4_0.json",
+      "report_sha256": "e276bf5a7838ffc4af949972927af309bb3b1c235c1be1624a7ce3aea26e40ee"
+    },
+    {
+      "model": "bitcpm4-8b-tq2_0-envocab.gguf",
+      "model_sha256": "069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d",
+      "model_bytes": 2208746208,
+      "report": "bitcpm4-8b-tq2_0-envocab.json",
+      "report_sha256": "33045455ec4cd07b60f0b4392d7cfbd998ffa3b09f0f925c1a21fab546670719"
+    },
+    {
+      "model": "qwen3.5-4b-iq4_xs.gguf",
+      "model_sha256": "658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f",
+      "model_bytes": 2477053088,
+      "report": "qwen3.5-4b-iq4_xs.json",
+      "report_sha256": "47ecdeb0ad95773b1e4977f4d4de9996dfcb59637a832d8dedd9a59d6649a9a0"
+    },
+    {
+      "model": "qwen3.5-0.8b-q4_k_m.gguf",
+      "model_sha256": "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
+      "model_bytes": 532517120,
+      "report": "qwen3.5-0.8b-q4_k_m.json",
+      "report_sha256": "277ff00a2d87bb978be96a58bd7accddbc4ee22960a2269c1f209efdd565aefc"
+    }
+  ]
+}

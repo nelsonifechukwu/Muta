@@ -88,3 +88,20 @@ portable artifact wins a tie.
 - Updated `RESULTS.md`, `bench/optimization-log.md`, Muta-IQ report, and a decision memo that
   explicitly covers every technique requested, including negative and infeasible results.
 - Independent adversarial review, exact finalist rerun, grouped commits, and GitHub push.
+
+## Bundled-profiler confirmation extension
+
+After the promotion funnel completed, four representative exact artifacts were promoted to full
+`adtc-profiler run --mode participant` confirmation on the same idle GCP proxy:
+
+1. the selected Qwen3-1.7B pure-Q4_0 tied-head submission;
+2. the BitCPM4-8B TQ2_0 vocabulary-pruned accuracy leader;
+3. the previous Qwen3.5-4B IQ4_XS product model;
+4. the Qwen3.5-0.8B Q4_K_M speed/size hedge.
+
+The runs are serialized and use the exact b10175 no-AVX benchmark binary already pinned above.
+Unlike the promotion screens, their RSS comes directly from the profiler's root-plus-child
+sampler and their reports pass the profiler's own schema and parameter-count checks. Raw reports,
+report hashes and the fail-closed aggregate live in
+`bench/measurements/campaign-20260819/official-profiler/`. This extension confirms the shortlist;
+it does not erase the broader quant-ladder screens or the separately preserved AVX2/webpage lane.

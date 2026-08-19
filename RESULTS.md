@@ -36,24 +36,25 @@ Standard Laptop with a 10th–12th-generation Intel Core i5 and cohort-relative
 a no-AVX b10175 cloud-VM image and `min(TPS/15, 1) × 100`. Both result sets are now retained,
 labelled, and never averaged.
 
-**Primary profiler-reference result** — GCP `n2-custom-4-8192`, 2C/4T, exact b10175 commit
-`60bccc…`, no native/AVX/AVX2/AVX-512/FMA/F16C, binary sha256 `7f01dc…9370`, whole-tree RSS:
+**Primary bundled-profiler result** — GCP `n2-custom-4-8192`, 2C/4T, exact profiler source
+commit `7adbe08…`, exact b10175 commit `60bccc…`, no native/AVX/AVX2/AVX-512/FMA/F16C,
+binary sha256 `7f01dc…9370`:
 
-| GGUF | tg tok/s | est. profiler RSS MiB | ARC-Easy proxy | est. S_total @ capped 15 | tier |
-|---|---:|---:|---:|---:|---|
-| **Muta Tutor Qwen3-1.7B pure Q4_0 tied** `a98ce3…` | **9.9869** | **1133.1** | **72%** | **72.81** | profiler-default 5 samples |
-| Qwen3-1.7B Q4_K_M tied `e8a413…` | 5.2954 | 1183.5 | 72% | 63.29 | one-sample promotion screen |
-| Qwen3-1.7B Q5_K_M tied `17ddf7…` | 4.7839 | 1364.5 | 76% | 63.76 | one-sample promotion screen |
-| Qwen3-1.7B IQ4_XS tied `aea3cb…` | 2.4961 | 1081.8 | 70% | 56.97 | one-sample promotion screen |
-| BitCPM4-8B TQ2_0 envocab `069621…` | 0.8108 | 2316.3 | 88% | 59.16 | one-sample promotion screen |
+| GGUF | tg tok/s | direct profiler RSS MiB | ARC-Easy proxy | S_total @ capped 15 |
+|---|---:|---:|---:|---:|
+| **Muta Tutor Qwen3-1.7B pure Q4_0 tied** `a98ce3…` | **9.79** | **1116.31** | **72%** | **72.4653** |
+| Qwen3.5-0.8B Q4_K_M `bd2587…` | 9.74 | 694.73 | 68% | 71.5416 |
+| BitCPM4-8B TQ2_0 envocab `069621…` | 0.81 | 2306.56 | 88% | 59.1843 |
+| Qwen3.5-4B IQ4_XS `658a9e…` | 1.13 | 2627.34 | 76% | 52.9293 |
 
-RSS above adds a 45 MiB estimate for the profiler Python root process to the measured
-llama-bench child-tree peak, so the efficiency terms and composites are estimates. The primary
-winner remains **Muta Tutor / Qwen3-1.7B pure Q4_0 with tied head**. Its SSSE3
-Q4_0 kernel is worth much more than the modest file/RSS savings of scalar k/i-quants in the
-published reference build. BitCPM's 16-point ARC-Easy lead cannot repay its 9.18 tok/s deficit.
-These totals use the small ARC-Easy gate as an explicit `S_acc` proxy and no thermal penalty
-because GCP exposes no package sensor; they are not hidden-panel or target-laptop scores.
+All four are complete `adtc-profiler run --mode participant` reports: five internal benchmark
+samples, direct root-plus-child RSS, ARC-Easy-50, schema validation and passing parameter checks.
+The primary winner remains **Muta Tutor / Qwen3-1.7B pure Q4_0 with tied head**, but the 0.8B
+hedge is only 0.9237 points behind. Its 421.58 MiB RSS saving almost repays the winner's four-point
+accuracy lead; prior maths/tutoring evidence keeps it from promotion. BitCPM's 16-point ARC-Easy
+lead cannot repay its 8.98 tok/s deficit. These are ARC-proxy, sensorless cloud results, not hidden
+panel or physical-laptop thermal scores. The broader quant-ladder promotion screens remain in the
+campaign root summary rather than being overwritten by this four-model confirmation set.
 
 **Preserved webpage alternative:** the full AVX2 ladder remains in
 `bench/measurements/campaign-20260819/avx2*`. Treating 15/30/45/60/100/150 as pre-entry

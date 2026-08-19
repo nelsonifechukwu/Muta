@@ -4,15 +4,19 @@
 
 This directory is the decision record for the seven-hour GGUF-only campaign. A 19 August
 provenance audit retracted the repository's unsupported claim of a private 6 August organiser
-clarification. The current official sources conflict, so this record deliberately preserves two
+clarification. The current official sources conflict, so this record deliberately preserves three
 non-interchangeable evidence lanes:
 
-1. `scalar15.jsonl` and `summary.*`: b10175 profiler-reference no-AVX measurements,
-   scored with `min(TPS/15, 1) × 100`. This is the primary decision surface because it matches
-   the executable profiler. The incumbent uses llama-bench's default five internal repetitions;
+1. `official-profiler/`: complete participant-mode runs emitted and schema-validated by the
+   bundled ADTC profiler. Its `summary.*` is the primary fixed-15 decision surface and its peak
+   RSS directly includes the profiler root and benchmark child.
+2. `scalar15.jsonl` and root `summary.*`: b10175 profiler-reference no-AVX measurements,
+   scored with `min(TPS/15, 1) × 100`. This matches the profiler's throughput path and is the
+   broader promotion-screen lane: the incumbent uses
+   llama-bench's default five internal repetitions;
    scalar challengers use one recorded internal repetition as a time-boxed promotion screen.
    `measurement_tier` and the full command make that precision difference visible.
-2. `avx2.jsonl` and `avx2-website-relative-summary.*`: AVX2 deployment measurements scored
+3. `avx2.jsonl` and `avx2-website-relative-summary.*`: AVX2 deployment measurements scored
    with the challenge webpage's cohort-relative `100 × TPS/TPS_max`, retained at every tested
    pre-entry cohort floor. Because the submitted candidate joins the cohort, its effective
    denominator is `max(floor, candidate TPS)`. This is a labelled alternative, never blended
@@ -30,13 +34,24 @@ The AVX2/webpage alternative produced **four denominator-dependent finalists**:
 
 There is no honest single webpage-relative score until the cohort's `TPS_max` and judging-panel
 `S_acc` are known. The alternative summary therefore reports the winner at six denominators
-instead of averaging them. The primary profiler summary uses the published fixed reference 15.
+instead of averaging them. Both profiler lanes use the published fixed reference 15.
 
-The primary result is not denominator-sensitive: **Muta Tutor / Qwen3-1.7B pure Q4_0 tied**
-remains the winner at 9.9869 tok/s, an estimated profiler-parity peak RSS of 1133.1 MiB,
-72% ARC-Easy-50 proxy and an estimated 72.81 composite. The RSS figure adds a 45 MiB estimate
-for the profiler's Python root to the measured child-tree peak. Q4_K_M scored 63.29, Q5_K_M
-63.76, IQ4_XS 56.97 and BitCPM4-8B 59.16 under the same accounting and reference binary.
+The direct profiler result keeps **Muta Tutor / Qwen3-1.7B pure Q4_0 tied** as the winner, but
+reveals a close efficiency hedge:
+
+| Full participant-mode report | TPS | Direct profiler peak RSS | ARC-Easy-50 | S_total @ capped 15 |
+|---|---:|---:|---:|---:|
+| **Muta Tutor Qwen3-1.7B pure Q4_0 tied** | **9.79** | **1116.31 MiB** | **72%** | **72.4653** |
+| Qwen3.5-0.8B Q4_K_M | 9.74 | 694.73 MiB | 68% | 71.5416 |
+| BitCPM4-8B TQ2_0 vocabulary-pruned | 0.81 | 2306.56 MiB | 88% | 59.1843 |
+| Qwen3.5-4B IQ4_XS | 1.13 | 2627.34 MiB | 76% | 52.9293 |
+
+The winner leads the 0.8B hedge by only 0.9237 composite points: its four-point ARC-Easy gain
+repays 421.58 MiB of additional RSS while throughput is effectively tied. The historical 0.8B
+maths/tutoring gates remain a product-quality warning, but are not mixed into this ARC-only score.
+The promotion-screen summary still contains the broader Qwen quant ladder; it remains the basis
+for rejecting Q4_K_M/Q5_K_M/IQ4_XS variants that were not all rerun through the expensive full
+profiler path.
 
 ## What was actually measured — AVX2 alternative
 
@@ -101,6 +116,11 @@ raw-profiler score) also favours BitCPM, 77.5% versus 70% for the shipped Qwen.
 4. Generate the fail-closed view:
 
    ```bash
+   python -m bench.official_profiler_summary \
+     --manifest official-profiler/manifest.json \
+     --json official-profiler/summary.json \
+     --tsv official-profiler/summary.tsv
+
    python -m bench.campaign_summary \
      --input scalar15.jsonl --accuracy-input avx2.jsonl \
      --performance-formula profiler_capped --tps-max 15 \
