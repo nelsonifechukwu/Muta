@@ -69,22 +69,22 @@ const REPORT_STREAMING = [
 ];
 
 const EXPERIMENTS = [
-  { status: "adopted", name: "Concurrency and cache caps", finding: "Two parallel slots, four checkpoints, and a 256 MiB cache stopped memory growth and raised the early Docker baseline from about 5.3 to 6.72 tok/s.", source: "RESULTS.md · 31 Jul" },
+  { status: "adopted", name: "Concurrency and cache caps", finding: "Two parallel slots, four checkpoints, and a 256 MiB cache stopped memory growth. The early Docker baseline rose from about 5.3 to 6.72 tok/s.", source: "RESULTS.md · 31 Jul" },
   { status: "adopted", name: "Six-thread runtime", finding: "Six batch and decode threads reached the native bandwidth frontier. Ten threads caused contention and collapsed decode to about 4.4 tok/s.", source: "RESULTS.md · 1 Aug" },
-  { status: "adopted", name: "Unified KV, two checkpoints", finding: "Reduced retained state and improved prefill while holding decode near 31 tok/s on the development host.", source: "RESULTS.md · 1 Aug" },
+  { status: "adopted", name: "Unified KV, two checkpoints", finding: "Unified KV and two checkpoints reduced retained state and improved prefill while holding decode near 31 tok/s on the development host.", source: "RESULTS.md · 1 Aug" },
   { status: "rejected", name: "0.8B draft speculation", finding: "98.4% proposal acceptance still slowed native decode from 30.84 to 24.72 tok/s. Host RAM readings were flagged as unreliable, so no native memory delta is claimed.", source: "RESULTS.md · 31 Jul" },
-  { status: "neutral", name: "N-gram speculation", finding: "A 12–22% acceptance rate did not cover the extra lookup and verification work. Kept off by default, with no model-memory cost if revisited.", source: "RESULTS.md · 1 Aug" },
-  { status: "rejected", name: "More threads", finding: "Throughput stopped scaling after memory bandwidth saturated, while heat and contention continued to rise.", source: "RESULTS.md · 1 Aug" },
+  { status: "neutral", name: "N-gram speculation", finding: "A 12–22% acceptance rate did not cover the extra lookup and verification work. We kept it off by default; revisiting it would add no model memory.", source: "RESULTS.md · 1 Aug" },
+  { status: "rejected", name: "More threads", finding: "Throughput stopped scaling after memory bandwidth saturated. Ten threads collapsed decode to about 4.4 tok/s; temperature was not measured in this sweep.", source: "RESULTS.md · 1 Aug" },
   { status: "rejected", name: "Disable mmap", finding: "Decode fell by about 28% and memory rose by about 1 GiB. The stock audit’s eager mmap policy cannot be changed by the submitted GGUF.", source: "RESULTS.md · GGUF campaign" },
   { status: "neutral", name: "mlock", finding: "Pinning pages produced no repeatable throughput gain in the tested resident configuration.", source: "RESULTS.md · 1 Aug" },
-  { status: "adopted", name: "No-repack product path", finding: "Avoiding runtime tensor conversion cut a tested 4B footprint from about 3,236 to 602 MiB. This is a product-engine result, not a model-only scoring lever.", source: "RESULTS.md · 1 Aug" },
-  { status: "adopted", name: "Fixed context budget", finding: "An explicit context and KV policy removed an uncontrolled memory variable and made runs comparable.", source: "runtime configuration" },
-  { status: "adopted", name: "4B reasoning baseline", finding: "The 4B model led 2B by 15.7 points across three hard STEM tasks, establishing the quality cost of shrinking before audit-kernel effects were known.", source: "RESULTS.md · 5 Aug" },
+  { status: "adopted", name: "No-repack product path", finding: "Avoiding runtime tensor conversion cut a tested 4B footprint from about 3,236 to 602 MiB. The campaign cannot use this engine-only change.", source: "RESULTS.md · 1 Aug" },
+  { status: "adopted", name: "Fixed context budget", finding: "We replaced implicit context and KV defaults with an explicit budget, removing an uncontrolled memory variable from later comparisons.", source: "runtime configuration" },
+  { status: "adopted", name: "4B reasoning baseline", finding: "The 4B model led 2B by 15.7 points across three hard STEM tasks. This measured the quality cost of shrinking before the audit exposed a different kernel regime.", source: "RESULTS.md · 5 Aug" },
   { status: "neutral", name: "IQ4_XS importance matrix", finding: "Task scores moved in both directions by roughly one or two items, with no reliable accuracy gain.", source: "RESULTS.md · 6 Aug" },
-  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "Under AVX2, Q4_K_M was the balanced Qwen variant. Q5_K_M bought a four-point ARC-Easy increase that did not repeat on ARC-Challenge or SciQ and cost substantial speed.", source: "GGUF campaign · 19 Aug" },
+  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "Under AVX2, Q4_K_M gave the best balance. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and came with a substantial speed cost.", source: "GGUF campaign · 19 Aug" },
   { status: "rejected", name: "Mixed embedding and head precision", finding: "Q3_K_M with a Q6_K head fell to 66% ARC-Easy; IQ4_XS with a Q6_K head was slower and larger than uniform IQ4_XS.", source: "GGUF campaign · 19 Aug" },
   { status: "neutral", name: "Vendor importance matrix", finding: "The Qwen K-quant ladder used the vendor matrix consistently, but its calibration corpus is unpublished. Dataset disjointness cannot be independently verified.", source: "GGUF campaign · 19 Aug" },
-  { status: "neutral", name: "Metal offload", finding: "Hybrid 4B decode was neutral to slightly slower than CPU-only on the development Mac. GPU support remains optional, not required.", source: "RESULTS.md · 6 Aug" },
+  { status: "neutral", name: "Metal offload", finding: "Hybrid 4B decode was neutral to slightly slower than CPU-only on the development Mac. GPU support remains optional.", source: "RESULTS.md · 6 Aug" },
   { status: "deferred", name: "TinyStories TTFT preamble", finding: "A tiny warm-up model produced a 1.65 ms first chunk with a small resident cost, but licensing was unresolved and the feature is off by default.", source: "RESULTS.md · 6 Aug" },
   { status: "adopted", name: "BitCPM vocabulary pruning", finding: "Pruning 73,448 tokens to 44,416 saved 164 MiB. English tokenisation matched across 20,464 checked tokens and perplexity stayed within noise.", source: "muta-iq/opt/docs/REPORT.md" },
   { status: "rejected", name: "BitCPM TQ1_0 body", finding: "The file lost 340 MiB, but generic-kernel throughput fell 22%. The evaluator lacked the kernel needed to turn fewer bits into less work.", source: "muta-iq/opt/docs/REPORT.md" },
@@ -94,23 +94,23 @@ const EXPERIMENTS = [
   { status: "rejected", name: "Single-layer pruning", finding: "One Qwen layer gained about 3.7% speed but lost two ARC-Easy points. The accuracy cost exceeded the performance return.", source: "GGUF campaign · 19 Aug" },
   { status: "deferred", name: "Qwen vocabulary pruning", finding: "Not attempted: the current tools cannot rewrite the GPT-2 BPE merges coherently. BitCPM’s verified vocabulary prune does not transfer automatically.", source: "GGUF campaign · 19 Aug" },
   { status: "rejected", name: "Context metadata as a score lever", finding: "The profiler fixes prompt 512 and generation 128. Changing context metadata cannot improve that measured workload.", source: "GGUF campaign · 19 Aug" },
-  { status: "rejected", name: "Custom tensor layout", finding: "The stock quantiser layout was retained. An unsupported alignment or packing scheme risks a load failure, which is a disqualification rather than a small regression.", source: "GGUF campaign · 19 Aug" },
-  { status: "adopted", name: "Embedded chat template", finding: "The template and tutoring persona are carried in the GGUF and checked on a live server. They are required for judging behaviour but receive no credit in raw ARC or throughput telemetry.", source: "muta-iq/REPORT.md" },
+  { status: "rejected", name: "Custom tensor layout", finding: "The stock quantiser layout was retained. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "GGUF campaign · 19 Aug" },
+  { status: "adopted", name: "Embedded chat template", finding: "The GGUF carries the chat template and tutoring persona, both checked on a live server. They shape judged behaviour but receive no credit in raw ARC or throughput telemetry.", source: "muta-iq/REPORT.md" },
   { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "muta-iq/opt/docs/STREAMING_ENGINE.md" },
-  { status: "adopted", name: "Pure Q4_0 audit layout", finding: "All matrices use a supported SSSE3 path in the no-AVX binary. That one property made the 1.7B model competitive with the 0.8B file.", source: "GGUF campaign · 19 Aug" },
-  { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MiB of file bytes with the same 72% ARC-Easy proxy.", source: "GGUF campaign · 19 Aug" },
+  { status: "adopted", name: "Pure Q4_0 audit layout", finding: "Every matrix reaches a supported SSSE3 path in the no-AVX binary. That dispatch made the 1.7B model competitive with the 0.8B file.", source: "GGUF campaign · 19 Aug" },
+  { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "GGUF campaign · 19 Aug" },
   { status: "adopted", name: "Exact-hash rebuild", finding: "The candidate was rebuilt from pinned source and matched the promoted SHA-256 after correcting a 32-byte metadata-name difference.", source: "Set up Muta on GCP VM" },
   { status: "adopted", name: "Direct official-profiler campaign", finding: "Four exact artifacts completed full participant runs. The current 1.7B winner leads the 0.8B runner-up by 0.92 total points.", source: "campaign-20260819/official-profiler" },
-  { status: "deferred", name: "QAT or distillation", finding: "Potential paths to recover capability in a smaller artifact. No result is claimed because neither has completed a controlled campaign.", source: "muta-iq/opt/docs/REPORT.md" },
+  { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "muta-iq/opt/docs/REPORT.md" },
 ];
 
 const CHALLENGE_FAQ = [
   { q: "Will evaluation run without internet access?", rule: "Yes. The judging environment is offline.", progress: "The runtime resolves local files first, the promoted GGUF is hash-pinned, and the tutor has an offline launch path. A clean physical-target rehearsal remains." },
   { q: "How is the final score calculated?", rule: "Accuracy carries 50%, performance 30%, and efficiency 20%, with a thermal penalty and hard-failure rules.", progress: "The executable formula is implemented and tested. This report keeps the public cohort-relative formula in a separate sensitivity lane." },
-  { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is judged on the standard laptop profile.", progress: "Development used an M2 Mac and a GCP x86 proxy. No Mac number is presented as a final laptop result." },
+  { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is judged on the standard laptop profile.", progress: "We developed on an M2 Mac and a GCP x86 proxy. Mac results remain in the development-evidence lane." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
-  { q: "Can the entry cover more than one discipline?", rule: "Yes. Cross-disciplinary tutoring is allowed.", progress: "Muta targets maths and scientific reasoning. The architecture includes verified maths, retrieval, pedagogy, and exam services, though several routes still await end-to-end evaluation." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The current model is a reproducible Qwen3-derived GGUF. QAT and distillation are deferred; this campaign does not claim a completed training run." },
+  { q: "What does cross-disciplinary integration require?", rule: "The model must connect to another deep-tech discipline in a meaningful, load-bearing way.", progress: "Muta plans to combine scientific tutoring with verified maths and local retrieval. Several relevant routes remain incomplete or return 501, so we do not yet claim a load-bearing integration." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The current model is a reproducible Qwen3-derived GGUF. QAT and distillation remain deferred because neither completed a controlled training run." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
@@ -118,13 +118,13 @@ const CHALLENGE_FAQ = [
   { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "The current Qwen3 base uses an open licence. The exact source, conversion path, binary, artifact size, and SHA-256 are recorded." },
   { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "The campaign submits exact GGUF artifacts and pins llama.cpp b10175. Custom streaming and lazy-mmap engines are excluded from the scoring claim." },
   { q: "What is the maximum model size?", rule: "The practical limit is the 7 GB memory ceiling on the standard machine.", progress: "The direct campaign spans about 0.50–2.31 GiB peak model footprints, all below the ceiling. Whole-tree RSS remains the unit of record." },
-  { q: "Where should the final benchmark be run?", rule: "The organiser judges on its standard hardware; local results are preparatory.", progress: "Full participant runs exist on a matched GCP proxy. Package temperature and final physical-laptop throughput are still open." },
-  { q: "What must the submission contain?", rule: "The challenge page lists the model, code or download route, report, and presentation requirements.", progress: "The repository contains the exact model metadata, reproducible campaign records, runtime, and this report. Final packaging and video remain." },
-  { q: "Should teams self-report a score?", rule: "Teams can report measured evidence, but the organiser’s run determines the official result.", progress: "The 72.47 value is labelled as a direct profiler result with an ARC-Easy proxy, not as the final judging-panel score." },
+  { q: "Where should the final benchmark be run?", rule: "The organiser judges on its standard hardware; local results are preparatory.", progress: "Full participant runs exist on a four-vCPU GCP x86 proxy with the pinned audit binary. Package temperature and physical-laptop bandwidth remain unmeasured." },
+  { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "We have recorded the exact model metadata, reproducible campaign, runtime, and this report in the repository. Final packaging, the two submission prompts, and the video remain." },
+  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "Under the executable profiler formula, the current candidate records S_perf 65.27 and S_eff 84.43. Its 72% ARC-Easy result remains an internal accuracy proxy, not a submitted S_acc value." },
   { q: "Is the whole application judged, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "Muta tracks product improvements separately from model-only evidence. Retrieval, the custom streamer, and UI work do not inflate the GGUF campaign score." },
   { q: "How many prompts are visible before submission?", rule: "The FAQ describes two visible prompts plus hidden tests.", progress: "The local profiler path covers the visible task shape and accuracy proxies. Hidden-prompt performance remains unknown by design." },
-  { q: "How is temperature handled?", rule: "Temperature is checked around evaluation and can trigger a 10-point penalty above the threshold or when throttling is detected.", progress: "The GCP host exposed no usable package sensor. It reported no throttling, but temperature is recorded as unavailable rather than treated as a pass." },
-  { q: "Can the system have an optional online mode?", rule: "The judged path must work offline; optional network features cannot be required.", progress: "Muta’s core runtime, model, retrieval plan, and UI are designed for offline use. Network model provisioning is a development fallback, not a deployment dependency." },
+  { q: "How is temperature handled?", rule: "Temperature is checked around evaluation and can trigger a 10-point penalty above the threshold or when throttling is detected.", progress: "The GCP host exposed no usable package sensor and reported no throttling. We therefore record temperature as unavailable rather than infer a thermal result." },
+  { q: "Can the system have an optional online mode?", rule: "The judged path must work offline; optional network features cannot be required.", progress: "Muta’s core runtime, model, retrieval plan, and UI are designed for offline use. Deployment uses local artifacts; network provisioning is a development fallback." },
   { q: "How should the African use case be demonstrated?", rule: "The use case should solve a concrete African problem; language support is not mandatory.", progress: "The current case is an offline tutor for bandwidth-constrained classrooms and budget laptops. Benchmark evidence alone is insufficient; the product claim still needs classroom evidence." },
   { q: "What should the demo video show?", rule: "The video should demonstrate the working entry under the stated constraints.", progress: "A final video has not been recorded." },
 ];
@@ -425,10 +425,10 @@ function renderCampaign(campaign, prefix) {
     return winner ? `${d}→${shortName(winner.model)} (${fmt.num(winner.s_total, 2)})` : null;
   }).filter(Boolean).join(" · ");
   const evidenceSummary = isOfficialFullRun
-    ? "Direct official-profiler evidence. The executable fixes the performance reference at 15 tok/s. Peak RSS is measured over the profiler root and child tree"
+    ? "Direct official-profiler evidence. The executable fixes the performance reference at 15 tok/s"
     : isWebsiteAlternative
       ? "Website-relative sensitivity only. AVX2 deployment measurements are rescored with the public cohort formula; each candidate is included in its effective denominator"
-      : "Profiler-parity estimate. Throughput is measured under the no-AVX audit kernel; profiler-root RSS is estimated from the measured child tree and the documented offset";
+      : "Profiler-parity estimate under the no-AVX audit kernel";
   formula.textContent = `${evidenceSummary}. ${sentenceCase(campaign.accuracy_notice)}. ` +
     `${sentenceCase(campaign.rss_notice)}. ${sentenceCase(campaign.thermal_notice)}.` + (winnerText
       ? ` Highest score by ${isWebsiteAlternative ? "website-relative floor" : "profiler reference"}: ${winnerText}.`
@@ -554,7 +554,11 @@ function statusChips(run) {
   } else {
     if (run.throttled) chips.push(chip("serious", "throttled"));
     if (s.thermal_penalty > 0) chips.push(chip("warning", "−10 thermal"));
-    if (!run.throttled && !(s.thermal_penalty > 0)) chips.push(chip("good", "no penalty"));
+    if (!run.throttled && !(s.thermal_penalty > 0)) {
+      chips.push(run.temp_c == null
+        ? chip("neutral", "temperature unknown")
+        : chip("good", "no penalty"));
+    }
   }
   return chips.join("");
 }

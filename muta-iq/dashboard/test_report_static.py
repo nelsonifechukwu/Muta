@@ -59,3 +59,19 @@ def test_static_verdict_matches_direct_campaign() -> None:
     assert f'{model["model_bytes"]:,} bytes' in html
     assert model["model_sha256"][:8] in html
     assert model["model_sha256"][-5:] in html
+
+
+def test_tied_head_claim_uses_the_isolated_control() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert "−175 MB · ARC-Easy 72% in both" in html
+    assert "about 175 MB of file bytes" in script
+    assert "about 175 MiB of file bytes" not in script
+    assert "tied output head saving 255 MB" not in html
+
+
+def test_unknown_temperature_is_not_rendered_as_a_pass() -> None:
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert 'chip("neutral", "temperature unknown")' in script
