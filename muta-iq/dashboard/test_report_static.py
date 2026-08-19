@@ -1,10 +1,34 @@
 """Static safeguards for the report's evidence labels and profiler controls."""
 
 import json
+import re
 from pathlib import Path
 
 DASHBOARD = Path(__file__).resolve().parent
 REPOSITORY = DASHBOARD.parents[1]
+
+
+def test_report_uses_direct_technical_prose() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+    combined = f"{html}\n{script}"
+
+    for phrase in (
+        "survives the laptop",
+        "what the score rewards",
+        "narrowing the field",
+        "when file size misleads",
+        "taught us where not to cut",
+        "moved the frontier",
+        "turns the usual format advice upside down",
+        "what survived measurement",
+        "one campaign, two runtime answers",
+        "first thing a student notices",
+        "something a classroom would feel",
+    ):
+        assert phrase not in combined.lower()
+
+    assert re.search(r"\b(?:we|our|us)\b", combined, re.IGNORECASE) is None
 
 
 def test_report_names_all_evidence_lanes() -> None:
@@ -88,7 +112,7 @@ def test_avx2_campaign_section_matches_comparison_artifact() -> None:
     html = (DASHBOARD / "index.html").read_text()
 
     assert 'id="avx2-campaign"' in html
-    assert "Five artifacts, two CPU policies" in html
+    assert "Effect of CPU instruction configuration" in html
     for feature in ("AVX", "AVX2", "FMA", "F16C"):
         assert f"<code>{feature}</code><strong>ON</strong>" in html
     for feature in ("NATIVE", "AVX-512"):
@@ -117,12 +141,12 @@ def test_dual_regime_chart_and_current_choice_are_explicit() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert "Current optimisation choice · portable AVX2 policy" in html
+    assert "Selected model · portable AVX2 configuration" in html
     assert "Q4_K_M-tied.gguf" in html
-    assert "Q4_0 remains the fallback" in html
+    assert "Use Q4_0 with the published scalar participant image" in html
     assert 'class="isa-bar scalar' in script
     assert 'class="isa-bar avx2' in script
-    assert "scalar winner" in script
-    assert "AVX2 winner" in script
+    assert "highest scalar total" in script
+    assert "highest AVX2 total" in script
     assert "item.scalar.score.s_total" in script
     assert "item.avx2.score.s_total" in script
