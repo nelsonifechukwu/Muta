@@ -188,7 +188,8 @@ def init_db() -> None:
         # finally, stranding rows at 'running'; nothing can be running at boot.
         conn.execute(
             "UPDATE runs SET status='failed', finished_at=?,"
-            " error='interrupted: server stopped mid-run' WHERE status='running'",
+            " error='Profiling interrupted: the dashboard stopped before the run finished.'"
+            " WHERE status='running'",
             (now_iso(),))
 
 
@@ -276,11 +277,11 @@ def now_iso() -> str:
 def start_profile(model_file: str, skip_accuracy: bool) -> tuple[int | None, str | None]:
     """Returns (run_id, None) or (None, error)."""
     if "/" in model_file or model_file.startswith("."):
-        return None, "invalid model filename"
+        return None, "The model filename is invalid."
     if not (MODEL_DIR / model_file).is_file():
-        return None, f"model not found: {model_file}"
+        return None, f"The model artifact was not found: {model_file}"
     if not RUN_LOCK.acquire(blocking=False):
-        return None, "a profiling run is already in progress"
+        return None, "A profiling run is already in progress."
     try:
         with db() as conn:
             cur = conn.execute(
@@ -318,7 +319,7 @@ def _run_profile(run_id: int, model_file: str, skip_accuracy: bool) -> None:
     try:
         meta = json.loads(METADATA.read_text())
         METADATA.write_text(json.dumps(updated_metadata(meta, model_file), indent=2) + "\n")
-        _append_log(f"metadata.json -> model/{model_file}")
+        _append_log(f"Prepared metadata.json for model/{model_file}")
 
         cmd = PROFILER_CMD + ["run", "--submission", str(ROOT), "--mode", "participant",
                               "--output", str(out_path)]
@@ -337,9 +338,9 @@ def _run_profile(run_id: int, model_file: str, skip_accuracy: bool) -> None:
         if exit_code == 0 and out_path.is_file():
             report = json.loads(out_path.read_text())
         elif exit_code != 0:
-            error = f"profiler exited with code {exit_code}"
+            error = f"The profiler exited with code {exit_code}."
         else:
-            error = "profiler produced no output file"
+            error = "The profiler did not produce an output file."
     except Exception as exc:
         error = str(exc)
     finally:
@@ -489,7 +490,7 @@ class Handler(BaseHTTPRequestHandler):
             name, ctype = STATIC_FILES[url.path]
             fp = DASH_DIR / name
             if not fp.is_file():
-                return self._json({"error": "missing static file"}, 404)
+                return self._json({"error": "The requested dashboard file is missing."}, 404)
             body = fp.read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", ctype)
@@ -518,12 +519,12 @@ class Handler(BaseHTTPRequestHandler):
                 ref_tps, _ = tps_reference(conn)
                 row = conn.execute("SELECT * FROM runs WHERE id=?", (int(m.group(1)),)).fetchone()
             if row is None:
-                return self._json({"error": "run not found"}, 404)
+                return self._json({"error": "The run record was not found."}, 404)
             d = run_row_public(row, tps_reference=ref_tps, include_report=True)
             if d.get("report_json"):
                 d["report"] = json.loads(d.pop("report_json"))
             return self._json(d)
-        self._json({"error": "not found"}, 404)
+        self._json({"error": "The requested dashboard route was not found."}, 404)
 
     def do_POST(self):
         url = urlparse(self.path)
@@ -543,7 +544,7 @@ class Handler(BaseHTTPRequestHandler):
             if err:
                 return self._json({"error": err}, 404 if err == "run has no report" else 409)
             return self._json(result)
-        self._json({"error": "not found"}, 404)
+        self._json({"error": "The requested dashboard route was not found."}, 404)
 
     def do_DELETE(self):
         m = _RUN_ID_RE.match(urlparse(self.path).path)
@@ -552,7 +553,7 @@ class Handler(BaseHTTPRequestHandler):
                 cur = conn.execute(
                     "DELETE FROM runs WHERE id=? AND status!='running'", (int(m.group(1)),))
             return self._json({"deleted": cur.rowcount > 0})
-        self._json({"error": "not found"}, 404)
+        self._json({"error": "The requested dashboard route was not found."}, 404)
 
 
 def main() -> None:
@@ -564,14 +565,14 @@ def main() -> None:
     init_db()
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     url = f"http://127.0.0.1:{port}"
-    print(f"adtc dashboard: {url}  (models: {MODEL_DIR}, db: {DB_PATH})")
-    print(f"profiler: {' '.join(PROFILER_CMD)}")
+    print(f"Muta IQ experiment report: {url}  (models: {MODEL_DIR}, database: {DB_PATH})")
+    print(f"Profiler command: {' '.join(PROFILER_CMD)}")
     if open_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nbye")
+        print("\nDashboard stopped.")
 
 
 if __name__ == "__main__":
