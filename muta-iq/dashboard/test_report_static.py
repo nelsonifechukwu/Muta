@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 
-
 DASHBOARD = Path(__file__).resolve().parent
 REPOSITORY = DASHBOARD.parents[1]
 
@@ -16,6 +15,7 @@ def test_report_names_all_evidence_lanes() -> None:
         "Official profiler result",
         "Profiler-parity estimate",
         "Website-relative sensitivity",
+        "Controlled AVX2 proxy",
         "Development result",
         "Mixed-machine archive",
     ):
@@ -75,3 +75,37 @@ def test_unknown_temperature_is_not_rendered_as_a_pass() -> None:
     script = (DASHBOARD / "script.js").read_text()
 
     assert 'chip("neutral", "temperature unknown")' in script
+
+
+def test_avx2_campaign_section_matches_comparison_artifact() -> None:
+    comparison_path = (
+        REPOSITORY
+        / "bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json"
+    )
+    comparison = json.loads(comparison_path.read_text())
+    html = (DASHBOARD / "index.html").read_text()
+
+    assert 'id="avx2-campaign"' in html
+    assert "AVX2 changes the quantization order" in html
+    for feature in ("AVX", "AVX2", "FMA", "F16C"):
+        assert f"<code>{feature}</code><strong>ON</strong>" in html
+    for feature in ("NATIVE", "AVX-512"):
+        assert f"<code>{feature}</code><strong>OFF</strong>" in html
+
+    for item in comparison["models"]:
+        assert item["model"] in html
+        assert f'{item["scalar"]["pp512_tps"]:.4f}' in html
+        assert f'{item["avx2"]["pp512_tps"]:.4f}' in html
+        assert f'{item["scalar"]["tg128_tps"]:.4f}' in html
+        assert f'{item["avx2"]["tg128_tps"]:.4f}' in html
+        assert f'{item["delta"]["decode_speedup"]:.3f}×' in html
+        assert f'{item["avx2"]["estimated_profiler_rss_mib"]:,.1f} MiB' in html
+        assert f'{item["accuracy_proxy"]:.0f}%' in html
+        assert f'{item["avx2"]["score"]["s_total"]:.4f}' in html
+
+    winner = comparison["winners"]["avx2"]
+    assert winner["model"] in html
+    assert f'{winner["s_total"]:.4f}' in html
+    assert "0.1666 points" in html
+    assert comparison["avx2_binary_sha256"][:8] in html
+    assert comparison["avx2_binary_sha256"][-5:] in html

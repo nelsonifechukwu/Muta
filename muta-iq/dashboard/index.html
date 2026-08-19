@@ -17,6 +17,7 @@
   </a>
   <nav class="topnav" aria-label="Report shortcuts">
     <a href="#campaign">Current result</a>
+    <a href="#avx2-campaign">AVX2 rerun</a>
     <a href="#ledger">Experiment ledger</a>
     <a href="#faq">Challenge FAQ</a>
     <a href="#profiler">Profiler workspace</a>
@@ -37,6 +38,7 @@
       <li><a href="#ternary">The ternary branch</a></li>
       <li><a href="#streaming">The submission boundary</a></li>
       <li><a href="#campaign">The direct campaign</a></li>
+      <li><a href="#avx2-campaign">The portable AVX2 rerun</a></li>
       <li><a href="#ledger">What survived measurement</a></li>
       <li><a href="#faq">Challenge FAQ</a></li>
       <li><a href="#current-state">Current state</a></li>
@@ -45,7 +47,7 @@
     <div class="contents-note">
       <span class="status-dot official"></span>
       Current campaign winner<br>
-      <span id="contents-winner">Qwen3 1.7B Q4_0</span>
+      <span id="contents-winner">Profiler: Qwen3 1.7B Q4_0<br>AVX2 proxy: Q4_K_M</span>
     </div>
   </aside>
 
@@ -561,9 +563,59 @@
       </details>
     </section>
 
-    <section class="chapter" id="ledger" aria-labelledby="ledger-title">
+    <section class="chapter" id="avx2-campaign" aria-labelledby="avx2-title">
       <header class="chapter-head">
         <span class="chapter-number">09</span>
+        <div><p class="eyebrow">Portable x86 ISA rerun</p><h2 id="avx2-title">AVX2 changes the quantization order</h2></div>
+      </header>
+      <p class="lead">We reran the same five score-of-record GGUFs on the same GCP 2C/4T proxy with one controlled change: the CPU backend could use AVX, AVX2, FMA, and F16C. Q4_K_M became the nominal winner at 80.4484, but its lead over pure Q4_0 was only 0.1666 points. That is an optimisation signal, not enough evidence to replace the current profiler submission.</p>
+
+      <div class="isa-policy" aria-label="AVX2 campaign build policy">
+        <span><code>AVX</code><strong>ON</strong></span>
+        <span><code>AVX2</code><strong>ON</strong></span>
+        <span><code>FMA</code><strong>ON</strong></span>
+        <span><code>F16C</code><strong>ON</strong></span>
+        <span class="disabled"><code>NATIVE</code><strong>OFF</strong></span>
+        <span class="disabled"><code>AVX-512</code><strong>OFF</strong></span>
+      </div>
+
+      <dl class="avx2-verdict-grid">
+        <div><dt>Nominal AVX2 winner</dt><dd>Q4_K_M tied</dd><small>80.4484 total</small></div>
+        <div><dt>Nearest challenger</dt><dd>Q4_0 tied</dd><small>80.2818 · −0.1666</small></div>
+        <div><dt>Largest recovery</dt><dd>BitCPM TQ2_0</dd><small>9.235× decode</small></div>
+        <div><dt>Efficiency hedge</dt><dd>IQ4_XS tied</dd><small>80.1089 · 1,082.3 MiB</small></div>
+      </dl>
+
+      <div class="table-wrap editorial-table-wrap avx2-table-wrap"><table class="editorial-table avx2-table" aria-label="Controlled AVX2 FMA F16C campaign results">
+        <caption class="sr-only">Scalar and portable AVX2 benchmark results for the five score-of-record GGUF artifacts.</caption>
+        <thead><tr><th>Exact artifact</th><th>Scalar → AVX2 pp512</th><th>Scalar → AVX2 tg128</th><th>Decode gain</th><th>Est. profiler RSS</th><th>ARC-Easy proxy</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr><td><strong><code>muta-tutor-qwen3-1.7b-q4_0.gguf</code></strong><small>Current scalar-profiler choice · <code>a98ce3…</code></small></td><td>14.7166 → 47.0716</td><td>9.9869 → 16.8927</td><td>1.691×</td><td>2,049.4 MiB<small>+916.3 MiB</small></td><td>72%</td><td><strong>80.2818</strong></td></tr>
+          <tr class="avx2-selected-row"><td><strong><code>Q4_K_M-tied.gguf</code></strong><small>Nominal AVX2 proxy winner · <code>e8a413…</code></small></td><td>7.1859 → 55.4554</td><td>5.2954 → 15.6714</td><td>2.959×</td><td>1,989.7 MiB<small>+806.2 MiB</small></td><td>72%</td><td><strong>80.4484</strong></td></tr>
+          <tr><td><code>Q5_K_M-tied.gguf</code><small><code>17ddf7…</code></small></td><td>6.5613 → 24.3231</td><td>4.7839 → 12.7191</td><td>2.659×</td><td>1,364.6 MiB<small>+0.1 MiB</small></td><td>76%</td><td>79.6307</td></tr>
+          <tr><td><code>IQ4_XS-tied.gguf</code><small><code>aea3cb…</code></small></td><td>3.2063 → 23.9364</td><td>2.4961 → 14.0644</td><td>5.635×</td><td>1,082.3 MiB<small>+0.5 MiB</small></td><td>70%</td><td>80.1089</td></tr>
+          <tr><td><code>bitcpm4-8b-tq2_0-envocab.gguf</code><small><code>069621…</code></small></td><td>0.8762 → 13.6569</td><td>0.8108 → 7.4876</td><td><strong>9.235×</strong></td><td>2,316.4 MiB<small>+0.1 MiB</small></td><td>88%</td><td>72.5121</td></tr>
+        </tbody>
+      </table></div>
+
+      <aside class="design-note avx2-note">
+        <p class="design-note-label">What the ISA change established</p>
+        <p>The scalar build understated every non-Q4_0 candidate. BitCPM's 9.235× recovery is the clearest example. The capped score still rejects it: 7.49 tok/s and 2.26 GiB estimated profiler RSS leave its 88% Easy proxy 7.94 points behind Q4_K_M.</p>
+      </aside>
+
+      <p>Q4_K_M and Q4_0 both clear the 15 tok/s performance cap. Their ordering therefore comes down to estimated profiler RSS: Q4_K_M uses 59.7 MiB less. The margin is fragile. Q4_K_M's five decode samples include a 13.6101 tok/s outlier and a 1.2364 tok/s standard deviation, while Q4_0's deviation is 0.1642 tok/s. IQ4_XS sits only 0.3395 points behind the nominal winner without the large repacking-RSS increase.</p>
+
+      <details class="reasoning-check">
+        <summary>Build, benchmark, and evidence boundary</summary>
+        <div>
+          <p><span class="evidence-badge avx2">Controlled AVX2 proxy</span> llama.cpp b10175 at commit <code>60bccc3763395e01b039aa1ddeacc8cc0ea69f70</code>; benchmark binary SHA-256 <code>4abfa11a…12fd8</code>. Every model used <code>p512/tg128</code>, <code>-ngl 0</code>, two automatically selected physical-core threads, and five internal samples. RSS is the measured child-tree peak plus the retained 45 MiB profiler-root estimate. Accuracy was reused by immutable GGUF hash. The GCP host has no package-temperature sensor, so thermal remains unknown. These results use the fixed/capped 15 tok/s score; they are neither an official participant-profiler run nor the website-relative sensitivity sweep.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="chapter" id="ledger" aria-labelledby="ledger-title">
+      <header class="chapter-head">
+        <span class="chapter-number">10</span>
         <div><p class="eyebrow">What survived measurement</p><h2 id="ledger-title">What we kept, rejected, or deferred</h2></div>
       </header>
       <p class="lead">A rejected experiment is still a result, but only if we record why it failed. The ledger keeps that condition beside each decision, because another runtime, prompt distribution, or submission rule may make the same idea worth testing again.</p>
@@ -579,7 +631,7 @@
 
     <section class="chapter" id="faq" aria-labelledby="faq-title">
       <header class="chapter-head">
-        <span class="chapter-number">10</span>
+        <span class="chapter-number">11</span>
         <div><p class="eyebrow">Challenge FAQ</p><h2 id="faq-title">What is ready, and what remains open</h2></div>
       </header>
       <p class="lead">The challenge FAQ becomes a set of project checks below. Where we have evidence, we state it; where the question concerns eligibility or a language bonus that we have not tested, the progress field remains deliberately blank.</p>
@@ -589,7 +641,7 @@
 
     <section class="chapter conclusion" id="current-state" aria-labelledby="current-title">
       <header class="chapter-head">
-        <span class="chapter-number">11</span>
+        <span class="chapter-number">12</span>
         <div><p class="eyebrow">Current state</p><h2 id="current-title">A reproducible candidate, with two decisive tests left</h2></div>
       </header>
       <p class="lead">We now have an exact GGUF candidate, a pinned audit binary, a direct profiler campaign, and an evidence trail for the ideas that did not survive measurement. That is enough to choose the next model, but not enough to close the project. Two measurements remain decisive.</p>
