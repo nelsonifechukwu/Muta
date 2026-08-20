@@ -47,6 +47,34 @@ def _score(accuracy_percent: float, throughput: dict, rss_mib: float) -> float:
     return round(result.s_total, 4)
 
 
+def _validate_accuracy_protocol(rows: list[dict], *, samples: int, label: str) -> None:
+    for row in rows:
+        observed = {
+            "kind": row.get("kind"),
+            "benchmark": row.get("benchmark"),
+            "metric": row.get("metric"),
+            "samples": row.get("samples"),
+            "limit": row.get("limit"),
+        }
+        expected = {
+            "kind": "accuracy",
+            "benchmark": "arc_easy",
+            "metric": "acc_norm",
+            "samples": samples,
+            "limit": samples,
+        }
+        if observed != expected:
+            raise ValueError(f"unexpected {label} protocol for {row.get('model')}: {observed}")
+
+
+def _validate_throughput_protocol(rows: list[dict]) -> None:
+    for row in rows:
+        if row.get("kind") != "throughput" or row.get("bench") not in {"scalar", "avx2"}:
+            raise ValueError(f"unexpected throughput protocol for {row.get('model')}")
+        if row.get("n_threads") != 2:
+            raise ValueError(f"unexpected thread count for {row.get('model')}")
+
+
 def build_summary(
     accuracy_path: Path,
     throughput_path: Path,
@@ -62,6 +90,13 @@ def build_summary(
         raise ValueError(
             "the architecture screen must contain one scalar and one vector row per model"
         )
+
+    _validate_accuracy_protocol(accuracy_rows, samples=50, label="screen accuracy")
+    _validate_throughput_protocol(throughput_rows)
+    _validate_accuracy_protocol(validation_rows, samples=500, label="validation accuracy")
+    validation_names = [row.get("model") for row in validation_rows]
+    if len(validation_names) != len(set(validation_names)):
+        raise ValueError("the validation file contains duplicate model rows")
 
     contexts = {row.get("hardware_context") for row in throughput_rows}
     if len(contexts) != 1 or None in contexts:
@@ -130,12 +165,16 @@ def build_summary(
                 "tg128_tps": round(float(scalar["tg_avg_ts"]), 6),
                 "estimated_profiler_rss_mib": round(scalar_rss, 1),
                 "s_total": _score(accuracy_percent, scalar, scalar_rss),
+                "accuracy_percent": accuracy_percent,
+                "accuracy_samples": int(accuracy["samples"]),
             },
             "avx2": {
                 "pp512_tps": round(float(vector["pp_avg_ts"]), 6),
                 "tg128_tps": round(float(vector["tg_avg_ts"]), 6),
                 "estimated_profiler_rss_mib": round(vector_rss, 1),
                 "s_total": _score(accuracy_percent, vector, vector_rss),
+                "accuracy_percent": accuracy_percent,
+                "accuracy_samples": int(accuracy["samples"]),
             },
             "decode_speedup": round(float(vector["tg_avg_ts"]) / float(scalar["tg_avg_ts"]), 3),
         }
@@ -154,16 +193,31 @@ def build_summary(
             }
             item["scalar"]["s_total_accuracy_500"] = _score(validation_percent, scalar, scalar_rss)
             item["avx2"]["s_total_accuracy_500"] = _score(validation_percent, vector, vector_rss)
+            item["scalar"]["accuracy_percent_500"] = validation_percent
+            item["avx2"]["accuracy_percent_500"] = validation_percent
         models.append(item)
 
     unmatched_validation = set(validation_by_model) - set(MODEL_LABELS)
     if unmatched_validation:
         raise ValueError(f"validation rows do not match the screen: {sorted(unmatched_validation)}")
     models.sort(key=lambda item: item["avx2"]["s_total"], reverse=True)
+    for rank, item in enumerate(models, start=1):
+        item["rank"] = rank
     winner = models[0]
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "evidence_tier": "controlled_scalar_and_vector_proxy",
+        "accuracy_shared_across_cpu_configurations": True,
+        "accuracy_protocol": {
+            "benchmark": "arc_easy",
+            "metric": "acc_norm",
+            "screen_samples": 50,
+            "interpretation": "GGUF-level accuracy evidence reused for scalar and vector scoring",
+        },
+        "throughput_protocol": {
+            "scalar": "supplied profiler configuration with wider vector extensions disabled for affected kernels",
+            "vector": "portable SIMD with AVX2, FMA, and F16C on the same two physical cores",
+        },
         "hardware_context": contexts.pop(),
         "hardware": {"physical_cores": 2, "logical_cpus": 4},
         "workload": {"prompt_tokens": 512, "generated_tokens": 128, "samples_per_lane": 5},

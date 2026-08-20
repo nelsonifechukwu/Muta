@@ -1,6 +1,17 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "evidence_tier": "controlled_scalar_and_vector_proxy",
+  "accuracy_shared_across_cpu_configurations": true,
+  "accuracy_protocol": {
+    "benchmark": "arc_easy",
+    "metric": "acc_norm",
+    "screen_samples": 50,
+    "interpretation": "GGUF-level accuracy evidence reused for scalar and vector scoring"
+  },
+  "throughput_protocol": {
+    "scalar": "supplied profiler configuration with wider vector extensions disabled for affected kernels",
+    "vector": "portable SIMD with AVX2, FMA, and F16C on the same two physical cores"
+  },
   "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
   "hardware": {
     "physical_cores": 2,
@@ -40,14 +51,20 @@
         "tg128_tps": 5.691929,
         "estimated_profiler_rss_mib": 1242.3,
         "s_total": 65.9176,
-        "s_total_accuracy_500": 63.8176
+        "accuracy_percent": 76.0,
+        "accuracy_samples": 50,
+        "s_total_accuracy_500": 63.8176,
+        "accuracy_percent_500": 71.8
       },
       "avx2": {
         "pp512_tps": 59.97855,
         "tg128_tps": 17.226522,
         "estimated_profiler_rss_mib": 1838.7,
         "s_total": 82.8697,
-        "s_total_accuracy_500": 80.7697
+        "accuracy_percent": 76.0,
+        "accuracy_samples": 50,
+        "s_total_accuracy_500": 80.7697,
+        "accuracy_percent_500": 71.8
       },
       "decode_speedup": 3.026,
       "accuracy_validation": {
@@ -59,7 +76,8 @@
           67.7,
           75.57
         ]
-      }
+      },
+      "rank": 1
     },
     {
       "model": "Qwen2-1.5B-Instruct-Q4_K_M.gguf",
@@ -76,15 +94,20 @@
         "pp512_tps": 7.700011,
         "tg128_tps": 5.697564,
         "estimated_profiler_rss_mib": 1117.1,
-        "s_total": 65.2782
+        "s_total": 65.2782,
+        "accuracy_percent": 74.0,
+        "accuracy_samples": 50
       },
       "avx2": {
         "pp512_tps": 59.184633,
         "tg128_tps": 16.815577,
         "estimated_profiler_rss_mib": 1714.0,
-        "s_total": 82.2176
+        "s_total": 82.2176,
+        "accuracy_percent": 74.0,
+        "accuracy_samples": 50
       },
-      "decode_speedup": 2.951
+      "decode_speedup": 2.951,
+      "rank": 2
     },
     {
       "model": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
@@ -101,15 +124,20 @@
         "pp512_tps": 10.67761,
         "tg128_tps": 7.079481,
         "estimated_profiler_rss_mib": 952.0,
-        "s_total": 63.5027
+        "s_total": 63.5027,
+        "accuracy_percent": 64.0,
+        "accuracy_samples": 50
       },
       "avx2": {
         "pp512_tps": 82.040245,
         "tg128_tps": 21.759123,
         "estimated_profiler_rss_mib": 1397.8,
-        "s_total": 78.0999
+        "s_total": 78.0999,
+        "accuracy_percent": 64.0,
+        "accuracy_samples": 50
       },
-      "decode_speedup": 3.074
+      "decode_speedup": 3.074,
+      "rank": 3
     },
     {
       "model": "Qwen2.5-3B-Instruct-Q4_K_M.gguf",
@@ -126,15 +154,20 @@
         "pp512_tps": 3.658355,
         "tg128_tps": 2.91878,
         "estimated_profiler_rss_mib": 2204.6,
-        "s_total": 58.6863
+        "s_total": 58.6863,
+        "accuracy_percent": 78.0,
+        "accuracy_samples": 50
       },
       "avx2": {
         "pp512_tps": 28.467925,
         "tg128_tps": 8.858322,
         "estimated_profiler_rss_mib": 3470.9,
-        "s_total": 67.0322
+        "s_total": 67.0322,
+        "accuracy_percent": 78.0,
+        "accuracy_samples": 50
       },
-      "decode_speedup": 3.035
+      "decode_speedup": 3.035,
+      "rank": 4
     },
     {
       "model": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
@@ -151,15 +184,20 @@
         "pp512_tps": 3.625791,
         "tg128_tps": 2.811849,
         "estimated_profiler_rss_mib": 2155.0,
-        "s_total": 55.6109
+        "s_total": 55.6109,
+        "accuracy_percent": 72.0,
+        "accuracy_samples": 50
       },
       "avx2": {
         "pp512_tps": 28.15149,
         "tg128_tps": 8.62537,
         "estimated_profiler_rss_mib": 3454.6,
-        "s_total": 63.6118
+        "s_total": 63.6118,
+        "accuracy_percent": 72.0,
+        "accuracy_samples": 50
       },
-      "decode_speedup": 3.068
+      "decode_speedup": 3.068,
+      "rank": 5
     },
     {
       "model": "gemma-2-2b-it-Q8_0.gguf",
@@ -176,15 +214,20 @@
         "pp512_tps": 5.519562,
         "tg128_tps": 3.543507,
         "estimated_profiler_rss_mib": 2870.8,
-        "s_total": 56.077
+        "s_total": 56.077,
+        "accuracy_percent": 74.0,
+        "accuracy_samples": 50
       },
       "avx2": {
         "pp512_tps": 28.704794,
         "tg128_tps": 6.46916,
         "estimated_profiler_rss_mib": 2871.1,
-        "s_total": 61.9274
+        "s_total": 61.9274,
+        "accuracy_percent": 74.0,
+        "accuracy_samples": 50
       },
-      "decode_speedup": 1.826
+      "decode_speedup": 1.826,
+      "rank": 6
     },
     {
       "model": "Phi-4-mini-instruct-Q4_K_M.gguf",
@@ -201,15 +244,20 @@
         "pp512_tps": 3.12381,
         "tg128_tps": 2.308376,
         "estimated_profiler_rss_mib": 2614.1,
-        "s_total": 56.3229
+        "s_total": 56.3229,
+        "accuracy_percent": 78.0,
+        "accuracy_samples": 50
       },
       "avx2": {
         "pp512_tps": 19.395644,
         "tg128_tps": 6.699454,
         "estimated_profiler_rss_mib": 3827.2,
-        "s_total": 61.7203
+        "s_total": 61.7203,
+        "accuracy_percent": 78.0,
+        "accuracy_samples": 50
       },
-      "decode_speedup": 2.902
+      "decode_speedup": 2.902,
+      "rank": 7
     },
     {
       "model": "orca-mini-3b-Q4_K_M.gguf",
@@ -226,15 +274,20 @@
         "pp512_tps": 0.897046,
         "tg128_tps": 0.848242,
         "estimated_profiler_rss_mib": 2759.1,
-        "s_total": 42.9981
+        "s_total": 42.9981,
+        "accuracy_percent": 58.0,
+        "accuracy_samples": 50
       },
       "avx2": {
         "pp512_tps": 13.048295,
         "tg128_tps": 5.583597,
         "estimated_profiler_rss_mib": 2759.3,
-        "s_total": 52.4683
+        "s_total": 52.4683,
+        "accuracy_percent": 58.0,
+        "accuracy_samples": 50
       },
-      "decode_speedup": 6.583
+      "decode_speedup": 6.583,
+      "rank": 8
     }
   ],
   "winner": {

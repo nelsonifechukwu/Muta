@@ -58,7 +58,6 @@ const REPORT_FUNNEL = [
   { name: "Qwen3.5 0.8B", gb: 0.50, acc: 51.3, lane: "reasoning" },
   { name: "Qwen3.5 0.8B final", gb: 0.47, acc: 64, lane: "audit", selected: true },
   { name: "Math-Expert 0.6B", gb: 0.37, acc: 68, lane: "audit" },
-  { name: "Qwen2.5 1.5B Q4_K_M", gb: 1.04, acc: 71.8, samples: 500, lane: "audit", leader: true },
   { name: "Qwen3 1.7B Q4_0", gb: 0.91, acc: 72, lane: "audit" },
   { name: "Qwen3.5 0.8B Q4_K_M", gb: 0.50, acc: 68, lane: "audit" },
   { name: "BitCPM4 8B TQ2_0", gb: 2.06, acc: 88, lane: "audit" },
@@ -88,7 +87,7 @@ const EXPERIMENTS = [
   { status: "adopted", name: "Fixed context budget", finding: "We replaced runtime defaults with explicit context and KV limits, fixing a memory variable for later comparisons.", source: "runtime configuration" },
   { status: "adopted", name: "4B reasoning baseline", finding: "The 4B model exceeded the 2B model by 15.7 points across three STEM tasks. The later audit used a different kernel configuration and a separate accuracy proxy.", source: "model-scale study" },
   { status: "neutral", name: "IQ4_XS importance matrix", finding: "Task scores moved in both directions by roughly one or two items, with no reliable accuracy gain.", source: "quantization study" },
-  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "On the vector path, Q4_K_M recorded the highest total. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and throughput was lower.", source: "quantization sweep" },
+  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "With vector execution, Q4_K_M recorded the highest total. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and throughput was lower.", source: "quantization sweep" },
   { status: "rejected", name: "Mixed embedding and head precision", finding: "Q3_K_M with a Q6_K head fell to 66% ARC-Easy; IQ4_XS with a Q6_K head was slower and larger than uniform IQ4_XS.", source: "quantization sweep" },
   { status: "neutral", name: "Vendor importance matrix", finding: "The Qwen K-quant ladder used the vendor matrix consistently, but its calibration corpus is unpublished. We cannot independently verify dataset disjointness.", source: "quantization sweep" },
   { status: "neutral", name: "Metal offload", finding: "Hybrid 4B decode was neutral to slightly slower than CPU-only on the development Mac. GPU support remains optional.", source: "runtime optimisation study" },
@@ -109,8 +108,8 @@ const EXPERIMENTS = [
   { status: "adopted", name: "Reproducible artifact build", finding: "We rebuilt the promoted candidate from its documented source. It matched byte-for-byte once we corrected a 32-byte metadata-name difference.", source: "artifact construction study" },
   { status: "adopted", name: "Direct participant-profiler campaign", finding: "Four models completed full participant runs. The 1.7B Q4_0 total exceeded the initially tested 0.8B Q4_K_M total by 0.92 points.", source: "direct profiler measurements" },
   { status: "adopted", name: "Larger-sample vector validation", finding: "Qwen2.5 1.5B scored 71.8% over 500 ARC-Easy questions. Its vector total is 80.7697, 3.9593 points above the current Qwen3.5 candidate on the same sample size; its scalar total is only 63.8176.", source: "combined vector comparison" },
-  { status: "rejected", name: "Three-billion-parameter size rule", finding: "Qwen2.5 3B reached 78% ARC-Easy but only 67.0322 on the vector path. The 1.5B version reached 82.8697 because its throughput and memory gains outweighed the two-point accuracy difference.", source: "architecture screen" },
-  { status: "rejected", name: "Gemma 2 2B Q8_0", finding: "The higher-precision file reached 74% ARC-Easy, 6.47 tok/s, and 61.9274 on the vector path. It spent too much memory and throughput for no accuracy advantage over the smaller Qwen candidates.", source: "architecture screen" },
+  { status: "rejected", name: "Three-billion-parameter size rule", finding: "Qwen2.5 3B reached 78% ARC-Easy but only 67.0322 with vector execution. The 1.5B version reached 82.8697 because its throughput and memory gains outweighed the two-point accuracy difference.", source: "architecture screen" },
+  { status: "rejected", name: "Gemma 2 2B Q8_0", finding: "The higher-precision file reached 74% ARC-Easy, 6.47 tok/s, and 61.9274 with vector execution. It spent too much memory and throughput for no accuracy advantage over the smaller Qwen candidates.", source: "architecture screen" },
   { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "future model-development study" },
 ];
 
@@ -267,7 +266,7 @@ function renderOfficialCharts() {
     const cx=x+bw/2, ly=height-bottom+17;
     return rects+svgText(cx,y(item.total)-5,item.total.toFixed(2),'text-anchor="middle" class="score-total"')+svgText(cx,ly,item.name,`text-anchor="end" transform="rotate(-38 ${cx} ${ly})" class="score-label"`);
   }).join("");
-  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>.score-grid{stroke:${CHART_PALETTE.grid}}.score-tick{font-size:9px;fill:${CHART_PALETTE.muted}}.score-seg.acc{fill:${CHART_PALETTE.official}}.score-seg.perf{fill:${CHART_PALETTE.avx2}}.score-seg.eff{fill:${CHART_PALETTE.scalar}}.score-total{font-size:8px;fill:${CHART_PALETTE.ink};font-weight:800}.score-label{font-size:8px;fill:#504945}</style>${scoreGrid}${bars}</svg>`;
+  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>.score-grid{stroke:${CHART_PALETTE.grid}}.score-tick{font-size:9px;fill:${CHART_PALETTE.muted}}.score-seg.acc{fill:${CHART_PALETTE.official}}.score-seg.perf{fill:#5b8fb4}.score-seg.eff{fill:#9dbcd5}.score-total{font-size:8px;fill:${CHART_PALETTE.ink};font-weight:800}.score-label{font-size:8px;fill:#504945}</style>${scoreGrid}${bars}</svg>`;
 
   const scatterEl = $("official-scatter-chart");
   const sw=360, sh=330, sl=46, sr=20, st=25, sb=48;
@@ -388,51 +387,39 @@ function renderOvernight(campaign, modelExtension) {
       label: (entry) => finalistLabel(entry.official.model), valueFormat: (value) => value.toFixed(2)});
     avx2Summary.textContent = finalists.map((entry) =>
       `${finalistLabel(entry.official.model)}: direct scalar ${entry.official.s_total.toFixed(4)}, ` +
-      `vector path ${entry.avx2_fixed_15.arc_easy_50.s_total.toFixed(4)}`
+      `vector ${entry.avx2_fixed_15.arc_easy_50.s_total.toFixed(4)}`
     ).join("; ") + ".";
 
     avx2Table.innerHTML = `<thead><tr><th>Model</th><th>Direct scalar total</th><th>Vector pp512</th><th>Vector tg128</th><th>Est. vector profiler RSS</th><th>ARC-Easy-50 vector total</th><th>ARC-Easy-500 vector diagnostic</th></tr></thead><tbody>` +
       finalists.map((entry) => {
         const avx = entry.avx2_fixed_15;
         const transfer = avx.transferred_from_tensor_identical_source
-          ? `<small>Vector path measured on a tensor-identical parent quant</small>`
-          : `<small>Vector path measured on the submitted model</small>`;
+          ? `<small>Vector measurement transferred from a tensor-identical parent quant</small>`
+          : `<small>Vector measurement uses the submitted model</small>`;
         return `<tr class="${entry.official.model === campaign.official_profiler_winner ? "avx2-selected-row" : ""}"><td><div class="model-name">${esc(finalistLabel(entry.official.model))}</div>${transfer}</td><td>${fmt.num(entry.official.s_total, 4)}</td><td>${fmt.num(avx.pp512_tps, 4)}</td><td>${fmt.num(avx.tg128_tps, 4)}</td><td>${fmt.num(avx.estimated_profiler_rss_mib, 1)} MiB<small>${fmt.num(avx.child_tree_rss_mib, 1)} measured + ${fmt.num(avx.profiler_root_rss_estimate_mib, 0)} estimated</small></td><td class="total">${fmt.num(avx.arc_easy_50.s_total, 4)}<small>${fmt.num(avx.arc_easy_50.accuracy_percent, 1)}% accuracy</small></td><td>${fmt.num(avx.arc_easy_500.s_total, 4)}<small>${fmt.num(avx.arc_easy_500.accuracy_percent, 1)}% accuracy</small></td></tr>`;
       }).join("") + "</tbody>";
   }
 
   {
-    const sampleFinalists = finalists.map((entry) => ({
-      label: finalistLabel(entry.official.model),
-      score50: entry.avx2_fixed_15.arc_easy_50.s_total,
-      score500: entry.avx2_fixed_15.arc_easy_500.s_total,
-      accuracy50: entry.avx2_fixed_15.arc_easy_50.accuracy_percent,
-      accuracy500: entry.avx2_fixed_15.arc_easy_500.accuracy_percent,
-    }));
     const extensionValidation = modelExtension && Array.isArray(modelExtension.models)
       ? modelExtension.models.find((entry) => entry.accuracy_validation &&
           entry.accuracy_validation.samples === 500)
       : null;
     if (extensionValidation) {
-      sampleFinalists.push({
-        label: `${extensionValidation.label} Q4_K_M`,
-        score50: extensionValidation.avx2.s_total,
-        score500: extensionValidation.avx2.s_total_accuracy_500,
-        accuracy50: extensionValidation.accuracy_percent,
-        accuracy500: extensionValidation.accuracy_validation.accuracy_percent,
-      });
+      const sampleSizes = [
+        {label: "n=50", scalar: extensionValidation.scalar.s_total,
+          vector: extensionValidation.avx2.s_total},
+        {label: "n=500", scalar: extensionValidation.scalar.s_total_accuracy_500,
+          vector: extensionValidation.avx2.s_total_accuracy_500},
+      ];
+      scoreChart.innerHTML = verticalGroupedChart(sampleSizes, [
+        {className: "scalar", value: (entry) => entry.scalar},
+        {className: "avx2", value: (entry) => entry.vector,
+          winner: (entry) => entry.label === "n=500"},
+      ], {width: 520, height: 285, max: 85, ticks: [0, 20, 40, 60, 80],
+        label: (entry) => entry.label, valueFormat: (value) => value.toFixed(2)});
+      scoreSummary.textContent = `Qwen2.5 1.5B: n=50 scalar ${extensionValidation.scalar.s_total.toFixed(4)} and vector ${extensionValidation.avx2.s_total.toFixed(4)}; n=500 scalar ${extensionValidation.scalar.s_total_accuracy_500.toFixed(4)} and vector ${extensionValidation.avx2.s_total_accuracy_500.toFixed(4)}.`;
     }
-    const validatedWinner = [...sampleFinalists].sort((a, b) => b.score500 - a.score500)[0];
-    scoreChart.innerHTML = verticalGroupedChart(sampleFinalists, [
-      {className: "avx2", value: (entry) => entry.score50},
-      {className: "diagnostic", value: (entry) => entry.score500,
-        winner: (entry) => entry === validatedWinner},
-    ], {width: 620, height: 285, max: 85, ticks: [0, 20, 40, 60, 80],
-      label: (entry) => entry.label, valueFormat: (value) => value.toFixed(2)});
-    scoreSummary.textContent = sampleFinalists.map((entry) =>
-      `${entry.label}: 50-item vector total ${entry.score50.toFixed(2)}, ` +
-      `500-item vector total ${entry.score500.toFixed(2)}`
-    ).join("; ") + ".";
   }
 
   {
@@ -631,7 +618,7 @@ function renderIsaComparison(comparison, overnight, modelExtension) {
   const sub = $("campaign-avx2-score-sub");
   const table = $("campaign-avx2-score-table");
   const formula = $("campaign-avx2-score-formula");
-  if (!comparison || !Array.isArray(comparison.models)) {
+  if (!modelExtension || !Array.isArray(modelExtension.models)) {
     if (chart) chart.innerHTML = '<p class="chart-empty">The paired ISA comparison is unavailable.</p>';
     if (summary) summary.textContent = "The paired ISA comparison is unavailable.";
     if (sub) sub.textContent = "No vector score-of-record artifact is available at the configured path.";
@@ -649,25 +636,11 @@ function renderIsaComparison(comparison, overnight, modelExtension) {
     "IQ4_XS-tied.gguf": "IQ4_XS tied",
     "bitcpm4-8b-tq2_0-envocab.gguf": "BitCPM TQ2_0",
   }[file] || shortName(file));
-  const latest = overnight && overnight.finalists ? Object.values(overnight.finalists).map((entry) => ({
-    model: entry.official.model,
-    latest: true,
-    scalar: {
-      tg128_tps: entry.official.tps,
-      estimated_profiler_rss_mib: entry.official.peak_rss_mib,
-      score: {s_total: entry.official.s_total},
-    },
-    avx2: {
-      tg128_tps: entry.avx2_fixed_15.tg128_tps,
-      estimated_profiler_rss_mib: entry.avx2_fixed_15.estimated_profiler_rss_mib,
-      score: {s_total: entry.avx2_fixed_15.arc_easy_50.s_total},
-    },
-    accuracy_proxy: entry.official.arc_easy_50,
-  })) : [];
   const extension = modelExtension && Array.isArray(modelExtension.models)
     ? modelExtension.models.map((entry) => ({
       model: entry.model,
-      label: entry.label,
+      label: entry.label.includes("Q8_0") ? entry.label : `${entry.label} Q4_K_M`,
+      rank: entry.rank,
       scalar: {
         pp512_tps: entry.scalar.pp512_tps,
         tg128_tps: entry.scalar.tg128_tps,
@@ -688,7 +661,7 @@ function renderIsaComparison(comparison, overnight, modelExtension) {
       decode_speedup: entry.decode_speedup,
       extension: true,
     })) : [];
-  const models = [...latest, ...comparison.models, ...extension];
+  const models = extension;
   const scalarWinnerItem = [...models].sort((a, b) => b.scalar.score.s_total - a.scalar.score.s_total)[0];
   const avx2WinnerItem = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total)[0];
   const scalarWinner = {model: scalarWinnerItem.model, s_total: scalarWinnerItem.scalar.score.s_total};
@@ -711,15 +684,15 @@ function renderIsaComparison(comparison, overnight, modelExtension) {
 
   if (sub && table && formula) {
     const ranked = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total);
-    sub.textContent = `${hardwareLabel(comparison.hardware_contexts.avx2)} · ${ranked.length} models · matched scalar and vector measurements`;
-    table.innerHTML = `<thead><tr><th>Model</th><th>Scalar total</th><th>Vector total</th><th>Scalar → vector pp512</th><th>Scalar → vector tg128</th><th>Vector RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
+    sub.textContent = `${hardwareLabel(modelExtension.hardware_context)} · ${ranked.length} current models · matched scalar and vector measurements`;
+    table.innerHTML = `<thead><tr><th>Model</th><th>Scalar → vector pp512</th><th>Scalar → vector tg128</th><th>Decode gain</th><th>Vector RSS</th><th>ARC-Easy proxy</th><th>Scalar → vector total</th></tr></thead><tbody>` +
       ranked.map((item) => {
-        const validatedTotal = item.avx2_total_accuracy_500 == null ? "" : `<small>n=500: ${fmt.num(item.avx2_total_accuracy_500, 4)}</small>`;
+        const validatedTotal = item.avx2_total_accuracy_500 == null ? "" : `<small>n=500: ${fmt.num(item.scalar_total_accuracy_500, 4)} → ${fmt.num(item.avx2_total_accuracy_500, 4)}</small>`;
         const validatedAccuracy = !item.accuracy_validation ? "" : `<small>n=500: ${fmt.num(item.accuracy_validation.accuracy_percent, 1)}%</small>`;
-        return `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td><div class="model-name">${esc(label(item.model, item.label))}</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}${item.scalar_total_accuracy_500 == null ? "" : `<small>n=500: ${fmt.num(item.scalar_total_accuracy_500, 4)}</small>`}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}${validatedTotal}</td><td>${fmt.num(item.scalar.pp512_tps, 4)} → ${fmt.num(item.avx2.pp512_tps, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy${validatedAccuracy}</td></tr>`;
+        return `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td><div class="model-name">${esc(`${item.rank} · ${label(item.model, item.label)}`)}</div></td><td>${fmt.num(item.scalar.pp512_tps, 4)} → ${fmt.num(item.avx2.pp512_tps, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.decode_speedup, 3)}×</td><td>${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% · n=50${validatedAccuracy}</td><td class="total">${fmt.num(item.scalar.score.s_total, 4)} → ${fmt.num(item.avx2.score.s_total, 4)}${validatedTotal}</td></tr>`;
       }).join("") +
       `</tbody>`;
-    formula.textContent = `Matched scalar and vector measurements on one GCP 2C/4T proxy · S_perf = 100 × min(TPS / 15, 1) · scalar finalist rows use direct profiler RSS; controlled rows add the 45 MiB profiler-root estimate · thermal unknown. Highest scalar total: ${label(scalarWinner.model, scalarWinnerItem.label)} (${fmt.num(scalarWinner.s_total, 4)}). Highest vector total: ${label(avx2Winner.model, avx2WinnerItem.label)} (${fmt.num(avx2Winner.s_total, 4)}).`;
+    formula.textContent = `Eight-model architecture screen on one GCP 2C/4T proxy · S_perf = 100 × min(TPS / 15, 1) · controlled RSS adds the 45 MiB profiler-root estimate · temperature unknown · one ARC-Easy n=50 result per GGUF is reused for both CPU configurations. Highest scalar total: ${label(scalarWinner.model, scalarWinnerItem.label)} (${fmt.num(scalarWinner.s_total, 4)}). Highest vector total: ${label(avx2Winner.model, avx2WinnerItem.label)} (${fmt.num(avx2Winner.s_total, 4)}).`;
   }
 }
 

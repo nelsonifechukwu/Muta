@@ -39,7 +39,7 @@ def test_report_names_all_evidence_lanes() -> None:
         "Official profiler result",
         "Profiler-parity estimate",
         "Website-relative sensitivity",
-        "Controlled vector CPU proxy",
+        "Controlled vector proxy",
         "Development result",
         "Mixed-machine archive",
     ):
@@ -75,17 +75,14 @@ def test_operational_profiler_controls_remain_present() -> None:
 
 
 def test_static_verdict_matches_overnight_recommendation() -> None:
-    campaign_path = (
-        REPOSITORY
-        / "bench/measurements/campaign-20260820-overnight/summary.json"
-    )
+    campaign_path = REPOSITORY / "bench/measurements/campaign-20260820-overnight/summary.json"
     campaign = json.loads(campaign_path.read_text())
     model = campaign["finalists"][campaign["risk_adjusted_recommendation"]]["official"]
     html = (DASHBOARD / "index.html").read_text()
 
     assert model["model"] in html
-    assert f'{model["s_total"]:.4f}' in html
-    assert f'{model["tps"]:.2f} tok/s' in html
+    assert f"{model['s_total']:.4f}" in html
+    assert f"{model['tps']:.2f} tok/s" in html
     assert "507.2 MB" in html
 
 
@@ -95,15 +92,24 @@ def test_current_artifact_diagram_uses_tensor_identity_control() -> None:
     assert "Qwen3.5 source quant" in html
     assert "320 model tensors compared" in html
     assert "all tensor payloads identical" in html
-    assert "The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata" in html
+    assert (
+        "The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata"
+        in html
+    )
 
 
 def test_all_current_visual_defaults_use_the_current_campaign_decision() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert '{ name: "Qwen3.5 0.8B final", gb: 0.47, acc: 64, lane: "audit", selected: true }' in script
-    assert '{ name: "Qwen2.5 1.5B Q4_K_M", gb: 1.04, acc: 71.8, samples: 500, lane: "audit", leader: true }' in script
+    assert (
+        '{ name: "Qwen3.5 0.8B final", gb: 0.47, acc: 64, lane: "audit", selected: true }' in script
+    )
+    assert (
+        "This historical filtering figure excludes the latest eight-model architecture screen"
+        in html
+    )
+    assert '{ name: "Qwen2.5 1.5B Q4_K_M", gb:' not in script
     assert "Validated vector candidate" in html
     assert "82.8697" in html
     assert 'Qwen3 1.7B Q4_K_M", gb: 0.96, acc: 72, lane: "audit", selected: true' not in script
@@ -117,53 +123,58 @@ def test_unknown_temperature_is_not_rendered_as_a_pass() -> None:
     assert 'chip("neutral", "temperature unknown")' in script
 
 
-def test_avx2_campaign_section_matches_comparison_artifact() -> None:
-    comparison_path = (
-        REPOSITORY
-        / "bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json"
+def test_current_comparison_is_the_complete_eight_model_screen() -> None:
+    comparison = json.loads(
+        (REPOSITORY / "bench/measurements/model-extension/summary.json").read_text()
     )
-    comparison = json.loads(comparison_path.read_text())
     html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+    section = html.split('id="instruction-set"', 1)[1].split(
+        '<section class="chapter" id="search"', 1
+    )[0]
 
     assert 'id="instruction-set"' in html
-    assert "fifteen models" in html
-    for feature in ("AVX", "AVX2", "FMA", "F16C"):
-        assert feature in html
-    assert "Scalar configuration</code><strong>vector extensions disabled" in html
-    assert "Vector configuration</code><strong>portable SIMD enabled" in html
-    assert "<code>NATIVE</code><strong>OFF</strong>" not in html
-
-    labels = {
-        "muta-tutor-qwen3-1.7b-q4_0.gguf": "Qwen3 1.7B Q4_0",
-        "Q4_K_M-tied.gguf": "Qwen3 1.7B Q4_K_M",
-        "Q5_K_M-tied.gguf": "Qwen3 1.7B Q5_K_M",
-        "IQ4_XS-tied.gguf": "Qwen3 1.7B IQ4_XS",
-        "bitcpm4-8b-tq2_0-envocab.gguf": "BitCPM4 8B TQ2_0",
-    }
+    assert "all eight current candidates are shown" in section.lower()
+    assert "fifteen models" not in section.lower()
+    assert "Math-Expert 0.6B" not in section
+    assert "Qwen3.5 0.8B" not in section
     for item in comparison["models"]:
-        assert labels[item["model"]] in html
-        assert f'{item["scalar"]["pp512_tps"]:.4f}' in html
-        assert f'{item["avx2"]["pp512_tps"]:.4f}' in html
-        assert f'{item["scalar"]["tg128_tps"]:.4f}' in html
-        assert f'{item["avx2"]["tg128_tps"]:.4f}' in html
-        assert f'{item["delta"]["decode_speedup"]:.3f}×' in html
-        assert f'{item["avx2"]["estimated_profiler_rss_mib"]:,.1f} MiB' in html
-        assert f'{item["accuracy_proxy"]:.0f}%' in html
-        assert f'{item["avx2"]["score"]["s_total"]:.4f}' in html
+        assert item["label"] in section
+        assert f"{item['scalar']['s_total']:.4f}" in section
+        assert f"{item['avx2']['s_total']:.4f}" in section
+    assert "82.8697" in section
+    assert "80.7697" in section
+    assert "67.70–75.57%" in section
+    assert '<span class="diagnostic">Larger sample</span>' not in section
+    assert "<th>Decode gain</th>" in script
+    assert "`${entry.label} Q4_K_M`" in script
 
-    winner = comparison["winners"]["avx2"]
-    assert labels[winner["model"]] in html
-    assert f'{winner["s_total"]:.4f}' in html
-    assert "Quantization-ladder leader" in html
+
+def test_scalar_profiler_winner_and_submission_choice_are_distinguished() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+
+    assert "Math-Expert leads the direct scalar n=50 profiler at 77.9324" in html
+    assert "Qwen3.5 becomes the submission choice only after the separate n=500 rescoring" in html
+    assert "Direct runs establish the scalar baseline" in html
+
+
+def test_engine_only_method_names_artifacts_and_submission_boundary() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    runtime = html.split('id="runtime"', 1)[1].split('id="remaining-methods"', 1)[0]
+
+    assert "Speculative decoding proposes several tokens" in runtime
+    assert "Qwen3.5 4B Q4_K_M" in runtime
+    assert "Qwen3.5 0.8B Q4_K_M" in runtime
+    assert "they do not rank GGUF submissions" in runtime
 
 
 def test_historical_dual_regime_chart_and_current_choice_are_explicit() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert "Risk-adjusted choice" in html
+    assert "Supplied-profiler choice" in html
     assert "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf" in html
-    assert "500-question check confirms Qwen2.5 1.5B as the vector candidate" in html
+    assert "Qwen2.5 1.5B remains the leading large-sample vector candidate" in html
     assert "80.7697" in html
     assert "63.8176" in html
     assert '{className: "scalar"' in script
@@ -174,47 +185,40 @@ def test_historical_dual_regime_chart_and_current_choice_are_explicit() -> None:
     assert "item.avx2.score.s_total" in script
 
 
-def test_latest_avx2_finalist_results_are_prominent_and_exact() -> None:
-    campaign_path = (
-        REPOSITORY
-        / "bench/measurements/campaign-20260820-overnight/summary.json"
-    )
+def test_earlier_direct_profiler_finalists_remain_historical() -> None:
+    campaign_path = REPOSITORY / "bench/measurements/campaign-20260820-overnight/summary.json"
     campaign = json.loads(campaign_path.read_text())
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
     for entry in campaign["finalists"].values():
-        avx2 = entry["avx2_fixed_15"]
-        assert f'{avx2["pp512_tps"]:.4f}' in html
-        assert f'{avx2["tg128_tps"]:.4f}' in html
-        assert f'{avx2["estimated_profiler_rss_mib"]:.1f} MiB' in html
-        assert f'{avx2["arc_easy_50"]["s_total"]:.4f}' in html
+        assert entry["avx2_fixed_15"]["arc_easy_500"]["s_total"] > 0
         assert "avx.arc_easy_500.s_total" in script
 
-    assert "Vector path measured on a tensor-identical parent quant" in script
+    assert "avx.pp512_tps" in script
+    assert "avx.tg128_tps" in script
+    assert "Vector measurement transferred from a tensor-identical parent quant" in script
     assert "45 MiB profiler-root estimate" in script
-    assert "81.8803" in html
-    assert "79.4104" in html
-    assert "76.8104" in html
+    assert "Earlier direct-profiler finalists" in html
+    assert "neither displaces the current eight-model field" in html
     assert "avx.arc_easy_500.s_total" in script
 
 
 def test_scalar_profiler_ledger_includes_the_latest_finalists() -> None:
-    campaign = json.loads((
-        REPOSITORY
-        / "bench/measurements/campaign-20260820-overnight/summary.json"
-    ).read_text())
+    campaign = json.loads(
+        (REPOSITORY / "bench/measurements/campaign-20260820-overnight/summary.json").read_text()
+    )
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert "six quantized candidates through the participant profiler" in html
+    assert "expanding the retained scalar ledger to six models" in html
     labels = {
         "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": "Math-Expert 0.6B Q4_K_M",
         "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": "Qwen3.5 0.8B Q4_0",
     }
     for entry in campaign["official_profiler"]:
         assert labels[entry["model"]] in html
-        assert f'{entry["s_total"]:.4f}' in html
+        assert f"{entry['s_total']:.4f}" in html
         assert entry["model"] in script
 
 
@@ -250,9 +254,9 @@ def test_visible_report_omits_chronology_and_build_identifiers() -> None:
         assert visible_template not in script
 
     for progression_term in (
-        "expanded search added",
-        "broader paired cpu comparison",
-        "500-question check confirms",
+        "the project began with a qwen scale study",
+        "the final architecture screen",
+        "the larger sample narrows",
     ):
         assert progression_term in html.lower()
 
@@ -274,15 +278,20 @@ def test_visible_report_uses_plain_scalar_vector_language() -> None:
     ):
         assert phrase not in visible_html
 
-    assert "we call this the scalar configuration" in visible_html
-    assert "q4_0 is the exception and still uses ssse3 simd" in visible_html
-    assert "we call that the vector configuration" in visible_html
+    assert "scalar configuration:  the supplied profiler configuration" in visible_html
+    assert (
+        "vector configuration:  portable simd enabled through avx2, fma, and f16c" in visible_html
+    )
+    after_definition = visible_html.split("from this point onward", 1)[1]
+    assert "avx2" not in after_definition
+    assert "vector path" not in after_definition
+    assert "scalar path" not in after_definition
 
 
 def test_model_extension_and_vertical_chart_system_are_complete() -> None:
-    extension = json.loads((
-        REPOSITORY / "bench/measurements/model-extension/summary.json"
-    ).read_text())
+    extension = json.loads(
+        (REPOSITORY / "bench/measurements/model-extension/summary.json").read_text()
+    )
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
     css = (DASHBOARD / "style.css").read_text()
@@ -296,11 +305,11 @@ def test_model_extension_and_vertical_chart_system_are_complete() -> None:
     assert validated["avx2"]["s_total_accuracy_500"] == 80.7697
     for item in extension["models"]:
         assert item["label"] in html
-        assert f'{item["scalar"]["pp512_tps"]:.4f}'[:5] in html
-        assert f'{item["avx2"]["pp512_tps"]:.4f}'[:5] in html
-        assert f'{item["scalar"]["tg128_tps"]:.4f}'[:5] in html
-        assert f'{item["avx2"]["tg128_tps"]:.4f}'[:5] in html
-        assert f'{item["avx2"]["s_total"]:.4f}' in html
+        assert f"{item['scalar']['pp512_tps']:.4f}"[:5] in html
+        assert f"{item['avx2']['pp512_tps']:.4f}"[:5] in html
+        assert f"{item['scalar']['tg128_tps']:.4f}"[:5] in html
+        assert f"{item['avx2']['tg128_tps']:.4f}"[:5] in html
+        assert f"{item['avx2']['s_total']:.4f}" in html
 
     assert 'data-orientation="vertical"' in script
     assert "verticalGroupedChart" in script
@@ -318,4 +327,4 @@ def test_compact_report_defaults_to_adopted_ledger_entries() -> None:
     assert 'data-ledger-filter="all" aria-pressed="false"' in html
     assert 'renderLedger("adopted")' in script
     assert '<details class="card workspace-disclosure" id="campaign-card">' in html
-    assert '<details class="card workspace-disclosure" id="campaign-avx2-score-card">' in html
+    assert 'id="campaign-avx2-score-table"' in html
