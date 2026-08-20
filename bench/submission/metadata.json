@@ -27,10 +27,10 @@
     }
   ],
   "model": {
-    "name": "Qwen3.5-4B-IQ4_XS",
+    "name": "muta-tutor-qwen3.5-0.8b-q4_0",
     "runtime": "llama.cpp",
-    "quantization": "GGUF IQ4_XS",
-    "parameters_estimate": "4.2B",
-    "packaging": "docker_build_from_repo"
+    "quantization": "GGUF Q4_0",
+    "parameters_estimate": "753M",
+    "packaging": "binary_bundle"
   }
 }

@@ -27,13 +27,13 @@
     }
   ],
   "model": {
-    "name": "muta-tutor-qwen3-1.7b-q4_0",
+    "name": "muta-tutor-qwen3.5-0.8b-q4_0",
     "runtime": "llama.cpp",
     "quantization": "GGUF Q4_0",
-    "parameters_estimate": "1.7B",
+    "parameters_estimate": "753M",
     "packaging": "binary_bundle"
   },
   "_runtime": {
-    "model_path": "model/muta-tutor-qwen3-1.7b-q4_0.gguf"
+    "model_path": "model/muta-tutor-qwen3.5-0.8b-q4_0.gguf"
   }
 }

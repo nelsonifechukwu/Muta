@@ -30,30 +30,30 @@
       }
     ],
     "model": {
-      "name": "muta-tutor-qwen3-1.7b-q4_0",
+      "name": "muta-tutor-qwen3.5-0.8b-q4_0",
       "runtime": "llama.cpp",
       "quantization": "GGUF Q4_0",
-      "parameters_estimate": "1.7B",
+      "parameters_estimate": "753M",
       "packaging": "binary_bundle"
     }
   },
   "environment": {
     "measured_on": "participant_laptop",
-    "cpu_model": "Apple M1",
-    "ram_gb": 8.0,
-    "gpu": "integrated only",
-    "os": "macOS-27.0-arm64-arm-64bit"
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.80GHz",
+    "ram_gb": 7.8,
+    "gpu": "none",
+    "os": "Ubuntu 22.04.5 LTS"
   },
   "throughput": {
-    "tokens_per_second_generation": 43.41,
-    "first_token_latency_ms": 3810.07,
+    "tokens_per_second_generation": 12.63,
+    "first_token_latency_ms": 16622.38,
     "prompt_tokens": 512,
     "generated_tokens": 128
   },
   "memory": {
-    "peak_rss_mb": 1133.03,
-    "steady_state_rss_mb": 1043.83,
-    "peak_vms_mb": 932481.25
+    "peak_rss_mb": 670.39,
+    "steady_state_rss_mb": 620.4,
+    "peak_vms_mb": 1704.05
   },
   "accuracy": [
     {
@@ -61,25 +61,25 @@
       "dataset_version": "lm-eval-harness",
       "language": "en",
       "samples": 50,
-      "score": 0.7,
+      "score": 0.64,
       "metric": "acc_norm"
     }
   ],
   "cpu_thermal": {
-    "cpu_percent_p99": 65.9,
+    "cpu_percent_p99": 53.5,
     "core_temp_c_peak": null,
     "throttled": false
   },
   "reproducibility": {
-    "git_commit_sha": "9b1feffe25e5",
+    "git_commit_sha": "bfdfa45f3324",
     "docker_image_digest": "unknown",
     "random_seed": 42
   },
   "model_info": {
-    "params_count": 1720574976,
-    "context_length": 32768,
-    "architecture": "qwen3",
-    "claimed_params_estimate": "1.7B",
+    "params_count": 752393024,
+    "context_length": 262144,
+    "architecture": "qwen35",
+    "claimed_params_estimate": "753M",
     "params_match": true
   }
 }

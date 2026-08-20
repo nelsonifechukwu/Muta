@@ -294,7 +294,7 @@ NO_CACHE=0
 FORCE_CPU=0
 GPU_OPT=0
 DEFAULT_MODEL="models/core/Qwen3.5-4B-IQ4_XS.gguf"
-NATIVE_WINNER_MODEL="muta-iq/model/muta-tutor-qwen3-1.7b-q4_0.gguf"
+NATIVE_WINNER_MODEL="muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf"
 MODEL="$DEFAULT_MODEL"
 MODEL_EXPLICIT=0
 while [ $# -gt 0 ]; do

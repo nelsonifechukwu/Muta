@@ -2,15 +2,27 @@
   "schema_version": 1,
   "models": [
     {
+      "id": "muta-tutor-qwen3.5-0.8b-q4_0",
+      "label": "Muta Tutor · Qwen3.5 0.8B",
+      "kind": "local",
+      "path": "muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf",
+      "sha256": "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b",
+      "size_bytes": 507156160,
+      "description": "Risk-adjusted submission: strongest larger matched accuracy among the overnight finalists.",
+      "arc_easy": 0.64,
+      "audit_proxy_tps": 12.63,
+      "recommended": true
+    },
+    {
       "id": "muta-tutor-qwen3-1.7b-q4_0",
       "label": "Muta Tutor · Qwen3 1.7B",
       "kind": "local",
       "path": "muta-iq/model/muta-tutor-qwen3-1.7b-q4_0.gguf",
       "sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
       "size_bytes": 974198528,
-      "description": "Overall competition winner: fast pure Q4_0 with a tied head.",
+      "description": "Previous scalar-profiler winner retained as a comparison model.",
       "arc_easy": 0.70,
-      "recommended": true
+      "recommended": false
     },
     {
       "id": "bitcpm4-8b-tq2_0-envocab",
