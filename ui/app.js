@@ -98,8 +98,61 @@ const chatScroller = $("#chat-scroll");
 // immediately before that render.
 const AUTO_FOLLOW_THRESHOLD_PX = 96;
 let autoFollow = true;
+let lastChatScrollTop = chatScroller.scrollTop;
+let viewportResizeActive = false;
+let viewportSettleTimer = null;
+let pointerScrollingChat = false;
+let manualScrollIntent = false;
+let manualScrollDirection = 0;
+let manualScrollIntentTimer = null;
+let touchStartY = null;
 let navigationVersion = 0;
 let pendingConversationLoad = null;
+
+// `interactive-widget=resizes-content` handles Chrome's virtual keyboard. Safari/iOS still
+// exposes the genuinely visible height only through visualViewport, so make that height the
+// shell's source of truth. This also follows the mobile address-bar animation without ever
+// unlocking body/document scrolling.
+function applyAppViewportMetrics() {
+  const viewport = window.visualViewport;
+  const height = viewport?.height || window.innerHeight;
+  if (height <= 0) return;
+  const root = document.documentElement;
+  root.style.setProperty("--app-height", `${height}px`);
+  root.style.setProperty("--app-top", `${viewport?.offsetTop || 0}px`);
+  // Queue rows and attachment chips share a small, height-aware budget. At keyboard height
+  // each keeps one usable row and scrolls internally, leaving the input and send controls visible.
+  const regionHeight = Math.max(40, Math.min(112, height * 0.14));
+  root.style.setProperty("--composer-region-max", `${regionHeight}px`);
+  root.classList.toggle("compact-height", height < 240);
+}
+
+// A virtual-keyboard or browser-chrome resize can reduce scrollTop without student input as the
+// browser clamps the old value to the new scroll range. Preserve an already-followed tail across
+// that movement and sample again after the viewport animation; explicit wheel/touch/drag intent
+// below can still cancel following immediately.
+function syncAppViewportHeight() {
+  const preserveFollow = autoFollow;
+  viewportResizeActive = true;
+  applyAppViewportMetrics();
+  if (preserveFollow) scrollToBottom({ force: true });
+
+  requestAnimationFrame(() => {
+    applyAppViewportMetrics();
+    if (preserveFollow && autoFollow) scrollToBottom({ force: true });
+  });
+
+  clearTimeout(viewportSettleTimer);
+  viewportSettleTimer = setTimeout(() => {
+    applyAppViewportMetrics();
+    // A student who explicitly returned to the tail during the resize owns that decision;
+    // layout clamping never sets manualScrollIntent, so it cannot trigger this resume path.
+    if (!autoFollow && manualScrollDirection > 0 && nearChatBottom()) autoFollow = true;
+    if (preserveFollow && autoFollow) scrollToBottom({ force: true });
+    viewportResizeActive = false;
+    lastChatScrollTop = chatScroller.scrollTop;
+  }, 320);
+}
 
 function conversationFromLocation() {
   const cid = new URL(location.href).searchParams.get("chat");
@@ -168,14 +221,80 @@ function nearChatBottom() {
 function scrollToBottom({ force = false } = {}) {
   if (!force && !autoFollow) return;
   chatScroller.scrollTop = chatScroller.scrollHeight;
+  lastChatScrollTop = chatScroller.scrollTop;
   autoFollow = true;
 }
 
-// A real user scroll is the authority: moving up pauses following, returning to the tail
-// resumes it. Programmatic scrolls also fire this event but leave `nearChatBottom()` true.
+function pauseAutoFollow() {
+  autoFollow = false;
+}
+
+function noteManualScrollIntent(direction = 0) {
+  manualScrollIntent = true;
+  if (direction) manualScrollDirection = direction;
+  clearTimeout(manualScrollIntentTimer);
+  // Outlast the 320 ms viewport settle sample so a keyboard-era flick that reaches the
+  // tail through momentum is still recognized as the student's downward intent.
+  manualScrollIntentTimer = setTimeout(() => {
+    manualScrollIntent = false;
+    manualScrollDirection = 0;
+  }, 480);
+}
+
+// Moving upward by even one pixel is intent to read earlier text, including when the reader is
+// still inside the 96 px bottom tolerance. Moving down does not resume following until the tail
+// is actually reached. Viewport-driven clamping is ignored unless a pointer is actively dragging
+// the chat; programmatic scroll-to-bottom only moves forward and remains followed.
 chatScroller.addEventListener("scroll", () => {
-  autoFollow = nearChatBottom();
+  const current = chatScroller.scrollTop;
+  if (pointerScrollingChat && current !== lastChatScrollTop) {
+    noteManualScrollIntent(Math.sign(current - lastChatScrollTop));
+  }
+  const studentMovedChat = manualScrollIntent;
+  if (current < lastChatScrollTop) {
+    if (!viewportResizeActive || studentMovedChat) pauseAutoFollow();
+  } else if (
+    (!viewportResizeActive || manualScrollDirection > 0) &&
+    nearChatBottom()
+  ) {
+    autoFollow = true;
+  }
+  lastChatScrollTop = current;
 }, { passive: true });
+
+chatScroller.addEventListener("wheel", (event) => {
+  noteManualScrollIntent(Math.sign(event.deltaY));
+  if (event.deltaY < 0) pauseAutoFollow();
+}, { passive: true });
+chatScroller.addEventListener("pointerdown", () => {
+  pointerScrollingChat = true;
+  // Pressing/selecting is neutral. Direction is recorded only after the pointer actually
+  // moves the scroll position, so layout clamping cannot borrow a bare pointerdown as consent.
+  manualScrollIntent = false;
+  manualScrollDirection = 0;
+  clearTimeout(manualScrollIntentTimer);
+}, { passive: true });
+window.addEventListener("pointerup", () => { pointerScrollingChat = false; }, { passive: true });
+window.addEventListener("pointercancel", () => { pointerScrollingChat = false; }, {
+  passive: true,
+});
+chatScroller.addEventListener("touchstart", (event) => {
+  touchStartY = event.touches[0]?.clientY ?? null;
+}, { passive: true });
+chatScroller.addEventListener("touchmove", (event) => {
+  const y = event.touches[0]?.clientY;
+  if (touchStartY !== null && y !== undefined) {
+    noteManualScrollIntent(Math.sign(touchStartY - y));
+  }
+  if (touchStartY !== null && y !== undefined && y > touchStartY + 2) pauseAutoFollow();
+  if (y !== undefined) touchStartY = y;
+}, { passive: true });
+chatScroller.addEventListener("touchend", () => { touchStartY = null; }, { passive: true });
+
+syncAppViewportHeight();
+window.addEventListener("resize", syncAppViewportHeight, { passive: true });
+window.visualViewport?.addEventListener("resize", syncAppViewportHeight, { passive: true });
+window.visualViewport?.addEventListener("scroll", syncAppViewportHeight, { passive: true });
 
 function autoGrow() {
   inputEl.style.height = "auto";

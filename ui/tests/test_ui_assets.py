@@ -83,7 +83,94 @@ def test_streaming_only_follows_while_the_reader_is_near_the_bottom():
     assert helper, "scrollToBottom helper missing"
     assert "!autoFollow" in helper.group("body")
     assert 'chatScroller.addEventListener("scroll"' in js
-    assert "autoFollow = nearChatBottom()" in js
+    assert "current < lastChatScrollTop" in js
+    assert "pointerScrollingChat && current !== lastChatScrollTop" in js
+    assert "const studentMovedChat = manualScrollIntent" in js
+    assert "!viewportResizeActive || studentMovedChat" in js
+    assert "!viewportResizeActive || manualScrollDirection > 0" in js
+    assert 'chatScroller.addEventListener("wheel"' in js
+    assert "noteManualScrollIntent(Math.sign(event.deltaY))" in js
+    assert "event.deltaY < 0" in js
+    assert 'chatScroller.addEventListener("touchmove"' in js
+    assert "!autoFollow && manualScrollDirection > 0 && nearChatBottom()" in js
+    assert "}, 480)" in js
+    assert "manualScrollDirection = 0" in js
+    assert "lastChatScrollTop = current" in js
+
+
+def test_only_the_chat_pane_scrolls_while_the_composer_stays_docked():
+    """Long streamed content must not turn the body or app shell into a scroll container.
+
+    A flex column also needs explicit zero minimum heights: otherwise its content-derived
+    minimum can grow the entire document and carry the composer upward with it.
+    """
+    document = "".join(_blocks("html, body"))
+    app = "".join(_blocks("#app"))
+    main = "".join(_blocks("#main"))
+    chat = "".join(_blocks("#chat-scroll"))
+    composer = "".join(_blocks("#composer-wrap"))
+
+    assert re.search(r"overflow\s*:\s*hidden", document)
+    assert re.search(r"overflow\s*:\s*hidden", app)
+    assert re.search(r"min-height\s*:\s*0", main)
+    assert re.search(r"overflow\s*:\s*hidden", main)
+    assert re.search(r"min-height\s*:\s*0", chat)
+    assert re.search(r"overflow-y\s*:\s*auto", chat)
+    assert re.search(r"flex\s*:\s*0\s+0\s+auto", composer)
+    assert "calc(100% - 58px)" in composer
+
+
+def test_mobile_keyboard_and_large_composer_regions_remain_bounded():
+    viewport = re.search(r'<meta name="viewport" content="([^"]+)">', HTML)
+    assert viewport and "interactive-widget=resizes-content" in viewport.group(1)
+
+    js = (UI / "app.js").read_text()
+    assert "viewport?.height || window.innerHeight" in js
+    assert "viewport?.offsetTop || 0" in js
+    assert 'style.setProperty("--app-height"' in js
+    assert 'style.setProperty("--app-top"' in js
+    assert 'style.setProperty("--composer-region-max"' in js
+    assert 'window.visualViewport?.addEventListener("resize"' in js
+    assert 'window.visualViewport?.addEventListener("scroll"' in js
+    assert 'root.classList.toggle("compact-height"' in js
+    assert "viewportResizeActive = true" in js
+    assert "if (preserveFollow) scrollToBottom({ force: true })" in js
+    assert "}, 320)" in js
+
+    # Safari may pan the visual viewport instead of leaving it at layout y=0. Every fixed
+    # surface must share the same visible origin/height as #app, or the hamburger/sidebar
+    # and overlays straddle browser chrome or the on-screen keyboard.
+    menu_toggle = "".join(_blocks(".menu-toggle"))
+    backdrop = "".join(_blocks("#sidebar-backdrop"))
+    sidebar = "".join(_blocks("#sidebar"))
+    model_menu = "".join(_blocks(".model-menu"))
+    mobile_header = "".join(_blocks(".chat-header"))
+    drop_overlay = "".join(_blocks("#drop-overlay"))
+    settings_modal = "".join(_blocks(".settings-modal"))
+    toast = "".join(_blocks("#toast"))
+    assert "var(--app-top" in menu_toggle
+    for surface in (backdrop, sidebar, model_menu, drop_overlay, settings_modal):
+        assert "var(--app-top" in surface
+        assert "var(--app-height" in surface
+    assert "var(--app-top" in toast and "var(--app-height" in toast
+    assert "backdrop-filter: none" in mobile_header
+
+    wrap = "".join(_blocks("#composer-wrap"))
+    queue = "".join(_blocks("#queue"))
+    chips = "".join(_blocks("#attachment-chips"))
+    composer = "".join(_blocks("#composer"))
+    assert re.search(r"max-height\s*:", wrap)
+    assert re.search(r"overflow\s*:\s*hidden", wrap)
+    assert re.search(r"max-height\s*:", composer)
+    assert re.search(r"overflow\s*:\s*hidden", composer)
+    for region in (queue, chips):
+        assert re.search(r"max-height\s*:", region)
+        assert re.search(r"overflow-y\s*:\s*auto", region)
+
+    compact = "".join(_blocks(".compact-height #composer-wrap"))
+    compact_composer = "".join(_blocks(".compact-height #composer"))
+    assert "calc(100% - 58px)" in compact
+    assert re.search(r"min-height\s*:\s*4\.6rem", compact_composer)
 
 
 def test_chat_generation_is_server_owned_and_recovered_after_reload():
