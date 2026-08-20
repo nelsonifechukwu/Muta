@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "campaign": "campaign-20260820-overnight",
+  "status": "in_progress",
+  "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
+  "rules": {
+    "profiler_formula": "100 * min(TPS / 15, 1)",
+    "website_formula": "100 * TPS / TPS_max",
+    "website_denominator_policy": "max(pre-entry cohort floor, candidate TPS)",
+    "peak_rss_budget_gib": 7,
+    "accuracy_proxy": "arc_easy acc_norm",
+    "temperature_available": false
+  },
+  "baseline": {
+    "model": "muta-tutor-qwen3-1.7b-q4_0.gguf",
+    "sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e",
+    "official_profiler_total": 72.4653,
+    "official_profiler_tps": 9.79,
+    "official_profiler_peak_rss_mib": 1116.31,
+    "arc_easy_50_percent": 72
+  },
+  "binaries": {
+    "scalar_b10175_sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+    "avx2_b10175_sha256": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8",
+    "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70"
+  },
+  "candidates": [
+    {
+      "id": "qwen3.5-0.8b-q4_0",
+      "repo": "unsloth/Qwen3.5-0.8B-GGUF",
+      "revision": "6ab461498e2023f6e3c1baea90a8f0fe38ab64d0",
+      "file": "Qwen3.5-0.8B-Q4_0.gguf",
+      "sha256": "444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c",
+      "license": "Apache-2.0",
+      "tier": 1
+    },
+    {
+      "id": "vibethinker-1.5b-q4_k_m",
+      "repo": "MaziyarPanahi/VibeThinker-1.5B-GGUF",
+      "revision": "92a23f2b379a88392891e1e67507730a06f87df8",
+      "file": "VibeThinker-1.5B.Q4_K_M.gguf",
+      "sha256": "f261e3f0504f6a7ec4f9c775a6c3dc2a15db2eaa4c4064b245ecbed833e43d8e",
+      "license": "MIT",
+      "tier": 2
+    },
+    {
+      "id": "openmath-nemotron-1.5b-q4_0",
+      "repo": "Mungert/OpenMath-Nemotron-1.5B-GGUF",
+      "revision": "dfaaa992245b06b7db1f2ce2bf6bfa25cf0a0a5e",
+      "file": "OpenMath-Nemotron-1.5B-q4_0.gguf",
+      "sha256": "90cdc608c465f5eacd3cce23048b5ab8ed6f7a05b8ec9afae82cfff2cda956f7",
+      "license": "CC-BY-4.0",
+      "tier": 2
+    },
+    {
+      "id": "noema-2b-q4_k_m",
+      "repo": "NoemaAI-labs/Noema-2B-GGUF",
+      "revision": "66d96b1",
+      "file": "Noema-2B-Q4_K_M.gguf",
+      "sha256": "e39e79c60f0411304ec6813ca3a07ba7dcd1c9fd3312202ad9de7a1b455cb762",
+      "license": "Apache-2.0",
+      "tier": 2
+    }
+  ],
+  "source_urls": [
+    "https://adtc-2026.devpost.com/",
+    "https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler",
+    "https://github.com/Africa-Deep-Tech-Foundation/adtc-2026-submission-template"
+  ]
+}
