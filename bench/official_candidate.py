@@ -37,7 +37,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--profiler", type=Path, required=True)
     parser.add_argument("--llama-bench-dir", type=Path, required=True)
-    parser.add_argument("--packaging", default="exact_gguf_campaign_artifact")
+    parser.add_argument(
+        "--packaging",
+        choices=("docker_image", "docker_build_from_repo", "binary_bundle"),
+        default="binary_bundle",
+    )
     parser.add_argument("--skip-accuracy", action="store_true")
     args = parser.parse_args(argv)
 
