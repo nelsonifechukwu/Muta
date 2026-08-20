@@ -86,3 +86,32 @@ def test_clean_eof_without_terminal_frame_is_a_retryable_truncation(monkeypatch)
     with pytest.raises(InferenceStreamError, match="before completion") as caught:
         list(InferenceClient().stream_events([{"role": "user", "content": "hi"}]))
     assert caught.value.retryable is True
+
+
+def test_length_finish_is_retryable_after_preserving_its_content(monkeypatch):
+    lines = [
+        'data: {"choices":[{"delta":{"content":"So, in a simple"},"finish_reason":null}]}',
+        'data: {"choices":[{"delta":{},"finish_reason":"length"}]}',
+        "data: [DONE]",
+    ]
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: _FakeStream(lines))
+    events = InferenceClient().stream_events([{"role": "user", "content": "hi"}])
+
+    assert next(events) == ("content", "So, in a simple")
+    with pytest.raises(InferenceStreamError, match="token limit") as caught:
+        next(events)
+    assert caught.value.retryable is True
+    assert caught.value.finish_reason == "length"
+
+
+def test_stop_finish_remains_a_successful_terminal_frame(monkeypatch):
+    lines = [
+        'data: {"choices":[{"delta":{"content":"Complete."},"finish_reason":null}]}',
+        'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}',
+        "data: [DONE]",
+    ]
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: _FakeStream(lines))
+
+    assert list(InferenceClient().stream_events([{"role": "user", "content": "hi"}])) == [
+        ("content", "Complete.")
+    ]

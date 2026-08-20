@@ -29,6 +29,8 @@ class _ClientLike(Protocol):
 
     def chat_with_timings(self, messages: list[Message], **params): ...
 
+    def count_prompt_tokens(self, messages: list[Message], **params) -> int: ...
+
 
 class CloudFallbackClient:
     def __init__(
@@ -80,7 +82,7 @@ class CloudFallbackClient:
             first = next(events)
         except StopIteration:
             return
-        except Exception as exc:  # noqa: BLE001 — classify before local fallback
+        except Exception as exc:
             if isinstance(exc, InferenceStreamError) and not exc.retryable:
                 raise
             if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code not in {
@@ -104,6 +106,13 @@ class CloudFallbackClient:
             if kind == "content":
                 yield text
 
+    def count_prompt_tokens(self, messages: list[Message], **params) -> int:
+        """Fit to the local guaranteed context even when cloud acceleration is enabled."""
+        counter = getattr(self.local, "count_prompt_tokens", None)
+        if not callable(counter):
+            raise TypeError("local client has no prompt tokenizer")
+        return counter(messages, **params)
+
     def retry_stream_events(self, messages: list[Message], **params) -> Iterator[tuple[str, str]]:
         """Resume an interrupted cloud turn locally instead of retrying the same weak link."""
         # If the first half already came from cloud, retain that disclosure even though the
@@ -118,7 +127,7 @@ class CloudFallbackClient:
                 result = self.cloud.chat_with_timings(messages, **params)
                 self.last_source = "cloud"
                 return result
-            except Exception:  # noqa: BLE001 — non-streaming: any failure retries locally
+            except Exception:  # noqa: BLE001, S110 — documented fallback is intentionally silent
                 pass
         self.last_source = "local"
         return self.local.chat_with_timings(messages, **params)

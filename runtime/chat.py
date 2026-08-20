@@ -301,14 +301,35 @@ class ChatEngine:
         )
         protected = max(1, min(protected_tail_messages, max(1, len(fitted) - 1)))
 
+        exact_counter = getattr(self.client, "count_prompt_tokens", None)
+        cached_prompt_tokens: int | None = None
+
         def prompt_tokens() -> int:
-            return sum(_message_tokens(message) for message in fitted)
+            nonlocal cached_prompt_tokens, exact_counter
+            if cached_prompt_tokens is not None:
+                return cached_prompt_tokens
+            if callable(exact_counter):
+                try:
+                    counted = exact_counter(fitted, **fitted_params)
+                    if not isinstance(counted, int) or counted <= 0:
+                        raise ValueError("invalid prompt token count")
+                    cached_prompt_tokens = counted
+                    return counted
+                except Exception:  # noqa: BLE001 — optional engine probe; hard fallback is safe
+                    exact_counter = None
+            cached_prompt_tokens = sum(_message_tokens(message) for message in fitted)
+            return cached_prompt_tokens
+
+        def invalidate_prompt_count() -> None:
+            nonlocal cached_prompt_tokens
+            cached_prompt_tokens = None
 
         # Drop whole oldest exchanges, leaving the stable system prefix and current/resume tail.
         while len(fitted) > 1 + protected and prompt_tokens() > prompt_limit:
             fitted.pop(1)
             while len(fitted) > 1 + protected and fitted[1].get("role") == "assistant":
                 fitted.pop(1)
+            invalidate_prompt_count()
 
         # An enormous current turn or optional grounding block can exceed the window alone.
         # Shrink only the request copy, largest reducible message first, until a useful reply
@@ -327,6 +348,7 @@ class ChatEngine:
             overflow = prompt_tokens() - prompt_limit
             target = costs[index] - min(reducible, overflow)
             fitted[index] = _truncate_message(fitted[index], target)
+            invalidate_prompt_count()
 
         available = max(
             1,
@@ -348,11 +370,16 @@ class ChatEngine:
         attempt = 0
         request_messages = messages
         request_params = params
+        retry_params = dict(params)
+        structured = "response_format" in params
+        awaiting_completion_progress = False
         stream = self.client.stream_events
         while True:
             if cancel_event is not None and cancel_event.is_set():
                 return
             deduplicator = _ResumeDeduplicator(writer.text) if attempt and writer.text else None
+            buffered_content: list[str] = []
+            attempt_content_progress = False
             try:
                 events = iter(stream(request_messages, **request_params))
                 while True:
@@ -367,15 +394,37 @@ class ChatEngine:
                     # resumes, then the normal UI transition settles it.
                     if attempt and kind == "reasoning":
                         continue
+                    if structured and kind == "content":
+                        # A schema-root JSON document cannot be continued by appending another
+                        # freshly generated root. Buffer until the attempt terminates cleanly;
+                        # a failed attempt is discarded and regenerated from the original prompt.
+                        if text:
+                            buffered_content.append(text)
+                            attempt_content_progress = True
+                        continue
                     if kind == "content" and deduplicator is not None:
                         text = deduplicator.feed(text)
                         if not text:
                             continue
+                    if kind == "content" and text:
+                        attempt_content_progress = True
                     yield kind, text
                 if deduplicator is not None:
                     tail = deduplicator.finish()
                     if tail:
+                        attempt_content_progress = True
                         yield "content", tail
+                if (structured or awaiting_completion_progress) and not attempt_content_progress:
+                    # A clean stop frame with no new answer text is not proof that a previously
+                    # truncated response was completed. Keep trying within the same bound, then
+                    # fail visibly instead of relabeling the old partial as success.
+                    raise InferenceStreamError(
+                        "continuation ended without producing answer content",
+                        retryable=True,
+                        finish_reason="length" if awaiting_completion_progress else None,
+                    )
+                if structured:
+                    yield from (("content", text) for text in buffered_content)
                 return
             except Exception as exc:
                 if deduplicator is not None:
@@ -385,11 +434,23 @@ class ChatEngine:
                 if not _retryable_stream_error(exc) or attempt >= self.stream_retry_attempts:
                     raise
                 attempt += 1
-                yield "recovering", "The tutor paused briefly — resuming automatically…"
-                delay = min(
-                    4.0,
-                    self.stream_retry_backoff_s * (2 ** (attempt - 1)),
+                reached_length = (
+                    isinstance(exc, InferenceStreamError) and exc.finish_reason == "length"
                 )
+                if reached_length:
+                    # The reasoning phase can consume the entire cap before emitting answer
+                    # content. Retrying the identical thinking request repeats invisibly; a
+                    # continuation/restart needs the direct answer now.
+                    retry_params["enable_thinking"] = False
+                    awaiting_completion_progress = True
+                    yield "recovering", "The tutor is finishing the answer automatically…"
+                    delay = 0.0
+                else:
+                    yield "recovering", "The tutor paused briefly — resuming automatically…"
+                    delay = min(
+                        4.0,
+                        self.stream_retry_backoff_s * (2 ** (attempt - 1)),
+                    )
                 if delay:
                     if cancel_event is not None:
                         if cancel_event.wait(delay):
@@ -399,7 +460,12 @@ class ChatEngine:
                 if cancel_event is not None and cancel_event.is_set():
                     return
                 partial = writer.text
-                if partial:
+                if structured:
+                    # Nothing from a failed structured attempt was exposed or persisted, so
+                    # regenerate one valid schema root rather than concatenating JSON fragments.
+                    request_messages = messages
+                    protected_tail = min(3, max(1, len(messages) - 1))
+                elif partial:
                     request_messages = [
                         *messages,
                         {"role": "assistant", "content": partial},
@@ -412,10 +478,97 @@ class ChatEngine:
                     protected_tail = 1
                 request_messages, request_params = self._fit_request(
                     request_messages,
-                    params,
+                    retry_params,
                     protected_tail_messages=protected_tail,
                 )
                 stream = getattr(self.client, "retry_stream_events", self.client.stream_events)
+
+    @staticmethod
+    def _merge_generations(text: str, attempts: list[Generation]) -> Generation:
+        """One honest metric record for a non-streaming completion that needed continuation."""
+        if len(attempts) == 1 and attempts[0].text == text:
+            return attempts[0]
+        elapsed = sum(attempt.elapsed_s for attempt in attempts)
+        completion_tokens = sum(attempt.completion_tokens for attempt in attempts)
+        return Generation(
+            text=text,
+            prompt_tokens=sum(attempt.prompt_tokens for attempt in attempts),
+            completion_tokens=completion_tokens,
+            elapsed_s=elapsed,
+            tokens_per_second=(completion_tokens / elapsed if elapsed > 0 else 0.0),
+            # A multi-request aggregate is necessarily derived from our wall clock even when
+            # each individual engine response included its own decode timing.
+            from_wall_clock=True,
+            finish_reason=attempts[-1].finish_reason,
+        )
+
+    def _chat_with_length_recovery(
+        self,
+        messages: list[Message],
+        params: dict,
+    ) -> Generation:
+        """Finish a non-streaming answer when the engine returns HTTP 200 + `length`."""
+        request_messages = messages
+        request_params = params
+        retry_params = dict(params)
+        structured = "response_format" in params
+        reply = ""
+        attempts: list[Generation] = []
+        awaiting_completion_progress = False
+        for attempt_index in range(self.stream_retry_attempts + 1):
+            prior_reply = reply
+            try:
+                generation = self.client.chat_with_timings(request_messages, **request_params)
+            except Exception as exc:
+                if reply and not structured:
+                    raise InferenceStreamError(
+                        str(exc) or "inference continuation failed",
+                        retryable=_retryable_stream_error(exc),
+                        finish_reason=getattr(exc, "finish_reason", None),
+                        partial_text=reply,
+                    ) from exc
+                raise
+            attempts.append(generation)
+            if structured:
+                # Each structured retry replaces the incomplete root; only a terminal attempt
+                # is eligible to become the returned/persisted document.
+                reply = generation.text
+            elif reply:
+                deduplicator = _ResumeDeduplicator(reply)
+                reply += deduplicator.feed(generation.text) + deduplicator.finish()
+            else:
+                reply = generation.text
+            made_progress = bool(generation.text) if structured else reply != prior_reply
+            needs_retry = generation.finish_reason == "length" or (
+                awaiting_completion_progress and not made_progress
+            )
+            if not needs_retry:
+                return self._merge_generations(reply, attempts)
+            if attempt_index >= self.stream_retry_attempts:
+                raise InferenceStreamError(
+                    "inference repeatedly reached its token limit before completion",
+                    retryable=False,
+                    finish_reason="length",
+                    partial_text="" if structured else reply,
+                )
+            awaiting_completion_progress = True
+            retry_params["enable_thinking"] = False
+            if structured or not reply:
+                request_messages = messages
+                protected_tail = min(3, max(1, len(messages) - 1))
+            else:
+                request_messages = [
+                    *messages,
+                    {"role": "assistant", "content": reply},
+                    {"role": "user", "content": _RESUME_PROMPT},
+                ]
+                protected_tail = 3
+            request_messages, request_params = self._fit_request(
+                request_messages,
+                retry_params,
+                protected_tail_messages=protected_tail,
+            )
+        raise AssertionError("unreachable length-recovery loop")
 
     def chat(
         self,
@@ -447,7 +600,12 @@ class ChatEngine:
             params,
             protected_tail_messages=min(3, max(1, len(messages) - 1)),
         )
-        generation = self.client.chat_with_timings(messages, **request_params)
+        try:
+            generation = self._chat_with_length_recovery(messages, request_params)
+        except InferenceStreamError as exc:
+            if exc.partial_text:
+                self.store.add_message(cid, "assistant", exc.partial_text)
+            raise
         self.store.add_message(cid, "assistant", generation.text)
         return ChatResult(
             conversation_id=cid,

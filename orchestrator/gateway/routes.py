@@ -156,11 +156,27 @@ def _engine_unreachable() -> HTTPException:
     )
 
 
-def _handle_engine_error(exc: httpx.HTTPError, *, where: str) -> HTTPException:
+def _incomplete_stream_message(*, partial_saved: bool) -> str:
+    if partial_saved:
+        return "The tutor could not resume automatically. Your partial answer is saved."
+    return "The tutor could not complete that answer automatically. Please try again."
+
+
+def _handle_engine_error(exc: Exception, *, where: str) -> HTTPException:
     """Map any llama-server failure to a friendly, student-safe 503 — and record the real
     cause server-side so an operator can diagnose it. A 400 is almost always context overflow
     (a long conversation), which the student can act on; transport errors mean the engine is
     down or slow."""
+    if isinstance(exc, InferenceStreamError):
+        log.warning("engine returned an incomplete answer at %s: %s", where, exc)
+        return HTTPException(
+            status_code=503,
+            detail=(
+                "the tutor could not finish this answer automatically — the partial reply is saved"
+                if exc.partial_text
+                else "the tutor could not finish this answer automatically — please try again"
+            ),
+        )
     if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 400:
         log.warning("engine rejected request at %s: %s", where, exc)
         return HTTPException(
@@ -424,7 +440,7 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             title=req.message[:80],
             **_apply_thinking(params_for_mode(req.mode.value), req.thinking),
         )
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/chat") from e
     if req.attachment_ids:
         _link_attachments(
@@ -513,6 +529,8 @@ def _start_chat_generation(
         rag_block=rag_block,
     )
     cancel_event = threading.Event()
+    sampling_params = _apply_thinking(params_for_mode(req.mode.value), req.thinking)
+    structured_response = "response_format" in sampling_params
 
     try:
         cid, user_message_id, events = engine.stream_events_chat(
@@ -530,7 +548,7 @@ def _start_chat_generation(
             # §6.5 sampling profiles apply to the UI's primary path too — without them the
             # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
             # student holding a slot indefinitely, and with thinking on it filled the context).
-            **_apply_thinking(params_for_mode(req.mode.value), req.thinking),
+            **sampling_params,
         )
     except Exception:
         # Physical admission happens only at FIFO-head promotion, after preparation succeeds.
@@ -580,18 +598,20 @@ def _start_chat_generation(
                         t_preamble = now
                     yield f"data: {json.dumps({'preamble': text})}\n\n"
                     continue
-                if n == 0:
-                    t_first = now
-                t_last = now
-                n += 1  # reasoning and content both count: the engine decodes both
-                hub.tick(cid)  # feeds the live tok/s in the telemetry strip
+                if not structured_response:
+                    if n == 0:
+                        t_first = now
+                    t_last = now
+                    n += 1  # reasoning and content both count: the engine decodes both
+                    hub.tick(cid)  # feeds the live tok/s in the telemetry strip
                 key = "reasoning" if kind == "reasoning" else "delta"
                 if kind != "reasoning":
                     reply_parts.append(text)
                 yield f"data: {json.dumps({key: text})}\n\n"
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /chat/stream: %r", e)
-            yield f"data: {json.dumps({'error': 'The tutor could not resume automatically. Your partial answer is saved.'})}\n\n"
+            error = {"error": _incomplete_stream_message(partial_saved=bool(reply_parts))}
+            yield f"data: {json.dumps(error)}\n\n"
             return
         finally:
             hub.end(cid)
@@ -613,7 +633,7 @@ def _start_chat_generation(
         # reads close to the engine's own generation rate rather than being dragged down by a
         # short reply's startup. Still wall-clock (from_wall_clock=True); the engine-true rate
         # is what `/chat` records. Feed the shared window so `make monitor` stays live too.
-        elapsed = t_last - t_first
+        elapsed = t_last - t_first if not structured_response else 0.0
         rate = (n - 1) / elapsed if n > 1 and elapsed > 0 else 0.0
         if rate > 0:
             bench_metrics.record(
@@ -638,14 +658,18 @@ def _start_chat_generation(
                 {
                     "done": True,
                     "conversation_id": cid,
-                    "completion_tokens": n,
-                    "elapsed_s": round(elapsed, 3),
-                    "tokens_per_second": round(rate, 2),
+                    # Structured output is buffered until one complete schema root exists.
+                    # Replaying that buffer is not decode and must never become a fake TPS sample.
+                    "completion_tokens": None if structured_response else n,
+                    "elapsed_s": None if structured_response else round(elapsed, 3),
+                    "tokens_per_second": None if structured_response else round(rate, 2),
                     # Two first-token numbers, deliberately separate. `ttft_s` is and stays the
                     # engine's own — what the tutor took to speak. `preamble_ttft_s` is when the
                     # pane stopped being empty. Collapsing them into one figure would be the
                     # dishonest version of this feature.
-                    "ttft_s": round(t_first - started, 3) if n else None,
+                    "ttft_s": (
+                        round(t_first - started, 3) if n and not structured_response else None
+                    ),
                     "preamble_ttft_s": round(t_preamble - started, 3) if t_preamble else None,
                     # Student text leaving the device must never be silent (P3): the UI
                     # badges any answer a cloud backend produced.
@@ -1132,6 +1156,7 @@ def tutor_chat(
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
     student_id = turn.student_id or turn.session_id
+    sampling_params = params_for_mode(turn.mode.value)
     try:
         result = engine.chat(
             student_id=student_id,
@@ -1140,9 +1165,9 @@ def tutor_chat(
             system_prompt=load_prompt(_prompt_for(turn.mode)),
             mode=turn.mode.value,
             language=turn.lang,
-            **params_for_mode(turn.mode.value),
+            **sampling_params,
         )
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/tutor/chat") from e
     finally:
         sessions.release(turn.session_id)
@@ -1191,6 +1216,9 @@ def tutor_chat_stream(
     if decision.admission is Admission.REFUSED:
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
+    sampling_params = params_for_mode(turn.mode.value)
+    structured_response = "response_format" in sampling_params
+
     try:
         cid, _user_message_id, events = engine.stream_events_chat(
             student_id=turn.student_id or turn.session_id,
@@ -1199,7 +1227,7 @@ def tutor_chat_stream(
             system_prompt=load_prompt(_prompt_for(turn.mode)),
             mode=turn.mode.value,
             language=turn.lang,
-            **params_for_mode(turn.mode.value),
+            **sampling_params,
         )
     except Exception:
         # The generator's finally releases the slot only once streaming starts; a failure
@@ -1214,6 +1242,7 @@ def tutor_chat_stream(
         first_token_at = 0.0
         preamble_at = 0.0
         count = 0
+        content_count = 0
         try:
             for kind, text in streamed:
                 if kind == "source":
@@ -1227,14 +1256,18 @@ def tutor_chat_stream(
                         preamble_at = time.monotonic()
                     yield f"data: {json.dumps({'preamble': text})}\n\n"
                     continue
-                if count == 0:
-                    first_token_at = time.monotonic()
-                count += 1
+                if not structured_response:
+                    if count == 0:
+                        first_token_at = time.monotonic()
+                    count += 1
                 key = "reasoning" if kind == "reasoning" else "delta"
+                if kind != "reasoning":
+                    content_count += 1
                 yield f"data: {json.dumps({key: text})}\n\n"
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /tutor/chat/stream: %r", e)
-            yield f"data: {json.dumps({'error': 'The tutor could not resume automatically. Your partial answer is saved.'})}\n\n"
+            error = {"error": _incomplete_stream_message(partial_saved=content_count > 0)}
+            yield f"data: {json.dumps(error)}\n\n"
             return
         finally:
             sessions.release(turn.session_id)
@@ -1250,8 +1283,12 @@ def tutor_chat_stream(
                 {
                     "done": True,
                     "session_id": cid,
-                    "completion_tokens": count,
-                    "ttft_s": round(first_token_at - started, 3) if count else None,
+                    "completion_tokens": None if structured_response else count,
+                    "ttft_s": (
+                        round(first_token_at - started, 3)
+                        if count and not structured_response
+                        else None
+                    ),
                     "preamble_ttft_s": round(preamble_at - started, 3) if preamble_at else None,
                     "degradation_level": f"L{int(state.level)}",
                 }

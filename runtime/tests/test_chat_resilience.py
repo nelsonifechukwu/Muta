@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 
@@ -29,6 +30,17 @@ class RecordingClient:
         self.messages.append(messages)
         self.params.append(params)
         return Generation("reply", 1, 1, 0.01, 100.0, True)
+
+
+class ExactCountingClient(RecordingClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.count_calls = 0
+
+    def count_prompt_tokens(self, messages, **params) -> int:
+        self.count_calls += 1
+        # Representative English-token ratio plus chat-role/template overhead.
+        return sum((len(message["content"].encode("utf-8")) + 3) // 4 + 8 for message in messages)
 
 
 def test_history_budget_trims_prompt_only_and_keeps_a_user_boundary(store):
@@ -94,6 +106,44 @@ def test_request_fitting_reserves_reply_tokens_inside_active_context(store):
     assert 1 <= params["max_tokens"] < 240
 
 
+def test_exact_engine_count_keeps_the_full_reply_budget_for_normal_english(store):
+    client = ExactCountingClient()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=2048,
+        context_safety_tokens=192,
+    )
+    system = "patient evidence-based tutor policy " * 45
+    question = "Please explain the main components of a cell with simple examples. " * 5
+
+    engine.chat("s1", question, system_prompt=system, max_tokens=1200)
+
+    sent, params = client.messages[-1], client.params[-1]
+    assert sent[0]["content"] == system
+    assert sent[-1]["content"] == question
+    assert params["max_tokens"] == 1200
+    assert client.count_calls == 1
+
+
+def test_failed_exact_counter_falls_back_to_the_byte_safe_fit(store):
+    class BrokenCounter(RecordingClient):
+        def count_prompt_tokens(self, messages, **params):
+            raise httpx.ConnectError("tokenizer endpoint unavailable")
+
+    client = BrokenCounter()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=320,
+        context_safety_tokens=32,
+    )
+    engine.chat("s1", "question " * 30, system_prompt="system rules " * 35, max_tokens=240)
+
+    sent, params = client.messages[-1], client.params[-1]
+    assert sum(_message_tokens(message) for message in sent) + params["max_tokens"] + 32 <= 320
+
+
 def test_transient_drop_resumes_same_turn_and_same_assistant_row(store):
     class RecoverOnce:
         def __init__(self) -> None:
@@ -127,6 +177,296 @@ def test_transient_drop_resumes_same_turn_and_same_assistant_row(store):
         ("user", "teach projectile motion"),
         ("assistant", "**Projectile Motion in Two Dimensions**"),
     ]
+
+
+def test_token_limit_finishes_automatically_in_the_same_assistant_row(store):
+    class LengthOnce:
+        def __init__(self) -> None:
+            self.calls: list[list[dict]] = []
+
+        def stream_events(self, messages, **params):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                yield "content", "So, in a simple"
+                raise InferenceStreamError(
+                    "inference reached its token limit before completion",
+                    retryable=True,
+                    finish_reason="length",
+                )
+            assert messages[-2]["content"] == "So, in a simple"
+            assert "Continue the interrupted assistant response" in messages[-1]["content"]
+            yield "content", " way, every component has a specific job."
+
+    client = LengthOnce()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=1,
+        # Length completion must not pay a network-outage backoff.
+        stream_retry_backoff_s=30.0,
+    )
+    started = time.monotonic()
+    cid, _mid, events = engine.stream_events_chat("s1", "explain cells")
+    received = list(events)
+
+    assert time.monotonic() - started < 0.2
+    assert ("recovering", "The tutor is finishing the answer automatically…") in received
+    expected = "So, in a simple way, every component has a specific job."
+    assert "".join(text for kind, text in received if kind == "content") == expected
+    assert [(message["role"], message["content"]) for message in store.get_messages(cid)] == [
+        ("user", "explain cells"),
+        ("assistant", expected),
+    ]
+
+
+def test_nonstreaming_token_limit_continues_before_persisting(store):
+    class LengthOnce:
+        def __init__(self) -> None:
+            self.calls: list[tuple[list[dict], dict]] = []
+
+        def chat_with_timings(self, messages, **params):
+            self.calls.append((messages, params))
+            if len(self.calls) == 1:
+                return Generation(
+                    "So, in a simple",
+                    20,
+                    5,
+                    0.1,
+                    50.0,
+                    False,
+                    finish_reason="length",
+                )
+            assert params["enable_thinking"] is False
+            assert messages[-2]["content"] == "So, in a simple"
+            return Generation(
+                " way, cells are tiny systems.",
+                25,
+                7,
+                0.1,
+                70.0,
+                False,
+                finish_reason="stop",
+            )
+
+    client = LengthOnce()
+    engine = ChatEngine(client, store, stream_retry_attempts=1)
+
+    result = engine.chat("s1", "explain cells", max_tokens=1200, enable_thinking=True)
+
+    expected = "So, in a simple way, cells are tiny systems."
+    assert result.reply == expected
+    assert result.generation is not None and result.generation.finish_reason == "stop"
+    assert [
+        (message["role"], message["content"])
+        for message in store.get_messages(result.conversation_id)
+    ] == [
+        ("user", "explain cells"),
+        ("assistant", expected),
+    ]
+
+
+def test_nonstreaming_reasoning_only_length_retries_as_a_direct_answer(store):
+    class ReasoningLengthOnce:
+        def __init__(self) -> None:
+            self.calls: list[dict] = []
+
+        def chat_with_timings(self, messages, **params):
+            self.calls.append(params)
+            if len(self.calls) == 1:
+                return Generation("", 20, 256, 1.0, 256.0, False, finish_reason="length")
+            assert params["enable_thinking"] is False
+            return Generation("A direct hint.", 20, 4, 0.1, 40.0, False, finish_reason="stop")
+
+    client = ReasoningLengthOnce()
+    engine = ChatEngine(client, store, stream_retry_attempts=1)
+
+    result = engine.chat("s1", "hint", max_tokens=256, enable_thinking=True)
+
+    assert result.reply == "A direct hint."
+    assert len(client.calls) == 2
+
+
+def test_nonstreaming_clean_retry_requires_new_answer_content(store):
+    class EmptyThenProgress:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat_with_timings(self, messages, **params):
+            self.calls += 1
+            if self.calls == 1:
+                return Generation(
+                    "So, in a simple", 10, 5, 0.1, 50.0, False, finish_reason="length"
+                )
+            if self.calls == 2:
+                return Generation("", 10, 0, 0.1, 0.0, False, finish_reason="stop")
+            return Generation(
+                " way, the parts cooperate.",
+                10,
+                6,
+                0.1,
+                60.0,
+                False,
+                finish_reason="stop",
+            )
+
+    client = EmptyThenProgress()
+    engine = ChatEngine(client, store, stream_retry_attempts=2)
+
+    result = engine.chat("s1", "explain cells", max_tokens=1200)
+
+    assert result.reply == "So, in a simple way, the parts cooperate."
+    assert client.calls == 3
+
+
+def test_nonstreaming_later_transport_failure_preserves_accumulated_partial(store):
+    class LengthThenDrop:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat_with_timings(self, messages, **params):
+            self.calls += 1
+            if self.calls == 1:
+                return Generation(
+                    "So, in a simple", 10, 5, 0.1, 50.0, False, finish_reason="length"
+                )
+            raise httpx.ReadError("socket reset")
+
+    client = LengthThenDrop()
+    engine = ChatEngine(client, store, stream_retry_attempts=2)
+
+    with pytest.raises(InferenceStreamError, match="socket reset") as caught:
+        engine.chat("s1", "explain cells", max_tokens=1200)
+
+    assert caught.value.partial_text == "So, in a simple"
+    conversations = store.list_conversations("s1")
+    assert len(conversations) == 1
+    assert [
+        (message["role"], message["content"])
+        for message in store.get_messages(conversations[0]["id"])
+    ] == [
+        ("user", "explain cells"),
+        ("assistant", "So, in a simple"),
+    ]
+
+
+def test_reasoning_only_length_retries_as_a_direct_answer(store):
+    class ReasoningLimitOnce:
+        def __init__(self) -> None:
+            self.calls: list[dict] = []
+
+        def stream_events(self, messages, **params):
+            self.calls.append(params)
+            if len(self.calls) == 1:
+                assert params["enable_thinking"] is True
+                yield "reasoning", "private reasoning that consumed the cap"
+                raise InferenceStreamError(
+                    "inference reached its token limit before completion",
+                    retryable=True,
+                    finish_reason="length",
+                )
+            assert params["enable_thinking"] is False
+            yield "content", "A concise direct answer."
+
+    client = ReasoningLimitOnce()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=1,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat(
+        "s1", "give me a hint", max_tokens=256, enable_thinking=True
+    )
+    received = list(events)
+
+    assert "".join(text for kind, text in received if kind == "content") == (
+        "A concise direct answer."
+    )
+    assert store.get_messages(cid)[-1]["content"] == "A concise direct answer."
+    assert len(client.calls) == 2
+
+
+def test_streaming_clean_retry_requires_new_answer_content(store):
+    class EmptyThenProgress:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def stream_events(self, messages, **params):
+            self.calls += 1
+            if self.calls == 1:
+                yield "content", "So, in a simple"
+                raise InferenceStreamError(
+                    "inference reached its token limit before completion",
+                    retryable=True,
+                    finish_reason="length",
+                )
+            if self.calls == 2:
+                return
+            yield "content", " way, the parts cooperate."
+
+    client = EmptyThenProgress()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=2,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat("s1", "explain cells", max_tokens=1200)
+    received = list(events)
+
+    assert "".join(text for kind, text in received if kind == "content") == (
+        "So, in a simple way, the parts cooperate."
+    )
+    assert store.get_messages(cid)[-1]["content"] == ("So, in a simple way, the parts cooperate.")
+    assert client.calls == 3
+
+
+def test_structured_length_discards_the_partial_root_and_regenerates_valid_json(store):
+    complete = '{"steps":[{"description":"complete"}]}'
+
+    class StructuredLengthOnce:
+        def __init__(self) -> None:
+            self.calls: list[tuple[list[dict], dict]] = []
+
+        def stream_events(self, messages, **params):
+            self.calls.append((messages, params))
+            if len(self.calls) == 1:
+                yield "content", '{"steps":[{"description":"first"}'
+                raise InferenceStreamError(
+                    "inference reached its token limit before completion",
+                    retryable=True,
+                    finish_reason="length",
+                )
+            assert params["enable_thinking"] is False
+            assert messages[-1]["role"] == "user"
+            assert all("Continue the interrupted" not in message["content"] for message in messages)
+            yield "content", complete
+
+    client = StructuredLengthOnce()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=1,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat(
+        "s1",
+        "mark this",
+        max_tokens=1200,
+        enable_thinking=True,
+        response_format={"type": "json_schema", "json_schema": {"type": "object"}},
+    )
+    received = list(events)
+    text = "".join(value for kind, value in received if kind == "content")
+
+    assert text == complete
+    assert json.loads(text)["steps"][0]["description"] == "complete"
+    assert store.get_messages(cid)[-1]["content"] == complete
+    assert len(client.calls) == 2
 
 
 def test_recovery_fit_keeps_original_question_and_removes_repeated_boundary(store):

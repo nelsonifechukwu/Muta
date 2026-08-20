@@ -38,9 +38,7 @@ def test_no_api_key_means_no_auth_header(monkeypatch):
 
 def test_template_kwargs_omitted_for_strict_providers(monkeypatch):
     seen = _capture_post(monkeypatch)
-    InferenceClient("http://cloud", template_kwargs=False).chat(
-        [{"role": "user", "content": "hi"}]
-    )
+    InferenceClient("http://cloud", template_kwargs=False).chat([{"role": "user", "content": "hi"}])
     assert "chat_template_kwargs" not in seen["json"]
 
 
@@ -71,5 +69,32 @@ def test_stream_carries_the_auth_header_too(monkeypatch):
         return _FakeStream()
 
     monkeypatch.setattr(httpx, "stream", fake_stream)
-    list(InferenceClient("http://cloud", api_key="sk-2").stream_events([{"role": "user", "content": "hi"}]))
+    list(
+        InferenceClient("http://cloud", api_key="sk-2").stream_events(
+            [{"role": "user", "content": "hi"}]
+        )
+    )
     assert seen["headers"].get("authorization") == "Bearer sk-2"
+
+
+def test_nonstreaming_generation_preserves_the_finish_reason(monkeypatch):
+    def fake_post(url, json=None, timeout=None, headers=None):
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {"content": "So, in a simple"},
+                        "finish_reason": "length",
+                    }
+                ],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+            },
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    result = InferenceClient().chat_with_timings([{"role": "user", "content": "hi"}])
+    assert result.text == "So, in a simple"
+    assert result.finish_reason == "length"

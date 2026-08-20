@@ -8,6 +8,7 @@ queue position, or an honest refusal — the paths a judge actually walks.
 from __future__ import annotations
 
 import io
+import json
 import threading
 import time
 
@@ -15,12 +16,14 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from orchestrator.gateway import deps
+from orchestrator import bench_metrics
+from orchestrator.gateway import deps, routes
 from orchestrator.gateway.generations import GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.main import app
 from runtime.chat import ChatResult
+from runtime.client import InferenceStreamError
 from runtime.vision import VisionManager
 
 client = TestClient(app)
@@ -143,6 +146,20 @@ def test_engine_down_is_a_503_not_a_stack_trace(wired):
     assert isinstance(detail, str) and "try again" in detail and "Traceback" not in detail
 
 
+def test_legacy_length_exhaustion_is_a_friendly_503(wired):
+    engine, *_ = wired
+    engine.raises = InferenceStreamError(
+        "token limit exhausted",
+        retryable=False,
+        finish_reason="length",
+        partial_text="A saved partial",
+    )
+    response = client.post("/v1/tutor/chat", json=turn())
+
+    assert response.status_code == 503
+    assert "partial reply is saved" in response.json()["detail"]
+
+
 def test_the_slot_is_released_even_when_the_engine_fails(wired):
     """Otherwise one dead turn leaks a lane and the classroom loses a slot per crash."""
     engine, _, sessions, _ = wired
@@ -208,6 +225,48 @@ def test_streaming_turn_emits_reasoning_then_deltas_then_done(wired):
     assert '"reasoning"' in events[0]
     assert '"delta"' in events[1]
     assert '"done": true' in events[-1] and '"ttft_s"' in events[-1]
+
+
+def test_buffered_structured_stream_does_not_report_replay_as_decode_speed(wired, monkeypatch):
+    """Marking JSON is held until one complete root exists, then replayed from memory.
+
+    Timing that replay would create a fictitious, enormous model rate and contaminate the
+    shared benchmark window. Structured streams therefore report no live decode sample.
+    """
+    bench_metrics.reset()
+    original_params = routes.params_for_mode
+    monkeypatch.setattr(
+        routes,
+        "params_for_mode",
+        lambda mode: {
+            **original_params(mode),
+            "response_format": {"type": "json_schema", "json_schema": {"type": "object"}},
+        },
+    )
+    response = client.post(
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "mark this"},
+    )
+    frames = [
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+
+    done = frames[-1]
+    assert done["done"] is True
+    assert done["completion_tokens"] is None
+    assert done["tokens_per_second"] is None
+    assert done["ttft_s"] is None
+    assert bench_metrics.snapshot()["count"] == 0
+
+
+def test_legacy_structured_stream_also_suppresses_replay_metrics(wired):
+    response = client.post("/v1/tutor/chat/stream", json=turn(mode="marking"))
+    frames = [
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+    assert frames[-1]["completion_tokens"] is None
+    assert frames[-1]["ttft_s"] is None
 
 
 def test_stream_done_reports_the_answer_source(wired):
@@ -453,8 +512,7 @@ def test_slow_preparation_cannot_reserve_a_physical_lane_ahead_of_fifo(wired):
     assert generations.active("s1") == []
     assert generations.get(fast.json()["job_id"]).snapshot().state == "completed"
     assert (
-        generations.get(slow_response["response"].json()["job_id"]).snapshot().state
-        == "completed"
+        generations.get(slow_response["response"].json()["job_id"]).snapshot().state == "completed"
     )
     assert sum(slot.busy for slot in sessions.slots) == 0
 

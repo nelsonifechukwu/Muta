@@ -19,9 +19,18 @@ Message = dict[str, str]
 class InferenceStreamError(RuntimeError):
     """A structured error frame emitted after an SSE response has already started."""
 
-    def __init__(self, message: str, *, retryable: bool = False) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        retryable: bool = False,
+        finish_reason: str | None = None,
+        partial_text: str = "",
+    ) -> None:
         super().__init__(message)
         self.retryable = retryable
+        self.finish_reason = finish_reason
+        self.partial_text = partial_text
 
 
 @dataclass(frozen=True)
@@ -39,6 +48,7 @@ class Generation:
     elapsed_s: float
     tokens_per_second: float
     from_wall_clock: bool
+    finish_reason: str | None = None
 
 
 class InferenceClient:
@@ -85,6 +95,45 @@ class InferenceClient:
                 payload["reasoning_budget_tokens"] = reasoning_budget
         return payload
 
+    def count_prompt_tokens(self, messages: list[Message], **params) -> int:
+        """Count the exact chat-template prompt with the already-loaded local tokenizer.
+
+        llama-server owns both the model's chat template and tokenizer. Asking it avoids
+        shipping a second tokenizer (and its RAM) in Python, while keeping context fitting
+        accurate enough that ordinary English is not treated as one token per byte. Callers
+        retain a conservative local fallback if either optional endpoint is unavailable.
+        """
+        template_body: dict = {
+            "messages": messages,
+            "add_generation_prompt": True,
+        }
+        if self.template_kwargs:
+            template_body["chat_template_kwargs"] = {
+                "enable_thinking": params.get("enable_thinking", self.enable_thinking)
+            }
+        probe_timeout = min(self.timeout, 5.0)
+        rendered = httpx.post(
+            f"{self.base_url}/apply-template",
+            json=template_body,
+            timeout=probe_timeout,
+            headers=self._headers,
+        )
+        rendered.raise_for_status()
+        prompt = rendered.json().get("prompt")
+        if not isinstance(prompt, str):
+            raise TypeError("llama-server did not return a rendered chat prompt")
+        tokenized = httpx.post(
+            f"{self.base_url}/tokenize",
+            json={"content": prompt, "add_special": True},
+            timeout=probe_timeout,
+            headers=self._headers,
+        )
+        tokenized.raise_for_status()
+        tokens = tokenized.json().get("tokens")
+        if not isinstance(tokens, list) or not all(isinstance(token, int) for token in tokens):
+            raise ValueError("llama-server did not return prompt token ids")
+        return len(tokens)
+
     def chat(self, messages: list[Message], **params) -> str:
         """Non-streaming completion → the assistant's full reply text."""
         return self.chat_with_timings(messages, **params).text
@@ -103,7 +152,8 @@ class InferenceClient:
         elapsed = time.monotonic() - started
         body = r.json()
 
-        text = body["choices"][0]["message"]["content"]
+        choice = body["choices"][0]
+        text = choice["message"].get("content") or ""
         usage = body.get("usage") or {}
         completion_tokens = int(usage.get("completion_tokens") or 0)
 
@@ -125,6 +175,9 @@ class InferenceClient:
             elapsed_s=elapsed,
             tokens_per_second=rate,
             from_wall_clock=from_wall_clock,
+            finish_reason=(
+                str(choice["finish_reason"]) if choice.get("finish_reason") is not None else None
+            ),
         )
 
     def stream(self, messages: list[Message], **params) -> Iterator[str]:
@@ -155,6 +208,7 @@ class InferenceClient:
         ) as r:
             r.raise_for_status()
             terminal = False
+            finish_reason: str | None = None
             for line in r.iter_lines():
                 if not line or not line.startswith("data: "):
                     continue
@@ -191,8 +245,10 @@ class InferenceClient:
                     delta = choice["delta"]
                 except (KeyError, IndexError, TypeError):
                     continue
-                if choice.get("finish_reason") is not None:
+                reason = choice.get("finish_reason")
+                if reason is not None:
                     terminal = True
+                    finish_reason = str(reason)
                 reasoning = delta.get("reasoning_content")
                 if reasoning:
                     yield "reasoning", reasoning
@@ -206,4 +262,13 @@ class InferenceClient:
                 raise InferenceStreamError(
                     "inference stream ended before completion",
                     retryable=True,
+                )
+            if finish_reason == "length":
+                # This is a valid HTTP/SSE exchange but not a complete answer. Surface it through
+                # ChatEngine's same-row continuation path instead of silently persisting a
+                # mid-sentence response as successful completion.
+                raise InferenceStreamError(
+                    "inference reached its token limit before completion",
+                    retryable=True,
+                    finish_reason=finish_reason,
                 )

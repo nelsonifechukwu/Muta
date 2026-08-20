@@ -16,10 +16,11 @@ from runtime.cloud import CloudFallbackClient
 
 
 class FakeStreamClient:
-    def __init__(self, events=None, fail_after: int | None = None, exc=None):
+    def __init__(self, events=None, fail_after: int | None = None, exc=None, token_count=17):
         self.events = events or []
         self.fail_after = fail_after  # raise after yielding this many events
         self.exc = exc or ConnectionError("cloud down")
+        self.token_count = token_count
         self.calls = 0
 
     def stream_events(self, messages, **params):
@@ -41,6 +42,10 @@ class FakeStreamClient:
         if self.fail_after == 0:
             raise self.exc
         return "generation"
+
+    def count_prompt_tokens(self, messages, **params):
+        self.calls += 1
+        return self.token_count
 
 
 CLOUD_EVENTS = [("content", "from "), ("content", "cloud")]
@@ -106,7 +111,7 @@ def test_mid_stream_cloud_failure_propagates_after_the_prefix():
     got = []
     with pytest.raises(ConnectionError):
         for ev in c.stream_events([]):
-            got.append(ev)
+            got.append(ev)  # noqa: PERF402 — retain the prefix emitted before the expected error
     assert got == [("source", "cloud"), CLOUD_EVENTS[0]]
     assert local.calls == 0, "a half-streamed reply must not silently restart elsewhere"
 
@@ -151,3 +156,13 @@ def test_chat_with_timings_falls_back_on_cloud_exception():
     c = _client(cloud, local)
     assert c.chat_with_timings([]) == "generation"
     assert c.last_source == "local"
+
+
+def test_context_fitting_always_uses_the_local_model_tokenizer():
+    cloud = FakeStreamClient(token_count=999)
+    local = FakeStreamClient(token_count=23)
+    c = _client(cloud, local, online=True)
+
+    assert c.count_prompt_tokens([{"role": "user", "content": "question"}]) == 23
+    assert cloud.calls == 0
+    assert local.calls == 1
