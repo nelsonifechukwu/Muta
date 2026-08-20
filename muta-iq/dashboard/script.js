@@ -58,8 +58,9 @@ const REPORT_FUNNEL = [
   { name: "Qwen3.5 4B", gb: 2.55, acc: 73.3, lane: "reasoning" },
   { name: "Qwen3.5 2B", gb: 1.19, acc: 64.8, lane: "reasoning" },
   { name: "Qwen3.5 0.8B", gb: 0.50, acc: 51.3, lane: "reasoning" },
+  { name: "Qwen3.5 0.8B final", gb: 0.47, acc: 64, lane: "audit", selected: true },
+  { name: "Math-Expert 0.6B", gb: 0.37, acc: 68, lane: "audit", leader: true },
   { name: "Qwen3 1.7B Q4_0", gb: 0.91, acc: 72, lane: "audit" },
-  { name: "Qwen3 1.7B Q4_K_M", gb: 0.96, acc: 72, lane: "audit", selected: true },
   { name: "Qwen3.5 0.8B Q4_K_M", gb: 0.50, acc: 68, lane: "audit" },
   { name: "BitCPM4 8B TQ2_0", gb: 2.06, acc: 88, lane: "audit" },
   { name: "Qwen3.5 4B IQ4_XS", gb: 2.31, acc: 76, lane: "audit" },
@@ -191,28 +192,29 @@ function renderRuntimeChart() {
 
 function renderModelFunnelChart() {
   const el = $("model-funnel-chart");
-  const width = 720, height = 500, left = 190, right = 65;
+  const reasoning = REPORT_FUNNEL.filter((item) => item.lane === "reasoning");
+  const audit = REPORT_FUNNEL.filter((item) => item.lane === "audit");
+  const width = 720, height = 265 + audit.length * 31, left = 190, right = 65;
   const x = (gb) => left + gb / 2.8 * (width - left - right);
   let grid = "";
   [0, .5, 1, 1.5, 2, 2.5].forEach((tick) => {
     const px = x(tick);
-    grid += `<line x1="${px}" y1="42" x2="${px}" y2="454" class="svg-grid"/>${svgText(px, 476, `${tick.toFixed(1)} GiB`, 'text-anchor="middle" class="svg-tick"')}`;
+    grid += `<line x1="${px}" y1="42" x2="${px}" y2="${height - 46}" class="svg-grid"/>${svgText(px, height - 20, `${tick.toFixed(1)} GiB`, 'text-anchor="middle" class="svg-tick"')}`;
   });
-  const reasoning = REPORT_FUNNEL.filter((item) => item.lane === "reasoning");
-  const audit = REPORT_FUNNEL.filter((item) => item.lane === "audit");
   const renderRows = (items, startY, gap, lane) => items.map((item, i) => {
     const py = startY + i * gap, px = x(item.gb);
-    const cls = item.selected ? "selected" : item.muted ? "muted" : lane;
-    const scoreLabel = lane === "reasoning" ? `${item.acc.toFixed(1)} four-task mean` : `${item.acc.toFixed(0)}% ARC proxy`;
+    const cls = item.selected ? "selected" : item.leader ? "leader" : item.muted ? "muted" : lane;
+    const status = item.selected ? " · risk-adjusted" : item.leader ? " · raw leader" : "";
+    const scoreLabel = lane === "reasoning" ? `${item.acc.toFixed(1)} four-task mean` : `${item.acc.toFixed(0)}% ARC proxy${status}`;
     return `${svgText(left - 12, py + 3, item.name, 'text-anchor="end" class="svg-row-label"')}
       <line x1="${left}" y1="${py}" x2="${px}" y2="${py}" class="lollipop-line ${cls}"/>
-      <circle cx="${px}" cy="${py}" r="${item.selected ? 7 : 5}" class="svg-point ${cls}"/><title>${esc(item.name)}: ${item.gb} GiB; ${scoreLabel}</title>
+      <circle cx="${px}" cy="${py}" r="${item.selected || item.leader ? 7 : 5}" class="svg-point ${cls}"/><title>${esc(item.name)}: ${item.gb} GiB; ${scoreLabel}</title>
       ${svgText(Math.min(px + 10, width - right + 5), py + 3, scoreLabel, `class="svg-score-label ${cls}"`)}`;
   }).join("");
   const points = renderRows(reasoning, 82, 40, "reasoning") + renderRows(audit, 245, 29, "audit");
   el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-    .svg-grid{stroke:#e6e2db;stroke-width:1}.svg-tick{font-size:9px;fill:#8a8580}.panel-title{font-size:9px;fill:#504945;font-weight:800;letter-spacing:1px}.panel-note{font-size:8px;fill:#8a8580}.svg-row-label{font-size:8.5px;fill:#3c3836}.lollipop-line{stroke:#9dbcac;stroke-width:2}.lollipop-line.audit{stroke:#9dbcd5}.lollipop-line.muted{stroke:#cec8be}.lollipop-line.selected{stroke:#af3a03}.svg-point{fill:#427b58;stroke:#ffffff;stroke-width:2}.svg-point.audit{fill:#1b6ca8}.svg-point.selected{fill:#af3a03;stroke:#ffffff}.svg-point.muted{fill:#aaa49d}.svg-score-label{font-size:8px;fill:#427b58}.svg-score-label.audit{fill:#1b6ca8}.svg-score-label.selected{fill:#af3a03;font-weight:800}.svg-score-label.muted{fill:#aaa49d}
-  </style>${grid}${svgText(0, 20, "REASONING STUDY", 'class="panel-title"')}${svgText(0, 34, "Four-task mean; development host", 'class="panel-note"')}${svgText(0, 196, "AUDIT CANDIDATES", 'class="panel-title"')}${svgText(0, 210, "ARC-Easy proxy; separate task and engine regime", 'class="panel-note"')}<line x1="0" y1="180" x2="${width}" y2="180" class="svg-grid"/>${points}</svg>`;
+    .svg-grid{stroke:#e6e2db;stroke-width:1}.svg-tick{font-size:9px;fill:#8a8580}.panel-title{font-size:9px;fill:#504945;font-weight:800;letter-spacing:1px}.panel-note{font-size:8px;fill:#8a8580}.svg-row-label{font-size:8.5px;fill:#3c3836}.lollipop-line{stroke:#9dbcac;stroke-width:2}.lollipop-line.audit{stroke:#9dbcd5}.lollipop-line.muted{stroke:#cec8be}.lollipop-line.selected{stroke:#af3a03}.lollipop-line.leader{stroke:#427b58}.svg-point{fill:#427b58;stroke:#ffffff;stroke-width:2}.svg-point.audit{fill:#1b6ca8}.svg-point.selected{fill:#af3a03;stroke:#ffffff}.svg-point.leader{fill:#427b58;stroke:#282828}.svg-point.muted{fill:#aaa49d}.svg-score-label{font-size:8px;fill:#427b58}.svg-score-label.audit{fill:#1b6ca8}.svg-score-label.selected{fill:#af3a03;font-weight:800}.svg-score-label.leader{fill:#427b58;font-weight:800}.svg-score-label.muted{fill:#aaa49d}
+  </style>${grid}${svgText(0, 20, "REASONING STUDY", 'class="panel-title"')}${svgText(0, 34, "Four-task mean; development host", 'class="panel-note"')}${svgText(0, 196, "AUDIT CANDIDATES", 'class="panel-title"')}${svgText(0, 210, "ARC-Easy-50 proxy; separate task and engine regime", 'class="panel-note"')}<line x1="0" y1="180" x2="${width}" y2="180" class="svg-grid"/>${points}</svg>`;
 }
 
 function renderStreamingChart() {
@@ -283,7 +285,7 @@ function renderFaq() {
   $("faq-list").innerHTML = CHALLENGE_FAQ.map((item, i) => `<details class="faq-item"><summary><span class="faq-number">${String(i + 1).padStart(2, "0")}</span><span class="faq-question">${esc(item.q)}</span></summary><div class="faq-body"><div><h4>Challenge rule</h4><p>${esc(item.rule)}</p></div><div><h4>Muta progress</h4>${item.progress ? `<p>${esc(item.progress)}</p>` : '<div class="empty-progress" aria-label="No Muta progress recorded"></div>'}</div></div></details>`).join("");
 }
 
-function renderSensitivity(campaign) {
+function renderSensitivity(campaign, overnight) {
   if (!campaign || !$("sensitivity-floor")) return;
   const allowed = campaign.tps_max_sensitivity || [];
   const index = Math.max(0, Math.min(allowed.length - 1, Math.round(Number($("sensitivity-floor").value))));
@@ -291,17 +293,36 @@ function renderSensitivity(campaign) {
   $("sensitivity-floor").value = index;
   $("sensitivity-floor-value").value = floor;
   const lookup = (mapping) => mapping && (mapping[String(floor)] || mapping[Number(floor).toFixed(1)]);
-  const models = (campaign.models || []).map((model) => ({ model, score: lookup(model.scores) })).filter((entry) => entry.score).sort((a,b)=>b.score.s_total-a.score.s_total);
-  const winner = lookup(campaign.winners);
-  $("sensitivity-winner").textContent = winner ? shortName(winner.model) : "No result at this floor";
-  $("sensitivity-winner-score").textContent = winner ? `S = ${Number(winner.s_total).toFixed(2)}` : "";
+  const historical = (campaign.models || [])
+    .map((model) => ({ name: model.model, score: lookup(model.scores), current: false }))
+    .filter((entry) => entry.score);
+  const latest = overnight && overnight.finalists ? Object.values(overnight.finalists).map((entry) => {
+    const avx2 = entry.avx2_fixed_15;
+    const tps = Number(avx2.tg128_tps);
+    const rssGiB = Number(avx2.estimated_profiler_rss_mib) / 1024;
+    const sPerf = 100 * tps / Math.max(Number(floor), tps);
+    const sEff = 100 * Math.max(0, 7 - rssGiB) / 7;
+    const sTotal = .5 * Number(entry.official.arc_easy_50) + .3 * sPerf + .2 * sEff;
+    return {name: entry.official.model, score: {s_total: sTotal}, current: true};
+  }) : [];
+  const models = [...latest, ...historical].sort((a,b)=>b.score.s_total-a.score.s_total);
+  const winner = models[0];
+  const label = (file) => ({
+    "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": "Qwen3.5 0.8B final",
+    "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": "Math-Expert 0.6B",
+    "muta-tutor-qwen3-1.7b-q4_0.gguf": "Qwen3 1.7B Q4_0",
+    "Qwen3-1.7B-Q4_0-pure.gguf": "Qwen3 1.7B pure",
+    "bitcpm4-8b-tq2_0-envocab.gguf": "BitCPM4 8B TQ2_0",
+  }[file] || shortName(file));
+  $("sensitivity-winner").textContent = winner ? label(winner.name) : "No result at this floor";
+  $("sensitivity-winner-score").textContent = winner ? `S = ${Number(winner.score.s_total).toFixed(2)}` : "";
   const el = $("sensitivity-chart");
   const width=700, left=190, right=42, rowH=30, height=Math.max(130,models.length*rowH+35), plotW=width-left-right;
-  const rows=models.map((entry,i)=>{const y=8+i*rowH, w=Math.min(100,entry.score.s_total)/100*plotW;return `${svgText(left-8,y+13,shortName(entry.model.model),'text-anchor="end" class="sens-label"')}<rect x="${left}" y="${y}" width="${w}" height="17" rx="2" class="sens-bar ${i===0?'winner':''}"/>${svgText(left+w+6,y+13,Number(entry.score.s_total).toFixed(2),'class="sens-value"')}`}).join("");
-  el.innerHTML=`<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.sens-label{font-size:8px;fill:#6b6866}.sens-bar{fill:#d3bdca}.sens-bar.winner{fill:#8f3f71}.sens-value{font-size:8px;fill:#504945;font-weight:700}</style>${rows}</svg>`;
+  const rows=models.map((entry,i)=>{const y=8+i*rowH, w=Math.min(100,entry.score.s_total)/100*plotW;return `${svgText(left-8,y+13,label(entry.name),'text-anchor="end" class="sens-label"')}<rect x="${left}" y="${y}" width="${w}" height="17" rx="2" class="sens-bar ${i===0?'winner':''} ${entry.current?'current':''}"/>${svgText(left+w+6,y+13,Number(entry.score.s_total).toFixed(2),'class="sens-value"')}`}).join("");
+  el.innerHTML=`<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.sens-label{font-size:8px;fill:#6b6866}.sens-bar{fill:#d3bdca}.sens-bar.current{fill:#9dbcd5}.sens-bar.winner{fill:#8f3f71}.sens-value{font-size:8px;fill:#504945;font-weight:700}</style>${rows}</svg>`;
   $("sensitivity-chart-summary").textContent = models.length
     ? `At a ${floor} token-per-second cohort floor: ` + models.map((entry) =>
-      `${shortName(entry.model.model)} scores ${Number(entry.score.s_total).toFixed(2)}`).join("; ") + "."
+      `${label(entry.name)} scores ${Number(entry.score.s_total).toFixed(2)}`).join("; ") + "."
     : `No website-relative model scores are available at a ${floor} token-per-second cohort floor.`;
 }
 
@@ -359,7 +380,7 @@ function render() {
   renderRunCard(d);
   renderChart(d);
   renderTable(d);
-  renderSensitivity(d.campaign_alternative);
+  renderSensitivity(d.campaign_alternative, d.overnight);
 }
 
 function renderOvernight(campaign) {
@@ -1042,7 +1063,10 @@ for (const id of ["score-accuracy", "score-tps", "score-ram", "score-thermal"]) 
 for (const id of ["streaming-tps", "streaming-bandwidth"]) {
   $(id).addEventListener("input", updateStreamingBudget);
 }
-$("sensitivity-floor").addEventListener("input", () => renderSensitivity(state.data && state.data.campaign_alternative));
+$("sensitivity-floor").addEventListener("input", () => renderSensitivity(
+  state.data && state.data.campaign_alternative,
+  state.data && state.data.overnight,
+));
 document.addEventListener("click", (ev) => {
   const filter = ev.target.closest && ev.target.closest("[data-ledger-filter]");
   if (!filter) return;

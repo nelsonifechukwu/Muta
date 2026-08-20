@@ -115,22 +115,22 @@
       <div class="score-lab" id="score-lab">
         <div class="figure-head">
           <div><p class="figure-kicker">Interactive calculation</p><h3>Score component sensitivity</h3></div>
-          <output class="score-output" id="score-total" aria-live="polite">80.45</output>
+          <output class="score-output" id="score-total" aria-live="polite">77.93</output>
         </div>
         <div class="controls-grid">
-          <label>Accuracy proxy <output id="score-accuracy-value">72</output>
-            <input id="score-accuracy" type="range" min="0" max="100" step="1" value="72">
+          <label>Accuracy proxy <output id="score-accuracy-value">68</output>
+            <input id="score-accuracy" type="range" min="0" max="100" step="1" value="68">
           </label>
-          <label>Generation, tok/s <output id="score-tps-value">15.67</output>
-            <input id="score-tps" type="range" min="0" max="20" step="0.01" value="15.67">
+          <label>Generation, tok/s <output id="score-tps-value">12.72</output>
+            <input id="score-tps" type="range" min="0" max="20" step="0.01" value="12.72">
           </label>
-          <label>Peak RSS, GiB <output id="score-ram-value">1.94</output>
-            <input id="score-ram" type="range" min="0.25" max="7" step="0.001" value="1.943">
+          <label>Peak RSS, GiB <output id="score-ram-value">0.53</output>
+            <input id="score-ram" type="range" min="0.25" max="7" step="0.001" value="0.527656">
           </label>
           <label class="toggle-control"><input id="score-thermal" type="checkbox"> Apply the 10-point thermal penalty</label>
         </div>
         <div class="score-breakdown" id="score-breakdown" aria-label="Score contribution breakdown"></div>
-        <p class="fine-print">This control reproduces the published profiler formula. It does not write to the run database or alter campaign results.</p>
+        <p class="fine-print">Preloaded with the current direct scalar leader, Math-Expert 0.6B Q4_K_M. This control does not write to the run database or alter campaign results.</p>
       </div>
 
       <aside class="design-note">
@@ -160,7 +160,7 @@
         <article class="evidence-card avx2">
           <p class="evidence-label"><span></span>Controlled AVX2 proxy</p>
           <h3>Paired ISA benchmark</h3>
-          <p>The dated 19 August five-model rerun selected Q4_K_M. The 20 August extension adds two finalists and selects Math-Expert under ARC-Easy-50.</p>
+          <p>The dated 19 August five-model rerun selected Q4_K_M. The complete 20 August ledger selects Math-Expert under ARC-Easy-50 and Qwen3.5 0.8B under the larger matched diagnostic.</p>
         </article>
         <article class="evidence-card sensitivity">
           <p class="evidence-label"><span></span>Website sensitivity</p>
@@ -197,7 +197,7 @@
         <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Selected runtime configurations</h3></div><span class="evidence-badge development">Development</span></div>
         <div class="svg-chart" id="runtime-chart" role="img" aria-label="Comparison of selected runtime experiment throughput and memory" aria-describedby="runtime-chart-summary"></div>
         <p class="sr-only" id="runtime-chart-summary">Docker baseline: 5.3 tokens per second and 4.77 GB, still rising. Resource caps: 6.72 tokens per second and 4.44 GB. Native default: 29.78 tokens per second and 3,519 MiB physical footprint. Six threads with unified KV: 31.09 tokens per second and 3,137 MiB. Draft speculation: 24.72 tokens per second; host memory was not reliably measured.</p>
-        <figcaption><span>Fig. 2</span> Selected development runs explain engineering decisions. Only the direct profiler campaign ranks submission artifacts.</figcaption>
+        <figcaption><span>Fig. 2</span> Historical development runs from 30 July–1 August. They explain runtime decisions but do not rank the current submission artifacts.</figcaption>
       </figure>
 
       <div class="finding-pair">
@@ -218,11 +218,11 @@
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Separate accuracy evaluations</p><h3>Candidate measurements</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
         <div class="svg-chart tall-chart" id="model-funnel-chart" role="img" aria-label="Model size, accuracy proxy, and campaign status for evaluated candidate models" aria-describedby="model-funnel-summary"></div>
-        <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy: Qwen3 1.7B Q4_0 is 0.91 GiB at 72%; Qwen3 1.7B Q4_K_M is 0.96 GiB at 72%; Qwen3.5 0.8B is 0.50 GiB at 68%; BitCPM4 8B is 2.06 GiB at 88%; Qwen3.5 4B is 2.31 GiB at 76%; LFM2.5 1.2B is 0.65 GiB at 56%; and Qwen2.5 Math 1.5B is 0.87 GiB at 24%.</p>
-        <figcaption><span>Fig. 3</span> Qwen3.5 4B had the highest result in the four-task reasoning study. The later scalar and AVX2 campaigns moved the score leaders to smaller Qwen-derived artifacts.</figcaption>
+        <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy. The current Qwen3.5 0.8B final is 0.47 GiB at 64% and is the risk-adjusted recommendation. Math-Expert 0.6B is 0.37 GiB at 68% and is the raw fixed-15 leader. Earlier candidates remain shown as dated comparison points.</p>
+        <figcaption><span>Fig. 3</span> The current recommendation and raw score leader are marked separately. Older candidates remain as comparison points; their accuracy values use the stated ARC-Easy proxy rather than the four-task development mean.</figcaption>
       </figure>
 
-      <p>Qwen3.5 4B led the 2B model by 15.7 points across mathematics and physics, so it remained the accuracy baseline. In the audit campaign, MiniCPM recorded 0–3% on GSM8K and Qwen2.5 Math recorded 24% on ARC-Easy with the tested prompt path. BitCPM 8B produced the highest ARC-Easy result but low scalar throughput.</p>
+      <p>Qwen3.5 4B led the earlier scale study. BitCPM 8B later produced the highest ARC-Easy-50 result but low scalar throughput. The 20 August search selected the two sub-1B finalists shown above: Qwen3.5 for the broader diagnostic evidence and Math-Expert for the highest raw fixed-15 total.</p>
     </section>
 
     <section class="chapter" id="quantization" aria-labelledby="quant-title">
@@ -250,7 +250,7 @@
             .kd-band-text { font: 12px var(--sans, sans-serif); fill: #504945; }
           </style>
           <rect class="kd-band" x="0" y="0" width="720" height="30" rx="2"/>
-          <text class="kd-band-text" x="12" y="19">Audit binary · llama.cpp b10175 · built with no AVX, AVX2, FMA or F16C</text>
+          <text class="kd-band-text" x="12" y="19">Scalar participant binary · llama.cpp b10175 · no AVX, AVX2, FMA or F16C</text>
 
           <text class="kd-head" x="0" y="58">Tensor type in the GGUF</text>
           <text class="kd-head" x="330" y="58">Kernel the binary can reach</text>
@@ -258,13 +258,13 @@
 
           <!-- fast path -->
           <text class="kd-type" x="0" y="98">Q4_0</text>
-          <text class="kd-type-note" x="52" y="98">every matrix, tied head</text>
+          <text class="kd-type-note" x="52" y="98">current Qwen final</text>
           <path class="kd-wire fast" d="M 190 93 H 330"/>
           <rect x="330" y="76" width="230" height="38" fill="#eaf1f8" stroke="#1b6ca8" stroke-width="1.5"/>
           <text class="kd-box-label" x="344" y="93" fill="#1b6ca8">Hand-written SSSE3 kernel</text>
           <text class="kd-box-sub" x="344" y="107">vectorised, 16 bytes per instruction</text>
-          <text class="kd-rate" x="586" y="93" fill="#1b6ca8">9.79 tok/s</text>
-          <text class="kd-rate-note" x="586" y="107">scalar Q4_0 artifact</text>
+          <text class="kd-rate" x="586" y="93" fill="#1b6ca8">12.63 tok/s</text>
+          <text class="kd-rate-note" x="586" y="107">current Qwen final</text>
 
           <!-- slow path -->
           <text class="kd-type" x="0" y="160">Q4_K_M, Q5_K_M</text>
@@ -278,24 +278,24 @@
           <rect x="330" y="171" width="230" height="38" fill="#f4f2ee" stroke="#cec8be" stroke-width="1.5"/>
           <text class="kd-box-label" x="344" y="188" fill="#504945">Generic C fallback</text>
           <text class="kd-box-sub" x="344" y="202">scalar, one weight at a time</text>
-          <text class="kd-rate" x="586" y="188" fill="#6b6866">0.8–1.1 tok/s</text>
-          <text class="kd-rate-note" x="586" y="202">4B and 8B rows</text>
+          <text class="kd-rate" x="586" y="188" fill="#6b6866">0.81–12.72 tok/s</text>
+          <text class="kd-rate-note" x="586" y="202">current six-model ledger</text>
 
           <line x1="0" y1="252" x2="720" y2="252" stroke="#e6e2db"/>
           <text class="kd-box-sub" x="0" y="272">Source analysis maps Q4_0 to SSSE3 and the other listed types to generic C; campaign rows show model-level rates.</text>
         </svg>
-        <p class="sr-only" id="kernel-diagram-summary">On the scalar audit build, Q4_0 tensors use a hand-written SSSE3 kernel and the Q4_0 artifact decodes at 9.79 tokens per second. K-quants, i-quants, and ternary types use a scalar generic C implementation, and the 4B and 8B campaign entries decode at 0.8 to 1.1 tokens per second. The portable AVX2 build enables vector kernels for these tensor types and changes the quant ordering.</p>
-        <figcaption><span>Fig. 4</span> The scalar build uses the SSSE3 implementation for Q4_0 and generic C implementations for the listed K-quants, I-quants, and ternary types. The portable build enables their AVX2 implementations.</figcaption>
+        <p class="sr-only" id="kernel-diagram-summary">On the scalar participant build, Q4_0 tensors use a hand-written SSSE3 kernel and the current Qwen final decodes at 12.63 tokens per second. K-quants, i-quants, and ternary types use scalar generic C implementations; their measured rates span 0.81 to 12.72 tokens per second across the current six-model ledger because model scale also differs. The portable AVX2 build enables vector kernels for these tensor types and changes the quant ordering.</p>
+        <figcaption><span>Fig. 4</span> Current scalar-ledger rates are shown beside the kernel paths. Model size also affects the measured range. The portable build enables AVX2 implementations for the listed tensor types.</figcaption>
       </figure>
 
       <p>In the 19 August controlled comparison, Q4_0 reached 9.99 scalar tok/s while Q4_K_M reached 5.30. Portable AVX2 increased them to 16.89 and 15.67 tok/s, respectively. Q4_K_M scored 80.4484 because its estimated repacking RSS was 59.7 MiB lower. The 20 August extension subsequently raised the AVX2 high score to 81.8803 with Math-Expert.</p>
 
       <h3 class="section-title">Artifact derivation</h3>
-      <p>The scripts in <code>opt/scripts/</code> reproduce the promoted SHA-256 from a pinned source.</p>
+      <p>The recommended Qwen artifact is reproduced from a pinned source by changing GGUF metadata only. Math-Expert remains an unchanged alternative artifact and is not part of this transformation.</p>
 
       <figure class="report-figure wide-figure">
         <svg viewBox="0 0 720 264" role="img" aria-labelledby="derivation-title" aria-describedby="derivation-summary">
-          <title id="derivation-title">Derivation of the evaluated GGUF and the isolated tied-head control</title>
+          <title id="derivation-title">Metadata-only derivation of the current recommended Qwen3.5 GGUF</title>
           <style>
             .dv-stage { fill: #ffffff; stroke: #cec8be; stroke-width: 1.5; }
             .dv-stage.final { stroke: #1b6ca8; fill: #eaf1f8; }
@@ -313,42 +313,42 @@
             </marker>
           </defs>
 
-          <rect class="dv-stage" x="0" y="52" width="150" height="66"/>
-          <text class="dv-name" x="12" y="72">bartowski source</text>
-          <text class="dv-meta" x="12" y="88">Q6_K head + Q4_1</text>
-          <text class="dv-size" x="12" y="108">1,232 MB</text>
+          <rect class="dv-stage" x="0" y="52" width="180" height="66"/>
+          <text class="dv-name" x="12" y="72">Pinned Qwen3.5 source</text>
+          <text class="dv-meta" x="12" y="88">444406dd…c652c</text>
+          <text class="dv-size" x="12" y="108">507,154,688 B</text>
 
-          <path class="dv-arrow" d="M 150 85 H 266" marker-end="url(#dv-tip)"/>
-          <text class="dv-op" x="152" y="30">llama-quantize --pure</text>
-          <text class="dv-op" x="152" y="44">+ drop output.weight</text>
+          <path class="dv-arrow" d="M 180 85 H 266" marker-end="url(#dv-tip)"/>
+          <text class="dv-op" x="182" y="30">bake_system_prompt.py</text>
+          <text class="dv-op" x="182" y="44">metadata and ChatML only</text>
 
           <rect class="dv-stage" x="270" y="52" width="180" height="66"/>
-          <text class="dv-name" x="282" y="72">Pure Q4_0, tied head</text>
-          <text class="dv-meta" x="282" y="88">all matrices Q4_0</text>
-          <text class="dv-size" x="282" y="108">974 MB</text>
+          <text class="dv-name" x="282" y="72">Embedded tutor policy</text>
+          <text class="dv-meta" x="282" y="88">English · thinking off</text>
+          <text class="dv-size" x="282" y="108">sampling defaults</text>
 
           <path class="dv-arrow" d="M 450 85 H 566" marker-end="url(#dv-tip)"/>
-          <text class="dv-op" x="452" y="30">bake_system_prompt.py</text>
-          <text class="dv-op" x="452" y="44">template · persona · sampling</text>
+          <text class="dv-op" x="452" y="30">write final GGUF</text>
+          <text class="dv-op" x="452" y="44">no tensor conversion</text>
 
           <rect class="dv-stage final" x="570" y="52" width="150" height="66"/>
           <text class="dv-name" x="582" y="72" fill="#1b6ca8">Evaluated artifact</text>
-          <text class="dv-meta" x="582" y="88">a98ce36e…fd63e</text>
-          <text class="dv-size" x="582" y="108" fill="#1b6ca8">974,198,528 B</text>
-          <text class="dv-delta" x="720" y="132" text-anchor="end" fill="#1b6ca8">−258 MB vs source</text>
+          <text class="dv-meta" x="582" y="88">c96df4ef…d5d7b</text>
+          <text class="dv-size" x="582" y="108" fill="#1b6ca8">507,156,160 B</text>
+          <text class="dv-delta" x="720" y="132" text-anchor="end" fill="#1b6ca8">+1,472 metadata bytes</text>
 
           <path class="dv-arrow" d="M 360 118 V 140"/>
           <rect class="dv-stage control" x="270" y="144" width="300" height="58"/>
-          <text class="dv-name" x="282" y="164">Isolated tied-versus-untied A/B</text>
-          <text class="dv-meta" x="282" y="181">untied ≈1,149 MB · tied 974 MB</text>
-          <text class="dv-delta" x="282" y="196">−175 MB · ARC-Easy 72% in both</text>
+          <text class="dv-name" x="282" y="164">Tensor-identity verification</text>
+          <text class="dv-meta" x="282" y="181">320 tensors · 496,192,768 tensor bytes</text>
+          <text class="dv-delta" x="282" y="196">all tensor payloads identical</text>
 
           <line x1="0" y1="220" x2="720" y2="220" stroke="#e6e2db"/>
           <text class="dv-op" x="0" y="240">Only the evaluated GGUF is submitted.</text>
           <text class="dv-op" x="0" y="256">Runtime flags, engine patches, and application code are not included.</text>
         </svg>
-        <p class="sr-only" id="derivation-summary">The bartowski source file at 1,232 MB has a Q6_K head and Q4_1 layers. Requantising it to pure Q4_0 and dropping the duplicated output weight produces a 974 MB tied-head model, a combined reduction of 258 MB. A separate tied-versus-untied pure-Q4 comparison measured the untied control at about 1,149 MB and the tied artifact at 974 MB. Tying saved about 175 MB, and both files scored 72% on ARC-Easy. Adding the chat template, tutoring persona, and sampling defaults produces the evaluated 974,198,528-byte artifact.</p>
-        <figcaption><span>Fig. 5</span> The source-to-artifact change combines requantisation and head tying. The separate A/B control attributes about 175 MB to the tied head alone.</figcaption>
+        <p class="sr-only" id="derivation-summary">The pinned Qwen3.5 0.8B Q4_0 source is 507,154,688 bytes with SHA-256 beginning 444406dd. The build adds the tutor policy, English language tag, non-thinking ChatML template, and sampling defaults without changing model tensors. The final artifact is 507,156,160 bytes with SHA-256 beginning c96df4ef. Verification confirms that all 320 tensors and 496,192,768 tensor bytes are identical.</p>
+        <figcaption><span>Fig. 5</span> The current recommendation differs from its pinned Qwen3.5 source only in GGUF metadata. The tensor-identity check permits transfer of the source AVX2 measurement; the final file itself completed the direct scalar profiler run.</figcaption>
       </figure>
 
       <details class="reasoning-check">
@@ -409,7 +409,7 @@
           <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Throughput and RSS by resident weight budget</h3></div><span class="evidence-badge development">Custom engine</span></div>
           <div class="svg-chart" id="streaming-chart" role="img" aria-label="Weight streaming throughput plotted against peak memory" aria-describedby="streaming-chart-summary"></div>
           <p class="sr-only" id="streaming-chart-summary">Stream all: 10.47 tokens per second at 279 MiB peak RSS. Pin 1,000 MB: 13.04 at 1,136 MiB. Pin 1,300 MB: 14.04 at 1,408 MiB. Pin 1,500 MB: 15.35 at 1,636 MiB. Fully resident: 18.70 at 2,129 MiB.</p>
-          <figcaption><span>Fig. 6</span> Each point pins more of the 2.2 GB model. The curve reaches 15 tok/s only after most of the weights are already resident.</figcaption>
+          <figcaption><span>Fig. 6</span> Historical custom-runtime experiment, completed before the current model campaign. Each point pins more of the 2.2 GB BitCPM model; the result is not a submission score.</figcaption>
         </figure>
       </div>
 
@@ -504,7 +504,7 @@
       </details>
 
       <h3 class="section-title">Sensitivity to the scoring formula</h3>
-      <p>Separately, the control below recalculates the AVX2 rows with the public website's cohort-relative denominator. This sensitivity analysis does not alter the profiler result.</p>
+      <p>Separately, the control below recalculates the complete current AVX2 roster with the public website's cohort-relative denominator. All rows use their ARC-Easy-50 proxy. This sensitivity analysis does not alter the profiler result.</p>
 
       <div class="sensitivity-lab">
         <label>Cohort <code>TPS_max</code> floor <output id="sensitivity-floor-value">15</output> tok/s
@@ -514,7 +514,7 @@
         <div class="sensitivity-result"><span>Highest total in this scenario</span><strong id="sensitivity-winner">Loading campaign data…</strong><small id="sensitivity-winner-score"></small></div>
         <div class="svg-chart" id="sensitivity-chart" role="img" aria-label="Website-relative model scores at the selected cohort throughput floor" aria-describedby="sensitivity-chart-summary"></div>
         <p class="sr-only" id="sensitivity-chart-summary" aria-live="polite"></p>
-        <p class="fine-print">Website-relative sensitivity result · AVX2 measurements · never combined with the direct no-AVX campaign.</p>
+        <p class="fine-print">Blue bars are the two 20 August finalists; purple marks the winner. Older AVX2 artifacts remain for comparison. This lane is never combined with the direct scalar campaign.</p>
       </div>
 
       <details class="reasoning-check">

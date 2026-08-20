@@ -91,14 +91,30 @@ def test_static_verdict_matches_overnight_recommendation() -> None:
     assert model["sha256"][-5:] in html
 
 
-def test_tied_head_claim_uses_the_isolated_control() -> None:
+def test_current_artifact_diagram_uses_tensor_identity_control() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+
+    assert "Pinned Qwen3.5 source" in html
+    assert "444406dd…c652c" in html
+    assert "c96df4ef…d5d7b" in html
+    assert "320 tensors · 496,192,768 tensor bytes" in html
+    assert "all tensor payloads identical" in html
+    assert "The current recommendation differs from its pinned Qwen3.5 source only in GGUF metadata" in html
+
+
+def test_all_current_visual_defaults_use_the_20_august_decision() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert "−175 MB · ARC-Easy 72% in both" in html
-    assert "about 175 MB of file bytes" in script
-    assert "about 175 MiB of file bytes" not in script
-    assert "tied output head saving 255 MB" not in html
+    assert 'id="score-total" aria-live="polite">77.93<' in html
+    assert 'id="score-accuracy" type="range" min="0" max="100" step="1" value="68"' in html
+    assert 'id="score-tps" type="range" min="0" max="20" step="0.01" value="12.72"' in html
+    assert 'id="score-ram" type="range" min="0.25" max="7" step="0.001" value="0.527656"' in html
+    assert '{ name: "Qwen3.5 0.8B final", gb: 0.47, acc: 64, lane: "audit", selected: true }' in script
+    assert '{ name: "Math-Expert 0.6B", gb: 0.37, acc: 68, lane: "audit", leader: true }' in script
+    assert 'Qwen3 1.7B Q4_K_M", gb: 0.96, acc: 72, lane: "audit", selected: true' not in script
+    assert "renderSensitivity(d.campaign_alternative, d.overnight)" in script
+    assert "entry.official.arc_easy_50" in script
 
 
 def test_unknown_temperature_is_not_rendered_as_a_pass() -> None:

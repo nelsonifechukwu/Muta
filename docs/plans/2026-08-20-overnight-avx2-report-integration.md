@@ -32,6 +32,9 @@ selection result.
 5. Add regression tests for the generated arithmetic, required report elements, exact values, and
    provenance wording.
 6. Run the focused and full test suites, then inspect the local report at desktop and narrow widths.
+7. Align every report visual with the current two-finalist decision: update the candidate funnel,
+   calculator defaults, artifact derivation, and cohort-relative sensitivity chart. Preserve older
+   figures only when their date and historical purpose are explicit.
 
 ## Acceptance criteria
 
@@ -42,3 +45,7 @@ selection result.
 - No latest AVX2 value is described as a direct participant-profiler measurement.
 - The dated 19 August result remains accessible and clearly labelled as historical.
 - Dashboard tests and the repository test suite pass.
+- No figure selects the retired 19 August artifact or omits the 20 August finalists from a
+  current-campaign comparison.
+- The score calculator opens with the current direct scalar leader, and the artifact diagram
+  describes the recommended Qwen3.5 submission file.
