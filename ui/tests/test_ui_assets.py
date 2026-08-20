@@ -67,3 +67,19 @@ def test_the_drop_overlay_can_never_swallow_clicks():
         "#drop-overlay must be pointer-events:none — otherwise it intercepts every click "
         "in the app while visible, and it perturbs the very drag events it reacts to"
     )
+
+
+def test_streaming_only_follows_while_the_reader_is_near_the_bottom():
+    """Every token render calls scrollToBottom, so that helper must carry the pause guard.
+
+    The scroll listener is the resume path: without it, one upward scroll would disable
+    following for the rest of the page lifetime even after the reader returned to the tail.
+    """
+    js = (UI / "app.js").read_text()
+    helper = re.search(
+        r"function scrollToBottom\([^)]*\)\s*\{(?P<body>.*?)\n\}", js, re.DOTALL
+    )
+    assert helper, "scrollToBottom helper missing"
+    assert "!autoFollow" in helper.group("body")
+    assert 'chatScroller.addEventListener("scroll"' in js
+    assert "autoFollow = nearChatBottom()" in js

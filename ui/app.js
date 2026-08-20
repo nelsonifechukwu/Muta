@@ -64,6 +64,14 @@ const messagesEl = $("#messages");
 const inputEl = $("#input");
 const sendBtn = $("#btn-send");
 const emptyStateEl = $("#empty-state");
+const chatScroller = $("#chat-scroll");
+
+// Streaming should follow only while the student is already reading the tail. Keeping this
+// as explicit state (instead of checking after every DOM append) matters: appending a large
+// markdown block can move the bottom beyond the threshold even though the student was at it
+// immediately before that render.
+const AUTO_FOLLOW_THRESHOLD_PX = 96;
+let autoFollow = true;
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -96,10 +104,22 @@ function safeHttpUrl(url) {
   }
 }
 
-function scrollToBottom() {
-  const scroller = $("#chat-scroll");
-  scroller.scrollTop = scroller.scrollHeight;
+function nearChatBottom() {
+  return chatScroller.scrollHeight - chatScroller.scrollTop - chatScroller.clientHeight <=
+    AUTO_FOLLOW_THRESHOLD_PX;
 }
+
+function scrollToBottom({ force = false } = {}) {
+  if (!force && !autoFollow) return;
+  chatScroller.scrollTop = chatScroller.scrollHeight;
+  autoFollow = true;
+}
+
+// A real user scroll is the authority: moving up pauses following, returning to the tail
+// resumes it. Programmatic scrolls also fire this event but leave `nearChatBottom()` true.
+chatScroller.addEventListener("scroll", () => {
+  autoFollow = nearChatBottom();
+}, { passive: true });
 
 function autoGrow() {
   inputEl.style.height = "auto";
@@ -498,7 +518,7 @@ async function loadConversation(cid) {
   if (restoring) reattachLive();
   refreshSidebar();
   syncComposerState(); // the send button is only a Stop button in the streaming thread
-  scrollToBottom();
+  scrollToBottom({ force: true });
 }
 
 /** Re-render the in-flight reply into a fresh bubble and point the stream at it. */
@@ -517,6 +537,7 @@ function newChat() {
   renderChips();
   messagesEl.innerHTML = "";
   emptyStateEl.style.display = "";
+  scrollToBottom({ force: true });
   refreshSidebar();
   syncComposerState();
 }
