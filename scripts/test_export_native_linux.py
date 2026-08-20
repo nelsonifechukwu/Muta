@@ -90,6 +90,48 @@ def test_llama_bench_identity_uses_zero_work_probe(monkeypatch, tmp_path):
     assert seen[0][1:] == ["-m", "/dev/null", "-p", "0", "-n", "0"]
 
 
+def test_sync_source_ui_overlays_authored_assets_and_reseals_manifest(tmp_path, monkeypatch):
+    monkeypatch.setattr(export, "ROOT", tmp_path)
+    output = tmp_path / "runtime" / "build"
+    binary_dir = output / "bin"
+    binary_dir.mkdir(parents=True)
+    binaries = {}
+    for name in export.BINARIES:
+        path = binary_dir / name
+        path.write_bytes(name.encode())
+        binaries[name] = {"sha256": export._sha256(path)}
+
+    ui_source = tmp_path / "ui"
+    ui_dist = ui_source / "dist"
+    ui_files = {}
+    for relative in export.UI_REQUIRED:
+        asset = ui_dist / relative
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_text(f"exported {relative}")
+        ui_files[relative] = {"sha256": export._sha256(asset)}
+    for relative in export.UI_SOURCE_FILES:
+        (ui_source / relative).write_text(f"checkout {relative}")
+
+    manifest_path = output / "native-linux-manifest.json"
+    manifest_path.write_text(
+        __import__("json").dumps(
+            {
+                "schema": 2,
+                "verification": {"llama_cpp_pin": "b10035/602f828"},
+                "binaries": binaries,
+                "ui": {"path": "ui/dist", "files": ui_files},
+            }
+        )
+    )
+
+    assert export.sync_source_ui(output) == manifest_path
+    for relative in export.UI_SOURCE_FILES:
+        assert (ui_dist / relative).read_text() == f"checkout {relative}"
+    resealed = __import__("json").loads(manifest_path.read_text())
+    assert resealed["ui"]["source_overlay"]["files"] == list(export.UI_SOURCE_FILES)
+    assert export.verify_manifest(output) == manifest_path
+
+
 def test_ui_verifier_rejects_root_absolute_assets(tmp_path):
     for relative in export.UI_REQUIRED:
         asset = tmp_path / relative

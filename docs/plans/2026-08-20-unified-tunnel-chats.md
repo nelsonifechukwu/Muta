@@ -17,6 +17,9 @@ planned user-account layer is implemented.
    the operator's history or each other's history.
 5. Existing UUID-owned operator conversations on the GCP VM are reassigned to the new operator
    UUID after making a recoverable SQLite backup. Named acceptance/smoke profiles are untouched.
+6. Native startup verifies the exported frontend, overlays the repository-owned HTML, CSS, and
+   JavaScript, and reseals its manifest. A pull cannot leave an older client paired with the new
+   gateway while pinned offline vendor assets remain unchanged.
 
 ## Acceptance
 

@@ -235,7 +235,7 @@ native_linux_env() {
             || die "Compose services are running — stop the control with './run.sh down' first"
     fi
     require_native_port_free "${MUTA_RT_SERVER_PORT:-8080}" "engine"
-    "$NATIVE_PY" scripts/export_native_linux.py --verify-only \
+    "$NATIVE_PY" scripts/export_native_linux.py --sync-ui \
         || die "native engine verification failed — rebuild the control and run './run.sh export-linux'"
     "$NATIVE_PY" -c "import orchestrator, uvicorn" >/dev/null 2>&1 \
         || die "project not importable by $NATIVE_PY — create a venv and run 'make install'"

@@ -39,6 +39,7 @@ UI_REQUIRED = (
     "vendor/katex/katex.min.css",
     "vendor/katex/contrib/auto-render.min.js",
 )
+UI_SOURCE_FILES = ("index.html", "app.js", "audio.js", "worklet.js", "styles.css")
 FORBIDDEN_AVX512 = re.compile(rb"\s(vpxord|vpternlogd|kmovw|vpbroadcastmw2d)\s")
 
 
@@ -276,22 +277,65 @@ def verify_manifest(output: Path) -> Path:
     return manifest_path
 
 
+def sync_source_ui(output: Path) -> Path:
+    """Overlay the current checkout's authored UI onto a verified native export.
+
+    The frontend image supplies pinned vendor assets, while the repository remains the source
+    of truth for the HTML, CSS, and JavaScript. Native starts call this after a pull so an old
+    exported frontend cannot silently serve an old client against a new gateway.
+    """
+    manifest_path = verify_manifest(output)
+    manifest = json.loads(manifest_path.read_text())
+    ui = manifest["ui"]
+    ui_path = ROOT / ui.get("path", "ui/dist")
+    source_path = ROOT / "ui"
+    for relative in UI_SOURCE_FILES:
+        source = source_path / relative
+        if not source.is_file():
+            raise ExportError(f"native UI source is missing: {relative}")
+        destination = ui_path / relative
+        pending = destination.with_name(f".{destination.name}.pending")
+        shutil.copy2(source, pending)
+        os.replace(pending, destination)
+
+    verified = _verify_ui(ui_path)
+    manifest["ui"] = {
+        "path": ui.get("path", "ui/dist"),
+        **verified,
+        "source_overlay": {
+            "checkout_git_sha": _git_sha(),
+            "files": list(UI_SOURCE_FILES),
+        },
+    }
+    pending_manifest = manifest_path.with_suffix(".json.tmp")
+    pending_manifest.write_text(json.dumps(manifest, indent=2) + "\n")
+    os.replace(pending_manifest, manifest_path)
+    return verify_manifest(output)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default=DEFAULT_IMAGE)
     parser.add_argument("--frontend-image", default=DEFAULT_FRONTEND_IMAGE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--ui-output", type=Path, default=DEFAULT_UI_OUTPUT)
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--verify-only", action="store_true", help="verify the installed artifact without Docker"
+    )
+    mode.add_argument(
+        "--sync-ui",
+        action="store_true",
+        help="verify the export, then overlay current repository UI assets",
     )
     args = parser.parse_args(argv)
     try:
-        manifest = (
-            verify_manifest(args.output)
-            if args.verify_only
-            else export(args.image, args.frontend_image, args.output, args.ui_output)
-        )
+        if args.verify_only:
+            manifest = verify_manifest(args.output)
+        elif args.sync_ui:
+            manifest = sync_source_ui(args.output)
+        else:
+            manifest = export(args.image, args.frontend_image, args.output, args.ui_output)
     except ExportError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(f"verified native Linux engine: {manifest}")
