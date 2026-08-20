@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -110,7 +111,9 @@ def test_sync_source_ui_overlays_authored_assets_and_reseals_manifest(tmp_path, 
         asset.write_text(f"exported {relative}")
         ui_files[relative] = {"sha256": export._sha256(asset)}
     for relative in export.UI_SOURCE_FILES:
-        (ui_source / relative).write_text(f"checkout {relative}")
+        source = ui_source / relative
+        source.write_text(f"checkout {relative}")
+        os.utime(source, (1, 1))
 
     manifest_path = output / "native-linux-manifest.json"
     manifest_path.write_text(
@@ -127,6 +130,7 @@ def test_sync_source_ui_overlays_authored_assets_and_reseals_manifest(tmp_path, 
     assert export.sync_source_ui(output) == manifest_path
     for relative in export.UI_SOURCE_FILES:
         assert (ui_dist / relative).read_text() == f"checkout {relative}"
+        assert (ui_dist / relative).stat().st_mtime > 1
     resealed = __import__("json").loads(manifest_path.read_text())
     assert resealed["ui"]["source_overlay"]["files"] == list(export.UI_SOURCE_FILES)
     assert export.verify_manifest(output) == manifest_path

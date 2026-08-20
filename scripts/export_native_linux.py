@@ -295,7 +295,10 @@ def sync_source_ui(output: Path) -> Path:
             raise ExportError(f"native UI source is missing: {relative}")
         destination = ui_path / relative
         pending = destination.with_name(f".{destination.name}.pending")
-        shutil.copy2(source, pending)
+        # Give the installed asset a fresh mtime. Starlette's conditional response handling
+        # considers Last-Modified as well as ETag; preserving an older checkout timestamp can
+        # otherwise make a browser retain the pre-pull script even when its bytes changed.
+        shutil.copyfile(source, pending)
         os.replace(pending, destination)
 
     verified = _verify_ui(ui_path)
