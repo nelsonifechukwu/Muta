@@ -675,6 +675,8 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .svg-chart { overflow-x: auto; overscroll-behavior-inline: contain; }
   #runtime-chart svg, #model-funnel-chart svg, #sensitivity-chart svg { min-width: 600px; }
   #isa-score-chart svg { min-width: 760px; }
+  #overnight-avx2-score-chart { min-height: 240px; }
+  #overnight-avx2-score-chart svg { min-width: 620px; }
   #overnight-score-chart svg, #overnight-quant-chart svg { min-width: 0; }
   #streaming-chart svg { min-width: 420px; }
   .submission-classification svg { min-width: 700px; }

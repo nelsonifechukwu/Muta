@@ -40,6 +40,12 @@ const REPORT_OFFICIAL = [
   { name: "Qwen3.5 4B IQ4_XS", file: "qwen3.5-4b-iq4_xs.gguf", sha: "658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f", bytes: 2477053088, ttft: 395187.97, tps: 1.13, rss: 2627.34, acc: 76, ci: [62.59, 85.70], sAcc: 76, sPerf: 7.5333, sEff: 63.3463, total: 52.9293 },
 ];
 
+const REPORT_CURRENT_OFFICIAL = [
+  { name: "Math-Expert 0.6B", file: "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf", sha: "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1", bytes: 396706176, ttft: 23613.51, tps: 12.72, rss: 540.32, acc: 68, ci: [54.19, 79.24], sAcc: 68, sPerf: 84.8, sEff: 92.4621, total: 77.9324 },
+  { name: "Qwen3.5 0.8B final", file: "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf", sha: "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b", bytes: 507156160, ttft: 16622.38, tps: 12.63, rss: 670.39, acc: 64, ci: [50.14, 75.86], sAcc: 64, sPerf: 84.2, sEff: 90.6475, total: 75.3895 },
+  ...REPORT_OFFICIAL,
+];
+
 const REPORT_RUNTIME = [
   { name: "Docker baseline", tps: 5.3, memory: "4.77 GB, still rising", date: "30 Jul" },
   { name: "Resource caps", tps: 6.72, memory: "4.44 GB", date: "31 Jul" },
@@ -98,11 +104,11 @@ const EXPERIMENTS = [
   { status: "rejected", name: "Custom tensor layout", finding: "The stock quantiser layout was retained. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "GGUF campaign · 19 Aug" },
   { status: "adopted", name: "Embedded chat template", finding: "The GGUF contains the chat template and tutoring persona, both verified on a live server. They affect evaluator responses but do not affect raw ARC or throughput measurements.", source: "muta-iq/REPORT.md" },
   { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "muta-iq/opt/docs/STREAMING_ENGINE.md" },
-  { status: "adopted", name: "Runtime-conditional quant choice", finding: "Pure Q4_0 wins the scalar participant regime. With AVX2/FMA/F16C enabled, Q4_K_M reaches the cap with 59.7 MiB less estimated RSS and leads by 0.1666 points.", source: "avx2-score-of-record · 19 Aug" },
+  { status: "adopted", name: "Runtime-conditional model choice", finding: "The 20 August AVX2 rerun changes the raw leader to Math-Expert Q4_K_M at 81.8803 using ARC-Easy-50. Qwen3.5 0.8B leads the larger 500-item AVX2 diagnostic, 76.8104 to 75.1803.", source: "overnight campaign · 20 Aug" },
   { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "GGUF campaign · 19 Aug" },
   { status: "adopted", name: "Exact-hash rebuild", finding: "The candidate was rebuilt from pinned source and matched the promoted SHA-256 after correcting a 32-byte metadata-name difference.", source: "Set up Muta on GCP VM" },
-  { status: "adopted", name: "Direct official-profiler campaign", finding: "Four exact artifacts completed full participant runs. The 1.7B Q4_0 total exceeds the 0.8B total by 0.92 points.", source: "campaign-20260819/official-profiler" },
-  { status: "adopted", name: "Portable AVX2 score of record", finding: "Five exact hashes were rerun with AVX2, FMA, and F16C enabled and AVX-512 disabled. Q4_K_M records 80.4484 and Q4_0 records 80.2818. BitCPM throughput increases by 9.235× and its total remains below the Qwen results.", source: "campaign-20260819/avx2-score-of-record" },
+  { status: "adopted", name: "19 August official-profiler campaign", finding: "Four exact artifacts completed full participant runs. The 1.7B Q4_0 total exceeded the then-tested 0.8B Q4_K_M total by 0.92 points.", source: "campaign-20260819/official-profiler" },
+  { status: "adopted", name: "Portable AVX2 score of record", finding: "The ledger now contains seven artifacts across the 19 and 20 August campaigns. Math-Expert Q4_K_M has the highest ARC-Easy-50 fixed-15 total at 81.8803; Qwen3.5 0.8B is the larger-sample choice.", source: "campaign-20260819 + campaign-20260820-overnight" },
   { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "muta-iq/opt/docs/REPORT.md" },
 ];
 
@@ -112,7 +118,7 @@ const CHALLENGE_FAQ = [
   { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is evaluated on the standard laptop profile.", progress: "Development used an M2 Mac and a GCP x86 proxy. Mac results are classified as development evidence." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
   { q: "What does cross-disciplinary integration require?", rule: "The model must depend substantively on another deep-tech discipline.", progress: "Muta plans to combine scientific tutoring with verified mathematics and local retrieval. Several relevant routes remain incomplete or return 501, so this requirement is not yet satisfied." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The current AVX2 choice and scalar fallback are reproducible Qwen3-derived GGUFs. QAT and distillation remain deferred because neither completed a controlled training run." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The latest AVX2 score leader is the public Math-Expert Qwen3 fine-tune. The risk-adjusted Qwen3.5 recommendation remains derived from an official Qwen checkpoint. Their revisions and hashes are retained." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
@@ -122,7 +128,7 @@ const CHALLENGE_FAQ = [
   { q: "What is the maximum model size?", rule: "The practical limit is the 7 GB memory ceiling on the standard machine.", progress: "The direct campaign spans about 0.50–2.31 GiB peak model footprints, all below the ceiling. Whole-tree RSS remains the unit of record." },
   { q: "Where should the final benchmark be run?", rule: "The organiser evaluates the artifact on its standard hardware; local results are preparatory.", progress: "Full participant runs exist on a four-vCPU GCP x86 proxy with the pinned audit binary. Package temperature and physical-laptop bandwidth remain unmeasured." },
   { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "The repository records exact model metadata, the reproducible campaign, the runtime, and this report. Final packaging, the two submission prompts, and the video remain incomplete." },
-  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "Q4_K_M under the portable AVX2 policy records S_perf 100.00 and estimated S_eff 72.24. The direct scalar participant run for Q4_0 records S_perf 65.27 and S_eff 84.43. Its 72% ARC-Easy result remains an internal accuracy proxy, not a submitted S_acc value." },
+  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "On the controlled AVX2 proxy, both latest finalists reach S_perf 100.00. Estimated S_eff is 89.40 for Math-Expert and 87.05 for Qwen3.5. The corresponding ARC-Easy values remain internal accuracy proxies, not submitted S_acc values." },
   { q: "Is the whole application evaluated, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "Product improvements are recorded separately from model-only evidence. Retrieval, the custom streamer, and UI changes are excluded from the GGUF campaign score." },
   { q: "How many prompts are visible before submission?", rule: "The FAQ describes two visible prompts plus hidden tests.", progress: "The local profiler path covers the visible task shape and accuracy proxies. Hidden-prompt performance remains unknown by design." },
   { q: "How is temperature handled?", rule: "Temperature is checked around evaluation and can trigger a 10-point penalty above the threshold or when throttling is detected.", progress: "The GCP host exposed no usable package sensor and reported no throttling. Temperature is recorded as unavailable." },
@@ -226,28 +232,31 @@ function renderStreamingChart() {
 
 function renderOfficialCharts() {
   const scoreEl = $("official-score-chart");
-  const width = 360, height = 330, left = 116, right = 28, top = 25, rowH = 67;
+  const width = 360, left = 116, right = 28, top = 25, rowH = 54;
+  const height = Math.max(330, top + REPORT_CURRENT_OFFICIAL.length * rowH + 48);
   const plotW = width - left - right;
-  const rows = REPORT_OFFICIAL.map((item, i) => {
+  const rows = REPORT_CURRENT_OFFICIAL.map((item, i) => {
     const y = top + i * rowH;
-    const a = item.sAcc * .5 / 80 * plotW, p = item.sPerf * .3 / 80 * plotW, e = item.sEff * .2 / 80 * plotW;
-    return `${svgText(left-7,y+15,item.name,'text-anchor="end" class="svg-label"')}<rect x="${left}" y="${y}" width="${a}" height="20" class="seg acc"/><rect x="${left+a}" y="${y}" width="${p}" height="20" class="seg perf"/><rect x="${left+a+p}" y="${y}" width="${e}" height="20" class="seg eff"/>${svgText(left+(item.total/80*plotW)+5,y+15,item.total.toFixed(2),'class="svg-total"')}`;
+    const a = item.sAcc * .5 / 85 * plotW, p = item.sPerf * .3 / 85 * plotW, e = item.sEff * .2 / 85 * plotW;
+    return `${svgText(left-7,y+15,item.name,'text-anchor="end" class="svg-label"')}<rect x="${left}" y="${y}" width="${a}" height="20" class="seg acc"/><rect x="${left+a}" y="${y}" width="${p}" height="20" class="seg perf"/><rect x="${left+a+p}" y="${y}" width="${e}" height="20" class="seg eff"/>${svgText(left+(item.total/85*plotW)+5,y+15,item.total.toFixed(2),'class="svg-total"')}`;
   }).join("");
   scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.svg-label{font-size:8px;fill:#504945}.seg.acc{fill:#1b6ca8}.seg.perf{fill:#427b58}.seg.eff{fill:#b57614}.svg-total{font-size:9px;fill:#282828;font-weight:800}.legend{font-size:8px;fill:#6b6866}</style>${rows}<rect x="${left}" y="${height-35}" width="8" height="8" class="seg acc"/>${svgText(left+12,height-28,"Accuracy",'class="legend"')}<rect x="${left+65}" y="${height-35}" width="8" height="8" class="seg perf"/>${svgText(left+77,height-28,"Performance",'class="legend"')}<rect x="${left+145}" y="${height-35}" width="8" height="8" class="seg eff"/>${svgText(left+157,height-28,"Efficiency",'class="legend"')}</svg>`;
 
   const scatterEl = $("official-scatter-chart");
   const sw=360, sh=330, sl=46, sr=20, st=25, sb=48;
-  const sx=(rss)=>sl+(rss-500)/2400*(sw-sl-sr), sy=(tps)=>st+(11-tps)/11*(sh-st-sb);
+  const sx=(rss)=>sl+(rss-500)/2400*(sw-sl-sr), sy=(tps)=>st+(14-tps)/14*(sh-st-sb);
   let grid="";
   [500,1000,1500,2000,2500].forEach(t=>{const px=sx(t);grid+=`<line x1="${px}" y1="${st}" x2="${px}" y2="${sh-sb}" class="svg-grid"/>${svgText(px,sh-25,t,'text-anchor="middle" class="svg-tick"')}`});
-  [0,5,10].forEach(t=>{const py=sy(t);grid+=`<line x1="${sl}" y1="${py}" x2="${sw-sr}" y2="${py}" class="svg-grid"/>${svgText(sl-6,py+3,t,'text-anchor="end" class="svg-tick"')}`});
+  [0,5,10,14].forEach(t=>{const py=sy(t);grid+=`<line x1="${sl}" y1="${py}" x2="${sw-sr}" y2="${py}" class="svg-grid"/>${svgText(sl-6,py+3,t,'text-anchor="end" class="svg-tick"')}`});
   const labelOffsets = [
+    { dx: 7, dy: 18, anchor: "start" },
+    { dx: 7, dy: -9, anchor: "start" },
     { dx: 7, dy: 18, anchor: "start" },
     { dx: 7, dy: -9, anchor: "start" },
     { dx: -7, dy: -9, anchor: "end" },
     { dx: -7, dy: 17, anchor: "end" },
   ];
-  const pts=REPORT_OFFICIAL.map((d,i)=>{const label=labelOffsets[i];return `<circle cx="${sx(d.rss)}" cy="${sy(d.tps)}" r="${4+d.acc/25}" class="scatter-point ${i===0?'selected':''}"/><title>${esc(d.name)}: ${d.tps} tok/s, ${d.rss.toFixed(0)} MiB, ${d.acc}% ARC-Easy</title>${svgText(sx(d.rss)+label.dx,sy(d.tps)+label.dy,d.name,`text-anchor="${label.anchor}" class="scatter-label ${i===0?'selected':''}"`)}`}).join("");
+  const pts=REPORT_CURRENT_OFFICIAL.map((d,i)=>{const label=labelOffsets[i];return `<circle cx="${sx(d.rss)}" cy="${sy(d.tps)}" r="${4+d.acc/25}" class="scatter-point ${i===0?'selected':''}"/><title>${esc(d.name)}: ${d.tps} tok/s, ${d.rss.toFixed(0)} MiB, ${d.acc}% ARC-Easy</title>${svgText(sx(d.rss)+label.dx,sy(d.tps)+label.dy,d.name,`text-anchor="${label.anchor}" class="scatter-label ${i===0?'selected':''}"`)}`}).join("");
   scatterEl.innerHTML=`<svg viewBox="0 0 ${sw} ${sh}" aria-hidden="true"><style>.svg-grid{stroke:#e6e2db}.svg-tick{font-size:8px;fill:#8a8580}.scatter-point{fill:#9dbcd5;fill-opacity:.9;stroke:#fff;stroke-width:2}.scatter-point.selected{fill:#af3a03}.scatter-label{font-size:7.5px;fill:#6b6866}.scatter-label.selected{fill:#af3a03;font-weight:800}</style>${grid}${pts}${svgText(sw/2,sh-3,"Peak RSS (MiB)",'text-anchor="middle" class="svg-axis"')}</svg>`;
 }
 
@@ -343,7 +352,7 @@ function render() {
   renderCampaign(d.campaign, "campaign");
   renderCampaign(d.campaign_parity, "campaign-parity");
   renderCampaign(d.campaign_alternative, "campaign-alternative");
-  renderIsaComparison(d.campaign_avx2_score);
+  renderIsaComparison(d.campaign_avx2_score, d.overnight);
   renderOvernight(d.overnight);
   renderCampaignSnapshotWarning(d.campaign);
   renderTpsRef(d);
@@ -358,12 +367,17 @@ function renderOvernight(campaign) {
   const scoreSummary = $("overnight-score-summary");
   const quantChart = $("overnight-quant-chart");
   const quantSummary = $("overnight-quant-summary");
+  const avx2Chart = $("overnight-avx2-score-chart");
+  const avx2Summary = $("overnight-avx2-score-summary");
+  const avx2Table = $("overnight-avx2-table");
   const finalistTable = $("overnight-finalist-table");
   const screenTable = $("overnight-screen-table");
-  if (!scoreChart || !quantChart || !finalistTable || !screenTable) return;
+  if (!scoreChart || !quantChart || !avx2Chart || !avx2Table || !finalistTable || !screenTable) return;
   if (!campaign || !campaign.finalists) {
     scoreChart.innerHTML = '<p class="chart-empty">The overnight campaign summary is unavailable.</p>';
     quantChart.innerHTML = '<p class="chart-empty">The quantization summary is unavailable.</p>';
+    avx2Chart.innerHTML = '<p class="chart-empty">The latest AVX2 finalist summary is unavailable.</p>';
+    avx2Table.innerHTML = "";
     finalistTable.innerHTML = "";
     screenTable.innerHTML = "";
     return;
@@ -373,6 +387,47 @@ function renderOvernight(campaign) {
     b.official.s_total - a.official.s_total);
   const finalistLabel = (model) => model.startsWith("Qwen3-0.6B")
     ? "Math-Expert 0.6B Q4_K_M" : "Qwen3.5 0.8B Q4_0";
+
+  {
+    const width = 700, left = 192, right = 42, top = 34, groupH = 92, barH = 24;
+    const height = top + finalists.length * groupH + 42;
+    const plotW = width - left - right;
+    const x = (value) => left + Number(value) / 85 * plotW;
+    let grid = "";
+    [0, 20, 40, 60, 80].forEach((tick) => {
+      const px = x(tick);
+      grid += `<line x1="${px}" y1="${top - 15}" x2="${px}" y2="${height - 32}" class="overnight-grid"/>` +
+        svgText(px, height - 12, tick, 'text-anchor="middle" class="overnight-tick"');
+    });
+    const rows = finalists.map((entry, index) => {
+      const y = top + index * groupH;
+      const scalar = Number(entry.official.s_total);
+      const avx2 = Number(entry.avx2_fixed_15.arc_easy_50.s_total);
+      const avx2Winner = entry.official.model === campaign.official_profiler_winner;
+      return `${svgText(left - 12, y + 31, finalistLabel(entry.official.model), 'text-anchor="end" class="overnight-model"')}
+        <rect x="${left}" y="${y}" width="${x(scalar) - left}" height="${barH}" rx="2" class="overnight-bar direct"/>
+        ${svgText(left + 8, y + 16, scalar.toFixed(4), 'text-anchor="start" class="overnight-total"')}
+        <rect x="${left}" y="${y + 32}" width="${x(avx2) - left}" height="${barH}" rx="2" class="overnight-bar avx2 ${avx2Winner ? "latest-winner" : ""}"/>
+        ${svgText(left + 8, y + 48, avx2.toFixed(4), 'text-anchor="start" class="overnight-total"')}
+        ${avx2Winner ? svgText(x(avx2) + 8, y + 48, "highest AVX2 total", 'class="overnight-choice external"') : ""}`;
+    }).join("");
+    avx2Chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
+      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-model{font-size:12px;fill:#3c3836}.overnight-bar.direct{fill:#1b6ca8}.overnight-bar.avx2{fill:#31714f}.overnight-bar.latest-winner{stroke:#282828;stroke-width:2}.overnight-total{font-size:11px;fill:#fff;font-weight:800}.overnight-choice.external{font-size:10px;fill:#282828;font-weight:700}
+    </style>${grid}${rows}</svg>`;
+    avx2Summary.textContent = finalists.map((entry) =>
+      `${finalistLabel(entry.official.model)}: direct scalar ${entry.official.s_total.toFixed(4)}, ` +
+      `portable AVX2 ${entry.avx2_fixed_15.arc_easy_50.s_total.toFixed(4)}`
+    ).join("; ") + ".";
+
+    avx2Table.innerHTML = `<thead><tr><th>Exact artifact</th><th>Direct scalar total</th><th>AVX2 pp512</th><th>AVX2 tg128</th><th>Est. AVX2 profiler RSS</th><th>ARC-Easy-50 AVX2 total</th><th>ARC-Easy-500 AVX2 diagnostic</th></tr></thead><tbody>` +
+      finalists.map((entry) => {
+        const avx = entry.avx2_fixed_15;
+        const transfer = avx.transferred_from_tensor_identical_source
+          ? `<small>AVX2 measured on tensor-identical source <code>${esc(avx.benchmark_model)}</code></small>`
+          : `<small>AVX2 measured on this exact GGUF</small>`;
+        return `<tr class="${entry.official.model === campaign.official_profiler_winner ? "avx2-selected-row" : ""}"><td><code>${esc(entry.official.model)}</code>${transfer}</td><td>${fmt.num(entry.official.s_total, 4)}</td><td>${fmt.num(avx.pp512_tps, 4)}</td><td>${fmt.num(avx.tg128_tps, 4)}</td><td>${fmt.num(avx.estimated_profiler_rss_mib, 1)} MiB<small>${fmt.num(avx.child_tree_rss_mib, 1)} measured + ${fmt.num(avx.profiler_root_rss_estimate_mib, 0)} estimated</small></td><td class="total">${fmt.num(avx.arc_easy_50.s_total, 4)}<small>${fmt.num(avx.arc_easy_50.accuracy_percent, 1)}% accuracy</small></td><td>${fmt.num(avx.arc_easy_500.s_total, 4)}<small>${fmt.num(avx.arc_easy_500.accuracy_percent, 1)}% accuracy</small></td></tr>`;
+      }).join("") + "</tbody>";
+  }
 
   {
     const width = 620, left = 176, right = 38, top = 34, groupH = 92, barH = 24;
@@ -572,7 +627,7 @@ function renderCampaign(campaign, prefix) {
       : "");
 }
 
-function renderIsaComparison(comparison) {
+function renderIsaComparison(comparison, overnight) {
   const chart = $("isa-score-chart");
   const summary = $("isa-score-summary");
   const sub = $("campaign-avx2-score-sub");
@@ -588,18 +643,39 @@ function renderIsaComparison(comparison) {
   }
 
   const label = (file) => ({
+    "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": "Qwen3.5 0.8B final",
+    "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": "Math-Expert 0.6B",
     "muta-tutor-qwen3-1.7b-q4_0.gguf": "Q4_0 tied",
     "Q4_K_M-tied.gguf": "Q4_K_M tied",
     "Q5_K_M-tied.gguf": "Q5_K_M tied",
     "IQ4_XS-tied.gguf": "IQ4_XS tied",
     "bitcpm4-8b-tq2_0-envocab.gguf": "BitCPM TQ2_0",
   }[file] || shortName(file));
-  const models = [...comparison.models];
-  const scalarWinner = comparison.winners && comparison.winners.scalar || {};
-  const avx2Winner = comparison.winners && comparison.winners.avx2 || {};
+  const latest = overnight && overnight.finalists ? Object.values(overnight.finalists).map((entry) => ({
+    model: entry.official.model,
+    model_sha256: entry.official.sha256,
+    campaign_date: "20 Aug",
+    latest: true,
+    scalar: {
+      tg128_tps: entry.official.tps,
+      estimated_profiler_rss_mib: entry.official.peak_rss_mib,
+      score: {s_total: entry.official.s_total},
+    },
+    avx2: {
+      tg128_tps: entry.avx2_fixed_15.tg128_tps,
+      estimated_profiler_rss_mib: entry.avx2_fixed_15.estimated_profiler_rss_mib,
+      score: {s_total: entry.avx2_fixed_15.arc_easy_50.s_total},
+    },
+    accuracy_proxy: entry.official.arc_easy_50,
+  })) : [];
+  const models = [...latest, ...comparison.models.map((entry) => ({...entry, campaign_date: "19 Aug"}))];
+  const scalarWinnerItem = [...models].sort((a, b) => b.scalar.score.s_total - a.scalar.score.s_total)[0];
+  const avx2WinnerItem = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total)[0];
+  const scalarWinner = {model: scalarWinnerItem.model, s_total: scalarWinnerItem.scalar.score.s_total};
+  const avx2Winner = {model: avx2WinnerItem.model, s_total: avx2WinnerItem.avx2.score.s_total};
 
   if (chart) {
-    const width = 820, left = 174, right = 54, top = 40, groupH = 64, barH = 17;
+    const width = 820, left = 196, right = 54, top = 40, groupH = 64, barH = 17;
     const height = top + models.length * groupH + 38;
     const plotW = width - left - right;
     const x = (score) => left + Number(score) / 85 * plotW;
@@ -635,11 +711,11 @@ function renderIsaComparison(comparison) {
 
   if (sub && table && formula) {
     const ranked = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total);
-    sub.textContent = `${comparison.hardware_contexts.avx2} · ${ranked.length} exact GGUF artifacts · AVX2 binary SHA-256 ${String(comparison.avx2_binary_sha256).slice(0, 12)}…`;
-    table.innerHTML = `<thead><tr><th>Exact model</th><th>Scalar total</th><th>AVX2 total</th><th>Scalar → AVX2 tg128</th><th>Scalar → AVX2 est. RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
-      ranked.map((item) => `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td><div class="model-name">${esc(label(item.model))}</div><div class="model-sub mono">SHA-256 ${esc(item.model_sha256.slice(0, 16))}…</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.scalar.estimated_profiler_rss_mib, 1)} → ${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy</td></tr>`).join("") +
+    sub.textContent = `${comparison.hardware_contexts.avx2} · ${ranked.length} artifacts across two dated campaigns · AVX2 binary SHA-256 ${String(comparison.avx2_binary_sha256).slice(0, 12)}…`;
+    table.innerHTML = `<thead><tr><th>Campaign</th><th>Exact model</th><th>Scalar total</th><th>AVX2 total</th><th>Scalar → AVX2 tg128</th><th>Scalar → AVX2 est. RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
+      ranked.map((item) => `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td>${esc(item.campaign_date)}</td><td><div class="model-name">${esc(label(item.model))}</div><div class="model-sub mono">SHA-256 ${esc(item.model_sha256.slice(0, 16))}…</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.scalar.estimated_profiler_rss_mib, 1)} → ${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy</td></tr>`).join("") +
       `</tbody>`;
-    formula.textContent = `Controlled paired evidence · S_perf = 100 × min(TPS / 15, 1) · estimated profiler RSS = measured child tree + 45 MiB root allowance · thermal unknown. Highest scalar total: ${label(scalarWinner.model)} (${fmt.num(scalarWinner.s_total, 4)}). Highest portable AVX2 total: ${label(avx2Winner.model)} (${fmt.num(avx2Winner.s_total, 4)}).`;
+    formula.textContent = `Two dated campaigns on one GCP 2C/4T proxy and the same portable AVX2 binary · S_perf = 100 × min(TPS / 15, 1) · latest scalar rows use direct profiler RSS; AVX2 rows use measured child tree + 45 MiB root estimate · thermal unknown. Highest scalar total: ${label(scalarWinner.model)} (${fmt.num(scalarWinner.s_total, 4)}). Highest portable AVX2 total: ${label(avx2Winner.model)} (${fmt.num(avx2Winner.s_total, 4)}).`;
   }
 }
 

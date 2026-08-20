@@ -42,6 +42,22 @@ non-thinking output.
 Math-Expert wins the profiler's 50-item slice. Qwen leads the matched 500-item ARC-Easy check,
 ARC-Challenge and SciQ; GSM8K-10 is tied. Qwen is retained as the risk-adjusted submission.
 
+**Controlled AVX2/FMA/F16C extension** — same GCP 2C/4T proxy and b10175 binary as the 19 August
+AVX2 campaign, with AVX/AVX2/FMA/F16C enabled and native tuning/AVX-512 disabled. Both finalists
+exceed the fixed 15 tok/s cap:
+
+| Exact finalist | AVX2 pp512 | AVX2 tg128 | Est. profiler RSS | ARC-Easy-50 total | ARC-Easy-500 diagnostic |
+|---|---:|---:|---:|---:|---:|
+| **Math-Expert 0.6B Q4_K_M** | **153.9351** | **39.2320** | **759.7 MiB** | **81.8803** | 75.1803 |
+| **Muta Tutor Qwen3.5 0.8B Q4_0 final** | 98.0094 | 27.1509 | 928.1 MiB | 79.4104 | **76.8104** |
+
+Math-Expert is the raw fixed-15 AVX2 leader with ARC-Easy-50. Qwen leads when the larger matched
+ARC-Easy-500 estimate is substituted. The final Qwen AVX2 row transfers the pinned source
+measurement after verifying all 320 tensors and 496,192,768 tensor bytes as identical. AVX2 RSS
+is the measured child tree plus a 45 MiB profiler-root estimate, not a direct participant-profiler
+measurement. The seven-artifact AVX2 ledger now ranks Math-Expert first at 81.8803, ahead of the
+19 August Q4_K_M tied result at 80.4484.
+
 The staged search tested nine new model artifacts and eight Math-Expert layouts. Q4_K_M is the
 best Math-Expert quant: pure Q4_0 reaches 22.79 scalar tok/s but falls to 52% ARC-Easy; Q4_0 with
 Q6_K/Q8_0 embeddings remains at 50%; raising the final four blocks reaches only 56%. A live

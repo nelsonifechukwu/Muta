@@ -1,7 +1,7 @@
 # Muta IQ experiment report and profiler
 
 This local, offline report explains how Muta’s model and runtime choices developed from July to
-19 August 2026. Its operational appendix profiles the GGUF files in `../model/` with
+20 August 2026. Its operational appendix profiles the GGUF files in `../model/` with
 [adtc-profiler](https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler), stores each run,
 and can promote a completed report without hand-editing `metadata.json` or copying
 `submission.json`.
@@ -32,10 +32,11 @@ default; set `ADTC_PROFILER` to use another executable.
 ## What the report contains
 
 - A chaptered account of the score, runtime baseline, model funnel, GGUF and quantisation work,
-  ternary branch, weight-streaming tests, the direct 19 August decision, and the controlled
-  AVX2/FMA/F16C rerun.
-- A paired total-score figure with scalar and portable AVX2 bars for every shared artifact. The
-  chart prints each total on the bar and outlines the winner under each CPU policy.
+  ternary branch, weight-streaming tests, the 19 August campaign, and the 20 August overnight
+  model and AVX2 extension.
+- A seven-artifact paired total-score figure with scalar and portable AVX2 bars, plus a dedicated
+  two-finalist figure that shows the latest direct scalar and controlled AVX2 totals. The charts
+  print each total and identify the winner under each accuracy sample.
 - Interactive score, disk-budget, and website-sensitivity controls. These controls are read-only:
   they do not change campaign data or stored runs.
 - Native HTML and SVG figures that work without a network connection, including three hand-drawn
@@ -59,9 +60,11 @@ The report never treats all benchmark rows as interchangeable.
    `../../bench/measurements/campaign-20260819/official-profiler/summary.json`. Override the path
    with `MUTA_CAMPAIGN_SUMMARY`.
 
-   The narrative and headline figures are a dated 19 August snapshot. If an override points to a
-   different direct campaign, the page displays a warning and leaves the configured rows in the
-   operational appendix until the report itself is deliberately revised.
+   The overview and overnight chapter use the 20 August direct finalist reports from
+   `../../bench/measurements/campaign-20260820-overnight/summary.json`. The operational campaign
+   table remains the dated 19 August four-model set so both complete campaigns stay inspectable.
+   If an override points to a different direct campaign, the page displays a warning and leaves
+   the configured rows in the operational appendix until the report itself is deliberately revised.
 
 2. **Profiler-parity estimate.** A controlled reconstruction of the no-AVX profiler environment.
    Throughput is measured; profiler-root RSS is estimated by adding the documented 45 MiB offset
@@ -76,13 +79,14 @@ The report never treats all benchmark rows as interchangeable.
    uses the same documented 45 MiB profiler-root estimate as the parity screens. Override the path
    with `MUTA_CAMPAIGN_ALTERNATIVE`.
 
-4. **Controlled AVX2 proxy.** The same five score-of-record artifacts rerun on the GCP 2C/4T
-   proxy with AVX, AVX2, FMA, and F16C enabled; native tuning and AVX-512 disabled. It uses the
-   fixed/capped 15 tok/s score so the ISA effect can be compared with the retained scalar screen,
-   but it is not an official participant-profiler run. The source is
-   `../../bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json`.
-   The dashboard state API exposes this artifact as `campaign_avx2_score`; override its source
-   with `MUTA_CAMPAIGN_AVX2_SCORE`.
+4. **Controlled AVX2 proxy.** The 19 August five-artifact campaign and 20 August two-finalist
+   extension use the GCP 2C/4T proxy with AVX, AVX2, FMA, and F16C enabled; native tuning and
+   AVX-512 disabled. They use the fixed/capped 15 tok/s score, but are not participant-profiler
+   runs. The source artifacts are
+   `../../bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json` and
+   `../../bench/measurements/campaign-20260820-overnight/summary.json`. The final Qwen AVX2 row
+   transfers the pinned source measurement only after tensor-identity verification. The dashboard
+   state API exposes the dated campaign as `campaign_avx2_score` and the extension as `overnight`.
 
 5. **Development result.** Earlier Mac, Docker, GCP, or custom-engine evidence used to accept or
    reject an engineering idea. It explains the decision history but is not ranked against the
