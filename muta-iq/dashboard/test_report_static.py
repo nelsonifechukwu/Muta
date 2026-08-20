@@ -86,23 +86,19 @@ def test_static_verdict_matches_overnight_recommendation() -> None:
     assert model["model"] in html
     assert f'{model["s_total"]:.4f}' in html
     assert f'{model["tps"]:.2f} tok/s' in html
-    assert f'{model["bytes"]:,} bytes' in html
-    assert model["sha256"][:8] in html
-    assert model["sha256"][-5:] in html
+    assert "507.2 MB" in html
 
 
 def test_current_artifact_diagram_uses_tensor_identity_control() -> None:
     html = (DASHBOARD / "index.html").read_text()
 
-    assert "Pinned Qwen3.5 source" in html
-    assert "444406dd…c652c" in html
-    assert "c96df4ef…d5d7b" in html
-    assert "320 tensors · 496,192,768 tensor bytes" in html
+    assert "Qwen3.5 source quant" in html
+    assert "320 model tensors compared" in html
     assert "all tensor payloads identical" in html
-    assert "The current recommendation differs from its pinned Qwen3.5 source only in GGUF metadata" in html
+    assert "The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata" in html
 
 
-def test_all_current_visual_defaults_use_the_20_august_decision() -> None:
+def test_all_current_visual_defaults_use_the_current_campaign_decision() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
@@ -132,14 +128,21 @@ def test_avx2_campaign_section_matches_comparison_artifact() -> None:
     html = (DASHBOARD / "index.html").read_text()
 
     assert 'id="avx2-campaign"' in html
-    assert "Updated seven-artifact AVX2 ledger" in html
+    assert "Expanded seven-model AVX2 comparison" in html
     for feature in ("AVX", "AVX2", "FMA", "F16C"):
         assert f"<code>{feature}</code><strong>ON</strong>" in html
     for feature in ("NATIVE", "AVX-512"):
         assert f"<code>{feature}</code><strong>OFF</strong>" in html
 
+    labels = {
+        "muta-tutor-qwen3-1.7b-q4_0.gguf": "Qwen3 1.7B Q4_0",
+        "Q4_K_M-tied.gguf": "Qwen3 1.7B Q4_K_M",
+        "Q5_K_M-tied.gguf": "Qwen3 1.7B Q5_K_M",
+        "IQ4_XS-tied.gguf": "Qwen3 1.7B IQ4_XS",
+        "bitcpm4-8b-tq2_0-envocab.gguf": "BitCPM4 8B TQ2_0",
+    }
     for item in comparison["models"]:
-        assert item["model"] in html
+        assert labels[item["model"]] in html
         assert f'{item["scalar"]["pp512_tps"]:.4f}' in html
         assert f'{item["avx2"]["pp512_tps"]:.4f}' in html
         assert f'{item["scalar"]["tg128_tps"]:.4f}' in html
@@ -150,11 +153,9 @@ def test_avx2_campaign_section_matches_comparison_artifact() -> None:
         assert f'{item["avx2"]["score"]["s_total"]:.4f}' in html
 
     winner = comparison["winners"]["avx2"]
-    assert winner["model"] in html
+    assert labels[winner["model"]] in html
     assert f'{winner["s_total"]:.4f}' in html
-    assert "19 Aug AVX2 leader" in html
-    assert comparison["avx2_binary_sha256"][:8] in html
-    assert comparison["avx2_binary_sha256"][-5:] in html
+    assert "Quantization-ladder leader" in html
 
 
 def test_historical_dual_regime_chart_and_current_choice_are_explicit() -> None:
@@ -191,8 +192,8 @@ def test_latest_avx2_finalist_results_are_prominent_and_exact() -> None:
             f'{avx2["arc_easy_500"]["s_total"]:.4f}' in script
         )
 
-    assert "AVX2 measured on tensor-identical source" in script
-    assert "measured child tree + 45 MiB root estimate" in script
+    assert "AVX2 measured on a tensor-identical parent quant" in script
+    assert "measured child-tree RSS + 45 MiB root estimate" in script
     assert "81.8803" in html
     assert "79.4104" in html
     assert "76.8104" in html
@@ -207,13 +208,54 @@ def test_scalar_profiler_ledger_includes_the_latest_finalists() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert "Six artifacts completed full scalar participant runs" in html
+    assert "Across all six participant runs" in html
+    labels = {
+        "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": "Math-Expert 0.6B Q4_K_M",
+        "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": "Qwen3.5 0.8B Q4_0",
+    }
     for entry in campaign["official_profiler"]:
-        assert entry["model"] in html
+        assert labels[entry["model"]] in html
         assert f'{entry["s_total"]:.4f}' in html
-        assert entry["sha256"][:8] in html
-        assert entry["sha256"][-5:] in html
         assert entry["model"] in script
+
+
+def test_visible_report_omits_chronology_and_build_identifiers() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+    visible_html = re.sub(r"<[^>]+>", " ", html).lower()
+
+    for phrase in (
+        "july",
+        "august",
+        "sha-256",
+        "commit",
+        "b10175",
+        "profiler binary",
+        "benchmark binary",
+        "dated campaigns",
+        "selected path",
+        "pinned source",
+        "exact artifact",
+        "exact model",
+        "overnight",
+    ):
+        assert phrase not in visible_html
+
+    for visible_template in (
+        "binary SHA-256",
+        "SHA-256 ${",
+        "campaign_date",
+        "two dated campaigns",
+        "fmt.when",
+    ):
+        assert visible_template not in script
+
+    for progression_term in (
+        "progressed from a four-model baseline",
+        "expanding the model search",
+        "expanded search adds",
+    ):
+        assert progression_term in html.lower()
 
 
 def test_compact_report_defaults_to_adopted_ledger_entries() -> None:

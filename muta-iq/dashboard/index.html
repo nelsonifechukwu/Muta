@@ -13,13 +13,13 @@
 
 <header class="topbar">
   <a class="wordmark" href="#overview" aria-label="Muta IQ experiment report home">
-    <strong>Muta IQ</strong><small>Experiment report, 20 August 2026</small>
+    <strong>Muta IQ</strong><small>Model optimisation report</small>
   </a>
   <nav class="topnav" aria-label="Report shortcuts">
     <a href="#overview">Current result</a>
-    <a href="#avx2-campaign">AVX2 ledger</a>
-    <a href="#overnight-search">Overnight search</a>
-    <a href="#ledger">Experiment ledger</a>
+    <a href="#avx2-campaign">AVX2 comparison</a>
+    <a href="#overnight-search">Expanded search</a>
+    <a href="#ledger">Experiment decisions</a>
     <a href="#faq">Challenge FAQ</a>
     <a href="#profiler">Profiler workspace</a>
   </nav>
@@ -40,7 +40,7 @@
       <li><a href="#streaming">Submission constraints</a></li>
       <li><a href="#campaign">Scalar profiler results</a></li>
       <li><a href="#avx2-campaign">Updated AVX2 comparison</a></li>
-      <li><a href="#overnight-search">20 August model search</a></li>
+      <li><a href="#overnight-search">Expanded model search</a></li>
       <li><a href="#ledger">Experiment decisions</a></li>
       <li><a href="#faq">Challenge requirements</a></li>
       <li><a href="#profiler">Profiler data</a></li>
@@ -54,7 +54,7 @@
 
   <article class="report-article">
     <header class="hero" id="overview">
-      <p class="eyebrow">Muta model optimisation report · July–August 2026</p>
+      <p class="eyebrow">Muta model optimisation report</p>
       <h1>Model selection for the 8 GB CPU target</h1>
       <p class="dek">The submitted GGUF must run on an 8 GB CPU-only laptop. The comparison covers accuracy, generation throughput, peak RSS, and compatibility with the evaluator's runtime.</p>
 
@@ -77,13 +77,13 @@
       </div>
 
       <p class="hero-caveat"><strong>Selection condition:</strong> choose Math-Expert if the fixed-15 objective is represented by ARC-Easy-50; choose Qwen3.5-0.8B for the larger matched accuracy evidence. Qwen remains the submission recommendation until a physical-target, tutoring-aware evaluation resolves that conflict.</p>
-      <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from this snapshot.</strong> The static text reports the 19 August campaign; the operational appendix shows the configured override.</p>
+      <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from the report snapshot.</strong> The operational appendix shows the configured campaign.</p>
 
       <dl class="artifact-line">
-        <div><dt>Recommended artifact size</dt><dd>507,156,160 bytes</dd></div>
-        <div><dt>Recommended SHA-256</dt><dd><code>c96df4ef…d5d7b</code></dd></div>
-        <div><dt>Profiler binary</dt><dd><code>7f01dc04…370</code></dd></div>
-        <div><dt>GCP proxy host</dt><dd>n2-custom-4-8192</dd></div>
+        <div><dt>Model file size</dt><dd>507.2 MB</dd></div>
+        <div><dt>Quantization</dt><dd>Q4_0</dd></div>
+        <div><dt>Target</dt><dd>8 GB, CPU-only</dd></div>
+        <div><dt>Selection basis</dt><dd>Matched accuracy and efficiency</dd></div>
       </dl>
     </header>
 
@@ -135,7 +135,7 @@
 
       <aside class="design-note">
         <p class="design-note-label">Decision rule</p>
-        <p>An additional 1 GB of RSS requires 1.43 tok/s or 5.7 accuracy points to break even. This exchange rate applies only within one hardware, binary, and scoring configuration.</p>
+        <p>An additional 1 GB of RSS requires 1.43 tok/s or 5.7 accuracy points to break even. This exchange rate applies only within one test system and scoring configuration.</p>
       </aside>
     </section>
 
@@ -144,7 +144,7 @@
         <span class="chapter-number">02</span>
         <div><p class="eyebrow">Evidence categories</p><h2 id="evidence-title">Five non-comparable measurement categories</h2></div>
       </header>
-      <p class="lead">Because the measurements use different machines, binaries, and performance formulas, the report separates them into five evidence categories. Rankings remain within a category unless a comparison controls those differences.</p>
+      <p class="lead">Because the measurements use different systems, CPU features, and performance formulas, the report separates them into five evidence categories. Rankings remain within a category unless a comparison controls those differences.</p>
 
       <div class="evidence-grid">
         <article class="evidence-card official">
@@ -160,7 +160,7 @@
         <article class="evidence-card avx2">
           <p class="evidence-label"><span></span>Controlled AVX2 proxy</p>
           <h3>Paired ISA benchmark</h3>
-          <p>The dated 19 August five-model rerun selected Q4_K_M. The complete 20 August ledger selects Math-Expert under ARC-Easy-50 and Qwen3.5 0.8B under the larger matched diagnostic.</p>
+          <p>The initial quantization sweep selected Q4_K_M. The expanded model search selects Math-Expert under ARC-Easy-50 and Qwen3.5 0.8B under the larger matched diagnostic.</p>
         </article>
         <article class="evidence-card sensitivity">
           <p class="evidence-label"><span></span>Website sensitivity</p>
@@ -170,7 +170,7 @@
         <article class="evidence-card development">
           <p class="evidence-label"><span></span>Development result</p>
           <h3>Development experiments</h3>
-          <p>Mac, Docker, GCP, and custom-engine tests guide implementation but do not rank submission artifacts.</p>
+          <p>Mac, Docker, GCP, and custom-engine tests guide implementation but do not rank submission models.</p>
         </article>
       </div>
 
@@ -182,7 +182,7 @@
       </details>
       <aside class="design-note warning-note">
         <p class="design-note-label">Accuracy extraction warning</p>
-        <p>The pinned profiler's generic score extractor returns the sample count as the score for some generative lm-eval tasks. ARC-Easy uses a separate multiple-choice metric. Generative task results use the project's explicit metric extractor and are excluded from the direct profiler total.</p>
+        <p>The participant profiler's generic score extractor returns the sample count as the score for some generative lm-eval tasks. ARC-Easy uses a separate multiple-choice metric. Generative task results use the project's explicit metric extractor and are excluded from the direct profiler total.</p>
       </aside>
     </section>
 
@@ -197,7 +197,7 @@
         <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Selected runtime configurations</h3></div><span class="evidence-badge development">Development</span></div>
         <div class="svg-chart" id="runtime-chart" role="img" aria-label="Comparison of selected runtime experiment throughput and memory" aria-describedby="runtime-chart-summary"></div>
         <p class="sr-only" id="runtime-chart-summary">Docker baseline: 5.3 tokens per second and 4.77 GB, still rising. Resource caps: 6.72 tokens per second and 4.44 GB. Native default: 29.78 tokens per second and 3,519 MiB physical footprint. Six threads with unified KV: 31.09 tokens per second and 3,137 MiB. Draft speculation: 24.72 tokens per second; host memory was not reliably measured.</p>
-        <figcaption><span>Fig. 2</span> Historical development runs from 30 July–1 August. They explain runtime decisions but do not rank the current submission artifacts.</figcaption>
+        <figcaption><span>Fig. 2</span> The runtime sequence progresses from the Docker baseline to resource caps, native execution, thread tuning, and speculation. These experiments guide configuration but do not rank submission models.</figcaption>
       </figure>
 
       <div class="finding-pair">
@@ -213,16 +213,16 @@
         <span class="chapter-number">04</span>
         <div><p class="eyebrow">Candidate evaluation</p><h2 id="funnel-title">Model-scale and runtime-specific selection</h2></div>
       </header>
-      <p class="lead">Once the runtime was fixed, a four-task study compared model scales. The audit campaign then tested exact GGUFs under scalar and portable AVX2 kernels.</p>
+      <p class="lead">Once the runtime was fixed, a four-task study compared model scales. The audit campaign then tested the submitted models under scalar and portable AVX2 kernels.</p>
 
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Separate accuracy evaluations</p><h3>Candidate measurements</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
         <div class="svg-chart tall-chart" id="model-funnel-chart" role="img" aria-label="Model size, accuracy proxy, and campaign status for evaluated candidate models" aria-describedby="model-funnel-summary"></div>
-        <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy. The current Qwen3.5 0.8B final is 0.47 GiB at 64% and is the risk-adjusted recommendation. Math-Expert 0.6B is 0.37 GiB at 68% and is the raw fixed-15 leader. Earlier candidates remain shown as dated comparison points.</p>
+        <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy. The current Qwen3.5 0.8B final is 0.47 GiB at 64% and is the risk-adjusted recommendation. Math-Expert 0.6B is 0.37 GiB at 68% and is the raw fixed-15 leader. Earlier candidates remain as comparison points.</p>
         <figcaption><span>Fig. 3</span> The current recommendation and raw score leader are marked separately. Older candidates remain as comparison points; their accuracy values use the stated ARC-Easy proxy rather than the four-task development mean.</figcaption>
       </figure>
 
-      <p>Qwen3.5 4B led the earlier scale study. BitCPM 8B later produced the highest ARC-Easy-50 result but low scalar throughput. The 20 August search selected the two sub-1B finalists shown above: Qwen3.5 for the broader diagnostic evidence and Math-Expert for the highest raw fixed-15 total.</p>
+      <p>Qwen3.5 4B led the scale study. BitCPM 8B produced the highest ARC-Easy-50 result but low scalar throughput. Expanding the search to sub-1B models identified two finalists: Qwen3.5 for the broader diagnostic evidence and Math-Expert for the highest raw fixed-15 total.</p>
     </section>
 
     <section class="chapter" id="quantization" aria-labelledby="quant-title">
@@ -235,7 +235,7 @@
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Scalar profiler configuration</p><h3>Kernel dispatch by tensor type</h3></div><span class="evidence-badge official">Scalar audit build</span></div>
         <svg viewBox="0 0 720 286" role="img" aria-labelledby="kernel-diagram-title" aria-describedby="kernel-diagram-summary">
-          <title id="kernel-diagram-title">Tensor quantisation type determines which kernel the audit binary can use</title>
+          <title id="kernel-diagram-title">Tensor quantisation type determines the available CPU kernel path</title>
           <style>
             .kd-head { font: 500 12px var(--sans, sans-serif); fill: #6b6866; }
             .kd-type { font: 500 13px var(--mono, monospace); fill: #282828; }
@@ -250,10 +250,10 @@
             .kd-band-text { font: 12px var(--sans, sans-serif); fill: #504945; }
           </style>
           <rect class="kd-band" x="0" y="0" width="720" height="30" rx="2"/>
-          <text class="kd-band-text" x="12" y="19">Scalar participant binary · llama.cpp b10175 · no AVX, AVX2, FMA or F16C</text>
+          <text class="kd-band-text" x="12" y="19">Scalar configuration · vector extensions disabled</text>
 
           <text class="kd-head" x="0" y="58">Tensor type in the GGUF</text>
-          <text class="kd-head" x="330" y="58">Kernel the binary can reach</text>
+          <text class="kd-head" x="330" y="58">Available CPU kernel</text>
           <text class="kd-head" x="600" y="58">Measured decode</text>
 
           <!-- fast path -->
@@ -288,10 +288,10 @@
         <figcaption><span>Fig. 4</span> Current scalar-ledger rates are shown beside the kernel paths. Model size also affects the measured range. The portable build enables AVX2 implementations for the listed tensor types.</figcaption>
       </figure>
 
-      <p>In the 19 August controlled comparison, Q4_0 reached 9.99 scalar tok/s while Q4_K_M reached 5.30. Portable AVX2 increased them to 16.89 and 15.67 tok/s, respectively. Q4_K_M scored 80.4484 because its estimated repacking RSS was 59.7 MiB lower. The 20 August extension subsequently raised the AVX2 high score to 81.8803 with Math-Expert.</p>
+      <p>The quantization sweep measured Q4_0 at 9.99 scalar tok/s and Q4_K_M at 5.30. Portable AVX2 increased them to 16.89 and 15.67 tok/s, respectively. Q4_K_M scored 80.4484 because its estimated repacking RSS was 59.7 MiB lower. Expanding the model search raised the AVX2 high score to 81.8803 with Math-Expert.</p>
 
-      <h3 class="section-title">Artifact derivation</h3>
-      <p>The recommended Qwen artifact is reproduced from a pinned source by changing GGUF metadata only. Math-Expert remains an unchanged alternative artifact and is not part of this transformation.</p>
+      <h3 class="section-title">Model derivation</h3>
+      <p>The recommended Qwen model is reproduced from the same source quant by changing GGUF metadata only. Math-Expert remains an unchanged alternative model and is not part of this transformation.</p>
 
       <figure class="report-figure wide-figure">
         <svg viewBox="0 0 720 264" role="img" aria-labelledby="derivation-title" aria-describedby="derivation-summary">
@@ -314,12 +314,12 @@
           </defs>
 
           <rect class="dv-stage" x="0" y="52" width="180" height="66"/>
-          <text class="dv-name" x="12" y="72">Pinned Qwen3.5 source</text>
-          <text class="dv-meta" x="12" y="88">444406dd…c652c</text>
-          <text class="dv-size" x="12" y="108">507,154,688 B</text>
+          <text class="dv-name" x="12" y="72">Qwen3.5 source quant</text>
+          <text class="dv-meta" x="12" y="88">Qwen3.5 0.8B Q4_0</text>
+          <text class="dv-size" x="12" y="108">507.2 MB</text>
 
           <path class="dv-arrow" d="M 180 85 H 266" marker-end="url(#dv-tip)"/>
-          <text class="dv-op" x="182" y="30">bake_system_prompt.py</text>
+          <text class="dv-op" x="182" y="30">Embed tutor policy</text>
           <text class="dv-op" x="182" y="44">metadata and ChatML only</text>
 
           <rect class="dv-stage" x="270" y="52" width="180" height="66"/>
@@ -332,23 +332,23 @@
           <text class="dv-op" x="452" y="44">no tensor conversion</text>
 
           <rect class="dv-stage final" x="570" y="52" width="150" height="66"/>
-          <text class="dv-name" x="582" y="72" fill="#1b6ca8">Evaluated artifact</text>
-          <text class="dv-meta" x="582" y="88">c96df4ef…d5d7b</text>
-          <text class="dv-size" x="582" y="108" fill="#1b6ca8">507,156,160 B</text>
-          <text class="dv-delta" x="720" y="132" text-anchor="end" fill="#1b6ca8">+1,472 metadata bytes</text>
+          <text class="dv-name" x="582" y="72" fill="#1b6ca8">Evaluated model</text>
+          <text class="dv-meta" x="582" y="88">Muta Tutor Qwen3.5</text>
+          <text class="dv-size" x="582" y="108" fill="#1b6ca8">507.2 MB</text>
+          <text class="dv-delta" x="720" y="132" text-anchor="end" fill="#1b6ca8">+1.5 KB metadata</text>
 
           <path class="dv-arrow" d="M 360 118 V 140"/>
           <rect class="dv-stage control" x="270" y="144" width="300" height="58"/>
           <text class="dv-name" x="282" y="164">Tensor-identity verification</text>
-          <text class="dv-meta" x="282" y="181">320 tensors · 496,192,768 tensor bytes</text>
+          <text class="dv-meta" x="282" y="181">320 model tensors compared</text>
           <text class="dv-delta" x="282" y="196">all tensor payloads identical</text>
 
           <line x1="0" y1="220" x2="720" y2="220" stroke="#e6e2db"/>
           <text class="dv-op" x="0" y="240">Only the evaluated GGUF is submitted.</text>
           <text class="dv-op" x="0" y="256">Runtime flags, engine patches, and application code are not included.</text>
         </svg>
-        <p class="sr-only" id="derivation-summary">The pinned Qwen3.5 0.8B Q4_0 source is 507,154,688 bytes with SHA-256 beginning 444406dd. The build adds the tutor policy, English language tag, non-thinking ChatML template, and sampling defaults without changing model tensors. The final artifact is 507,156,160 bytes with SHA-256 beginning c96df4ef. Verification confirms that all 320 tensors and 496,192,768 tensor bytes are identical.</p>
-        <figcaption><span>Fig. 5</span> The current recommendation differs from its pinned Qwen3.5 source only in GGUF metadata. The tensor-identity check permits transfer of the source AVX2 measurement; the final file itself completed the direct scalar profiler run.</figcaption>
+        <p class="sr-only" id="derivation-summary">The Qwen3.5 0.8B Q4_0 source is 507.2 MB. The build adds the tutor policy, English language tag, non-thinking ChatML template, and sampling defaults without changing model tensors. Verification confirms that all 320 model tensors are identical.</p>
+        <figcaption><span>Fig. 5</span> The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata. The tensor-identity check permits transfer of the source AVX2 measurement; the final model itself completed the direct scalar profiler run.</figcaption>
       </figure>
 
       <details class="reasoning-check">
@@ -415,7 +415,7 @@
 
       <p>At 15 tok/s, the measured 48 ms compute time leaves 18.7 ms for storage reads. A 1.35 GB/s device can transfer about 25 MB in that interval, only 1.1% of the model.</p>
 
-      <h3 class="section-title">Properties included in the submitted artifact</h3>
+      <h3 class="section-title">Properties included in the submitted model</h3>
       <p>This distinction determines submission eligibility. The GGUF contains the tensors, quantization, tied head, metadata, and chat template; streaming, repacking, mmap, threads, and KV configuration belong to the runtime.</p>
 
       <figure class="report-figure wide-figure">
@@ -451,13 +451,13 @@
           <text class="bd-gain" x="400" y="147">approximately 175 MB smaller in A/B test</text>
           <text class="bd-item" x="400" y="178">Chat template and metadata</text>
           <text class="bd-gain" x="400" y="195">persona and sampling defaults</text>
-          <text class="bd-item" x="400" y="226">Exact model tensors</text>
-          <text class="bd-gain" x="400" y="243">verified by SHA-256</text>
+          <text class="bd-item" x="400" y="226">Model tensors</text>
+          <text class="bd-gain" x="400" y="243">unchanged from source quant</text>
 
           <text class="bd-note" x="0" y="288">The submitted file cannot alter llama.cpp build flags, memory policy, thread count, or cache configuration.</text>
         </svg>
         </div>
-        <p class="sr-only" id="boundary-summary">The custom streaming engine, tensor-repacking setting, thread and KV-cache configuration, and mmap policy require a modified runtime and are not submitted. The GGUF contains the tensor quantization, tied output head, chat template, metadata, and exact model tensors.</p>
+        <p class="sr-only" id="boundary-summary">The custom streaming engine, tensor-repacking setting, thread and KV-cache configuration, and mmap policy require a modified runtime and are not submitted. The GGUF contains the tensor quantization, tied output head, chat template, metadata, and model tensors.</p>
         <figcaption><span>Fig. 7</span> Classification of evaluated changes by submission eligibility. Only properties encoded in the GGUF can affect the model-only evaluation.</figcaption>
       </figure>
 
@@ -472,7 +472,7 @@
         <span class="chapter-number">08</span>
         <div><p class="eyebrow">Scalar participant results</p><h2 id="campaign-title">Math-Expert has the highest current scalar-profiler total</h2></div>
       </header>
-      <p class="lead">Six artifacts completed full scalar participant runs across the 19 and 20 August campaigns. Math-Expert 0.6B now leads with 68% ARC-Easy, 12.72 tok/s, 540 MiB peak RSS, and a total of 77.9324.</p>
+      <p class="lead">The scalar campaign progressed from a four-model baseline to two additional finalists. Across all six participant runs, Math-Expert 0.6B leads with 68% ARC-Easy, 12.72 tok/s, 540 MiB peak RSS, and a total of 77.9324.</p>
 
       <div class="campaign-summary-grid">
         <figure class="report-figure">
@@ -488,16 +488,16 @@
       </div>
 
       <details class="reasoning-check measurement-disclosure">
-        <summary>Exact scalar measurements</summary>
+        <summary>Scalar measurements</summary>
         <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="official-data-table" aria-label="Official profiler campaign summary">
-        <thead><tr><th>Exact artifact</th><th>tok/s</th><th>First token</th><th>Peak RSS</th><th>ARC-Easy</th><th>Total</th></tr></thead>
+        <thead><tr><th>Model</th><th>tok/s</th><th>First token</th><th>Peak RSS</th><th>ARC-Easy</th><th>Total</th></tr></thead>
         <tbody>
-          <tr class="selected-row"><td><strong><code>Qwen3-0.6B-Math-Expert.Q4_K_M.gguf</code></strong><small>20 Aug scalar leader · 396,706,176 bytes · SHA-256 7f64c2e3…ae9a1</small></td><td>12.72</td><td>23.61 s</td><td>540 MiB</td><td>68% <small>54.2–79.2</small></td><td><strong>77.9324</strong></td></tr>
-          <tr><td><strong><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></strong><small>20 Aug risk-adjusted recommendation · 507,156,160 bytes · SHA-256 c96df4ef…d5d7b</small></td><td>12.63</td><td>16.62 s</td><td>670 MiB</td><td>64% <small>50.1–75.9</small></td><td><strong>75.3895</strong></td></tr>
-          <tr><td><strong><code>muta-tutor-qwen3-1.7b-q4_0.gguf</code></strong><small>19 Aug scalar leader · 974,198,528 bytes · SHA-256 a98ce36e…fd63e</small></td><td>9.79</td><td>35.37 s</td><td>1,116 MiB</td><td>72% <small>58.3–82.5</small></td><td><strong>72.4653</strong></td></tr>
-          <tr><td><code>qwen3.5-0.8b-q4_k_m.gguf</code></td><td>9.74</td><td>28.26 s</td><td>695 MiB</td><td>68% <small>54.2–79.2</small></td><td>71.54</td></tr>
-          <tr><td><code>bitcpm4-8b-tq2_0-envocab.gguf</code></td><td>0.81</td><td>584.15 s</td><td>2,307 MiB</td><td>88% <small>76.2–94.4</small></td><td>59.18</td></tr>
-          <tr><td><code>qwen3.5-4b-iq4_xs.gguf</code></td><td>1.13</td><td>395.19 s</td><td>2,627 MiB</td><td>76% <small>62.6–85.7</small></td><td>52.93</td></tr>
+          <tr class="selected-row"><td><strong>Math-Expert 0.6B Q4_K_M</strong><small>Scalar leader · 396.7 MB</small></td><td>12.72</td><td>23.61 s</td><td>540 MiB</td><td>68% <small>54.2–79.2</small></td><td><strong>77.9324</strong></td></tr>
+          <tr><td><strong>Qwen3.5 0.8B Q4_0</strong><small>Risk-adjusted recommendation · 507.2 MB</small></td><td>12.63</td><td>16.62 s</td><td>670 MiB</td><td>64% <small>50.1–75.9</small></td><td><strong>75.3895</strong></td></tr>
+          <tr><td><strong>Qwen3 1.7B Q4_0</strong><small>Previous scalar leader · 974.2 MB</small></td><td>9.79</td><td>35.37 s</td><td>1,116 MiB</td><td>72% <small>58.3–82.5</small></td><td><strong>72.4653</strong></td></tr>
+          <tr><td>Qwen3.5 0.8B Q4_K_M</td><td>9.74</td><td>28.26 s</td><td>695 MiB</td><td>68% <small>54.2–79.2</small></td><td>71.54</td></tr>
+          <tr><td>BitCPM4 8B TQ2_0</td><td>0.81</td><td>584.15 s</td><td>2,307 MiB</td><td>88% <small>76.2–94.4</small></td><td>59.18</td></tr>
+          <tr><td>Qwen3.5 4B IQ4_XS</td><td>1.13</td><td>395.19 s</td><td>2,627 MiB</td><td>76% <small>62.6–85.7</small></td><td>52.93</td></tr>
         </tbody>
         </table></div>
         <p>The final Qwen model has the shortest measured first-token latency at 16.62 seconds. Math-Expert follows at 23.61 seconds. First-token latency remains unscored.</p></div>
@@ -514,7 +514,7 @@
         <div class="sensitivity-result"><span>Highest total in this scenario</span><strong id="sensitivity-winner">Loading campaign data…</strong><small id="sensitivity-winner-score"></small></div>
         <div class="svg-chart" id="sensitivity-chart" role="img" aria-label="Website-relative model scores at the selected cohort throughput floor" aria-describedby="sensitivity-chart-summary"></div>
         <p class="sr-only" id="sensitivity-chart-summary" aria-live="polite"></p>
-        <p class="fine-print">Blue bars are the two 20 August finalists; purple marks the winner. Older AVX2 artifacts remain for comparison. This lane is never combined with the direct scalar campaign.</p>
+        <p class="fine-print">Blue bars are the two finalists from the expanded search; purple marks the winner. Earlier AVX2 models remain for comparison. This lane is never combined with the direct scalar campaign.</p>
       </div>
 
       <details class="reasoning-check">
@@ -528,9 +528,9 @@
     <section class="chapter" id="avx2-campaign" aria-labelledby="avx2-title">
       <header class="chapter-head">
         <span class="chapter-number">09</span>
-        <div><p class="eyebrow">Paired scalar and portable AVX2 benchmark</p><h2 id="avx2-title">Updated seven-artifact AVX2 ledger</h2></div>
+        <div><p class="eyebrow">Paired scalar and portable AVX2 benchmark</p><h2 id="avx2-title">Expanded seven-model AVX2 comparison</h2></div>
       </header>
-      <p class="lead">The original 19 August rerun covered five artifacts. The 20 August search adds Qwen3.5 0.8B Q4_0 and Math-Expert 0.6B Q4_K_M under the same portable b10175 binary and GCP 2-core, 4-thread proxy. Math-Expert now has the highest fixed-15 AVX2 total at 81.8803 using ARC-Easy-50.</p>
+      <p class="lead">A five-model quantization sweep established the baseline. The expanded search adds Qwen3.5 0.8B Q4_0 and Math-Expert 0.6B Q4_K_M under the same portable AVX2 configuration and two-core, four-thread CPU proxy. Math-Expert has the highest fixed-15 AVX2 total at 81.8803 using ARC-Easy-50.</p>
 
       <div class="isa-policy" aria-label="AVX2 campaign build policy">
         <span><code>AVX</code><strong>ON</strong></span>
@@ -543,59 +543,59 @@
 
       <figure class="report-figure wide-figure isa-score-figure">
         <div class="figure-head">
-          <div><p class="figure-kicker">Same hashes, same fixed-15 score</p><h3>Total score by CPU method</h3></div>
+          <div><p class="figure-kicker">Matched models and scoring function</p><h3>Total score by CPU method</h3></div>
           <div class="chart-legend isa-legend"><span class="scalar">Scalar configuration</span><span class="avx2">Portable AVX2</span></div>
         </div>
-        <div class="svg-chart tall-chart" id="isa-score-chart" role="img" aria-label="Paired scalar and AVX2 total scores for seven GGUF artifacts" aria-describedby="isa-score-summary"></div>
+        <div class="svg-chart tall-chart" id="isa-score-chart" role="img" aria-label="Paired scalar and AVX2 total scores for seven GGUF models" aria-describedby="isa-score-summary"></div>
         <p class="sr-only" id="isa-score-summary" aria-live="polite">Loading paired scalar and AVX2 score evidence.</p>
-        <figcaption><span>Fig. 10</span> Each model has a scalar and portable AVX2 fixed-15 total using its ARC-Easy-50 proxy. The 20 August scalar rows are direct participant-profiler results; the dated 19 August rows are controlled scalar screens. Outlined bars mark the highest total in each CPU configuration.</figcaption>
+        <figcaption><span>Fig. 10</span> Each model has a scalar and portable AVX2 fixed-15 total using its ARC-Easy-50 proxy. The finalist scalar rows are participant-profiler results; the quantization-ladder rows are controlled scalar screens. Outlined bars mark the highest total in each CPU configuration.</figcaption>
       </figure>
 
       <details class="reasoning-check measurement-disclosure">
-        <summary>Exact scalar and AVX2 measurements</summary>
+        <summary>Scalar and AVX2 measurements</summary>
         <div><div class="table-wrap editorial-table-wrap avx2-table-wrap"><table class="editorial-table avx2-table" aria-label="Controlled AVX2 FMA F16C campaign results">
-        <caption class="sr-only">Scalar and portable AVX2 benchmark results for seven GGUF artifacts across the 19 and 20 August campaigns.</caption>
-        <thead><tr><th>Exact artifact</th><th>Scalar → AVX2 pp512</th><th>Scalar → AVX2 tg128</th><th>Decode gain</th><th>Est. profiler RSS</th><th>ARC-Easy proxy</th><th>Total</th></tr></thead>
+        <caption class="sr-only">Scalar and portable AVX2 benchmark results for seven GGUF models across the quantization and expanded model searches.</caption>
+        <thead><tr><th>Model</th><th>Scalar → AVX2 pp512</th><th>Scalar → AVX2 tg128</th><th>Decode gain</th><th>Est. profiler RSS</th><th>ARC-Easy proxy</th><th>Total</th></tr></thead>
         <tbody>
-          <tr class="avx2-selected-row"><td><strong><code>Qwen3-0.6B-Math-Expert.Q4_K_M.gguf</code></strong><small>20 Aug · highest latest AVX2 total · <code>7f64c2…</code></small></td><td>21.7268 → 153.9351</td><td>12.6339 → 39.2320</td><td>3.105×</td><td>759.7 MiB<small>+202.9 MiB</small></td><td>68%</td><td><strong>81.8803</strong></td></tr>
-          <tr><td><strong><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></strong><small>20 Aug · AVX2 screen transfers from tensor-identical source · <code>c96df4…</code></small></td><td>31.0781 → 98.0094</td><td>12.6955 → 27.1509</td><td>2.139×</td><td>928.1 MiB<small>+240.8 MiB</small></td><td>64%</td><td><strong>79.4104</strong></td></tr>
-          <tr><td><strong><code>muta-tutor-qwen3-1.7b-q4_0.gguf</code></strong><small>19 Aug scalar-profiler choice · <code>a98ce3…</code></small></td><td>14.7166 → 47.0716</td><td>9.9869 → 16.8927</td><td>1.691×</td><td>2,049.4 MiB<small>+916.3 MiB</small></td><td>72%</td><td><strong>80.2818</strong></td></tr>
-          <tr><td><strong><code>Q4_K_M-tied.gguf</code></strong><small>19 Aug AVX2 leader · <code>e8a413…</code></small></td><td>7.1859 → 55.4554</td><td>5.2954 → 15.6714</td><td>2.959×</td><td>1,989.7 MiB<small>+806.2 MiB</small></td><td>72%</td><td><strong>80.4484</strong></td></tr>
-          <tr><td><code>Q5_K_M-tied.gguf</code><small><code>17ddf7…</code></small></td><td>6.5613 → 24.3231</td><td>4.7839 → 12.7191</td><td>2.659×</td><td>1,364.6 MiB<small>+0.1 MiB</small></td><td>76%</td><td>79.6307</td></tr>
-          <tr><td><code>IQ4_XS-tied.gguf</code><small><code>aea3cb…</code></small></td><td>3.2063 → 23.9364</td><td>2.4961 → 14.0644</td><td>5.635×</td><td>1,082.3 MiB<small>+0.5 MiB</small></td><td>70%</td><td>80.1089</td></tr>
-          <tr><td><code>bitcpm4-8b-tq2_0-envocab.gguf</code><small><code>069621…</code></small></td><td>0.8762 → 13.6569</td><td>0.8108 → 7.4876</td><td><strong>9.235×</strong></td><td>2,316.4 MiB<small>+0.1 MiB</small></td><td>88%</td><td>72.5121</td></tr>
+          <tr class="avx2-selected-row"><td><strong>Math-Expert 0.6B Q4_K_M</strong><small>Expanded-search leader</small></td><td>21.7268 → 153.9351</td><td>12.6339 → 39.2320</td><td>3.105×</td><td>759.7 MiB<small>+202.9 MiB</small></td><td>68%</td><td><strong>81.8803</strong></td></tr>
+          <tr><td><strong>Qwen3.5 0.8B Q4_0</strong><small>Risk-adjusted recommendation; tensor-identical AVX2 source</small></td><td>31.0781 → 98.0094</td><td>12.6955 → 27.1509</td><td>2.139×</td><td>928.1 MiB<small>+240.8 MiB</small></td><td>64%</td><td><strong>79.4104</strong></td></tr>
+          <tr><td><strong>Qwen3 1.7B Q4_0</strong><small>Previous scalar choice</small></td><td>14.7166 → 47.0716</td><td>9.9869 → 16.8927</td><td>1.691×</td><td>2,049.4 MiB<small>+916.3 MiB</small></td><td>72%</td><td><strong>80.2818</strong></td></tr>
+          <tr><td><strong>Qwen3 1.7B Q4_K_M</strong><small>Quantization-ladder leader</small></td><td>7.1859 → 55.4554</td><td>5.2954 → 15.6714</td><td>2.959×</td><td>1,989.7 MiB<small>+806.2 MiB</small></td><td>72%</td><td><strong>80.4484</strong></td></tr>
+          <tr><td>Qwen3 1.7B Q5_K_M</td><td>6.5613 → 24.3231</td><td>4.7839 → 12.7191</td><td>2.659×</td><td>1,364.6 MiB<small>+0.1 MiB</small></td><td>76%</td><td>79.6307</td></tr>
+          <tr><td>Qwen3 1.7B IQ4_XS</td><td>3.2063 → 23.9364</td><td>2.4961 → 14.0644</td><td>5.635×</td><td>1,082.3 MiB<small>+0.5 MiB</small></td><td>70%</td><td>80.1089</td></tr>
+          <tr><td>BitCPM4 8B TQ2_0</td><td>0.8762 → 13.6569</td><td>0.8108 → 7.4876</td><td><strong>9.235×</strong></td><td>2,316.4 MiB<small>+0.1 MiB</small></td><td>88%</td><td>72.5121</td></tr>
         </tbody>
         </table></div></div>
       </details>
 
       <aside class="design-note avx2-note">
         <p class="design-note-label">Result</p>
-        <p>Math-Expert replaces the 19 August Q4_K_M artifact as the highest measured AVX2 proxy: 81.8803 versus 80.4484. Both latest finalists exceed 15 tok/s. Math-Expert then leads the ARC-Easy-50 comparison through four additional accuracy points and 168.4 MiB lower estimated RSS. Qwen leads only after substituting the larger ARC-Easy-500 estimate.</p>
+        <p>Math-Expert improves on the quantization-ladder leader: 81.8803 versus 80.4484. Both finalists exceed 15 tok/s. Math-Expert leads the ARC-Easy-50 comparison through four additional accuracy points and 168.4 MiB lower estimated RSS. Qwen leads after substituting the larger ARC-Easy-500 estimate.</p>
       </aside>
 
       <details class="reasoning-check">
         <summary>Benchmark configuration and evidence limits</summary>
         <div>
-          <p><span class="evidence-badge avx2">Controlled AVX2 proxy</span> llama.cpp b10175 at commit <code>60bccc3763395e01b039aa1ddeacc8cc0ea69f70</code>; benchmark binary SHA-256 <code>4abfa11a…12fd8</code>. Every model used <code>p512/tg128</code>, <code>-ngl 0</code>, two automatically selected physical-core threads, and five internal samples. RSS is measured child-tree peak plus a 45 MiB profiler-root estimate. The final Qwen AVX2 row uses its pinned source measurement after verifying all 320 tensors and 496,192,768 tensor bytes as identical; the final metadata-wrapped file itself completed the scalar participant run. Temperature is unavailable on GCP. AVX2 rows are controlled proxies, not participant-profiler reports.</p>
+          <p><span class="evidence-badge avx2">Controlled AVX2 proxy</span> Every model used a 512-token prompt, 128 generated tokens, two physical-core threads, and five internal samples. RSS is the measured child-tree peak plus a 45 MiB profiler-root estimate. The final Qwen row transfers the source measurement after verifying all 320 model tensors as identical. Temperature is unavailable on the cloud proxy. AVX2 rows are controlled proxies, not participant-profiler reports.</p>
         </div>
       </details>
 
       <aside class="design-note warning-note" id="current-state">
         <p class="design-note-label">Required validation</p>
-        <p>Run the final Qwen file and Math-Expert with the organiser's exact binary on the physical target, recording repeated throughput, whole-tree RSS, temperature, and throttling. Replace ARC-Easy with a tutoring-aware accuracy evaluation before choosing between the raw score leader and the larger-sample recommendation.</p>
+        <p>Run the final Qwen file and Math-Expert on the physical target using the competition procedure, recording repeated throughput, whole-tree RSS, temperature, and throttling. Replace ARC-Easy with a tutoring-aware accuracy evaluation before choosing between the raw score leader and the larger-sample recommendation.</p>
       </aside>
     </section>
 
     <section class="chapter" id="overnight-search" aria-labelledby="overnight-search-title">
       <header class="chapter-head">
         <span class="chapter-number">10</span>
-        <div><p class="eyebrow">20 August model and GGUF search</p><h2 id="overnight-search-title">The profiler slice and the broader accuracy checks select different models</h2></div>
+        <div><p class="eyebrow">Expanded model and GGUF search</p><h2 id="overnight-search-title">The profiler slice and the broader accuracy checks select different models</h2></div>
       </header>
-      <p class="lead">Nine new model artifacts and eight Math-Expert quantization layouts were tested on the same GCP x86 proxy. Math-Expert Q4_K_M records the highest direct scalar total and the highest fixed-15 AVX2 total with ARC-Easy-50. Qwen3.5-0.8B Q4_0 leads the matched ARC-Easy-500 comparison and remains the lower-risk submission.</p>
+      <p class="lead">Nine additional models and eight Math-Expert quantization layouts were tested on the same GCP x86 proxy. Math-Expert Q4_K_M records the highest direct scalar total and the highest fixed-15 AVX2 total with ARC-Easy-50. Qwen3.5-0.8B Q4_0 leads the matched ARC-Easy-500 comparison and remains the lower-risk submission.</p>
 
       <div class="finding-pair overnight-decision-grid">
         <article>
-          <p class="figure-kicker">Exact profiler proxy</p>
+          <p class="figure-kicker">Profiler proxy</p>
           <h3>Math-Expert 0.6B Q4_K_M</h3>
           <dl class="compact-metrics"><div><dt>Direct scalar total</dt><dd>77.9324</dd></div><div><dt>AVX2 total, n=50</dt><dd>81.8803</dd></div><div><dt>AVX2 generation</dt><dd>39.23 tok/s</dd></div><div><dt>Est. AVX2 RSS</dt><dd>759.7 MiB</dd></div></dl>
           <p>Use this file only if the executable profiler's 50 ARC-Easy items are treated as the selection objective.</p>
@@ -610,22 +610,22 @@
 
       <figure class="report-figure wide-figure latest-avx2-figure">
         <div class="figure-head"><div><p class="figure-kicker">Latest finalists, fixed-15 score</p><h3>Direct scalar and portable AVX2 totals</h3></div><div class="chart-legend isa-legend"><span class="scalar">Direct scalar</span><span class="avx2">Portable AVX2</span></div></div>
-        <div class="svg-chart tall-chart" id="overnight-avx2-score-chart" role="img" aria-label="Direct scalar and portable AVX2 fixed-15 totals for the two overnight finalists" aria-describedby="overnight-avx2-score-summary"></div>
+        <div class="svg-chart tall-chart" id="overnight-avx2-score-chart" role="img" aria-label="Direct scalar and portable AVX2 fixed-15 totals for the two expanded-search finalists" aria-describedby="overnight-avx2-score-summary"></div>
         <p class="sr-only" id="overnight-avx2-score-summary" aria-live="polite">Loading the latest finalist AVX2 comparison.</p>
         <figcaption><span>Fig. 11</span> Both AVX2 totals use the profiler's 15 tok/s cap and ARC-Easy-50. Math-Expert scores 81.8803; Qwen scores 79.4104. AVX2 RSS adds a 45 MiB profiler-root estimate to the measured child tree.</figcaption>
       </figure>
 
       <details class="reasoning-check measurement-disclosure" open>
         <summary>Latest scalar and AVX2 finalist results</summary>
-        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-avx2-table" aria-label="Latest overnight finalist scalar and AVX2 results"></table></div>
-        <p>ARC-Easy-50 supplies the raw fixed-15 comparison. The ARC-Easy-500 column is diagnostic. The final Qwen AVX2 row transfers the source measurement only after exact tensor-identity verification.</p></div>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-avx2-table" aria-label="Expanded-search finalist scalar and AVX2 results"></table></div>
+        <p>ARC-Easy-50 supplies the raw fixed-15 comparison. The ARC-Easy-500 column is diagnostic. The final Qwen AVX2 row transfers the source measurement only after tensor-identity verification.</p></div>
       </details>
 
       <div class="campaign-summary-grid">
         <figure class="report-figure">
           <div class="figure-head"><div><p class="figure-kicker">Sample sensitivity</p><h3>Profiler total and larger-sample diagnostic</h3></div><span class="evidence-badge official">Same TPS and RSS</span></div>
           <div class="svg-chart tall-chart" id="overnight-score-chart" role="img" aria-label="Direct profiler total and larger-sample diagnostic total for the two finalists" aria-describedby="overnight-score-summary"></div>
-          <p class="sr-only" id="overnight-score-summary" aria-live="polite">Loading the overnight score comparison.</p>
+          <p class="sr-only" id="overnight-score-summary" aria-live="polite">Loading the finalist score comparison.</p>
           <figcaption><span>Fig. 12</span> The solid bar uses the profiler's 50 ARC-Easy items. The paired bar substitutes the larger ARC-Easy estimate while preserving the same measured TPS and RSS. The second bar is diagnostic, not an official score.</figcaption>
         </figure>
         <figure class="report-figure">
@@ -638,20 +638,20 @@
 
       <details class="reasoning-check measurement-disclosure" open>
         <summary>Finalist accuracy checks</summary>
-        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-finalist-table" aria-label="Matched accuracy results for the overnight finalists"></table></div>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-finalist-table" aria-label="Matched accuracy results for the expanded-search finalists"></table></div>
         <p>Confidence intervals are Wilson 95% intervals. The task results are diagnostics, not the judging-panel tutoring score.</p></div>
       </details>
 
       <details class="reasoning-check measurement-disclosure">
         <summary>Models screened and rejection reasons</summary>
-        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-screen-table" aria-label="Overnight model screen"></table></div></div>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-screen-table" aria-label="Expanded model screen"></table></div></div>
       </details>
 
       <h3 class="section-title">Methods considered</h3>
       <div class="table-wrap editorial-table-wrap"><table class="editorial-table method-table">
         <thead><tr><th>Method</th><th>Test or constraint</th><th>Decision</th></tr></thead>
         <tbody>
-          <tr><td>Uniform quantization</td><td>Q4_0, Q5_0, Q4_K_S, Q4_K_M, and IQ4_XS from one pinned F16 source.</td><td>Keep Q4_K_M. Q4_0 is fast but loses too much accuracy; Q5_0 is slow on the scalar profiler kernel.</td></tr>
+          <tr><td>Uniform quantization</td><td>Q4_0, Q5_0, Q4_K_S, Q4_K_M, and IQ4_XS from the same F16 source.</td><td>Keep Q4_K_M. Q4_0 is fast but loses too much accuracy; Q5_0 is slow on the scalar profiler kernel.</td></tr>
           <tr><td>Mixed tensor precision</td><td>Q4_0 body with Q6_K or Q8_0 tied embedding; Q5_0 in the final four blocks.</td><td>Reject. None recovered enough ARC-Easy accuracy.</td></tr>
           <tr><td>Architecture and specialist search</td><td>Qwen3/3.5, Gemma 3, Noema, VibeThinker, OpenMath-Nemotron, NuminaMath, and a reasoning distill.</td><td>Keep Qwen3.5-0.8B and Math-Expert as finalists. Other files lost on throughput, accuracy, licensing, or provenance.</td></tr>
           <tr><td>Pruning and vocabulary reduction</td><td>Prior layer-pruning and BitCPM vocabulary results were retained; Qwen BPE vocabulary pruning cannot be reproduced safely with the current tool.</td><td>No new submission candidate.</td></tr>
@@ -669,7 +669,7 @@
       <details class="reasoning-check">
         <summary>Research and provenance</summary>
         <div>
-          <p>The search used the public model cards, immutable revisions, exact SHA-256 hashes, the pinned quantizer, and the retained raw JSONL rows. The selected Math-Expert source is a full Qwen3-0.6B fine-tune on OpenMathReasoning-mini; its public card does not provide a complete training recipe or benchmark table. The Qwen3.5 artifact is derived from the official Qwen checkpoint.</p>
+          <p>The search used public model cards, documented licences, reproducible conversion procedures, and retained raw measurements. Math-Expert is a Qwen3-0.6B fine-tune on OpenMathReasoning-mini; its public card does not provide a complete training recipe or benchmark table. The Qwen3.5 model is derived from the official Qwen checkpoint.</p>
           <p>Primary references: <a href="https://huggingface.co/suayptalha/Qwen3-0.6B-Math-Expert" target="_blank" rel="noreferrer">Math-Expert model card</a>, <a href="https://huggingface.co/mradermacher/Qwen3-0.6B-Math-Expert-GGUF" target="_blank" rel="noreferrer">GGUF repository</a>, <a href="https://huggingface.co/datasets/nvidia/OpenMathReasoning" target="_blank" rel="noreferrer">OpenMathReasoning dataset</a>, <a href="https://arxiv.org/abs/2504.16891" target="_blank" rel="noreferrer">OpenMathReasoning paper</a>, <a href="https://arxiv.org/abs/2505.11574" target="_blank" rel="noreferrer">low-bit reasoning study</a>, and <a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/speculative.md" target="_blank" rel="noreferrer">llama.cpp speculative-decoding documentation</a>.</p>
         </div>
       </details>
@@ -698,15 +698,15 @@
       </header>
       <p class="lead">Model selection also has to satisfy the published challenge requirements. Each entry pairs one requirement with Muta's recorded implementation status.</p>
       <div class="faq-list" id="faq-list"></div>
-      <p class="source-note">Challenge requirements checked against the <a href="https://africadeeptech.org/challenge-2026/" target="_blank" rel="noreferrer">Africa Deep Tech Challenge 2026 page</a> on 19 August 2026.</p>
+      <p class="source-note">Challenge requirements follow the <a href="https://africadeeptech.org/challenge-2026/" target="_blank" rel="noreferrer">Africa Deep Tech Challenge 2026 page</a>.</p>
     </section>
 
     <section class="chapter profiler-workspace" id="profiler" aria-labelledby="profiler-title">
       <header class="chapter-head">
         <span class="chapter-number">A</span>
-        <div><p class="eyebrow">Operational appendix</p><h2 id="profiler-title">Profiler records and campaign tables</h2></div>
+        <div><p class="eyebrow">Operational appendix</p><h2 id="profiler-title">Profiler results and comparison tables</h2></div>
       </header>
-      <p class="lead">The exact campaign records, live profiling controls, stored reports, and mixed-machine archive remain available below.</p>
+      <p class="lead">The underlying measurements, live profiling controls, stored results, and mixed-machine archive remain available below.</p>
 
       <div class="workspace-bar">
         <div><strong>Profiler metadata</strong><p id="meta-line">Loading metadata…</p></div>
@@ -716,7 +716,7 @@
       </div>
 
       <details class="card workspace-disclosure" id="campaign-card">
-        <summary><span class="evidence-badge official">Official profiler result</span><strong>19 August direct GGUF campaign</strong><small class="sub" id="campaign-sub">Loading campaign evidence…</small></summary>
+        <summary><span class="evidence-badge official">Official profiler result</span><strong>Direct GGUF campaign</strong><small class="sub" id="campaign-sub">Loading campaign evidence…</small></summary>
         <div class="table-wrap"><table class="models" id="campaign-table"></table></div>
         <p class="formula" id="campaign-formula"></p>
       </details>
@@ -728,7 +728,7 @@
       </details>
 
       <details class="card workspace-disclosure" id="campaign-avx2-score-card">
-        <summary><span class="evidence-badge avx2">Controlled AVX2 proxy</span><strong>Paired scalar and AVX2 measurements</strong><small class="sub" id="campaign-avx2-score-sub">Loading the seven-artifact instruction-set ledger…</small></summary>
+        <summary><span class="evidence-badge avx2">Controlled AVX2 proxy</span><strong>Paired scalar and AVX2 measurements</strong><small class="sub" id="campaign-avx2-score-sub">Loading the seven-model instruction-set comparison…</small></summary>
         <div class="table-wrap"><table class="models" id="campaign-avx2-score-table"></table></div>
         <p class="formula" id="campaign-avx2-score-formula"></p>
       </details>
@@ -758,7 +758,7 @@
 
     <footer class="report-footer">
       <p><strong>Muta IQ</strong> · Offline adaptive tutoring for maths and scientific reasoning.</p>
-      <p>Primary repository evidence: <code>RESULTS.md</code>, <code>muta-iq/REPORT.md</code>, <code>muta-iq/opt/docs/REPORT.md</code>, <code>muta-iq/opt/docs/STREAMING_ENGINE.md</code>, <code>bench/measurements/campaign-20260819/</code>, and <code>bench/measurements/campaign-20260820-overnight/</code>.</p>
+      <p>Full methods and raw measurements are retained in the repository benchmark archive.</p>
     </footer>
   </article>
 </main>

@@ -21,8 +21,6 @@ const fmt = {
   int: (x) => (x == null ? "—" : String(Math.round(x))),
   gb: (b) => (b == null ? "—" : (b / 2 ** 30).toFixed(2) + " GB"),
   mb: (x) => (x == null ? "—" : Math.round(x).toLocaleString() + " MB"),
-  when: (iso) => iso == null ? "—" :
-    new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
   elapsed: (s) => {
     s = Math.max(0, Math.floor(s));
     const m = Math.floor(s / 60), h = Math.floor(m / 60);
@@ -47,11 +45,11 @@ const REPORT_CURRENT_OFFICIAL = [
 ];
 
 const REPORT_RUNTIME = [
-  { name: "Docker baseline", tps: 5.3, memory: "4.77 GB, still rising", date: "30 Jul" },
-  { name: "Resource caps", tps: 6.72, memory: "4.44 GB", date: "31 Jul" },
-  { name: "Native default", tps: 29.78, memory: "3,519 MiB footprint", date: "1 Aug" },
-  { name: "6 threads + unified KV", tps: 31.09, memory: "3,137 MiB footprint", date: "1 Aug" },
-  { name: "Draft speculation", tps: 24.72, memory: "host RAM not reliable", date: "31 Jul" },
+  { name: "Docker baseline", tps: 5.3, memory: "4.77 GB, still rising" },
+  { name: "Resource caps", tps: 6.72, memory: "4.44 GB" },
+  { name: "Native default", tps: 29.78, memory: "3,519 MiB footprint" },
+  { name: "6 threads + unified KV", tps: 31.09, memory: "3,137 MiB footprint" },
+  { name: "Draft speculation", tps: 24.72, memory: "host RAM not reliable" },
 ];
 
 const REPORT_FUNNEL = [
@@ -77,58 +75,58 @@ const REPORT_STREAMING = [
 ];
 
 const EXPERIMENTS = [
-  { status: "adopted", name: "Concurrency and cache caps", finding: "Two parallel slots, four checkpoints, and a 256 MiB cache stopped memory growth. The early Docker baseline rose from about 5.3 to 6.72 tok/s.", source: "RESULTS.md · 31 Jul" },
-  { status: "adopted", name: "Six-thread runtime", finding: "Six batch and decode threads reached 31.09 tok/s, 83% of the estimated weight-bandwidth limit. Ten threads reduced decode throughput to approximately 4.4 tok/s.", source: "RESULTS.md · 1 Aug" },
-  { status: "adopted", name: "Unified KV, two checkpoints", finding: "Unified KV and two checkpoints reduced retained state and improved prefill while holding decode near 31 tok/s on the development host.", source: "RESULTS.md · 1 Aug" },
-  { status: "rejected", name: "0.8B draft speculation", finding: "98.4% proposal acceptance still slowed native decode from 30.84 to 24.72 tok/s. Host RAM readings were flagged as unreliable, so no native memory delta is claimed.", source: "RESULTS.md · 31 Jul" },
-  { status: "neutral", name: "N-gram speculation", finding: "A 12–22% acceptance rate did not offset lookup and verification overhead. The feature is disabled by default and uses no additional model memory.", source: "RESULTS.md · 1 Aug" },
-  { status: "rejected", name: "More threads", finding: "Throughput did not increase after memory bandwidth saturated. Ten threads reduced decode throughput to approximately 4.4 tok/s; temperature was not measured in this sweep.", source: "RESULTS.md · 1 Aug" },
-  { status: "rejected", name: "Disable mmap", finding: "Decode fell by about 28% and memory rose by about 1 GiB. The stock audit’s eager mmap policy cannot be changed by the submitted GGUF.", source: "RESULTS.md · GGUF campaign" },
-  { status: "neutral", name: "mlock", finding: "Pinning pages produced no repeatable throughput gain in the tested resident configuration.", source: "RESULTS.md · 1 Aug" },
-  { status: "adopted", name: "No-repack product path", finding: "Avoiding runtime tensor conversion cut a tested 4B footprint from about 3,236 to 602 MiB. The campaign cannot use this engine-only change.", source: "RESULTS.md · 1 Aug" },
+  { status: "adopted", name: "Concurrency and cache caps", finding: "Two parallel slots, four checkpoints, and a 256 MiB cache stopped memory growth. The early Docker baseline rose from about 5.3 to 6.72 tok/s.", source: "runtime memory study" },
+  { status: "adopted", name: "Six-thread runtime", finding: "Six batch and decode threads reached 31.09 tok/s, 83% of the estimated weight-bandwidth limit. Ten threads reduced decode throughput to approximately 4.4 tok/s.", source: "runtime thread sweep" },
+  { status: "adopted", name: "Unified KV, two checkpoints", finding: "Unified KV and two checkpoints reduced retained state and improved prefill while holding decode near 31 tok/s on the development host.", source: "runtime memory study" },
+  { status: "rejected", name: "0.8B draft speculation", finding: "98.4% proposal acceptance still slowed native decode from 30.84 to 24.72 tok/s. Host RAM readings were flagged as unreliable, so no native memory delta is claimed.", source: "speculation study" },
+  { status: "neutral", name: "N-gram speculation", finding: "A 12–22% acceptance rate did not offset lookup and verification overhead. The feature is disabled by default and uses no additional model memory.", source: "speculation study" },
+  { status: "rejected", name: "More threads", finding: "Throughput did not increase after memory bandwidth saturated. Ten threads reduced decode throughput to approximately 4.4 tok/s; temperature was not measured in this sweep.", source: "runtime thread sweep" },
+  { status: "rejected", name: "Disable mmap", finding: "Decode fell by about 28% and memory rose by about 1 GiB. The stock audit’s eager mmap policy cannot be changed by the submitted GGUF.", source: "runtime memory study" },
+  { status: "neutral", name: "mlock", finding: "Pinning pages produced no repeatable throughput gain in the tested resident configuration.", source: "runtime memory study" },
+  { status: "adopted", name: "No-repack product path", finding: "Avoiding runtime tensor conversion cut a tested 4B footprint from about 3,236 to 602 MiB. The campaign cannot use this engine-only change.", source: "runtime memory study" },
   { status: "adopted", name: "Fixed context budget", finding: "Explicit context and KV limits replaced runtime defaults, fixing a memory variable for subsequent comparisons.", source: "runtime configuration" },
-  { status: "adopted", name: "4B reasoning baseline", finding: "The 4B model exceeded the 2B model by 15.7 points across three STEM tasks. The later audit used a different kernel configuration and a separate accuracy proxy.", source: "RESULTS.md · 5 Aug" },
-  { status: "neutral", name: "IQ4_XS importance matrix", finding: "Task scores moved in both directions by roughly one or two items, with no reliable accuracy gain.", source: "RESULTS.md · 6 Aug" },
-  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "Under AVX2, Q4_K_M recorded the highest total. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and throughput was lower.", source: "GGUF campaign · 19 Aug" },
-  { status: "rejected", name: "Mixed embedding and head precision", finding: "Q3_K_M with a Q6_K head fell to 66% ARC-Easy; IQ4_XS with a Q6_K head was slower and larger than uniform IQ4_XS.", source: "GGUF campaign · 19 Aug" },
-  { status: "neutral", name: "Vendor importance matrix", finding: "The Qwen K-quant ladder used the vendor matrix consistently, but its calibration corpus is unpublished. Dataset disjointness cannot be independently verified.", source: "GGUF campaign · 19 Aug" },
-  { status: "neutral", name: "Metal offload", finding: "Hybrid 4B decode was neutral to slightly slower than CPU-only on the development Mac. GPU support remains optional.", source: "RESULTS.md · 6 Aug" },
-  { status: "deferred", name: "TinyStories TTFT preamble", finding: "A tiny warm-up model produced a 1.65 ms first chunk with a small resident cost, but licensing was unresolved and the feature is off by default.", source: "RESULTS.md · 6 Aug" },
-  { status: "adopted", name: "BitCPM vocabulary pruning", finding: "Pruning 73,448 tokens to 44,416 saved 164 MiB. English tokenisation matched across 20,464 checked tokens and perplexity changed from 10.558 to 10.473.", source: "muta-iq/opt/docs/REPORT.md" },
-  { status: "rejected", name: "BitCPM TQ1_0 body", finding: "The file lost 340 MiB, but generic-kernel throughput fell 22%. The evaluator lacked the kernel needed to turn fewer bits into less work.", source: "muta-iq/opt/docs/REPORT.md" },
-  { status: "rejected", name: "Head and embedding requants", finding: "At most 48 MiB was saved and the largest estimated total-score increase was approximately 0.14. Behavioural effects were not measured.", source: "muta-iq/opt/docs/REPORT.md" },
-  { status: "rejected", name: "Low-rank factorisation", finding: "Ternary matrices remained full-rank. Rank-2048 factorisation error was about 0.80 before quantisation and exceeded 1 after it.", source: "muta-iq/opt/docs/REPORT.md" },
-  { status: "rejected", name: "Unstructured sparsity", finding: "Dense GGUF stores the zeros and the stock kernels still multiply them. There was no file or compute saving to score.", source: "muta-iq/opt/docs/REPORT.md" },
-  { status: "rejected", name: "Single-layer pruning", finding: "One Qwen layer gained about 3.7% speed but lost two ARC-Easy points. The accuracy cost exceeded the performance return.", source: "GGUF campaign · 19 Aug" },
-  { status: "deferred", name: "Qwen vocabulary pruning", finding: "Not attempted: the current tools cannot rewrite the GPT-2 BPE merges coherently. BitCPM’s verified vocabulary prune does not transfer automatically.", source: "GGUF campaign · 19 Aug" },
-  { status: "rejected", name: "Context metadata change", finding: "The profiler fixes prompt length at 512 tokens and generation length at 128 tokens. Context metadata does not change this workload.", source: "GGUF campaign · 19 Aug" },
-  { status: "rejected", name: "Custom tensor layout", finding: "The stock quantiser layout was retained. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "GGUF campaign · 19 Aug" },
-  { status: "adopted", name: "Embedded chat template", finding: "The GGUF contains the chat template and tutoring persona, both verified on a live server. They affect evaluator responses but do not affect raw ARC or throughput measurements.", source: "muta-iq/REPORT.md" },
-  { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "muta-iq/opt/docs/STREAMING_ENGINE.md" },
-  { status: "adopted", name: "Runtime-conditional model choice", finding: "The 20 August AVX2 rerun changes the raw leader to Math-Expert Q4_K_M at 81.8803 using ARC-Easy-50. Qwen3.5 0.8B leads the larger 500-item AVX2 diagnostic, 76.8104 to 75.1803.", source: "overnight campaign · 20 Aug" },
-  { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "GGUF campaign · 19 Aug" },
-  { status: "adopted", name: "Exact-hash rebuild", finding: "The candidate was rebuilt from pinned source and matched the promoted SHA-256 after correcting a 32-byte metadata-name difference.", source: "Set up Muta on GCP VM" },
-  { status: "adopted", name: "19 August official-profiler campaign", finding: "Four exact artifacts completed full participant runs. The 1.7B Q4_0 total exceeded the then-tested 0.8B Q4_K_M total by 0.92 points.", source: "campaign-20260819/official-profiler" },
-  { status: "adopted", name: "Portable AVX2 score of record", finding: "The ledger now contains seven artifacts across the 19 and 20 August campaigns. Math-Expert Q4_K_M has the highest ARC-Easy-50 fixed-15 total at 81.8803; Qwen3.5 0.8B is the larger-sample choice.", source: "campaign-20260819 + campaign-20260820-overnight" },
-  { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "muta-iq/opt/docs/REPORT.md" },
+  { status: "adopted", name: "4B reasoning baseline", finding: "The 4B model exceeded the 2B model by 15.7 points across three STEM tasks. The later audit used a different kernel configuration and a separate accuracy proxy.", source: "model-scale study" },
+  { status: "neutral", name: "IQ4_XS importance matrix", finding: "Task scores moved in both directions by roughly one or two items, with no reliable accuracy gain.", source: "quantization study" },
+  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "Under AVX2, Q4_K_M recorded the highest total. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and throughput was lower.", source: "quantization sweep" },
+  { status: "rejected", name: "Mixed embedding and head precision", finding: "Q3_K_M with a Q6_K head fell to 66% ARC-Easy; IQ4_XS with a Q6_K head was slower and larger than uniform IQ4_XS.", source: "quantization sweep" },
+  { status: "neutral", name: "Vendor importance matrix", finding: "The Qwen K-quant ladder used the vendor matrix consistently, but its calibration corpus is unpublished. Dataset disjointness cannot be independently verified.", source: "quantization sweep" },
+  { status: "neutral", name: "Metal offload", finding: "Hybrid 4B decode was neutral to slightly slower than CPU-only on the development Mac. GPU support remains optional.", source: "runtime optimisation study" },
+  { status: "deferred", name: "TinyStories TTFT preamble", finding: "A tiny warm-up model produced a 1.65 ms first chunk with a small resident cost, but licensing was unresolved and the feature is off by default.", source: "first-token latency study" },
+  { status: "adopted", name: "BitCPM vocabulary pruning", finding: "Pruning 73,448 tokens to 44,416 saved 164 MiB. English tokenisation matched across 20,464 checked tokens and perplexity changed from 10.558 to 10.473.", source: "vocabulary study" },
+  { status: "rejected", name: "BitCPM TQ1_0 body", finding: "The file lost 340 MiB, but generic-kernel throughput fell 22%. The evaluator lacked the kernel needed to turn fewer bits into less work.", source: "ternary quantization study" },
+  { status: "rejected", name: "Head and embedding requants", finding: "At most 48 MiB was saved and the largest estimated total-score increase was approximately 0.14. Behavioural effects were not measured.", source: "mixed-precision study" },
+  { status: "rejected", name: "Low-rank factorisation", finding: "Ternary matrices remained full-rank. Rank-2048 factorisation error was about 0.80 before quantisation and exceeded 1 after it.", source: "factorisation study" },
+  { status: "rejected", name: "Unstructured sparsity", finding: "Dense GGUF stores the zeros and the stock kernels still multiply them. There was no file or compute saving to score.", source: "sparsity study" },
+  { status: "rejected", name: "Single-layer pruning", finding: "One Qwen layer gained about 3.7% speed but lost two ARC-Easy points. The accuracy cost exceeded the performance return.", source: "pruning study" },
+  { status: "deferred", name: "Qwen vocabulary pruning", finding: "Not attempted: the current tools cannot rewrite the GPT-2 BPE merges coherently. BitCPM’s verified vocabulary prune does not transfer automatically.", source: "vocabulary study" },
+  { status: "rejected", name: "Context metadata change", finding: "The profiler fixes prompt length at 512 tokens and generation length at 128 tokens. Context metadata does not change this workload.", source: "context study" },
+  { status: "rejected", name: "Custom tensor layout", finding: "The stock quantiser layout was retained. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "tensor-layout study" },
+  { status: "adopted", name: "Embedded chat template", finding: "The GGUF contains the chat template and tutoring persona, both verified on a live server. They affect evaluator responses but do not affect raw ARC or throughput measurements.", source: "prompt-format study" },
+  { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "weight-streaming study" },
+  { status: "adopted", name: "Runtime-conditional model choice", finding: "The expanded AVX2 search identifies Math-Expert Q4_K_M as the raw leader at 81.8803 using ARC-Easy-50. Qwen3.5 0.8B leads the larger 500-item AVX2 diagnostic, 76.8104 to 75.1803.", source: "expanded model search" },
+  { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "quantization sweep" },
+  { status: "adopted", name: "Reproducible artifact build", finding: "The promoted candidate was rebuilt from its documented source and matched byte-for-byte after correcting a 32-byte metadata-name difference.", source: "artifact construction study" },
+  { status: "adopted", name: "Direct participant-profiler campaign", finding: "Four models completed full participant runs. The 1.7B Q4_0 total exceeded the initially tested 0.8B Q4_K_M total by 0.92 points.", source: "direct profiler measurements" },
+  { status: "adopted", name: "Portable AVX2 score of record", finding: "The combined ledger contains seven models from the quantization sweep and expanded search. Math-Expert Q4_K_M has the highest ARC-Easy-50 fixed-15 total at 81.8803; Qwen3.5 0.8B is the larger-sample choice.", source: "combined AVX2 comparison" },
+  { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "future model-development study" },
 ];
 
 const CHALLENGE_FAQ = [
-  { q: "Will evaluation run without internet access?", rule: "Yes. The judging environment is offline.", progress: "The runtime resolves local files first, the promoted GGUF is hash-pinned, and the tutor has an offline launch path. A clean physical-target rehearsal remains." },
+  { q: "Will evaluation run without internet access?", rule: "Yes. The judging environment is offline.", progress: "The runtime resolves local files first, the promoted GGUF is stored locally, and the tutor has an offline launch path. A clean physical-target rehearsal remains." },
   { q: "How is the final score calculated?", rule: "Accuracy carries 50%, performance 30%, and efficiency 20%, with a thermal penalty and hard-failure rules.", progress: "The executable formula is implemented and tested. This report keeps the public cohort-relative formula in a separate sensitivity lane." },
   { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is evaluated on the standard laptop profile.", progress: "Development used an M2 Mac and a GCP x86 proxy. Mac results are classified as development evidence." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
   { q: "What does cross-disciplinary integration require?", rule: "The model must depend substantively on another deep-tech discipline.", progress: "Muta plans to combine scientific tutoring with verified mathematics and local retrieval. Several relevant routes remain incomplete or return 501, so this requirement is not yet satisfied." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The latest AVX2 score leader is the public Math-Expert Qwen3 fine-tune. The risk-adjusted Qwen3.5 recommendation remains derived from an official Qwen checkpoint. Their revisions and hashes are retained." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The latest AVX2 score leader is the public Math-Expert Qwen3 fine-tune. The risk-adjusted Qwen3.5 recommendation remains derived from an official Qwen checkpoint. Their source models, licences, and transformations are documented." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
   { q: "How is the team identified in the artifact?", rule: "Submission metadata must identify the registered team.", progress: "The current metadata uses team ID `team-muta`. Registration details still need a final submission check." },
-  { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "The current Qwen3 base uses an open licence. The exact source, conversion path, binary, artifact size, and SHA-256 are recorded." },
-  { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "The campaign submits exact GGUF artifacts and pins llama.cpp b10175. Custom streaming and lazy-mmap engines are excluded from the scoring claim." },
+  { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "The current Qwen3 base uses an open licence. Its source model, conversion method, licence, and artifact size are documented." },
+  { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "The submitted GGUFs were measured under matched scalar and AVX2 configurations. Custom streaming and lazy-mmap engines are excluded from the scoring claim." },
   { q: "What is the maximum model size?", rule: "The practical limit is the 7 GB memory ceiling on the standard machine.", progress: "The direct campaign spans about 0.50–2.31 GiB peak model footprints, all below the ceiling. Whole-tree RSS remains the unit of record." },
-  { q: "Where should the final benchmark be run?", rule: "The organiser evaluates the artifact on its standard hardware; local results are preparatory.", progress: "Full participant runs exist on a four-vCPU GCP x86 proxy with the pinned audit binary. Package temperature and physical-laptop bandwidth remain unmeasured." },
-  { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "The repository records exact model metadata, the reproducible campaign, the runtime, and this report. Final packaging, the two submission prompts, and the video remain incomplete." },
+  { q: "Where should the final benchmark be run?", rule: "The organiser evaluates the artifact on its standard hardware; local results are preparatory.", progress: "Full participant runs exist on a four-vCPU GCP x86 proxy under the competition procedure. Package temperature and physical-laptop bandwidth remain unmeasured." },
+  { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "The repository contains the model metadata, reproducible experiments, runtime, and this report. Final packaging, the two submission prompts, and the video remain incomplete." },
   { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "On the controlled AVX2 proxy, both latest finalists reach S_perf 100.00. Estimated S_eff is 89.40 for Math-Expert and 87.05 for Qwen3.5. The corresponding ARC-Easy values remain internal accuracy proxies, not submitted S_acc values." },
   { q: "Is the whole application evaluated, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "Product improvements are recorded separately from model-only evidence. Retrieval, the custom streamer, and UI changes are excluded from the GGUF campaign score." },
   { q: "How many prompts are visible before submission?", rule: "The FAQ describes two visible prompts plus hidden tests.", progress: "The local profiler path covers the visible task shape and accuracy proxies. Hidden-prompt performance remains unknown by design." },
@@ -395,7 +393,7 @@ function renderOvernight(campaign) {
   const screenTable = $("overnight-screen-table");
   if (!scoreChart || !quantChart || !avx2Chart || !avx2Table || !finalistTable || !screenTable) return;
   if (!campaign || !campaign.finalists) {
-    scoreChart.innerHTML = '<p class="chart-empty">The overnight campaign summary is unavailable.</p>';
+    scoreChart.innerHTML = '<p class="chart-empty">The expanded campaign summary is unavailable.</p>';
     quantChart.innerHTML = '<p class="chart-empty">The quantization summary is unavailable.</p>';
     avx2Chart.innerHTML = '<p class="chart-empty">The latest AVX2 finalist summary is unavailable.</p>';
     avx2Table.innerHTML = "";
@@ -440,13 +438,13 @@ function renderOvernight(campaign) {
       `portable AVX2 ${entry.avx2_fixed_15.arc_easy_50.s_total.toFixed(4)}`
     ).join("; ") + ".";
 
-    avx2Table.innerHTML = `<thead><tr><th>Exact artifact</th><th>Direct scalar total</th><th>AVX2 pp512</th><th>AVX2 tg128</th><th>Est. AVX2 profiler RSS</th><th>ARC-Easy-50 AVX2 total</th><th>ARC-Easy-500 AVX2 diagnostic</th></tr></thead><tbody>` +
+    avx2Table.innerHTML = `<thead><tr><th>Model</th><th>Direct scalar total</th><th>AVX2 pp512</th><th>AVX2 tg128</th><th>Est. AVX2 profiler RSS</th><th>ARC-Easy-50 AVX2 total</th><th>ARC-Easy-500 AVX2 diagnostic</th></tr></thead><tbody>` +
       finalists.map((entry) => {
         const avx = entry.avx2_fixed_15;
         const transfer = avx.transferred_from_tensor_identical_source
-          ? `<small>AVX2 measured on tensor-identical source <code>${esc(avx.benchmark_model)}</code></small>`
-          : `<small>AVX2 measured on this exact GGUF</small>`;
-        return `<tr class="${entry.official.model === campaign.official_profiler_winner ? "avx2-selected-row" : ""}"><td><code>${esc(entry.official.model)}</code>${transfer}</td><td>${fmt.num(entry.official.s_total, 4)}</td><td>${fmt.num(avx.pp512_tps, 4)}</td><td>${fmt.num(avx.tg128_tps, 4)}</td><td>${fmt.num(avx.estimated_profiler_rss_mib, 1)} MiB<small>${fmt.num(avx.child_tree_rss_mib, 1)} measured + ${fmt.num(avx.profiler_root_rss_estimate_mib, 0)} estimated</small></td><td class="total">${fmt.num(avx.arc_easy_50.s_total, 4)}<small>${fmt.num(avx.arc_easy_50.accuracy_percent, 1)}% accuracy</small></td><td>${fmt.num(avx.arc_easy_500.s_total, 4)}<small>${fmt.num(avx.arc_easy_500.accuracy_percent, 1)}% accuracy</small></td></tr>`;
+          ? `<small>AVX2 measured on a tensor-identical parent quant</small>`
+          : `<small>AVX2 measured on the submitted model</small>`;
+        return `<tr class="${entry.official.model === campaign.official_profiler_winner ? "avx2-selected-row" : ""}"><td><div class="model-name">${esc(finalistLabel(entry.official.model))}</div>${transfer}</td><td>${fmt.num(entry.official.s_total, 4)}</td><td>${fmt.num(avx.pp512_tps, 4)}</td><td>${fmt.num(avx.tg128_tps, 4)}</td><td>${fmt.num(avx.estimated_profiler_rss_mib, 1)} MiB<small>${fmt.num(avx.child_tree_rss_mib, 1)} measured + ${fmt.num(avx.profiler_root_rss_estimate_mib, 0)} estimated</small></td><td class="total">${fmt.num(avx.arc_easy_50.s_total, 4)}<small>${fmt.num(avx.arc_easy_50.accuracy_percent, 1)}% accuracy</small></td><td>${fmt.num(avx.arc_easy_500.s_total, 4)}<small>${fmt.num(avx.arc_easy_500.accuracy_percent, 1)}% accuracy</small></td></tr>`;
       }).join("") + "</tbody>";
   }
 
@@ -555,9 +553,9 @@ function renderOvernight(campaign) {
     };
     const rows = [...(campaign.screened_candidates || [])].sort((a, b) =>
       (b.scalar && b.scalar.tg128_tps || 0) - (a.scalar && a.scalar.tg128_tps || 0));
-    screenTable.innerHTML = `<thead><tr><th>Exact artifact</th><th>Scalar tg128</th><th>AVX2 tg128</th><th>Accuracy screen</th><th>Decision</th></tr></thead><tbody>` + rows.map((entry) => {
+    screenTable.innerHTML = `<thead><tr><th>Model</th><th>Scalar tg128</th><th>AVX2 tg128</th><th>Accuracy screen</th><th>Decision</th></tr></thead><tbody>` + rows.map((entry) => {
       const accuracy = Object.entries(entry.accuracy || {}).map(([task, value]) => `${task}: ${fmt.num(value, 0)}%`).join(" · ");
-      return `<tr><td><code>${esc(entry.model)}</code></td><td>${fmt.num(entry.scalar && entry.scalar.tg128_tps, 2)}</td><td>${fmt.num(entry.avx2 && entry.avx2.tg128_tps, 2)}</td><td>${esc(accuracy || "screened separately")}</td><td>${esc(disposition[entry.model] || "Rejected in staged screen")}</td></tr>`;
+      return `<tr><td><div class="model-name">${esc(shortName(entry.model))}</div></td><td>${fmt.num(entry.scalar && entry.scalar.tg128_tps, 2)}</td><td>${fmt.num(entry.avx2 && entry.avx2.tg128_tps, 2)}</td><td>${esc(accuracy || "screened separately")}</td><td>${esc(disposition[entry.model] || "Rejected in staged screen")}</td></tr>`;
     }).join("") + "</tbody>";
   }
 }
@@ -567,7 +565,7 @@ function renderCampaign(campaign, prefix) {
   const table = $(`${prefix}-table`);
   const formula = $(`${prefix}-formula`);
   if (!campaign) {
-    sub.textContent = "No campaign summary is available at the configured path.";
+    sub.textContent = "No campaign summary is available.";
     table.innerHTML = "";
     formula.textContent = "";
     return;
@@ -594,12 +592,12 @@ function renderCampaign(campaign, prefix) {
     : models.some((model) => model.rss_estimated)
       ? "Est. profiler RSS mean ± SD"
       : "Profiler peak RSS mean ± SD";
-  sub.textContent = `${campaign.hardware_context || "unknown host"} · ` +
-    `${models.length} exact GGUF artifact${models.length === 1 ? "" : "s"} · binary SHA-256 ${String(campaign.benchmark_binary_sha256 || "unknown").slice(0, 12)}…`;
+  sub.textContent = `${hardwareLabel(campaign.hardware_context)} · ` +
+    `${models.length} model${models.length === 1 ? "" : "s"} · standardized benchmark protocol`;
   const scoreHeads = denominators.map((d) =>
     `<th>Total @ ${isWebsiteAlternative ? "cohort floor" : "profiler ref"} ${esc(d)}</th>`
   ).join("");
-  const head = `<thead><tr><th>Exact model</th><th>Size</th><th>${throughputLabel}</th>` +
+  const head = `<thead><tr><th>Model</th><th>Size</th><th>${throughputLabel}</th>` +
     `${hasFirstToken ? "<th>First token</th>" : ""}<th>${rssLabel}</th><th>Accuracy proxies</th>` +
     `${scoreHeads}</tr></thead>`;
   const rows = models.map((m) => {
@@ -624,7 +622,7 @@ function renderCampaign(campaign, prefix) {
       ? fmt.mb(m.peak_rss_mib_mean)
       : `${fmt.mb(m.peak_rss_mib_mean)} ± ${fmt.mb(m.peak_rss_mib_sd)}`;
     return `<tr><td><div class="model-name">${esc(shortName(m.model))}</div>` +
-      `<div class="model-sub mono">SHA-256 ${esc(String(m.model_sha256 || "unknown").slice(0, 16))}… · ${esc(m.measurement_tier || "unlabelled")} · ${sampleLabel}</div></td>` +
+      `<div class="model-sub">${sampleLabel}</div></td>` +
       `<td>${fmt.gb(m.model_bytes)}</td>` +
       `<td>${throughputCell}</td>` +
       `${hasFirstToken ? `<td>${m.first_token_latency_ms == null ? "—" : `${fmt.num(m.first_token_latency_ms / 1000, 2)} s`}</td>` : ""}` +
@@ -638,7 +636,7 @@ function renderCampaign(campaign, prefix) {
     return winner ? `${d}→${shortName(winner.model)} (${fmt.num(winner.s_total, 2)})` : null;
   }).filter(Boolean).join(" · ");
   const evidenceSummary = isOfficialFullRun
-    ? "Direct official-profiler evidence. The executable fixes the performance reference at 15 tok/s"
+    ? "Direct participant-profiler evidence. The performance reference is fixed at 15 tok/s"
     : isWebsiteAlternative
       ? "Website-relative sensitivity only. AVX2 deployment measurements are rescored with the public cohort formula; each candidate is included in its effective denominator"
       : "Profiler-parity estimate under the no-AVX audit kernel";
@@ -674,8 +672,6 @@ function renderIsaComparison(comparison, overnight) {
   }[file] || shortName(file));
   const latest = overnight && overnight.finalists ? Object.values(overnight.finalists).map((entry) => ({
     model: entry.official.model,
-    model_sha256: entry.official.sha256,
-    campaign_date: "20 Aug",
     latest: true,
     scalar: {
       tg128_tps: entry.official.tps,
@@ -689,7 +685,7 @@ function renderIsaComparison(comparison, overnight) {
     },
     accuracy_proxy: entry.official.arc_easy_50,
   })) : [];
-  const models = [...latest, ...comparison.models.map((entry) => ({...entry, campaign_date: "19 Aug"}))];
+  const models = [...latest, ...comparison.models];
   const scalarWinnerItem = [...models].sort((a, b) => b.scalar.score.s_total - a.scalar.score.s_total)[0];
   const avx2WinnerItem = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total)[0];
   const scalarWinner = {model: scalarWinnerItem.model, s_total: scalarWinnerItem.scalar.score.s_total};
@@ -732,11 +728,11 @@ function renderIsaComparison(comparison, overnight) {
 
   if (sub && table && formula) {
     const ranked = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total);
-    sub.textContent = `${comparison.hardware_contexts.avx2} · ${ranked.length} artifacts across two dated campaigns · AVX2 binary SHA-256 ${String(comparison.avx2_binary_sha256).slice(0, 12)}…`;
-    table.innerHTML = `<thead><tr><th>Campaign</th><th>Exact model</th><th>Scalar total</th><th>AVX2 total</th><th>Scalar → AVX2 tg128</th><th>Scalar → AVX2 est. RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
-      ranked.map((item) => `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td>${esc(item.campaign_date)}</td><td><div class="model-name">${esc(label(item.model))}</div><div class="model-sub mono">SHA-256 ${esc(item.model_sha256.slice(0, 16))}…</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.scalar.estimated_profiler_rss_mib, 1)} → ${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy</td></tr>`).join("") +
+    sub.textContent = `${hardwareLabel(comparison.hardware_contexts.avx2)} · ${ranked.length} models · matched scalar and portable AVX2 measurements`;
+    table.innerHTML = `<thead><tr><th>Model</th><th>Scalar total</th><th>AVX2 total</th><th>Scalar → AVX2 tg128</th><th>Scalar → AVX2 est. RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
+      ranked.map((item) => `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td><div class="model-name">${esc(label(item.model))}</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.scalar.estimated_profiler_rss_mib, 1)} → ${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy</td></tr>`).join("") +
       `</tbody>`;
-    formula.textContent = `Two dated campaigns on one GCP 2C/4T proxy and the same portable AVX2 binary · S_perf = 100 × min(TPS / 15, 1) · latest scalar rows use direct profiler RSS; AVX2 rows use measured child tree + 45 MiB root estimate · thermal unknown. Highest scalar total: ${label(scalarWinner.model)} (${fmt.num(scalarWinner.s_total, 4)}). Highest portable AVX2 total: ${label(avx2Winner.model)} (${fmt.num(avx2Winner.s_total, 4)}).`;
+    formula.textContent = `Matched scalar and AVX2 measurements on one GCP 2C/4T proxy · S_perf = 100 × min(TPS / 15, 1) · scalar finalist rows use direct profiler RSS; AVX2 rows use measured child-tree RSS + 45 MiB root estimate · thermal unknown. Highest scalar total: ${label(scalarWinner.model)} (${fmt.num(scalarWinner.s_total, 4)}). Highest portable AVX2 total: ${label(avx2Winner.model)} (${fmt.num(avx2Winner.s_total, 4)}).`;
   }
 }
 
@@ -791,9 +787,9 @@ function renderHeader(d) {
   if (m.african_alpha_claim) claims.push("African-use-case metadata claim");
   if (m.budget_laptop_claim) claims.push("budget-laptop metadata claim");
   $("meta-line").textContent =
-    `${m.team_id || "?"} · ${m.domain || "?"}` +
+    `${m.domain || "Math and scientific reasoning"}` +
     (claims.length ? ` · ${claims.join(" · ")}` : "") +
-    (m.current_model_path ? ` · selected path: ${m.current_model_path}` : "");
+    (m.current_model_path ? ` · selected model: ${shortName(m.current_model_path.split("/").pop())}` : "");
   const pill = $("status-pill");
   if (d.current) {
     pill.classList.add("busy");
@@ -883,6 +879,16 @@ function claimChips(run, meta) {
 
 function shortName(file) { return file.replace(/\.gguf$/i, ""); }
 
+function hardwareLabel(context) {
+  const value = String(context || "");
+  if (value.includes("n2_custom_4_8192_2c4t") || value.includes("2c4t")) {
+    return value.includes("no_avx")
+      ? "2-core, 4-thread scalar CPU proxy"
+      : "2-core, 4-thread x86 CPU proxy";
+  }
+  return value ? value.replaceAll("_", " ") : "CPU benchmark environment";
+}
+
 function renderTable(d) {
   const busy = !!d.current;
   const present = d.models.filter((m) => m.present).length;
@@ -904,7 +910,7 @@ function renderTable(d) {
       : ["artifact removed; run records retained", m.quant, m.params];
     const sub = info.filter(Boolean).join(" · ") +
       (m.runs_count
-        ? ` · ${m.runs_count} run${m.runs_count === 1 ? "" : "s"} · last ${fmt.when(r && (r.finished_at || r.started_at))}`
+        ? ` · ${m.runs_count} run${m.runs_count === 1 ? "" : "s"}`
         : " · no stored run");
     const arc = r && r.arc_score != null ? `${r.arc_score.toFixed(3)}` : "—";
     const main = `<tr class="model-row" data-model="${esc(m.file)}">
@@ -943,7 +949,7 @@ function historyRow(file) {
   const rows = runs.filter((r) => r.status !== "running").map((r) => {
     const s = r.scores || {};
     return `<tr>
-      <td>#${r.id} · ${fmt.when(r.finished_at || r.started_at)}</td>
+      <td>#${r.id}</td>
       <td>${r.skip_accuracy ? "quick" : "full"}</td>
       <td>${r.status === "ok" ? "ok" : (r.oom ? "OOM" : "crash")}</td>
       <td>${fmt.score(s.s_total)}</td>
@@ -1096,7 +1102,7 @@ document.addEventListener("mousemove", (ev) => {
       <span>S_eff</span><b>${fmt.score(s.s_eff)}</b>
       <span>tok/s</span><b>${fmt.num(r.tps)}</b>
       <span>peak RAM</span><b>${fmt.mb(r.peak_rss_mb)}</b>
-      <span>archive run</span><b>#${r.id} · ${fmt.when(r.finished_at)}</b>
+      <span>archive run</span><b>#${r.id}</b>
     </div>`;
   tip.hidden = false;
   const pad = 14;
