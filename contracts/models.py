@@ -168,14 +168,17 @@ class GenerationStarted(BaseModel):
     job_id: str
     conversation_id: str
     client_request_id: str | None = None
+    state: Literal["queued", "running"] = "running"
+    queue_position: int = 0
 
 
 class GenerationStatus(BaseModel):
     job_id: str
     conversation_id: str
-    state: Literal["running", "completed", "failed", "stopped"]
+    state: Literal["queued", "running", "completed", "failed", "stopped"]
     created_at: str
     client_request_id: str | None = None
+    queue_position: int = 0
 
 
 class GenerationList(BaseModel):

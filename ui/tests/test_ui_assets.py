@@ -182,13 +182,68 @@ def test_chat_generation_is_server_owned_and_recovered_after_reload():
     assert 'fetch("/v1/chat/stream"' not in js, "a page-owned POST stream stops on refresh"
 
 
+def test_refresh_retries_recovery_and_keeps_same_chat_followups():
+    js = (UI / "app.js").read_text()
+    assert "async function recoverGenerations({ attempts = 6" in js
+    assert "await recoverGenerations({ attempts: 4, delayMs: 400 })" in js
+    assert "reply is already running" in js
+    assert "The earlier reply is still running. This message is queued" in js
+    assert 'const MESSAGE_QUEUE_STORAGE_KEY = "muta-message-queue"' in js
+    assert "persistMessageQueue()" in js and "restoreMessageQueue()" in js
+    assert "item.cid === conversationId" in js
+    assert "pendingStartsFor(selected)" in js
+    assert "fallbackConversation: startedIn" in js
+    assert "identityReady = true" in js and "while (!(await ensureAuth()))" in js
+    assert "!identityReady ||" in js
+    assert "Starting your previous message — this draft is still here." in js
+    assert js.index("startingConversations.has(startKeyFor(conversationId))") < js.index(
+        'inputEl.value = ""', js.index("function send(")
+    )
+    assert "expectedViewStillVisible" in js and "returnedToConversation" in js
+    assert "This message remains queued until it can send." in js
+    assert "setTimeout(() => drainQueue(startedIn), 0)" in js
+    assert "retryUnavailable: true" in js
+
+
+def test_refresh_only_clears_selected_chat_after_a_definitive_not_found():
+    js = (UI / "app.js").read_text()
+    load = js[js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")]
+    assert "if (!r)" in load and "if (r.status === 404)" in load
+    assert load.index("if (!r)") < load.index("if (r.status === 404)")
+    unavailable = load[load.index("if (!r)") : load.index("if (r.status === 404)")]
+    assert "setConversationLocation" not in unavailable
+    assert "scheduleConversationRetry(cid)" in unavailable
+    assert "if (loaded === false) newChat" in js
+    assert "if (!loaded) newChat" not in js
+    boot = js[js.index("async function bootChat()") : js.index("void bootChat();")]
+    assert "if (loaded === false) newChat" in boot
+    assert "pendingStartsFor(selected)" in boot
+    assert "loaded === true" not in boot
+
+
+def test_full_inference_slots_become_a_durable_visible_queue():
+    js = (UI / "app.js").read_text()
+    assert "started.state || \"running\"" in js
+    assert "active.state || \"running\"" in js
+    assert "ev.queued === true && !ev.done" in js
+    assert "ev.started" in js
+    assert "showQueued(position = 1)" in js
+    assert "startQueued()" in js
+    assert (
+        "Queued — other responses are running. Your answer will start automatically "
+        "as soon as a slot is free."
+    ) in js
+    assert 'backgroundJob.state === "queued"' in js
+
+    queued = "".join(_blocks(".reply-queued .prose"))
+    queued_dot = "".join(_blocks(".conv-generating.queued"))
+    assert "border-left" in queued and "background" in queued
+    assert "animation: none" in queued_dot
+
+
 def test_switching_conversations_detaches_rendering_without_stopping_the_job():
     js = (UI / "app.js").read_text()
-    load = re.search(
-        r"async function loadConversation\(cid,[^)]*\)\s*\{(?P<body>.*?)\n\}", js, re.DOTALL
-    )
-    assert load
-    body = load.group("body")
+    body = js[js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")]
     assert "leaving.handle = null" in body
     assert "stopGeneration" not in body
 

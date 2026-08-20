@@ -219,6 +219,62 @@ def test_generation_replay_is_scoped_to_its_owner(wired):
     assert response.status_code == 404
 
 
+def test_refresh_can_rediscover_the_job_then_continue_the_same_conversation(wired):
+    engine, *_ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    finish = threading.Event()
+
+    def durable_stream(**kwargs):
+        engine.calls.append(kwargs)
+        cid = kwargs.get("conversation_id") or "conv-refresh"
+
+        def events():
+            yield "content", "first"
+            if len(engine.calls) == 1:
+                assert finish.wait(2.0)
+                yield "content", " reply"
+            else:
+                yield "content", "continued"
+
+        return cid, len(engine.calls), events()
+
+    engine.stream_events_chat = durable_stream
+    headers = {"Authorization": "Bearer s1"}
+    started = client.post(
+        "/v1/chat/generations",
+        headers=headers,
+        json={"student_id": "s1", "message": "start", "client_request_id": "refresh-1"},
+    ).json()
+    engine.store.conversations["conv-refresh"] = {
+        "id": "conv-refresh",
+        "student_id": "s1",
+    }
+
+    # No subscriber is kept: this is the old document disappearing during browser refresh.
+    active = client.get("/v1/chat/generations", headers=headers).json()["generations"]
+    assert any(row["job_id"] == started["job_id"] for row in active)
+    finish.set()
+    job = generations.get(started["job_id"])
+    deadline = time.monotonic() + 1.0
+    while job.snapshot().state == "running" and time.monotonic() < deadline:
+        time.sleep(0.005)
+    replay = client.get(f"/v1/chat/generations/{job.id}/stream", headers=headers)
+    assert '"delta": "first"' in replay.text and '"delta": " reply"' in replay.text
+
+    continued = client.post(
+        "/v1/chat/generations",
+        headers=headers,
+        json={
+            "student_id": "s1",
+            "conversation_id": "conv-refresh",
+            "message": "continue",
+            "client_request_id": "refresh-2",
+        },
+    )
+    assert continued.status_code == 202
+    assert engine.calls[-1]["conversation_id"] == "conv-refresh"
+
+
 def test_generation_start_hides_another_students_conversation(wired):
     engine, *_ = wired
     engine.store.conversations["private"] = {"id": "private", "student_id": "s1"}
@@ -249,7 +305,7 @@ def test_disabled_parallel_setting_is_enforced_by_the_server(wired):
 def test_parallel_chat_completion_releases_only_its_own_admission_lease(wired):
     engine, _, sessions, _ = wired
     generations = app.dependency_overrides[deps.get_generation_manager]()
-    gates = [threading.Event(), threading.Event()]
+    gates = [threading.Event(), threading.Event(), threading.Event()]
 
     def blocking_stream(**kwargs):
         index = len(engine.calls)
@@ -279,16 +335,166 @@ def test_parallel_chat_completion_releases_only_its_own_admission_lease(wired):
         headers=headers,
         json={"student_id": "s1", "message": "must wait"},
     )
-    assert third.status_code == 409
+    assert third.status_code == 202
+    third_ids = third.json()
+    assert third_ids["state"] == "queued" and third_ids["queue_position"] == 1
+    listed = client.get("/v1/chat/generations", headers=headers).json()["generations"]
+    assert any(
+        row["job_id"] == third_ids["job_id"]
+        and row["state"] == "queued"
+        and row["queue_position"] == 1
+        for row in listed
+    )
 
     gates[0].set()
     deadline = time.monotonic() + 1.0
-    while generations.running_count() != 1 and time.monotonic() < deadline:
+    while (
+        generations.get(third_ids["job_id"]).snapshot().state == "queued"
+        and time.monotonic() < deadline
+    ):
         time.sleep(0.005)
+    assert generations.get(third_ids["job_id"]).snapshot().state == "running"
+    assert generations.running_count() == 2
+    assert sum(slot.busy for slot in sessions.slots) == 2
+
+    gates[1].set()
+    gates[2].set()
+
+
+def test_slow_preparation_cannot_reserve_a_physical_lane_ahead_of_fifo(wired):
+    engine, *_ = wired
+    sessions = SessionManager(slots_count=1)
+    generations = GenerationManager(max_active=1, max_queued=2)
+    app.dependency_overrides[deps.get_sessions] = lambda: sessions
+    app.dependency_overrides[deps.get_generation_manager] = lambda: generations
+    slow_preparing = threading.Event()
+    release_slow_prepare = threading.Event()
+    release_fast_generation = threading.Event()
+
+    def reordered_stream(**kwargs):
+        engine.calls.append(kwargs)
+        message = kwargs["message"]
+        if message == "slow":
+            slow_preparing.set()
+            assert release_slow_prepare.wait(2.0)
+
+        def events():
+            yield "content", message
+            if message == "fast":
+                assert release_fast_generation.wait(2.0)
+
+        return f"conv-{message}", len(engine.calls), events()
+
+    engine.stream_events_chat = reordered_stream
+    headers = {"Authorization": "Bearer s1"}
+    slow_response = {}
+
+    def start_slow() -> None:
+        slow_response["response"] = client.post(
+            "/v1/chat/generations",
+            headers=headers,
+            json={"student_id": "s1", "message": "slow"},
+        )
+
+    worker = threading.Thread(target=start_slow)
+    worker.start()
+    assert slow_preparing.wait(1.0)
+    fast = client.post(
+        "/v1/chat/generations",
+        headers=headers,
+        json={"student_id": "s1", "message": "fast"},
+    )
+    assert fast.status_code == 202 and fast.json()["state"] == "running"
+
+    release_slow_prepare.set()
+    worker.join(timeout=1.0)
+    assert slow_response["response"].status_code == 202
+    assert slow_response["response"].json()["state"] == "queued"
     assert generations.running_count() == 1
     assert sum(slot.busy for slot in sessions.slots) == 1
 
-    gates[1].set()
+    release_fast_generation.set()
+    deadline = time.monotonic() + 1.0
+    while generations.active("s1") and time.monotonic() < deadline:
+        time.sleep(0.005)
+    assert generations.active("s1") == []
+    assert generations.get(fast.json()["job_id"]).snapshot().state == "completed"
+    assert (
+        generations.get(slow_response["response"].json()["job_id"]).snapshot().state
+        == "completed"
+    )
+    assert sum(slot.busy for slot in sessions.slots) == 0
+
+
+def test_queued_generation_that_later_hits_l3_refusal_finishes_in_band(wired):
+    accepting = {"value": True}
+    sessions = SessionManager(
+        slots_count=1,
+        accepts_new_sessions=lambda: accepting["value"],
+    )
+    sessions.acquire("external-engine-user")
+    generations = GenerationManager(max_active=1, max_queued=2)
+    app.dependency_overrides[deps.get_sessions] = lambda: sessions
+    app.dependency_overrides[deps.get_generation_manager] = lambda: generations
+    headers = {"Authorization": "Bearer s1"}
+
+    response = client.post(
+        "/v1/chat/generations",
+        headers=headers,
+        json={"student_id": "s1", "message": "wait for a lane"},
+    )
+    assert response.status_code == 202
+    ids = response.json()
+    assert ids["state"] == "queued"
+
+    accepting["value"] = False
+    job = generations.get(ids["job_id"])
+    deadline = time.monotonic() + 1.0
+    while job.snapshot().state == "queued" and time.monotonic() < deadline:
+        time.sleep(0.005)
+
+    assert job.snapshot().state == "failed"
+    assert generations.active("s1") == []
+    assert sessions.queue == []
+    replay = client.get(f"/v1/chat/generations/{job.id}/stream", headers=headers)
+    assert replay.status_code == 200
+    assert '"error": "I\'m at capacity for a moment' in replay.text
+    assert '"done": true' in replay.text and '"failed": true' in replay.text
+
+
+def test_stop_after_leading_conversation_frame_still_releases_the_lane(wired):
+    engine, _, sessions, _ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    gate = threading.Event()
+
+    def blocked_before_content(**kwargs):
+        engine.calls.append(kwargs)
+
+        def events():
+            assert gate.wait(2.0)
+            yield "content", "too late"
+
+        return "conv-stop", 1, events()
+
+    engine.stream_events_chat = blocked_before_content
+    headers = {"Authorization": "Bearer s1"}
+    started = client.post(
+        "/v1/chat/generations",
+        headers=headers,
+        json={"student_id": "s1", "message": "stop immediately"},
+    ).json()
+    job = generations.get(started["job_id"])
+    subscriber = job.subscribe()
+    assert "conv-stop" in next(subscriber)
+
+    stopped = client.delete(f"/v1/chat/generations/{job.id}", headers=headers)
+    assert stopped.status_code == 200 and stopped.json()["stopping"] is True
+    gate.set()
+    deadline = time.monotonic() + 1.0
+    while job.snapshot().state == "running" and time.monotonic() < deadline:
+        time.sleep(0.005)
+    assert job.snapshot().state == "stopped"
+    assert sum(slot.busy for slot in sessions.slots) == 0
 
 
 def test_parallel_chat_setting_defaults_on_and_round_trips_privately(wired):

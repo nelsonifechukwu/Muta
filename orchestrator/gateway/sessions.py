@@ -19,6 +19,7 @@ five wait for a hint.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -87,6 +88,7 @@ class SessionManager:
     queue: list[str] = field(default_factory=list, init=False)
     suspended: set[str] = field(default_factory=set, init=False)
     stats: dict[str, int] = field(default_factory=dict, init=False)
+    _lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.slots = [Slot(index=i) for i in range(self.slots_count)]
@@ -100,10 +102,15 @@ class SessionManager:
         self.stats[key] = self.stats.get(key, 0) + 1
 
     def slot_for(self, session_id: str) -> Slot | None:
-        return next((s for s in self.slots if s.session_id == session_id), None)
+        with self._lock:
+            return next((s for s in self.slots if s.session_id == session_id), None)
 
     # --- admission --------------------------------------------------------------------
     def acquire(self, session_id: str) -> Decision:
+        with self._lock:
+            return self._acquire_locked(session_id)
+
+    def _acquire_locked(self, session_id: str) -> Decision:
         now = self.clock()
         usable = self._usable()
 
@@ -183,47 +190,65 @@ class SessionManager:
 
     def release(self, session_id: str) -> None:
         """Turn finished: the slot stays bound (so the next turn is free) but is idle."""
-        slot = self.slot_for(session_id)
-        if slot is not None:
-            slot.busy = False
-            slot.last_activity = self.clock()
+        with self._lock:
+            if session_id in self.queue:
+                self.queue.remove(session_id)
+            slot = self.slot_for(session_id)
+            if slot is not None:
+                if session_id.startswith("generation:"):
+                    # Durable chat jobs use one lease per reply, not a reusable learner/KV
+                    # session. Free it outright so GenerationManager can bind the FIFO head to
+                    # the same physical lane before promotion.
+                    slot.session_id = None
+                    slot.busy = False
+                    slot.last_activity = 0.0
+                else:
+                    slot.busy = False
+                    slot.last_activity = self.clock()
 
     def evict(self, session_id: str) -> bool:
         """Explicit suspend — the ladder does this at L3 to reclaim idle slots."""
-        slot = self.slot_for(session_id)
-        if slot is None:
-            return False
-        self._suspend(slot)
-        return True
+        with self._lock:
+            slot = self.slot_for(session_id)
+            if slot is None:
+                return False
+            self._suspend(slot)
+            return True
 
     def suspend_idle(self, *, older_than: float | None = None) -> list[str]:
         """L3 action: suspend every idle bound session, newest last."""
-        threshold = self.idle_steal_seconds if older_than is None else older_than
-        now = self.clock()
-        victims = [s for s in self.slots if not s.free and not s.busy and s.idle_seconds(now) >= threshold]
-        names = [s.session_id for s in victims if s.session_id]
-        for slot in victims:
-            self._suspend(slot)
-        return names
+        with self._lock:
+            threshold = self.idle_steal_seconds if older_than is None else older_than
+            now = self.clock()
+            victims = [
+                s
+                for s in self.slots
+                if not s.free and not s.busy and s.idle_seconds(now) >= threshold
+            ]
+            names = [s.session_id for s in victims if s.session_id]
+            for slot in victims:
+                self._suspend(slot)
+            return names
 
     # --- reporting ---------------------------------------------------------------------
     def status(self) -> dict:
-        now = self.clock()
-        return {
-            "slots": [
-                {
-                    "index": s.index,
-                    "session": s.session_id,
-                    "busy": s.busy,
-                    "idle_seconds": round(s.idle_seconds(now), 1) if not s.free else None,
-                }
-                for s in self.slots
-            ],
-            "usable_slots": len(self._usable()),
-            "queue": list(self.queue),
-            "suspended": sorted(self.suspended),
-            "stats": dict(self.stats),
-        }
+        with self._lock:
+            now = self.clock()
+            return {
+                "slots": [
+                    {
+                        "index": s.index,
+                        "session": s.session_id,
+                        "busy": s.busy,
+                        "idle_seconds": round(s.idle_seconds(now), 1) if not s.free else None,
+                    }
+                    for s in self.slots
+                ],
+                "usable_slots": len(self._usable()),
+                "queue": list(self.queue),
+                "suspended": sorted(self.suspended),
+                "stats": dict(self.stats),
+            }
 
 
 def _queue_message(position: int) -> str:

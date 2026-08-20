@@ -1583,6 +1583,17 @@ components:
           - type: string
           - type: 'null'
           title: Client Request Id
+        state:
+          type: string
+          enum:
+          - queued
+          - running
+          title: State
+          default: running
+        queue_position:
+          type: integer
+          title: Queue Position
+          default: 0
       type: object
       required:
       - job_id
@@ -1600,6 +1611,7 @@ components:
         state:
           type: string
           enum:
+          - queued
           - running
           - completed
           - failed
@@ -1613,6 +1625,10 @@ components:
           - type: string
           - type: 'null'
           title: Client Request Id
+        queue_position:
+          type: integer
+          title: Queue Position
+          default: 0
       type: object
       required:
       - job_id

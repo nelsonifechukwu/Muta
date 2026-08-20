@@ -30,6 +30,7 @@ let studentId = (() => {
 // server sets MUTA_AUTH_SECRET, ensureAuth() upgrades it to a signed token. Attachment <img>
 // URLs can't carry a header, so they take ?token= instead.
 let authToken = studentId;
+let identityReady = false;
 const authHeaders = () => ({ Authorization: `Bearer ${authToken}` });
 const attachmentUrl = (id) => `/v1/attachments/${id}?token=${encodeURIComponent(authToken)}`;
 
@@ -47,10 +48,13 @@ async function ensureAuth() {
       studentId = session.student_id || studentId;
       authToken = session.token || studentId;
       localStorage.setItem("muta-student", studentId);
+      identityReady = true;
+      return true;
     }
   } catch {
-    /* offline / older server: fall back to the student id (dev-mode token) */
+    /* The selected URL stays intact; boot retries once the same-origin gateway returns. */
   }
+  return false;
 }
 
 let conversationId = null;
@@ -70,7 +74,9 @@ let voiceModeActive = false;
 // capable of parallel jobs, while this gate preserves today's one-chat product behaviour.
 let allowParallelChats = true;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
-let messageQueue = []; // {typed, attachments} — sent one by one when the tutor is free
+// Follow-ups typed while a reply is running are view state, but they still have to survive a
+// reload. Each item is scoped to its conversation so navigating elsewhere never discards it.
+let messageQueue = []; // {typed, attachments, cid} — sent one by one when that chat is free
 let telemetrySource = null;
 let telemetryCloseTimer = null;
 // Reasoning effort for new turns: "off" (direct answer) | "auto" (think first) | "extended".
@@ -108,6 +114,8 @@ let manualScrollIntentTimer = null;
 let touchStartY = null;
 let navigationVersion = 0;
 let pendingConversationLoad = null;
+let conversationRetryTimer = null;
+let conversationRetryTarget = null;
 
 // `interactive-widget=resizes-content` handles Chrome's virtual keyboard. Safari/iOS still
 // exposes the genuinely visible height only through visualViewport, so make that height the
@@ -439,6 +447,7 @@ function beginAssistantMessage(onAnswerNow) {
   let thought_ = "";
   let thinkStartedAt = 0; // 0 = this reply produced no thinking
   let thinkSettled = false;
+  let queuedNotice = false;
 
   // Markdown and math render AS the reply streams. Parsing is O(reply) and tokens land
   // every ~30 ms, so rendering per token would be quadratic and spend the frame budget
@@ -498,9 +507,32 @@ function beginAssistantMessage(onAnswerNow) {
     if (preamble.isConnected) preamble.remove();
   };
 
+  const clearQueuedNotice = () => {
+    if (!queuedNotice) return;
+    queuedNotice = false;
+    wrap.classList.remove("reply-queued");
+    prose.textContent = "";
+    prose.classList.add("cursor");
+  };
+
   return {
     element: wrap,
+    showQueued(position = 1) {
+      queuedNotice = true;
+      wrap.classList.add("reply-queued");
+      prose.classList.remove("cursor");
+      prose.textContent = position > 1
+        ? `Queued #${position} — other responses are running. Your answer will start automatically as soon as a slot is free.`
+        : "Queued — other responses are running. Your answer will start automatically as soon as a slot is free.";
+      scrollToBottom();
+    },
+    startQueued() {
+      if (!queuedNotice) return;
+      prose.textContent = "A slot is free — starting your answer…";
+      scrollToBottom();
+    },
     pushPreamble(t) {
+      clearQueuedNotice();
       if (preamble.hidden) {
         preamble.hidden = false;
         announce("Tutor is warming up.");
@@ -509,6 +541,7 @@ function beginAssistantMessage(onAnswerNow) {
       scrollToBottom();
     },
     pushThought(t) {
+      clearQueuedNotice();
       clearPreamble();
       if (!thinkStartedAt) {
         thinkStartedAt = performance.now();
@@ -527,12 +560,14 @@ function beginAssistantMessage(onAnswerNow) {
       scrollToBottom();
     },
     pushDelta(t) {
+      clearQueuedNotice();
       clearPreamble();
       settleThinking();
       full += t;
       scheduleRender();
     },
     finalize() {
+      clearQueuedNotice();
       clearPreamble(); // a turn that ended before the engine spoke leaves nothing behind
       settleThinking(); // a reply stopped mid-think still gets its label settled
       cancelRender();
@@ -545,6 +580,8 @@ function beginAssistantMessage(onAnswerNow) {
       wrap.remove();
     },
     fail(message) {
+      wrap.classList.remove("reply-queued");
+      queuedNotice = false;
       settleThinking();
       cancelRender();
       if (!full) {
@@ -646,8 +683,10 @@ async function refreshSidebar() {
       title.textContent = c.title || "Untitled";
       if (backgroundJob) {
         const dot = document.createElement("span");
-        dot.className = "conv-generating";
-        dot.title = "Replying in the background";
+        dot.className = "conv-generating" + (backgroundJob.state === "queued" ? " queued" : "");
+        dot.title = backgroundJob.state === "queued"
+          ? `Queued${backgroundJob.queuePosition ? ` #${backgroundJob.queuePosition}` : ""} — waiting for a slot`
+          : "Replying in the background";
         item.appendChild(dot);
       }
       const del = document.createElement("button");
@@ -657,6 +696,7 @@ async function refreshSidebar() {
       del.addEventListener("click", async (ev) => {
         ev.stopPropagation();
         if (backgroundJob) await stopGeneration(backgroundJob);
+        discardQueue(c.id, { announce: false });
         await fetch(`/v1/conversations/${c.id}`, { method: "DELETE", headers: authHeaders() });
         if (c.id === conversationId) newChat();
         refreshSidebar();
@@ -670,37 +710,88 @@ async function refreshSidebar() {
   }
 }
 
-async function loadConversation(cid, { historyMode = "push" } = {}) {
+function scheduleConversationRetry(cid) {
+  clearTimeout(conversationRetryTimer);
+  conversationRetryTarget = cid;
+  conversationRetryTimer = setTimeout(() => {
+    conversationRetryTimer = null;
+    // A retry belongs to the URL the student refreshed. Back/Forward or a deliberate click
+    // cancels it implicitly, so a recovered gateway can never pull the UI to an old chat.
+    if (
+      conversationRetryTarget !== cid ||
+      conversationFromLocation() !== cid ||
+      conversationId === cid
+    ) return;
+    void loadConversation(cid, {
+      historyMode: "none",
+      attempts: 6,
+      retryUnavailable: true,
+      quietUnavailable: true,
+    });
+  }, 2000);
+}
+
+async function loadConversation(
+  cid,
+  {
+    historyMode = "push",
+    attempts = 1,
+    retryUnavailable = false,
+    quietUnavailable = false,
+  } = {},
+) {
+  if (conversationRetryTarget && conversationRetryTarget !== cid) {
+    clearTimeout(conversationRetryTimer);
+    conversationRetryTimer = null;
+    conversationRetryTarget = null;
+  }
   if (voiceModeActive) {
     setConversationLocation(conversationId, { mode: "replace" });
     toast("Finish or stop voice mode before changing chats.");
-    return false;
+    return null;
   }
   const requestedNavigation = ++navigationVersion;
   pendingConversationLoad = cid;
   // Keep a reference even if finishGeneration removes it from the Map while history is in
   // flight. That history snapshot may contain only a partial assistant row.
   const targetJobBeforeLoad = jobForConversation(cid);
-  let r;
-  try {
-    r = await fetch(`/v1/conversations/${cid}/messages`, { headers: authHeaders() });
-  } catch {
-    if (requestedNavigation !== navigationVersion) return false;
-    pendingConversationLoad = null;
-    setConversationLocation(conversationId, { mode: "replace" });
-    toast("Couldn't load that conversation.");
-    return false;
+  let r = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const candidate = await fetch(`/v1/conversations/${cid}/messages`, {
+        headers: authHeaders(),
+      });
+      if (candidate.ok || candidate.status === 404) {
+        r = candidate;
+        break;
+      }
+    } catch {
+      /* A refresh can race a brief gateway/model restart; retry without changing the URL. */
+    }
+    if (requestedNavigation !== navigationVersion) return null;
+    if (attempt + 1 < attempts) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
   }
   // A slower A load must never overwrite a newer B click or Back/Forward navigation.
-  if (requestedNavigation !== navigationVersion) return false;
-  if (!r.ok) {
+  if (requestedNavigation !== navigationVersion) return null;
+  if (!r) {
     pendingConversationLoad = null;
+    // A 5xx/network outage says nothing about whether this chat exists. Preserve the selected
+    // URL and keep trying in the background; only a definitive 404 may clear it.
+    if (retryUnavailable) scheduleConversationRetry(cid);
+    if (!quietUnavailable) toast("That conversation is temporarily unavailable — retrying.");
+    return null;
+  }
+  if (r.status === 404) {
+    pendingConversationLoad = null;
+    conversationRetryTarget = null;
     setConversationLocation(conversationId, { mode: "replace" });
-    toast("Couldn't load that conversation.");
+    toast("Couldn't find that conversation.");
     return false;
   }
   const body = await r.json();
-  if (requestedNavigation !== navigationVersion) return false;
+  if (requestedNavigation !== navigationVersion) return null;
   // Commit the navigation only after its history arrived. Until here, the previous stream
   // remains attached and visible if the target request fails.
   const leaving = jobForConversation();
@@ -709,9 +800,11 @@ async function loadConversation(cid, { historyMode = "push" } = {}) {
     leaving.telemetryOpened = false;
   }
   closeTelemetry(0);
-  discardQueue(); // queued messages were aimed at the thread we're leaving
   conversationId = cid;
   pendingConversationLoad = null;
+  clearTimeout(conversationRetryTimer);
+  conversationRetryTimer = null;
+  conversationRetryTarget = null;
   currentViewId = newViewId();
   setConversationLocation(cid, { mode: historyMode });
   messagesEl.innerHTML = "";
@@ -727,19 +820,24 @@ async function loadConversation(cid, { historyMode = "push" } = {}) {
   for (const m of messages) renderHistoryMessage(m);
   if (restoring) {
     reattachJob(restoring);
-    openTelemetry(restoring.cid);
-    restoring.telemetryOpened = true;
+    if (restoring.state !== "queued") {
+      openTelemetry(restoring.cid);
+      restoring.telemetryOpened = true;
+    }
   }
   refreshSidebar();
+  renderQueue();
   syncComposerState(); // the send button is only a Stop button in the streaming thread
   scrollToBottom({ force: true });
+  if (!restoring) drainQueue(cid);
   return true;
 }
 
 /** Re-render one in-flight reply into a fresh bubble and point its subscription at it. */
 function reattachJob(job) {
   const handle = beginAssistantMessage(null); // no "Answer now" on a resumed view
-  if (job.preamble) handle.pushPreamble(job.preamble);
+  if (job.state === "queued") handle.showQueued(job.queuePosition);
+  else if (job.preamble) handle.pushPreamble(job.preamble);
   if (job.reasoning) handle.pushThought(job.reasoning);
   if (job.content) handle.pushDelta(job.content);
   job.handle = handle;
@@ -752,6 +850,9 @@ function reattachJob(job) {
 }
 
 function newChat({ historyMode = "push" } = {}) {
+  clearTimeout(conversationRetryTimer);
+  conversationRetryTimer = null;
+  conversationRetryTarget = null;
   if (voiceModeActive) {
     setConversationLocation(conversationId, { mode: "replace" });
     return toast("Finish or stop voice mode before changing chats.");
@@ -764,7 +865,6 @@ function newChat({ historyMode = "push" } = {}) {
     leaving.telemetryOpened = false;
   }
   closeTelemetry(0);
-  discardQueue();
   conversationId = null;
   currentViewId = newViewId();
   setConversationLocation(null, { mode: historyMode });
@@ -772,6 +872,7 @@ function newChat({ historyMode = "push" } = {}) {
   renderChips();
   messagesEl.innerHTML = "";
   emptyStateEl.style.display = "";
+  renderQueue();
   scrollToBottom({ force: true });
   refreshSidebar();
   syncComposerState();
@@ -805,6 +906,7 @@ function syncComposerState() {
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
   // voice reply (generating without a chat stream) the mic button owns interruption.
   sendBtn.disabled =
+    !identityReady ||
     switchingModel ||
     busy ||
     voiceModeActive ||
@@ -1047,11 +1149,74 @@ function composeOutgoingMessage(typed, attachments) {
 }
 
 // --- the queue: messages typed while the tutor is busy -----------------------------------
+const MESSAGE_QUEUE_STORAGE_KEY = "muta-message-queue";
+
+function persistMessageQueue() {
+  try {
+    if (messageQueue.length) {
+      sessionStorage.setItem(MESSAGE_QUEUE_STORAGE_KEY, JSON.stringify(messageQueue));
+    } else {
+      sessionStorage.removeItem(MESSAGE_QUEUE_STORAGE_KEY);
+    }
+  } catch {
+    /* Storage can be disabled; the in-memory queue still works for this page lifetime. */
+  }
+}
+
+function restoreMessageQueue() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(MESSAGE_QUEUE_STORAGE_KEY) || "[]");
+    if (!Array.isArray(saved)) return;
+    // Browser storage is untrusted input. Keep only the small, serialisable shape dispatch()
+    // understands, and bound it to the same maximum as the server-side waiting room.
+    messageQueue = saved.slice(0, 32).flatMap((item) => {
+      if (!item || typeof item.typed !== "string" || typeof item.cid !== "string") return [];
+      const attachments = Array.isArray(item.attachments)
+        ? item.attachments.filter((a) => a && typeof a === "object").slice(0, 8)
+        : [];
+      return [{
+        typed: item.typed.slice(0, 4096),
+        attachments,
+        cid: item.cid,
+        conflictRetries: Math.min(2, Math.max(0, Number(item.conflictRetries) || 0)),
+      }];
+    });
+  } catch {
+    messageQueue = [];
+    sessionStorage.removeItem(MESSAGE_QUEUE_STORAGE_KEY);
+  }
+  persistMessageQueue();
+}
+
+function pendingStartsFor(cid) {
+  const matches = [];
+  for (let index = 0; index < sessionStorage.length; index += 1) {
+    const key = sessionStorage.key(index);
+    if (!key?.startsWith("muta-pending:")) continue;
+    try {
+      const marker = JSON.parse(sessionStorage.getItem(key) || "null");
+      if (marker?.conversation_id === cid) matches.push(key.slice("muta-pending:".length));
+    } catch {
+      /* Legacy blank-chat markers are recovered from the pending URL, not from this list. */
+    }
+  }
+  return matches;
+}
+
+function queueMessage(item, cid, { front = false } = {}) {
+  const queued = { ...item, cid };
+  if (front) messageQueue.unshift(queued);
+  else messageQueue.push(queued);
+  persistMessageQueue();
+  renderQueue();
+}
+
 function renderQueue() {
   const box = $("#queue");
   box.innerHTML = "";
-  box.hidden = messageQueue.length === 0;
-  messageQueue.forEach((item) => {
+  const visible = messageQueue.filter((item) => item.cid === conversationId);
+  box.hidden = visible.length === 0;
+  visible.forEach((item) => {
     const row = document.createElement("div");
     row.className = "queued";
     const label = document.createElement("span");
@@ -1065,6 +1230,7 @@ function renderQueue() {
     x.title = "Don't send this";
     x.addEventListener("click", () => {
       messageQueue = messageQueue.filter((q) => q !== item);
+      persistMessageQueue();
       renderQueue();
     });
     row.append(label, x);
@@ -1072,19 +1238,29 @@ function renderQueue() {
   });
 }
 
-function discardQueue() {
-  if (messageQueue.length) {
-    toast(`Discarded ${messageQueue.length} queued message${messageQueue.length > 1 ? "s" : ""}.`);
+function discardQueue(cid = conversationId, { announce = true } = {}) {
+  const removed = messageQueue.filter((item) => item.cid === cid).length;
+  if (removed && announce) {
+    toast(`Discarded ${removed} queued message${removed > 1 ? "s" : ""}.`);
   }
-  messageQueue = [];
+  messageQueue = messageQueue.filter((item) => item.cid !== cid);
+  persistMessageQueue();
   renderQueue();
 }
 
 function drainQueue(cid = conversationId) {
-  if (cid !== conversationId || voiceGenerating || jobForConversation(cid)) return;
-  const next = messageQueue.shift();
+  if (!cid || voiceGenerating || jobForConversation(cid) || startingConversations.has(startKeyFor(cid))) {
+    return;
+  }
+  const index = messageQueue.findIndex((item) => item.cid === cid);
+  if (index < 0) return;
+  const [next] = messageQueue.splice(index, 1);
+  persistMessageQueue();
   renderQueue();
-  if (next) dispatch(next);
+  dispatch(next, {
+    conversationOverride: cid,
+    viewOverride: conversationId === cid ? currentViewId : newViewId(),
+  });
 }
 
 function restoreDraft(item) {
@@ -1095,6 +1271,7 @@ function restoreDraft(item) {
 }
 
 function send(steer = false) {
+  if (!identityReady) return toast("Opening your chats — your draft is safe.");
   if (voiceModeActive) return toast("Finish voice mode before sending a typed message.");
   if ($("#model-trigger")?.dataset.switching === "true") {
     return toast("The selected model is still loading — your draft is safe.");
@@ -1102,6 +1279,9 @@ function send(steer = false) {
   const typed = inputEl.value.trim();
   if (readingAnImage()) return toast("Still reading your image — one moment.");
   if (!typed && !pendingAttachments.some((a) => a.transcription)) return;
+  if (startingConversations.has(startKeyFor(conversationId))) {
+    return toast("Starting your previous message — this draft is still here.");
+  }
 
   const item = { typed, attachments: pendingAttachments.slice() };
   pendingAttachments = [];
@@ -1116,18 +1296,16 @@ function send(steer = false) {
     // ahead of anything already queued. A voice reply can't be stopped from the keyboard
     // (the mic button owns barge-in), so steering degrades to queueing there.
     if (steer) {
-      messageQueue.unshift(item);
-      renderQueue();
+      queueMessage(item, currentJob.cid, { front: true });
       stopGeneration(currentJob); // finishGeneration drains the correction straight away
     } else {
-      messageQueue.push(item);
-      renderQueue();
+      queueMessage(item, currentJob.cid);
     }
     return;
   }
   if (voiceGenerating) {
-    messageQueue.push(item);
-    renderQueue();
+    if (conversationId) queueMessage(item, conversationId);
+    else restoreDraft(item);
     return;
   }
   if (!allowParallelChats && generationJobs.size) {
@@ -1171,9 +1349,15 @@ async function dispatch(item, opts = {}) {
       )
     : null;
   startingConversations.add(startKey);
+  // Every start is idempotently discoverable by client_request_id. Keep the marker until a
+  // definitive response or successful recovery — existing-conversation starts can lose their
+  // POST response during refresh just as easily as brand-new chats can.
+  sessionStorage.setItem(
+    `muta-pending:${clientRequestId}`,
+    JSON.stringify({ conversation_id: startedIn }),
+  );
   if (startedIn == null && renderingHere) {
     setPendingLocation(clientRequestId);
-    sessionStorage.setItem(`muta-pending:${clientRequestId}`, "1");
   }
   syncComposerState();
 
@@ -1195,6 +1379,49 @@ async function dispatch(item, opts = {}) {
     if (!res.ok) {
       startRejected = true;
       const detail = (await res.json().catch(() => ({}))).detail;
+      // The page may have missed recovery during a transient startup failure. If the gateway
+      // says this thread is already replying, adopt that server job and retain this follow-up
+      // instead of rendering a dead-end error or asking the student to type "continue" again.
+      if (
+        res.status === 409 &&
+        startedIn &&
+        !regenerate &&
+        typeof detail === "string" &&
+        detail.includes("reply is already running")
+      ) {
+        await recoverGenerations({ attempts: 4, delayMs: 400 });
+        const existing = jobForConversation(startedIn);
+        if (existing) {
+          sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+          queueMessage(item, startedIn);
+          assistant?.remove();
+          if (currentViewId === startedView) {
+            await loadConversation(startedIn, { historyMode: "none" });
+          }
+          toast("The earlier reply is still running. This message is queued and will send automatically.", 5000);
+          // If that reply finished during the canonical history load, its normal drain ran
+          // while this rejected start key was still held. Retry once the finally block frees it.
+          setTimeout(() => drainQueue(startedIn), 0);
+          return;
+        }
+        const retries = item.conflictRetries || 0;
+        sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+        queueMessage(
+          { ...item, conflictRetries: retries < 2 ? retries + 1 : 0 },
+          startedIn,
+          { front: true },
+        );
+        assistant?.remove();
+        if (currentViewId === startedView) {
+          await loadConversation(startedIn, { historyMode: "none" });
+        }
+        toast("The earlier reply is finishing. This message remains queued until it can send.", 5000);
+        setTimeout(async () => {
+          await recoverGenerations({ attempts: 4, delayMs: 500 });
+          if (!jobForConversation(startedIn)) drainQueue(startedIn);
+        }, retries < 2 ? 500 : 2000);
+        return;
+      }
       if (assistant) assistant.fail(detail || `The tutor couldn't answer (HTTP ${res.status}).`);
       return;
     }
@@ -1226,25 +1453,31 @@ async function dispatch(item, opts = {}) {
       stopping: false,
       telemetryOpened: false,
       clientRequestId: started.client_request_id || clientRequestId,
+      state: started.state || "running",
+      queuePosition: started.queue_position || 0,
     };
     generationJobs.set(job.id, job);
+    if (job.state === "queued") {
+      job.handle?.showQueued(job.queuePosition);
+      toast("Queued — other responses are running. Your answer will start automatically when a slot is free.", 5000);
+    }
     refreshSidebar();
     // Begin the replacement load first so it captures this job synchronously, before a very
     // short generation can finish and leave an older in-flight history snapshot behind.
     if (returnedToConversation) void loadConversation(job.cid, { historyMode: "none" });
     void followGeneration(job);
   } catch {
-    if (startedIn == null && currentViewId === startedView) {
-      const recovered = await recoverPendingGeneration(clientRequestId);
-      if (!recovered && assistant) {
-        assistant.fail("Couldn't start that reply — your message is saved above.");
-      }
-    } else if (assistant) {
+    const recovered = await recoverPendingGeneration(clientRequestId, {
+      navigate: true,
+      fallbackConversation: startedIn,
+      expectedViewId: startedView,
+    });
+    if (!recovered && assistant) {
       assistant.fail("Couldn't start that reply — your message is saved above.");
     }
   } finally {
+    if (startRejected) sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
     if (startRejected && currentViewId === startedView && startedIn == null) {
-      sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
       setConversationLocation(null, { mode: "replace" });
     }
     startingConversations.delete(startKey);
@@ -1306,7 +1539,17 @@ async function pumpSse(res, job) {
         }
         if (ev.conversation_id) job.cid = ev.conversation_id;
         // Buffer first, then paint only if this conversation is still on screen.
-        if (ev.preamble) {
+        if (ev.queued === true && !ev.done) {
+          job.state = "queued";
+          job.queuePosition = ev.queue_position || 1;
+          job.handle?.showQueued(job.queuePosition);
+          refreshSidebar();
+        } else if (ev.started) {
+          job.state = "running";
+          job.queuePosition = 0;
+          job.handle?.startQueued();
+          refreshSidebar();
+        } else if (ev.preamble) {
           job.preamble += ev.preamble;
           job.handle?.pushPreamble(ev.preamble);
         } else if (ev.reasoning) {
@@ -1326,12 +1569,6 @@ async function pumpSse(res, job) {
           else if (!job.failed) job.handle?.finalize();
           decorateCompletedReply(job, ev);
           if (conversationId === job.cid) announce("Tutor replied.");
-          if (ev.queued) {
-            toast(
-              `You're #${ev.queue_position || 1} in line — the tutor is busy. Your answer will start shortly.`,
-              4000,
-            );
-          }
         }
         if (!job.telemetryOpened && (ev.reasoning || ev.delta) && conversationId === job.cid) {
           openTelemetry(job.cid);
@@ -1408,38 +1645,58 @@ function finishGeneration(job) {
   }
 }
 
-async function recoverGenerations() {
-  try {
-    const response = await fetch("/v1/chat/generations", { headers: authHeaders() });
-    if (!response.ok) return;
-    const body = await response.json();
-    for (const active of body.generations || []) {
-      if (generationJobs.has(active.job_id)) continue;
-      const job = {
-        id: active.job_id,
-        cid: active.conversation_id,
-        handle: null,
-        preamble: "",
-        reasoning: "",
-        content: "",
-        item: null,
-        pendingRegen: null,
-        framesSeen: 0,
-        terminal: false,
-        stopping: false,
-        telemetryOpened: false,
-        clientRequestId: active.client_request_id || null,
-      };
-      generationJobs.set(job.id, job);
-      void followGeneration(job);
-    }
-    syncComposerState();
-  } catch {
-    /* history remains usable; the next reload can try reconnecting again */
-  }
+function recoveredJob(active, clientRequestId = active.client_request_id || null) {
+  return {
+    id: active.job_id,
+    cid: active.conversation_id,
+    handle: null,
+    preamble: "",
+    reasoning: "",
+    content: "",
+    item: null,
+    pendingRegen: null,
+    framesSeen: 0,
+    terminal: false,
+    stopping: false,
+    telemetryOpened: false,
+    clientRequestId,
+    state: active.state || "running",
+    queuePosition: active.queue_position || 0,
+  };
 }
 
-async function recoverPendingGeneration(clientRequestId) {
+async function recoverGenerations({ attempts = 6, delayMs = 400 } = {}) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch("/v1/chat/generations", { headers: authHeaders() });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      for (const active of body.generations || []) {
+        if (active.client_request_id) {
+          sessionStorage.removeItem(`muta-pending:${active.client_request_id}`);
+        }
+        if (generationJobs.has(active.job_id)) continue;
+        const job = recoveredJob(active);
+        generationJobs.set(job.id, job);
+        void followGeneration(job);
+      }
+      syncComposerState();
+      return true;
+    } catch {
+      if (attempt + 1 < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  // A transient boot failure must not become permanent for this page. The next dispatch also
+  // performs targeted recovery if the gateway reports an already-running conversation.
+  return false;
+}
+
+async function recoverPendingGeneration(
+  clientRequestId,
+  { navigate = true, fallbackConversation = null, expectedViewId = null, quiet = false } = {},
+) {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     try {
       const response = await fetch(
@@ -1451,29 +1708,37 @@ async function recoverPendingGeneration(clientRequestId) {
         const active = body.generations?.[0];
         if (active) {
           let job = generationJobs.get(active.job_id);
+          let created = false;
           if (!job) {
-            job = {
-              id: active.job_id,
-              cid: active.conversation_id,
-              handle: null,
-              preamble: "",
-              reasoning: "",
-              content: "",
-              item: null,
-              pendingRegen: null,
-              framesSeen: 0,
-              terminal: false,
-              stopping: false,
-              telemetryOpened: false,
-              clientRequestId,
-            };
+            job = recoveredJob(active, clientRequestId);
             generationJobs.set(job.id, job);
+            created = true;
+          }
+          sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+          // Polling can last 20 seconds. Re-evaluate the view when the match arrives so an old
+          // recovery cannot yank the student back from a chat they deliberately navigated to;
+          // conversely, attach if they have since returned to this conversation.
+          const returnedToConversation =
+            conversationId === active.conversation_id ||
+            pendingConversationLoad === active.conversation_id;
+          const pendingBlankStillVisible =
+            fallbackConversation == null && pendingRequestFromLocation() === clientRequestId;
+          const expectedViewStillVisible =
+            expectedViewId == null || currentViewId === expectedViewId;
+          const shouldAttach = returnedToConversation ||
+            (navigate && expectedViewStillVisible &&
+              (fallbackConversation != null || pendingBlankStillVisible));
+          if (shouldAttach) {
+            conversationId = active.conversation_id;
+            setConversationLocation(conversationId, { mode: "replace" });
+            // Start the canonical history load while the recovered job is definitely retained
+            // in the Map; this closes the short-completion snapshot race on refresh.
+            const loading = loadConversation(conversationId, { historyMode: "none" });
+            if (created) void followGeneration(job);
+            await loading;
+          } else if (created) {
             void followGeneration(job);
           }
-          conversationId = active.conversation_id;
-          sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
-          setConversationLocation(conversationId, { mode: "replace" });
-          await loadConversation(conversationId, { historyMode: "none" });
           return true;
         }
       }
@@ -1483,9 +1748,16 @@ async function recoverPendingGeneration(clientRequestId) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
-  setConversationLocation(null, { mode: "replace" });
-  currentViewId = newViewId();
-  toast("That reply did not start. Your conversation list is still intact.");
+  if (
+    navigate &&
+    fallbackConversation == null &&
+    pendingRequestFromLocation() === clientRequestId &&
+    (expectedViewId == null || currentViewId === expectedViewId)
+  ) {
+    setConversationLocation(null, { mode: "replace" });
+    currentViewId = newViewId();
+  }
+  if (!quiet) toast("That reply did not start. Your conversation list is still intact.");
   return false;
 }
 
@@ -1616,16 +1888,42 @@ if (menuToggle) {
   $("#new-chat").addEventListener("click", () => setDrawer(false));
 }
 
-// Mint the bearer token (signed-mode servers), then load the sidebar. In default mode the
-// token already equals the student id, so a failed/slow mint never blocks startup.
-ensureAuth().then(async () => {
+// Identity is a readiness barrier, not a best-effort enhancement. In unified-loopback and
+// signed deployments the temporary browser UUID is not the eventual owner; loading or sending
+// under it can make a selected chat look missing and strand a reply under the wrong identity.
+async function bootChat() {
+  sendBtn.disabled = true;
+  while (!(await ensureAuth())) {
+    await new Promise((resolve) => setTimeout(resolve, 750));
+  }
+  syncComposerState();
+  restoreMessageQueue();
   await loadSettings();
   await recoverGenerations();
   const selected = conversationFromLocation();
   const pending = pendingRequestFromLocation();
   if (selected) {
-    const loaded = await loadConversation(selected, { historyMode: "none" });
-    if (!loaded) newChat({ historyMode: "replace" });
+    const loaded = await loadConversation(selected, {
+      historyMode: "none",
+      attempts: 6,
+      retryUnavailable: true,
+    });
+    if (loaded === false) newChat({ historyMode: "replace" });
+    else {
+      // A POST can be accepted just as the old document unloads, then finish before the active
+      // list is queried. Recover its retained replay by request id so the marker cannot become a
+      // stale dead end and a queued "continue" survives the reload. This also runs while history
+      // is temporarily unavailable: the job can then be followed in the background and attached
+      // by the URL-scoped history retry, instead of leaving a partial snapshot onscreen.
+      for (const requestId of pendingStartsFor(selected)) {
+        void recoverPendingGeneration(requestId, {
+          navigate: conversationId === selected,
+          fallbackConversation: selected,
+          expectedViewId: currentViewId,
+          quiet: true,
+        });
+      }
+    }
   } else if (pending && sessionStorage.getItem(`muta-pending:${pending}`)) {
     const recovered = await recoverPendingGeneration(pending);
     if (!recovered) refreshSidebar();
@@ -1633,7 +1931,8 @@ ensureAuth().then(async () => {
     if (pending) setConversationLocation(null, { mode: "replace" });
     refreshSidebar();
   }
-});
+}
+void bootChat();
 
 window.addEventListener("popstate", () => {
   const selected = conversationFromLocation();

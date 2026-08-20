@@ -481,10 +481,6 @@ def _start_chat_generation(
     # completion falsely releases it while the second is still decoding.
     admission_id = f"generation:{reservation_id}"
     state = ladder.evaluate()
-    decision = sessions.acquire(admission_id)
-    if decision.admission is Admission.REFUSED:
-        generations.cancel_reservation(reservation_id)
-        raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
     # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
     # the ungrounded request must stay byte-identical to what the tutor already serves.
@@ -534,9 +530,8 @@ def _start_chat_generation(
             **_apply_thinking(params_for_mode(req.mode.value), req.thinking),
         )
     except Exception:
-        # The slot is released in the SSE generator's finally, which only runs once streaming
-        # starts. A failure before that (store down, bad prompt) must free the lane here.
-        sessions.release(admission_id)
+        # Physical admission happens only at FIFO-head promotion, after preparation succeeds.
+        # At this point only the bounded registry reservation needs to be released.
         generations.cancel_reservation(reservation_id)
         raise
     if req.attachment_ids:
@@ -552,14 +547,12 @@ def _start_chat_generation(
         t_preamble = 0.0
         reply_parts: list[str] = []  # answer content only, for the post-stream self-check
         hub = get_hub()
-        hub.begin(cid)
-        # The id leads the stream rather than arriving only at `done`: a client that stops
-        # generation early (human-in-the-loop stop/steer) must already know which conversation
-        # its partial reply landed in, or stopping the first reply of a new chat forks a
-        # second thread on the next message.
-        yield f"data: {json.dumps({'conversation_id': cid})}\n\n"
         started = time.monotonic()
         try:
+            hub.begin(cid)
+            # Keep the leading id inside the cleanup boundary: Stop can land after this first
+            # yield, and closing there must still release telemetry and the physical slot.
+            yield f"data: {json.dumps({'conversation_id': cid})}\n\n"
             for kind, text in streamed:
                 now = time.monotonic()
                 # The preamble is filler from a 1 M-parameter model, not the tutor speaking:
@@ -650,13 +643,33 @@ def _start_chat_generation(
                     "check_note": check_note,
                     # Admission/degradation state, so the UI can show "you're next" and a
                     # reduced-capacity notice under classroom load.
-                    "queued": decision.admission is Admission.QUEUED,
-                    "queue_position": decision.queue_position,
+                    "queued": False,
+                    "queue_position": 0,
                     "degradation_level": f"L{int(state.level)}",
                 }
             )
             + "\n\n"
         )
+
+    def _cleanup_while_queued() -> None:
+        # A generator closed before its first `next()` never enters its own `finally`.
+        # Explicit queued cancellation therefore owns the otherwise-unreachable resources.
+        _close_events(streamed)
+        _close_events(events)
+        sessions.release(admission_id)
+
+    def _claim_inference_session() -> bool:
+        # GenerationManager owns the FIFO, while SessionManager mirrors the actual physical
+        # slot. A queued job must bind that freed slot before its worker is allowed to run.
+        promoted = sessions.acquire(admission_id)
+        if promoted.admission is Admission.REFUSED:
+            # L3 is the memory/thermal emergency brake, not ordinary classroom contention.
+            # Keeping the FIFO head parked here would block every later job indefinitely.
+            raise HTTPException(
+                status_code=503,
+                detail=promoted.message or ladder.busy_message(),
+            )
+        return promoted.admitted
 
     try:
         return generations.start(
@@ -665,6 +678,8 @@ def _start_chat_generation(
             producer=_sse(),
             reservation_id=reservation_id,
             client_request_id=req.client_request_id,
+            queued_cleanup=_cleanup_while_queued,
+            before_start=_claim_inference_session,
         )
     except Exception:
         _close_events(streamed)
@@ -736,10 +751,13 @@ def generation_start(
         generations=generations,
         allow_parallel=engine.store.get_settings(caller).get("allow_parallel_chats", True),
     )
+    snapshot = job.snapshot()
     return GenerationStarted(
         job_id=job.id,
         conversation_id=job.conversation_id,
         client_request_id=job.client_request_id,
+        state="queued" if snapshot.state == "queued" else "running",
+        queue_position=snapshot.queue_position,
     )
 
 
@@ -763,6 +781,7 @@ def generation_list(
                 state=row.state,
                 created_at=row.created_at,
                 client_request_id=row.client_request_id,
+                queue_position=row.queue_position,
             )
             for row in rows
         ]

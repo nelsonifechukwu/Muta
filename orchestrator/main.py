@@ -185,8 +185,13 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
-        with contextlib.suppress(Exception):
-            await asyncio.to_thread(get_generation_manager().shutdown)
+        try:
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(get_generation_manager().shutdown)
+        finally:
+            # A FastAPI app can run more than one lifespan in an in-process test/embedding.
+            # Never hand the next lifespan a registry that correctly refuses post-shutdown work.
+            get_generation_manager.cache_clear()
         with contextlib.suppress(Exception):
             get_connectivity().stop()
         if engine_stop is not None:

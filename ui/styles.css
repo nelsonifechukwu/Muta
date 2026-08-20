@@ -96,6 +96,9 @@ button.ghost:hover { background: var(--accent-soft); }
   flex: none; width: 7px; height: 7px; border-radius: 50%;
   background: var(--accent-strong); animation: think-pulse 1.4s ease-in-out infinite;
 }
+.conv-generating.queued {
+  background: transparent; border: 1.5px solid var(--accent-strong); animation: none;
+}
 .conv-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conv-del {
   visibility: hidden; border: none; background: none; cursor: pointer;
@@ -142,6 +145,11 @@ button.ghost:hover { background: var(--accent-soft); }
 .reply-incomplete {
   margin-top: 8px; font-size: 0.8rem; color: var(--danger);
   border-left: 3px solid var(--danger); padding-left: 8px;
+}
+.reply-queued .prose {
+  max-width: 34rem; padding: 10px 12px; border-left: 3px solid var(--accent-strong);
+  border-radius: 0 10px 10px 0; background: var(--accent-soft);
+  color: var(--muted); font-family: var(--sans); font-size: 0.88rem; line-height: 1.5;
 }
 
 /* --- chat column ---------------------------------------------------------- */

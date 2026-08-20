@@ -7,6 +7,8 @@ instead — an OOM kill of the core server is a hard failure, not a slow score.
 
 from __future__ import annotations
 
+import threading
+
 import pytest
 
 from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
@@ -190,6 +192,45 @@ def test_a_third_student_queues_with_a_position(manager):
 
     fourth = manager.acquire("dami")
     assert fourth.queue_position == 2 and "1 student ahead" in fourth.message
+
+    manager.release("chidi")
+    assert "chidi" not in manager.queue
+    assert manager.acquire("dami").queue_position == 1
+
+
+def test_generation_admission_is_an_ephemeral_physical_lane_lease():
+    manager = SessionManager(slots_count=1)
+    first = manager.acquire("generation:first")
+    assert first.admitted and first.slot is not None
+
+    manager.release("generation:first")
+    assert first.slot.free and first.slot.busy is False
+
+    second = manager.acquire("generation:second")
+    assert second.admitted and second.slot is first.slot
+
+
+def test_concurrent_acquire_cannot_bind_one_physical_slot_twice():
+    manager = SessionManager(slots_count=1)
+    barrier = threading.Barrier(3)
+    decisions = []
+
+    def acquire(name: str) -> None:
+        barrier.wait()
+        decisions.append(manager.acquire(name))
+
+    workers = [threading.Thread(target=acquire, args=(name,)) for name in ("ada", "bimpe")]
+    for worker in workers:
+        worker.start()
+    barrier.wait()
+    for worker in workers:
+        worker.join(timeout=1.0)
+
+    assert sorted(decision.admission for decision in decisions) == [
+        Admission.BOUND,
+        Admission.QUEUED,
+    ]
+    assert sum(slot.busy for slot in manager.slots) == 1
 
 
 def test_an_idle_slot_is_taken_over_and_its_session_suspended(manager):
