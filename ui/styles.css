@@ -249,9 +249,20 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .prose img { max-width: 100%; height: auto; border-radius: 10px; }
 .prose a { color: var(--accent); text-underline-offset: 2px; }
-/* KaTeX renders display math as a wide inline-block; without this a long equation drags
-   the whole page sideways. */
-.prose .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+/* KaTeX display output can be wider than a phone. Keep the conversation column fixed and
+   give only the equation a horizontal scroller; inline equations continue to wrap with prose. */
+.prose .katex { font-size: 1.04em; }
+.prose .math-source.display-math { display: block; max-width: 100%; }
+.prose .math-source.inline-math {
+  display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden;
+  vertical-align: -0.2em; scrollbar-width: thin;
+}
+.prose .katex-display {
+  display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden;
+  margin: 0.9em 0; padding: 0.2em 0 0.35em;
+  text-align: center; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
+.prose .katex-display > .katex { min-width: min-content; }
 
 details.thinking {
   border: 1px solid var(--border); border-radius: 12px;

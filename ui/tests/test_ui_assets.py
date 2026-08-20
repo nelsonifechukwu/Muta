@@ -169,3 +169,29 @@ def test_student_identity_boots_on_plain_http_lan_origins():
     assert 'typeof crypto.randomUUID === "function"' in js
     assert "crypto.getRandomValues(new Uint8Array(16))" in js
     assert "Math.random" not in js
+
+
+def test_math_is_protected_before_markdown_and_loaded_before_the_chat_app():
+    js = (UI / "app.js").read_text()
+    math = (UI / "math.js").read_text()
+    assert "extractMath(markdown)" in math
+    assert "marked.parse(protectedSource)" in math
+    markdown_at = math.index("marked.parse(protectedSource)")
+    restore_at = math.index("restoreMath(root, expressions, placeholderOpen);")
+    katex_at = math.index("global.katex.render(input.tex", restore_at)
+    assert markdown_at < restore_at < katex_at
+    assert 'slot.closest("pre, code, script, style, textarea, noscript, option, title")' in math
+    assert HTML.index('<script src="math.js"></script>') < HTML.index(
+        '<script src="app.js"></script>'
+    )
+    assert "MutaMath.render(el, text)" in js
+    assert 'last.matches(".katex, .katex-display")' in js
+
+
+def test_display_math_cannot_widen_the_conversation_column():
+    display = "".join(_blocks(".prose .katex-display"))
+    assert re.search(r"max-width\s*:\s*100%", display)
+    assert re.search(r"overflow-x\s*:\s*auto", display)
+    inline = "".join(_blocks(".prose .math-source.inline-math"))
+    assert re.search(r"max-width\s*:\s*100%", inline)
+    assert re.search(r"overflow-x\s*:\s*auto", inline)

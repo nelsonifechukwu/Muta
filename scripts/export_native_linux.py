@@ -30,6 +30,7 @@ BINARIES = ("llama-server", "llama-bench")
 UI_REQUIRED = (
     "index.html",
     "app.js",
+    "math.js",
     "audio.js",
     "worklet.js",
     "styles.css",
@@ -37,9 +38,8 @@ UI_REQUIRED = (
     "vendor/purify.min.js",
     "vendor/katex/katex.min.js",
     "vendor/katex/katex.min.css",
-    "vendor/katex/contrib/auto-render.min.js",
 )
-UI_SOURCE_FILES = ("index.html", "app.js", "audio.js", "worklet.js", "styles.css")
+UI_SOURCE_FILES = ("index.html", "app.js", "math.js", "audio.js", "worklet.js", "styles.css")
 FORBIDDEN_AVX512 = re.compile(rb"\s(vpxord|vpternlogd|kmovw|vpbroadcastmw2d)\s")
 
 
@@ -246,8 +246,14 @@ def export(image: str, frontend_image: str, output: Path, ui_output: Path) -> Pa
     return manifest_path
 
 
-def verify_manifest(output: Path) -> Path:
-    """Re-check installed binary hashes and the recorded pin without invoking Docker."""
+def verify_manifest(output: Path, *, allow_source_overlay: bool = False) -> Path:
+    """Re-check installed binary hashes and the recorded pin without invoking Docker.
+
+    ``allow_source_overlay`` is only for the preflight inside :func:`sync_source_ui`: authored
+    files are about to be atomically replaced there, so an older export may legitimately lack
+    a newly introduced source file. Binaries and pinned vendor assets remain hash-checked.
+    The finished overlay always goes through the strict default verification.
+    """
     manifest_path = output.resolve() / "native-linux-manifest.json"
     try:
         manifest = json.loads(manifest_path.read_text())
@@ -269,10 +275,15 @@ def verify_manifest(output: Path) -> Path:
     ui = manifest.get("ui", {})
     ui_path = ROOT / ui.get("path", "ui/dist")
     for relative, metadata in ui.get("files", {}).items():
+        if allow_source_overlay and relative in UI_SOURCE_FILES:
+            continue
         asset = ui_path / relative
         if not asset.is_file() or _sha256(asset) != metadata.get("sha256"):
             raise ExportError(f"native UI artifact hash mismatch for {relative}")
-    if not ui.get("files") or any(not (ui_path / item).is_file() for item in UI_REQUIRED):
+    required = set(UI_REQUIRED)
+    if allow_source_overlay:
+        required.difference_update(UI_SOURCE_FILES)
+    if not ui.get("files") or any(not (ui_path / item).is_file() for item in required):
         raise ExportError("native UI artifact is incomplete")
     return manifest_path
 
@@ -284,7 +295,7 @@ def sync_source_ui(output: Path) -> Path:
     of truth for the HTML, CSS, and JavaScript. Native starts call this after a pull so an old
     exported frontend cannot silently serve an old client against a new gateway.
     """
-    manifest_path = verify_manifest(output)
+    manifest_path = verify_manifest(output, allow_source_overlay=True)
     manifest = json.loads(manifest_path.read_text())
     ui = manifest["ui"]
     ui_path = ROOT / ui.get("path", "ui/dist")

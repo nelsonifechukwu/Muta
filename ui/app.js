@@ -181,22 +181,8 @@ function autoGrow() {
 }
 inputEl.addEventListener("input", autoGrow);
 
-// Cheap pre-check: renderMathInElement walks the whole subtree, and this runs on every
-// frame of a streaming reply. No delimiter in the source means there is nothing to find.
-const MATH_HINT = /\$|\\\(|\\\[/;
-
 function renderMarkdown(el, text) {
-  el.innerHTML = DOMPurify.sanitize(marked.parse(text));
-  if (!MATH_HINT.test(text)) return;
-  renderMathInElement(el, {
-    delimiters: [
-      { left: "$$", right: "$$", display: true },
-      { left: "$", right: "$", display: false },
-      { left: "\\(", right: "\\)", display: false },
-      { left: "\\[", right: "\\]", display: true },
-    ],
-    throwOnError: false,
-  });
+  MutaMath.render(el, text);
 }
 
 function clearCursor(root) {
@@ -220,6 +206,10 @@ function placeCursor(root) {
       last = last.previousSibling;
     }
     if (!last || last.nodeType !== Node.ELEMENT_NODE) break;
+    if (last.matches(".katex, .katex-display")) {
+      el = last;
+      break;
+    }
     el = last;
   }
   el.classList.add("cursor");

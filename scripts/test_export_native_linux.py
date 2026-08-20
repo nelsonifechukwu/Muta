@@ -136,6 +136,51 @@ def test_sync_source_ui_overlays_authored_assets_and_reseals_manifest(tmp_path, 
     assert export.verify_manifest(output) == manifest_path
 
 
+def test_sync_source_ui_upgrades_a_legacy_export_without_new_authored_assets(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(export, "ROOT", tmp_path)
+    output = tmp_path / "runtime" / "build"
+    binary_dir = output / "bin"
+    binary_dir.mkdir(parents=True)
+    binaries = {}
+    for name in export.BINARIES:
+        path = binary_dir / name
+        path.write_bytes(name.encode())
+        binaries[name] = {"sha256": export._sha256(path)}
+
+    ui_source = tmp_path / "ui"
+    ui_dist = ui_source / "dist"
+    legacy_required = [item for item in export.UI_REQUIRED if item != "math.js"]
+    legacy_required.append("vendor/katex/contrib/auto-render.min.js")
+    ui_files = {}
+    for relative in legacy_required:
+        asset = ui_dist / relative
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_text(f"legacy {relative}")
+        ui_files[relative] = {"sha256": export._sha256(asset)}
+    for relative in export.UI_SOURCE_FILES:
+        source = ui_source / relative
+        source.write_text(f"current {relative}")
+
+    manifest_path = output / "native-linux-manifest.json"
+    manifest_path.write_text(
+        __import__("json").dumps(
+            {
+                "schema": 2,
+                "verification": {"llama_cpp_pin": "b10035/602f828"},
+                "binaries": binaries,
+                "ui": {"path": "ui/dist", "files": ui_files},
+            }
+        )
+    )
+
+    assert not (ui_dist / "math.js").exists()
+    assert export.sync_source_ui(output) == manifest_path
+    assert (ui_dist / "math.js").read_text() == "current math.js"
+    assert export.verify_manifest(output) == manifest_path
+
+
 def test_ui_verifier_rejects_root_absolute_assets(tmp_path):
     for relative in export.UI_REQUIRED:
         asset = tmp_path / relative
