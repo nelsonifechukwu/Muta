@@ -10,8 +10,8 @@ from pathlib import Path
 from bench.campaign_summary import _wilson95
 from bench.score import score
 
-
 ROOT_NAME = "campaign-20260820-overnight"
+PROFILER_ROOT_RSS_ESTIMATE_MIB = 45.0
 PROFILER_REPORTS = {
     "qwen3-0.6b-math-expert-q4_k_m": {
         "report": "official-clean-qwen3-0.6b-math-expert-q4_k_m.json",
@@ -69,6 +69,24 @@ def _ci(score_fraction: float, samples: int) -> list[float]:
     return [round(low * 100, 2), round(high * 100, 2)]
 
 
+def _fixed_15_avx2(
+    *, accuracy_percent: float, tps: float, rss_mib: float, label: str
+) -> dict:
+    result = score(
+        accuracy=accuracy_percent,
+        tps_actual=tps,
+        peak_rss_gb=rss_mib / 1024,
+        label=label,
+    )
+    return {
+        "accuracy_percent": accuracy_percent,
+        "s_acc": result.s_acc,
+        "s_perf": result.s_perf,
+        "s_eff": result.s_eff,
+        "s_total": result.s_total,
+    }
+
+
 def _profiler_row(root: Path, manifest: dict, candidate_id: str) -> dict:
     spec = PROFILER_REPORTS[candidate_id]
     report_name = spec["report"]
@@ -115,6 +133,13 @@ def summarize(root: Path) -> dict:
     if root.name != ROOT_NAME:
         raise ValueError(f"expected campaign directory {ROOT_NAME}")
     manifest = json.loads((root / "manifest.json").read_text())
+    tensor_identity = json.loads((root / "tensor-identity-final-qwen.json").read_text())
+    if (
+        tensor_identity.get("identical") is not True
+        or tensor_identity.get("tensor_count") != 320
+        or tensor_identity.get("tensor_bytes") != 496_192_768
+    ):
+        raise ValueError("final Qwen tensor-identity evidence is incomplete")
     raw = {name: _rows(root / name) for name in RAW_FILES}
 
     official = [_profiler_row(root, manifest, candidate_id) for candidate_id in PROFILER_REPORTS]
@@ -193,6 +218,47 @@ def summarize(root: Path) -> dict:
             label=official_row["model"],
         )
         entry["diagnostic_total_with_arc_easy_500"] = diagnostic.s_total
+
+        screen_model = official_row["screen_model"]
+        avx2 = next(
+            row["avx2"]
+            for row in screened
+            if row["model"] == screen_model and row.get("avx2") is not None
+        )
+        estimated_profiler_rss_mib = (
+            avx2["child_tree_rss_mib"] + PROFILER_ROOT_RSS_ESTIMATE_MIB
+        )
+
+        entry["avx2_fixed_15"] = {
+            "benchmark_model": screen_model,
+            "binary_sha256": manifest["binaries"]["avx2_b10175_sha256"],
+            "build": {
+                "avx": True,
+                "avx2": True,
+                "fma": True,
+                "f16c": True,
+                "native": False,
+                "avx512": False,
+            },
+            "pp512_tps": avx2["pp512_tps"],
+            "tg128_tps": avx2["tg128_tps"],
+            "child_tree_rss_mib": avx2["child_tree_rss_mib"],
+            "profiler_root_rss_estimate_mib": PROFILER_ROOT_RSS_ESTIMATE_MIB,
+            "estimated_profiler_rss_mib": estimated_profiler_rss_mib,
+            "arc_easy_50": _fixed_15_avx2(
+                accuracy_percent=official_row["arc_easy_50"],
+                tps=avx2["tg128_tps"],
+                rss_mib=estimated_profiler_rss_mib,
+                label=official_row["model"],
+            ),
+            "arc_easy_500": _fixed_15_avx2(
+                accuracy_percent=accuracy_500,
+                tps=avx2["tg128_tps"],
+                rss_mib=estimated_profiler_rss_mib,
+                label=official_row["model"],
+            ),
+            "transferred_from_tensor_identical_source": screen_model != official_row["model"],
+        }
     recommendation = max(
         finalists,
         key=lambda model: finalists[model]["accuracy"]["arc_easy_500"]["score_percent"],
@@ -224,7 +290,7 @@ def summarize(root: Path) -> dict:
         website_relative[model] = {"avx2": avx2, "scores": scores}
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "campaign": manifest["campaign"],
         "status": manifest["status"],
         "hardware_context": manifest["hardware_context"],
@@ -242,7 +308,8 @@ def summarize(root: Path) -> dict:
             "accuracy": "ARC and SciQ are diagnostic proxies; the judging-panel tutoring score is unknown.",
             "thermal": "The GCP host exposed no package-temperature sensor.",
             "hardware": "GCP n2-custom-4-8192 is a 2-core/4-thread cloud proxy, not the physical target laptop.",
-            "rss": "Direct reports use profiler root-plus-child RSS; screening rows use child-tree RSS.",
+            "rss": "Direct reports use profiler root-plus-child RSS; AVX2 screening rows use measured child-tree RSS plus a 45 MiB profiler-root estimate.",
+            "avx2": "The final Qwen AVX2 row transfers the pinned source measurement only after verification of all 320 tensors and 496,192,768 tensor bytes.",
         },
     }
 

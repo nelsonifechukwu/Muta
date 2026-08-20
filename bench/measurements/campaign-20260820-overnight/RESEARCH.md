@@ -103,3 +103,22 @@ mode, both finalists consumed the 256-token allowance in `reasoning_content` and
 Non-thinking mode produced direct answers, but both models failed the √2 proof prompt. This test is
 an acceptance check rather than an accuracy score. Its full responses are retained in the campaign
 directory.
+
+## Finalist results by CPU configuration
+
+The direct participant-profiler run and the controlled AVX2 screen produce the following result:
+
+| Artifact | Direct scalar TPS / RSS / ARC-Easy-50 / total | AVX2 pp512 / tg128 / est. RSS / total |
+|---|---:|---:|
+| Qwen3-0.6B Math-Expert Q4_K_M | 12.72 / 540.32 MiB / 68% / 77.9324 | 153.9351 / 39.2320 / 759.7 MiB / **81.8803** |
+| Muta Tutor Qwen3.5-0.8B Q4_0 final | 12.63 / 670.39 MiB / 64% / 75.3895 | 98.0094 / 27.1509 / 928.1 MiB / 79.4104 |
+
+AVX2 totals use ARC-Easy-50 and the executable profiler's fixed 15 tok/s cap. Both models saturate
+the performance term. Math-Expert then leads through its four-point accuracy advantage and lower
+estimated RSS. Substituting the matched ARC-Easy-500 estimates reverses the AVX2 order: Qwen scores
+76.8104 and Math-Expert 75.1803. This larger-sample result is diagnostic.
+
+The AVX2 binary is SHA-256 `4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8`.
+It enables AVX/AVX2/FMA/F16C and disables native tuning and AVX-512. AVX2 RSS is measured child-tree
+peak plus a 45 MiB profiler-root estimate. Math-Expert used the exact finalist GGUF. Qwen used the
+pinned source whose tensor identity with the final metadata-wrapped artifact is recorded above.

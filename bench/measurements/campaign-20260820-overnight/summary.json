@@ -57,6 +57,38 @@
           "score_percent": 92.0
         }
       },
+      "avx2_fixed_15": {
+        "arc_easy_50": {
+          "accuracy_percent": 64.0,
+          "s_acc": 64.0,
+          "s_eff": 87.05217633928571,
+          "s_perf": 100.0,
+          "s_total": 79.41043526785714
+        },
+        "arc_easy_500": {
+          "accuracy_percent": 58.8,
+          "s_acc": 58.8,
+          "s_eff": 87.05217633928571,
+          "s_perf": 100.0,
+          "s_total": 76.81043526785714
+        },
+        "benchmark_model": "Qwen3.5-0.8B-Q4_0.gguf",
+        "binary_sha256": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8",
+        "build": {
+          "avx": true,
+          "avx2": true,
+          "avx512": false,
+          "f16c": true,
+          "fma": true,
+          "native": false
+        },
+        "child_tree_rss_mib": 883.1,
+        "estimated_profiler_rss_mib": 928.1,
+        "pp512_tps": 98.009425,
+        "profiler_root_rss_estimate_mib": 45.0,
+        "tg128_tps": 27.150908,
+        "transferred_from_tensor_identical_source": true
+      },
       "diagnostic_total_with_arc_easy_500": 72.7894921875,
       "official": {
         "accuracy_model": "Qwen3.5-0.8B-Q4_0.gguf",
@@ -131,6 +163,38 @@
           "score_percent": 88.0
         }
       },
+      "avx2_fixed_15": {
+        "arc_easy_50": {
+          "accuracy_percent": 68.0,
+          "s_acc": 68.0,
+          "s_eff": 89.40150669642857,
+          "s_perf": 100.0,
+          "s_total": 81.88030133928572
+        },
+        "arc_easy_500": {
+          "accuracy_percent": 54.6,
+          "s_acc": 54.6,
+          "s_eff": 89.40150669642857,
+          "s_perf": 100.0,
+          "s_total": 75.1803013392857
+        },
+        "benchmark_model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+        "binary_sha256": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8",
+        "build": {
+          "avx": true,
+          "avx2": true,
+          "avx512": false,
+          "f16c": true,
+          "fma": true,
+          "native": false
+        },
+        "child_tree_rss_mib": 714.7,
+        "estimated_profiler_rss_mib": 759.7,
+        "pp512_tps": 153.93511,
+        "profiler_root_rss_estimate_mib": 45.0,
+        "tg128_tps": 39.232048,
+        "transferred_from_tensor_identical_source": false
+      },
       "diagnostic_total_with_arc_easy_500": 71.23241071428572,
       "official": {
         "accuracy_model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
@@ -161,8 +225,9 @@
   "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
   "notices": {
     "accuracy": "ARC and SciQ are diagnostic proxies; the judging-panel tutoring score is unknown.",
+    "avx2": "The final Qwen AVX2 row transfers the pinned source measurement only after verification of all 320 tensors and 496,192,768 tensor bytes.",
     "hardware": "GCP n2-custom-4-8192 is a 2-core/4-thread cloud proxy, not the physical target laptop.",
-    "rss": "Direct reports use profiler root-plus-child RSS; screening rows use child-tree RSS.",
+    "rss": "Direct reports use profiler root-plus-child RSS; AVX2 screening rows use measured child-tree RSS plus a 45 MiB profiler-root estimate.",
     "thermal": "The GCP host exposed no package-temperature sensor."
   },
   "official_profiler": [
@@ -351,7 +416,7 @@
     "website_denominator_policy": "max(pre-entry cohort floor, candidate TPS)",
     "website_formula": "100 * TPS / TPS_max"
   },
-  "schema_version": 1,
+  "schema_version": 2,
   "screened_candidates": [
     {
       "accuracy": {
