@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Muta IQ experiment report: model selection, runtime tests, GGUF optimisation, and the evidence behind the current submission recommendation.">
-<title>Muta IQ — Experiment report</title>
+<meta name="description" content="The story of building Muta for the Africa Deep Tech Challenge: the constraints, the mechanisms we tried, and how each one narrowed the model further.">
+<title>Muta IQ — How we got here</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,14 +13,13 @@
 
 <header class="topbar">
   <a class="wordmark" href="#overview" aria-label="Muta IQ experiment report home">
-    <strong>Muta IQ</strong><small>Model optimisation report</small>
+    <strong>Muta IQ</strong><small>How we got here</small>
   </a>
   <nav class="topnav" aria-label="Report shortcuts">
-    <a href="#overview">Current result</a>
-    <a href="#avx2-campaign">AVX2 comparison</a>
-    <a href="#overnight-search">Expanded search</a>
-    <a href="#ledger">Experiment decisions</a>
-    <a href="#faq">Challenge FAQ</a>
+    <a href="#scoreboard">Scoreboard</a>
+    <a href="#search">Widening the search</a>
+    <a href="#current-state">Where we've landed</a>
+    <a href="#ledger">Every experiment</a>
     <a href="#profiler">Profiler workspace</a>
   </nav>
   <span class="pill" id="status-pill" aria-live="polite">Loading profiler…</span>
@@ -30,20 +29,23 @@
   <aside class="contents" aria-label="Report chapters">
     <p class="contents-label">Contents</p>
     <ol>
-      <li><a href="#overview">Current model selection</a></li>
-      <li><a href="#brief">Scoring function</a></li>
-      <li><a href="#evidence">Evidence categories</a></li>
-      <li><a href="#runtime">Runtime benchmarks</a></li>
-      <li><a href="#funnel">Candidate comparison</a></li>
-      <li><a href="#quantization">Quantization and kernels</a></li>
-      <li><a href="#ternary">Ternary model tests</a></li>
-      <li><a href="#streaming">Submission constraints</a></li>
-      <li><a href="#campaign">Scalar profiler results</a></li>
-      <li><a href="#avx2-campaign">Updated AVX2 comparison</a></li>
-      <li><a href="#overnight-search">Expanded model search</a></li>
-      <li><a href="#ledger">Experiment decisions</a></li>
+      <li><a href="#overview">Why we're here</a></li>
+      <li><a href="#competition">The competition</a></li>
+      <li><a href="#paths">Two roads</a></li>
+      <li><a href="#methods">Nine ways to shrink a model</a></li>
+      <li><a href="#quantization">Quantization</a></li>
+      <li><a href="#dedup">Cutting the duplicate head</a></li>
+      <li><a href="#vocabulary">Pruning the vocabulary</a></li>
+      <li><a href="#streaming">Weight streaming</a></li>
+      <li><a href="#runtime">Tuning the runtime</a></li>
+      <li><a href="#scoreboard">The first scoreboard</a></li>
+      <li><a href="#instruction-set">Finding the real CPU</a></li>
+      <li><a href="#search">Widening the search</a></li>
+      <li><a href="#behaviour">Teaching the file to behave</a></li>
+      <li><a href="#current-state">Where we've landed</a></li>
+      <li><a href="#ledger">Every experiment</a></li>
       <li><a href="#faq">Challenge requirements</a></li>
-      <li><a href="#profiler">Profiler data</a></li>
+      <li><a href="#profiler">Profiler workspace</a></li>
     </ol>
     <div class="contents-note">
       <span class="status-dot official"></span>
@@ -54,15 +56,15 @@
 
   <article class="report-article">
     <header class="hero" id="overview">
-      <p class="eyebrow">Muta model optimisation report</p>
-      <h1>Model selection for the 8 GB CPU target</h1>
-      <p class="dek">The submitted GGUF must run on an 8 GB CPU-only laptop. The comparison covers accuracy, generation throughput, peak RSS, and compatibility with the evaluator's runtime.</p>
+      <p class="eyebrow">The story of a competition entry</p>
+      <h1>Teaching a laptop to tutor</h1>
+      <p class="dek">I picked Math &amp; Scientific Reasoning because pragmatic education is something African classrooms need and rarely get enough of. This is the story of fitting a model that teaches that way onto an 8 GB laptop, and everything we had to narrow down to make it fit.</p>
 
       <div class="verdict">
         <div>
-          <p class="verdict-label">Risk-adjusted submission recommendation</p>
+          <p class="verdict-label">Where the story ends, for now</p>
           <h2><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></h2>
-          <p>Math-Expert Q4_K_M has the highest direct scalar and controlled AVX2 totals when the 50-item ARC-Easy proxy is used. The final Qwen3.5-0.8B file remains the risk-adjusted recommendation because it leads the matched 500-item ARC-Easy check and the two-finalist AVX2 diagnostic.</p>
+          <p>Math-Expert Q4_K_M posts the highest direct scalar and controlled AVX2 totals when we use the 50-item ARC-Easy proxy. We still recommend the final Qwen3.5-0.8B file, because it leads the matched 500-item ARC-Easy check and the two-finalist AVX2 diagnostic. The rest of this page tells you how we got to a tie we haven't broken yet.</p>
         </div>
         <div class="regime-result-grid">
           <article class="avx2-result">
@@ -76,7 +78,7 @@
         </div>
       </div>
 
-      <p class="hero-caveat"><strong>Selection condition:</strong> choose Math-Expert if the fixed-15 objective is represented by ARC-Easy-50; choose Qwen3.5-0.8B for the larger matched accuracy evidence. Qwen remains the submission recommendation until a physical-target, tutoring-aware evaluation resolves that conflict.</p>
+      <p class="hero-caveat"><strong>Selection condition:</strong> choose Math-Expert if ARC-Easy-50 stands in for the fixed-15 objective; choose Qwen3.5-0.8B for the larger matched accuracy evidence. We keep Qwen as the submission recommendation until a physical-target, tutoring-aware evaluation resolves that conflict.</p>
       <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from the report snapshot.</strong> The operational appendix shows the configured campaign.</p>
 
       <dl class="artifact-line">
@@ -87,13 +89,15 @@
       </dl>
     </header>
 
-    <section class="chapter" id="brief" aria-labelledby="brief-title">
+    <section class="chapter" id="competition" aria-labelledby="competition-title">
       <header class="chapter-head">
         <span class="chapter-number">01</span>
-        <div><p class="eyebrow">Scoring function</p><h2 id="brief-title">Score components and disqualification conditions</h2></div>
+        <div><p class="eyebrow">The rules we're playing by</p><h2 id="competition-title">A $150–$500 laptop is the whole target</h2></div>
       </header>
 
-      <p class="lead">The evaluator loads one GGUF with <code>llama.cpp</code> on a four-core, 8 GB Ubuntu laptop. The score combines accuracy, generation throughput, peak RSS, and temperature. A crash, OOM, or illegal instruction disqualifies the run.<span class="sidenote-number"></span><span class="sidenote">The engine disables AVX-512 and checks the disassembly because several eligible consumer CPUs do not support it.</span></p>
+      <p class="lead">The <a href="https://africadeeptech.org/challenge-2026/" target="_blank" rel="noreferrer">Africa Deep Tech Challenge</a> wants language models running entirely on-device, on the standard laptops already sitting in African cities, with no cloud behind them. It lists seven tracks: Math &amp; Scientific Reasoning, Healthcare, Agriculture, Creative Writing, Coding Assistants, Corporate/Enterprise, and Autonomous Agents. We took the first one, because a tutor that explains a wrong answer instead of just marking it is closer to what a scarce teacher actually does.</p>
+
+      <p>The hardware is exact: an Intel Core i5, 10th to 12th generation, integrated graphics only, Ubuntu 22.04, and a hard 7 GB RAM ceiling. Go over it and the run is disqualified, full stop. The rules are just as narrow on software: <code>llama.cpp</code> only, weights in GGUF. Any open base model is fair game, quantized or fine-tuned however we like, but nothing closed and nothing needing a different runtime.<span class="sidenote-number"></span><span class="sidenote">We disable AVX-512 in our own build and check the disassembly for it, because several eligible consumer CPUs don't support it: an illegal instruction there means an automatic zero.</span></p>
 
       <figure class="equation-figure">
         <div class="equation" role="math" aria-label="Total score equals one half accuracy plus three tenths performance plus two tenths efficiency minus the thermal penalty">
@@ -110,127 +114,73 @@
         <figcaption><span>Fig. 1</span> Fixed-15 profiler score. Below 15 tok/s, an increase of 1 tok/s adds 2.00 total points. One accuracy point adds 0.50. A reduction of 1 GB in peak RSS adds 2.86.</figcaption>
       </figure>
 
-      <p>Performance is capped at 15 tok/s; efficiency reaches zero at 7 GB RSS.<span class="sidenote-number"></span><span class="sidenote"><code>S_perf = min(TPS/15, 1) × 100</code> and <code>S_eff = max(0, (7 GB − RSS)/7 GB) × 100</code>.</span> All candidates remained below the limit.</p>
-
-      <div class="score-lab" id="score-lab">
-        <div class="figure-head">
-          <div><p class="figure-kicker">Interactive calculation</p><h3>Score component sensitivity</h3></div>
-          <output class="score-output" id="score-total" aria-live="polite">77.93</output>
-        </div>
-        <div class="controls-grid">
-          <label>Accuracy proxy <output id="score-accuracy-value">68</output>
-            <input id="score-accuracy" type="range" min="0" max="100" step="1" value="68">
-          </label>
-          <label>Generation, tok/s <output id="score-tps-value">12.72</output>
-            <input id="score-tps" type="range" min="0" max="20" step="0.01" value="12.72">
-          </label>
-          <label>Peak RSS, GiB <output id="score-ram-value">0.53</output>
-            <input id="score-ram" type="range" min="0.25" max="7" step="0.001" value="0.527656">
-          </label>
-          <label class="toggle-control"><input id="score-thermal" type="checkbox"> Apply the 10-point thermal penalty</label>
-        </div>
-        <div class="score-breakdown" id="score-breakdown" aria-label="Score contribution breakdown"></div>
-        <p class="fine-print">Preloaded with the current direct scalar leader, Math-Expert 0.6B Q4_K_M. This control does not write to the run database or alter campaign results.</p>
-      </div>
+      <p>Half the score is accuracy, so a fast model that can't teach still loses. But performance caps at 15 tok/s and efficiency zeroes out at 7 GB, so past those points speed and memory stop paying at all.<span class="sidenote-number"></span><span class="sidenote"><code>S_perf = min(TPS/15, 1) × 100</code> and <code>S_eff = max(0, (7 GB − RSS)/7 GB) × 100</code>. The public challenge page instead defines performance relative to the fastest submission, <code>TPS_max</code>, rather than a fixed 15. We follow the fixed formula, since it's what the executable profiler actually runs, and keep the cohort-relative reading as a separate sensitivity check throughout this page.</span> That formula produces a decision rule we checked every optimisation against for the rest of the project:</p>
 
       <aside class="design-note">
         <p class="design-note-label">Decision rule</p>
-        <p>An additional 1 GB of RSS requires 1.43 tok/s or 5.7 accuracy points to break even. This exchange rate applies only within one test system and scoring configuration.</p>
+        <p>An additional 1 GB of RSS has to buy 1.43 tok/s or 5.7 accuracy points to break even. Every method in this story either pays that rate or it doesn't ship.</p>
       </aside>
-    </section>
-
-    <section class="chapter" id="evidence" aria-labelledby="evidence-title">
-      <header class="chapter-head">
-        <span class="chapter-number">02</span>
-        <div><p class="eyebrow">Evidence categories</p><h2 id="evidence-title">Five non-comparable measurement categories</h2></div>
-      </header>
-      <p class="lead">Because the measurements use different systems, CPU features, and performance formulas, the report separates them into five evidence categories. Rankings remain within a category unless a comparison controls those differences.</p>
-
-      <div class="evidence-grid">
-        <article class="evidence-card official">
-          <p class="evidence-label"><span></span>Official profiler result</p>
-          <h3>Full profiler execution</h3>
-          <p>The participant executable measures throughput and root-plus-child RSS. The latest direct finalist run selects Math-Expert Q4_K_M with ARC-Easy-50.</p>
-        </article>
-        <article class="evidence-card parity">
-          <p class="evidence-label"><span></span>Profiler-parity estimate</p>
-          <h3>No-AVX reconstruction</h3>
-          <p>This reconstruction combines timed no-AVX samples, measured child-tree RSS, and a 45 MiB profiler-root estimate.<span class="sidenote-number"></span><span class="sidenote">The allowance covers the Python interpreter and lm-eval imports; it is estimated, not directly measured.</span></p>
-        </article>
-        <article class="evidence-card avx2">
-          <p class="evidence-label"><span></span>Controlled AVX2 proxy</p>
-          <h3>Paired ISA benchmark</h3>
-          <p>The initial quantization sweep selected Q4_K_M. The expanded model search selects Math-Expert under ARC-Easy-50 and Qwen3.5 0.8B under the larger matched diagnostic.</p>
-        </article>
-        <article class="evidence-card sensitivity">
-          <p class="evidence-label"><span></span>Website sensitivity</p>
-          <h3>Cohort-relative sensitivity</h3>
-          <p>The AVX2 rows are recalculated with a cohort-relative denominator. This is sensitivity analysis, not a profiler result.</p>
-        </article>
-        <article class="evidence-card development">
-          <p class="evidence-label"><span></span>Development result</p>
-          <h3>Development experiments</h3>
-          <p>Mac, Docker, GCP, and custom-engine tests guide implementation but do not rank submission models.</p>
-        </article>
-      </div>
 
       <details class="reasoning-check">
-        <summary>Performance formula definitions</summary>
+        <summary>Why we keep five separate evidence categories on this page</summary>
         <div>
-          <p>The executable profiler uses <code>S_perf = min(TPS / 15, 1) × 100</code>. The public challenge page defines <code>TPS_max</code> as the fastest qualifying submission. Direct profiler totals use the executable formula. The separate sensitivity calculation uses the website formula. Totals calculated with different formulas are not compared.</p>
+          <p>Our numbers come from different systems, CPU features, and performance formulas, so we never blend them into one ranking: <strong>official profiler results</strong> (the participant executable's own runs), <strong>profiler-parity estimates</strong> (a no-AVX reconstruction with a 45 MiB profiler-root allowance we estimated, not measured), <strong>controlled AVX2 proxies</strong> (a paired scalar/AVX2 benchmark on the same host), <strong>website sensitivity</strong> (the cohort-relative formula as a separate check, never averaged in), and plain <strong>development results</strong> (Mac, Docker, and custom-engine tests that guided decisions but never ranked a submission). A colour and a badge on every figure below show which lane it belongs to.</p>
         </div>
       </details>
-      <aside class="design-note warning-note">
-        <p class="design-note-label">Accuracy extraction warning</p>
-        <p>The participant profiler's generic score extractor returns the sample count as the score for some generative lm-eval tasks. ARC-Easy uses a separate multiple-choice metric. Generative task results use the project's explicit metric extractor and are excluded from the direct profiler total.</p>
-      </aside>
     </section>
 
-    <section class="chapter" id="runtime" aria-labelledby="runtime-title">
+    <section class="chapter" id="paths" aria-labelledby="paths-title">
       <header class="chapter-head">
-        <span class="chapter-number">03</span>
-        <div><p class="eyebrow">Runtime benchmarks</p><h2 id="runtime-title">Controlled runtime baseline</h2></div>
+        <span class="chapter-number">02</span>
+        <div><p class="eyebrow">Before we picked a model</p><h2 id="paths-title">Bigger teaches better. Bigger also costs more.</h2></div>
       </header>
-      <p class="lead">Before comparing models, the runtime variables were fixed. Six threads, unified KV, and two checkpoints produced 31.09 tok/s at 3,137 MiB, or 83% of the estimated weight-bandwidth limit.</p>
-
-      <figure class="report-figure">
-        <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Selected runtime configurations</h3></div><span class="evidence-badge development">Development</span></div>
-        <div class="svg-chart" id="runtime-chart" role="img" aria-label="Comparison of selected runtime experiment throughput and memory" aria-describedby="runtime-chart-summary"></div>
-        <p class="sr-only" id="runtime-chart-summary">Docker baseline: 5.3 tokens per second and 4.77 GB, still rising. Resource caps: 6.72 tokens per second and 4.44 GB. Native default: 29.78 tokens per second and 3,519 MiB physical footprint. Six threads with unified KV: 31.09 tokens per second and 3,137 MiB. Draft speculation: 24.72 tokens per second; host memory was not reliably measured.</p>
-        <figcaption><span>Fig. 2</span> The runtime sequence progresses from the Docker baseline to resource caps, native execution, thread tuning, and speculation. These experiments guide configuration but do not rank submission models.</figcaption>
-      </figure>
-
-      <div class="finding-pair">
-        <article><p class="result-tag rejected">Rejected</p><h3>Draft-model speculation</h3><p>Despite 98.4% acceptance, generation fell from 30.84 to 24.72 tok/s.</p></article>
-        <article><p class="result-tag rejected">Rejected</p><h3>N-gram speculation</h3><p>With only 12–22% acceptance, lookup and verification overhead exceeded the gain.</p></article>
-        <article><p class="result-tag adopted">Adopted</p><h3>Six-thread cap</h3><p>Raising the thread count to ten reduced decode to approximately 4.4 tok/s. Temperature was unavailable.</p></article>
-        <article><p class="result-tag adopted">Adopted</p><h3>Unified KV, two checkpoints</h3><p>This configuration reduced retained state and improved prefill without slowing decode.<span class="sidenote-number"></span><span class="sidenote">Unified KV shares capacity across active slots instead of reserving a fixed block per slot.</span></p></article>
-      </div>
-    </section>
-
-    <section class="chapter" id="funnel" aria-labelledby="funnel-title">
-      <header class="chapter-head">
-        <span class="chapter-number">04</span>
-        <div><p class="eyebrow">Candidate evaluation</p><h2 id="funnel-title">Model-scale and runtime-specific selection</h2></div>
-      </header>
-      <p class="lead">Once the runtime was fixed, a four-task study compared model scales. The audit campaign then tested the submitted models under scalar and portable AVX2 kernels.</p>
+      <p class="lead">Before touching quantization, we ran a plain accuracy-by-scale study across the Qwen3.5 family: 0.8B, 2B, and 4B, on four reasoning tasks. The result was the least surprising thing in this whole project, and also the thing every later decision had to argue against.</p>
 
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Separate accuracy evaluations</p><h3>Candidate measurements</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
         <div class="svg-chart tall-chart" id="model-funnel-chart" role="img" aria-label="Model size, accuracy proxy, and campaign status for evaluated candidate models" aria-describedby="model-funnel-summary"></div>
         <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy. The current Qwen3.5 0.8B final is 0.47 GiB at 64% and is the risk-adjusted recommendation. Math-Expert 0.6B is 0.37 GiB at 68% and is the raw fixed-15 leader. Earlier candidates remain as comparison points.</p>
-        <figcaption><span>Fig. 3</span> The current recommendation and raw score leader are marked separately. Older candidates remain as comparison points; their accuracy values use the stated ARC-Easy proxy rather than the four-task development mean.</figcaption>
+        <figcaption><span>Fig. 2</span> The audit-campaign points are a preview of where this story's scoreboard eventually lands, several sections ahead; this section is really about the reasoning-study points, the four-task scale study that started everything. Older candidates stay in as comparison points; their accuracy values use the stated ARC-Easy proxy, not the four-task development mean.</figcaption>
       </figure>
 
-      <p>Qwen3.5 4B led the scale study. BitCPM 8B produced the highest ARC-Easy-50 result but low scalar throughput. Expanding the search to sub-1B models identified two finalists: Qwen3.5 for the broader diagnostic evidence and Math-Expert for the highest raw fixed-15 total.</p>
+      <p>4B beat 2B beat 0.8B, cleanly, on every task. Under a formula that pays 0.50 total-score points per accuracy point and only 2.86 per gigabyte saved, that curve makes a strong case for going as big as the RAM ceiling allows. But RSS on Linux tracks file bytes almost one-to-one, so "as big as the ceiling allows" is a number in the hundreds of megabytes, not gigabytes, once quantization is priced in. That tension split our search down two roads at once, plus one number neither road was allowed to cross:</p>
+
+      <div class="finding-pair">
+        <article><p class="result-tag adopted">Road one</p><h3>Go small and dense</h3><p>Stay in the Qwen3/3.5 family, quantize as hard as the audit kernel would tolerate, and win back accuracy through parameter dedication and behaviour baked into the file rather than raw scale.</p></article>
+        <article><p class="result-tag adopted">Road two</p><h3>Go big and ternary</h3><p>Bet that an 8B-parameter model at roughly 2 bits per weight, BitCPM4 in TQ2_0, could out-accuracy anything dense enough to fit, if we pruned and compressed it hard enough to land in the same weight class as the dense candidates.</p></article>
+      </div>
+
+      <p>Every 100 MB above the smallest working file was already worth 1.4 points of efficiency score we'd rather spend on accuracy, so neither road got a free pass on size: road two's ternary bet only earned its keep by landing at about 2.1 GB, not the 8 GB the parameter count alone would suggest. We ran both roads in parallel for weeks. This page tells road one's story in full, because it's the one that shipped; road two still shows up wherever its lessons apply, and its ending is in the vocabulary-pruning section below.</p>
+    </section>
+
+    <section class="chapter" id="methods" aria-labelledby="methods-title">
+      <header class="chapter-head">
+        <span class="chapter-number">03</span>
+        <div><p class="eyebrow">The toolbox</p><h2 id="methods-title">Nine ways to make a model fit</h2></div>
+      </header>
+      <p class="lead">Once we knew the shape of the trade-off, the question became mechanical: which levers actually move file size, RAM, and speed on this exact evaluator? We ended up pulling nine of them, roughly in this order, and each one either survived and narrowed the model further, or it didn't and we recorded why not.</p>
+
+      <div class="experiment-sequence" aria-label="Overview of methods explored">
+        <article><span>1</span><h3>Quantization</h3><p>Not just bits per weight, but which quantization type the audit binary can actually run fast.</p></article>
+        <article><span>2</span><h3>Parameter deduplication</h3><p>Dropping the duplicated output head when embedding and head can share one matrix.</p></article>
+        <article><span>3</span><h3>Vocabulary pruning</h3><p>Removing tokens the tutor will never emit, and checking token by token that nothing else changed.</p></article>
+        <article><span>4</span><h3>Weight streaming</h3><p>Paging weights from disk instead of keeping the whole file resident, and finding the boundary the competition draws around it.</p></article>
+        <article><span>5</span><h3>Runtime tuning</h3><p>Threads, KV cache, checkpoints, and two kinds of speculative decoding, before any model comparison could be trusted.</p></article>
+        <article><span>6</span><h3>Instruction-set targeting</h3><p>Discovering that the audit binary's actual CPU features change which quantization type wins, and testing both readings.</p></article>
+        <article><span>7</span><h3>Widening the model search</h3><p>Testing nine more candidates and a specialist fine-tune once the first roster stopped improving.</p></article>
+        <article><span>8</span><h3>Baking behaviour into the file</h3><p>Persona, chat template, and sampling defaults, since judges talk to the bare GGUF with no app layer in front of it.</p></article>
+        <article><span>9</span><h3>Runtime configuration we couldn't submit</h3><p>Repacking, mmap policy, thread count: real engineering wins that live in Muta's own runtime, not in the scored file.</p></article>
+      </div>
+
+      <p>The first five apply directly to the file we ship, and the sixth changed which of them actually wins. The seventh and eighth ran in parallel with everything before them. The ninth taught us where the submission boundary actually sits, which mattered enough to shape how we read every other result below. Quantization first, since it's the lever every other decision had to route around.</p>
     </section>
 
     <section class="chapter" id="quantization" aria-labelledby="quant-title">
       <header class="chapter-head">
-        <span class="chapter-number">05</span>
-        <div><p class="eyebrow">Quantization and kernel dispatch</p><h2 id="quant-title">Quantization type affects throughput and RSS</h2></div>
+        <span class="chapter-number">04</span>
+        <div><p class="eyebrow">Method one</p><h2 id="quant-title">Quantization: the file format is the kernel choice</h2></div>
       </header>
-      <p class="lead">The candidate results showed that quantization affects more than file size: it also controls kernel dispatch and possible tensor repacking. Throughput and RSS must therefore be measured at runtime.<span class="sidenote-number"></span><span class="sidenote">With AVX2 repacking, estimated RSS rose by 916.3 MiB for Q4_0 and 806.2 MiB for Q4_K_M, but by less than 1 MiB for Q5_K_M and IQ4_XS.</span></p>
+      <p class="lead">Quantization means storing each weight in fewer bits than the 16 or 32 it was trained in, trading a little precision for a much smaller file. GGUF supports a whole ladder of these formats, from plain 4-bit rounding (Q4_0) through vector-quantized "k-quants" (Q4_K_M, Q5_K_M) to sub-4-bit "i-quants" and ternary formats. We assumed, like most guides do, that a newer, smarter format like Q4_K_M would be the better choice. On this evaluator, it wasn't.</p>
 
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Scalar profiler configuration</p><h3>Kernel dispatch by tensor type</h3></div><span class="evidence-badge official">Scalar audit build</span></div>
@@ -285,13 +235,335 @@
           <text class="kd-box-sub" x="0" y="272">Source analysis maps Q4_0 to SSSE3 and the other listed types to generic C; campaign rows show model-level rates.</text>
         </svg>
         <p class="sr-only" id="kernel-diagram-summary">On the scalar participant build, Q4_0 tensors use a hand-written SSSE3 kernel and the current Qwen final decodes at 12.63 tokens per second. K-quants, i-quants, and ternary types use scalar generic C implementations; their measured rates span 0.81 to 12.72 tokens per second across the current six-model ledger because model scale also differs. The portable AVX2 build enables vector kernels for these tensor types and changes the quant ordering.</p>
-        <figcaption><span>Fig. 4</span> Current scalar-ledger rates are shown beside the kernel paths. Model size also affects the measured range. The portable build enables AVX2 implementations for the listed tensor types.</figcaption>
+        <figcaption><span>Fig. 3</span> We show the current scalar-ledger rates beside the kernel paths. Model size also affects the measured range. The portable build enables AVX2 implementations for the listed tensor types.</figcaption>
       </figure>
 
-      <p>The quantization sweep measured Q4_0 at 9.99 scalar tok/s and Q4_K_M at 5.30. Portable AVX2 increased them to 16.89 and 15.67 tok/s, respectively. Q4_K_M scored 80.4484 because its estimated repacking RSS was 59.7 MiB lower. Expanding the model search raised the AVX2 high score to 81.8803 with Math-Expert.</p>
+      <p>We read the audit binary's own kernel source rather than trust a guide written for a different CPU, and found only Q4_0 has a hand-written SIMD path on the scalar build the executable profiler runs. Everything else, including the "smarter" k-quants, falls back to generic C. The original control, on the Qwen3 1.7B pair, measured 9.99 tok/s in Q4_0 against 5.30 tok/s in Q4_K_M, purely from that one format choice; the diagram above shows the same pattern holding on the file we eventually shipped, at 12.63 tok/s. That single fact ruled out most of the usual advice and pointed every candidate toward pure Q4_0, at least until instruction-set targeting complicated the picture again, several sections down.</p>
 
-      <h3 class="section-title">Model derivation</h3>
-      <p>The recommended Qwen model is reproduced from the same source quant by changing GGUF metadata only. Math-Expert remains an unchanged alternative model and is not part of this transformation.</p>
+      <aside class="design-note">
+        <p class="design-note-label">A second confirmation, weeks later</p>
+        <p>Weeks later, when we widened the model search in August, an unrelated candidate, Math-Expert, gave us the same lesson from scratch: eight quantization layouts of the same source file, and the format with a real kernel still won. See the widening-the-search section below for that sweep.</p>
+      </aside>
+    </section>
+
+    <section class="chapter" id="dedup" aria-labelledby="dedup-title">
+      <header class="chapter-head">
+        <span class="chapter-number">05</span>
+        <div><p class="eyebrow">Method two</p><h2 id="dedup-title">Cutting the duplicate head</h2></div>
+      </header>
+      <p class="lead">Many transformer architectures give the embedding table and the output head separate weight matrices, even though both are the same shape and often learn near-identical representations. Tying them, letting the head reuse the embedding matrix instead of storing its own copy, is a free win if the architecture supports it: no retraining, no accuracy cost, just a smaller file.</p>
+
+      <p>We reproduce our recommended file from its source quant by metadata changes alone, and ran an isolated A/B on the tied-versus-untied question. Removing the duplicate saved about 175 MB with identical ARC-Easy accuracy in both conditions, an unambiguous win we took on every candidate that supported it.</p>
+
+<p>The tutor persona, chat template, and sampling defaults get written in through a similar scripted pass, though that one only touches metadata, not tensors, so it costs no file size at all. It gets its own full treatment in the behaviour-baking section further down, once the mechanisms that shrink the file are out of the way.</p>
+    </section>
+
+    <section class="chapter" id="vocabulary" aria-labelledby="vocabulary-title">
+      <header class="chapter-head">
+        <span class="chapter-number">06</span>
+        <div><p class="eyebrow">Method three, and the end of road two</p><h2 id="vocabulary-title">Pruning the vocabulary, and letting the ternary bet go</h2></div>
+      </header>
+      <p class="lead">Vocabulary pruning removes tokens a model will never realistically emit from its embedding table, shrinking the largest single matrix in a small model without touching a single weight the tutor actually uses. We built this for road two, the 8B ternary BitCPM4 model, since an English tutor has no use for most of a 73,448-token vocabulary built to cover CJK scripts.</p>
+
+      <div class="experiment-sequence" aria-label="BitCPM optimisation sequence">
+        <article><span>01</span><h3>Vocabulary pruning</h3><p>We cut the vocabulary from 73,448 to 44,416 tokens and padded it to a multiple of 64, which shrank the file by 164 MB. English tokenisation matched across 20,464 checked tokens; perplexity fell from 10.558 to 10.473.</p><strong>Kept</strong></article>
+        <article><span>02</span><h3>TQ1_0 body test</h3><p>The body shrank by 340 MB, but generic CPU throughput fell from 3.70 to 2.88 tok/s. The lower bit width bought us nothing on the evaluated kernel's instruction cost.</p><strong>Rejected</strong></article>
+        <article><span>03</span><h3>Head and embedding quantization</h3><p>Head and embedding requantization saved at most 48 MB. The largest estimated total-score gain we found was about 0.14 points, too small to matter.</p><strong>Rejected</strong></article>
+        <article><span>04</span><h3>Factorisation and sparsity tests</h3><p>The ternary matrices turned out to be full-rank: rank-2048 factorisation error was about 0.80 before quantization. Dense GGUF storage and kernels give us no credit for unstructured zeros either, so sparsity saved nothing.</p><strong>Rejected</strong></article>
+      </div>
+
+      <p>Only the vocabulary prune was worth keeping, and it was the last real win road two got. BitCPM4-8B-TQ2_0 still recorded the highest accuracy of any candidate we ever tested, 88% ARC-Easy, well above every Qwen quantization we ran. But it decoded at just 0.81 tok/s on the scalar audit kernel, since ternary formats fall on the same generic-C path as k-quants. Even after instruction-set targeting later gave it an AVX2 kernel and lifted that to 7.49 tok/s, its total reached only 72.5121, still short of every Qwen variant. The most accurate model we built turned out to be the one we couldn't ship. Road one, dense and quantization-first, was the road that survived.</p>
+    </section>
+
+    <section class="chapter" id="streaming" aria-labelledby="streaming-title">
+      <header class="chapter-head">
+        <span class="chapter-number">07</span>
+        <div><p class="eyebrow">Method four</p><h2 id="streaming-title">Weight streaming, and where the submission boundary sits</h2></div>
+      </header>
+      <p class="lead">If a model's file is too big to hold entirely in RAM, one option is to page the weights in from disk as each layer needs them. We built a residency-window streaming engine for llama.cpp to test exactly that on the 2.2 GB BitCPM model, still mid-flight on road two at the time.</p>
+
+      <figure class="report-figure">
+        <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Throughput and RSS by resident weight budget</h3></div><span class="evidence-badge development">Custom engine</span></div>
+        <div class="svg-chart" id="streaming-chart" role="img" aria-label="Weight streaming throughput plotted against peak memory" aria-describedby="streaming-chart-summary"></div>
+        <p class="sr-only" id="streaming-chart-summary">Stream all: 10.47 tokens per second at 279 MiB peak RSS. Pin 1,000 MB: 13.04 at 1,136 MiB. Pin 1,300 MB: 14.04 at 1,408 MiB. Pin 1,500 MB: 15.35 at 1,636 MiB. Fully resident: 18.70 at 2,129 MiB.</p>
+        <figcaption><span>Fig. 4</span> A historical custom-runtime experiment, completed before the current model campaign. Each point pins more of the 2.2 GB BitCPM model in memory; the result is not a submission score.</figcaption>
+      </figure>
+
+      <p>It worked, as engineering: full streaming cut peak RSS to 279 MiB, a huge win on paper. It also missed the 15 tok/s threshold, generating only 10.47 tok/s. Decoding one token at batch size 1 touches nearly every weight in the model, so throughput reduces to one ratio, bandwidth over model size:<span class="sidenote-number"></span><span class="sidenote">Hitting 20 tok/s would take about 44 GB/s of effective bandwidth. Even the fully resident point in the chart above, the fastest this model gets on this host, only reaches 41 GB/s and 18.70 tok/s. On this hardware, 20 tok/s is out of reach no matter how much RAM the residency window is given; only faster memory would clear it.</span></p>
+
+      <figure class="equation-figure">
+        <div class="equation" role="math" aria-label="Tokens per second approximately equal effective memory bandwidth divided by model size">
+          <math display="block">
+            <mrow>
+              <mtext>tok/s</mtext><mo>≈</mo>
+              <mfrac><msub><mi>BW</mi><mtext>eff</mtext></msub><mi>M</mi></mfrac>
+            </mrow>
+          </math>
+        </div>
+        <figcaption><span>Fig. 5</span> Effective bandwidth blends fast reads from whatever's resident with slow reads from whatever still has to stream off the SSD. Reaching 15 tok/s on this 2.2 GB model needs about 33 GB/s of it.</figcaption>
+      </figure>
+
+      <p>Working that ratio backward from each point in the chart above shows the same climb in different units: Stream all backs out to about 23 GB/s of effective bandwidth, Pin 1,500 MB to about 34 GB/s, Resident to about 41 GB/s. The 33 GB/s the target needs falls right at the 1,500 MB pin, where the measured rate, 15.35 tok/s, is the only point in the sweep that clears the line.</p>
+
+      <p>The real problem was upstream of the bandwidth math: streaming needs a custom binary, and the competition evaluates the submitted GGUF through the organiser's own unmodified <code>llama.cpp</code>. No engine change we make can travel with the file. That single fact drew a line we kept running into for the rest of the project:</p>
+
+      <figure class="report-figure wide-figure">
+        <div class="svg-chart submission-classification">
+        <svg viewBox="0 0 720 300" role="img" aria-labelledby="boundary-title" aria-describedby="boundary-summary">
+          <title id="boundary-title">Runtime-only changes and GGUF-contained changes</title>
+          <style>
+            .bd-zone { font: 500 13px var(--sans, sans-serif); fill: #282828; }
+            .bd-item { font: 13px var(--sans, sans-serif); fill: #282828; }
+            .bd-gain { font: 11.5px var(--mono, monospace); fill: #8a8580; }
+            .bd-box { fill: #f4f2ee; stroke: #cec8be; stroke-width: 1.5; }
+            .bd-box.submitted { fill: #eaf1f8; stroke: #1b6ca8; }
+            .bd-note { font: 11.5px var(--sans, sans-serif); fill: #6b6866; }
+          </style>
+          <rect class="bd-box" x="0" y="0" width="338" height="258" rx="2"/>
+          <rect class="bd-box submitted" x="382" y="0" width="338" height="258" rx="2"/>
+          <text class="bd-zone" x="18" y="28">Requires a modified runtime</text>
+          <text class="bd-note" x="18" y="47">Not included in the model-only submission</text>
+          <text class="bd-item" x="18" y="82">Residency streaming engine</text>
+          <text class="bd-gain" x="18" y="99">2,129 → 279 MiB</text>
+          <text class="bd-item" x="18" y="130">Disable tensor repacking</text>
+          <text class="bd-gain" x="18" y="147">3,236 → 602 MiB</text>
+          <text class="bd-item" x="18" y="178">Thread and KV-cache configuration</text>
+          <text class="bd-gain" x="18" y="195">development-runtime settings</text>
+          <text class="bd-item" x="18" y="226">Lazy mmap policy</text>
+          <text class="bd-gain" x="18" y="243">engine setting</text>
+
+          <text class="bd-zone" x="400" y="28">Encoded in the submitted GGUF</text>
+          <text class="bd-note" x="400" y="47">Evaluated by the organiser's runtime</text>
+          <text class="bd-item" x="400" y="82">Q4_0 or Q4_K_M tensor layout</text>
+          <text class="bd-gain" x="400" y="99">runtime kernels determine measured cost</text>
+          <text class="bd-item" x="400" y="130">Tied output head</text>
+          <text class="bd-gain" x="400" y="147">approximately 175 MB smaller in A/B test</text>
+          <text class="bd-item" x="400" y="178">Chat template and metadata</text>
+          <text class="bd-gain" x="400" y="195">persona and sampling defaults</text>
+          <text class="bd-item" x="400" y="226">Model tensors</text>
+          <text class="bd-gain" x="400" y="243">unchanged from source quant</text>
+
+          <text class="bd-note" x="0" y="288">The submitted file cannot alter llama.cpp build flags, memory policy, thread count, or cache configuration.</text>
+        </svg>
+        </div>
+        <p class="sr-only" id="boundary-summary">The custom streaming engine, tensor-repacking setting, thread and KV-cache configuration, and mmap policy require a modified runtime and are not submitted. The GGUF contains the tensor quantization, tied output head, chat template, metadata, and model tensors.</p>
+        <figcaption><span>Fig. 6</span> We classify every evaluated change by submission eligibility here. Only properties encoded in the GGUF can affect the model-only evaluation.</figcaption>
+      </figure>
+
+      <aside class="design-note warning-note">
+        <p class="design-note-label">Submission constraint</p>
+        <p>We still use the streaming engine and disabled repacking in Muta's own product, since they're real wins for anyone actually running the app. Neither one enters the competition score, because the organiser evaluates the GGUF with its own runtime, not ours.</p>
+      </aside>
+    </section>
+
+    <section class="chapter" id="runtime" aria-labelledby="runtime-title">
+      <header class="chapter-head">
+        <span class="chapter-number">08</span>
+        <div><p class="eyebrow">Method five</p><h2 id="runtime-title">Tuning the runtime before trusting any comparison</h2></div>
+      </header>
+      <p class="lead">None of the model-versus-model numbers above mean anything if the runtime underneath them is inconsistent. Before comparing candidates at all, we fixed threads, KV cache, and checkpoints, and along the way tested two forms of speculative decoding that looked promising in early sweeps and fell apart under load.</p>
+
+      <figure class="report-figure">
+        <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Selected runtime configurations</h3></div><span class="evidence-badge development">Development</span></div>
+        <div class="svg-chart" id="runtime-chart" role="img" aria-label="Comparison of selected runtime experiment throughput and memory" aria-describedby="runtime-chart-summary"></div>
+        <p class="sr-only" id="runtime-chart-summary">Docker baseline: 5.3 tokens per second and 4.77 GB, still rising. Resource caps: 6.72 tokens per second and 4.44 GB. Native default: 29.78 tokens per second and 3,519 MiB physical footprint. Six threads with unified KV: 31.09 tokens per second and 3,137 MiB. Draft speculation: 24.72 tokens per second; host memory was not reliably measured.</p>
+        <figcaption><span>Fig. 7</span> Our runtime sequence moves from the Docker baseline through resource caps, native execution, thread tuning, and speculation. These experiments guide configuration; they never rank submission models.</figcaption>
+      </figure>
+
+      <div class="finding-pair">
+        <article><p class="result-tag rejected">Rejected</p><h3>Draft-model speculation</h3><p>Acceptance reached 98.4%, but generation still fell from 30.84 to 24.72 tok/s.</p></article>
+        <article><p class="result-tag rejected">Rejected</p><h3>N-gram speculation</h3><p>Acceptance ran only 12–22%, so lookup and verification overhead outweighed the gain.</p></article>
+        <article><p class="result-tag adopted">Adopted</p><h3>Six-thread cap</h3><p>Raising the thread count to ten cut decode to about 4.4 tok/s. We had no temperature reading to explain why.</p></article>
+        <article><p class="result-tag adopted">Adopted</p><h3>Unified KV, two checkpoints</h3><p>This configuration cut retained state and sped up prefill without slowing decode.<span class="sidenote-number"></span><span class="sidenote">Unified KV shares capacity across active slots instead of reserving a fixed block per slot.</span></p></article>
+      </div>
+
+      <p>Six threads and unified KV got us to 31.09 tok/s at 3,137 MiB, 83% of the estimated weight-bandwidth ceiling, on the development host. None of this configuration travels with the submitted GGUF; it's the ninth method from our list, the runtime work that stays ours to keep but never enters the score. It bought us trustworthy numbers, and that finally let us run the first real model-versus-model scoreboard.</p>
+    </section>
+
+    <section class="chapter" id="scoreboard" aria-labelledby="scoreboard-title">
+      <header class="chapter-head">
+        <span class="chapter-number">09</span>
+        <div><p class="eyebrow">Checkpoint</p><h2 id="scoreboard-title">The first scoreboard: Qwen3 1.7B wins, narrowly</h2></div>
+      </header>
+      <p class="lead">With quantization, deduplication, and the runtime settled, we ran six candidates through the actual participant profiler. Qwen3 1.7B Q4_0, pure and tied, won at 72.4653, ahead of Qwen3.5 0.8B by 0.92 points and comfortably ahead of both the BitCPM ternary bet and a larger Qwen3.5 4B candidate.</p>
+
+      <div class="campaign-summary-grid">
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Official profiler result</p><h3>Score by component</h3></div><span class="evidence-badge official">Direct</span></div>
+          <div class="svg-chart tall-chart" id="official-score-chart" role="img" aria-label="Official profiler total score and component contributions by model" aria-describedby="official-data-table"></div>
+          <figcaption><span>Fig. 8</span> Contributions use the executable profiler's fixed 15 tok/s reference. ARC-Easy supplies the accuracy proxy; we still don't have the judging-panel score.</figcaption>
+        </figure>
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Official profiler result</p><h3>Speed against memory</h3></div><span class="evidence-badge official">Direct</span></div>
+          <div class="svg-chart tall-chart" id="official-scatter-chart" role="img" aria-label="Official profiler throughput plotted against peak RSS" aria-describedby="official-data-table"></div>
+          <figcaption><span>Fig. 9</span> We plot generation throughput against peak RSS. Higher throughput and lower RSS both raise the total. Circle area represents the ARC-Easy proxy.</figcaption>
+        </figure>
+      </div>
+
+      <details class="reasoning-check measurement-disclosure">
+        <summary>Scalar measurements</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="official-data-table" aria-label="Official profiler campaign summary">
+        <thead><tr><th>Model</th><th>tok/s</th><th>First token</th><th>Peak RSS</th><th>ARC-Easy</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr class="selected-row"><td><strong>Math-Expert 0.6B Q4_K_M</strong><small>Scalar leader · 396.7 MB</small></td><td>12.72</td><td>23.61 s</td><td>540 MiB</td><td>68% <small>54.2–79.2</small></td><td><strong>77.9324</strong></td></tr>
+          <tr><td><strong>Qwen3.5 0.8B Q4_0</strong><small>Risk-adjusted recommendation · 507.2 MB</small></td><td>12.63</td><td>16.62 s</td><td>670 MiB</td><td>64% <small>50.1–75.9</small></td><td><strong>75.3895</strong></td></tr>
+          <tr><td><strong>Qwen3 1.7B Q4_0</strong><small>Previous scalar leader · 974.2 MB</small></td><td>9.79</td><td>35.37 s</td><td>1,116 MiB</td><td>72% <small>58.3–82.5</small></td><td><strong>72.4653</strong></td></tr>
+          <tr><td>Qwen3.5 0.8B Q4_K_M</td><td>9.74</td><td>28.26 s</td><td>695 MiB</td><td>68% <small>54.2–79.2</small></td><td>71.54</td></tr>
+          <tr><td>BitCPM4 8B TQ2_0</td><td>0.81</td><td>584.15 s</td><td>2,307 MiB</td><td>88% <small>76.2–94.4</small></td><td>59.18</td></tr>
+          <tr><td>Qwen3.5 4B IQ4_XS</td><td>1.13</td><td>395.19 s</td><td>2,627 MiB</td><td>76% <small>62.6–85.7</small></td><td>52.93</td></tr>
+        </tbody>
+        </table></div>
+        <p>The final Qwen model has the shortest measured first-token latency, 16.62 seconds against Math-Expert's 23.61. Neither number enters the score.</p></div>
+      </details>
+
+      <p>The table above already shows Math-Expert and the final Qwen3.5 0.8B ahead of the 1.7B model that won this first round. That's the ledger as it stands today: two later rounds moved the winner twice more. At the time of this first scoreboard, though, 1.7B genuinely led, and we treated it as settled long enough to ask a harder question: would the public webpage's cohort-relative scoring formula, instead of the fixed 15, change anything?</p>
+
+      <p>We checked, and the full breakdown, at every cohort floor we tested, is in the operational appendix under Website-relative sensitivity. It's a separate check, never blended with the profiler result above.</p>
+    </section>
+
+    <section class="chapter" id="instruction-set" aria-labelledby="avx2-title">
+      <header class="chapter-head">
+        <span class="chapter-number">10</span>
+        <div><p class="eyebrow">Method six</p><h2 id="avx2-title">Finding the real CPU, and watching the ranking flip</h2></div>
+      </header>
+      <p class="lead">Everything so far assumed the audit binary has no AVX support at all, because that's how the executable profiler we could get our hands on was built. But the competition's own public page describes hardware that plausibly supports AVX2, FMA, and F16C. We couldn't be sure which one the final judging actually runs, so we built both and measured the same seven models on each.</p>
+
+      <div class="isa-policy" aria-label="AVX2 campaign build policy">
+        <span><code>AVX</code><strong>ON</strong></span>
+        <span><code>AVX2</code><strong>ON</strong></span>
+        <span><code>FMA</code><strong>ON</strong></span>
+        <span><code>F16C</code><strong>ON</strong></span>
+        <span class="disabled"><code>NATIVE</code><strong>OFF</strong></span>
+        <span class="disabled"><code>AVX-512</code><strong>OFF</strong></span>
+      </div>
+
+      <figure class="report-figure wide-figure isa-score-figure">
+        <div class="figure-head">
+          <div><p class="figure-kicker">Matched models and scoring function</p><h3>Total score by CPU method</h3></div>
+          <div class="chart-legend isa-legend"><span class="scalar">Scalar configuration</span><span class="avx2">Portable AVX2</span></div>
+        </div>
+        <div class="svg-chart tall-chart" id="isa-score-chart" role="img" aria-label="Paired scalar and AVX2 total scores for seven GGUF models" aria-describedby="isa-score-summary"></div>
+        <p class="sr-only" id="isa-score-summary" aria-live="polite">Loading paired scalar and AVX2 score evidence.</p>
+        <figcaption><span>Fig. 10</span> Each model carries a scalar and a portable AVX2 fixed-15 total, both using its ARC-Easy-50 proxy. The finalist scalar rows are participant-profiler results; the quantization-ladder rows are controlled scalar screens. Outlined bars mark the highest total in each CPU configuration.</figcaption>
+      </figure>
+
+      <p>Turning AVX2 on reordered the field, not only sped it up. Q4_K_M, penalised by the generic-C fallback under quantization's first lesson, jumped ahead of pure Q4_0 once it had a real vector kernel to run on: 80.4484 against 80.2818, a lead earned entirely by 59.7 MiB less repacking RSS, not by anything about the model. Even BitCPM, road two's abandoned bet, sped up 9.235× and became operationally viable, though its total still couldn't catch the Qwen variants.</p>
+
+      <details class="reasoning-check measurement-disclosure">
+        <summary>Scalar and AVX2 measurements</summary>
+        <div><div class="table-wrap editorial-table-wrap avx2-table-wrap"><table class="editorial-table avx2-table" aria-label="Controlled AVX2 FMA F16C campaign results">
+        <caption class="sr-only">Scalar and portable AVX2 benchmark results for seven GGUF models across the quantization and expanded model searches.</caption>
+        <thead><tr><th>Model</th><th>Scalar → AVX2 pp512</th><th>Scalar → AVX2 tg128</th><th>Decode gain</th><th>Est. profiler RSS</th><th>ARC-Easy proxy</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr class="avx2-selected-row"><td><strong>Math-Expert 0.6B Q4_K_M</strong><small>Expanded-search leader</small></td><td>21.7268 → 153.9351</td><td>12.6339 → 39.2320</td><td>3.105×</td><td>759.7 MiB<small>+202.9 MiB</small></td><td>68%</td><td><strong>81.8803</strong></td></tr>
+          <tr><td><strong>Qwen3.5 0.8B Q4_0</strong><small>Risk-adjusted recommendation; tensor-identical AVX2 source</small></td><td>31.0781 → 98.0094</td><td>12.6955 → 27.1509</td><td>2.139×</td><td>928.1 MiB<small>+240.8 MiB</small></td><td>64%</td><td><strong>79.4104</strong></td></tr>
+          <tr><td><strong>Qwen3 1.7B Q4_0</strong><small>Previous scalar choice</small></td><td>14.7166 → 47.0716</td><td>9.9869 → 16.8927</td><td>1.691×</td><td>2,049.4 MiB<small>+916.3 MiB</small></td><td>72%</td><td><strong>80.2818</strong></td></tr>
+          <tr><td><strong>Qwen3 1.7B Q4_K_M</strong><small>Quantization-ladder leader</small></td><td>7.1859 → 55.4554</td><td>5.2954 → 15.6714</td><td>2.959×</td><td>1,989.7 MiB<small>+806.2 MiB</small></td><td>72%</td><td><strong>80.4484</strong></td></tr>
+          <tr><td>Qwen3 1.7B Q5_K_M</td><td>6.5613 → 24.3231</td><td>4.7839 → 12.7191</td><td>2.659×</td><td>1,364.6 MiB<small>+0.1 MiB</small></td><td>76%</td><td>79.6307</td></tr>
+          <tr><td>Qwen3 1.7B IQ4_XS</td><td>3.2063 → 23.9364</td><td>2.4961 → 14.0644</td><td>5.635×</td><td>1,082.3 MiB<small>+0.5 MiB</small></td><td>70%</td><td>80.1089</td></tr>
+          <tr><td>BitCPM4 8B TQ2_0</td><td>0.8762 → 13.6569</td><td>0.8108 → 7.4876</td><td><strong>9.235×</strong></td><td>2,316.4 MiB<small>+0.1 MiB</small></td><td>88%</td><td>72.5121</td></tr>
+        </tbody>
+        </table></div></div>
+      </details>
+
+      <aside class="design-note warning-note">
+        <p class="design-note-label">Which reading governs</p>
+        <p><span class="evidence-badge avx2">Controlled AVX2 proxy</span> We still don't know for certain which binary the final audit runs. Every model here ran a 512-token prompt, 128 generated tokens, two physical-core threads, and five internal samples. The cloud proxy gave us no temperature reading. We treat these AVX2 rows as a controlled proxy, not a participant-profiler report, and keep both scalar and AVX2 totals on this page rather than pick one silently.</p>
+      </aside>
+    </section>
+
+    <section class="chapter" id="search" aria-labelledby="overnight-search-title">
+      <header class="chapter-head">
+        <span class="chapter-number">11</span>
+        <div><p class="eyebrow">Method seven</p><h2 id="overnight-search-title">Widening the search finds a specialist we hadn't considered</h2></div>
+      </header>
+      <p class="lead">Once the Qwen roster stopped producing gains, we widened the net: nine more candidates, and eight quantization layouts of one promising fine-tune, Math-Expert, a Qwen3-0.6B model tuned on mathematical reasoning data. It won the raw scoreboard. It didn't win cleanly.</p>
+
+      <div class="finding-pair overnight-decision-grid">
+        <article>
+          <p class="figure-kicker">Profiler proxy</p>
+          <h3>Math-Expert 0.6B Q4_K_M</h3>
+          <dl class="compact-metrics"><div><dt>Direct scalar total</dt><dd>77.9324</dd></div><div><dt>AVX2 total, n=50</dt><dd>81.8803</dd></div><div><dt>AVX2 generation</dt><dd>39.23 tok/s</dd></div><div><dt>Est. AVX2 RSS</dt><dd>759.7 MiB</dd></div></dl>
+          <p>Use this file only if you treat the executable profiler's 50 ARC-Easy items as the selection objective.</p>
+        </article>
+        <article class="preferred-decision">
+          <p class="figure-kicker">Risk-adjusted submission</p>
+          <h3><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></h3>
+          <dl class="compact-metrics"><div><dt>Direct scalar total</dt><dd>75.3895</dd></div><div><dt>AVX2 total, n=500</dt><dd>76.8104</dd></div><div><dt>AVX2 generation</dt><dd>27.15 tok/s</dd></div><div><dt>Est. AVX2 RSS</dt><dd>928.1 MiB</dd></div></dl>
+          <p>This file wins the matched result outside the 50-item profiler slice and reaches its first token sooner. Its template supplies the tutor policy and disables hidden reasoning whenever the caller sends no setting of its own.</p>
+        </article>
+      </div>
+
+      <figure class="report-figure wide-figure latest-avx2-figure">
+        <div class="figure-head"><div><p class="figure-kicker">Latest finalists, fixed-15 score</p><h3>Direct scalar and portable AVX2 totals</h3></div><div class="chart-legend isa-legend"><span class="scalar">Direct scalar</span><span class="avx2">Portable AVX2</span></div></div>
+        <div class="svg-chart tall-chart" id="overnight-avx2-score-chart" role="img" aria-label="Direct scalar and portable AVX2 fixed-15 totals for the two expanded-search finalists" aria-describedby="overnight-avx2-score-summary"></div>
+        <p class="sr-only" id="overnight-avx2-score-summary" aria-live="polite">Loading the latest finalist AVX2 comparison.</p>
+        <figcaption><span>Fig. 11</span> Both AVX2 totals use the profiler's 15 tok/s cap and ARC-Easy-50. Math-Expert scores 81.8803; Qwen scores 79.4104. AVX2 RSS adds a 45 MiB profiler-root estimate to the measured child tree.</figcaption>
+      </figure>
+
+      <details class="reasoning-check measurement-disclosure" open>
+        <summary>Latest scalar and AVX2 finalist results</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-avx2-table" aria-label="Expanded-search finalist scalar and AVX2 results"></table></div>
+        <p>ARC-Easy-50 supplies the raw fixed-15 comparison; the ARC-Easy-500 column is diagnostic. The final Qwen AVX2 row transfers the source measurement, and only after we verified tensor identity.</p></div>
+      </details>
+
+      <div class="campaign-summary-grid">
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Sample sensitivity</p><h3>Profiler total and larger-sample diagnostic</h3></div><span class="evidence-badge official">Same TPS and RSS</span></div>
+          <div class="svg-chart tall-chart" id="overnight-score-chart" role="img" aria-label="Direct profiler total and larger-sample diagnostic total for the two finalists" aria-describedby="overnight-score-summary"></div>
+          <p class="sr-only" id="overnight-score-summary" aria-live="polite">Loading the finalist score comparison.</p>
+          <figcaption><span>Fig. 12</span> The solid bar uses the profiler's 50 ARC-Easy items. The paired bar substitutes the larger ARC-Easy estimate, while keeping the same measured TPS and RSS. That second bar is diagnostic; it is not an official score.</figcaption>
+        </figure>
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Quantization search</p><h3>Speed and ARC-Easy trade-off</h3></div><span class="evidence-badge parity">Scalar screen</span></div>
+          <div class="svg-chart tall-chart" id="overnight-quant-chart" role="img" aria-label="Math-Expert quantization variants by scalar throughput and ARC-Easy accuracy" aria-describedby="overnight-quant-summary"></div>
+          <p class="sr-only" id="overnight-quant-summary" aria-live="polite">Loading the Math-Expert quantization sweep.</p>
+          <figcaption><span>Fig. 13</span> Uniform Q4_0 is the fastest layout, but it loses 16 ARC-Easy points. Q4_K_M holds the best measured score. Neither higher embedding precision nor four higher-precision final layers recovers the loss.</figcaption>
+        </figure>
+      </div>
+
+      <p>We ran Math-Expert through the same quantization-method question we'd already answered once, on a completely different model, and got the same answer: the format with a real kernel wins, and no amount of extra precision in the embedding or final layers buys back what a slow kernel costs. That's the second confirmation we promised back in the quantization section.</p>
+
+      <details class="reasoning-check measurement-disclosure" open>
+        <summary>Finalist accuracy checks</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-finalist-table" aria-label="Matched accuracy results for the expanded-search finalists"></table></div>
+        <p>Confidence intervals are Wilson 95% intervals. These task results are diagnostics; they are not the judging-panel tutoring score.</p></div>
+      </details>
+
+      <details class="reasoning-check measurement-disclosure">
+        <summary>Models screened and rejection reasons</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-screen-table" aria-label="Expanded model screen"></table></div></div>
+      </details>
+
+      <h3 class="section-title">Everything else we tried in this round</h3>
+      <div class="table-wrap editorial-table-wrap"><table class="editorial-table method-table">
+        <thead><tr><th>Method</th><th>Test or constraint</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>Uniform quantization</td><td>Q4_0, Q5_0, Q4_K_S, Q4_K_M, and IQ4_XS from the same F16 source.</td><td>Keep Q4_K_M. Q4_0 is fast but loses too much accuracy; Q5_0 is slow on the scalar profiler kernel.</td></tr>
+          <tr><td>Mixed tensor precision</td><td>Q4_0 body with Q6_K or Q8_0 tied embedding; Q5_0 in the final four blocks.</td><td>Reject. None recovered enough ARC-Easy accuracy.</td></tr>
+          <tr><td>Architecture and specialist search</td><td>Qwen3/3.5, Gemma 3, Noema, VibeThinker, OpenMath-Nemotron, NuminaMath, and a reasoning distill.</td><td>Keep Qwen3.5-0.8B and Math-Expert as finalists. Other files lost on throughput, accuracy, licensing, or provenance.</td></tr>
+          <tr><td>Pruning and vocabulary reduction</td><td>Prior layer-pruning and BitCPM vocabulary results were retained; Qwen BPE vocabulary pruning cannot be reproduced safely with the current tool.</td><td>No new submission candidate.</td></tr>
+          <tr><td>Distillation and fine-tuning</td><td>Finished public fine-tunes were tested. A new training run was not promoted without a GPU, a complete dataset audit, and a reproducible conversion path.</td><td>Defer new training; do not submit a partially validated derivative.</td></tr>
+          <tr><td>MTP and speculative decoding</td><td><code>llama-bench</code> in the profiler does not invoke the runtime flags required by MTP or draft decoding.</td><td>Exclude from a GGUF-only profiler claim.</td></tr>
+          <tr><td>Context and embedded template</td><td>The profiler fixes p512/tg128. A live four-prompt test showed that unrestricted hidden reasoning could consume the full response allowance. The final GGUF embeds the tutor policy and forces non-thinking ChatML.</td><td>Adopt for interactive reliability; assign no profiler throughput gain.</td></tr>
+        </tbody>
+      </table></div>
+
+      <details class="reasoning-check">
+        <summary>Research and provenance</summary>
+        <div>
+          <p>We built the search on public model cards, documented licences, reproducible conversion procedures, and retained raw measurements. Math-Expert is a Qwen3-0.6B fine-tune on OpenMathReasoning-mini; its public card gives no complete training recipe or benchmark table. The Qwen3.5 model derives from the official Qwen checkpoint.</p>
+          <p>Primary references: <a href="https://huggingface.co/suayptalha/Qwen3-0.6B-Math-Expert" target="_blank" rel="noreferrer">Math-Expert model card</a>, <a href="https://huggingface.co/mradermacher/Qwen3-0.6B-Math-Expert-GGUF" target="_blank" rel="noreferrer">GGUF repository</a>, <a href="https://huggingface.co/datasets/nvidia/OpenMathReasoning" target="_blank" rel="noreferrer">OpenMathReasoning dataset</a>, <a href="https://arxiv.org/abs/2504.16891" target="_blank" rel="noreferrer">OpenMathReasoning paper</a>, <a href="https://arxiv.org/abs/2505.11574" target="_blank" rel="noreferrer">low-bit reasoning study</a>, and <a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/speculative.md" target="_blank" rel="noreferrer">llama.cpp speculative-decoding documentation</a>.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="chapter" id="behaviour" aria-labelledby="behaviour-title">
+      <header class="chapter-head">
+        <span class="chapter-number">12</span>
+        <div><p class="eyebrow">Method eight</p><h2 id="behaviour-title">Teaching the file to behave, since nothing else is in the room</h2></div>
+      </header>
+      <p class="lead">Every method so far shrinks bytes or speeds up decode. This one changes what the model says: judges chat with the bare GGUF directly, no system prompt and no application layer standing between them and the model, so the tutoring persona has to travel inside the file or it doesn't exist during evaluation.</p>
 
       <figure class="report-figure wide-figure">
         <svg viewBox="0 0 720 264" role="img" aria-labelledby="derivation-title" aria-describedby="derivation-summary">
@@ -348,339 +620,40 @@
           <text class="dv-op" x="0" y="256">Runtime flags, engine patches, and application code are not included.</text>
         </svg>
         <p class="sr-only" id="derivation-summary">The Qwen3.5 0.8B Q4_0 source is 507.2 MB. The build adds the tutor policy, English language tag, non-thinking ChatML template, and sampling defaults without changing model tensors. Verification confirms that all 320 model tensors are identical.</p>
-        <figcaption><span>Fig. 5</span> The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata. The tensor-identity check permits transfer of the source AVX2 measurement; the final model itself completed the direct scalar profiler run.</figcaption>
+        <figcaption><span>Fig. 14</span> The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata. The tensor-identity check lets us transfer the source AVX2 measurement; the final model itself still completed the direct scalar profiler run.</figcaption>
       </figure>
 
-      <details class="reasoning-check">
-        <summary>mmap is controlled by the evaluator's runtime</summary>
-        <div>
-          <p>The stock Linux audit runtime opens the GGUF with eager page population, so RSS includes file-backed weight pages and runtime buffers. A custom lazy-mmap engine can reduce deployment memory, but mmap policy is not encoded in the submitted GGUF.</p>
-        </div>
-      </details>
+      <p>We replace the chat template with a clean ChatML template that injects the Muta tutoring persona as the system turn whenever the client sends none, and always opens the assistant turn with an empty <code>&lt;think&gt;&lt;/think&gt;</code> block, forcing a direct answer instead of a long reasoning trace. That last part isn't cosmetic. A live four-prompt acceptance test with unrestricted thinking left both finalists spending their entire 256-token allowance on hidden reasoning and returning no usable answer at all, a minute of silence per prompt at audit-box speed. Disabling thinking fixed that. Sampling defaults (temperature 0.4, top-p 0.9, min-p 0.05, repeat penalty 1.05) are read straight from the file by <code>llama-server</code>, and the persona runs about 130 tokens, so a judge's first turn pays little extra prefill for it.</p>
 
-      <details class="reasoning-check">
-        <summary>Tensor repacking is controlled by the runtime</summary>
-        <div>
-          <p>Disabling repacking reduced one 4B model's development-runtime footprint from approximately 3,236 to 602 MiB. This setting is not encoded in the GGUF and cannot affect the organiser's executable unless that executable exposes the option.</p>
-        </div>
-      </details>
+      <p>We verified this on both paths a judge could plausibly use: llama.cpp's own Jinja engine, probed on a stock server with zero flags, correctly injecting the persona and answering test prompts with <code>finish_reason: stop</code>; and llama-cpp-python's separate jinja2 path. Neither finalist passed everything, though. Both still failed the hardest prompt in that battery, proving √2 is irrational, and some Qwen answers ran into the 256-token limit trying. We record that as a real quality limit, not a rounding error we can explain away.</p>
     </section>
 
-    <section class="chapter" id="ternary" aria-labelledby="ternary-title">
+    <section class="chapter" id="current-state" aria-labelledby="current-state-title">
       <header class="chapter-head">
-        <span class="chapter-number">06</span>
-        <div><p class="eyebrow">BitCPM4-8B evaluation</p><h2 id="ternary-title">Accuracy, throughput, and model-size results</h2></div>
+        <span class="chapter-number">13</span>
+        <div><p class="eyebrow">Where the story stands</p><h2 id="current-state-title">Nine methods, one open tie</h2></div>
       </header>
-      <p class="lead">BitCPM4-8B-TQ2_0 tested whether higher accuracy could offset slower inference. It recorded 88% ARC-Easy, but even after AVX2 raised decode from 0.81 to 7.49 tok/s, its total reached only 72.5121. The Qwen quantizations remained above 79.</p>
-
-      <div class="experiment-sequence" aria-label="BitCPM optimisation sequence">
-        <article><span>01</span><h3>Vocabulary pruning</h3><p>The vocabulary decreased from 73,448 to 44,416 tokens and was padded to a multiple of 64. File size decreased by 164 MB. English tokenisation matched across 20,464 checked tokens; perplexity decreased from 10.558 to 10.473.</p><strong>Kept</strong></article>
-        <article><span>02</span><h3>TQ1_0 body test</h3><p>The body was 340 MB smaller, but generic CPU throughput decreased from 3.70 to 2.88 tok/s. The lower bit width did not reduce instruction cost on the evaluated kernel.</p><strong>Rejected</strong></article>
-        <article><span>03</span><h3>Head and embedding quantization</h3><p>Head and embedding requantization reduced file size by at most 48 MB. The largest estimated total-score increase was approximately 0.14 points.</p><strong>Rejected</strong></article>
-        <article><span>04</span><h3>Factorisation and sparsity tests</h3><p>The ternary matrices were full-rank. Rank-2048 factorisation error was approximately 0.80 before quantization. Dense GGUF storage and kernels did not reduce storage or multiplication for unstructured zeros.</p><strong>Rejected</strong></article>
-      </div>
-
-    </section>
-
-    <section class="chapter" id="streaming" aria-labelledby="streaming-title">
-      <header class="chapter-head">
-        <span class="chapter-number">07</span>
-        <div><p class="eyebrow">Runtime-only memory optimisation</p><h2 id="streaming-title">Weight streaming measurements and submission exclusion</h2></div>
-      </header>
-      <p class="lead">A separate custom-runtime experiment tested whether lower weight residency could improve efficiency. Full streaming reduced RSS to 279 MiB but generated only 10.47 tok/s, below the 15 tok/s threshold. The required engine changes cannot be encoded in a GGUF.</p>
-
-      <div class="streaming-lab">
-        <div class="controls-column">
-          <p class="figure-kicker">Interactive disk budget</p>
-          <label>Target generation rate <output id="streaming-tps-value">15</output> tok/s
-            <input id="streaming-tps" type="range" min="5" max="22" step="0.5" value="15">
-          </label>
-          <label>Storage bandwidth <output id="streaming-bandwidth-value">1.35</output> GB/s
-            <input id="streaming-bandwidth" type="range" min="0.5" max="7" step="0.05" value="1.35">
-          </label>
-          <dl class="budget-result">
-            <div><dt>Token interval</dt><dd id="streaming-interval">66.7 ms</dd></div>
-            <div><dt>Time left after compute</dt><dd id="streaming-slack">18.7 ms</dd></div>
-            <div><dt>Weights available</dt><dd id="streaming-budget">25 MB/token</dd></div>
-            <div><dt>Share of 2.2 GB model</dt><dd id="streaming-share">1.1%</dd></div>
-          </dl>
-        </div>
-        <figure class="report-figure inset-figure">
-          <div class="figure-head"><div><p class="figure-kicker">Development result</p><h3>Throughput and RSS by resident weight budget</h3></div><span class="evidence-badge development">Custom engine</span></div>
-          <div class="svg-chart" id="streaming-chart" role="img" aria-label="Weight streaming throughput plotted against peak memory" aria-describedby="streaming-chart-summary"></div>
-          <p class="sr-only" id="streaming-chart-summary">Stream all: 10.47 tokens per second at 279 MiB peak RSS. Pin 1,000 MB: 13.04 at 1,136 MiB. Pin 1,300 MB: 14.04 at 1,408 MiB. Pin 1,500 MB: 15.35 at 1,636 MiB. Fully resident: 18.70 at 2,129 MiB.</p>
-          <figcaption><span>Fig. 6</span> Historical custom-runtime experiment, completed before the current model campaign. Each point pins more of the 2.2 GB BitCPM model; the result is not a submission score.</figcaption>
-        </figure>
-      </div>
-
-      <p>At 15 tok/s, the measured 48 ms compute time leaves 18.7 ms for storage reads. A 1.35 GB/s device can transfer about 25 MB in that interval, only 1.1% of the model.</p>
-
-      <h3 class="section-title">Properties included in the submitted model</h3>
-      <p>This distinction determines submission eligibility. The GGUF contains the tensors, quantization, tied head, metadata, and chat template; streaming, repacking, mmap, threads, and KV configuration belong to the runtime.</p>
-
-      <figure class="report-figure wide-figure">
-        <div class="svg-chart submission-classification">
-        <svg viewBox="0 0 720 300" role="img" aria-labelledby="boundary-title" aria-describedby="boundary-summary">
-          <title id="boundary-title">Runtime-only changes and GGUF-contained changes</title>
-          <style>
-            .bd-zone { font: 500 13px var(--sans, sans-serif); fill: #282828; }
-            .bd-item { font: 13px var(--sans, sans-serif); fill: #282828; }
-            .bd-gain { font: 11.5px var(--mono, monospace); fill: #8a8580; }
-            .bd-box { fill: #f4f2ee; stroke: #cec8be; stroke-width: 1.5; }
-            .bd-box.submitted { fill: #eaf1f8; stroke: #1b6ca8; }
-            .bd-note { font: 11.5px var(--sans, sans-serif); fill: #6b6866; }
-          </style>
-          <rect class="bd-box" x="0" y="0" width="338" height="258" rx="2"/>
-          <rect class="bd-box submitted" x="382" y="0" width="338" height="258" rx="2"/>
-          <text class="bd-zone" x="18" y="28">Requires a modified runtime</text>
-          <text class="bd-note" x="18" y="47">Not included in the model-only submission</text>
-          <text class="bd-item" x="18" y="82">Residency streaming engine</text>
-          <text class="bd-gain" x="18" y="99">2,129 → 279 MiB</text>
-          <text class="bd-item" x="18" y="130">Disable tensor repacking</text>
-          <text class="bd-gain" x="18" y="147">3,236 → 602 MiB</text>
-          <text class="bd-item" x="18" y="178">Thread and KV-cache configuration</text>
-          <text class="bd-gain" x="18" y="195">development-runtime settings</text>
-          <text class="bd-item" x="18" y="226">Lazy mmap policy</text>
-          <text class="bd-gain" x="18" y="243">engine setting</text>
-
-          <text class="bd-zone" x="400" y="28">Encoded in the submitted GGUF</text>
-          <text class="bd-note" x="400" y="47">Evaluated by the organiser's runtime</text>
-          <text class="bd-item" x="400" y="82">Q4_0 or Q4_K_M tensor layout</text>
-          <text class="bd-gain" x="400" y="99">runtime kernels determine measured cost</text>
-          <text class="bd-item" x="400" y="130">Tied output head</text>
-          <text class="bd-gain" x="400" y="147">approximately 175 MB smaller in A/B test</text>
-          <text class="bd-item" x="400" y="178">Chat template and metadata</text>
-          <text class="bd-gain" x="400" y="195">persona and sampling defaults</text>
-          <text class="bd-item" x="400" y="226">Model tensors</text>
-          <text class="bd-gain" x="400" y="243">unchanged from source quant</text>
-
-          <text class="bd-note" x="0" y="288">The submitted file cannot alter llama.cpp build flags, memory policy, thread count, or cache configuration.</text>
-        </svg>
-        </div>
-        <p class="sr-only" id="boundary-summary">The custom streaming engine, tensor-repacking setting, thread and KV-cache configuration, and mmap policy require a modified runtime and are not submitted. The GGUF contains the tensor quantization, tied output head, chat template, metadata, and model tensors.</p>
-        <figcaption><span>Fig. 7</span> Classification of evaluated changes by submission eligibility. Only properties encoded in the GGUF can affect the model-only evaluation.</figcaption>
-      </figure>
+      <p class="lead">Nine mechanisms, and each one either shrank the file, sped up decode, or drew the line between what we control and what we don't. What's left is the two-finalist tie the scoreboard never quite broke, and the tests that would break it.</p>
 
       <aside class="design-note warning-note">
-        <p class="design-note-label">Submission constraint</p>
-        <p>The custom page-cache engine can be used in the Muta application. It is excluded from the competition score because the organiser evaluates the GGUF with its own runtime.</p>
-      </aside>
-    </section>
-
-    <section class="chapter" id="campaign" aria-labelledby="campaign-title">
-      <header class="chapter-head">
-        <span class="chapter-number">08</span>
-        <div><p class="eyebrow">Scalar participant results</p><h2 id="campaign-title">Math-Expert has the highest current scalar-profiler total</h2></div>
-      </header>
-      <p class="lead">The scalar campaign progressed from a four-model baseline to two additional finalists. Across all six participant runs, Math-Expert 0.6B leads with 68% ARC-Easy, 12.72 tok/s, 540 MiB peak RSS, and a total of 77.9324.</p>
-
-      <div class="campaign-summary-grid">
-        <figure class="report-figure">
-          <div class="figure-head"><div><p class="figure-kicker">Official profiler result</p><h3>Score by component</h3></div><span class="evidence-badge official">Direct</span></div>
-          <div class="svg-chart tall-chart" id="official-score-chart" role="img" aria-label="Official profiler total score and component contributions by model" aria-describedby="official-data-table"></div>
-          <figcaption><span>Fig. 8</span> Contributions use the executable profiler's fixed 15 tok/s reference. ARC-Easy supplies the accuracy proxy; the judging-panel score remains unavailable.</figcaption>
-        </figure>
-        <figure class="report-figure">
-          <div class="figure-head"><div><p class="figure-kicker">Official profiler result</p><h3>Speed against memory</h3></div><span class="evidence-badge official">Direct</span></div>
-          <div class="svg-chart tall-chart" id="official-scatter-chart" role="img" aria-label="Official profiler throughput plotted against peak RSS" aria-describedby="official-data-table"></div>
-          <figcaption><span>Fig. 9</span> Generation throughput is plotted against peak RSS. Higher throughput and lower RSS increase the total. Circle area represents the ARC-Easy proxy.</figcaption>
-        </figure>
-      </div>
-
-      <details class="reasoning-check measurement-disclosure">
-        <summary>Scalar measurements</summary>
-        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="official-data-table" aria-label="Official profiler campaign summary">
-        <thead><tr><th>Model</th><th>tok/s</th><th>First token</th><th>Peak RSS</th><th>ARC-Easy</th><th>Total</th></tr></thead>
-        <tbody>
-          <tr class="selected-row"><td><strong>Math-Expert 0.6B Q4_K_M</strong><small>Scalar leader · 396.7 MB</small></td><td>12.72</td><td>23.61 s</td><td>540 MiB</td><td>68% <small>54.2–79.2</small></td><td><strong>77.9324</strong></td></tr>
-          <tr><td><strong>Qwen3.5 0.8B Q4_0</strong><small>Risk-adjusted recommendation · 507.2 MB</small></td><td>12.63</td><td>16.62 s</td><td>670 MiB</td><td>64% <small>50.1–75.9</small></td><td><strong>75.3895</strong></td></tr>
-          <tr><td><strong>Qwen3 1.7B Q4_0</strong><small>Previous scalar leader · 974.2 MB</small></td><td>9.79</td><td>35.37 s</td><td>1,116 MiB</td><td>72% <small>58.3–82.5</small></td><td><strong>72.4653</strong></td></tr>
-          <tr><td>Qwen3.5 0.8B Q4_K_M</td><td>9.74</td><td>28.26 s</td><td>695 MiB</td><td>68% <small>54.2–79.2</small></td><td>71.54</td></tr>
-          <tr><td>BitCPM4 8B TQ2_0</td><td>0.81</td><td>584.15 s</td><td>2,307 MiB</td><td>88% <small>76.2–94.4</small></td><td>59.18</td></tr>
-          <tr><td>Qwen3.5 4B IQ4_XS</td><td>1.13</td><td>395.19 s</td><td>2,627 MiB</td><td>76% <small>62.6–85.7</small></td><td>52.93</td></tr>
-        </tbody>
-        </table></div>
-        <p>The final Qwen model has the shortest measured first-token latency at 16.62 seconds. Math-Expert follows at 23.61 seconds. First-token latency remains unscored.</p></div>
-      </details>
-
-      <h3 class="section-title">Sensitivity to the scoring formula</h3>
-      <p>Separately, the control below recalculates the complete current AVX2 roster with the public website's cohort-relative denominator. All rows use their ARC-Easy-50 proxy. This sensitivity analysis does not alter the profiler result.</p>
-
-      <div class="sensitivity-lab">
-        <label>Cohort <code>TPS_max</code> floor <output id="sensitivity-floor-value">15</output> tok/s
-          <input id="sensitivity-floor" type="range" min="0" max="5" step="1" value="0" list="sensitivity-values">
-          <datalist id="sensitivity-values"><option value="0" label="15"><option value="1" label="30"><option value="2" label="45"><option value="3" label="60"><option value="4" label="100"><option value="5" label="150"></datalist>
-        </label>
-        <div class="sensitivity-result"><span>Highest total in this scenario</span><strong id="sensitivity-winner">Loading campaign data…</strong><small id="sensitivity-winner-score"></small></div>
-        <div class="svg-chart" id="sensitivity-chart" role="img" aria-label="Website-relative model scores at the selected cohort throughput floor" aria-describedby="sensitivity-chart-summary"></div>
-        <p class="sr-only" id="sensitivity-chart-summary" aria-live="polite"></p>
-        <p class="fine-print">Blue bars are the two finalists from the expanded search; purple marks the winner. Earlier AVX2 models remain for comparison. This lane is never combined with the direct scalar campaign.</p>
-      </div>
-
-      <details class="reasoning-check">
-        <summary>Measurements required to confirm the scalar ordering</summary>
-        <div>
-          <p>The current scalar total differs by 2.5429 points between Math-Expert and the final Qwen model. The accuracy estimates are based on 50 questions.<span class="sidenote-number"></span><span class="sidenote">Math-Expert's 68% estimate has a 54.2–79.2 confidence interval. Qwen's 64% estimate has a 50.1–75.9 interval.</span> Confirmation requires a larger tutoring-aware accuracy evaluation and repeated measurements on the physical target, including package temperature.</p>
-        </div>
-      </details>
-    </section>
-
-    <section class="chapter" id="avx2-campaign" aria-labelledby="avx2-title">
-      <header class="chapter-head">
-        <span class="chapter-number">09</span>
-        <div><p class="eyebrow">Paired scalar and portable AVX2 benchmark</p><h2 id="avx2-title">Expanded seven-model AVX2 comparison</h2></div>
-      </header>
-      <p class="lead">A five-model quantization sweep established the baseline. The expanded search adds Qwen3.5 0.8B Q4_0 and Math-Expert 0.6B Q4_K_M under the same portable AVX2 configuration and two-core, four-thread CPU proxy. Math-Expert has the highest fixed-15 AVX2 total at 81.8803 using ARC-Easy-50.</p>
-
-      <div class="isa-policy" aria-label="AVX2 campaign build policy">
-        <span><code>AVX</code><strong>ON</strong></span>
-        <span><code>AVX2</code><strong>ON</strong></span>
-        <span><code>FMA</code><strong>ON</strong></span>
-        <span><code>F16C</code><strong>ON</strong></span>
-        <span class="disabled"><code>NATIVE</code><strong>OFF</strong></span>
-        <span class="disabled"><code>AVX-512</code><strong>OFF</strong></span>
-      </div>
-
-      <figure class="report-figure wide-figure isa-score-figure">
-        <div class="figure-head">
-          <div><p class="figure-kicker">Matched models and scoring function</p><h3>Total score by CPU method</h3></div>
-          <div class="chart-legend isa-legend"><span class="scalar">Scalar configuration</span><span class="avx2">Portable AVX2</span></div>
-        </div>
-        <div class="svg-chart tall-chart" id="isa-score-chart" role="img" aria-label="Paired scalar and AVX2 total scores for seven GGUF models" aria-describedby="isa-score-summary"></div>
-        <p class="sr-only" id="isa-score-summary" aria-live="polite">Loading paired scalar and AVX2 score evidence.</p>
-        <figcaption><span>Fig. 10</span> Each model has a scalar and portable AVX2 fixed-15 total using its ARC-Easy-50 proxy. The finalist scalar rows are participant-profiler results; the quantization-ladder rows are controlled scalar screens. Outlined bars mark the highest total in each CPU configuration.</figcaption>
-      </figure>
-
-      <details class="reasoning-check measurement-disclosure">
-        <summary>Scalar and AVX2 measurements</summary>
-        <div><div class="table-wrap editorial-table-wrap avx2-table-wrap"><table class="editorial-table avx2-table" aria-label="Controlled AVX2 FMA F16C campaign results">
-        <caption class="sr-only">Scalar and portable AVX2 benchmark results for seven GGUF models across the quantization and expanded model searches.</caption>
-        <thead><tr><th>Model</th><th>Scalar → AVX2 pp512</th><th>Scalar → AVX2 tg128</th><th>Decode gain</th><th>Est. profiler RSS</th><th>ARC-Easy proxy</th><th>Total</th></tr></thead>
-        <tbody>
-          <tr class="avx2-selected-row"><td><strong>Math-Expert 0.6B Q4_K_M</strong><small>Expanded-search leader</small></td><td>21.7268 → 153.9351</td><td>12.6339 → 39.2320</td><td>3.105×</td><td>759.7 MiB<small>+202.9 MiB</small></td><td>68%</td><td><strong>81.8803</strong></td></tr>
-          <tr><td><strong>Qwen3.5 0.8B Q4_0</strong><small>Risk-adjusted recommendation; tensor-identical AVX2 source</small></td><td>31.0781 → 98.0094</td><td>12.6955 → 27.1509</td><td>2.139×</td><td>928.1 MiB<small>+240.8 MiB</small></td><td>64%</td><td><strong>79.4104</strong></td></tr>
-          <tr><td><strong>Qwen3 1.7B Q4_0</strong><small>Previous scalar choice</small></td><td>14.7166 → 47.0716</td><td>9.9869 → 16.8927</td><td>1.691×</td><td>2,049.4 MiB<small>+916.3 MiB</small></td><td>72%</td><td><strong>80.2818</strong></td></tr>
-          <tr><td><strong>Qwen3 1.7B Q4_K_M</strong><small>Quantization-ladder leader</small></td><td>7.1859 → 55.4554</td><td>5.2954 → 15.6714</td><td>2.959×</td><td>1,989.7 MiB<small>+806.2 MiB</small></td><td>72%</td><td><strong>80.4484</strong></td></tr>
-          <tr><td>Qwen3 1.7B Q5_K_M</td><td>6.5613 → 24.3231</td><td>4.7839 → 12.7191</td><td>2.659×</td><td>1,364.6 MiB<small>+0.1 MiB</small></td><td>76%</td><td>79.6307</td></tr>
-          <tr><td>Qwen3 1.7B IQ4_XS</td><td>3.2063 → 23.9364</td><td>2.4961 → 14.0644</td><td>5.635×</td><td>1,082.3 MiB<small>+0.5 MiB</small></td><td>70%</td><td>80.1089</td></tr>
-          <tr><td>BitCPM4 8B TQ2_0</td><td>0.8762 → 13.6569</td><td>0.8108 → 7.4876</td><td><strong>9.235×</strong></td><td>2,316.4 MiB<small>+0.1 MiB</small></td><td>88%</td><td>72.5121</td></tr>
-        </tbody>
-        </table></div></div>
-      </details>
-
-      <aside class="design-note avx2-note">
-        <p class="design-note-label">Result</p>
-        <p>Math-Expert improves on the quantization-ladder leader: 81.8803 versus 80.4484. Both finalists exceed 15 tok/s. Math-Expert leads the ARC-Easy-50 comparison through four additional accuracy points and 168.4 MiB lower estimated RSS. Qwen leads after substituting the larger ARC-Easy-500 estimate.</p>
-      </aside>
-
-      <details class="reasoning-check">
-        <summary>Benchmark configuration and evidence limits</summary>
-        <div>
-          <p><span class="evidence-badge avx2">Controlled AVX2 proxy</span> Every model used a 512-token prompt, 128 generated tokens, two physical-core threads, and five internal samples. RSS is the measured child-tree peak plus a 45 MiB profiler-root estimate. The final Qwen row transfers the source measurement after verifying all 320 model tensors as identical. Temperature is unavailable on the cloud proxy. AVX2 rows are controlled proxies, not participant-profiler reports.</p>
-        </div>
-      </details>
-
-      <aside class="design-note warning-note" id="current-state">
         <p class="design-note-label">Required validation</p>
-        <p>Run the final Qwen file and Math-Expert on the physical target using the competition procedure, recording repeated throughput, whole-tree RSS, temperature, and throttling. Replace ARC-Easy with a tutoring-aware accuracy evaluation before choosing between the raw score leader and the larger-sample recommendation.</p>
+        <p>We still need to run the final Qwen file and Math-Expert on the physical target using the competition procedure, recording repeated throughput, whole-tree RSS, temperature, and throttling. And we should replace ARC-Easy with a tutoring-aware accuracy evaluation before choosing between the raw score leader and the larger-sample recommendation.</p>
       </aside>
-    </section>
-
-    <section class="chapter" id="overnight-search" aria-labelledby="overnight-search-title">
-      <header class="chapter-head">
-        <span class="chapter-number">10</span>
-        <div><p class="eyebrow">Expanded model and GGUF search</p><h2 id="overnight-search-title">The profiler slice and the broader accuracy checks select different models</h2></div>
-      </header>
-      <p class="lead">Nine additional models and eight Math-Expert quantization layouts were tested on the same GCP x86 proxy. Math-Expert Q4_K_M records the highest direct scalar total and the highest fixed-15 AVX2 total with ARC-Easy-50. Qwen3.5-0.8B Q4_0 leads the matched ARC-Easy-500 comparison and remains the lower-risk submission.</p>
-
-      <div class="finding-pair overnight-decision-grid">
-        <article>
-          <p class="figure-kicker">Profiler proxy</p>
-          <h3>Math-Expert 0.6B Q4_K_M</h3>
-          <dl class="compact-metrics"><div><dt>Direct scalar total</dt><dd>77.9324</dd></div><div><dt>AVX2 total, n=50</dt><dd>81.8803</dd></div><div><dt>AVX2 generation</dt><dd>39.23 tok/s</dd></div><div><dt>Est. AVX2 RSS</dt><dd>759.7 MiB</dd></div></dl>
-          <p>Use this file only if the executable profiler's 50 ARC-Easy items are treated as the selection objective.</p>
-        </article>
-        <article class="preferred-decision">
-          <p class="figure-kicker">Risk-adjusted submission</p>
-          <h3><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></h3>
-          <dl class="compact-metrics"><div><dt>Direct scalar total</dt><dd>75.3895</dd></div><div><dt>AVX2 total, n=500</dt><dd>76.8104</dd></div><div><dt>AVX2 generation</dt><dd>27.15 tok/s</dd></div><div><dt>Est. AVX2 RSS</dt><dd>928.1 MiB</dd></div></dl>
-          <p>This file has the stronger matched result outside the 50-item profiler slice and a shorter first-token time. The template supplies the tutor policy and disables hidden reasoning when the caller provides no setting.</p>
-        </article>
-      </div>
-
-      <figure class="report-figure wide-figure latest-avx2-figure">
-        <div class="figure-head"><div><p class="figure-kicker">Latest finalists, fixed-15 score</p><h3>Direct scalar and portable AVX2 totals</h3></div><div class="chart-legend isa-legend"><span class="scalar">Direct scalar</span><span class="avx2">Portable AVX2</span></div></div>
-        <div class="svg-chart tall-chart" id="overnight-avx2-score-chart" role="img" aria-label="Direct scalar and portable AVX2 fixed-15 totals for the two expanded-search finalists" aria-describedby="overnight-avx2-score-summary"></div>
-        <p class="sr-only" id="overnight-avx2-score-summary" aria-live="polite">Loading the latest finalist AVX2 comparison.</p>
-        <figcaption><span>Fig. 11</span> Both AVX2 totals use the profiler's 15 tok/s cap and ARC-Easy-50. Math-Expert scores 81.8803; Qwen scores 79.4104. AVX2 RSS adds a 45 MiB profiler-root estimate to the measured child tree.</figcaption>
-      </figure>
-
-      <details class="reasoning-check measurement-disclosure" open>
-        <summary>Latest scalar and AVX2 finalist results</summary>
-        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-avx2-table" aria-label="Expanded-search finalist scalar and AVX2 results"></table></div>
-        <p>ARC-Easy-50 supplies the raw fixed-15 comparison. The ARC-Easy-500 column is diagnostic. The final Qwen AVX2 row transfers the source measurement only after tensor-identity verification.</p></div>
-      </details>
-
-      <div class="campaign-summary-grid">
-        <figure class="report-figure">
-          <div class="figure-head"><div><p class="figure-kicker">Sample sensitivity</p><h3>Profiler total and larger-sample diagnostic</h3></div><span class="evidence-badge official">Same TPS and RSS</span></div>
-          <div class="svg-chart tall-chart" id="overnight-score-chart" role="img" aria-label="Direct profiler total and larger-sample diagnostic total for the two finalists" aria-describedby="overnight-score-summary"></div>
-          <p class="sr-only" id="overnight-score-summary" aria-live="polite">Loading the finalist score comparison.</p>
-          <figcaption><span>Fig. 12</span> The solid bar uses the profiler's 50 ARC-Easy items. The paired bar substitutes the larger ARC-Easy estimate while preserving the same measured TPS and RSS. The second bar is diagnostic, not an official score.</figcaption>
-        </figure>
-        <figure class="report-figure">
-          <div class="figure-head"><div><p class="figure-kicker">Quantization search</p><h3>Speed and ARC-Easy trade-off</h3></div><span class="evidence-badge parity">Scalar screen</span></div>
-          <div class="svg-chart tall-chart" id="overnight-quant-chart" role="img" aria-label="Math-Expert quantization variants by scalar throughput and ARC-Easy accuracy" aria-describedby="overnight-quant-summary"></div>
-          <p class="sr-only" id="overnight-quant-summary" aria-live="polite">Loading the Math-Expert quantization sweep.</p>
-          <figcaption><span>Fig. 13</span> Uniform Q4_0 is the fastest layout but loses 16 ARC-Easy points. Q4_K_M retains the best measured score. Higher embedding precision and four higher-precision final layers do not recover the loss.</figcaption>
-        </figure>
-      </div>
-
-      <details class="reasoning-check measurement-disclosure" open>
-        <summary>Finalist accuracy checks</summary>
-        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-finalist-table" aria-label="Matched accuracy results for the expanded-search finalists"></table></div>
-        <p>Confidence intervals are Wilson 95% intervals. The task results are diagnostics, not the judging-panel tutoring score.</p></div>
-      </details>
-
-      <details class="reasoning-check measurement-disclosure">
-        <summary>Models screened and rejection reasons</summary>
-        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-screen-table" aria-label="Expanded model screen"></table></div></div>
-      </details>
-
-      <h3 class="section-title">Methods considered</h3>
-      <div class="table-wrap editorial-table-wrap"><table class="editorial-table method-table">
-        <thead><tr><th>Method</th><th>Test or constraint</th><th>Decision</th></tr></thead>
-        <tbody>
-          <tr><td>Uniform quantization</td><td>Q4_0, Q5_0, Q4_K_S, Q4_K_M, and IQ4_XS from the same F16 source.</td><td>Keep Q4_K_M. Q4_0 is fast but loses too much accuracy; Q5_0 is slow on the scalar profiler kernel.</td></tr>
-          <tr><td>Mixed tensor precision</td><td>Q4_0 body with Q6_K or Q8_0 tied embedding; Q5_0 in the final four blocks.</td><td>Reject. None recovered enough ARC-Easy accuracy.</td></tr>
-          <tr><td>Architecture and specialist search</td><td>Qwen3/3.5, Gemma 3, Noema, VibeThinker, OpenMath-Nemotron, NuminaMath, and a reasoning distill.</td><td>Keep Qwen3.5-0.8B and Math-Expert as finalists. Other files lost on throughput, accuracy, licensing, or provenance.</td></tr>
-          <tr><td>Pruning and vocabulary reduction</td><td>Prior layer-pruning and BitCPM vocabulary results were retained; Qwen BPE vocabulary pruning cannot be reproduced safely with the current tool.</td><td>No new submission candidate.</td></tr>
-          <tr><td>Distillation and fine-tuning</td><td>Finished public fine-tunes were tested. A new training run was not promoted without a GPU, a complete dataset audit, and a reproducible conversion path.</td><td>Defer new training; do not submit a partially validated derivative.</td></tr>
-          <tr><td>MTP and speculative decoding</td><td><code>llama-bench</code> in the profiler does not invoke the runtime flags required by MTP or draft decoding.</td><td>Exclude from a GGUF-only profiler claim.</td></tr>
-          <tr><td>Context and embedded template</td><td>The profiler fixes p512/tg128. A live four-prompt test showed that unrestricted hidden reasoning could consume the full response allowance. The final GGUF embeds the tutor policy and forces non-thinking ChatML.</td><td>Adopt for interactive reliability; assign no profiler throughput gain.</td></tr>
-        </tbody>
-      </table></div>
 
       <aside class="design-note warning-note">
         <p class="design-note-label">Submission decision</p>
-        <p><strong>Submit <code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code> unless a physical-target, tutoring-aware evaluation reverses the broader accuracy result.</strong> Keep Math-Expert Q4_K_M as the profiler-proxy alternative. Both sub-1B models failed the difficult proof prompt in the live acceptance battery, so neither supports a guarantee about hidden judging quality.</p>
+        <p><strong>We recommend submitting <code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code>, unless a physical-target, tutoring-aware evaluation reverses the broader accuracy result.</strong> Keep Math-Expert Q4_K_M as the profiler-proxy alternative. Both sub-1B models failed the difficult proof prompt in our live acceptance battery, so neither one guarantees hidden judging quality.</p>
       </aside>
 
-      <details class="reasoning-check">
-        <summary>Research and provenance</summary>
-        <div>
-          <p>The search used public model cards, documented licences, reproducible conversion procedures, and retained raw measurements. Math-Expert is a Qwen3-0.6B fine-tune on OpenMathReasoning-mini; its public card does not provide a complete training recipe or benchmark table. The Qwen3.5 model is derived from the official Qwen checkpoint.</p>
-          <p>Primary references: <a href="https://huggingface.co/suayptalha/Qwen3-0.6B-Math-Expert" target="_blank" rel="noreferrer">Math-Expert model card</a>, <a href="https://huggingface.co/mradermacher/Qwen3-0.6B-Math-Expert-GGUF" target="_blank" rel="noreferrer">GGUF repository</a>, <a href="https://huggingface.co/datasets/nvidia/OpenMathReasoning" target="_blank" rel="noreferrer">OpenMathReasoning dataset</a>, <a href="https://arxiv.org/abs/2504.16891" target="_blank" rel="noreferrer">OpenMathReasoning paper</a>, <a href="https://arxiv.org/abs/2505.11574" target="_blank" rel="noreferrer">low-bit reasoning study</a>, and <a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/speculative.md" target="_blank" rel="noreferrer">llama.cpp speculative-decoding documentation</a>.</p>
-        </div>
-      </details>
+      <p>Nine methods, two roads, and one lesson that came back twice: on this evaluator, the quantization type is the kernel, not just the file size. Whatever this page says next time you read it, that's the one conclusion we don't expect to change.</p>
     </section>
 
     <section class="chapter" id="ledger" aria-labelledby="ledger-title">
       <header class="chapter-head">
-        <span class="chapter-number">11</span>
-        <div><p class="eyebrow">Experiment decisions</p><h2 id="ledger-title">Adopted, rejected, and deferred tests</h2></div>
+        <span class="chapter-number">14</span>
+        <div><p class="eyebrow">The receipts</p><h2 id="ledger-title">Every experiment, adopted, rejected, and deferred</h2></div>
       </header>
-      <p class="lead">The measurements above produced the decisions below. Adopted changes appear first; the filters expose rejected, neutral, and deferred tests.</p>
+      <p class="lead">The measurements above produced the decisions below. Adopted changes appear first; use the filters to see rejected, neutral, and deferred tests.</p>
       <div class="filter-row" role="group" aria-label="Filter experiment ledger">
         <button class="filter-button" data-ledger-filter="all" aria-pressed="false">All</button>
         <button class="filter-button active" data-ledger-filter="adopted" aria-pressed="true">Adopted</button>
@@ -693,10 +666,10 @@
 
     <section class="chapter" id="faq" aria-labelledby="faq-title">
       <header class="chapter-head">
-        <span class="chapter-number">12</span>
+        <span class="chapter-number">15</span>
         <div><p class="eyebrow">Challenge requirements</p><h2 id="faq-title">Requirement status</h2></div>
       </header>
-      <p class="lead">Model selection also has to satisfy the published challenge requirements. Each entry pairs one requirement with Muta's recorded implementation status.</p>
+      <p class="lead">Model selection also has to satisfy the published challenge requirements. Each entry pairs one requirement with what we have actually implemented.</p>
       <div class="faq-list" id="faq-list"></div>
       <p class="source-note">Challenge requirements follow the <a href="https://africadeeptech.org/challenge-2026/" target="_blank" rel="noreferrer">Africa Deep Tech Challenge 2026 page</a>.</p>
     </section>
@@ -706,7 +679,7 @@
         <span class="chapter-number">A</span>
         <div><p class="eyebrow">Operational appendix</p><h2 id="profiler-title">Profiler results and comparison tables</h2></div>
       </header>
-      <p class="lead">The underlying measurements, live profiling controls, stored results, and mixed-machine archive remain available below.</p>
+      <p class="lead">The underlying measurements, live profiling controls, stored results, and mixed-machine archive all stay available below.</p>
 
       <div class="workspace-bar">
         <div><strong>Profiler metadata</strong><p id="meta-line">Loading metadata…</p></div>
@@ -758,7 +731,7 @@
 
     <footer class="report-footer">
       <p><strong>Muta IQ</strong> · Offline adaptive tutoring for maths and scientific reasoning.</p>
-      <p>Full methods and raw measurements are retained in the repository benchmark archive.</p>
+      <p>We keep the full methods and raw measurements in the repository benchmark archive.</p>
     </footer>
   </article>
 </main>

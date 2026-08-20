@@ -1,28 +1,29 @@
 # Technical Report — Muta Tutor: an offline maths & science tutor for the 8 GB classroom laptop
 
-> **19 August 2026 provenance correction.** An old repository entry claimed that organisers
-> privately confirmed a physical AVX2 audit and uncapped cohort-relative score on 6 August.
-> No source for that claim exists in the repository or online. The public challenge page and
-> official profiler conflict; this report follows the executable profiler: secure cloud-VM
-> audit mode and `min(TPS/15, 1)·100`. AVX2 results are deployment evidence only.
+> **19 August 2026 provenance correction.** An earlier repository entry claimed that organisers
+> privately confirmed a physical AVX2 audit and an uncapped cohort-relative score on 6 August.
+> We found no source for that claim, in the repository or anywhere online. The public challenge
+> page and the official profiler disagree on the performance formula; we follow the executable
+> profiler here: secure cloud-VM audit mode and `min(TPS/15, 1)·100`. AVX2 results remain
+> deployment evidence only.
 
 ## Current result — 20 August overnight campaign
 
-The overnight search tested nine additional model artifacts and eight Math-Expert quantization
-layouts. Two sub-1B models passed the staged screen. Their direct participant-profiler and
-controlled portable AVX2 results select different models depending on the accuracy sample.
+Overnight, we tested nine additional model artifacts and eight Math-Expert quantization
+layouts. Two sub-1B models passed the staged screen. Depending on which accuracy sample we use,
+the direct participant-profiler and controlled portable AVX2 results point to different models.
 
 | Exact finalist | Direct scalar total, ARC-Easy-50 | AVX2 pp512 / tg128 | Est. AVX2 profiler RSS | AVX2 total, ARC-Easy-50 | AVX2 diagnostic, ARC-Easy-500 |
 |---|---:|---:|---:|---:|---:|
 | **Qwen3 0.6B Math-Expert Q4_K_M** `7f64c2…ae9a1` | **77.9324** | **153.9351 / 39.2320** | **759.7 MiB** | **81.8803** | 75.1803 |
 | **Muta Tutor Qwen3.5 0.8B Q4_0 final** `c96df4…d5d7b` | 75.3895 | 98.0094 / 27.1509 | 928.1 MiB | 79.4104 | **76.8104** |
 
-Both AVX2 decode results exceed 15 tok/s, so both receive `S_perf = 100` under the executable
-formula. With ARC-Easy-50, Math-Expert leads by 2.4699 total points. With the matched 500-item
-ARC-Easy estimates, Qwen leads by 1.6301 points. The 500-item values are diagnostics, not direct
-participant-profiler scores.
+Both AVX2 decode results clear 15 tok/s, so both receive `S_perf = 100` under the executable
+formula. On ARC-Easy-50, Math-Expert leads by 2.4699 total points. On the matched 500-item
+ARC-Easy estimates, Qwen leads by 1.6301 points instead. The 500-item values are diagnostics, not
+direct participant-profiler scores.
 
-The controlled AVX2 ledger now contains seven artifacts across the 19 and 20 August campaigns:
+The controlled AVX2 ledger now holds seven artifacts across the 19 and 20 August campaigns:
 
 | AVX2 rank | Artifact | AVX2 tg128 | Est. profiler RSS | ARC-Easy-50 | Fixed-15 total |
 |---:|---|---:|---:|---:|---:|
@@ -34,68 +35,69 @@ The controlled AVX2 ledger now contains seven artifacts across the 19 and 20 Aug
 | 6 | Muta Tutor Qwen3.5 0.8B Q4_0 final | 27.1509 | 928.1 MiB | 64% | 79.4104 |
 | 7 | BitCPM4 8B TQ2_0 envocab | 7.4876 | 2,316.4 MiB | 88% | 72.5121 |
 
-All AVX2 rows use llama.cpp b10175 commit `60bccc…f70` and binary SHA-256 `4abfa11a…12fd8`
+All AVX2 rows use llama.cpp b10175, commit `60bccc…f70`, and binary SHA-256 `4abfa11a…12fd8`,
 with AVX/AVX2/FMA/F16C enabled, native tuning and AVX-512 disabled, `p512/tg128`, two physical
-cores and five internal samples. AVX2 RSS is measured child-tree peak plus a 45 MiB profiler-root
-estimate. The final Qwen AVX2 measurement comes from its pinned Q4_0 source; an independent
-comparison verified all 320 tensors and 496,192,768 tensor bytes as identical to the final
-metadata-wrapped file. The final file itself completed the direct scalar participant run.
+cores, and five internal samples. AVX2 RSS is the measured child-tree peak plus a 45 MiB
+profiler-root estimate. The final Qwen AVX2 measurement comes from its pinned Q4_0 source: we
+verified all 320 tensors and 496,192,768 tensor bytes as identical to the final metadata-wrapped
+file, so the source measurement transfers. The final file itself completed the direct scalar
+participant run.
 
-The current recommendation remains
-`Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf` because Qwen leads the larger matched ARC-Easy,
-ARC-Challenge and SciQ checks. Math-Expert is the raw fixed-15 alternative and should replace Qwen
-if a physical-target, tutoring-aware evaluation confirms the ARC-Easy-50 ordering. Current data do
-not justify describing either model as an unconditional winner.
+We still recommend `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`, because Qwen leads the larger
+matched ARC-Easy, ARC-Challenge, and SciQ checks. Math-Expert is the raw fixed-15 alternative, and
+should replace Qwen if a physical-target, tutoring-aware evaluation confirms the ARC-Easy-50
+ordering. Neither model earns an unconditional win from the data we have.
 
 ## Corrected 19 August decision (historical)
 
-The seven-hour campaign keeps three non-blended evidence lanes: direct bundled-profiler reports,
+The seven-hour campaign keeps three evidence lanes separate: direct bundled-profiler reports,
 broader no-AVX b10175 promotion screens scored at the profiler's fixed 15 tok/s cap, and separately
-labelled AVX2 product rows. Exact reports, timing vectors, task intervals and hashes live in
-`bench/measurements/campaign-20260819/`; unlike the earlier decision, no score averages the two
-public rule interpretations.
+labelled AVX2 product rows. Exact reports, timing vectors, task intervals, and hashes live in
+`bench/measurements/campaign-20260819/`. Unlike the earlier decision, no score here averages the
+two public rule interpretations.
 
-In the full profiler reports, the shipped Muta Tutor Q4_0 tied-head file remains the winner:
-9.79 tok/s, 1116.31 MiB directly measured profiler peak RSS, 72% ARC-Easy-50 and a 72.4653
-composite. The Qwen3.5-0.8B hedge is close at 71.5416 (9.74 tok/s, 694.73 MiB, 68%); its
-421.58 MiB saving almost repays the four-point accuracy gap, but historical maths/tutoring gates
-remain below the product bar. BitCPM4-8B scores 59.1843 despite 88% Easy because scalar TQ2_0
-decode is 0.81 tok/s; Qwen3.5-4B IQ4_XS scores 52.9293. Thermal is unknown on GCP and the
-accuracy term is a small diagnostic proxy, not a claim about the hidden panel.
+In the full profiler reports, the shipped Muta Tutor Q4_0 tied-head file still wins: 9.79 tok/s,
+1116.31 MiB directly measured profiler peak RSS, 72% ARC-Easy-50, and a 72.4653 composite. The
+Qwen3.5-0.8B hedge trails closely at 71.5416 (9.74 tok/s, 694.73 MiB, 68%); its 421.58 MiB saving
+almost repays the four-point accuracy gap, but it falls short of our historical maths/tutoring
+gates. BitCPM4-8B scores 59.1843 despite 88% ARC-Easy, because scalar TQ2_0 decode runs at only
+0.81 tok/s; Qwen3.5-4B IQ4_XS scores 52.9293. Thermal is unknown on GCP, and the accuracy term is
+a small diagnostic proxy, not a claim about the hidden panel.
 
-The AVX2/webpage-relative panel is still preserved. Treating each scenario as a pre-entry cohort
-floor and using `max(floor, candidate TPS)` as the effective denominator, it selects Q3_K_M at
-15, Q4_K_S at 30, Q5_K_M at 45, and BitCPM4-8B at 60/100/150. That alternative is useful if
-the webpage, rather than the published profiler image, turns out to govern the final audit.
+We also keep the AVX2/webpage-relative panel. Treating each scenario as a pre-entry cohort floor
+and using `max(floor, candidate TPS)` as the effective denominator, it selects Q3_K_M at 15,
+Q4_K_S at 30, Q5_K_M at 45, and BitCPM4-8B at 60/100/150. This alternative matters only if the
+webpage, rather than the published profiler image, ends up governing the final audit.
 
 ## 19 August AVX2/FMA/F16C CPU benchmark regime
 
-The 19 August campaign reran five score-of-record artifacts on the same GCP 2C/4T proxy to isolate one
+On 19 August, we reran five score-of-record artifacts on the same GCP 2C/4T proxy to isolate one
 variable: portable x86 SIMD. The original scalar binary remains untouched and reproducible at
-SHA-256 `7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370`.
-The new binary is a separate deterministic build at
+SHA-256 `7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370`. The new binary is a
+separate deterministic build at
 `4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8`, from the same llama.cpp
-b10175 commit `60bccc3763395e01b039aa1ddeacc8cc0ea69f70`, CMake 3.22.1 and GNU 11.4.0.
+b10175 commit `60bccc3763395e01b039aa1ddeacc8cc0ea69f70`, CMake 3.22.1, and GNU 11.4.0.
 
-The VM exposes AVX, AVX2, FMA and F16C. Configuration was explicit: `GGML_NATIVE=OFF`,
+The VM exposes AVX, AVX2, FMA, and F16C. We set the configuration explicitly: `GGML_NATIVE=OFF`,
 `GGML_AVX=ON`, `GGML_AVX2=ON`, `GGML_FMA=ON`, `GGML_F16C=ON`, with `GGML_AVX512=OFF`,
-`GGML_AVX512_VBMI=OFF` and `GGML_AVX512_VNNI=OFF`. GGML's runtime trace reports
-`AVX=1 | AVX2=1 | F16C=1 | FMA=1`; the scalar trace reports none of them. The backend archive
-and llama-bench reproduce an independent AVX2 build byte-for-byte, and a disassembly scan found
-zero ZMM/opmask or selected AVX-512 signatures. The full CMake cache, CPU flags, compiler output,
-feature traces and build logs are retained with the result.
+`GGML_AVX512_VBMI=OFF`, and `GGML_AVX512_VNNI=OFF`. GGML's runtime trace confirms
+`AVX=1 | AVX2=1 | F16C=1 | FMA=1`; the scalar trace reports none of them. The backend archive and
+llama-bench reproduce an independent AVX2 build byte-for-byte, and a disassembly scan found zero
+ZMM/opmask instructions or other AVX-512 signatures. We retain the full CMake cache, CPU flags,
+compiler output, feature traces, and build logs alongside the result.
 
-Every artifact hash matched the scalar record. Each AVX2 invocation used the unchanged workload:
+Every artifact hash matched the scalar record. Each AVX2 invocation ran the same unchanged
+workload:
 
 ```text
 llama-bench -m MODEL -p 512 -n 128 -o json -ngl 0 -r 5
 ```
 
-No thread override was supplied; llama-bench selected the two physical cores. The same 100 ms
-child-tree RSS sampler and 45 MiB profiler-root estimate were used. ARC-Easy was reused by exact
-GGUF hash because the weights did not change. All AVX2 rows contain five internal timing samples;
-the scalar incumbent also has five, while the four retained scalar challenger rows remain clearly
-labelled one-repetition promotion screens.
+We supplied no thread override; llama-bench selected the two physical cores on its own. We used
+the same 100 ms child-tree RSS sampler and 45 MiB profiler-root estimate as before. We reused
+ARC-Easy by exact GGUF hash, since the weights did not change. All AVX2 rows carry five internal
+timing samples; so does the scalar incumbent, while the four retained scalar challenger rows stay
+labelled as one-repetition promotion screens.
 
 | Artifact | Scalar pp512 / tg128 | AVX2 pp512 / tg128 ± decode sd | Decode speedup | Scalar → AVX2 est. RSS | ARC-Easy | Scalar → AVX2 S_total |
 |---|---:|---:|---:|---:|---:|---:|
@@ -105,25 +107,24 @@ labelled one-repetition promotion screens.
 | Qwen3-1.7B IQ4_XS tied `aea3cb…` | 3.2063 / 2.4961 | 23.9364 / 14.0644 ± 0.0942 | 5.635× | 1081.8 → 1082.3 MiB | 70% | 56.9738 → 80.1089 |
 | BitCPM4-8B TQ2_0 envocab `069621…` | 0.8762 / 0.8108 | 13.6569 / 7.4876 ± 0.0562 | **9.235×** | 2316.3 → 2316.4 MiB | 88% | 59.1587 → 72.5121 |
 
-Within the 19 August set, the scalar winner is Muta Tutor pure Q4_0 tied and the AVX2 winner is
-Q4_K_M tied: both
-Q4 variants clear the 15 tok/s performance cap, and Q4_K_M's estimated RSS is 59.7 MiB lower,
-producing a 0.1666-point lead. That is not a robust promotion margin: Q4_K_M has one 13.6101
-tok/s internal outlier and substantially higher decode variance. IQ4_XS is only 0.3395 points
-behind the nominal winner with essentially no repacking-RSS increase.
+Within the 19 August set, the scalar winner is Muta Tutor pure Q4_0 tied, and the AVX2 winner is
+Q4_K_M tied. Both Q4 variants clear the 15 tok/s performance cap, and Q4_K_M's estimated RSS runs
+59.7 MiB lower, producing a 0.1666-point lead. We don't treat that as a robust promotion margin:
+Q4_K_M has one 13.6101 tok/s internal outlier and substantially higher decode variance. IQ4_XS
+trails the nominal winner by only 0.3395 points, with essentially no repacking-RSS increase.
 
-BitCPM's old 0.8108 tok/s result was primarily a scalar-kernel failure: AVX2 makes it 9.235×
-faster and operationally viable. The conclusion still does not flip under the capped score. At
-7.49 tok/s and about 2.26 GiB estimated profiler RSS, its 88% Easy proxy reaches 72.5121—7.94
-points behind Q4_K_M. It remains the accuracy experiment, not the capped-15 submission winner.
+BitCPM's old 0.8108 tok/s result was mostly a scalar-kernel failure: AVX2 makes it 9.235× faster
+and operationally viable. Even so, the conclusion does not flip under the capped score. At
+7.49 tok/s and about 2.26 GiB estimated profiler RSS, its 88% ARC-Easy proxy reaches 72.5121, 7.94
+points behind Q4_K_M. BitCPM remains the accuracy experiment, not the capped-15 submission
+winner.
 
-This 19 August result was superseded by the 20 August candidate extension above. At the time, the
-executable-profiler submission stayed Muta Tutor pure Q4_0 tied. If the final audit
-instead supplies a portable AVX2 build, optimization direction changes toward Q4_K_M, with
-IQ4_XS close enough to confirm on the physical target before switching. The GCP host exposes no
-temperature sensor, so thermal is unknown and these are cloud-proxy, not physical-laptop, scores.
-The complete evidence is in
-`bench/measurements/campaign-20260819/avx2-score-of-record/`.
+The 20 August candidate extension above supersedes this 19 August result. At the time, the
+executable-profiler submission stayed Muta Tutor pure Q4_0 tied. If the final audit instead
+supplies a portable AVX2 build, our optimisation direction shifts toward Q4_K_M, with IQ4_XS close
+enough that we would confirm it on the physical target before switching. The GCP host exposes no
+temperature sensor, so thermal remains unknown; these are cloud-proxy scores, not physical-laptop
+scores. The complete evidence is in `bench/measurements/campaign-20260819/avx2-score-of-record/`.
 
 ---
 
@@ -199,17 +200,18 @@ the audit build; a 1.5 B Q4_K_M runs ~3.5 tok/s there vs ~9–13 for Q4_0 files 
 own kernel analysis and other teams' published audit-build runs); Q8_0 (2× the bytes for a scalar
 kernel); TQ1_0/TQ2_0 ternary (fast on ARM/AVX2, generic C on the audit box).
 
-**Behaviour baked into the file.** The chat template is replaced by a clean ChatML template that
+**Behaviour baked into the file.** We replace the chat template with a clean ChatML template that
 (a) injects the Muta tutoring persona as the system turn when the client sends none, or merges it in
 front of a client-supplied system message, and (b) always opens the assistant turn with an empty
 `<think></think>` block so the model answers directly instead of producing long reasoning traces
-(a minute of silence per prompt at audit-box speed). `general.sampling.*` defaults are set to
+(a minute of silence per prompt at audit-box speed). We set `general.sampling.*` defaults to
 temp 0.4, top_p 0.9, min_p 0.05, repeat_penalty 1.05 (honoured by llama-server); `general.name`
-identifies the tutor. The persona is ~130 tokens so a judge's first turn pays little extra prefill.
-Verified on both paths the judges can use: llama.cpp's own Jinja engine (the code llama-server
-and llama-cli use; the shipped file was probed on a stock b10175 llama-server with zero flags:
-persona injected, `chat template, thinking = 0`, `/props` sampling read from the file, both test
-prompts answered correctly with `finish_reason: stop`) and llama-cpp-python's jinja2 path.
+identifies the tutor. The persona is ~130 tokens, so a judge's first turn pays little extra prefill.
+We verified this on both paths judges might use: llama.cpp's own Jinja engine (the code
+llama-server and llama-cli use; we probed the shipped file on a stock b10175 llama-server with
+zero flags, and it injected the persona, reported `chat template, thinking = 0`, read sampling from
+`/props`, and answered both test prompts correctly with `finish_reason: stop`) and
+llama-cpp-python's jinja2 path.
 
 **Vocabulary pruning and streaming (from the 8 B track, kept for the classroom runtime).** For the
 ternary model we built a byte-exact CJK vocabulary pruner (73,448 → 44,416 tokens, −164 MB, identical
@@ -245,11 +247,11 @@ numerically full-rank; the proposed rank-2048 pair reconstructs at 0.80 relative
 
 ## Benchmarks
 
-Self-reported development benchmarks (Apple M1, 8 GB, macOS 27; `adtc-profiler run --mode
-participant`, i.e. `llama-bench -p 512 -n 128 -ngl 0`, 4 threads, plus the profiler's arc_easy).
-`submission.json` was produced with a CPU-only llama.cpp b10360 build with weight repacking
-disabled, the same behaviour as the audit image, so its RSS is comparable to the audit box. The
-Homebrew ARM build's numbers are given in parentheses for reference (`opt/results/`).
+These are self-reported development benchmarks (Apple M1, 8 GB, macOS 27; `adtc-profiler run
+--mode participant`, i.e. `llama-bench -p 512 -n 128 -ngl 0`, 4 threads, plus the profiler's
+arc_easy). We produced `submission.json` with a CPU-only llama.cpp b10360 build with weight
+repacking disabled, the same behaviour as the audit image, so its RSS is comparable to the audit
+box. The Homebrew ARM build's numbers appear in parentheses for reference (`opt/results/`).
 
 | Metric | Value |
 |---|---|
@@ -262,10 +264,10 @@ Homebrew ARM build's numbers are given in parentheses for reference (`opt/result
 | GSM8K-40 (greedy, baked persona, no-think, shipped file) | **0.70 (28/40)**, ~170 generated tokens per answer (`opt/eval/results/muta-tutor-ship.json`) |
 | Thermal throttling | None observed (cpu p99 65%) |
 
-Expected on the audit build (no-AVX x86, 4 vCPU): ~9–13 tok/s (Q4_0 SSSE3 kernel; other teams'
-published audit-build runs give 9.4 tok/s for a ≈1.2 GB Q4_0 Qwen3-1.7B, ours is 21% smaller) and
-~1.2 GB peak RSS. A ready-to-run GitHub-Actions workflow that reproduces the audit binary on a free
-x86 runner is in `opt/audit-bench/`.
+On the audit build (no-AVX x86, 4 vCPU), we expect ~9–13 tok/s (Q4_0 SSSE3 kernel; other teams'
+published audit-build runs give 9.4 tok/s for a ≈1.2 GB Q4_0 Qwen3-1.7B, and ours is 21% smaller)
+and ~1.2 GB peak RSS. A ready-to-run GitHub-Actions workflow that reproduces the audit binary on a
+free x86 runner lives in `opt/audit-bench/`.
 
 Official scores are measured by the ADTC profiler on the standard evaluation machine.
 
@@ -416,37 +418,35 @@ and the model is evaluated in English. Muta is built for the shared-laptop class
 machine, ~30 students on phones over the local network, no internet. The persona teaches in the exam
 formats students actually sit (WASSCE/JAMB/KCSE), uses local currencies and contexts, and diagnoses
 misconceptions rather than just answering. Those are the behaviours a scarce teacher cannot give
-thirty students at once. The streaming
-runtime in `opt/` exists so that the same file also fits beside a browser and a classroom server on
-that laptop.
+thirty students at once. The streaming runtime in `opt/` exists so that the same file also fits
+beside a browser and a classroom server on that laptop.
 
 ---
 
 ## 20 August 2026 model search and current submission recommendation
 
-This section supersedes the earlier model choice above. The earlier experiments remain as a record
-of the path to the current result.
+This section supersedes the earlier model choice above; we keep the earlier experiments as a
+record of how we got here.
 
 ### Measurement boundary
 
-The search ran on the GCP `n2-custom-4-8192` proxy: 2 physical cores, 4 threads, 8 GB RAM and no
-swap. It is not the physical target laptop and exposes no package-temperature sensor. Two b10175
-binaries were retained:
+We ran the search on the GCP `n2-custom-4-8192` proxy: 2 physical cores, 4 threads, 8 GB RAM, no
+swap. It is not the physical target laptop, and it exposes no package-temperature sensor. We
+retained two b10175 binaries:
 
 - executable-profiler configuration: scalar x86 binary SHA-256 `7f01dc04…9370`;
 - controlled portable configuration: AVX/AVX2/FMA/F16C enabled, native and AVX-512 disabled,
   binary SHA-256 `4abfa11a…2fd8`.
 
 Every promoted result records the exact GGUF SHA-256, binary SHA-256, model revision, command,
-sample count and raw output. The executable-profiler score uses
-`S_perf = 100 × min(TPS / 15, 1)`. Cohort-relative results are reported separately and are not
-averaged with it.
+sample count, and raw output. The executable-profiler score uses `S_perf = 100 × min(TPS / 15, 1)`.
+We report cohort-relative results separately and never average them into it.
 
 ### Model screen
 
-Nine new artifacts were tested. Staged screening used the same scalar and AVX2 binaries before the
-slow participant-profiler run. The table shows the scalar generation result because that binary
-matches the executable profiler.
+We tested nine new artifacts. Staged screening used the same scalar and AVX2 binaries before the
+slow participant-profiler run. The table below shows the scalar generation result, since that
+binary matches the executable profiler.
 
 | Candidate | Scalar tg128, tok/s | ARC-Easy-50 | Decision |
 |---|---:|---:|---|
@@ -460,12 +460,12 @@ matches the executable profiler.
 | VibeThinker 1.5B Q4_K_M | 5.68 | 36% | reject |
 | Gemma 3 1B Q4_0 | 12.75 | 58% staged accuracy | reject |
 
-The retained general-model control was Qwen3.5 0.8B Q4_0. Its final participant-profiler run is
-reported below.
+We retained Qwen3.5 0.8B Q4_0 as the general-model control. Its final participant-profiler run
+appears below.
 
 ### Math-Expert quantization sweep
 
-Eight layouts were derived from one pinned F16 source. This isolates quantization from model and
+We derived eight layouts from one pinned F16 source, isolating quantization from model and
 training differences.
 
 | Layout | Scalar tg128 | AVX2 tg128 | ARC-Easy-50 | Decision |
@@ -479,9 +479,9 @@ training differences.
 | Q4_0 body + Q8_0 tied embedding | 19.47 | 38.10 | 50% | reject |
 | Q4_0 body + Q5_0 final four blocks + Q8_0 embedding | 13.59 | — | 56% | reject |
 
-The mixed layouts show that the loss is distributed through the quantized body. Raising the tied
-embedding or the final four blocks does not recover enough accuracy. Q4_K_M remains the best tested
-Math-Expert layout.
+The mixed layouts show that the loss spreads through the quantized body: raising the tied
+embedding or the final four blocks does not recover enough accuracy. Q4_K_M remains the best
+Math-Expert layout we have tested.
 
 ### Direct participant-profiler results
 
@@ -490,33 +490,33 @@ Math-Expert layout.
 | **Qwen3 0.6B Math-Expert Q4_K_M** `7f64c2…ae9a1` | **12.72 tok/s** | **540.32 MiB** | **68%** | **77.9324** |
 | Muta Tutor Qwen3.5 0.8B Q4_0 final `c96df4…d5d7b` | 12.63 tok/s | 670.39 MiB | 64% | 75.3895 |
 
-Math-Expert wins the executable profiler's 50-item ARC-Easy slice by 2.5429 total points. The 95%
-Wilson intervals are wide: 54.2–79.2% for Math-Expert and 50.1–75.9% for Qwen. The difference is
-not a reliable estimate of general task quality.
+Math-Expert wins the executable profiler's 50-item ARC-Easy slice by 2.5429 total points. The
+95% Wilson intervals are wide, 54.2–79.2% for Math-Expert and 50.1–75.9% for Qwen, so we don't
+treat this difference as a reliable estimate of general task quality.
 
 ### Controlled AVX2/FMA/F16C finalist results
 
-The same b10175 AVX2 binary used for the 19 August campaign measured both finalist weight sets.
-AVX, AVX2, FMA and F16C were enabled; native tuning and AVX-512 were disabled. The score below
-uses the executable profiler's 15 tok/s cap.
+We measured both finalist weight sets with the same b10175 AVX2 binary used for the 19 August
+campaign. AVX, AVX2, FMA, and F16C were enabled; native tuning and AVX-512 were disabled. The
+score below uses the executable profiler's 15 tok/s cap.
 
 | Exact artifact | AVX2 pp512 | AVX2 tg128 | Est. profiler RSS | ARC-Easy-50 | Fixed-15 total |
 |---|---:|---:|---:|---:|---:|
 | **Qwen3 0.6B Math-Expert Q4_K_M** | **153.9351** | **39.2320** | **759.7 MiB** | **68%** | **81.8803** |
 | Muta Tutor Qwen3.5 0.8B Q4_0 final | 98.0094 | 27.1509 | 928.1 MiB | 64% | 79.4104 |
 
-Math-Expert leads by 2.4699 points. Both models saturate `S_perf`; Math-Expert retains four more
+Math-Expert leads by 2.4699 points. Both models saturate `S_perf`; Math-Expert keeps four more
 ARC-Easy-50 points and uses 168.4 MiB less estimated profiler RSS. RSS combines measured
 child-tree peaks of 714.7 and 883.1 MiB with a 45 MiB profiler-root estimate.
 
 The Math-Expert row uses the exact submitted GGUF. The Qwen benchmark used the pinned source
-`Qwen3.5-0.8B-Q4_0.gguf`; raw tensor comparison verified that its 320 tensors and 496,192,768
-tensor bytes are identical to `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`. The metadata-wrapped
-final file still requires an exact-file AVX2 rerun for complete procedural parity.
+`Qwen3.5-0.8B-Q4_0.gguf`; we verified by raw tensor comparison that its 320 tensors and
+496,192,768 tensor bytes are identical to `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`. We still owe
+the metadata-wrapped final file an exact-file AVX2 rerun for complete procedural parity.
 
 Replacing ARC-Easy-50 with the matched ARC-Easy-500 values gives **76.8104 for Qwen** and
-**75.1803 for Math-Expert** under the same fixed-15 AVX2 performance and RSS measurements. This is
-a larger-sample diagnostic, not an official profiler score.
+**75.1803 for Math-Expert**, under the same fixed-15 AVX2 performance and RSS measurements. This
+is a larger-sample diagnostic, not an official profiler score.
 
 ### Larger matched checks
 
@@ -527,15 +527,15 @@ a larger-sample diagnostic, not an official profiler score.
 | SciQ | 50 | **92%** | 88% |
 | GSM8K strict | 10 | 30% | 30% |
 
-Substituting the 500-item ARC-Easy estimates while keeping each model's directly measured
-throughput and RSS gives a diagnostic fixed-15 total of **72.7895 for Qwen** and **71.2324 for
-Math-Expert**. This is not an official profiler score. It is the reason Qwen is the lower-risk
-choice: it leads every larger matched check except the tied GSM8K sample.
+Substituting the 500-item ARC-Easy estimates, while keeping each model's directly measured
+throughput and RSS, gives a diagnostic fixed-15 total of **72.7895 for Qwen** and **71.2324 for
+Math-Expert**. This is not an official profiler score, but it is why we treat Qwen as the
+lower-risk choice: it leads every larger matched check except the tied GSM8K sample.
 
 ### Cohort-relative sensitivity
 
-The public-page formula was also retained. The table uses the AVX2 generation results, the larger
-ARC-Easy estimates, and `max(pre-entry floor, candidate TPS)` as the effective denominator so no
+We also kept the public-page formula. The table uses the AVX2 generation results, the larger
+ARC-Easy estimates, and `max(pre-entry floor, candidate TPS)` as the effective denominator, so no
 candidate receives performance above 100.
 
 | Pre-entry TPS floor | Qwen3.5 0.8B total | Math-Expert total | Higher result |
@@ -547,23 +547,25 @@ candidate receives performance above 100.
 | 100 | 54.9557 | **56.9499** | Math-Expert |
 | 150 | 52.2406 | **53.0267** | Math-Expert |
 
-These rows are sensitivity analysis. The cohort maximum and physical-laptop results are unknown.
+These rows are sensitivity analysis only. We don't know the cohort maximum or the
+physical-laptop results.
 
 ### Embedded template and live acceptance test
 
-The final Qwen file is tensor-identical to the pinned Q4_0 source. GGUF metadata adds the tutor
-policy, English language tag, sampling defaults and a ChatML template that forces non-thinking
-responses. The final file was rerun through the participant profiler after this rewrite.
+The final Qwen file is tensor-identical to the pinned Q4_0 source. Its GGUF metadata adds the
+tutor policy, an English language tag, sampling defaults, and a ChatML template that forces
+non-thinking responses. We reran the final file through the participant profiler after this
+rewrite.
 
-A deterministic four-prompt battery tested a profit calculation, fraction misconception, thermal
-energy calculation and proof that √2 is irrational. With unrestricted thinking, both finalists
-used the 256-token allowance on hidden reasoning and returned no usable answer. Disabling thinking
-produced direct answers. Both models still failed the proof prompt, and some Qwen answers reached
-the 256-token limit. This is a recorded quality limitation, not a pass.
+We ran a deterministic four-prompt battery: a profit calculation, a fraction misconception, a
+thermal-energy calculation, and a proof that √2 is irrational. With unrestricted thinking, both
+finalists spent the full 256-token allowance on hidden reasoning and returned no usable answer.
+Disabling thinking produced direct answers. Both models still failed the proof prompt, and some
+Qwen answers hit the 256-token limit. We record this as a quality limitation, not a pass.
 
 ### Submission decision
 
-The current recommendation is:
+Our current recommendation is:
 
 `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`
 
@@ -573,10 +575,10 @@ The current recommendation is:
 - source SHA-256: `444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c`;
 - transformation: metadata and chat-template rewrite only; no tensor change.
 
-Keep `Qwen3-0.6B-Math-Expert.Q4_K_M.gguf` as the alternative if the objective is restricted to the
+Keep `Qwen3-0.6B-Math-Expert.Q4_K_M.gguf` as the alternative, if the objective narrows to the
 current executable profiler's 50 ARC-Easy items. The broader evidence does not support replacing
-Qwen with Math-Expert. Neither result guarantees a hidden-panel win or measures thermal behaviour
-on the physical laptop.
+Qwen with Math-Expert. Neither result guarantees a hidden-panel win, and neither measures thermal
+behaviour on the physical laptop.
 
 The complete manifest, raw rows, direct profiler reports, live responses, generator and summary
 are in `bench/measurements/campaign-20260820-overnight/`.

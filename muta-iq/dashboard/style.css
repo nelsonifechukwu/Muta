@@ -320,27 +320,7 @@ math { font-family: var(--serif); }
 
 /* ------------------------------------------------------------ interactive */
 
-.score-lab, .sensitivity-lab, .streaming-lab {
-  margin: 34px 0; padding: 22px 24px;
-  background: var(--bg-soft); border: 1px solid var(--rule);
-}
-.score-output { color: var(--fg); font: 500 32px/1 var(--sans); letter-spacing: -.03em; }
-.score-output::before { content: "S = "; color: var(--fg4); font-size: 13px; letter-spacing: 0; }
-.controls-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.controls-grid label, .streaming-lab label, .sensitivity-lab > label {
-  color: var(--fg3); font: 13px/1.4 var(--sans);
-}
-.controls-grid output, .streaming-lab output, .sensitivity-lab output { color: var(--fg); font-family: var(--mono); }
-input[type="range"] { width: 100%; margin: 8px 0 0; accent-color: var(--official); }
-.toggle-control { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
 input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var(--official); }
-.score-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 20px; background: var(--rule); border: 1px solid var(--rule); }
-.score-part { position: relative; min-height: 68px; padding: 11px 12px; overflow: hidden; background: var(--bg); }
-.score-part::after { content: ""; position: absolute; inset: auto 0 0; height: var(--fill); background: var(--part-color); opacity: .12; }
-.score-part span, .score-part strong { position: relative; z-index: 1; display: block; font-family: var(--sans); }
-.score-part span { color: var(--fg4); font-size: 12px; }
-.score-part strong { margin-top: 7px; font-size: 18px; font-weight: 500; }
-.fine-print { margin: 14px 0 0; color: var(--fg4); font: var(--caption)/1.5 var(--sans); }
 
 /* ---------------------------------------------------------------- asides */
 
@@ -407,13 +387,6 @@ input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var
 .experiment-sequence strong { color: var(--adopted); font: 500 12px var(--sans); text-align: right; }
 .experiment-sequence article:not(:first-child) strong { color: var(--rejected); }
 
-.streaming-lab { display: grid; grid-template-columns: 220px 1fr; gap: 26px; }
-.controls-column label { display: block; margin: 16px 0; }
-.budget-result { margin: 22px 0 0; }
-.budget-result div { padding: 7px 0; border-top: 1px solid var(--rule); }
-.budget-result dt { color: var(--fg4); font: 12px var(--sans); }
-.budget-result dd { margin: 3px 0 0; font: 500 16px var(--sans); }
-.inset-figure { margin: 0; }
 
 .campaign-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin: 32px 0; }
 .campaign-summary-grid .report-figure { min-width: 0; margin: 0; }
@@ -457,7 +430,6 @@ input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var
 .models .avx2-winner-row { background: var(--avx2-soft); }
 .models .avx2-winner-row td { border-color: color-mix(in srgb, var(--avx2) 25%, var(--rule)); }
 
-.sensitivity-lab > label { display: block; }
 .sensitivity-result {
   display: flex; align-items: baseline; gap: 10px;
   margin: 18px 0 0; padding: 14px 0;
@@ -668,7 +640,7 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .lead { font-size: 17px; }
   .chapter { padding-top: 48px; }
   .controls-grid, .score-breakdown, .evidence-grid, .finding-pair,
-  .campaign-summary-grid, .streaming-lab { grid-template-columns: 1fr; }
+  .campaign-summary-grid { grid-template-columns: 1fr; }
   .regime-result-grid { grid-template-columns: 1fr; }
   .score-breakdown { gap: 1px; }
   .finding-pair { gap: 0; }
@@ -716,6 +688,6 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
     display: block; float: none; width: auto; margin: 10px 0 14px 20px;
     padding-left: 14px; border-left: 1px solid #999;
   }
-  .report-figure, .score-lab, .verdict, .equation-figure, .isa-policy { break-inside: avoid; }
+  .report-figure, .verdict, .equation-figure, .isa-policy { break-inside: avoid; }
   .reasoning-check div { display: block !important; }
 }

@@ -78,34 +78,34 @@ const EXPERIMENTS = [
   { status: "adopted", name: "Concurrency and cache caps", finding: "Two parallel slots, four checkpoints, and a 256 MiB cache stopped memory growth. The early Docker baseline rose from about 5.3 to 6.72 tok/s.", source: "runtime memory study" },
   { status: "adopted", name: "Six-thread runtime", finding: "Six batch and decode threads reached 31.09 tok/s, 83% of the estimated weight-bandwidth limit. Ten threads reduced decode throughput to approximately 4.4 tok/s.", source: "runtime thread sweep" },
   { status: "adopted", name: "Unified KV, two checkpoints", finding: "Unified KV and two checkpoints reduced retained state and improved prefill while holding decode near 31 tok/s on the development host.", source: "runtime memory study" },
-  { status: "rejected", name: "0.8B draft speculation", finding: "98.4% proposal acceptance still slowed native decode from 30.84 to 24.72 tok/s. Host RAM readings were flagged as unreliable, so no native memory delta is claimed.", source: "speculation study" },
+  { status: "rejected", name: "0.8B draft speculation", finding: "98.4% proposal acceptance still slowed native decode from 30.84 to 24.72 tok/s. We flagged host RAM readings as unreliable, so we do not claim a native memory delta.", source: "speculation study" },
   { status: "neutral", name: "N-gram speculation", finding: "A 12–22% acceptance rate did not offset lookup and verification overhead. The feature is disabled by default and uses no additional model memory.", source: "speculation study" },
-  { status: "rejected", name: "More threads", finding: "Throughput did not increase after memory bandwidth saturated. Ten threads reduced decode throughput to approximately 4.4 tok/s; temperature was not measured in this sweep.", source: "runtime thread sweep" },
-  { status: "rejected", name: "Disable mmap", finding: "Decode fell by about 28% and memory rose by about 1 GiB. The stock audit’s eager mmap policy cannot be changed by the submitted GGUF.", source: "runtime memory study" },
+  { status: "rejected", name: "More threads", finding: "Throughput stopped increasing once memory bandwidth saturated. Ten threads cut decode throughput to about 4.4 tok/s; we did not measure temperature in this sweep.", source: "runtime thread sweep" },
+  { status: "rejected", name: "Disable mmap", finding: "Decode fell by about 28% and memory rose by about 1 GiB. The submitted GGUF cannot change the stock audit’s eager mmap policy.", source: "runtime memory study" },
   { status: "neutral", name: "mlock", finding: "Pinning pages produced no repeatable throughput gain in the tested resident configuration.", source: "runtime memory study" },
   { status: "adopted", name: "No-repack product path", finding: "Avoiding runtime tensor conversion cut a tested 4B footprint from about 3,236 to 602 MiB. The campaign cannot use this engine-only change.", source: "runtime memory study" },
-  { status: "adopted", name: "Fixed context budget", finding: "Explicit context and KV limits replaced runtime defaults, fixing a memory variable for subsequent comparisons.", source: "runtime configuration" },
+  { status: "adopted", name: "Fixed context budget", finding: "We replaced runtime defaults with explicit context and KV limits, fixing a memory variable for later comparisons.", source: "runtime configuration" },
   { status: "adopted", name: "4B reasoning baseline", finding: "The 4B model exceeded the 2B model by 15.7 points across three STEM tasks. The later audit used a different kernel configuration and a separate accuracy proxy.", source: "model-scale study" },
   { status: "neutral", name: "IQ4_XS importance matrix", finding: "Task scores moved in both directions by roughly one or two items, with no reliable accuracy gain.", source: "quantization study" },
   { status: "adopted", name: "Uniform Qwen quant ladder", finding: "Under AVX2, Q4_K_M recorded the highest total. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and throughput was lower.", source: "quantization sweep" },
   { status: "rejected", name: "Mixed embedding and head precision", finding: "Q3_K_M with a Q6_K head fell to 66% ARC-Easy; IQ4_XS with a Q6_K head was slower and larger than uniform IQ4_XS.", source: "quantization sweep" },
-  { status: "neutral", name: "Vendor importance matrix", finding: "The Qwen K-quant ladder used the vendor matrix consistently, but its calibration corpus is unpublished. Dataset disjointness cannot be independently verified.", source: "quantization sweep" },
+  { status: "neutral", name: "Vendor importance matrix", finding: "The Qwen K-quant ladder used the vendor matrix consistently, but its calibration corpus is unpublished. We cannot independently verify dataset disjointness.", source: "quantization sweep" },
   { status: "neutral", name: "Metal offload", finding: "Hybrid 4B decode was neutral to slightly slower than CPU-only on the development Mac. GPU support remains optional.", source: "runtime optimisation study" },
-  { status: "deferred", name: "TinyStories TTFT preamble", finding: "A tiny warm-up model produced a 1.65 ms first chunk with a small resident cost, but licensing was unresolved and the feature is off by default.", source: "first-token latency study" },
+  { status: "deferred", name: "TinyStories TTFT preamble", finding: "A tiny warm-up model produced a 1.65 ms first chunk with a small resident cost, but we had not resolved licensing, so the feature stays off by default.", source: "first-token latency study" },
   { status: "adopted", name: "BitCPM vocabulary pruning", finding: "Pruning 73,448 tokens to 44,416 saved 164 MiB. English tokenisation matched across 20,464 checked tokens and perplexity changed from 10.558 to 10.473.", source: "vocabulary study" },
   { status: "rejected", name: "BitCPM TQ1_0 body", finding: "The file lost 340 MiB, but generic-kernel throughput fell 22%. The evaluator lacked the kernel needed to turn fewer bits into less work.", source: "ternary quantization study" },
-  { status: "rejected", name: "Head and embedding requants", finding: "At most 48 MiB was saved and the largest estimated total-score increase was approximately 0.14. Behavioural effects were not measured.", source: "mixed-precision study" },
+  { status: "rejected", name: "Head and embedding requants", finding: "We saved at most 48 MiB, and the largest estimated total-score gain was about 0.14. We did not measure behavioural effects.", source: "mixed-precision study" },
   { status: "rejected", name: "Low-rank factorisation", finding: "Ternary matrices remained full-rank. Rank-2048 factorisation error was about 0.80 before quantisation and exceeded 1 after it.", source: "factorisation study" },
   { status: "rejected", name: "Unstructured sparsity", finding: "Dense GGUF stores the zeros and the stock kernels still multiply them. There was no file or compute saving to score.", source: "sparsity study" },
   { status: "rejected", name: "Single-layer pruning", finding: "One Qwen layer gained about 3.7% speed but lost two ARC-Easy points. The accuracy cost exceeded the performance return.", source: "pruning study" },
-  { status: "deferred", name: "Qwen vocabulary pruning", finding: "Not attempted: the current tools cannot rewrite the GPT-2 BPE merges coherently. BitCPM’s verified vocabulary prune does not transfer automatically.", source: "vocabulary study" },
+  { status: "deferred", name: "Qwen vocabulary pruning", finding: "We have not attempted this: our current tools cannot rewrite the GPT-2 BPE merges coherently. BitCPM’s verified vocabulary prune does not transfer automatically.", source: "vocabulary study" },
   { status: "rejected", name: "Context metadata change", finding: "The profiler fixes prompt length at 512 tokens and generation length at 128 tokens. Context metadata does not change this workload.", source: "context study" },
-  { status: "rejected", name: "Custom tensor layout", finding: "The stock quantiser layout was retained. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "tensor-layout study" },
+  { status: "rejected", name: "Custom tensor layout", finding: "We kept the stock quantiser layout. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "tensor-layout study" },
   { status: "adopted", name: "Embedded chat template", finding: "The GGUF contains the chat template and tutoring persona, both verified on a live server. They affect evaluator responses but do not affect raw ARC or throughput measurements.", source: "prompt-format study" },
   { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "weight-streaming study" },
   { status: "adopted", name: "Runtime-conditional model choice", finding: "The expanded AVX2 search identifies Math-Expert Q4_K_M as the raw leader at 81.8803 using ARC-Easy-50. Qwen3.5 0.8B leads the larger 500-item AVX2 diagnostic, 76.8104 to 75.1803.", source: "expanded model search" },
   { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "quantization sweep" },
-  { status: "adopted", name: "Reproducible artifact build", finding: "The promoted candidate was rebuilt from its documented source and matched byte-for-byte after correcting a 32-byte metadata-name difference.", source: "artifact construction study" },
+  { status: "adopted", name: "Reproducible artifact build", finding: "We rebuilt the promoted candidate from its documented source. It matched byte-for-byte once we corrected a 32-byte metadata-name difference.", source: "artifact construction study" },
   { status: "adopted", name: "Direct participant-profiler campaign", finding: "Four models completed full participant runs. The 1.7B Q4_0 total exceeded the initially tested 0.8B Q4_K_M total by 0.92 points.", source: "direct profiler measurements" },
   { status: "adopted", name: "Portable AVX2 score of record", finding: "The combined ledger contains seven models from the quantization sweep and expanded search. Math-Expert Q4_K_M has the highest ARC-Easy-50 fixed-15 total at 81.8803; Qwen3.5 0.8B is the larger-sample choice.", source: "combined AVX2 comparison" },
   { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "future model-development study" },
@@ -113,62 +113,40 @@ const EXPERIMENTS = [
 
 const CHALLENGE_FAQ = [
   { q: "Will evaluation run without internet access?", rule: "Yes. The judging environment is offline.", progress: "The runtime resolves local files first, the promoted GGUF is stored locally, and the tutor has an offline launch path. A clean physical-target rehearsal remains." },
-  { q: "How is the final score calculated?", rule: "Accuracy carries 50%, performance 30%, and efficiency 20%, with a thermal penalty and hard-failure rules.", progress: "The executable formula is implemented and tested. This report keeps the public cohort-relative formula in a separate sensitivity lane." },
-  { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is evaluated on the standard laptop profile.", progress: "Development used an M2 Mac and a GCP x86 proxy. Mac results are classified as development evidence." },
+  { q: "How is the final score calculated?", rule: "Accuracy carries 50%, performance 30%, and efficiency 20%, with a thermal penalty and hard-failure rules.", progress: "We implemented and tested the executable formula. This report keeps the public cohort-relative formula in a separate sensitivity lane." },
+  { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is evaluated on the standard laptop profile.", progress: "We developed on an M2 Mac and a GCP x86 proxy. We classify Mac results as development evidence." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
   { q: "What does cross-disciplinary integration require?", rule: "The model must depend substantively on another deep-tech discipline.", progress: "Muta plans to combine scientific tutoring with verified mathematics and local retrieval. Several relevant routes remain incomplete or return 501, so this requirement is not yet satisfied." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The latest AVX2 score leader is the public Math-Expert Qwen3 fine-tune. The risk-adjusted Qwen3.5 recommendation remains derived from an official Qwen checkpoint. Their source models, licences, and transformations are documented." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The latest AVX2 score leader is the public Math-Expert Qwen3 fine-tune. The risk-adjusted Qwen3.5 recommendation still derives from an official Qwen checkpoint. We document both models’ source, licence, and transformation." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
   { q: "How is the team identified in the artifact?", rule: "Submission metadata must identify the registered team.", progress: "The current metadata uses team ID `team-muta`. Registration details still need a final submission check." },
-  { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "The current Qwen3 base uses an open licence. Its source model, conversion method, licence, and artifact size are documented." },
-  { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "The submitted GGUFs were measured under matched scalar and AVX2 configurations. Custom streaming and lazy-mmap engines are excluded from the scoring claim." },
+  { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "The current Qwen3 base uses an open licence. We document its source model, conversion method, licence, and artifact size." },
+  { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "We measured the submitted GGUFs under matched scalar and AVX2 configurations. Custom streaming and lazy-mmap engines stay out of the scoring claim." },
   { q: "What is the maximum model size?", rule: "The practical limit is the 7 GB memory ceiling on the standard machine.", progress: "The direct campaign spans about 0.50–2.31 GiB peak model footprints, all below the ceiling. Whole-tree RSS remains the unit of record." },
-  { q: "Where should the final benchmark be run?", rule: "The organiser evaluates the artifact on its standard hardware; local results are preparatory.", progress: "Full participant runs exist on a four-vCPU GCP x86 proxy under the competition procedure. Package temperature and physical-laptop bandwidth remain unmeasured." },
+  { q: "Where should the final benchmark be run?", rule: "The organiser evaluates the artifact on its standard hardware; local results are preparatory.", progress: "We have full participant runs on a four-vCPU GCP x86 proxy under the competition procedure. Package temperature and physical-laptop bandwidth remain unmeasured." },
   { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "The repository contains the model metadata, reproducible experiments, runtime, and this report. Final packaging, the two submission prompts, and the video remain incomplete." },
   { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "On the controlled AVX2 proxy, both latest finalists reach S_perf 100.00. Estimated S_eff is 89.40 for Math-Expert and 87.05 for Qwen3.5. The corresponding ARC-Easy values remain internal accuracy proxies, not submitted S_acc values." },
-  { q: "Is the whole application evaluated, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "Product improvements are recorded separately from model-only evidence. Retrieval, the custom streamer, and UI changes are excluded from the GGUF campaign score." },
+  { q: "Is the whole application evaluated, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "We record product improvements separately from model-only evidence. Retrieval, the custom streamer, and UI changes stay out of the GGUF campaign score." },
   { q: "How many prompts are visible before submission?", rule: "The FAQ describes two visible prompts plus hidden tests.", progress: "The local profiler path covers the visible task shape and accuracy proxies. Hidden-prompt performance remains unknown by design." },
   { q: "How is temperature handled?", rule: "Temperature is checked around evaluation and can trigger a 10-point penalty above the threshold or when throttling is detected.", progress: "The GCP host exposed no usable package sensor and reported no throttling. Temperature is recorded as unavailable." },
-  { q: "Can the system have an optional online mode?", rule: "The judged path must work offline; optional network features cannot be required.", progress: "Muta’s core runtime, model, retrieval plan, and UI are designed for offline use. Deployment uses local artifacts; network provisioning is a development fallback." },
+  { q: "Can the system have an optional online mode?", rule: "The judged path must work offline; optional network features cannot be required.", progress: "We designed Muta’s core runtime, model, retrieval plan, and UI for offline use. Deployment uses local artifacts; network provisioning is only a development fallback." },
   { q: "How should the African use case be demonstrated?", rule: "The use case should solve a concrete African problem; language support is not mandatory.", progress: "The current case is an offline tutor for bandwidth-constrained classrooms and budget laptops. Benchmark evidence alone is insufficient; the product claim still needs classroom evidence." },
-  { q: "What should the demo video show?", rule: "The video should demonstrate the working entry under the stated constraints.", progress: "A final video has not been recorded." },
+  { q: "What should the demo video show?", rule: "The video should demonstrate the working entry under the stated constraints.", progress: "We have not recorded a final video yet." },
 ];
 
 const svgText = (x, y, value, attrs = "") => `<text x="${x}" y="${y}" ${attrs}>${esc(value)}</text>`;
 
 function initReport() {
-  renderScoreLab();
   renderRuntimeChart();
   renderModelFunnelChart();
   renderStreamingChart();
   renderOfficialCharts();
   renderLedger("adopted");
   renderFaq();
-  updateStreamingBudget();
   updateReadingProgress();
   updateActiveChapter();
-}
-
-function renderScoreLab() {
-  const accuracy = Number($("score-accuracy").value);
-  const tps = Number($("score-tps").value);
-  const ram = Number($("score-ram").value);
-  const penalty = $("score-thermal").checked ? 10 : 0;
-  const sPerf = Math.min(tps / 15, 1) * 100;
-  const sEff = Math.max(0, (7 - ram) / 7) * 100;
-  const parts = [
-    { label: "Accuracy × 0.50", value: accuracy * .5, color: "#1b6ca8" },
-    { label: "Performance × 0.30", value: sPerf * .3, color: "#427b58" },
-    { label: "Efficiency × 0.20", value: sEff * .2, color: "#b57614" },
-    { label: "Thermal penalty", value: -penalty, color: "#ad2111" },
-  ];
-  $("score-accuracy-value").value = accuracy.toFixed(0);
-  $("score-tps-value").value = tps.toFixed(2);
-  $("score-ram-value").value = ram.toFixed(2);
-  $("score-total").value = (parts.reduce((sum, part) => sum + part.value, 0)).toFixed(2);
-  $("score-breakdown").innerHTML = parts.map((part) => `<div class="score-part" style="--fill:${Math.abs(part.value) * 2}%;--part-color:${part.color}"><span>${esc(part.label)}</span><strong>${part.value >= 0 ? "+" : ""}${part.value.toFixed(2)}</strong></div>`).join("");
 }
 
 function renderRuntimeChart() {
@@ -260,20 +238,6 @@ function renderOfficialCharts() {
   scatterEl.innerHTML=`<svg viewBox="0 0 ${sw} ${sh}" aria-hidden="true"><style>.svg-grid{stroke:#e6e2db}.svg-tick{font-size:8px;fill:#8a8580}.scatter-point{fill:#9dbcd5;fill-opacity:.9;stroke:#fff;stroke-width:2}.scatter-point.selected{fill:#af3a03}.scatter-label{font-size:7.5px;fill:#6b6866}.scatter-label.selected{fill:#af3a03;font-weight:800}</style>${grid}${pts}${svgText(sw/2,sh-3,"Peak RSS (MiB)",'text-anchor="middle" class="svg-axis"')}</svg>`;
 }
 
-function updateStreamingBudget() {
-  const tps = Number($("streaming-tps").value);
-  const bandwidth = Number($("streaming-bandwidth").value);
-  const interval = 1000 / tps;
-  const slack = Math.max(0, interval - 48);
-  const mb = slack / 1000 * bandwidth * 1000;
-  $("streaming-tps-value").value = tps.toFixed(1).replace(".0", "");
-  $("streaming-bandwidth-value").value = bandwidth.toFixed(2);
-  $("streaming-interval").textContent = `${interval.toFixed(1)} ms`;
-  $("streaming-slack").textContent = `${slack.toFixed(1)} ms`;
-  $("streaming-budget").textContent = `${mb.toFixed(0)} MB/token`;
-  $("streaming-share").textContent = `${(mb / 2200 * 100).toFixed(1)}%`;
-}
-
 function renderLedger(filter) {
   const rows = EXPERIMENTS.filter((item) => filter === "all" || item.status === filter);
   $("experiment-ledger").innerHTML = rows.map((item) => `<article class="ledger-entry"><span class="ledger-status ${item.status}">${item.status === "neutral" ? "No clear gain" : esc(item.status)}</span><h3>${esc(item.name)}</h3><p>${esc(item.finding)}</p><span class="ledger-source">${esc(item.source)}</span></article>`).join("");
@@ -281,47 +245,6 @@ function renderLedger(filter) {
 
 function renderFaq() {
   $("faq-list").innerHTML = CHALLENGE_FAQ.map((item, i) => `<details class="faq-item"><summary><span class="faq-number">${String(i + 1).padStart(2, "0")}</span><span class="faq-question">${esc(item.q)}</span></summary><div class="faq-body"><div><h4>Challenge rule</h4><p>${esc(item.rule)}</p></div><div><h4>Muta progress</h4>${item.progress ? `<p>${esc(item.progress)}</p>` : '<div class="empty-progress" aria-label="No Muta progress recorded"></div>'}</div></div></details>`).join("");
-}
-
-function renderSensitivity(campaign, overnight) {
-  if (!campaign || !$("sensitivity-floor")) return;
-  const allowed = campaign.tps_max_sensitivity || [];
-  const index = Math.max(0, Math.min(allowed.length - 1, Math.round(Number($("sensitivity-floor").value))));
-  const floor = allowed[index] || 15;
-  $("sensitivity-floor").value = index;
-  $("sensitivity-floor-value").value = floor;
-  const lookup = (mapping) => mapping && (mapping[String(floor)] || mapping[Number(floor).toFixed(1)]);
-  const historical = (campaign.models || [])
-    .map((model) => ({ name: model.model, score: lookup(model.scores), current: false }))
-    .filter((entry) => entry.score);
-  const latest = overnight && overnight.finalists ? Object.values(overnight.finalists).map((entry) => {
-    const avx2 = entry.avx2_fixed_15;
-    const tps = Number(avx2.tg128_tps);
-    const rssGiB = Number(avx2.estimated_profiler_rss_mib) / 1024;
-    const sPerf = 100 * tps / Math.max(Number(floor), tps);
-    const sEff = 100 * Math.max(0, 7 - rssGiB) / 7;
-    const sTotal = .5 * Number(entry.official.arc_easy_50) + .3 * sPerf + .2 * sEff;
-    return {name: entry.official.model, score: {s_total: sTotal}, current: true};
-  }) : [];
-  const models = [...latest, ...historical].sort((a,b)=>b.score.s_total-a.score.s_total);
-  const winner = models[0];
-  const label = (file) => ({
-    "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": "Qwen3.5 0.8B final",
-    "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": "Math-Expert 0.6B",
-    "muta-tutor-qwen3-1.7b-q4_0.gguf": "Qwen3 1.7B Q4_0",
-    "Qwen3-1.7B-Q4_0-pure.gguf": "Qwen3 1.7B pure",
-    "bitcpm4-8b-tq2_0-envocab.gguf": "BitCPM4 8B TQ2_0",
-  }[file] || shortName(file));
-  $("sensitivity-winner").textContent = winner ? label(winner.name) : "No result at this floor";
-  $("sensitivity-winner-score").textContent = winner ? `S = ${Number(winner.score.s_total).toFixed(2)}` : "";
-  const el = $("sensitivity-chart");
-  const width=700, left=190, right=42, rowH=30, height=Math.max(130,models.length*rowH+35), plotW=width-left-right;
-  const rows=models.map((entry,i)=>{const y=8+i*rowH, w=Math.min(100,entry.score.s_total)/100*plotW;return `${svgText(left-8,y+13,label(entry.name),'text-anchor="end" class="sens-label"')}<rect x="${left}" y="${y}" width="${w}" height="17" rx="2" class="sens-bar ${i===0?'winner':''} ${entry.current?'current':''}"/>${svgText(left+w+6,y+13,Number(entry.score.s_total).toFixed(2),'class="sens-value"')}`}).join("");
-  el.innerHTML=`<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.sens-label{font-size:8px;fill:#6b6866}.sens-bar{fill:#d3bdca}.sens-bar.current{fill:#9dbcd5}.sens-bar.winner{fill:#8f3f71}.sens-value{font-size:8px;fill:#504945;font-weight:700}</style>${rows}</svg>`;
-  $("sensitivity-chart-summary").textContent = models.length
-    ? `At a ${floor} token-per-second cohort floor: ` + models.map((entry) =>
-      `${label(entry.name)} scores ${Number(entry.score.s_total).toFixed(2)}`).join("; ") + "."
-    : `No website-relative model scores are available at a ${floor} token-per-second cohort floor.`;
 }
 
 function updateReadingProgress() {
@@ -378,7 +301,6 @@ function render() {
   renderRunCard(d);
   renderChart(d);
   renderTable(d);
-  renderSensitivity(d.campaign_alternative, d.overnight);
 }
 
 function renderOvernight(campaign) {
@@ -1063,16 +985,6 @@ document.addEventListener("keydown", (ev) => {
 
 $("quick-toggle").addEventListener("change", (ev) => { state.quick = ev.target.checked; });
 
-for (const id of ["score-accuracy", "score-tps", "score-ram", "score-thermal"]) {
-  $(id).addEventListener("input", renderScoreLab);
-}
-for (const id of ["streaming-tps", "streaming-bandwidth"]) {
-  $(id).addEventListener("input", updateStreamingBudget);
-}
-$("sensitivity-floor").addEventListener("input", () => renderSensitivity(
-  state.data && state.data.campaign_alternative,
-  state.data && state.data.overnight,
-));
 document.addEventListener("click", (ev) => {
   const filter = ev.target.closest && ev.target.closest("[data-ledger-filter]");
   if (!filter) return;
