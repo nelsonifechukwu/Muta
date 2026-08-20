@@ -12,12 +12,16 @@ def test_model_recipe_hashes_and_winner_metadata_match_catalog():
     catalog = json.loads((ROOT / "runtime" / "model-catalog.json").read_text())
     models = {model["id"]: model for model in catalog["models"]}
     winner_recipe = (ROOT / "muta-iq" / "download_model.sh").read_text()
+    qwen25_recipe = (ROOT / "muta-iq" / "fetch_qwen25.sh").read_text()
     math_expert_recipe = (ROOT / "muta-iq" / "fetch_math_expert.sh").read_text()
     bitcpm_recipe = (ROOT / "muta-iq" / "fetch_bitcpm.sh").read_text()
 
     assert models["muta-tutor-qwen3.5-0.8b-q4_0"]["sha256"] in winner_recipe
     assert models["muta-tutor-qwen3.5-0.8b-q4_0"]["size_bytes"] == 507_148_832
     assert '--set-name "Muta Tutor (Qwen3.5-0.8B)"' in winner_recipe
+    assert models["qwen2.5-1.5b-instruct-q4_k_m"]["sha256"] in qwen25_recipe
+    assert str(models["qwen2.5-1.5b-instruct-q4_k_m"]["size_bytes"]) in qwen25_recipe
+    assert "91cad51170dc346986eccefdc2dd33a9da36ead9" in qwen25_recipe
     assert models["qwen3-0.6b-math-expert-q4_k_m"]["sha256"] in math_expert_recipe
     assert str(models["qwen3-0.6b-math-expert-q4_k_m"]["size_bytes"]) in math_expert_recipe
     assert models["bitcpm4-8b-tq2_0-envocab"]["sha256"] in bitcpm_recipe

@@ -14,6 +14,18 @@
       "recommended": true
     },
     {
+      "id": "qwen2.5-1.5b-instruct-q4_k_m",
+      "label": "Qwen2.5 1.5B · Q4_K_M",
+      "kind": "local",
+      "path": "muta-iq/model/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "size_bytes": 1117320736,
+      "description": "Vector-path candidate: 71.8% ARC-Easy over 500 questions and 17.23 decode tok/s on the GCP proxy.",
+      "arc_easy": 0.718,
+      "audit_proxy_tps": 5.69,
+      "recommended": false
+    },
+    {
       "id": "qwen3-0.6b-math-expert-q4_k_m",
       "label": "Math-Expert · Qwen3 0.6B",
       "kind": "local",

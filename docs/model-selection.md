@@ -8,6 +8,7 @@ experiment/control surface, not a claim that the biggest model is the best compe
 | id | role | exact artifact | benchmark evidence |
 |---|---|---|---|
 | `muta-tutor-qwen3.5-0.8b-q4_0` | default / risk-adjusted recommendation | 507,148,832 bytes; SHA-256 `c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b` | direct Scalar: ARC-Easy-50 0.64 and 12.63 tok/s; the matched 500-item check leads the two finalists at 0.588 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | vector-path candidate | 1,117,320,736 bytes; SHA-256 `6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e` | ARC-Easy-500 0.718; 5.69 Scalar and 17.23 vector decode tok/s on the GCP proxy |
 | `qwen3-0.6b-math-expert-q4_k_m` | raw-score alternative | 396,706,176 bytes; SHA-256 `7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1` | direct Scalar: ARC-Easy-50 0.68 and 12.72 tok/s; highest current fixed-15 Scalar and AVX2 total |
 | `muta-tutor-qwen3-1.7b-q4_0` | previous recommendation | 974,198,528 bytes; SHA-256 `a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e` | retained for comparison with the earlier campaign |
 | `bitcpm4-8b-tq2_0-envocab` | accuracy experiment | 2,208,746,208 bytes; SHA-256 `069621f168502215839fb82db3afe35beb8e5350fb6cbf8523aa1eea6bee237d` | ARC-Easy 0.84; generic/audit proxy 3.92 tok/s, so its overall score loses despite the accuracy lead |
@@ -27,6 +28,16 @@ Run once while online for the recommended default:
 
 This downloads the pinned Qwen3.5 0.8B Q4_0 source, verifies it, bakes the tutor metadata, and
 accepts only the catalog hash.
+
+For the Qwen2.5 1.5B vector-path candidate:
+
+```bash
+./muta-iq/fetch_qwen25.sh
+```
+
+The script downloads the exact official Qwen Q4_K_M artifact from a pinned source revision and
+accepts it only when both its byte size and SHA-256 match the runtime catalog. This is the base
+instruction model used in the benchmark; Muta supplies its tutor prompt at runtime.
 
 For the Math-Expert alternative:
 
