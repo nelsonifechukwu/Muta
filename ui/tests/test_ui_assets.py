@@ -83,3 +83,23 @@ def test_streaming_only_follows_while_the_reader_is_near_the_bottom():
     assert "!autoFollow" in helper.group("body")
     assert 'chatScroller.addEventListener("scroll"' in js
     assert "autoFollow = nearChatBottom()" in js
+
+
+def test_chat_generation_is_server_owned_and_recovered_after_reload():
+    js = (UI / "app.js").read_text()
+    assert 'fetch("/v1/chat/generations"' in js, "UI must start a durable gateway job"
+    assert "/stream?after=${job.framesSeen}" in js, "reconnect must resume from a frame offset"
+    assert "await recoverGenerations()" in js, "startup must discover generations already running"
+    assert "const generationJobs = new Map()" in js, "generation state must be per job, not global"
+    assert 'fetch("/v1/chat/stream"' not in js, "a page-owned POST stream stops on refresh"
+
+
+def test_switching_conversations_detaches_rendering_without_stopping_the_job():
+    js = (UI / "app.js").read_text()
+    load = re.search(
+        r"async function loadConversation\(cid\)\s*\{(?P<body>.*?)\n\}", js, re.DOTALL
+    )
+    assert load
+    body = load.group("body")
+    assert "leaving.handle = null" in body
+    assert "stopGeneration" not in body

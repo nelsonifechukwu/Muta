@@ -83,6 +83,10 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .conv-item:hover { background: rgba(0, 0, 0, 0.04); }
 .conv-item.active { background: var(--accent-soft); }
+.conv-generating {
+  flex: none; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent-strong); animation: think-pulse 1.4s ease-in-out infinite;
+}
 .conv-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conv-del {
   visibility: hidden; border: none; background: none; cursor: pointer;

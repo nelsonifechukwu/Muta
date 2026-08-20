@@ -42,22 +42,26 @@ async function ensureAuth() {
 }
 
 let conversationId = null;
-let generating = false;
-// The reply currently in flight, kept OUTSIDE the DOM so leaving its conversation cannot
-// destroy it: { cid, handle, preamble, reasoning, content }. `handle` is re-pointed at a
-// fresh bubble when the student comes back, and the three buffers are what gets replayed
-// into it. Null whenever nothing is streaming.
-let live = null;
+// Chat inference is owned by the gateway. Each entry mirrors one replayable server job and
+// keeps only view state in the browser; losing this Map on refresh is harmless because
+// recoverGenerations() rebuilds it from GET /v1/chat/generations.
+const generationJobs = new Map(); // job id -> {id, cid, handle, buffers, item, ...}
+const startingConversations = new Set(); // prevent duplicate sends while POST /generations starts
+let voiceGenerating = false;
+// Kept false until the Settings UI lands; the per-conversation machinery itself is already
+// capable of parallel jobs, while this gate preserves today's one-chat product behaviour.
+let allowParallelChats = false;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
 let messageQueue = []; // {typed, attachments} — sent one by one when the tutor is free
-let currentAbort = null; // AbortController while a *chat* stream runs (voice has its own barge)
 let telemetrySource = null;
 let telemetryCloseTimer = null;
 // Reasoning effort for new turns: "off" (direct answer) | "auto" (think first) | "extended".
 let thinkingLevel = localStorage.getItem("muta-thinking") || "auto";
-let currentItem = null; // the item the active stream is answering (for "Answer now")
-let pendingRegen = null; // set by "Answer now": re-dispatch this item with thinking off
 let modelCatalog = null;
+
+const anyGeneration = () => voiceGenerating || generationJobs.size > 0 || startingConversations.size > 0;
+const jobForConversation = (cid = conversationId) =>
+  [...generationJobs.values()].find((job) => job.cid === cid && !job.terminal) || null;
 
 const $ = (sel) => document.querySelector(sel);
 const messagesEl = $("#messages");
@@ -334,6 +338,7 @@ function beginAssistantMessage(onAnswerNow) {
   };
 
   return {
+    element: wrap,
     pushPreamble(t) {
       if (preamble.hidden) {
         preamble.hidden = false;
@@ -471,16 +476,26 @@ async function refreshSidebar() {
     list.innerHTML = "";
     for (const c of body.conversations) {
       const item = document.createElement("div");
-      item.className = "conv-item" + (c.id === conversationId ? " active" : "");
+      const backgroundJob = jobForConversation(c.id);
+      item.className = "conv-item" +
+        (c.id === conversationId ? " active" : "") +
+        (backgroundJob ? " generating" : "");
       const title = document.createElement("span");
       title.className = "conv-title";
       title.textContent = c.title || "Untitled";
+      if (backgroundJob) {
+        const dot = document.createElement("span");
+        dot.className = "conv-generating";
+        dot.title = "Replying in the background";
+        item.appendChild(dot);
+      }
       const del = document.createElement("button");
       del.className = "conv-del";
       del.textContent = "✕";
       del.title = "Delete conversation";
       del.addEventListener("click", async (ev) => {
         ev.stopPropagation();
+        if (backgroundJob) await stopGeneration(backgroundJob);
         await fetch(`/v1/conversations/${c.id}`, { method: "DELETE", headers: authHeaders() });
         if (c.id === conversationId) newChat();
         refreshSidebar();
@@ -495,42 +510,55 @@ async function refreshSidebar() {
 }
 
 async function loadConversation(cid) {
-  // Leaving a conversation no longer cancels its reply. It used to: the stream was aborted
-  // and the partial left to the server, so coming back showed a truncated answer at best —
-  // and usually nothing, because the partial was not durable yet. The stream now runs on,
-  // and `live` carries it across the switch.
+  // Detach only the view. The gateway owns the job and our subscription keeps buffering it.
+  const leaving = jobForConversation();
+  if (leaving) {
+    leaving.handle = null;
+    leaving.telemetryOpened = false;
+  }
+  closeTelemetry(0);
   discardQueue(); // queued messages were aimed at the thread we're leaving
   const r = await fetch(`/v1/conversations/${cid}/messages`, { headers: authHeaders() });
   if (!r.ok) return toast("Couldn't load that conversation.");
   const body = await r.json();
   conversationId = cid;
   messagesEl.innerHTML = "";
-  const restoring = live && live.cid === cid;
+  const restoring = jobForConversation(cid);
   let messages = body.messages;
   // The server writes a streaming reply through to its row as it arrives, so the in-flight
-  // turn is already in this history — as a snapshot that is at most a moment old. `live`
-  // holds the same text plus whatever landed since, so drop the row and replay the buffer.
+  // turn is already in this history — as a snapshot that is at most a moment old. The job
+  // replay buffer holds the same text plus whatever landed since, so drop the partial row.
   if (restoring && messages.length && messages[messages.length - 1].role === "assistant") {
     messages = messages.slice(0, -1);
   }
   emptyStateEl.style.display = messages.length ? "none" : "";
   for (const m of messages) renderHistoryMessage(m);
-  if (restoring) reattachLive();
+  if (restoring) {
+    reattachJob(restoring);
+    openTelemetry(restoring.cid);
+    restoring.telemetryOpened = true;
+  }
   refreshSidebar();
   syncComposerState(); // the send button is only a Stop button in the streaming thread
   scrollToBottom({ force: true });
 }
 
-/** Re-render the in-flight reply into a fresh bubble and point the stream at it. */
-function reattachLive() {
+/** Re-render one in-flight reply into a fresh bubble and point its subscription at it. */
+function reattachJob(job) {
   const handle = beginAssistantMessage(null); // no "Answer now" on a resumed view
-  if (live.preamble) handle.pushPreamble(live.preamble);
-  if (live.reasoning) handle.pushThought(live.reasoning);
-  if (live.content) handle.pushDelta(live.content);
-  live.handle = handle;
+  if (job.preamble) handle.pushPreamble(job.preamble);
+  if (job.reasoning) handle.pushThought(job.reasoning);
+  if (job.content) handle.pushDelta(job.content);
+  job.handle = handle;
 }
 
 function newChat() {
+  const leaving = jobForConversation();
+  if (leaving) {
+    leaving.handle = null;
+    leaving.telemetryOpened = false;
+  }
+  closeTelemetry(0);
   discardQueue();
   conversationId = null;
   pendingAttachments = [];
@@ -556,7 +584,7 @@ function readingAnImage() {
 /** True when the reply in flight belongs to the conversation on screen. A stream in another
  *  thread must not be stoppable from here — the Stop button has to mean "this reply". */
 function viewingLiveStream() {
-  return currentAbort != null && (!live || live.cid == null || live.cid === conversationId);
+  return jobForConversation();
 }
 
 function syncComposerState() {
@@ -568,19 +596,32 @@ function syncComposerState() {
   $("#btn-mic").disabled = switchingModel;
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
   // voice reply (generating without a chat stream) the mic button owns interruption.
-  sendBtn.disabled = switchingModel || busy || (generating && !streaming);
-  sendBtn.classList.toggle("stop", streaming);
+  sendBtn.disabled = switchingModel || busy || voiceGenerating || startingConversations.has(conversationId);
+  sendBtn.classList.toggle("stop", Boolean(streaming));
   sendBtn.title = streaming ? "Stop the reply (Esc)" : "Send";
   const modelSelect = $("#model-select");
   if (modelSelect) {
     const hasChoice = modelCatalog?.selection_enabled
       && modelCatalog.models?.some((model) => model.available);
-    modelSelect.disabled = generating || modelSelect.dataset.switching === "true" || !hasChoice;
+    modelSelect.disabled = anyGeneration() || modelSelect.dataset.switching === "true" || !hasChoice;
   }
 }
 
-function stopGeneration() {
-  if (currentAbort) currentAbort.abort();
+async function stopGeneration(job = viewingLiveStream()) {
+  if (!job || job.stopping) return;
+  job.stopping = true;
+  syncComposerState();
+  try {
+    const response = await fetch(`/v1/chat/generations/${job.id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
+  } catch {
+    job.stopping = false;
+    syncComposerState();
+    toast("Couldn't stop that reply yet — it is still running.");
+  }
 }
 
 function renderChips() {
@@ -814,11 +855,18 @@ function discardQueue() {
   renderQueue();
 }
 
-function drainQueue() {
-  if (generating) return;
+function drainQueue(cid = conversationId) {
+  if (cid !== conversationId || voiceGenerating || jobForConversation(cid)) return;
   const next = messageQueue.shift();
   renderQueue();
   if (next) dispatch(next);
+}
+
+function restoreDraft(item) {
+  inputEl.value = item.typed;
+  pendingAttachments = item.attachments;
+  renderChips();
+  autoGrow();
 }
 
 function send(steer = false) {
@@ -835,120 +883,148 @@ function send(steer = false) {
   inputEl.value = "";
   autoGrow();
 
-  if (generating) {
-    // A reply running in a *different* thread must not be queued into this one — the queue
-    // drains into whatever conversation is open when the stream ends, which would post this
-    // message to the wrong conversation.
-    if (!viewingLiveStream() && live) {
-      // Hand the student's draft back exactly as it was — text and attachments — rather
-      // than swallowing it.
-      inputEl.value = item.typed;
-      pendingAttachments = item.attachments;
-      renderChips();
-      autoGrow();
-      return toast("Finish or stop the reply in the other chat first.");
-    }
+  const currentJob = viewingLiveStream();
+  if (currentJob) {
     // Human in the loop: Enter while the tutor talks queues the message; Ctrl+Enter steers —
     // it cuts the current reply short (partial is persisted) and sends this message next,
     // ahead of anything already queued. A voice reply can't be stopped from the keyboard
     // (the mic button owns barge-in), so steering degrades to queueing there.
-    if (steer && currentAbort) {
+    if (steer) {
       messageQueue.unshift(item);
       renderQueue();
-      stopGeneration(); // dispatch's finally drains the queue straight away
+      stopGeneration(currentJob); // finishGeneration drains the correction straight away
     } else {
       messageQueue.push(item);
       renderQueue();
     }
     return;
   }
+  if (voiceGenerating) {
+    messageQueue.push(item);
+    renderQueue();
+    return;
+  }
+  if (!allowParallelChats && generationJobs.size) {
+    restoreDraft(item);
+    return toast("A reply is running in another chat. Enable multiple chats in Settings to continue here.");
+  }
   dispatch(item);
 }
 
 async function dispatch(item, opts = {}) {
-  const { regenerate = false, thinking = thinkingLevel } = opts;
+  const {
+    regenerate = false,
+    thinking = thinkingLevel,
+    conversationOverride = conversationId,
+  } = opts;
   const message = composeOutgoingMessage(item.typed, item.attachments);
   const attachmentIds = item.attachments.map((a) => a.id).filter((id) => id != null);
+  const startedIn = conversationOverride;
+  const startKey = startedIn;
+  if (startingConversations.has(startKey) || jobForConversation(startedIn)) return;
 
   // A regenerate ("answer now") re-answers the turn already on screen, so it neither adds a
   // new user bubble nor re-links attachments — the backend re-runs the last user turn.
-  if (!regenerate) addUserMessage(item.typed || "(from my image)", item.attachments);
+  const renderingHere = conversationId === startedIn;
+  if (!regenerate && renderingHere) addUserMessage(item.typed || "(from my image)", item.attachments);
   // "Answer now" is offered while the tutor is thinking: it cancels this stream and asks for
   // a direct answer to the same question. Not offered on a regenerate (it is already the
   // direct answer — thinking is off — so it can't loop).
-  const assistant = beginAssistantMessage(
-    regenerate ? null : () => {
-      pendingRegen = item;
-      stopGeneration();
-    },
-  );
-  // Everything the stream produces goes here as well as to the DOM, so that leaving this
-  // conversation costs nothing: `reattachLive` replays these buffers into a new bubble.
-  live = { cid: conversationId, handle: assistant, preamble: "", reasoning: "", content: "" };
-  const startedIn = conversationId;
-  currentItem = item;
-  generating = true;
-  currentAbort = new AbortController();
+  let job = null;
+  const assistant = renderingHere
+    ? beginAssistantMessage(
+        regenerate ? null : () => {
+          if (!job) return;
+          job.pendingRegen = item;
+          stopGeneration(job);
+        },
+      )
+    : null;
+  startingConversations.add(startKey);
   syncComposerState();
 
   try {
-    const res = await fetch("/v1/chat/stream", {
+    const res = await fetch("/v1/chat/generations", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...authHeaders() },
       body: JSON.stringify({
         student_id: studentId,
         message,
-        // The thread this turn belongs to, captured at dispatch — not `conversationId`,
-        // which now follows whatever the student is looking at.
         conversation_id: startedIn,
         attachment_ids: regenerate ? [] : attachmentIds,
         use_web: useWeb,
         thinking,
         regenerate,
       }),
-      signal: currentAbort.signal,
     });
     if (!res.ok) {
       const detail = (await res.json().catch(() => ({}))).detail;
-      live.handle.fail(detail || `The tutor couldn't answer (HTTP ${res.status}).`);
+      if (assistant) assistant.fail(detail || `The tutor couldn't answer (HTTP ${res.status}).`);
       return;
     }
-    await pumpSse(res);
-  } catch (err) {
-    // `live.handle`, not `assistant`: after a switch away and back these are different
-    // bubbles, and the message belongs on the one currently on screen.
-    if (err && err.name === "AbortError") {
-      // A deliberate stop. If it was "Answer now", the finally re-dispatches — don't flash a
-      // "Stopped" first; just drop this bubble. Otherwise the partial reply is saved as-is.
-      if (pendingRegen) live.handle.remove();
-      else live.handle.fail("Stopped.");
-    } else {
-      live.handle.fail("Lost the connection mid-answer — the partial reply is saved.");
-    }
-  } finally {
-    generating = false;
-    live = null;
-    currentAbort = null;
-    currentItem = null;
-    syncComposerState();
-    closeTelemetry();
+    const started = await res.json();
+    const stillHere = conversationId === startedIn;
+    if (stillHere) conversationId = started.conversation_id;
+    job = {
+      id: started.job_id,
+      cid: started.conversation_id,
+      handle: stillHere ? assistant : null,
+      preamble: "",
+      reasoning: "",
+      content: "",
+      item,
+      pendingRegen: null,
+      framesSeen: 0,
+      terminal: false,
+      stopping: false,
+      telemetryOpened: false,
+    };
+    generationJobs.set(job.id, job);
     refreshSidebar();
-    if (pendingRegen) {
-      // "Answer now": re-answer the same turn directly, no thinking, no duplicate question.
-      const again = pendingRegen;
-      pendingRegen = null;
-      dispatch(again, { regenerate: true, thinking: "off" });
-    } else {
-      drainQueue(); // steering: a stop followed by a queued correction sends it immediately
-    }
+    void followGeneration(job);
+  } catch {
+    if (assistant) assistant.fail("Couldn't start that reply — your message is saved above.");
+  } finally {
+    startingConversations.delete(startKey);
+    syncComposerState();
   }
 }
 
-async function pumpSse(res) {
+async function followGeneration(job) {
+  let reconnectNoticeShown = false;
+  while (!job.terminal && generationJobs.get(job.id) === job) {
+    try {
+      const res = await fetch(
+        `/v1/chat/generations/${job.id}/stream?after=${job.framesSeen}`,
+        { headers: authHeaders() },
+      );
+      if (res.status === 404) {
+        // A gateway restart loses the live replay buffer, never the write-through transcript.
+        job.terminal = true;
+        generationJobs.delete(job.id);
+        if (conversationId === job.cid) await loadConversation(job.cid);
+        break;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      reconnectNoticeShown = false;
+      await pumpSse(res, job);
+      if (!job.terminal) throw new Error("stream ended before the job finished");
+    } catch {
+      if (job.terminal) break;
+      if (!reconnectNoticeShown && conversationId === job.cid) {
+        toast("Connection interrupted — reconnecting while the tutor keeps working.");
+        reconnectNoticeShown = true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 750));
+    }
+  }
+  if (job.terminal && generationJobs.get(job.id) === job) finishGeneration(job);
+}
+
+async function pumpSse(res, job) {
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "";
-  let telemetryOpened = false;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -959,86 +1035,34 @@ async function pumpSse(res) {
       buf = buf.slice(i + 2);
       for (const line of frame.split("\n")) {
         if (!line.startsWith("data: ")) continue;
+        job.framesSeen += 1;
         let ev;
         try {
           ev = JSON.parse(line.slice(6));
         } catch {
           continue;
         }
-        // The id leads the stream (first frame), so even a reply stopped mid-token knows
-        // which conversation its partial landed in — a stopped first turn must not fork a
-        // second thread on the next message. It names the *stream's* thread, so it only
-        // moves the view when the student is still looking at that thread.
-        if (ev.conversation_id) {
-          const wasViewingThisStream = conversationId === live.cid;
-          live.cid = ev.conversation_id;
-          if (wasViewingThisStream) conversationId = ev.conversation_id;
-          syncComposerState();
-        }
-        // Buffer first, then paint. `live.handle` is whichever bubble is on screen now.
+        if (ev.conversation_id) job.cid = ev.conversation_id;
+        // Buffer first, then paint only if this conversation is still on screen.
         if (ev.preamble) {
-          live.preamble += ev.preamble;
-          live.handle.pushPreamble(ev.preamble);
+          job.preamble += ev.preamble;
+          job.handle?.pushPreamble(ev.preamble);
         } else if (ev.reasoning) {
-          live.reasoning += ev.reasoning;
-          live.handle.pushThought(ev.reasoning);
+          job.reasoning += ev.reasoning;
+          job.handle?.pushThought(ev.reasoning);
         } else if (ev.delta) {
-          live.content += ev.delta;
-          live.handle.pushDelta(ev.delta);
-        } else if (ev.error) live.handle.fail(ev.error);
-        else if (ev.done) {
-          live.handle.finalize();
-          announce("Tutor replied.");
-          if (Array.isArray(ev.sources) && ev.sources.length) {
-            const msgs = messagesEl.querySelectorAll(".msg.assistant");
-            const last = msgs[msgs.length - 1];
-            if (last && !last.querySelector(".sources")) {
-              const box = document.createElement("div");
-              box.className = "sources";
-              box.append("Sources: ");
-              ev.sources.forEach((s, i) => {
-                const safe = safeHttpUrl(s.url);
-                const a = document.createElement(safe ? "a" : "span");
-                if (safe) {
-                  a.href = safe;
-                  a.target = "_blank";
-                  a.rel = "noopener noreferrer";
-                }
-                a.textContent = `[${i + 1}] ${s.title}`;
-                box.appendChild(a);
-                if (i < ev.sources.length - 1) box.append(" · ");
-              });
-              last.appendChild(box);
-            }
-          }
-          if (ev.source === "cloud") {
-            // The one thing a privacy-respecting cloud boost owes the student: saying so.
-            const msgs = messagesEl.querySelectorAll(".msg.assistant");
-            const last = msgs[msgs.length - 1];
-            if (last && !last.querySelector(".src-badge")) {
-              const badge = document.createElement("span");
-              badge.className = "src-badge";
-              badge.textContent = "answered via cloud";
-              last.appendChild(badge);
-            }
-          }
-          // Self-check result: a "steps checked" badge when the model's explicit arithmetic
-          // held, or a friendly caution the server produced when a step contradicted itself.
-          const last = messagesEl.querySelector(".msg.assistant:last-child");
-          if (last) {
-            if (ev.check_note) {
-              const warn = document.createElement("div");
-              warn.className = "reply-incomplete";
-              warn.textContent = ev.check_note;
-              last.querySelector(".prose")?.appendChild(warn);
-            } else if (ev.verified === true && !last.querySelector(".verified-badge")) {
-              const badge = document.createElement("span");
-              badge.className = "verified-badge";
-              badge.textContent = "✓ steps checked";
-              badge.title = "The explicit arithmetic in this reply was verified with a math engine.";
-              last.appendChild(badge);
-            }
-          }
+          job.content += ev.delta;
+          job.handle?.pushDelta(ev.delta);
+        } else if (ev.error) {
+          job.failed = true;
+          job.handle?.fail(ev.error);
+        } else if (ev.done) {
+          job.terminal = true;
+          if (ev.stopped && job.pendingRegen) job.handle?.remove();
+          else if (ev.stopped) job.handle?.fail("Stopped.");
+          else if (!job.failed) job.handle?.finalize();
+          decorateCompletedReply(job, ev);
+          if (conversationId === job.cid) announce("Tutor replied.");
           if (ev.queued) {
             toast(
               `You're #${ev.queue_position || 1} in line — the tutor is busy. Your answer will start shortly.`,
@@ -1046,29 +1070,113 @@ async function pumpSse(res) {
             );
           }
         }
-        // Telemetry follows the STREAM's thread, not the viewed one — a student who
-        // wanders off must not point the live strip at a conversation that is idle.
-        if (!telemetryOpened && (ev.reasoning || ev.delta) && live.cid) {
-          openTelemetry(live.cid);
-          telemetryOpened = true;
+        if (!job.telemetryOpened && (ev.reasoning || ev.delta) && conversationId === job.cid) {
+          openTelemetry(job.cid);
+          job.telemetryOpened = true;
         }
       }
     }
   }
-  const streamCid = live && live.cid;
-  if (streamCid && !telemetryOpened) openTelemetry(streamCid);
-  if (streamCid) {
+  if (job.cid) {
     // One last snapshot so a brand-new thread still shows its numbers.
-    fetch(`/v1/conversations/${streamCid}/telemetry`)
+    fetch(`/v1/conversations/${job.cid}/telemetry`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((t) => t && updateTelemetry(t))
+      .then((t) => t && conversationId === job.cid && updateTelemetry(t))
       .catch(() => {});
+  }
+}
+
+function decorateCompletedReply(job, ev) {
+  const last = job.handle?.element;
+  if (!last) return;
+  if (Array.isArray(ev.sources) && ev.sources.length && !last.querySelector(".sources")) {
+    const box = document.createElement("div");
+    box.className = "sources";
+    box.append("Sources: ");
+    ev.sources.forEach((source, i) => {
+      const safe = safeHttpUrl(source.url);
+      const link = document.createElement(safe ? "a" : "span");
+      if (safe) {
+        link.href = safe;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      }
+      link.textContent = `[${i + 1}] ${source.title}`;
+      box.appendChild(link);
+      if (i < ev.sources.length - 1) box.append(" · ");
+    });
+    last.appendChild(box);
+  }
+  if (ev.source === "cloud" && !last.querySelector(".src-badge")) {
+    const badge = document.createElement("span");
+    badge.className = "src-badge";
+    badge.textContent = "answered via cloud";
+    last.appendChild(badge);
+  }
+  if (ev.check_note) {
+    const warn = document.createElement("div");
+    warn.className = "reply-incomplete";
+    warn.textContent = ev.check_note;
+    last.querySelector(".prose")?.appendChild(warn);
+  } else if (ev.verified === true && !last.querySelector(".verified-badge")) {
+    const badge = document.createElement("span");
+    badge.className = "verified-badge";
+    badge.textContent = "✓ steps checked";
+    badge.title = "The explicit arithmetic in this reply was verified with a math engine.";
+    last.appendChild(badge);
+  }
+}
+
+function finishGeneration(job) {
+  generationJobs.delete(job.id);
+  if (conversationId === job.cid) closeTelemetry();
+  refreshSidebar();
+  syncComposerState();
+  if (job.pendingRegen) {
+    const again = job.pendingRegen;
+    dispatch(again, {
+      regenerate: true,
+      thinking: "off",
+      conversationOverride: job.cid,
+    });
+  } else {
+    drainQueue(job.cid);
+  }
+}
+
+async function recoverGenerations() {
+  try {
+    const response = await fetch("/v1/chat/generations", { headers: authHeaders() });
+    if (!response.ok) return;
+    const body = await response.json();
+    for (const active of body.generations || []) {
+      if (generationJobs.has(active.job_id)) continue;
+      const job = {
+        id: active.job_id,
+        cid: active.conversation_id,
+        handle: null,
+        preamble: "",
+        reasoning: "",
+        content: "",
+        item: null,
+        pendingRegen: null,
+        framesSeen: 0,
+        terminal: false,
+        stopping: false,
+        telemetryOpened: false,
+      };
+      generationJobs.set(job.id, job);
+      void followGeneration(job);
+    }
+    syncComposerState();
+  } catch {
+    /* history remains usable; the next reload can try reconnecting again */
   }
 }
 
 sendBtn.addEventListener("click", () => {
   // While a chat stream runs the button is Stop; Enter still queues (see send()).
-  if (currentAbort) stopGeneration();
+  if (viewingLiveStream()) stopGeneration();
   else send();
 });
 inputEl.addEventListener("keydown", (e) => {
@@ -1092,9 +1200,9 @@ window.MutaChat = {
   openTelemetry,
   closeTelemetry,
   toast,
-  isGenerating: () => generating,
+  isGenerating: anyGeneration,
   setGenerating: (v) => {
-    generating = v;
+    voiceGenerating = v;
     syncComposerState();
     if (!v) drainQueue(); // a message typed during a voice reply goes out when it ends
   },
@@ -1119,7 +1227,10 @@ if (menuToggle) {
 
 // Mint the bearer token (signed-mode servers), then load the sidebar. In default mode the
 // token already equals the student id, so a failed/slow mint never blocks startup.
-ensureAuth().then(refreshSidebar);
+ensureAuth().then(async () => {
+  await recoverGenerations();
+  refreshSidebar();
+});
 
 // --- thinking-level selector ------------------------------------------------------------
 const THINK_LABELS = { off: "Instant", auto: "Thinking", extended: "Extended" };
@@ -1230,7 +1341,7 @@ function renderModelCatalog(catalog) {
         ? "No verified optional model is installed."
         : "Only the laptop operator can change the shared tutor model.";
   modelSelect.dataset.switching = String(catalog.switching === true);
-  modelSelect.disabled = generating || catalog.switching === true || !hasChoice;
+  modelSelect.disabled = anyGeneration() || catalog.switching === true || !hasChoice;
 }
 
 async function refreshModelCatalog() {
@@ -1248,7 +1359,7 @@ modelSelect.addEventListener("change", async () => {
   const target = modelSelect.value;
   const prior = modelCatalog && modelCatalog.active_id;
   if (!target || target === prior) return;
-  if (generating) {
+  if (anyGeneration()) {
     modelSelect.value = prior;
     toast("Stop the current reply before changing models.");
     return;
