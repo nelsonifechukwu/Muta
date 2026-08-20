@@ -8,12 +8,70 @@ and carries no pedagogy of its own.
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from runtime.client import Generation, InferenceClient, Message
+import httpx
+
+from runtime.client import Generation, InferenceClient, InferenceStreamError, Message
 from runtime.memory import ConversationStore
+
+_MESSAGE_OVERHEAD_TOKENS = 8
+_MIN_REPLY_TOKENS = 64
+_RESUME_PROMPT = (
+    "Continue the interrupted assistant response directly from its exact final character. "
+    "Do not repeat or restart any part, apologize, mention the interruption, or add a new "
+    "heading. Finish the original answer only."
+)
+_MAX_RESUME_OVERLAP = 512
+_MIN_RESUME_OVERLAP = 8
+
+
+def _estimate_tokens(text: str) -> int:
+    """Tokenizer-free planning estimate: UTF-8 bytes/3, rounded up.
+
+    The separate template/message overhead and context safety margin absorb normal variance;
+    llama-server remains the authority for exact model-token counts.
+    """
+    return max(1, (len(text.encode("utf-8")) + 2) // 3)
+
+
+def _message_tokens(message: Message) -> int:
+    content = message.get("content", "")
+    # Byte-fallback BPE can approach one token per UTF-8 byte. This includes role=system:
+    # the gateway appends live web/RAG/twin context to that message, so its contents are not
+    # wholly static or trusted. bytes/3 remains a history-quality heuristic only.
+    return _MESSAGE_OVERHEAD_TOKENS + max(1, len(content.encode("utf-8")))
+
+
+def _retryable_stream_error(exc: Exception) -> bool:
+    if isinstance(exc, InferenceStreamError):
+        return exc.retryable
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code in {408, 425, 429, 500, 502, 503, 504}
+    return isinstance(exc, (httpx.TransportError, ConnectionError, TimeoutError))
+
+
+def _truncate_message(message: Message, token_budget: int) -> Message:
+    """Return a prompt-only truncation; the persisted message is never modified."""
+    content_budget = max(1, token_budget - _MESSAGE_OVERHEAD_TOKENS)
+    raw = message.get("content", "").encode("utf-8")
+    max_bytes = content_budget
+    if len(raw) <= max_bytes:
+        return dict(message)
+    marker = "\n[…]\n".encode()
+    usable = max(1, max_bytes - len(marker))
+    if message.get("role") == "system":
+        clipped = raw[:max_bytes]
+    else:
+        # A long question needs its setup and its actual ask; an interrupted assistant needs
+        # the immediate tail. Keeping both is safer than blindly retaining one side.
+        head = usable // 3
+        clipped = raw[:head] + marker + raw[-(usable - head) :]
+    return {**message, "content": clipped.decode("utf-8", errors="ignore")}
+
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are a patient tutor for mathematics and scientific reasoning. Be concise, guide "
@@ -67,6 +125,10 @@ class _ReplyWriter:
             self.flush()
             self._last_flush = now
 
+    @property
+    def text(self) -> str:
+        return "".join(self.chunks)
+
     def flush(self) -> None:
         """Idempotent: a flush with nothing new since the last one touches no rows."""
         if not self.chunks:
@@ -81,6 +143,53 @@ class _ReplyWriter:
         self._flushed_len = len(text)
 
 
+class _ResumeDeduplicator:
+    """Remove an exact repeated boundary prefix without delaying unrelated continuation."""
+
+    def __init__(self, prior: str) -> None:
+        self.prior = prior[-_MAX_RESUME_OVERLAP:]
+        self.pending = ""
+        self.min_overlap = min(_MIN_RESUME_OVERLAP, max(1, len(self.prior)))
+        self.decided = not self.prior
+
+    def feed(self, text: str) -> str:
+        if self.decided:
+            return text
+        self.pending += text
+        limit = min(len(self.prior), _MAX_RESUME_OVERLAP)
+        possible_longer: list[int] = []
+        full: list[int] = []
+        for size in range(self.min_overlap, limit + 1):
+            suffix = self.prior[-size:]
+            if len(self.pending) <= size and suffix.startswith(self.pending):
+                possible_longer.append(size)
+            elif self.pending.startswith(suffix):
+                full.append(size)
+        if possible_longer and len(self.pending) < _MAX_RESUME_OVERLAP:
+            return ""
+        self.decided = True
+        overlap = max(full, default=0)
+        output, self.pending = self.pending[overlap:], ""
+        return output
+
+    def finish(self) -> str:
+        if self.decided:
+            output, self.pending = self.pending, ""
+            return output
+        limit = min(len(self.prior), len(self.pending), _MAX_RESUME_OVERLAP)
+        overlap = max(
+            (
+                size
+                for size in range(self.min_overlap, limit + 1)
+                if self.pending.startswith(self.prior[-size:])
+            ),
+            default=0,
+        )
+        self.decided = True
+        output, self.pending = self.pending[overlap:], ""
+        return output
+
+
 class ChatEngine:
     def __init__(
         self,
@@ -88,6 +197,11 @@ class ChatEngine:
         store: ConversationStore,
         *,
         max_history_messages: int = 20,
+        history_token_budget: int = 0,
+        context_window_tokens: int = 0,
+        context_safety_tokens: int = 192,
+        stream_retry_attempts: int = 0,
+        stream_retry_backoff_s: float = 0.5,
         default_system_prompt: str = DEFAULT_SYSTEM_PROMPT,
         # 0.25 s bounds a disconnect's cost to ~1 token on the x86 target (5 tok/s) and ~8
         # on a fast native box, for four small UPDATEs per second per active stream — far
@@ -98,6 +212,11 @@ class ChatEngine:
         self.client = client
         self.store = store
         self.max_history_messages = max_history_messages
+        self.history_token_budget = max(0, history_token_budget)
+        self.context_window_tokens = max(0, context_window_tokens)
+        self.context_safety_tokens = max(0, context_safety_tokens)
+        self.stream_retry_attempts = max(0, stream_retry_attempts)
+        self.stream_retry_backoff_s = max(0.0, stream_retry_backoff_s)
         self.default_system_prompt = default_system_prompt
         # How often a streaming reply is written through to the store. See `_ReplyWriter`:
         # this is the bound on how much of a reply a disconnect can cost.
@@ -112,8 +231,39 @@ class ChatEngine:
                 return conversation_id
         return self.store.create_conversation(student_id, **meta)
 
-    def _assemble(self, conversation_id: str, system_prompt: str | None, message: str) -> list[Message]:
+    def _history(self, conversation_id: str) -> list[dict]:
         history = self.store.get_messages(conversation_id, limit=self.max_history_messages)
+        if self.history_token_budget <= 0:
+            return history
+        spent = 0
+        start = len(history)
+        for index in range(len(history) - 1, -1, -1):
+            row = history[index]
+            cost = _estimate_tokens(row["content"]) + _MESSAGE_OVERHEAD_TOKENS
+            # Keep the latest row even when it alone exceeds the replay budget. The request
+            # fitter can safely truncate that prompt copy; dropping it here makes a student's
+            # ordinary "continue" lose the response they are asking the tutor to continue.
+            if spent and spent + cost > self.history_token_budget:
+                break
+            spent += cost
+            start = index
+        # Do not begin replay at an orphan assistant. If a newer complete exchange exists,
+        # discard the orphan; if the oversized newest reply is the only selected row, retain
+        # its adjacent question so "continue" still has a coherent boundary.
+        while start < len(history) and history[start]["role"] == "assistant":
+            if any(row["role"] == "user" for row in history[start + 1 :]):
+                start += 1
+            elif start > 0 and history[start - 1]["role"] == "user":
+                start -= 1
+                break
+            else:
+                break
+        return history[start:]
+
+    def _assemble(
+        self, conversation_id: str, system_prompt: str | None, message: str
+    ) -> list[Message]:
+        history = self._history(conversation_id)
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
@@ -125,12 +275,147 @@ class ChatEngine:
         """Prompt for regeneration: system + existing history, with NO new user turn appended.
         The last stored message is already the user's turn, so this re-answers it — used by
         'answer now', which re-runs the in-flight turn without duplicating the question."""
-        history = self.store.get_messages(conversation_id, limit=self.max_history_messages)
+        history = self._history(conversation_id)
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
         messages += [{"role": m["role"], "content": m["content"]} for m in history]
         return messages
+
+    def _fit_request(
+        self,
+        messages: list[Message],
+        params: dict,
+        *,
+        protected_tail_messages: int = 1,
+    ) -> tuple[list[Message], dict]:
+        """Fit prompt + requested generation inside the configured llama context."""
+        fitted = [dict(message) for message in messages]
+        fitted_params = dict(params)
+        if self.context_window_tokens <= 0 or not fitted:
+            return fitted, fitted_params
+
+        prompt_limit = max(
+            1,
+            self.context_window_tokens - self.context_safety_tokens - _MIN_REPLY_TOKENS,
+        )
+        protected = max(1, min(protected_tail_messages, max(1, len(fitted) - 1)))
+
+        def prompt_tokens() -> int:
+            return sum(_message_tokens(message) for message in fitted)
+
+        # Drop whole oldest exchanges, leaving the stable system prefix and current/resume tail.
+        while len(fitted) > 1 + protected and prompt_tokens() > prompt_limit:
+            fitted.pop(1)
+            while len(fitted) > 1 + protected and fitted[1].get("role") == "assistant":
+                fitted.pop(1)
+
+        # An enormous current turn or optional grounding block can exceed the window alone.
+        # Shrink only the request copy, largest reducible message first, until a useful reply
+        # still fits. Stored history and the user's original text remain byte-identical.
+        minimums = [96] + [48] * (len(fitted) - 1)
+        while prompt_tokens() > prompt_limit:
+            costs = [_message_tokens(message) for message in fitted]
+            candidates = [
+                (cost - minimums[index], index)
+                for index, cost in enumerate(costs)
+                if cost > minimums[index]
+            ]
+            if not candidates:
+                break
+            reducible, index = max(candidates)
+            overflow = prompt_tokens() - prompt_limit
+            target = costs[index] - min(reducible, overflow)
+            fitted[index] = _truncate_message(fitted[index], target)
+
+        available = max(
+            1,
+            self.context_window_tokens - self.context_safety_tokens - prompt_tokens(),
+        )
+        requested = fitted_params.get("max_tokens")
+        if not isinstance(requested, int) or requested <= 0:
+            requested = available
+        fitted_params["max_tokens"] = min(requested, available)
+        return fitted, fitted_params
+
+    def _events_with_recovery(
+        self,
+        messages: list[Message],
+        params: dict,
+        writer: _ReplyWriter,
+        cancel_event: threading.Event | None = None,
+    ) -> Iterator[tuple[str, str]]:
+        attempt = 0
+        request_messages = messages
+        request_params = params
+        stream = self.client.stream_events
+        while True:
+            if cancel_event is not None and cancel_event.is_set():
+                return
+            deduplicator = _ResumeDeduplicator(writer.text) if attempt and writer.text else None
+            try:
+                events = iter(stream(request_messages, **request_params))
+                while True:
+                    if cancel_event is not None and cancel_event.is_set():
+                        return
+                    try:
+                        kind, text = next(events)
+                    except StopIteration:
+                        break
+                    # A restarted reasoning trace is neither persisted nor useful to append
+                    # to the abandoned one. Keep the original trace visible until content
+                    # resumes, then the normal UI transition settles it.
+                    if attempt and kind == "reasoning":
+                        continue
+                    if kind == "content" and deduplicator is not None:
+                        text = deduplicator.feed(text)
+                        if not text:
+                            continue
+                    yield kind, text
+                if deduplicator is not None:
+                    tail = deduplicator.finish()
+                    if tail:
+                        yield "content", tail
+                return
+            except Exception as exc:
+                if deduplicator is not None:
+                    tail = deduplicator.finish()
+                    if tail:
+                        yield "content", tail
+                if not _retryable_stream_error(exc) or attempt >= self.stream_retry_attempts:
+                    raise
+                attempt += 1
+                yield "recovering", "The tutor paused briefly — resuming automatically…"
+                delay = min(
+                    4.0,
+                    self.stream_retry_backoff_s * (2 ** (attempt - 1)),
+                )
+                if delay:
+                    if cancel_event is not None:
+                        if cancel_event.wait(delay):
+                            return
+                    else:
+                        time.sleep(delay)
+                if cancel_event is not None and cancel_event.is_set():
+                    return
+                partial = writer.text
+                if partial:
+                    request_messages = [
+                        *messages,
+                        {"role": "assistant", "content": partial},
+                        {"role": "user", "content": _RESUME_PROMPT},
+                    ]
+                    # Original user turn + partial assistant + continuation instruction.
+                    protected_tail = 3
+                else:
+                    request_messages = messages
+                    protected_tail = 1
+                request_messages, request_params = self._fit_request(
+                    request_messages,
+                    params,
+                    protected_tail_messages=protected_tail,
+                )
+                stream = getattr(self.client, "retry_stream_events", self.client.stream_events)
 
     def chat(
         self,
@@ -147,12 +432,22 @@ class ChatEngine:
         **params,
     ) -> ChatResult:
         cid = self._open(
-            student_id, conversation_id,
-            mode=mode, persona=persona, subject=subject, language=language, title=title,
+            student_id,
+            conversation_id,
+            mode=mode,
+            persona=persona,
+            subject=subject,
+            language=language,
+            title=title,
         )
         messages = self._assemble(cid, system_prompt, message)
         user_message_id = self.store.add_message(cid, "user", message)
-        generation = self.client.chat_with_timings(messages, **params)
+        messages, request_params = self._fit_request(
+            messages,
+            params,
+            protected_tail_messages=min(3, max(1, len(messages) - 1)),
+        )
+        generation = self.client.chat_with_timings(messages, **request_params)
         self.store.add_message(cid, "assistant", generation.text)
         return ChatResult(
             conversation_id=cid,
@@ -178,21 +473,33 @@ class ChatEngine:
         """Returns (conversation_id, user_message_id, token iterator). The reply is persisted
         when the iterator finishes — including early close/error (partial persist)."""
         cid = self._open(
-            student_id, conversation_id,
-            mode=mode, persona=persona, subject=subject, language=language, title=title,
+            student_id,
+            conversation_id,
+            mode=mode,
+            persona=persona,
+            subject=subject,
+            language=language,
+            title=title,
         )
         messages = self._assemble(cid, system_prompt, message)
         user_message_id = self.store.add_message(cid, "user", message)
+        messages, request_params = self._fit_request(
+            messages,
+            params,
+            protected_tail_messages=min(3, max(1, len(messages) - 1)),
+        )
 
         def _gen() -> Iterator[str]:
             writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
-                for delta in self.client.stream(messages, **params):
+                for kind, text in self._events_with_recovery(messages, request_params, writer):
+                    if kind != "content":
+                        continue
                     # Written through as it arrives: losing the assistant half of a turn
                     # corrupts the replayed history for every later turn, and a disconnect
                     # gives no reliable chance to save it afterwards.
-                    writer.add(delta)
-                    yield delta
+                    writer.add(text)
+                    yield text
             finally:
                 writer.flush()
 
@@ -211,6 +518,7 @@ class ChatEngine:
         language: str | None = None,
         title: str | None = None,
         regenerate: bool = False,
+        cancel_event: threading.Event | None = None,
         **params,
     ) -> tuple[str, int | None, Iterator[tuple[str, str]]]:
         """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
@@ -220,8 +528,13 @@ class ChatEngine:
         With ``regenerate`` the last stored user turn is re-answered and NO new user message is
         added (the 'answer now' path re-runs the in-flight turn without the thinking phase)."""
         cid = self._open(
-            student_id, conversation_id,
-            mode=mode, persona=persona, subject=subject, language=language, title=title,
+            student_id,
+            conversation_id,
+            mode=mode,
+            persona=persona,
+            subject=subject,
+            language=language,
+            title=title,
         )
         if regenerate:
             messages = self._assemble_history(cid, system_prompt)
@@ -229,11 +542,18 @@ class ChatEngine:
         else:
             messages = self._assemble(cid, system_prompt, message)
             user_message_id = self.store.add_message(cid, "user", message)
+        messages, request_params = self._fit_request(
+            messages,
+            params,
+            protected_tail_messages=min(3, max(1, len(messages) - 1)),
+        )
 
         def _gen() -> Iterator[tuple[str, str]]:
             writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
-                for kind, text in self.client.stream_events(messages, **params):
+                for kind, text in self._events_with_recovery(
+                    messages, request_params, writer, cancel_event
+                ):
                     if kind == "content":
                         writer.add(text)
                     yield kind, text

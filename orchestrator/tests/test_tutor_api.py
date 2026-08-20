@@ -168,6 +168,39 @@ def test_chat_stream_announces_the_conversation_in_its_first_frame(wired):
     assert '"done": true' in events[-1]
 
 
+def test_transient_engine_pause_is_replayed_as_automatic_recovery(wired):
+    engine, *_ = wired
+
+    def recovering_stream(**kwargs):
+        engine.calls.append(kwargs)
+        return (
+            "conv-recover",
+            1,
+            iter(
+                [
+                    ("source", "cloud"),
+                    ("content", "Projectile Motion in"),
+                    ("recovering", "The tutor paused briefly — resuming automatically…"),
+                    ("source", "local"),
+                    ("content", " Two Dimensions"),
+                ]
+            ),
+        )
+
+    engine.stream_events_chat = recovering_stream
+    response = client.post(
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "teach projectile motion"},
+    )
+
+    events = [line for line in response.text.splitlines() if line.startswith("data: ")]
+    assert any('"recovering"' in event and "resuming automatically" in event for event in events)
+    assert sum('"delta"' in event for event in events) == 2
+    assert '"done": true' in events[-1]
+    assert '"source": "cloud"' in events[-1]
+
+
 def test_streaming_turn_emits_reasoning_then_deltas_then_done(wired):
     with client.stream("POST", "/v1/tutor/chat/stream", json=turn()) as response:
         assert response.headers["content-type"].startswith("text/event-stream")

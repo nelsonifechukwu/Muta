@@ -183,7 +183,7 @@ native_up() {
     export MUTA_RT_MODEL_DIR="$MODEL_DIR"
     export MUTA_RT_MODEL_FILE="$MODEL_FILE"
     export MUTA_RT_MODEL_ALIAS="$MODEL_ALIAS"
-    export MUTA_RT_N_CTX=2048
+    export MUTA_RT_N_CTX=12288
     export MUTA_RT_ENABLE_THINKING=1
     export MUTA_RT_AUTO_DOWNLOAD=0
     export MUTA_RT_DRAFT_MODEL=models/draft/Qwen3.5-0.8B-Q4_K_M.gguf
@@ -249,7 +249,7 @@ native_linux_env() {
     export MUTA_RT_MODEL_DIR="$native_model_dir"
     export MUTA_RT_MODEL_FILE="$MODEL_FILE"
     export MUTA_RT_MODEL_ALIAS="$MODEL_ALIAS"
-    export MUTA_RT_N_CTX="${MUTA_RT_N_CTX:-2048}"
+    export MUTA_RT_N_CTX="${MUTA_RT_N_CTX:-12288}"
     export MUTA_RT_N_GPU_LAYERS=0
     export MUTA_RT_ENABLE_THINKING="${MUTA_RT_ENABLE_THINKING:-1}"
     export MUTA_RT_AUTO_DOWNLOAD=0

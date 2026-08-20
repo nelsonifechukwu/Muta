@@ -283,6 +283,8 @@ async def audio_voice(ws: WebSocket) -> None:
             async for kind, chunk in iterate_in_threadpool(events):
                 if cancel.is_set():
                     break  # closes the generator → the partial reply is persisted
+                if kind in {"source", "recovering"}:
+                    continue
                 hub.tick(cid)
                 if kind == "reasoning":
                     await ws.send_json({"type": "reasoning", "text": chunk})

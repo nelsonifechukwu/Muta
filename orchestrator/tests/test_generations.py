@@ -84,6 +84,28 @@ def test_stop_is_cooperative_and_publishes_a_terminal_event():
     assert job.request_stop() is False
 
 
+def test_stop_signals_the_producers_interruptible_retry_wait():
+    cancel = threading.Event()
+
+    def producer():
+        yield 'data: {"recovering": "resuming"}\n\n'
+        assert cancel.wait(1.0)
+
+    job = GenerationManager().start(
+        student_id="ada",
+        conversation_id="conv-retry",
+        producer=producer(),
+        cancel_event=cancel,
+    )
+    subscriber = job.subscribe()
+    assert "recovering" in next(subscriber)
+
+    assert job.request_stop() is True
+    assert cancel.wait(0.1)
+    _wait_finished(job)
+    assert job.snapshot().state == "stopped"
+
+
 def test_registry_never_exposes_another_students_job():
     manager = GenerationManager()
     private = manager.start(

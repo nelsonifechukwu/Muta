@@ -92,7 +92,7 @@ are the class defaults; the `Qwen3-0.6B` smoke-fixture defaults are what ship in
 | `MUTA_RT_SERVER_HOST` | `127.0.0.1` | engine bind host (loopback) | `config.py:63`, `server.py:64` |
 | `MUTA_RT_SERVER_PORT` | `8080` | **engine bind port — the one the gateway actually talks to** | `config.py:64`, `server.py:65` |
 | `MUTA_RT_MODEL_ALIAS` | `qwen3-0.6b` *(compose: `qwen3.5-4b`)* | `/v1/models` alias | `config.py:65`, compose `:53` |
-| `MUTA_RT_N_CTX` | `4096` *(compose: `2048`)* | total context size | `config.py:66`, compose `:59` |
+| `MUTA_RT_N_CTX` | `4096` *(native: `12288`; Compose: `2048`)* | total unified context; hard request fitting uses `n_ctx / n_parallel` as each concurrent lane's guaranteed share | `config.py:66`, `deps.py`, compose `:86`, `run.sh` |
 | `MUTA_RT_N_THREADS` | `None` → P-cores on Apple silicon, engine default elsewhere *(compose: `8`)* | decode threads | `config.py:73`, compose `:81` |
 | `MUTA_RT_N_GPU_LAYERS` | `0` | GPU offload layers (also read by the vision command) | `config.py:76`, `profiles.py:398` |
 | `MUTA_RT_N_PARALLEL` | `2` | **engine slots (the real slot count)** | `config.py:83`, `server.py:70` |
@@ -122,6 +122,10 @@ are the class defaults; the `Qwen3-0.6B` smoke-fixture defaults are what ship in
 |---|---|---|---|
 | `MUTA_RT_DB_URL` | `sqlite:///data/muta.sqlite3` *(compose overrides: `postgresql://muta:muta@db:5432/muta`)* | Persistence URL. SQLite is the daemon-free host/portable default; PostgreSQL remains the explicit Compose control. | `config.py`, `memory.py`, `sqlite_memory.py`, compose, `run.sh` |
 | `MUTA_RT_MAX_HISTORY_MESSAGES` | `20` | multi-turn context trim; **also the max turns cloud boost sends off-device** | `config.py:151` |
+| `MUTA_RT_HISTORY_TOKEN_BUDGET` | `1200` | estimated-token ceiling for replayed history; trims oldest prompt turns without deleting stored history | `config.py`, `chat.py` |
+| `MUTA_RT_CONTEXT_SAFETY_TOKENS` | `192` | chat-template/context margin reserved before fitting `max_tokens` | `config.py`, `chat.py` |
+| `MUTA_RT_STREAM_RETRY_ATTEMPTS` | `5` | bounded automatic resumes for transient streamed transport failures | `config.py`, `chat.py` |
+| `MUTA_RT_STREAM_RETRY_BACKOFF_S` | `0.5` | initial exponential resume backoff, capped at four seconds | `config.py`, `chat.py` |
 
 ### `MUTA_RT_`-prefixed but **not** RuntimeConfig fields
 

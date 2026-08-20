@@ -439,7 +439,11 @@ function beginAssistantMessage(onAnswerNow) {
   const prose = document.createElement("div");
   prose.className = "prose cursor";
 
-  wrap.append(thinking, preamble, prose);
+  const recovering = document.createElement("div");
+  recovering.className = "reply-recovering";
+  recovering.hidden = true;
+
+  wrap.append(thinking, preamble, prose, recovering);
   messagesEl.appendChild(wrap);
   scrollToBottom();
 
@@ -515,6 +519,11 @@ function beginAssistantMessage(onAnswerNow) {
     prose.classList.add("cursor");
   };
 
+  const clearRecovering = () => {
+    recovering.hidden = true;
+    recovering.textContent = "";
+  };
+
   return {
     element: wrap,
     showQueued(position = 1) {
@@ -531,8 +540,15 @@ function beginAssistantMessage(onAnswerNow) {
       prose.textContent = "A slot is free — starting your answer…";
       scrollToBottom();
     },
+    showRecovering(message) {
+      clearQueuedNotice();
+      recovering.textContent = message || "The tutor paused briefly — resuming automatically…";
+      recovering.hidden = false;
+      scrollToBottom();
+    },
     pushPreamble(t) {
       clearQueuedNotice();
+      clearRecovering();
       if (preamble.hidden) {
         preamble.hidden = false;
         announce("Tutor is warming up.");
@@ -542,6 +558,7 @@ function beginAssistantMessage(onAnswerNow) {
     },
     pushThought(t) {
       clearQueuedNotice();
+      clearRecovering();
       clearPreamble();
       if (!thinkStartedAt) {
         thinkStartedAt = performance.now();
@@ -561,6 +578,7 @@ function beginAssistantMessage(onAnswerNow) {
     },
     pushDelta(t) {
       clearQueuedNotice();
+      clearRecovering();
       clearPreamble();
       settleThinking();
       full += t;
@@ -568,6 +586,7 @@ function beginAssistantMessage(onAnswerNow) {
     },
     finalize() {
       clearQueuedNotice();
+      clearRecovering();
       clearPreamble(); // a turn that ended before the engine spoke leaves nothing behind
       settleThinking(); // a reply stopped mid-think still gets its label settled
       cancelRender();
@@ -582,6 +601,7 @@ function beginAssistantMessage(onAnswerNow) {
     fail(message) {
       wrap.classList.remove("reply-queued");
       queuedNotice = false;
+      clearRecovering();
       settleThinking();
       cancelRender();
       if (!full) {
@@ -840,7 +860,9 @@ function reattachJob(job) {
   else if (job.preamble) handle.pushPreamble(job.preamble);
   if (job.reasoning) handle.pushThought(job.reasoning);
   if (job.content) handle.pushDelta(job.content);
+  if (job.recovering) handle.showRecovering(job.recovering);
   job.handle = handle;
+  if (job.source) decorateCompletedReply(job, { source: job.source });
   // Replay can finish while the history request is still in flight. In that ordering the
   // terminal event had no view handle to settle, so settle the freshly attached bubble now.
   if (job.terminal) {
@@ -1452,6 +1474,8 @@ async function dispatch(item, opts = {}) {
       terminal: false,
       stopping: false,
       telemetryOpened: false,
+      recovering: null,
+      source: null,
       clientRequestId: started.client_request_id || clientRequestId,
       state: started.state || "running",
       queuePosition: started.queue_position || 0,
@@ -1549,13 +1573,22 @@ async function pumpSse(res, job) {
           job.queuePosition = 0;
           job.handle?.startQueued();
           refreshSidebar();
+        } else if (ev.recovering) {
+          job.recovering = ev.recovering;
+          job.handle?.showRecovering(ev.recovering);
+        } else if (ev.source && !ev.done) {
+          if (ev.source === "cloud") job.source = "cloud";
+          decorateCompletedReply(job, { source: job.source || ev.source });
         } else if (ev.preamble) {
+          job.recovering = null;
           job.preamble += ev.preamble;
           job.handle?.pushPreamble(ev.preamble);
         } else if (ev.reasoning) {
+          job.recovering = null;
           job.reasoning += ev.reasoning;
           job.handle?.pushThought(ev.reasoning);
         } else if (ev.delta) {
+          job.recovering = null;
           job.content += ev.delta;
           job.handle?.pushDelta(ev.delta);
         } else if (ev.error) {
@@ -1567,7 +1600,7 @@ async function pumpSse(res, job) {
           if (ev.stopped && job.pendingRegen) job.handle?.remove();
           else if (ev.stopped) job.handle?.fail("Stopped.");
           else if (!job.failed) job.handle?.finalize();
-          decorateCompletedReply(job, ev);
+          decorateCompletedReply(job, { ...ev, source: ev.source || job.source });
           if (conversationId === job.cid) announce("Tutor replied.");
         }
         if (!job.telemetryOpened && (ev.reasoning || ev.delta) && conversationId === job.cid) {
@@ -1659,6 +1692,8 @@ function recoveredJob(active, clientRequestId = active.client_request_id || null
     terminal: false,
     stopping: false,
     telemetryOpened: false,
+    recovering: null,
+    source: null,
     clientRequestId,
     state: active.state || "running",
     queuePosition: active.queue_position || 0,

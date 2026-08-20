@@ -9,8 +9,9 @@ that don't want the reasoning.
 from __future__ import annotations
 
 import httpx
+import pytest
 
-from runtime.client import InferenceClient
+from runtime.client import InferenceClient, InferenceStreamError
 
 
 class _FakeStream:
@@ -58,3 +59,30 @@ def test_stream_drops_reasoning_and_yields_only_the_answer(monkeypatch):
         "The answer ",
         "is 132.",
     ]
+
+
+def test_structured_context_error_is_not_silently_discarded(monkeypatch):
+    lines = ['data: {"error":{"code":500,"message":"Context size has been exceeded."}}']
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: _FakeStream(lines))
+
+    with pytest.raises(InferenceStreamError, match="Context size") as caught:
+        list(InferenceClient().stream_events([{"role": "user", "content": "hi"}]))
+    assert caught.value.retryable is False
+
+
+def test_structured_temporary_error_is_marked_retryable(monkeypatch):
+    lines = ['data: {"error":{"code":503,"message":"engine temporarily unavailable"}}']
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: _FakeStream(lines))
+
+    with pytest.raises(InferenceStreamError) as caught:
+        list(InferenceClient().stream_events([{"role": "user", "content": "hi"}]))
+    assert caught.value.retryable is True
+
+
+def test_clean_eof_without_terminal_frame_is_a_retryable_truncation(monkeypatch):
+    lines = ['data: {"choices":[{"delta":{"content":"partial"}}]}']
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: _FakeStream(lines))
+
+    with pytest.raises(InferenceStreamError, match="before completion") as caught:
+        list(InferenceClient().stream_events([{"role": "user", "content": "hi"}]))
+    assert caught.value.retryable is True

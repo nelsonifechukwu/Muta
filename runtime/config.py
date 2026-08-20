@@ -63,6 +63,8 @@ class RuntimeConfig(BaseSettings):
     server_host: str = "127.0.0.1"
     server_port: int = 8080
     model_alias: str = "qwen3-0.6b"
+    # Generic application default; native launchers deliberately override to 12288 after the
+    # target RSS check, while the memory-constrained 4B Compose control stays at 2048.
     n_ctx: int = 4096
     # None -> let llama.cpp choose. On LINUX x86 that default is already the right one:
     # cpu_get_num_math() counts physical cores only (SMT siblings skipped) and on hybrid
@@ -100,7 +102,7 @@ class RuntimeConfig(BaseSettings):
     # MUTA_RT_EXTRA_SERVER_ARGS in docker-compose.yml. Small -b/-ub shrink the compute
     # buffers (~31 MiB at -ub 128 on the 4B, measured); q8_0 K halves that side of the
     # attention KV; the reasoning budget force-closes the think phase so the answer
-    # always arrives inside a 2048-token context.
+    # leaves room for visible content inside each admitted lane.
     n_batch: int = 512
     n_ubatch: int = 128
     cache_type_k: str = "q8_0"
@@ -176,6 +178,15 @@ class RuntimeConfig(BaseSettings):
     # service. Relative SQLite paths resolve from TUTOR_ROOT/the repo launch directory.
     db_url: str = "sqlite:///data/muta.sqlite3"
     max_history_messages: int = 20  # multi-turn context window trim (excludes system)
+    # Prompt safety: preserve the full stored transcript, but replay only a recent suffix and
+    # reserve room for the current answer. This prevents llama-server from terminating a healthy
+    # SSE stream with "Context size has been exceeded" in long tutoring conversations.
+    history_token_budget: int = 1200
+    context_safety_tokens: int = 192
+    # Genuine transport failures (engine supervised restart, transient socket reset) resume in
+    # the same assistant row. Five bounded attempts wait at most 11.5 s between requests.
+    stream_retry_attempts: int = 5
+    stream_retry_backoff_s: float = 0.5
 
     @field_validator("n_threads", "n_threads_batch", mode="before")
     @classmethod

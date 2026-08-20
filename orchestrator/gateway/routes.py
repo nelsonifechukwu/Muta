@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from functools import lru_cache
 
@@ -107,7 +108,7 @@ from orchestrator.telemetry import get_hub
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
 from runtime.chat import ChatEngine
-from runtime.client import Generation
+from runtime.client import Generation, InferenceStreamError
 from runtime.config import RuntimeConfig
 from runtime.model_catalog import ModelSwitchError
 from runtime.slots import SlotError
@@ -511,6 +512,7 @@ def _start_chat_generation(
         web_lines=web_lines,
         rag_block=rag_block,
     )
+    cancel_event = threading.Event()
 
     try:
         cid, user_message_id, events = engine.stream_events_chat(
@@ -524,6 +526,7 @@ def _start_chat_generation(
             language=req.language,
             title=req.message[:80],
             regenerate=req.regenerate,  # 'answer now' re-runs this turn without a new user msg
+            cancel_event=cancel_event,
             # §6.5 sampling profiles apply to the UI's primary path too — without them the
             # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
             # student holding a slot indefinitely, and with thinking on it filled the context).
@@ -548,6 +551,7 @@ def _start_chat_generation(
         reply_parts: list[str] = []  # answer content only, for the post-stream self-check
         hub = get_hub()
         started = time.monotonic()
+        reply_source = "local"
         try:
             hub.begin(cid)
             # Keep the leading id inside the cleanup boundary: Stop can land after this first
@@ -555,6 +559,18 @@ def _start_chat_generation(
             yield f"data: {json.dumps({'conversation_id': cid})}\n\n"
             for kind, text in streamed:
                 now = time.monotonic()
+                if kind == "source":
+                    # Sticky per-job provenance: parallel jobs cannot overwrite it, and a
+                    # cloud prefix resumed locally must still disclose cloud involvement.
+                    if text == "cloud":
+                        reply_source = "cloud"
+                    # Provenance must reach replay/UI before any cloud content. A later Stop
+                    # or terminal recovery failure may bypass this route's successful done.
+                    yield f"data: {json.dumps({'source': reply_source})}\n\n"
+                    continue
+                if kind == "recovering":
+                    yield f"data: {json.dumps({'recovering': text})}\n\n"
+                    continue
                 # The preamble is filler from a 1 M-parameter model, not the tutor speaking:
                 # it gets its own event key, is excluded from the token count and the tok/s
                 # window, and never joins reply_parts (so it cannot reach the self-check or
@@ -573,9 +589,9 @@ def _start_chat_generation(
                 if kind != "reasoning":
                     reply_parts.append(text)
                 yield f"data: {json.dumps({key: text})}\n\n"
-        except httpx.HTTPError as e:
+        except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /chat/stream: %r", e)
-            yield f"data: {json.dumps({'error': 'the tutor dropped the connection — try again'})}\n\n"
+            yield f"data: {json.dumps({'error': 'The tutor could not resume automatically. Your partial answer is saved.'})}\n\n"
             return
         finally:
             hub.end(cid)
@@ -633,8 +649,7 @@ def _start_chat_generation(
                     "preamble_ttft_s": round(t_preamble - started, 3) if t_preamble else None,
                     # Student text leaving the device must never be silent (P3): the UI
                     # badges any answer a cloud backend produced.
-                    "source": getattr(getattr(engine, "client", None), "last_source", None)
-                    or "local",
+                    "source": reply_source,
                     # Grounding sources (P4): empty unless web context shaped this answer.
                     "sources": sources,
                     # Verified-tool-calls (self-check): True/False when a step was checkable,
@@ -680,6 +695,7 @@ def _start_chat_generation(
             client_request_id=req.client_request_id,
             queued_cleanup=_cleanup_while_queued,
             before_start=_claim_inference_session,
+            cancel_event=cancel_event,
         )
     except Exception:
         _close_events(streamed)
@@ -1200,6 +1216,11 @@ def tutor_chat_stream(
         count = 0
         try:
             for kind, text in streamed:
+                if kind == "source":
+                    continue
+                if kind == "recovering":
+                    yield f"data: {json.dumps({'recovering': text})}\n\n"
+                    continue
                 if kind == "preamble":
                     # Filler, not tutoring: own event key, excluded from count and ttft_s.
                     if not preamble_at:
@@ -1211,9 +1232,9 @@ def tutor_chat_stream(
                 count += 1
                 key = "reasoning" if kind == "reasoning" else "delta"
                 yield f"data: {json.dumps({key: text})}\n\n"
-        except httpx.HTTPError as e:
+        except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /tutor/chat/stream: %r", e)
-            yield f"data: {json.dumps({'error': 'the tutor dropped the connection — try again'})}\n\n"
+            yield f"data: {json.dumps({'error': 'The tutor could not resume automatically. Your partial answer is saved.'})}\n\n"
             return
         finally:
             sessions.release(turn.session_id)

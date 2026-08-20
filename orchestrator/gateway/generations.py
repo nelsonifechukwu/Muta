@@ -66,6 +66,7 @@ class GenerationJob:
         on_terminal: Callable[[GenerationJob], None] | None = None,
         queued_cleanup: Callable[[], None] | None = None,
         before_start: Callable[[], bool] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> None:
         self.id = job_id or uuid.uuid4().hex
         self.student_id = student_id
@@ -78,6 +79,7 @@ class GenerationJob:
         self._on_terminal = on_terminal
         self._queued_cleanup = queued_cleanup
         self._before_start = before_start
+        self._cancel_event = cancel_event or threading.Event()
         self._condition = threading.Condition()
         # The producer's leading conversation-id frame remains byte-compatible with the
         # original /chat/stream contract. New job clients already receive both ids from the
@@ -216,6 +218,9 @@ class GenerationJob:
             if self.state not in {"queued", "running"}:
                 return False
             self._stop_requested = True
+            # Wake any ChatEngine retry backoff before another HTTP request starts. The
+            # producer still owns its own close/finally on the worker thread.
+            self._cancel_event.set()
             if self.state == "queued":
                 self._events.append(
                     _sse(
@@ -292,7 +297,10 @@ class GenerationJob:
                     {
                         "job_id": self.id,
                         "conversation_id": self.conversation_id,
-                        "error": "the tutor dropped the connection — try again",
+                        "error": (
+                            "The tutor could not resume automatically. "
+                            "Your partial answer is saved."
+                        ),
                     }
                 )
             )
@@ -437,6 +445,7 @@ class GenerationManager:
         client_request_id: str | None = None,
         queued_cleanup: Callable[[], None] | None = None,
         before_start: Callable[[], bool] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> GenerationJob:
         if reservation_id is None:
             reservation_id = self.reserve(
@@ -453,6 +462,7 @@ class GenerationManager:
             on_terminal=self._job_terminal,
             queued_cleanup=queued_cleanup,
             before_start=before_start,
+            cancel_event=cancel_event,
         )
         with self._lock:
             self._prune_locked()

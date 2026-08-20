@@ -99,7 +99,19 @@ def get_engine() -> ChatEngine:
             cloud=cloud, local=client, online=lambda: get_connectivity().online()
         )
     store = ConversationStore(cfg.db_url)
-    return ChatEngine(client, store, max_history_messages=cfg.max_history_messages)
+    return ChatEngine(
+        client,
+        store,
+        max_history_messages=cfg.max_history_messages,
+        history_token_budget=cfg.history_token_budget,
+        # --kv-unified lets an idle slot borrow the shared window, but two concurrent jobs
+        # still draw from one total KV budget. Fit each admitted lane to its guaranteed share
+        # so individually-valid prompts cannot overcommit the engine when both are active.
+        context_window_tokens=cfg.n_ctx // max(1, cfg.n_parallel),
+        context_safety_tokens=cfg.context_safety_tokens,
+        stream_retry_attempts=cfg.stream_retry_attempts,
+        stream_retry_backoff_s=cfg.stream_retry_backoff_s,
+    )
 
 
 @lru_cache(maxsize=1)

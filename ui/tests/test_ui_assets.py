@@ -241,6 +241,18 @@ def test_full_inference_slots_become_a_durable_visible_queue():
     assert "animation: none" in queued_dot
 
 
+def test_transient_engine_drop_shows_automatic_recovery_not_a_terminal_disconnect():
+    js = (UI / "app.js").read_text()
+    assert "ev.recovering" in js
+    assert "showRecovering(message)" in js
+    assert "resuming automatically" in js
+    assert "the tutor dropped the connection" not in js.lower()
+    recovering = "".join(_blocks(".reply-recovering"))
+    assert "background" in recovering and "color" in recovering
+    assert 'ev.source && !ev.done' in js
+    assert 'source: ev.source || job.source' in js
+
+
 def test_switching_conversations_detaches_rendering_without_stopping_the_job():
     js = (UI / "app.js").read_text()
     body = js[js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")]

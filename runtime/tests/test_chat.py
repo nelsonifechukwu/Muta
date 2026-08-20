@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
-from runtime.chat import ChatEngine
-from runtime.client import Generation
+from runtime.chat import ChatEngine, _message_tokens
+from runtime.client import Generation, InferenceStreamError
 from runtime.memory import ConversationStore
 
 
@@ -18,9 +19,11 @@ class FakeClient:
 
     def __init__(self) -> None:
         self.seen: list[list[dict]] = []
+        self.seen_params: list[dict] = []
 
     def chat_with_timings(self, messages, **params) -> Generation:
         self.seen.append(messages)
+        self.seen_params.append(params)
         return Generation(
             text=f"reply-{len(self.seen)}",
             prompt_tokens=1,
@@ -100,6 +103,44 @@ def test_history_is_trimmed_to_max(store):
     assert len(last_call) <= 1 + 2 + 1
 
 
+def test_history_token_budget_drops_oldest_turns_without_mutating_storage(store):
+    engine, client, store = _engine(store, history_token_budget=70)
+    first = engine.chat("s1", "x" * 180)
+    engine.chat("s1", "y" * 60, conversation_id=first.conversation_id)
+    before = [message["content"] for message in store.get_messages(first.conversation_id)]
+
+    engine.chat("s1", "what next?", conversation_id=first.conversation_id)
+    sent = client.seen[-1]
+    contents = [message["content"] for message in sent]
+
+    assert "x" * 180 not in contents
+    assert "y" * 60 in contents
+    assert sent[0]["role"] == "system"
+    assert sent[1]["role"] == "user"
+    assert [message["content"] for message in store.get_messages(first.conversation_id)][
+        : len(before)
+    ] == before
+
+
+def test_request_fitting_reserves_output_inside_the_active_context(store):
+    engine, client, _ = _engine(
+        store,
+        context_window_tokens=320,
+        context_safety_tokens=32,
+    )
+    engine.chat(
+        "s1",
+        "question " * 30,
+        system_prompt="system rules " * 35,
+        max_tokens=240,
+    )
+
+    sent = client.seen[-1]
+    params = client.seen_params[-1]
+    assert sum(_message_tokens(message) for message in sent) + params["max_tokens"] + 32 <= 320
+    assert 1 <= params["max_tokens"] < 240
+
+
 def test_system_prompt_override_is_used(store):
     engine, client, _ = _engine(store)
     engine.chat("s1", "hi", system_prompt="BE TERSE")
@@ -116,6 +157,7 @@ class StreamingFakeClient(FakeClient):
 
     def stream(self, messages, **params):
         self.seen.append(messages)
+        self.seen_params.append(params)
         for i, delta in enumerate(self.deltas):
             if self.explode_after is not None and i == self.explode_after:
                 raise RuntimeError("engine died mid-stream")
@@ -159,6 +201,62 @@ def test_stream_events_chat_persists_partial_reply_on_midstream_error(store):
     assert got == ["a", "b"]
     msgs = store.get_messages(cid)
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "ab")]
+
+
+def test_transient_stream_drop_resumes_in_the_same_assistant_row(store):
+    class RecoverOnce:
+        def __init__(self) -> None:
+            self.calls: list[list[dict]] = []
+
+        def stream_events(self, messages, **params):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                yield "content", "**Projectile Motion in"
+                raise httpx.ReadError("socket reset")
+            assert messages[-2] == {
+                "role": "assistant",
+                "content": "**Projectile Motion in",
+            }
+            assert "Continue the interrupted assistant response" in messages[-1]["content"]
+            yield "content", " Two Dimensions**"
+
+    client = RecoverOnce()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=1,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat("s1", "teach projectile motion")
+
+    received = list(events)
+    assert any(kind == "recovering" for kind, _text in received)
+    assert "".join(text for kind, text in received if kind == "content") == (
+        "**Projectile Motion in Two Dimensions**"
+    )
+    assert [(m["role"], m["content"]) for m in store.get_messages(cid)] == [
+        ("user", "teach projectile motion"),
+        ("assistant", "**Projectile Motion in Two Dimensions**"),
+    ]
+
+
+def test_permanent_context_error_is_not_retried(store):
+    class ContextFailure:
+        calls = 0
+
+        def stream_events(self, messages, **params):
+            self.calls += 1
+            raise InferenceStreamError("Context size has been exceeded", retryable=False)
+            yield  # pragma: no cover - keep this a generator
+
+    client = ContextFailure()
+    engine = ChatEngine(client, store, stream_retry_attempts=5, stream_retry_backoff_s=0.0)
+    _cid, _mid, events = engine.stream_events_chat("s1", "hi")
+
+    with pytest.raises(InferenceStreamError, match="Context size"):
+        list(events)
+    assert client.calls == 1
 
 
 def test_stream_chat_skips_empty_assistant_message_when_nothing_streamed(store):

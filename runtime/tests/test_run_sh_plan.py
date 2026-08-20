@@ -80,3 +80,10 @@ def test_plan_on_plain_linux_is_cpu(tmp_path):
 def test_native_port_probe_allows_immediate_restart_after_time_wait():
     source = (REPO / "run.sh").read_text()
     assert "setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)" in source
+
+
+def test_native_launchers_reserve_a_12288_token_context():
+    source = (REPO / "run.sh").read_text()
+    assert "export MUTA_RT_N_CTX=12288" in source
+    assert 'export MUTA_RT_N_CTX="${MUTA_RT_N_CTX:-12288}"' in source
+    assert "MUTA_RT_N_CTX=2048" not in source

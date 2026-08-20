@@ -146,6 +146,10 @@ button.ghost:hover { background: var(--accent-soft); }
   margin-top: 8px; font-size: 0.8rem; color: var(--danger);
   border-left: 3px solid var(--danger); padding-left: 8px;
 }
+.reply-recovering {
+  width: fit-content; margin-top: 7px; padding: 5px 9px; border-radius: 8px;
+  color: var(--muted); background: var(--accent-soft); font: 0.76rem/1.4 var(--sans);
+}
 .reply-queued .prose {
   max-width: 34rem; padding: 10px 12px; border-left: 3px solid var(--accent-strong);
   border-radius: 0 10px 10px 0; background: var(--accent-soft);

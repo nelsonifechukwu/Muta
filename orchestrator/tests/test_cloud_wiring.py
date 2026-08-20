@@ -40,3 +40,13 @@ def test_without_cloud_env_the_client_is_plain(monkeypatch):
         assert isinstance(deps.get_engine().client, InferenceClient)
     finally:
         deps.get_engine.cache_clear()
+
+
+def test_each_parallel_lane_fits_to_its_guaranteed_share_of_unified_context(monkeypatch):
+    monkeypatch.setenv("MUTA_RT_N_CTX", "12288")
+    monkeypatch.setenv("MUTA_RT_N_PARALLEL", "2")
+    deps.get_engine.cache_clear()
+    try:
+        assert deps.get_engine().context_window_tokens == 6144
+    finally:
+        deps.get_engine.cache_clear()

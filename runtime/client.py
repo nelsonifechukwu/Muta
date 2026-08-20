@@ -16,6 +16,14 @@ import httpx
 Message = dict[str, str]
 
 
+class InferenceStreamError(RuntimeError):
+    """A structured error frame emitted after an SSE response has already started."""
+
+    def __init__(self, message: str, *, retryable: bool = False) -> None:
+        super().__init__(message)
+        self.retryable = retryable
+
+
 @dataclass(frozen=True)
 class Generation:
     """One completion plus the numbers the product path needs to compute TPS.
@@ -146,19 +154,56 @@ class InferenceClient:
             headers=self._headers,
         ) as r:
             r.raise_for_status()
+            terminal = False
             for line in r.iter_lines():
                 if not line or not line.startswith("data: "):
                     continue
                 data = line[len("data: ") :]
                 if data.strip() == "[DONE]":
+                    terminal = True
                     break
                 try:
-                    delta = json.loads(data)["choices"][0]["delta"]
+                    body = json.loads(data)
                 except (json.JSONDecodeError, KeyError, IndexError):
                     continue
+                error = body.get("error") if isinstance(body, dict) else None
+                if error:
+                    if isinstance(error, dict):
+                        message = str(
+                            error.get("message") or error.get("type") or "inference failed"
+                        )
+                        code = error.get("code")
+                    else:
+                        message, code = str(error), None
+                    lower = message.lower()
+                    retryable = (
+                        "context size" not in lower
+                        and "context window" not in lower
+                        and (
+                            str(code) in {"408", "425", "429", "500", "502", "503", "504"}
+                            or "temporar" in lower
+                            or "unavailable" in lower
+                        )
+                    )
+                    raise InferenceStreamError(message, retryable=retryable)
+                try:
+                    choice = body["choices"][0]
+                    delta = choice["delta"]
+                except (KeyError, IndexError, TypeError):
+                    continue
+                if choice.get("finish_reason") is not None:
+                    terminal = True
                 reasoning = delta.get("reasoning_content")
                 if reasoning:
                     yield "reasoning", reasoning
                 content = delta.get("content")
                 if content:
                     yield "content", content
+            if not terminal:
+                # A proxy/socket can end a chunked body cleanly without raising httpx. Unless
+                # llama-server sent its terminal frame, that EOF is a truncated answer and
+                # must enter the same bounded recovery path as a connection reset.
+                raise InferenceStreamError(
+                    "inference stream ended before completion",
+                    retryable=True,
+                )
