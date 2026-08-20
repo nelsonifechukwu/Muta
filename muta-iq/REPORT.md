@@ -7,7 +7,64 @@
 > profiler here: secure cloud-VM audit mode and `min(TPS/15, 1)·100`. AVX2 results remain
 > deployment evidence only.
 
-## Current result — 20 August overnight campaign
+## Current result — eight-model architecture screen (supersedes the campaign below where they conflict)
+
+We define two CPU configurations once, here, and use only these two names below: the **scalar
+configuration** is the supplied profiler build, with the wider vector extensions disabled for the
+affected kernels; the **vector configuration** is a portable SIMD build with AVX2, FMA, and F16C
+enabled, on the same two physical cores.
+
+The Math-Expert-versus-Qwen3.5 tie below motivated a second, wider search: we hadn't tried Qwen's
+own general-purpose 1.5B/3B line, or comparable dense models from outside the Qwen tree. We paired
+eight GGUFs — Qwen2.5 at 1.5B and 3B, Qwen2 at 1.5B, Llama 3.2 at 1B and 3B, Gemma 2 at 2B, Phi-4
+Mini, and Orca Mini at 3B — under matched scalar and vector execution, with each model's accuracy
+measured exactly once (ARC-Easy, `n=50`) and reused for both totals; the CPU kernel changes
+throughput and RSS, never accuracy.
+
+| Rank | Model | ARC-Easy `n=50` | Scalar → vector pp512 | Scalar → vector tg128 | Decode gain | Vector RSS | Scalar → vector total |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1 | **Qwen2.5 1.5B Q4_K_M** | **76%** | 7.68 → 59.98 | 5.69 → 17.23 | 3.03× | 1,839 MiB | 65.92 → **82.87** |
+| 2 | Qwen2 1.5B Q4_K_M | 74% | 7.70 → 59.18 | 5.70 → 16.82 | 2.95× | 1,714 MiB | 65.28 → **82.22** |
+| 3 | Llama 3.2 1B Q4_K_M | 64% | 10.68 → 82.04 | 7.08 → 21.76 | 3.07× | **1,398 MiB** | 63.50 → **78.10** |
+| 4 | Qwen2.5 3B Q4_K_M | 78% | 3.66 → 28.47 | 2.92 → 8.86 | 3.04× | 3,471 MiB | 58.69 → **67.03** |
+| 5 | Llama 3.2 3B Q4_K_M | 72% | 3.63 → 28.15 | 2.81 → 8.63 | 3.07× | 3,455 MiB | 55.61 → **63.61** |
+| 6 | Gemma 2 2B Q8_0 | 74% | 5.52 → 28.70 | 3.54 → 6.47 | 1.83× | 2,871 MiB | 56.08 → **61.93** |
+| 7 | Phi-4 Mini 3.8B Q4_K_M | 78% | 3.12 → 19.40 | 2.31 → 6.70 | 2.90× | 3,827 MiB | 56.32 → **61.72** |
+| 8 | Orca Mini 3B Q4_K_M | 58% | 0.90 → 13.05 | 0.85 → 5.58 | **6.58×** | 2,759 MiB | 43.00 → **52.47** |
+
+Qwen2.5 1.5B Q4_K_M is the `n=50` vector-configuration leader at 82.8697. Gemma 2 2B Q8_0 shows
+the same lesson quantization already taught us, from a new angle: Q8_0 doesn't reach the SIMD path
+Q4_K_M does, so its decode gain (1.826×) trails the Q4_K_M field (~3×) and 74% accuracy can't make
+up the difference. Raw data: `bench/measurements/model-extension/screen-accuracy.jsonl`,
+`screen-throughput.jsonl`, summarised by `bench/model_extension_summary.py` into
+`bench/measurements/model-extension/summary.json`.
+
+**The `n=50` result is provisional.** A 500-item ARC-Easy rerun on Qwen2.5 1.5B measured 71.8%
+(95% CI 67.70–75.57%, `bench/measurements/model-extension/qwen25-15b-arc-easy-500.jsonl`). Holding
+throughput and RSS fixed, both totals fall by the same 2.10 points the accuracy change accounts
+for: vector 82.8697 → **80.7697**, scalar 65.9176 → **63.8176**. Qwen2.5 1.5B remains the leading
+vector-configuration candidate at the larger sample; the other seven screened models still have
+only `n=50` accuracy evidence.
+
+Matching all three finalists — Qwen2.5 1.5B, the final Qwen3.5 file, and Math-Expert — to the same
+`n=500` ARC-Easy sample splits the result cleanly by CPU configuration:
+
+| Finalist, matched to `n=500` | ARC-Easy | Scalar total | Vector total |
+|---|---:|---:|---:|
+| **Qwen2.5 1.5B Q4_K_M** | 71.8% (67.70–75.57) | 63.8176 | **80.7697** |
+| **Muta Tutor Qwen3.5 0.8B Q4_0 final** | 58.8% (54.43–63.03) | **72.7895** | 76.8104 |
+| Math-Expert 0.6B Q4_K_M | 54.6% (50.22–58.91) | 71.2324 | 75.1803 |
+
+Under vector, Qwen2.5 1.5B leads. Under scalar, the ranking reverses: Qwen3.5 leads, Math-Expert
+follows, and Qwen2.5 falls to third, because the profiler kernel that runs its Q4_K_M tensors is
+the same slow generic-C path that cost every k-quant candidate in this project. **We recommend
+submitting `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf` under the supplied scalar profiler.**
+Qwen2.5 1.5B Q4_K_M is the validated vector-configuration candidate; it replaces Qwen3.5 only if
+the final audit is confirmed to run the vector configuration and Qwen2.5 passes the physical-target
+and embedded tutor-behaviour checks Qwen3.5 has already passed. Neither candidate is a guaranteed
+winner outside its own CPU configuration.
+
+## Current result — 20 August overnight campaign (historical; the eight-model screen above supersedes its selection language)
 
 Overnight, we tested nine additional model artifacts and eight Math-Expert quantization
 layouts. Two sub-1B models passed the staged screen. Depending on which accuracy sample we use,
