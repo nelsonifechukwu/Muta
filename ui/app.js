@@ -77,6 +77,20 @@ const chatScroller = $("#chat-scroll");
 const AUTO_FOLLOW_THRESHOLD_PX = 96;
 let autoFollow = true;
 
+function conversationFromLocation() {
+  const cid = new URL(location.href).searchParams.get("chat");
+  return cid && cid.length <= 64 ? cid : null;
+}
+
+function setConversationLocation(cid, { mode = "push" } = {}) {
+  if (mode === "none") return;
+  const url = new URL(location.href);
+  if (cid) url.searchParams.set("chat", cid);
+  else url.searchParams.delete("chat");
+  if (url.href === location.href) return;
+  history[mode === "replace" ? "replaceState" : "pushState"]({ chat: cid }, "", url);
+}
+
 // ---------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------
@@ -509,7 +523,7 @@ async function refreshSidebar() {
   }
 }
 
-async function loadConversation(cid) {
+async function loadConversation(cid, { historyMode = "push" } = {}) {
   // Detach only the view. The gateway owns the job and our subscription keeps buffering it.
   const leaving = jobForConversation();
   if (leaving) {
@@ -519,9 +533,13 @@ async function loadConversation(cid) {
   closeTelemetry(0);
   discardQueue(); // queued messages were aimed at the thread we're leaving
   const r = await fetch(`/v1/conversations/${cid}/messages`, { headers: authHeaders() });
-  if (!r.ok) return toast("Couldn't load that conversation.");
+  if (!r.ok) {
+    toast("Couldn't load that conversation.");
+    return false;
+  }
   const body = await r.json();
   conversationId = cid;
+  setConversationLocation(cid, { mode: historyMode });
   messagesEl.innerHTML = "";
   const restoring = jobForConversation(cid);
   let messages = body.messages;
@@ -541,6 +559,7 @@ async function loadConversation(cid) {
   refreshSidebar();
   syncComposerState(); // the send button is only a Stop button in the streaming thread
   scrollToBottom({ force: true });
+  return true;
 }
 
 /** Re-render one in-flight reply into a fresh bubble and point its subscription at it. */
@@ -552,7 +571,7 @@ function reattachJob(job) {
   job.handle = handle;
 }
 
-function newChat() {
+function newChat({ historyMode = "push" } = {}) {
   const leaving = jobForConversation();
   if (leaving) {
     leaving.handle = null;
@@ -561,6 +580,7 @@ function newChat() {
   closeTelemetry(0);
   discardQueue();
   conversationId = null;
+  setConversationLocation(null, { mode: historyMode });
   pendingAttachments = [];
   renderChips();
   messagesEl.innerHTML = "";
@@ -964,7 +984,12 @@ async function dispatch(item, opts = {}) {
     }
     const started = await res.json();
     const stillHere = conversationId === startedIn;
-    if (stillHere) conversationId = started.conversation_id;
+    if (stillHere) {
+      conversationId = started.conversation_id;
+      // The first persisted id replaces the blank-new-chat URL immediately, before any
+      // tokens arrive, so even an instant refresh returns to the correct conversation.
+      setConversationLocation(conversationId, { mode: "replace" });
+    }
     job = {
       id: started.job_id,
       cid: started.conversation_id,
@@ -1193,6 +1218,7 @@ window.MutaChat = {
   getConversationId: () => conversationId,
   setConversationId: (cid) => {
     conversationId = cid;
+    setConversationLocation(cid, { mode: "replace" });
     refreshSidebar();
   },
   addUserMessage,
@@ -1296,7 +1322,19 @@ if (menuToggle) {
 ensureAuth().then(async () => {
   await loadSettings();
   await recoverGenerations();
-  refreshSidebar();
+  const selected = conversationFromLocation();
+  if (selected) {
+    const loaded = await loadConversation(selected, { historyMode: "none" });
+    if (!loaded) newChat({ historyMode: "replace" });
+  } else {
+    refreshSidebar();
+  }
+});
+
+window.addEventListener("popstate", () => {
+  const selected = conversationFromLocation();
+  if (selected) void loadConversation(selected, { historyMode: "none" });
+  else newChat({ historyMode: "none" });
 });
 
 // --- thinking-level selector ------------------------------------------------------------

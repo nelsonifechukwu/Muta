@@ -97,7 +97,7 @@ def test_chat_generation_is_server_owned_and_recovered_after_reload():
 def test_switching_conversations_detaches_rendering_without_stopping_the_job():
     js = (UI / "app.js").read_text()
     load = re.search(
-        r"async function loadConversation\(cid\)\s*\{(?P<body>.*?)\n\}", js, re.DOTALL
+        r"async function loadConversation\(cid,[^)]*\)\s*\{(?P<body>.*?)\n\}", js, re.DOTALL
     )
     assert load
     body = load.group("body")
@@ -113,3 +113,13 @@ def test_settings_exposes_a_persisted_parallel_chat_switch():
     assert 'fetch("/v1/settings"' in js
     assert "allow_parallel_chats: enabled" in js
     assert "!allowParallelChats && generationJobs.size" in js
+
+
+def test_selected_conversation_lives_in_the_url_and_restores_on_startup():
+    js = (UI / "app.js").read_text()
+    assert 'searchParams.get("chat")' in js
+    assert 'url.searchParams.set("chat", cid)' in js
+    assert "history[mode === \"replace\" ? \"replaceState\" : \"pushState\"]" in js
+    assert "const selected = conversationFromLocation()" in js
+    assert 'window.addEventListener("popstate"' in js
+    assert 'setConversationLocation(conversationId, { mode: "replace" })' in js
