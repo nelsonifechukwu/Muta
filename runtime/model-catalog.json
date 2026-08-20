@@ -7,11 +7,23 @@
       "kind": "local",
       "path": "muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf",
       "sha256": "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b",
-      "size_bytes": 507156160,
+      "size_bytes": 507148832,
       "description": "Risk-adjusted submission: strongest larger matched accuracy among the overnight finalists.",
       "arc_easy": 0.64,
       "audit_proxy_tps": 12.63,
       "recommended": true
+    },
+    {
+      "id": "qwen3-0.6b-math-expert-q4_k_m",
+      "label": "Math-Expert · Qwen3 0.6B",
+      "kind": "local",
+      "path": "muta-iq/model/Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "sha256": "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1",
+      "size_bytes": 396706176,
+      "description": "Raw fixed-15 Scalar and AVX2 leader on ARC-Easy-50; the larger accuracy check still favors Qwen3.5.",
+      "arc_easy": 0.68,
+      "audit_proxy_tps": 12.72,
+      "recommended": false
     },
     {
       "id": "muta-tutor-qwen3-1.7b-q4_0",
