@@ -107,23 +107,7 @@ paths:
       tags:
       - tutor
       summary: Chat Stream
-      description: 'Token-streaming twin of `/chat` — the browser UI''s primary path.
-
-
-        Emits Server-Sent Events: a leading `{"conversation_id": "..."}`, then
-
-        `{"reasoning": "..."}` for Qwen3 thinking tokens and `{"delta": "..."}` for answer
-
-        tokens, then a final
-
-        `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
-
-
-        Admission-controlled on the student''s session so the classroom demo (30 phones, 2 engine
-
-        slots) queues gracefully with a ''you''re next'' message instead of piling unbounded
-
-        concurrent streams onto the engine — the exact path production traffic takes.'
+      description: Backwards-compatible streaming start; disconnecting no longer cancels inference.
       operationId: chat_stream_v1_chat_stream_post
       requestBody:
         content:
@@ -138,6 +122,146 @@ paths:
             application/json:
               schema: {}
             text/event-stream: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/chat/generations:
+    post:
+      tags:
+      - tutor
+      summary: Generation Start
+      description: Start a durable browser turn and return its ids before subscribing to tokens.
+      operationId: generation_start_v1_chat_generations_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStarted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - tutor
+      summary: Generation List
+      description: List the caller's live jobs so a refreshed UI can reconnect to each one.
+      operationId: generation_list_v1_chat_generations_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationList'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/chat/generations/{job_id}/stream:
+    get:
+      tags:
+      - tutor
+      summary: Generation Stream
+      description: Replay and tail a live or recently-completed job from a frame offset.
+      operationId: generation_stream_v1_chat_generations__job_id__stream_get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      - name: after
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+          title: After
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: SSE token stream
+          content:
+            application/json:
+              schema: {}
+            text/event-stream: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/chat/generations/{job_id}:
+    delete:
+      tags:
+      - tutor
+      summary: Generation Stop
+      description: Explicit Stop is the only browser action that cancels a server-owned generation.
+      operationId: generation_stop_v1_chat_generations__job_id__delete
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStopped'
         '422':
           description: Validation Error
           content:
@@ -367,7 +491,9 @@ paths:
 
         HMAC-signed (unforgeable); without it the token is the id itself (opaque per-device
 
-        secret). The client sends it as `Authorization: Bearer <token>` on data endpoints.'
+        secret). Native loopback mode replaces port-scoped browser ids with one persistent operator
+
+        id. The client sends the token as `Authorization: Bearer <token>` on data endpoints.'
       operationId: auth_session_v1_auth_session_post
       requestBody:
         content:
@@ -1348,6 +1474,68 @@ components:
       - correct_answer
       - worked_solution
       title: GeneratedQuestion
+    GenerationList:
+      properties:
+        generations:
+          items:
+            $ref: '#/components/schemas/GenerationStatus'
+          type: array
+          title: Generations
+      type: object
+      title: GenerationList
+    GenerationStarted:
+      properties:
+        job_id:
+          type: string
+          title: Job Id
+        conversation_id:
+          type: string
+          title: Conversation Id
+      type: object
+      required:
+      - job_id
+      - conversation_id
+      title: GenerationStarted
+      description: A server-owned generation that can be re-subscribed after browser navigation.
+    GenerationStatus:
+      properties:
+        job_id:
+          type: string
+          title: Job Id
+        conversation_id:
+          type: string
+          title: Conversation Id
+        state:
+          type: string
+          enum:
+          - running
+          - completed
+          - failed
+          - stopped
+          title: State
+        created_at:
+          type: string
+          title: Created At
+      type: object
+      required:
+      - job_id
+      - conversation_id
+      - state
+      - created_at
+      title: GenerationStatus
+    GenerationStopped:
+      properties:
+        job_id:
+          type: string
+          title: Job Id
+        stopping:
+          type: boolean
+          title: Stopping
+      type: object
+      required:
+      - job_id
+      - stopping
+      title: GenerationStopped
     HTTPValidationError:
       properties:
         detail:

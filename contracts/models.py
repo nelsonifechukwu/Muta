@@ -144,13 +144,38 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     student_id: str
-    conversation_id: str = Field(description="Pass back in the next request to continue the thread.")
+    conversation_id: str = Field(
+        description="Pass back in the next request to continue the thread."
+    )
     mode: TutoringMode
     reply: str
     verified: bool = Field(
         False, description="Whether math in the reply was checked by the `math` service."
     )
     citations: list[str] = Field(default_factory=list, description="RAG source references.")
+
+
+class GenerationStarted(BaseModel):
+    """A server-owned generation that can be re-subscribed after browser navigation."""
+
+    job_id: str
+    conversation_id: str
+
+
+class GenerationStatus(BaseModel):
+    job_id: str
+    conversation_id: str
+    state: Literal["running", "completed", "failed", "stopped"]
+    created_at: str
+
+
+class GenerationList(BaseModel):
+    generations: list[GenerationStatus] = Field(default_factory=list)
+
+
+class GenerationStopped(BaseModel):
+    job_id: str
+    stopping: bool
 
 
 # --- /diagnose -------------------------------------------------------------------------

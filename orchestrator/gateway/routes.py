@@ -42,6 +42,10 @@ from contracts.models import (
     GeneratedQuestion,
     GenerateQuestionRequest,
     GenerateQuestionResponse,
+    GenerationList,
+    GenerationStarted,
+    GenerationStatus,
+    GenerationStopped,
     HealthResponse,
     MasteryResponse,
     MessageList,
@@ -72,6 +76,7 @@ from orchestrator.gateway.auth import (
 )
 from orchestrator.gateway.deps import (
     get_engine,
+    get_generation_manager,
     get_ladder,
     get_model_manager,
     get_preamble_writer,
@@ -84,6 +89,7 @@ from orchestrator.gateway.deps import (
     load_prompt,
     refresh_engine_dependencies,
 )
+from orchestrator.gateway.generations import GenerationJob, GenerationManager
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.preamble import with_preamble
@@ -116,8 +122,15 @@ _SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 # vector). Constrain the served type to a known-safe allowlist, too.
 _ATTACHMENT_HEADERS = {"X-Content-Type-Options": "nosniff", "Content-Disposition": "attachment"}
 _SAFE_ATTACHMENT_MIME = {
-    "image/jpeg", "image/png", "image/webp",
-    "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "audio/webm",
+    "audio/ogg",
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/wav",
+    "audio/x-wav",
 }
 
 
@@ -301,7 +314,9 @@ def _preamble_opts() -> dict:
     }
 
 
-def _apply_thinking(params: dict, thinking: str | None, *, extended_budget: int | None = None) -> dict:
+def _apply_thinking(
+    params: dict, thinking: str | None, *, extended_budget: int | None = None
+) -> dict:
     """Fold the request's thinking level into the sampling params the engine receives. `off`
     disables the Qwen3 thinking phase (a direct, faster answer); `auto`/None leave the launch
     default reasoning budget; `extended` keeps thinking on, raises the PER-REQUEST reasoning
@@ -400,7 +415,9 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
     except httpx.HTTPError as e:
         raise _handle_engine_error(e, where="/chat") from e
     if req.attachment_ids:
-        _link_attachments(engine, req.attachment_ids, result.conversation_id, result.user_message_id)
+        _link_attachments(
+            engine, req.attachment_ids, result.conversation_id, result.user_message_id
+        )
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
     if result.generation is not None:
         bench_metrics.record(result.generation)
@@ -418,28 +435,20 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
     )
 
 
-@router.post(
-    "/chat/stream",
-    tags=["tutor"],
-    responses={200: {"content": {"text/event-stream": {}}, "description": "SSE token stream"}},
-)
-def chat_stream(
+def _start_chat_generation(
     req: ChatRequest,
-    engine: ChatEngine = Depends(get_engine),
-    sessions: SessionManager = Depends(get_sessions),
-    ladder: DegradationLadder = Depends(get_ladder),
-    preamble: PreambleWriter | None = Depends(get_preamble_writer),
-) -> StreamingResponse:
-    """Token-streaming twin of `/chat` — the browser UI's primary path.
+    *,
+    engine: ChatEngine,
+    sessions: SessionManager,
+    ladder: DegradationLadder,
+    preamble: PreambleWriter | None,
+    generations: GenerationManager,
+) -> GenerationJob:
+    """Prepare one turn and hand its iterator to the process-owned generation registry.
 
-    Emits Server-Sent Events: a leading `{"conversation_id": "..."}`, then
-    `{"reasoning": "..."}` for Qwen3 thinking tokens and `{"delta": "..."}` for answer
-    tokens, then a final
-    `{"done": true, "conversation_id", "completion_tokens", "elapsed_s", "tokens_per_second"}`.
-
-    Admission-controlled on the student's session so the classroom demo (30 phones, 2 engine
-    slots) queues gracefully with a 'you're next' message instead of piling unbounded
-    concurrent streams onto the engine — the exact path production traffic takes.
+    The worker, rather than an HTTP response iterator, owns `_sse()`. Consequently the
+    generator's persistence and session-release finalizers run even when every browser
+    subscriber disconnects.
     """
     state = ladder.evaluate()
     decision = sessions.acquire(req.student_id)
@@ -582,38 +591,158 @@ def chat_stream(
         # was checkable — the UI shows a "✓ checked" badge only on a real True.
         verified, check_note = _run_self_check("".join(reply_parts))
         _touch_twin(req.student_id, req.subject.value, req.message)
-        yield "data: " + json.dumps(
-            {
-                "done": True,
-                "conversation_id": cid,
-                "completion_tokens": n,
-                "elapsed_s": round(elapsed, 3),
-                "tokens_per_second": round(rate, 2),
-                # Two first-token numbers, deliberately separate. `ttft_s` is and stays the
-                # engine's own — what the tutor took to speak. `preamble_ttft_s` is when the
-                # pane stopped being empty. Collapsing them into one figure would be the
-                # dishonest version of this feature.
-                "ttft_s": round(t_first - started, 3) if n else None,
-                "preamble_ttft_s": round(t_preamble - started, 3) if t_preamble else None,
-                # Student text leaving the device must never be silent (P3): the UI
-                # badges any answer a cloud backend produced.
-                "source": getattr(getattr(engine, "client", None), "last_source", None)
-                or "local",
-                # Grounding sources (P4): empty unless web context shaped this answer.
-                "sources": sources,
-                # Verified-tool-calls (self-check): True/False when a step was checkable,
-                # null otherwise; check_note carries a friendly caution on a contradiction.
-                "verified": verified,
-                "check_note": check_note,
-                # Admission/degradation state, so the UI can show "you're next" and a
-                # reduced-capacity notice under classroom load.
-                "queued": decision.admission is Admission.QUEUED,
-                "queue_position": decision.queue_position,
-                "degradation_level": f"L{int(state.level)}",
-            }
-        ) + "\n\n"
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "done": True,
+                    "conversation_id": cid,
+                    "completion_tokens": n,
+                    "elapsed_s": round(elapsed, 3),
+                    "tokens_per_second": round(rate, 2),
+                    # Two first-token numbers, deliberately separate. `ttft_s` is and stays the
+                    # engine's own — what the tutor took to speak. `preamble_ttft_s` is when the
+                    # pane stopped being empty. Collapsing them into one figure would be the
+                    # dishonest version of this feature.
+                    "ttft_s": round(t_first - started, 3) if n else None,
+                    "preamble_ttft_s": round(t_preamble - started, 3) if t_preamble else None,
+                    # Student text leaving the device must never be silent (P3): the UI
+                    # badges any answer a cloud backend produced.
+                    "source": getattr(getattr(engine, "client", None), "last_source", None)
+                    or "local",
+                    # Grounding sources (P4): empty unless web context shaped this answer.
+                    "sources": sources,
+                    # Verified-tool-calls (self-check): True/False when a step was checkable,
+                    # null otherwise; check_note carries a friendly caution on a contradiction.
+                    "verified": verified,
+                    "check_note": check_note,
+                    # Admission/degradation state, so the UI can show "you're next" and a
+                    # reduced-capacity notice under classroom load.
+                    "queued": decision.admission is Admission.QUEUED,
+                    "queue_position": decision.queue_position,
+                    "degradation_level": f"L{int(state.level)}",
+                }
+            )
+            + "\n\n"
+        )
 
-    return StreamingResponse(_sse(), media_type="text/event-stream", headers=_SSE_HEADERS)
+    return generations.start(
+        student_id=req.student_id,
+        conversation_id=cid,
+        producer=_sse(),
+    )
+
+
+def _job_stream(job: GenerationJob, *, after: int = 0) -> StreamingResponse:
+    return StreamingResponse(
+        job.subscribe(after=after), media_type="text/event-stream", headers=_SSE_HEADERS
+    )
+
+
+@router.post(
+    "/chat/stream",
+    tags=["tutor"],
+    responses={200: {"content": {"text/event-stream": {}}, "description": "SSE token stream"}},
+)
+def chat_stream(
+    req: ChatRequest,
+    engine: ChatEngine = Depends(get_engine),
+    sessions: SessionManager = Depends(get_sessions),
+    ladder: DegradationLadder = Depends(get_ladder),
+    preamble: PreambleWriter | None = Depends(get_preamble_writer),
+    generations: GenerationManager = Depends(get_generation_manager),
+) -> StreamingResponse:
+    """Backwards-compatible streaming start; disconnecting no longer cancels inference."""
+    job = _start_chat_generation(
+        req,
+        engine=engine,
+        sessions=sessions,
+        ladder=ladder,
+        preamble=preamble,
+        generations=generations,
+    )
+    return _job_stream(job)
+
+
+@router.post(
+    "/chat/generations",
+    response_model=GenerationStarted,
+    status_code=202,
+    tags=["tutor"],
+)
+def generation_start(
+    req: ChatRequest,
+    engine: ChatEngine = Depends(get_engine),
+    sessions: SessionManager = Depends(get_sessions),
+    ladder: DegradationLadder = Depends(get_ladder),
+    preamble: PreambleWriter | None = Depends(get_preamble_writer),
+    generations: GenerationManager = Depends(get_generation_manager),
+    caller: str = Depends(require_caller),
+) -> GenerationStarted:
+    """Start a durable browser turn and return its ids before subscribing to tokens."""
+    if caller != req.student_id:
+        raise HTTPException(status_code=403, detail="you can only start your own generation")
+    job = _start_chat_generation(
+        req,
+        engine=engine,
+        sessions=sessions,
+        ladder=ladder,
+        preamble=preamble,
+        generations=generations,
+    )
+    return GenerationStarted(job_id=job.id, conversation_id=job.conversation_id)
+
+
+@router.get("/chat/generations", response_model=GenerationList, tags=["tutor"])
+def generation_list(
+    generations: GenerationManager = Depends(get_generation_manager),
+    caller: str = Depends(require_caller),
+) -> GenerationList:
+    """List the caller's live jobs so a refreshed UI can reconnect to each one."""
+    return GenerationList(
+        generations=[
+            GenerationStatus(
+                job_id=row.job_id,
+                conversation_id=row.conversation_id,
+                state=row.state,
+                created_at=row.created_at,
+            )
+            for row in generations.active(caller)
+        ]
+    )
+
+
+@router.get(
+    "/chat/generations/{job_id}/stream",
+    tags=["tutor"],
+    responses={200: {"content": {"text/event-stream": {}}, "description": "SSE token stream"}},
+)
+def generation_stream(
+    job_id: str,
+    after: int = 0,
+    generations: GenerationManager = Depends(get_generation_manager),
+    caller: str = Depends(require_caller),
+) -> StreamingResponse:
+    """Replay and tail a live or recently-completed job from a frame offset."""
+    if after < 0:
+        raise HTTPException(status_code=422, detail="after must be non-negative")
+    job = generations.get(job_id, student_id=caller)
+    if job is None:
+        raise HTTPException(status_code=404, detail="unknown generation")
+    return _job_stream(job, after=after)
+
+
+@router.delete("/chat/generations/{job_id}", response_model=GenerationStopped, tags=["tutor"])
+def generation_stop(
+    job_id: str,
+    generations: GenerationManager = Depends(get_generation_manager),
+    caller: str = Depends(require_caller),
+) -> GenerationStopped:
+    """Explicit Stop is the only browser action that cancels a server-owned generation."""
+    job = generations.get(job_id, student_id=caller)
+    if job is None:
+        raise HTTPException(status_code=404, detail="unknown generation")
+    return GenerationStopped(job_id=job.id, stopping=job.request_stop())
 
 
 @router.get("/conversations", response_model=ConversationList, tags=["conversations"])
@@ -917,9 +1046,12 @@ def tutor_chat(
 
 
 def _prompt_for(mode: TutorMode) -> str:
-    return {"dialogue": "socratic", "solution": "subgoal", "marking": "subgoal", "hint": "socratic"}[
-        mode.value
-    ]
+    return {
+        "dialogue": "socratic",
+        "solution": "subgoal",
+        "marking": "subgoal",
+        "hint": "socratic",
+    }[mode.value]
 
 
 @router.post(
@@ -990,17 +1122,23 @@ def tutor_chat_stream(
             # Preamble wrapper first, then the engine's generator — same load-bearing order
             # as /chat/stream: its helper thread may still be inside `next(events)`.
             _close_events(streamed)
-            _close_events(events)  # deterministic partial-persist off the event loop (see /chat/stream)
-        yield "data: " + json.dumps(
-            {
-                "done": True,
-                "session_id": cid,
-                "completion_tokens": count,
-                "ttft_s": round(first_token_at - started, 3) if count else None,
-                "preamble_ttft_s": round(preamble_at - started, 3) if preamble_at else None,
-                "degradation_level": f"L{int(state.level)}",
-            }
-        ) + "\n\n"
+            _close_events(
+                events
+            )  # deterministic partial-persist off the event loop (see /chat/stream)
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "done": True,
+                    "session_id": cid,
+                    "completion_tokens": count,
+                    "ttft_s": round(first_token_at - started, 3) if count else None,
+                    "preamble_ttft_s": round(preamble_at - started, 3) if preamble_at else None,
+                    "degradation_level": f"L{int(state.level)}",
+                }
+            )
+            + "\n\n"
+        )
 
     return StreamingResponse(_sse(), media_type="text/event-stream", headers=_SSE_HEADERS)
 

@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from orchestrator.gateway import deps
+from orchestrator.gateway.generations import GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.main import app
@@ -33,7 +34,9 @@ class FakeEngine:
         if self.raises:
             raise self.raises
         self.calls.append(kwargs)
-        return ChatResult(conversation_id=kwargs.get("conversation_id") or "conv-1", reply=self.reply)
+        return ChatResult(
+            conversation_id=kwargs.get("conversation_id") or "conv-1", reply=self.reply
+        )
 
     def stream_events_chat(self, **kwargs):
         self.calls.append(kwargs)
@@ -46,13 +49,17 @@ def wired():
     """Override the gateway's singletons; hand the test the objects it may poke."""
     engine = FakeEngine()
     ladder = DegradationLadder(free_probe=lambda: 8 * GiB, reserve_bytes=0, poll_seconds=0.0)
-    sessions = SessionManager(slots_count=2, accepts_new_sessions=lambda: ladder.evaluate().accepts_new_sessions)
+    sessions = SessionManager(
+        slots_count=2, accepts_new_sessions=lambda: ladder.evaluate().accepts_new_sessions
+    )
     vision = VisionManager(admit=lambda: ladder.evaluate().vision_allowed)
+    generations = GenerationManager()
 
     app.dependency_overrides[deps.get_engine] = lambda: engine
     app.dependency_overrides[deps.get_ladder] = lambda: ladder
     app.dependency_overrides[deps.get_sessions] = lambda: sessions
     app.dependency_overrides[deps.get_vision] = lambda: vision
+    app.dependency_overrides[deps.get_generation_manager] = lambda: generations
     yield engine, ladder, sessions, vision
     app.dependency_overrides.clear()
 
@@ -159,6 +166,37 @@ def test_stream_done_reports_the_answer_source(wired):
     assert '"source": "local"' in r.text.strip().splitlines()[-1]
 
 
+def test_browser_can_start_then_reconnect_to_a_server_owned_generation(wired):
+    auth = {"Authorization": "Bearer s1"}
+    started = client.post(
+        "/v1/chat/generations",
+        headers=auth,
+        json={"student_id": "s1", "message": "Solve x^2 = 9"},
+    )
+    assert started.status_code == 202
+    ids = started.json()
+    assert ids["job_id"] and ids["conversation_id"] == "conv-1"
+
+    replay = client.get(f"/v1/chat/generations/{ids['job_id']}/stream", headers=auth)
+    assert replay.status_code == 200
+    assert '"reasoning": "hmm"' in replay.text
+    assert '"delta": "x = "' in replay.text
+    assert '"done": true' in replay.text
+
+
+def test_generation_replay_is_scoped_to_its_owner(wired):
+    started = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "hello"},
+    ).json()
+    response = client.get(
+        f"/v1/chat/generations/{started['job_id']}/stream",
+        headers={"Authorization": "Bearer s2"},
+    )
+    assert response.status_code == 404
+
+
 # --- vision -------------------------------------------------------------------------------
 
 
@@ -210,9 +248,7 @@ def test_a_valid_photo_is_transcribed(wired, monkeypatch):
         captured["bytes"] = len(image_bytes)
         return "x^2 = 9"
 
-    monkeypatch.setattr(
-        "orchestrator.gateway.routes.VisionClient.transcribe", fake_transcribe
-    )
+    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient.transcribe", fake_transcribe)
     body = client.post(
         "/v1/tutor/vision",
         data={"session_id": "s1"},

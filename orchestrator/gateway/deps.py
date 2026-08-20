@@ -16,6 +16,7 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
+from orchestrator.gateway.generations import GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.pedagogy.twin import TwinStore
@@ -99,6 +100,12 @@ def get_engine() -> ChatEngine:
         )
     store = ConversationStore(cfg.db_url)
     return ChatEngine(client, store, max_history_messages=cfg.max_history_messages)
+
+
+@lru_cache(maxsize=1)
+def get_generation_manager() -> GenerationManager:
+    """Live replay buffers outlive browser requests but not the gateway process."""
+    return GenerationManager()
 
 
 @lru_cache(maxsize=1)
@@ -209,7 +216,9 @@ def get_twin_store() -> TwinStore:
         return TwinStore(target)
     except OSError:
         fallback = Path(tempfile.gettempdir()) / "muta-twins"
-        log.warning("twin dir %s not writable — using ephemeral %s (set TUTOR_ROOT)", target, fallback)
+        log.warning(
+            "twin dir %s not writable — using ephemeral %s (set TUTOR_ROOT)", target, fallback
+        )
         return TwinStore(fallback)
 
 
