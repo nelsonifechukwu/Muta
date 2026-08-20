@@ -123,3 +123,49 @@ def test_selected_conversation_lives_in_the_url_and_restores_on_startup():
     assert "const selected = conversationFromLocation()" in js
     assert 'window.addEventListener("popstate"' in js
     assert 'setConversationLocation(conversationId, { mode: "replace" })' in js
+
+
+def test_new_chat_start_can_be_recovered_if_the_page_refreshes_immediately():
+    js = (UI / "app.js").read_text()
+    assert "client_request_id: clientRequestId" in js
+    assert "setPendingLocation(clientRequestId)" in js
+    assert "/v1/chat/generations?client_request_id=" in js
+    assert "recoverPendingGeneration(pending)" in js
+    assert 'if (job.terminal)' in js and 'job.error = ev.error' in js
+    assert "if (startRejected" in js
+
+
+def test_only_the_latest_conversation_navigation_can_commit():
+    js = (UI / "app.js").read_text()
+    assert "const requestedNavigation = ++navigationVersion" in js
+    assert js.count("requestedNavigation !== navigationVersion") >= 2
+    assert "const targetJobBeforeLoad = jobForConversation(cid)" in js
+    assert "const restoring = targetJobBeforeLoad || jobForConversation(cid)" in js
+    assert "currentViewId = newViewId()" in js
+    assert "returnedToConversation" in js
+    assert "pendingConversationLoad === started.conversation_id" in js
+    assert js.index("if (returnedToConversation) void loadConversation") < js.index(
+        "void followGeneration(job)", js.index("if (returnedToConversation)")
+    )
+
+
+def test_settings_escape_is_consumed_before_the_stop_shortcut():
+    js = (UI / "app.js").read_text()
+    assert "event.stopPropagation()" in js
+    assert 'if (!settingsModal.hidden) return;' in js
+
+
+def test_voice_status_uses_the_same_guarded_auto_follow_policy():
+    audio = (UI / "audio.js").read_text()
+    app = (UI / "app.js").read_text()
+    assert "chat.scrollIfFollowing()" in audio
+    assert "scrollTop = 1e9" not in audio
+    assert "chat.setVoiceActive(true)" in audio
+    assert "if (voiceModeActive)" in app
+
+
+def test_student_identity_boots_on_plain_http_lan_origins():
+    js = (UI / "app.js").read_text()
+    assert 'typeof crypto.randomUUID === "function"' in js
+    assert "crypto.getRandomValues(new Uint8Array(16))" in js
+    assert "Math.random" not in js

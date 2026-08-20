@@ -32,10 +32,18 @@ allowed to occupy more than one of those already-budgeted slots.
 5. Put the selected conversation id in the `/ui/` query string and restore it after auth on
    startup. Use history navigation for conversation selection and clear the parameter for a
    new chat.
+6. Harden the lifecycle after adversarial review: reserve capacity atomically per generation,
+   reject duplicate turns in one conversation, enforce the learner setting on the server,
+   verify conversation ownership in the runtime, and serialize model switching against live
+   generation admission.
+7. Give a brand-new-chat start a client request id and provisional URL so a refresh between
+   clicking Send and receiving the persisted conversation id can recover the exact job. Guard
+   conversation loads with a navigation sequence so stale A responses cannot overwrite B.
 
 ## Compatibility and safety invariants
 
-- Keep `POST /v1/chat/stream` as a backwards-compatible SSE endpoint.
+- Keep `POST /v1/chat/stream` as a request/response-compatible SSE endpoint, but require the
+  same learner bearer identity as the durable generation API before launching background work.
 - New data endpoints require the existing bearer identity and never reveal another
   student's job or conversation.
 - A deliberate Stop cancels the server-owned job; navigation, tab backgrounding, connection
@@ -44,6 +52,8 @@ allowed to occupy more than one of those already-budgeted slots.
   registry is only a live replay buffer and may be lost on a gateway process restart.
 - Parallel generation never changes `MUTA_RT_N_PARALLEL`, the KV-cache budget, or the memory
   ladder.
+- Model switching and new-job admission share one lock; a model process is never stopped while
+  a reply owns or is reserving an engine slot.
 
 ## Verification
 

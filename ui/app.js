@@ -4,10 +4,22 @@
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
+function newStudentId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // randomUUID is secure-context-only in some browsers, while getRandomValues remains
+  // available on the plain-HTTP classroom LAN. Produce an RFC 4122 v4 id without making
+  // first boot depend on HTTPS or on weak pseudo-random entropy.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 let studentId = (() => {
   let id = localStorage.getItem("muta-student");
   if (!id) {
-    id = crypto.randomUUID();
+    id = newStudentId();
     localStorage.setItem("muta-student", id);
   }
   return id;
@@ -42,12 +54,18 @@ async function ensureAuth() {
 }
 
 let conversationId = null;
+// A blank chat has no persisted conversation id yet, but it is still a distinct view. This
+// token prevents a slow start response from an older blank chat attaching itself to a newer
+// blank chat merely because both have conversationId === null.
+const newViewId = () => `view:${newStudentId()}`;
+let currentViewId = newViewId();
 // Chat inference is owned by the gateway. Each entry mirrors one replayable server job and
 // keeps only view state in the browser; losing this Map on refresh is harmless because
 // recoverGenerations() rebuilds it from GET /v1/chat/generations.
 const generationJobs = new Map(); // job id -> {id, cid, handle, buffers, item, ...}
 const startingConversations = new Set(); // prevent duplicate sends while POST /generations starts
 let voiceGenerating = false;
+let voiceModeActive = false;
 // Kept false until the Settings UI lands; the per-conversation machinery itself is already
 // capable of parallel jobs, while this gate preserves today's one-chat product behaviour.
 let allowParallelChats = true;
@@ -59,9 +77,11 @@ let telemetryCloseTimer = null;
 let thinkingLevel = localStorage.getItem("muta-thinking") || "auto";
 let modelCatalog = null;
 
-const anyGeneration = () => voiceGenerating || generationJobs.size > 0 || startingConversations.size > 0;
+const anyGeneration = () =>
+  voiceModeActive || voiceGenerating || generationJobs.size > 0 || startingConversations.size > 0;
 const jobForConversation = (cid = conversationId) =>
   [...generationJobs.values()].find((job) => job.cid === cid && !job.terminal) || null;
+const startKeyFor = (cid, viewId = currentViewId) => cid ? `conversation:${cid}` : viewId;
 
 const $ = (sel) => document.querySelector(sel);
 const messagesEl = $("#messages");
@@ -76,19 +96,35 @@ const chatScroller = $("#chat-scroll");
 // immediately before that render.
 const AUTO_FOLLOW_THRESHOLD_PX = 96;
 let autoFollow = true;
+let navigationVersion = 0;
+let pendingConversationLoad = null;
 
 function conversationFromLocation() {
   const cid = new URL(location.href).searchParams.get("chat");
   return cid && cid.length <= 64 ? cid : null;
 }
 
+function pendingRequestFromLocation() {
+  const requestId = new URL(location.href).searchParams.get("pending");
+  return requestId && requestId.length <= 64 ? requestId : null;
+}
+
 function setConversationLocation(cid, { mode = "push" } = {}) {
   if (mode === "none") return;
   const url = new URL(location.href);
+  url.searchParams.delete("pending");
   if (cid) url.searchParams.set("chat", cid);
   else url.searchParams.delete("chat");
   if (url.href === location.href) return;
   history[mode === "replace" ? "replaceState" : "pushState"]({ chat: cid }, "", url);
+}
+
+
+function setPendingLocation(requestId) {
+  const url = new URL(location.href);
+  url.searchParams.delete("chat");
+  url.searchParams.set("pending", requestId);
+  history.replaceState({ pending: requestId }, "", url);
 }
 
 // ---------------------------------------------------------------------------
@@ -524,7 +560,38 @@ async function refreshSidebar() {
 }
 
 async function loadConversation(cid, { historyMode = "push" } = {}) {
-  // Detach only the view. The gateway owns the job and our subscription keeps buffering it.
+  if (voiceModeActive) {
+    setConversationLocation(conversationId, { mode: "replace" });
+    toast("Finish or stop voice mode before changing chats.");
+    return false;
+  }
+  const requestedNavigation = ++navigationVersion;
+  pendingConversationLoad = cid;
+  // Keep a reference even if finishGeneration removes it from the Map while history is in
+  // flight. That history snapshot may contain only a partial assistant row.
+  const targetJobBeforeLoad = jobForConversation(cid);
+  let r;
+  try {
+    r = await fetch(`/v1/conversations/${cid}/messages`, { headers: authHeaders() });
+  } catch {
+    if (requestedNavigation !== navigationVersion) return false;
+    pendingConversationLoad = null;
+    setConversationLocation(conversationId, { mode: "replace" });
+    toast("Couldn't load that conversation.");
+    return false;
+  }
+  // A slower A load must never overwrite a newer B click or Back/Forward navigation.
+  if (requestedNavigation !== navigationVersion) return false;
+  if (!r.ok) {
+    pendingConversationLoad = null;
+    setConversationLocation(conversationId, { mode: "replace" });
+    toast("Couldn't load that conversation.");
+    return false;
+  }
+  const body = await r.json();
+  if (requestedNavigation !== navigationVersion) return false;
+  // Commit the navigation only after its history arrived. Until here, the previous stream
+  // remains attached and visible if the target request fails.
   const leaving = jobForConversation();
   if (leaving) {
     leaving.handle = null;
@@ -532,16 +599,12 @@ async function loadConversation(cid, { historyMode = "push" } = {}) {
   }
   closeTelemetry(0);
   discardQueue(); // queued messages were aimed at the thread we're leaving
-  const r = await fetch(`/v1/conversations/${cid}/messages`, { headers: authHeaders() });
-  if (!r.ok) {
-    toast("Couldn't load that conversation.");
-    return false;
-  }
-  const body = await r.json();
   conversationId = cid;
+  pendingConversationLoad = null;
+  currentViewId = newViewId();
   setConversationLocation(cid, { mode: historyMode });
   messagesEl.innerHTML = "";
-  const restoring = jobForConversation(cid);
+  const restoring = targetJobBeforeLoad || jobForConversation(cid);
   let messages = body.messages;
   // The server writes a streaming reply through to its row as it arrives, so the in-flight
   // turn is already in this history — as a snapshot that is at most a moment old. The job
@@ -569,9 +632,21 @@ function reattachJob(job) {
   if (job.reasoning) handle.pushThought(job.reasoning);
   if (job.content) handle.pushDelta(job.content);
   job.handle = handle;
+  // Replay can finish while the history request is still in flight. In that ordering the
+  // terminal event had no view handle to settle, so settle the freshly attached bubble now.
+  if (job.terminal) {
+    if (job.failed) handle.fail(job.error || "The tutor couldn't finish that reply.");
+    else handle.finalize();
+  }
 }
 
 function newChat({ historyMode = "push" } = {}) {
+  if (voiceModeActive) {
+    setConversationLocation(conversationId, { mode: "replace" });
+    return toast("Finish or stop voice mode before changing chats.");
+  }
+  navigationVersion += 1;
+  pendingConversationLoad = null;
   const leaving = jobForConversation();
   if (leaving) {
     leaving.handle = null;
@@ -580,6 +655,7 @@ function newChat({ historyMode = "push" } = {}) {
   closeTelemetry(0);
   discardQueue();
   conversationId = null;
+  currentViewId = newViewId();
   setConversationLocation(null, { mode: historyMode });
   pendingAttachments = [];
   renderChips();
@@ -616,7 +692,11 @@ function syncComposerState() {
   $("#btn-mic").disabled = switchingModel;
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
   // voice reply (generating without a chat stream) the mic button owns interruption.
-  sendBtn.disabled = switchingModel || busy || voiceGenerating || startingConversations.has(conversationId);
+  sendBtn.disabled =
+    switchingModel ||
+    busy ||
+    voiceModeActive ||
+    startingConversations.has(startKeyFor(conversationId));
   sendBtn.classList.toggle("stop", Boolean(streaming));
   sendBtn.title = streaming ? "Stop the reply (Esc)" : "Send";
   const modelSelect = $("#model-select");
@@ -805,6 +885,7 @@ window.addEventListener("dragend", hideDropHint);
 window.addEventListener("blur", hideDropHint);
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    if (!settingsModal.hidden) return;
     hideDropHint();
     const menu = $("#think-menu");
     if (menu && !menu.hidden) return openThinkMenu(false); // close the menu before stopping
@@ -890,6 +971,7 @@ function restoreDraft(item) {
 }
 
 function send(steer = false) {
+  if (voiceModeActive) return toast("Finish voice mode before sending a typed message.");
   if ($("#model-select")?.dataset.switching === "true") {
     return toast("The selected model is still loading — your draft is safe.");
   }
@@ -906,7 +988,7 @@ function send(steer = false) {
   const currentJob = viewingLiveStream();
   if (currentJob) {
     // Human in the loop: Enter while the tutor talks queues the message; Ctrl+Enter steers —
-    // it cuts the current reply short (partial is persisted) and sends this message next,
+  // it cuts the current reply short (partial is persisted) and sends this message next,
     // ahead of anything already queued. A voice reply can't be stopped from the keyboard
     // (the mic button owns barge-in), so steering degrades to queueing there.
     if (steer) {
@@ -936,21 +1018,25 @@ async function dispatch(item, opts = {}) {
     regenerate = false,
     thinking = thinkingLevel,
     conversationOverride = conversationId,
+    viewOverride = currentViewId,
+    clientRequestId = newStudentId(),
   } = opts;
   const message = composeOutgoingMessage(item.typed, item.attachments);
   const attachmentIds = item.attachments.map((a) => a.id).filter((id) => id != null);
   const startedIn = conversationOverride;
-  const startKey = startedIn;
+  const startedView = viewOverride;
+  const startKey = startKeyFor(startedIn, startedView);
   if (startingConversations.has(startKey) || jobForConversation(startedIn)) return;
 
   // A regenerate ("answer now") re-answers the turn already on screen, so it neither adds a
   // new user bubble nor re-links attachments — the backend re-runs the last user turn.
-  const renderingHere = conversationId === startedIn;
+  const renderingHere = currentViewId === startedView;
   if (!regenerate && renderingHere) addUserMessage(item.typed || "(from my image)", item.attachments);
   // "Answer now" is offered while the tutor is thinking: it cancels this stream and asks for
   // a direct answer to the same question. Not offered on a regenerate (it is already the
   // direct answer — thinking is off — so it can't loop).
   let job = null;
+  let startRejected = false;
   const assistant = renderingHere
     ? beginAssistantMessage(
         regenerate ? null : () => {
@@ -961,6 +1047,10 @@ async function dispatch(item, opts = {}) {
       )
     : null;
   startingConversations.add(startKey);
+  if (startedIn == null && renderingHere) {
+    setPendingLocation(clientRequestId);
+    sessionStorage.setItem(`muta-pending:${clientRequestId}`, "1");
+  }
   syncComposerState();
 
   try {
@@ -971,6 +1061,7 @@ async function dispatch(item, opts = {}) {
         student_id: studentId,
         message,
         conversation_id: startedIn,
+        client_request_id: clientRequestId,
         attachment_ids: regenerate ? [] : attachmentIds,
         use_web: useWeb,
         thinking,
@@ -978,18 +1069,25 @@ async function dispatch(item, opts = {}) {
       }),
     });
     if (!res.ok) {
+      startRejected = true;
       const detail = (await res.json().catch(() => ({}))).detail;
       if (assistant) assistant.fail(detail || `The tutor couldn't answer (HTTP ${res.status}).`);
       return;
     }
     const started = await res.json();
-    const stillHere = conversationId === startedIn;
+    const stillHere = currentViewId === startedView;
+    const returnedToConversation =
+      !stillHere &&
+      startedIn != null &&
+      (conversationId === started.conversation_id ||
+        pendingConversationLoad === started.conversation_id);
     if (stillHere) {
       conversationId = started.conversation_id;
       // The first persisted id replaces the blank-new-chat URL immediately, before any
       // tokens arrive, so even an instant refresh returns to the correct conversation.
       setConversationLocation(conversationId, { mode: "replace" });
     }
+    sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
     job = {
       id: started.job_id,
       cid: started.conversation_id,
@@ -1003,13 +1101,28 @@ async function dispatch(item, opts = {}) {
       terminal: false,
       stopping: false,
       telemetryOpened: false,
+      clientRequestId: started.client_request_id || clientRequestId,
     };
     generationJobs.set(job.id, job);
     refreshSidebar();
+    // Begin the replacement load first so it captures this job synchronously, before a very
+    // short generation can finish and leave an older in-flight history snapshot behind.
+    if (returnedToConversation) void loadConversation(job.cid, { historyMode: "none" });
     void followGeneration(job);
   } catch {
-    if (assistant) assistant.fail("Couldn't start that reply — your message is saved above.");
+    if (startedIn == null && currentViewId === startedView) {
+      const recovered = await recoverPendingGeneration(clientRequestId);
+      if (!recovered && assistant) {
+        assistant.fail("Couldn't start that reply — your message is saved above.");
+      }
+    } else if (assistant) {
+      assistant.fail("Couldn't start that reply — your message is saved above.");
+    }
   } finally {
+    if (startRejected && currentViewId === startedView && startedIn == null) {
+      sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+      setConversationLocation(null, { mode: "replace" });
+    }
     startingConversations.delete(startKey);
     syncComposerState();
   }
@@ -1080,6 +1193,7 @@ async function pumpSse(res, job) {
           job.handle?.pushDelta(ev.delta);
         } else if (ev.error) {
           job.failed = true;
+          job.error = ev.error;
           job.handle?.fail(ev.error);
         } else if (ev.done) {
           job.terminal = true;
@@ -1163,6 +1277,7 @@ function finishGeneration(job) {
       regenerate: true,
       thinking: "off",
       conversationOverride: job.cid,
+      viewOverride: conversationId === job.cid ? currentViewId : newViewId(),
     });
   } else {
     drainQueue(job.cid);
@@ -1189,6 +1304,7 @@ async function recoverGenerations() {
         terminal: false,
         stopping: false,
         telemetryOpened: false,
+        clientRequestId: active.client_request_id || null,
       };
       generationJobs.set(job.id, job);
       void followGeneration(job);
@@ -1197,6 +1313,56 @@ async function recoverGenerations() {
   } catch {
     /* history remains usable; the next reload can try reconnecting again */
   }
+}
+
+async function recoverPendingGeneration(clientRequestId) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      const response = await fetch(
+        `/v1/chat/generations?client_request_id=${encodeURIComponent(clientRequestId)}`,
+        { headers: authHeaders() },
+      );
+      if (response.ok) {
+        const body = await response.json();
+        const active = body.generations?.[0];
+        if (active) {
+          let job = generationJobs.get(active.job_id);
+          if (!job) {
+            job = {
+              id: active.job_id,
+              cid: active.conversation_id,
+              handle: null,
+              preamble: "",
+              reasoning: "",
+              content: "",
+              item: null,
+              pendingRegen: null,
+              framesSeen: 0,
+              terminal: false,
+              stopping: false,
+              telemetryOpened: false,
+              clientRequestId,
+            };
+            generationJobs.set(job.id, job);
+            void followGeneration(job);
+          }
+          conversationId = active.conversation_id;
+          sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+          setConversationLocation(conversationId, { mode: "replace" });
+          await loadConversation(conversationId, { historyMode: "none" });
+          return true;
+        }
+      }
+    } catch {
+      /* the original start may still be crossing the refresh; keep polling briefly */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+  setConversationLocation(null, { mode: "replace" });
+  currentViewId = newViewId();
+  toast("That reply did not start. Your conversation list is still intact.");
+  return false;
 }
 
 sendBtn.addEventListener("click", () => {
@@ -1226,7 +1392,12 @@ window.MutaChat = {
   openTelemetry,
   closeTelemetry,
   toast,
+  scrollIfFollowing: () => scrollToBottom(),
   isGenerating: anyGeneration,
+  setVoiceActive: (v) => {
+    voiceModeActive = v;
+    syncComposerState();
+  },
   setGenerating: (v) => {
     voiceGenerating = v;
     syncComposerState();
@@ -1297,7 +1468,11 @@ parallelChatsToggle.addEventListener("change", () => {
   void saveParallelChats(parallelChatsToggle.checked);
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !settingsModal.hidden) setSettingsOpen(false);
+  if (event.key === "Escape" && !settingsModal.hidden) {
+    event.preventDefault();
+    event.stopPropagation();
+    setSettingsOpen(false);
+  }
 });
 
 // --- mobile sidebar drawer -------------------------------------------------------------
@@ -1323,10 +1498,15 @@ ensureAuth().then(async () => {
   await loadSettings();
   await recoverGenerations();
   const selected = conversationFromLocation();
+  const pending = pendingRequestFromLocation();
   if (selected) {
     const loaded = await loadConversation(selected, { historyMode: "none" });
     if (!loaded) newChat({ historyMode: "replace" });
+  } else if (pending && sessionStorage.getItem(`muta-pending:${pending}`)) {
+    const recovered = await recoverPendingGeneration(pending);
+    if (!recovered) refreshSidebar();
   } else {
+    if (pending) setConversationLocation(null, { mode: "replace" });
     refreshSidebar();
   }
 });

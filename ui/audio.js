@@ -146,7 +146,7 @@
       document.querySelector("#messages").appendChild(statusEl);
     }
     statusEl.textContent = "🎙 " + text;
-    document.querySelector("#chat-scroll").scrollTop = 1e9;
+    chat.scrollIfFollowing();
   }
 
   // --- websocket voice session ---------------------------------------------
@@ -175,6 +175,7 @@
         })
       );
       active = true;
+      chat.setVoiceActive(true);
       replying = false;
       micMuted = false;
       micBtn.classList.add("recording");
@@ -263,6 +264,7 @@
 
   function stopVoice(toastText) {
     active = false;
+    chat.setVoiceActive(false);
     replying = false;
     micMuted = false;
     stopPlayback();
