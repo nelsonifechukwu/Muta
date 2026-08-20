@@ -1,0 +1,21 @@
+[Unit]
+Description=Muta native gateway and inference engine
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Muta
+EnvironmentFile=-%h/.config/muta/native.env
+# Pass these security invariants at exec time so an EnvironmentFile or repo .env value cannot
+# override them. Clearing escape-hatch engine flags prevents a second, later --host argument.
+ExecStart=/usr/bin/env MUTA_NATIVE_HOST=127.0.0.1 MUTA_RT_SERVER_HOST=127.0.0.1 MUTA_RT_EXTRA_SERVER_ARGS=[] %h/Muta/run.sh --native-linux
+Restart=always
+RestartSec=3s
+TimeoutStartSec=360s
+TimeoutStopSec=90s
+# TERM only the gateway first so its lifespan can stop the supervised engine. If graceful shutdown
+# wedges, systemd's final KILL still covers every remaining process in the unit cgroup.
+KillMode=mixed
+
+[Install]
+WantedBy=default.target

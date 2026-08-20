@@ -94,6 +94,80 @@ Mac, use an SSH tunnel rather than opening a public firewall rule:
 gcloud compute ssh muta-vm --zone=us-west1-b -- -L 8000:127.0.0.1:8000
 ```
 
+### Keep the GCP native UI running
+
+Do not launch the GCP gateway with `nohup`: when its SSH session is collected, the gateway can
+disappear while its engine child keeps the native ports occupied. Install the checked-in systemd
+user unit once instead (the GCP checkout is `/home/$USER/Muta`). Enable it without starting first,
+then enable linger before taking over the two native ports:
+
+```bash
+systemctl --user stop muta-gateway.service 2>/dev/null || true
+mkdir -p ~/.config/systemd/user
+install -m 0644 deploy/systemd/muta-gateway.service \
+  ~/.config/systemd/user/muta-gateway.service
+systemctl --user daemon-reload
+systemctl --user enable muta-gateway.service
+sudo loginctl enable-linger "$USER"
+```
+
+On the first migration only, identify the old listeners and verify both belong to this checkout
+before terminating them. Do not use a broad `pkill` command:
+
+```bash
+set -eu
+gateway_pid="$(pgrep -f '^(.*/)?[.]venv/bin/python -m uvicorn orchestrator[.]main:app .*--port 8000$' || true)"
+engine_pid="$(pgrep -f '^(.*/)?runtime/build/bin/llama-server .*--port 8080( |$)' || true)"
+[ "$(printf '%s\n' "$gateway_pid" | wc -w)" -eq 1 ] || {
+  echo "expected exactly one legacy gateway; refusing takeover" >&2; exit 1;
+}
+[ "$(printf '%s\n' "$engine_pid" | wc -w)" -eq 1 ] || {
+  echo "expected exactly one legacy engine; refusing takeover" >&2; exit 1;
+}
+test "$(readlink -f "/proc/$gateway_pid/cwd")" = "$HOME/Muta"
+test "$(readlink -f "/proc/$engine_pid/cwd")" = "$HOME/Muta"
+ps -fp "$gateway_pid" -p "$engine_pid"
+
+wait_port_free() {
+  port="$1"; attempts=0
+  while ss -H -ltn "sport = :$port" | grep -q .; do
+    attempts=$((attempts + 1))
+    [ "$attempts" -lt 90 ] || return 1
+    sleep 1
+  done
+}
+
+kill -TERM "$gateway_pid"
+wait_port_free 8000 || { echo "gateway port did not clear" >&2; exit 1; }
+kill -0 "$engine_pid" 2>/dev/null && kill -TERM "$engine_pid"
+wait_port_free 8080 || { echo "engine port did not clear" >&2; exit 1; }
+systemctl --user start muta-gateway.service
+
+attempts=0
+until curl -fsS http://127.0.0.1:8000/v1/ready \
+    | grep -Eq '"ready"[[:space:]]*:[[:space:]]*true'; do
+  attempts=$((attempts + 1))
+  [ "$attempts" -lt 90 ] || { echo "Muta did not become ready" >&2; exit 1; }
+  sleep 1
+done
+```
+
+Exit SSH, reconnect, and run the readiness check once more. That proves the service—not the
+deployment shell—owns the live processes. Later upgrades only need
+`systemctl --user restart muta-gateway.service`; do not repeat the legacy takeover.
+
+The optional `~/.config/muta/native.env` file can override native environment variables without
+editing the unit. Gateway and engine bind addresses are deliberately pinned to `127.0.0.1` in the
+executed command; connect through the SSH tunnel above. Check and safely restart it with:
+
+```bash
+systemctl --user status muta-gateway.service
+journalctl --user -u muta-gateway.service -f
+curl -fsS http://127.0.0.1:8000/v1/ready \
+  | grep -Eq '"ready"[[:space:]]*:[[:space:]]*true'
+systemctl --user restart muta-gateway.service
+```
+
 The exploratory VM engine benchmark is:
 
 ```bash
