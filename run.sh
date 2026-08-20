@@ -221,7 +221,7 @@ native_python() {
 require_native_port_free() {
     port="$1"
     label="$2"
-    "$NATIVE_PY" -c 'import socket,sys; s=socket.socket(); s.bind(("127.0.0.1", int(sys.argv[1]))); s.close()' \
+    "$NATIVE_PY" -c 'import socket,sys; s=socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(("127.0.0.1", int(sys.argv[1]))); s.close()' \
         "$port" >/dev/null 2>&1 || die "$label port $port is already occupied — stop the old native/control process first"
 }
 

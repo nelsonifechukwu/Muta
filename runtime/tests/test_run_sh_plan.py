@@ -75,3 +75,8 @@ def test_plan_on_linux_with_nvidia_points_at_cuda(tmp_path):
 def test_plan_on_plain_linux_is_cpu(tmp_path):
     out = run_plan(tmp_path, "Linux", "x86_64")
     assert "gpu=none" in out
+
+
+def test_native_port_probe_allows_immediate_restart_after_time_wait():
+    source = (REPO / "run.sh").read_text()
+    assert "setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)" in source
