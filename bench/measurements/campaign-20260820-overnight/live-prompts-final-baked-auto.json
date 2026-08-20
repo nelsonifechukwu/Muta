@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "kind": "qualitative_live_prompt_acceptance",
+  "created_at": "2026-08-20T03:39:13.949994+00:00",
+  "binary": "/home/elijahnelson/Muta/runtime/build/bin/llama-server",
+  "binary_sha256": "43ed5a11149b9d1e7e9b8935fb2d9518e0723c14ec2d6bb58be787adefd0124a",
+  "settings": {
+    "threads": 2,
+    "ctx_size": 2048,
+    "temperature": 0,
+    "seed": 42,
+    "max_tokens": 256,
+    "thinking": "auto"
+  },
+  "models": [
+    {
+      "model_id": "muta-tutor-qwen3.5-0.8b-q4_0-final",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf",
+      "model_sha256": "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b",
+      "model_bytes": 507148832,
+      "system_prompt_supplied": false,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "Here is the step-by-step solution to find the selling price of one crate.\n\n**Step 1: Calculate the total cost.**\nThe trader bought 24 crates for a total of 18,000 naira.\n$$ \\text{Total Cost} = 18,000 $$\n$$ \\text{Cost per crate} = \\frac{18,000}{24} $$\n\n**Step 2: Calculate the selling price.**\nThe trader made a 25% profit on the cost. This means the selling price is the cost plus 25% of the cost (or $1.25$ times the cost).\n$$ \\text{Profit Amount} = 0.25 \\times \\text{Cost per crate} $$\n$$ \\text{Selling Price} = \\text{Cost per crate} + 0.25 \\times \\text{Cost per crate} $$\n$$ \\text{Selling Price} = 1.25 \\times \\text{Cost per crate} $$\n\n**Step 3: Substitute the cost back into the equation.**\nWe know the cost is $\\frac{18,000}{2",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 12.136,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 189,
+            "total_tokens": 445,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "You made a mistake in the **addition** of fractions, not the multiplication.\n\nHere is the step-by-step correction:\n\n1.  **Find the Least Common Denominator**: The denominators are 2 and 3. The smallest number that both 2 and 3 divide into evenly is **6**.\n2.  **Convert the fractions to have a denominator of 6**:\n    *   $\\frac{1}{2} = \\frac{1 \\times 3}{2 \\times 3} = \\frac{3}{6}$\n    *   $\\frac{1}{3} = \\frac{1 \\times 2}{3 \\times 2} = \\frac{2}{6}$\n3.  **Add the numerators**:\n    $$ \\frac{3}{6} + \\frac{2}{6} = \\frac{3 + 2}{6} = \\frac{5}{6} $$\n\n**What went wrong?**\nYou multiplied the numerators ($1 \\times 1$) instead of converting them to a common denominator.\n\n**Quick Check:**\n*   **Correct Answer**: $\\frac{5}{6}$\n*   **Your Answer**: $2",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.52,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 170,
+            "total_tokens": 426,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "**Step 1: Identify the given values.**\n*   Mass ($m$) = $2.0 \\text{ kg}$\n*   Initial Temperature ($T_i$) = $20^\\circ\\text{C}$\n*   Final Temperature ($T_f$) = $30^\\circ\\text{C}$\n*   Specific Heat Capacity ($c$) = $4200 \\text{ J/(kg}\\cdot^\\circ\\text{C)}$\n\n**Step 2: Calculate the change in temperature ($\\Delta T$).**\n$$ \\Delta T = T_f - T_i = 30^\\circ\\text{C} - 20^\\circ\\text{C} = 10^\\circ\\text{C} $$\n\n**Step 3: Calculate the energy transferred ($Q$) using the formula.**\nThe formula for heat transfer is $Q = mc\\Delta T$.\n$$ Q = 2.0 \\text{ kg} \\times 4200 \\frac{\\text{J}}{\\text{kg}\\cdot^\\circ\\text{C}} \\times 10^\\circ\\text{C} $$\n\nFirst, multiply the mass",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.787,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 194,
+            "total_tokens": 450,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "Here is the proof by contradiction that $\\sqrt{2}$ is irrational.\n\n**Step 1: Assume the opposite.**\nAssume that $\\sqrt{2}$ **is** an integer.\n*   *Reasoning:* If we assume it is an integer, we are saying it has no decimal part (like $3.5$).\n\n**Step 2: Test the assumption against a known number.**\nWe know that $\\sqrt{2}$ is approximately $1.414$.\n*   *Check:* Is $1.414$ an integer? No, because it has a decimal part ($0.414$).\n\n**Step 3: Conclude the contradiction.**\nSince our assumption (that $\\sqrt{2}$ is an integer) leads to a false statement (because $1.414$ is not an integer), the assumption must be wrong.\n*   *Result:* $\\sqrt{2}$ cannot be an integer.\n\n**Conclusion:**\n$\\sqrt{2}$ is **irrational**.\n\n***\n\n**Quick Self-Check:**\n*   **Did I say \"Assume it is an integer\"?** Yes.\n*   **Did I test it against $1",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.507,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 168,
+            "total_tokens": 424,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

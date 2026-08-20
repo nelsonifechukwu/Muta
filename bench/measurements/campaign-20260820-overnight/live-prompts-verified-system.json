@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "kind": "qualitative_live_prompt_acceptance",
+  "created_at": "2026-08-20T03:37:02.067207+00:00",
+  "binary": "/home/elijahnelson/Muta/runtime/build/bin/llama-server",
+  "binary_sha256": "43ed5a11149b9d1e7e9b8935fb2d9518e0723c14ec2d6bb58be787adefd0124a",
+  "settings": {
+    "threads": 2,
+    "ctx_size": 2048,
+    "temperature": 0,
+    "seed": 42,
+    "max_tokens": 256,
+    "enable_thinking": false
+  },
+  "models": [
+    {
+      "model_id": "qwen3.5-0.8b-q4_0",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Qwen3.5-0.8B-Q4_0.gguf",
+      "model_sha256": "444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c",
+      "model_bytes": 507154688,
+      "system_prompt_supplied": true,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "1. Calculate the total cost of the crates.\n   $24 \\times 18,000 = 4,320,000$ naira.\n\n2. Calculate the selling price of one crate.\n   Selling price = Total cost / Number of crates\n   $4,320,000 / 24 = 180,000$ naira.\n\nThe correct selling price of one crate is **180,000 naira**.",
+          "reasoning": "",
+          "finish_reason": "stop",
+          "elapsed_s": 7.202,
+          "usage": {
+            "completion_tokens": 111,
+            "prompt_tokens": 293,
+            "total_tokens": 404,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "1. **Identify the error**: You are adding fractions with different denominators (2 and 3) without a common denominator.\n2. **Find the least common denominator**: The least common multiple of 2 and 3 is 6.\n3. **Convert the fractions**:\n   - 1/2 becomes 3/6 (multiply numerator and denominator by 3).\n   - 1/3 becomes 2/6 (multiply numerator and denominator by 2).\n4. **Add the fractions**: Now the fractions have the same denominator. 3/6 + 2/6 = 5/6.\n5. **Final result**: The correct answer is 5/6.\n\n**Correct Answer:** 5/6",
+          "reasoning": "",
+          "finish_reason": "stop",
+          "elapsed_s": 6.457,
+          "usage": {
+            "completion_tokens": 158,
+            "prompt_tokens": 274,
+            "total_tokens": 432,
+            "prompt_tokens_details": {
+              "cached_tokens": 239
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "1. Identify the given values:\n   - Mass ($m$) = 2.0 kg\n   - Initial temperature ($T_i$) = 20 \u00b0C\n   - Final temperature ($T_f$) = 30 \u00b0C\n   - Specific heat capacity ($c$) = 4200 J/(kg\u00b7\u00b0C)\n\n2. Calculate the change in temperature ($\\Delta T$):\n   $\\Delta T = T_f - T_i = 30 - 20 = 10$ \u00b0C\n\n3. Calculate the energy transferred ($Q$):\n   $Q = mc\\Delta T$\n   $Q = 2.0 \\text{ kg} \\times 4200 \\text{ J/(kg\u00b7\u00b0C)} \\times 10 \\text{ \u00b0C}$\n   $Q = 84,000 \\text{ J}$\n\n4. Verify units:\n   - Mass: kg (Correct)\n   - Temperature: \u00b0C (Correct)\n   - Specific heat: J/(kg\u00b7\u00b0C) (Correct)\n   - Result: J (Correct)\n\nThe energy transferred is **84,0",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.521,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 298,
+            "total_tokens": 554,
+            "prompt_tokens_details": {
+              "cached_tokens": 239
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "1. **Define the goal**: We want to prove that $\\sqrt{2}$ cannot be written as a fraction $\\frac{a}{b}$ where $a$ and $b$ are integers.\n2. **Assume the opposite**: Assume $\\sqrt{2}$ is a fraction $\\frac{a}{b}$, where $a$ and $b$ are positive integers.\n3. **Square both sides**: Multiply both sides by $b^2$ to eliminate the denominator.\n   $$b^2 \\cdot \\sqrt{2} = \\frac{a}{b} \\cdot b^2$$\n   $$b^2 \\cdot \\sqrt{2} = ab^2$$\n4. **Rearrange**: Divide both sides by $b^2$ to isolate $\\sqrt{2}$.\n   $$\\sqrt{2} = \\frac{ab}{b^2}$$\n   *(Note: This step is the critical step where we assume the fraction form and then square it to get back to the original form.)*\n5. **Square the result**: Square both sides again.\n   $$2 = \\left(\\frac{ab}{b^2}\\right)^2$$\n   $$",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.299,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 272,
+            "total_tokens": 528,
+            "prompt_tokens_details": {
+              "cached_tokens": 239
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model_id": "qwen3-0.6b-math-expert-q4_k_m",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "model_sha256": "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1",
+      "model_bytes": 396706176,
+      "system_prompt_supplied": true,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "To find the selling price of one crate, we first calculate the total cost of 24 crates:\n\\[ 24 \\times 18,000 = 432,000 \\text{ naira} \\]\n\nNext, we calculate the profit per crate:\n\\[ \\frac{25\\% \\times 432,000}{24} = \\frac{0.25 \\times 432,000}{24} = \\frac{108,000}{24} = 4,500 \\text{ naira} \\]\n\nFinally, we add the cost and the profit to find the selling price of one crate:\n\\[ 432,000 + 4,500 = 436,500 \\text{ naira} \\]\n\nThe selling price of one crate is \\(\\boxed{436,500}\\) naira.",
+          "reasoning": "",
+          "finish_reason": "stop",
+          "elapsed_s": 9.36,
+          "usage": {
+            "completion_tokens": 209,
+            "prompt_tokens": 284,
+            "total_tokens": 493,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "1/2 + 1/3 = 3/6 + 2/6 = 5/6  \n**Step 1:** Add the numerators: 3 + 2 = 5  \n**Step 2:** Use a common denominator: 6  \n**Step 3:** Simplify: 5/6  \n\n**Result:** 5/6  \n\n**Step 1:** Add the numerators: 3 + 2 = 5  \n**Step 2:** Use a common denominator: 6  \n**Step 3:** Simplify: 5/6  \n\n**Step 1:** Add the numerators: 3 + 2 = 5  \n**Step 2:** Use a common denominator: 6  \n**Step 3:** Simplify: 5/6  \n\n**Step 1:** Add the numerators: 3 + 2 = 5  \n**Step 2:** Use a common denominator: 6  \n**Step 3:** Simplify: 5/6  \n\n**Step 1:** Add the numerators: 3 + 2 = 5  \n**Step 2:** Use a common denominator: 6  \n**Step 3:** Simplify: 5/6",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 9.635,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 265,
+            "total_tokens": 521,
+            "prompt_tokens_details": {
+              "cached_tokens": 233
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "1. **Calculate the energy transferred:**\n   - Use the formula:  \n     $$\n     Q = m \\cdot c \\cdot \\Delta T\n     $$\n     where $ m = 2.0 \\, \\text{kg} $, $ c = 4200 \\, \\text{J/(kg\u00b7C)} $, and $ \\Delta T = 30 - 20 = 10 \\, \\text{C} $.\n\n   - Substitute the values:  \n     $$\n     Q = 2.0 \\cdot 4200 \\cdot 10 = 84000 \\, \\text{J}\n     $$\n\n2. **Check units:**\n   - The units are consistent: $ \\text{kg} \\cdot \\text{J/(kg\u00b7C)} \\cdot \\text{C} = \\text{J} $.\n\n**Final Answer:**  \nThe energy transferred is $ \\boxed{84000 \\, \\text{J}} $.",
+          "reasoning": "",
+          "finish_reason": "stop",
+          "elapsed_s": 8.478,
+          "usage": {
+            "completion_tokens": 219,
+            "prompt_tokens": 289,
+            "total_tokens": 508,
+            "prompt_tokens_details": {
+              "cached_tokens": 234
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "**Proof by contradiction:**\n\n1. Assume that \\(\\sqrt{2}\\) is rational. That is, there exist integers \\(a\\) and \\(b\\) such that \\(\\sqrt{2} = \\frac{a}{b}\\).\n2. Square both sides: \\((\\sqrt{2})^2 = \\left(\\frac{a}{b}\\right)^2 \\Rightarrow 2 = \\frac{a^2}{b^2}\\).\n3. Multiply both sides by \\(b^2\\): \\(2b^2 = a^2\\).\n4. This implies that \\(a^2\\) is even, so \\(a\\) must be even.\n5. Let \\(a = 2k\\), where \\(k\\) is an integer. Then \\(a^2 = 4k^2\\).\n6. Substitute back into the equation: \\(2b^2 = 4k^2 \\Rightarrow b^2 = 2k^2\\).\n7. This implies that \\(b^2\\) is even, so \\(b\\) must be even.\n8. Let \\(b = 2m\\), where \\(m\\) is an integer. Then \\(b^2 = 4m^2\\).\n",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 9.555,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 263,
+            "total_tokens": 519,
+            "prompt_tokens_details": {
+              "cached_tokens": 233
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

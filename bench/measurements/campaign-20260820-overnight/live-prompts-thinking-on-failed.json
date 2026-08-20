@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "kind": "qualitative_live_prompt_acceptance",
+  "created_at": "2026-08-20T03:31:05.078686+00:00",
+  "binary": "/home/elijahnelson/Muta/runtime/build/bin/llama-server",
+  "binary_sha256": "43ed5a11149b9d1e7e9b8935fb2d9518e0723c14ec2d6bb58be787adefd0124a",
+  "settings": {
+    "threads": 2,
+    "ctx_size": 2048,
+    "temperature": 0,
+    "seed": 42,
+    "max_tokens": 256
+  },
+  "models": [
+    {
+      "model_id": "qwen3.5-0.8b-q4_0",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Qwen3.5-0.8B-Q4_0.gguf",
+      "model_sha256": "444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c",
+      "model_bytes": 507154688,
+      "system_prompt_supplied": true,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "",
+          "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Muta, a patient maths and science tutor for secondary-school students in Africa (WASSCE/JAMB/KCSE).\n    *   **Task:** Solve a word problem step-by-step.\n    *   **Context:** African secondary school math (WASSCE/JAMB/KCSE).\n    *   **Input Data:**\n        *   Number of crates: 24\n        *   Cost price (Total): 18,000 naira\n        *   Selling price ratio: 25% profit\n    *   **Goal:** Find the selling price of one crate.\n    *   **Format:** Short numbered steps with reasons, one-line takeaway or quick self-check.\n    *   **Constraint:** Be correct first. Check arithmetic and units. State final answer clearly. If reasoning is wrong, say what is right, what is wrong, and why.\n    *   **Language:** Plain text with simple notation.\n\n2.  **Step-by-Step Calculation:**\n    *   **Step 1: Calculate the selling price per crate.**\n        *   Total Cost = 18,",
+          "finish_reason": "length",
+          "elapsed_s": 11.841,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 187,
+            "total_tokens": 443,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "",
+          "reasoning": "The user is asking me to act as Muta, a patient maths and science tutor for secondary-school students in Africa.\nI need to:\n1.  Solve the problem step-by-step.\n2.  Check arithmetic and units.\n3.  State the final answer clearly.\n4.  Teach the reasoning (short numbered steps with reasons).\n5.  Provide a one-line takeaway or quick self-check.\n6.  If the reasoning is wrong, say what is right, what is wrong, and why.\n7.  Use local examples (naira, cedis, shillings, markets) when helpful.\n8.  Keep it focused; plain text with simple notation like x^2 and 3/4.\n\nThe problem is: 1/2 + 1/3 = ?\nThe user thinks it equals 2/5.\nI need to explain why 1/2 + 1/3 = 2/5 is incorrect.\nWait, 1/2 + 1/3 = 1/2 + 1/3 = 3/6 + 2/6 = 5/6.\nThe user's answer is 2/5.\nI",
+          "finish_reason": "length",
+          "elapsed_s": 10.363,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 168,
+            "total_tokens": 424,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "",
+          "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Muta, a patient maths and science tutor for secondary-school students in Africa (WASSCE/JAMB/KCSE).\n    *   **Task:** Solve a physics problem (specific heat capacity of water) step-by-step.\n    *   **Input Data:**\n        *   Mass ($m$) = 2.0 kg\n        *   Initial Temperature ($T_i$) = 20 \u00b0C\n        *   Final Temperature ($T_f$) = 30 \u00b0C\n        *   Specific Heat Capacity ($c$) = 4200 J/(kg \u00b0C)\n    *   **Goal:** Calculate the energy transferred ($Q$) and check the units.\n    *   **Format:** Short numbered steps with reasons, one-line takeaway or quick self-check.\n    *   **Constraint:** If reasoning is wrong, say what is right, what is wrong, and why.\n    *   **Language:** Plain text with simple notation.\n\n2.  **Verify the Physics Problem:**\n    *   **Formula:** $Q = mc\\Delta T$\n    *   **Variables",
+          "finish_reason": "length",
+          "elapsed_s": 10.389,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 192,
+            "total_tokens": 448,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "",
+          "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Topic:** Proof by contradiction that $\\sqrt{2}$ is irrational.\n    *   **Target Audience:** Secondary-school students in Africa (WASSCE/JAMB/KCSE).\n    *   **Tone:** Correct first, step-by-step, check arithmetic and units, state final answer clearly.\n    *   **Style:** Short numbered steps with reasons, one-line takeaway or quick self-check.\n    *   **Constraint:** If reasoning is wrong, say what is right, what is wrong, and why.\n    *   **Language:** Plain text with simple notation (e.g., $x^2$).\n    *   **Context:** Math and science tutor for students in Africa.\n\n2.  **Verify the Mathematical Fact:**\n    *   Is $\\sqrt{2}$ irrational? Yes.\n    *   Proof by contradiction: Assume $\\sqrt{2}$ is rational. Then $\\sqrt{2} = \\frac{a}{b}$ where $a, b$ are integers and $b \\neq 0$. Square both sides: $2 = \\frac{a^2}{b^2} \\implies",
+          "finish_reason": "length",
+          "elapsed_s": 10.201,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 166,
+            "total_tokens": 422,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model_id": "qwen3-0.6b-math-expert-q4_k_m",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "model_sha256": "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1",
+      "model_bytes": 396706176,
+      "system_prompt_supplied": true,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "",
+          "reasoning": "Okay, let's see. The problem is about a trader buying 24 crates for 18,000 naira and selling them at a 25% profit. I need to find the selling price of one crate. Hmm, let's break this down step by step.\n\nFirst, the trader buys 24 crates for 18,000 naira. So, the cost price (CP) is 18,000 naira. The profit is 25%, so the selling price (SP) should be the cost price plus 25% of the cost price. Wait, but profit percentage is usually calculated as a percentage of the cost price, right? So 25% profit would mean 25% of 18,000 naira added to the cost price.\n\nLet me calculate that. 25% of 18,000 is 0.25 * 18,000. Let's do that: 18,000 * 0.25. Hmm, 18,000 divided by 4 is 4,500. So 0.25 * ",
+          "finish_reason": "length",
+          "elapsed_s": 10.232,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 185,
+            "total_tokens": 441,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "To solve \\( \\frac{1}{2} + \\frac{1}{3} \\):\n\n1",
+          "reasoning": "Okay, let's see. The user is asking where they went wrong in their calculation of 1/2 + 1/3. They thought the answer was 2/5, but they need to find out where they made a mistake.\n\nFirst, I'll start by adding the fractions. To add 1/2 and 1/3, I need a common denominator. The least common denominator for 2 and 3 is 6. So converting both fractions to sixths: 1/2 becomes 3/6 and 1/3 becomes 2/6. Adding them gives 5/6. So the correct answer should be 5/6, not 2/5. \n\nNow, checking their steps. They might have added the numerators directly instead of converting to a common denominator. That's the mistake. They might have thought 1/2 + 1/3 is 2/5, which is incorrect. So the right answer is 5/6, and the wrong step was adding without converting to a common denominator. They should convert both fractions to sixths first before adding.\n",
+          "finish_reason": "length",
+          "elapsed_s": 9.206,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 166,
+            "total_tokens": 422,
+            "prompt_tokens_details": {
+              "cached_tokens": 138
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "",
+          "reasoning": "Okay, let's see. The problem is about calculating the energy transferred when a 2.0 kg sample of water warms from 20\u00b0C to 30\u00b0C. They gave the specific heat capacity as 4200 J/(kg\u00b7C). Hmm, I need to use the formula for heat transfer, right? The formula is Q = m * c * \u0394T, where Q is energy, m is mass, c is specific heat, and \u0394T is the temperature change.\n\nFirst, let me check the units. The specific heat is in J/(kg\u00b7C), so when I multiply by mass (kg) and temperature change (C), the units should work out. Let's see: kg * J/(kg\u00b7C) * C. The kg cancels out, and the C cancels with the \u0394T. So that's correct. So the units should be in joules.\n\nNow, the mass is 2.0 kg. The temperature change is from 20\u00b0C to 30\u00b0C, so \u0394T is 10\u00b0C. Plugging into the formula: 2.0 kg * 4200 J/(kg\u00b7C) * 10\u00b0C. Let me",
+          "finish_reason": "length",
+          "elapsed_s": 9.536,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 190,
+            "total_tokens": 446,
+            "prompt_tokens_details": {
+              "cached_tokens": 138
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "",
+          "reasoning": "Okay, so I need to prove that the square root of 2 is irrational using a proof by contradiction. Hmm, let's start by recalling what an irrational number is. An irrational number is a number that cannot be expressed as a fraction of two integers. So, if sqrt(2) is irrational, then there's no way to write it as a fraction a/b where a and b are integers.\n\nNow, let's think about the steps. The proof by contradiction method usually involves assuming the opposite of the statement and showing that it leads to a contradiction. So, let's assume that sqrt(2) is rational. If that's the case, then there exist integers a and b such that sqrt(2) = a/b. Squaring both sides, we get 2 = a\u00b2/b\u00b2. This implies that a\u00b2 is divisible by 2, so a must be even. Let's write a = 2k, where k is an integer. Substituting back, we get 2 = (2k)\u00b2 / b\u00b2, which simplifies to 2 = 4k\u00b2 / b\u00b2. Multiplying both sides by b\u00b2 gives 2b\u00b2 = 4k\u00b2, so dividing both sides by ",
+          "finish_reason": "length",
+          "elapsed_s": 9.241,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 164,
+            "total_tokens": 420,
+            "prompt_tokens_details": {
+              "cached_tokens": 138
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

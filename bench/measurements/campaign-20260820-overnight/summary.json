@@ -1,0 +1,620 @@
+{
+  "baseline": {
+    "arc_easy_50_percent": 72,
+    "model": "muta-tutor-qwen3-1.7b-q4_0.gguf",
+    "official_profiler_peak_rss_mib": 1116.31,
+    "official_profiler_total": 72.4653,
+    "official_profiler_tps": 9.79,
+    "sha256": "a98ce36e9ff97e5271d90cbc429c952f99a5a966bb0195ae74661b4c054fd63e"
+  },
+  "campaign": "campaign-20260820-overnight",
+  "finalists": {
+    "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": {
+      "accuracy": {
+        "arc_challenge_50": {
+          "ci95_percent": [
+            20.76,
+            45.81
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 32.0
+        },
+        "arc_easy_200": {
+          "ci95_percent": [
+            55.11,
+            68.44
+          ],
+          "metric": "acc_norm",
+          "samples": 200,
+          "score_percent": 62.0
+        },
+        "arc_easy_500": {
+          "ci95_percent": [
+            54.43,
+            63.03
+          ],
+          "metric": "acc_norm",
+          "samples": 500,
+          "score_percent": 58.8
+        },
+        "gsm8k_10": {
+          "ci95_percent": [
+            10.78,
+            60.32
+          ],
+          "metric": "exact_match(strict)",
+          "samples": 10,
+          "score_percent": 30.0
+        },
+        "sciq_50": {
+          "ci95_percent": [
+            81.16,
+            96.85
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 92.0
+        }
+      },
+      "diagnostic_total_with_arc_easy_500": 72.7894921875,
+      "official": {
+        "accuracy_model": "Qwen3.5-0.8B-Q4_0.gguf",
+        "arc_easy_50": 64.0,
+        "arc_easy_50_ci95": [
+          50.14,
+          75.86
+        ],
+        "bytes": 507156160,
+        "first_token_ms": 16622.38,
+        "id": "muta-tutor-qwen3.5-0.8b-q4_0-final",
+        "model": "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf",
+        "params_match": true,
+        "peak_rss_mib": 670.39,
+        "report": "official-final-muta-tutor-qwen3.5-0.8b-q4_0.json",
+        "s_acc": 64.0,
+        "s_eff": 90.6474609375,
+        "s_perf": 84.2,
+        "s_total": 75.38949218750001,
+        "screen_model": "Qwen3.5-0.8B-Q4_0.gguf",
+        "sha256": "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b",
+        "temperature_c": null,
+        "throttled": false,
+        "tps": 12.63
+      }
+    },
+    "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": {
+      "accuracy": {
+        "arc_challenge_50": {
+          "ci95_percent": [
+            19.1,
+            43.75
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 30.0
+        },
+        "arc_easy_200": {
+          "ci95_percent": [
+            49.57,
+            63.18
+          ],
+          "metric": "acc_norm",
+          "samples": 200,
+          "score_percent": 56.49999999999999
+        },
+        "arc_easy_500": {
+          "ci95_percent": [
+            50.22,
+            58.91
+          ],
+          "metric": "acc_norm",
+          "samples": 500,
+          "score_percent": 54.6
+        },
+        "gsm8k_10": {
+          "ci95_percent": [
+            10.78,
+            60.32
+          ],
+          "metric": "exact_match(strict)",
+          "samples": 10,
+          "score_percent": 30.0
+        },
+        "sciq_50": {
+          "ci95_percent": [
+            76.2,
+            94.38
+          ],
+          "metric": "acc_norm",
+          "samples": 50,
+          "score_percent": 88.0
+        }
+      },
+      "diagnostic_total_with_arc_easy_500": 71.23241071428572,
+      "official": {
+        "accuracy_model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+        "arc_easy_50": 68.0,
+        "arc_easy_50_ci95": [
+          54.19,
+          79.24
+        ],
+        "bytes": 396706176,
+        "first_token_ms": 23613.51,
+        "id": "qwen3-0.6b-math-expert-q4_k_m",
+        "model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+        "params_match": true,
+        "peak_rss_mib": 540.32,
+        "report": "official-clean-qwen3-0.6b-math-expert-q4_k_m.json",
+        "s_acc": 68.0,
+        "s_eff": 92.46205357142857,
+        "s_perf": 84.80000000000001,
+        "s_total": 77.93241071428571,
+        "screen_model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+        "sha256": "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1",
+        "temperature_c": null,
+        "throttled": false,
+        "tps": 12.72
+      }
+    }
+  },
+  "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
+  "notices": {
+    "accuracy": "ARC and SciQ are diagnostic proxies; the judging-panel tutoring score is unknown.",
+    "hardware": "GCP n2-custom-4-8192 is a 2-core/4-thread cloud proxy, not the physical target laptop.",
+    "rss": "Direct reports use profiler root-plus-child RSS; screening rows use child-tree RSS.",
+    "thermal": "The GCP host exposed no package-temperature sensor."
+  },
+  "official_profiler": [
+    {
+      "accuracy_model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "arc_easy_50": 68.0,
+      "arc_easy_50_ci95": [
+        54.19,
+        79.24
+      ],
+      "bytes": 396706176,
+      "first_token_ms": 23613.51,
+      "id": "qwen3-0.6b-math-expert-q4_k_m",
+      "model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "params_match": true,
+      "peak_rss_mib": 540.32,
+      "report": "official-clean-qwen3-0.6b-math-expert-q4_k_m.json",
+      "s_acc": 68.0,
+      "s_eff": 92.46205357142857,
+      "s_perf": 84.80000000000001,
+      "s_total": 77.93241071428571,
+      "screen_model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "sha256": "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1",
+      "temperature_c": null,
+      "throttled": false,
+      "tps": 12.72
+    },
+    {
+      "accuracy_model": "Qwen3.5-0.8B-Q4_0.gguf",
+      "arc_easy_50": 64.0,
+      "arc_easy_50_ci95": [
+        50.14,
+        75.86
+      ],
+      "bytes": 507156160,
+      "first_token_ms": 16622.38,
+      "id": "muta-tutor-qwen3.5-0.8b-q4_0-final",
+      "model": "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf",
+      "params_match": true,
+      "peak_rss_mib": 670.39,
+      "report": "official-final-muta-tutor-qwen3.5-0.8b-q4_0.json",
+      "s_acc": 64.0,
+      "s_eff": 90.6474609375,
+      "s_perf": 84.2,
+      "s_total": 75.38949218750001,
+      "screen_model": "Qwen3.5-0.8B-Q4_0.gguf",
+      "sha256": "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b",
+      "temperature_c": null,
+      "throttled": false,
+      "tps": 12.63
+    }
+  ],
+  "official_profiler_winner": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+  "quantization_sweep": [
+    {
+      "accuracy": {
+        "arc_easy": 62.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 485.7,
+        "pp512_tps": 67.931902,
+        "tg128_tps": 35.653598
+      },
+      "model": "Qwen3-0.6B-Math-Expert.IQ4_XS.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 485.6,
+        "pp512_tps": 10.258404,
+        "tg128_tps": 7.644389
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 56.00000000000001
+      },
+      "avx2": null,
+      "model": "Qwen3-0.6B-Math-Expert.Q4_0-Q5_0-last4-Q8_0-embd.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 540.5,
+        "pp512_tps": 23.326166,
+        "tg128_tps": 13.593934
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 50.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 731.9,
+        "pp512_tps": 131.771824,
+        "tg128_tps": 40.04592
+      },
+      "model": "Qwen3-0.6B-Math-Expert.Q4_0-body-Q6_K-embd.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 497.4,
+        "pp512_tps": 41.466373,
+        "tg128_tps": 17.931431
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 50.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 768.0,
+        "pp512_tps": 129.955007,
+        "tg128_tps": 38.10218
+      },
+      "model": "Qwen3-0.6B-Math-Expert.Q4_0-body-Q8_0-embd.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 533.2,
+        "pp512_tps": 39.477895,
+        "tg128_tps": 19.470727
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 68.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 715.2,
+        "pp512_tps": 153.653606,
+        "tg128_tps": 39.731826
+      },
+      "model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 511.7,
+        "pp512_tps": 21.716696,
+        "tg128_tps": 11.929551
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 60.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 726.5,
+        "pp512_tps": 163.953143,
+        "tg128_tps": 39.276667
+      },
+      "model": "Qwen3-0.6B-Math-Expert.Q4_K_S.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 499.1,
+        "pp512_tps": 22.285148,
+        "tg128_tps": 12.993893
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 52.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 777.2,
+        "pp512_tps": 130.361376,
+        "tg128_tps": 43.309192
+      },
+      "model": "Qwen3-0.6B-Math-Expert.pure-Q4_0.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 458.9,
+        "pp512_tps": 41.206798,
+        "tg128_tps": 22.791164
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 70.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 530.1,
+        "pp512_tps": 84.869894,
+        "tg128_tps": 28.60763
+      },
+      "model": "Qwen3-0.6B-Math-Expert.pure-Q5_0.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 529.9,
+        "pp512_tps": 5.66437,
+        "tg128_tps": 3.968857
+      }
+    }
+  ],
+  "risk_adjusted_recommendation": "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf",
+  "rules": {
+    "accuracy_proxy": "arc_easy acc_norm",
+    "peak_rss_budget_gib": 7,
+    "profiler_formula": "100 * min(TPS / 15, 1)",
+    "temperature_available": false,
+    "website_denominator_policy": "max(pre-entry cohort floor, candidate TPS)",
+    "website_formula": "100 * TPS / TPS_max"
+  },
+  "schema_version": 1,
+  "screened_candidates": [
+    {
+      "accuracy": {
+        "arc_challenge": 50.0,
+        "arc_easy": 74.0,
+        "sciq": 92.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 1966.5,
+        "pp512_tps": 49.309182,
+        "tg128_tps": 12.7891
+      },
+      "model": "Noema-2B-Q4_K_M.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 1379.7,
+        "pp512_tps": 6.896691,
+        "tg128_tps": 4.448155
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 70.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 2194.9,
+        "pp512_tps": 45.203198,
+        "tg128_tps": 13.893859
+      },
+      "model": "Noema-2B-pure-Q4_0.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 1185.5,
+        "pp512_tps": 14.419271,
+        "tg128_tps": 8.886625
+      }
+    },
+    {
+      "accuracy": {
+        "arc_challenge": 14.000000000000002,
+        "arc_easy": 44.0,
+        "sciq": 72.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 1786.6,
+        "pp512_tps": 50.746704,
+        "tg128_tps": 18.808074
+      },
+      "model": "OpenMath-Nemotron-1.5B-q4_0.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 965.7,
+        "pp512_tps": 15.737494,
+        "tg128_tps": 11.250984
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 68.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 714.7,
+        "pp512_tps": 153.93511,
+        "tg128_tps": 39.232048
+      },
+      "model": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 511.8,
+        "pp512_tps": 21.726793,
+        "tg128_tps": 12.633862
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 64.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 843.1,
+        "pp512_tps": 94.223568,
+        "tg128_tps": 26.299767
+      },
+      "model": "Qwen3.5-0.8B-Opus-Q4_K_M.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 661.8,
+        "pp512_tps": 18.401281,
+        "tg128_tps": 9.859219
+      }
+    },
+    {
+      "accuracy": {},
+      "avx2": {
+        "child_tree_rss_mib": 883.1,
+        "pp512_tps": 98.009425,
+        "tg128_tps": 27.150908
+      },
+      "model": "Qwen3.5-0.8B-Q4_0.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 642.3,
+        "pp512_tps": 31.078084,
+        "tg128_tps": 12.695476
+      }
+    },
+    {
+      "accuracy": {},
+      "avx2": {
+        "child_tree_rss_mib": 827.7,
+        "pp512_tps": 90.045916,
+        "tg128_tps": 26.241578
+      },
+      "model": "Qwen3.5-0.8B-Q4_K_M.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 666.5,
+        "pp512_tps": 17.972392,
+        "tg128_tps": 9.865082
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 70.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 1997.9,
+        "pp512_tps": 41.882122,
+        "tg128_tps": 12.571034
+      },
+      "model": "Qwen3.5-2B-Q4_0.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 1322.7,
+        "pp512_tps": 12.596042,
+        "tg128_tps": 6.231164
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 36.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 1786.6,
+        "pp512_tps": 59.723024,
+        "tg128_tps": 17.197211
+      },
+      "model": "VibeThinker-1.5B.Q4_K_M.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 1197.2,
+        "pp512_tps": 7.716957,
+        "tg128_tps": 5.678147
+      }
+    },
+    {
+      "accuracy": {},
+      "avx2": {
+        "child_tree_rss_mib": 1163.6,
+        "pp512_tps": 89.174682,
+        "tg128_tps": 21.623597
+      },
+      "model": "gemma-3-1b-it-Q4_0.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 802.1,
+        "pp512_tps": 25.658564,
+        "tg128_tps": 12.751052
+      }
+    },
+    {
+      "accuracy": {
+        "arc_easy": 54.0
+      },
+      "avx2": {
+        "child_tree_rss_mib": 501.1,
+        "pp512_tps": 120.35026,
+        "tg128_tps": 36.33205
+      },
+      "model": "qwen2-0.5b-numina-math.Q4_K_M.gguf",
+      "scalar": {
+        "child_tree_rss_mib": 473.1,
+        "pp512_tps": 9.166518,
+        "tg128_tps": 7.535091
+      }
+    }
+  ],
+  "status": "complete",
+  "website_relative": {
+    "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": {
+      "avx2": {
+        "child_tree_rss_mib": 883.1,
+        "pp512_tps": 98.009425,
+        "tg128_tps": 27.150908
+      },
+      "scores": {
+        "100": {
+          "effective_tps_max": 100.0,
+          "s_perf": 27.150908,
+          "s_total": 54.95570766785714
+        },
+        "15": {
+          "effective_tps_max": 27.150908,
+          "s_perf": 100.0,
+          "s_total": 76.81043526785714
+        },
+        "150": {
+          "effective_tps_max": 150.0,
+          "s_perf": 18.100605333333334,
+          "s_total": 52.24061686785714
+        },
+        "30": {
+          "effective_tps_max": 30.0,
+          "s_perf": 90.50302666666667,
+          "s_total": 73.96134326785715
+        },
+        "45": {
+          "effective_tps_max": 45.0,
+          "s_perf": 60.335351111111116,
+          "s_total": 64.91104060119048
+        },
+        "60": {
+          "effective_tps_max": 60.0,
+          "s_perf": 45.251513333333335,
+          "s_total": 60.38588926785714
+        }
+      }
+    },
+    "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": {
+      "avx2": {
+        "child_tree_rss_mib": 714.7,
+        "pp512_tps": 153.93511,
+        "tg128_tps": 39.232048
+      },
+      "scores": {
+        "100": {
+          "effective_tps_max": 100.0,
+          "s_perf": 39.232048,
+          "s_total": 56.949915739285714
+        },
+        "15": {
+          "effective_tps_max": 39.232048,
+          "s_perf": 100.0,
+          "s_total": 75.1803013392857
+        },
+        "150": {
+          "effective_tps_max": 150.0,
+          "s_perf": 26.154698666666665,
+          "s_total": 53.026710939285714
+        },
+        "30": {
+          "effective_tps_max": 39.232048,
+          "s_perf": 100.0,
+          "s_total": 75.1803013392857
+        },
+        "45": {
+          "effective_tps_max": 45.0,
+          "s_perf": 87.18232888888889,
+          "s_total": 71.33500000595238
+        },
+        "60": {
+          "effective_tps_max": 60.0,
+          "s_perf": 65.38674666666667,
+          "s_total": 64.79632533928572
+        }
+      }
+    }
+  },
+  "website_relative_floors": [
+    15,
+    30,
+    45,
+    60,
+    100,
+    150
+  ]
+}

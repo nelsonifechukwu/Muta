@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "kind": "qualitative_live_prompt_acceptance",
+  "created_at": "2026-08-20T03:32:40.239678+00:00",
+  "binary": "/home/elijahnelson/Muta/runtime/build/bin/llama-server",
+  "binary_sha256": "43ed5a11149b9d1e7e9b8935fb2d9518e0723c14ec2d6bb58be787adefd0124a",
+  "settings": {
+    "threads": 2,
+    "ctx_size": 2048,
+    "temperature": 0,
+    "seed": 42,
+    "max_tokens": 256
+  },
+  "models": [
+    {
+      "model_id": "muta-tutor-qwen3.5-0.8b-q4_0",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Muta-Tutor-Qwen3.5-0.8B-Q4_0.gguf",
+      "model_sha256": "75075762078923fa1079225326b9b9886011d432954992ea74c27b525e83b0f6",
+      "model_bytes": 507156160,
+      "system_prompt_supplied": false,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "",
+          "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Muta, a patient maths and science tutor for secondary-school students in Africa (WASSCE/JAMB/KCSE).\n    *   **Task:** Solve step-by-step, check arithmetic and units, state final answer clearly.\n    *   **Tone:** Teach, don't just answer. Short numbered steps with reasons. One-line takeaway or quick self-check.\n    *   **Context:** Local examples (naira, cedis, shillings) when helpful.\n    *   **Input Data:**\n        *   Number of crates: 24\n        *   Cost price per crate: 18,000 naira\n        *   Selling price ratio: 25% profit\n    *   **Goal:** Find the selling price of one crate.\n\n2.  **Verify the Math:**\n    *   Total cost = 24 crates * 18,000 naira/crate.\n    *   Profit = 25% of total cost.\n    *   Selling Price = Cost + Profit.\n    *   Alternatively, Selling Price = Cost * (1 +",
+          "finish_reason": "length",
+          "elapsed_s": 12.0,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 187,
+            "total_tokens": 443,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "",
+          "reasoning": "The user is asking me to act as Muta, a patient maths and science tutor for secondary-school students in Africa (WASSCE/JAMB/KCSE). They want me to solve step by step, check arithmetic and units, state the final answer clearly.\n\nI need to:\n1. Solve 1/2 + 1/3 = 2/5\n2. Check the reasoning\n3. Provide a one-line takeaway or quick self-check\n4. If wrong, say what is right, what is wrong, and why\n5. Use local examples (naira, cedis, shillings) when helpful\n6. Keep it focused; plain text with simple notation like x^2 and 3/4\n\nWait, the user's question is \"I think 1/2 + 1/3 = 2/5. Where did I go wrong?\"\n\nLet me check:\n1/2 + 1/3 = ?\nCommon denominator of 2 and 3 is 6.\n1/2 = 3/6\n1/3 = 2/6\nSum = 3/6 + 2/6 = 5/6\n\nSo the answer should be 5/",
+          "finish_reason": "length",
+          "elapsed_s": 10.567,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 168,
+            "total_tokens": 424,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "",
+          "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Muta, a patient maths and science tutor for secondary-school students in Africa (WASSCE/JAMB/KCSE).\n    *   **Task:** Solve step-by-step, check arithmetic and units, state final answer clearly.\n    *   **Context:** Local examples (naira, cedis, shillings) when helpful.\n    *   **Input Data:**\n        *   Mass ($m$) = 2.0 kg\n        *   Initial Temperature ($T_i$) = 20 C\n        *   Final Temperature ($T_f$) = 30 C\n        *   Specific Heat Capacity ($c$) = 4200 J/(kg C)\n    *   **Goal:** Calculate energy transferred and check units.\n\n2.  **Identify the Physics Principle:**\n    *   Formula: $Q = mc\\Delta T$ (Heat Energy Transfer).\n    *   Variables:\n        *   $m = 2.0 \\text{ kg}$\n        *   $c = 4200 \\text{ J/(kg C)}$\n       ",
+          "finish_reason": "length",
+          "elapsed_s": 10.746,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 192,
+            "total_tokens": 448,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "",
+          "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Topic:** Proof by contradiction that $\\sqrt{2}$ is irrational.\n    *   **Target Audience:** Secondary-school students in Africa (WASSCE/JAMB/KCSE). This means the language should be simple, the concepts should be accessible, and the tone should be encouraging but rigorous enough to catch errors.\n    *   **Format:** Concise proof. Short numbered steps with reasons. One-line takeaway or quick self-check at the end.\n    *   **Constraint:** Be correct first: solve step by step, check arithmetic and units, state final answer clearly. Teach, don't just answer. If reasoning is wrong, say what is right, what is wrong, and why. Use local examples (naira, cedis, shillings, markets) when helpful. Keep it focused; plain text with simple notation like $x^2$ and $3/4$.\n\n2.  **Evaluate the Mathematical Claim:**\n    *   Is $\\sqrt{2}$ irrational? Yes.\n    *   Proof by contradiction: Assume $\\sqrt{2} = p/q$ where $p, q$ are integers, $q \\neq",
+          "finish_reason": "length",
+          "elapsed_s": 11.549,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 166,
+            "total_tokens": 422,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

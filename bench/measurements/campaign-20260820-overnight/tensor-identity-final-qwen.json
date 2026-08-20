@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "left": "bench/measurements/campaign-20260820-overnight/models/Qwen3.5-0.8B-Q4_0.gguf",
+  "right": "bench/measurements/campaign-20260820-overnight/models/Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf",
+  "tensor_count": 320,
+  "tensor_bytes": 496192768,
+  "identical": true
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "campaign": "campaign-20260820-overnight",
-  "status": "in_progress",
+  "status": "complete",
   "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
   "rules": {
     "profiler_formula": "100 * min(TPS / 15, 1)",
@@ -23,6 +23,10 @@
     "scalar_b10175_sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
     "avx2_b10175_sha256": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8",
     "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70"
+  },
+  "quantizer": {
+    "llama_cpp_commit": "48d22e295e2b86b47366c16390794f3e05ba970a",
+    "sha256": "dea1cace012c3e6ed7589fa2cab130497859156c7233c4958363c7d72d5a31d7"
   },
   "candidates": [
     {
@@ -55,16 +59,183 @@
     {
       "id": "noema-2b-q4_k_m",
       "repo": "NoemaAI-labs/Noema-2B-GGUF",
-      "revision": "66d96b1",
+      "revision": "66d96b1efe4fec42eda0bdea42563fb3ec728c73",
       "file": "Noema-2B-Q4_K_M.gguf",
       "sha256": "e39e79c60f0411304ec6813ca3a07ba7dcd1c9fd3312202ad9de7a1b455cb762",
       "license": "Apache-2.0",
       "tier": 2
+    },
+    {
+      "id": "qwen3.5-0.8b-opus-reasoning-distill-q4_k_m",
+      "repo": "Jackrong/Qwen3.5-0.8B-Claude-4.6-Opus-Reasoning-Distilled-GGUF",
+      "revision": "9675af0af5c5d39cc459b3f947593c6314fee75e",
+      "file": "Qwen3.5-0.8B.Q4_K_M.gguf",
+      "sha256": "d19e7793a8f452495b349da314ac9fcc9866c7ff4844a9d54aa1a926d040113c",
+      "license": "Apache-2.0",
+      "tier": 2,
+      "provenance_note": "community fine-tune; proprietary-teacher dataset provenance requires separate review"
+    },
+    {
+      "id": "qwen3-0.6b-math-expert-q4_k_m",
+      "repo": "mradermacher/Qwen3-0.6B-Math-Expert-GGUF",
+      "revision": "aa95cecf66c2cdd4bac11c70999dab8cefa42d08",
+      "file": "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "sha256": "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1",
+      "license": "Apache-2.0",
+      "tier": 3,
+      "provenance_note": "community fine-tune; screening evidence only until source recipe is audited"
+    },
+    {
+      "id": "qwen2-0.5b-numina-math-q4_k_m",
+      "repo": "mradermacher/qwen2-0.5b_numina_math-instruct-GGUF",
+      "revision": "6b79c6c939d7ebe05040364d103fe3b7eed583d4",
+      "file": "qwen2-0.5b_numina_math-instruct.Q4_K_M.gguf",
+      "sha256": "0698be83e72c4260b0cb82a0c43306ab3332fd0f2902d3b8c34c7b48239ce5a5",
+      "license": "CC-BY-4.0",
+      "tier": 3,
+      "provenance_note": "community GGUF of a public NuminaMath fine-tune"
+    },
+    {
+      "id": "qwen3.5-2b-q4_0",
+      "repo": "unsloth/Qwen3.5-2B-GGUF",
+      "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+      "file": "Qwen3.5-2B-Q4_0.gguf",
+      "sha256": "cd70221bebaee0503e0f6717e174250cd7825aa88438b3aabec9ad55731d9bb1",
+      "license": "Apache-2.0",
+      "tier": 2,
+      "provenance_note": "official Qwen checkpoint converted by Unsloth; balanced scale control"
+    },
+    {
+      "id": "gemma-3-1b-it-q4_0",
+      "repo": "unsloth/gemma-3-1b-it-GGUF",
+      "revision": "f0b45be0aac41bd6a100a4b5734cad5f67255bfb",
+      "file": "gemma-3-1b-it-Q4_0.gguf",
+      "sha256": "27ee88e03be02e9ba73def9a819d570d8ad73716e50769e87f374ae394b0276e",
+      "license": "Gemma",
+      "tier": 2,
+      "provenance_note": "official Google checkpoint converted by Unsloth; license retained as a separate acceptance gate"
+    }
+  ],
+  "derived_candidates": [
+    {
+      "id": "muta-tutor-qwen3.5-0.8b-q4_0-final",
+      "source_repo": "unsloth/Qwen3.5-0.8B-GGUF",
+      "source_revision": "6ab461498e2023f6e3c1baea90a8f0fe38ab64d0",
+      "source_file": "Qwen3.5-0.8B-Q4_0.gguf",
+      "source_sha256": "444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c",
+      "source_bytes": 507154688,
+      "file": "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf",
+      "sha256": "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b",
+      "bytes": 507156160,
+      "system_prompt_sha256": "c5f76d7b20c22778e57c563304fbe1b1581ef544ccb471d6a1999906c022cf20",
+      "recipe": "bake_system_prompt.py SOURCE OUTPUT --system muta-iq/opt/eval/system_prompt.txt --replace-chatml off --set-languages en --set-name 'Muta Tutor (Qwen3.5-0.8B)' --sampling temp=0.4,top_p=0.9,min_p=0.05,penalty_repeat=1.05",
+      "tensor_change": "none; GGUF metadata and chat template only",
+      "chat_default": "embedded tutor system prompt; thinking forced off"
+    },
+    {
+      "id": "noema-2b-pure-q4_0",
+      "source_repo": "NoemaAI-labs/Noema-2B-GGUF",
+      "source_revision": "66d96b1efe4fec42eda0bdea42563fb3ec728c73",
+      "source_file": "Noema-2B-F16.gguf",
+      "source_sha256": "7028fafd3232449449b0e5f9630dcb203d54785912d6782c3905d02d6ebcc5bd",
+      "source_bytes": 3775708608,
+      "file": "Noema-2B-pure-Q4_0.gguf",
+      "sha256": "63889c9d9906e8fc284251f4258a3f20d05b714db40e174feb3ea1bffe15a0ac",
+      "bytes": 1071373760,
+      "recipe": "llama-quantize --pure --output-tensor-type q4_0 --token-embedding-type q4_0 SOURCE OUTPUT Q4_0 4"
+    },
+    {
+      "id": "qwen3-0.6b-math-expert-pure-q4_0",
+      "source_repo": "mradermacher/Qwen3-0.6B-Math-Expert-GGUF",
+      "source_revision": "aa95cecf66c2cdd4bac11c70999dab8cefa42d08",
+      "source_file": "Qwen3-0.6B-Math-Expert.f16.gguf",
+      "source_sha256": "8bbe6896d75e7f9a3e70f162e7d37cc3bd55df98faeeea5be0ed15fb18e8fef5",
+      "source_bytes": 1198183808,
+      "file": "Qwen3-0.6B-Math-Expert.pure-Q4_0.gguf",
+      "sha256": "566794f40bf6f28bffe5b55438f40e2258721300b7017667f733cab0ba91d986",
+      "bytes": 341456256,
+      "recipe": "llama-quantize --pure SOURCE OUTPUT Q4_0 2"
+    },
+    {
+      "id": "qwen3-0.6b-math-expert-pure-q5_0",
+      "source_repo": "mradermacher/Qwen3-0.6B-Math-Expert-GGUF",
+      "source_revision": "aa95cecf66c2cdd4bac11c70999dab8cefa42d08",
+      "source_file": "Qwen3-0.6B-Math-Expert.f16.gguf",
+      "source_sha256": "8bbe6896d75e7f9a3e70f162e7d37cc3bd55df98faeeea5be0ed15fb18e8fef5",
+      "source_bytes": 1198183808,
+      "file": "Qwen3-0.6B-Math-Expert.pure-Q5_0.gguf",
+      "sha256": "6d42c729ca93796f97f034a00a1efd4d215ef0354e69b8d14083ce513531b37c",
+      "bytes": 415954304,
+      "recipe": "llama-quantize --pure SOURCE OUTPUT Q5_0 2"
+    },
+    {
+      "id": "qwen3-0.6b-math-expert-q4_0-body-q6_k-embedding",
+      "source_repo": "mradermacher/Qwen3-0.6B-Math-Expert-GGUF",
+      "source_revision": "aa95cecf66c2cdd4bac11c70999dab8cefa42d08",
+      "source_file": "Qwen3-0.6B-Math-Expert.f16.gguf",
+      "source_sha256": "8bbe6896d75e7f9a3e70f162e7d37cc3bd55df98faeeea5be0ed15fb18e8fef5",
+      "source_bytes": 1198183808,
+      "file": "Qwen3-0.6B-Math-Expert.Q4_0-body-Q6_K-embd.gguf",
+      "sha256": "c30e845c76d6e3ab9966a6838139669626ba333809c1dd3ed4372c6369500a01",
+      "bytes": 381567360,
+      "recipe": "llama-quantize --pure --token-embedding-type Q6_K --output-tensor-type Q6_K SOURCE OUTPUT Q4_0 2"
+    },
+    {
+      "id": "qwen3-0.6b-math-expert-q4_0-body-q8_0-embedding",
+      "source_repo": "mradermacher/Qwen3-0.6B-Math-Expert-GGUF",
+      "source_revision": "aa95cecf66c2cdd4bac11c70999dab8cefa42d08",
+      "source_file": "Qwen3-0.6B-Math-Expert.f16.gguf",
+      "source_sha256": "8bbe6896d75e7f9a3e70f162e7d37cc3bd55df98faeeea5be0ed15fb18e8fef5",
+      "source_bytes": 1198183808,
+      "file": "Qwen3-0.6B-Math-Expert.Q4_0-body-Q8_0-embd.gguf",
+      "sha256": "0eabbe239de8074e39757b789401deaa7bd77da4c2b304632cbe01003a015ff5",
+      "bytes": 419247488,
+      "recipe": "llama-quantize --pure --token-embedding-type Q8_0 --output-tensor-type Q8_0 SOURCE OUTPUT Q4_0 2"
+    },
+    {
+      "id": "qwen3-0.6b-math-expert-q4_0-q5_0-last4-q8_0-embedding",
+      "source_repo": "mradermacher/Qwen3-0.6B-Math-Expert-GGUF",
+      "source_revision": "aa95cecf66c2cdd4bac11c70999dab8cefa42d08",
+      "source_file": "Qwen3-0.6B-Math-Expert.f16.gguf",
+      "source_sha256": "8bbe6896d75e7f9a3e70f162e7d37cc3bd55df98faeeea5be0ed15fb18e8fef5",
+      "source_bytes": 1198183808,
+      "file": "Qwen3-0.6B-Math-Expert.Q4_0-Q5_0-last4-Q8_0-embd.gguf",
+      "sha256": "be0d60f209d5e582bdf1cd6437cbd5003bd05ca66d5a0be8c88f6c1be9f38d12",
+      "bytes": 427111808,
+      "recipe": "llama-quantize --pure --token-embedding-type Q8_0 --output-tensor-type Q8_0 --tensor-type 'blk\\.(24|25|26|27)\\.=q5_0' SOURCE OUTPUT Q4_0 2"
+    }
+  ],
+  "qualitative_gate": {
+    "binary_sha256": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+    "settings": "temperature=0, seed=42, max_tokens=256, four math/science prompts",
+    "evidence": [
+      "live-prompts-thinking-on-failed.json",
+      "live-prompts-explicit-system.json",
+      "live-prompts-verified-system.json",
+      "live-prompts-final-baked-auto.json",
+      "tensor-identity-final-qwen.json"
+    ],
+    "result": "forced non-thinking template prevents hidden reasoning from consuming the response budget; both sub-1B finalists still failed the sqrt(2) proof prompt"
+  },
+  "excluded_reports": [
+    {
+      "file": "official-gemma-3-1b-it-q4_0.json",
+      "reason": "concurrent-run contamination; screening evidence only"
+    },
+    {
+      "file": "official-qwen3-0.6b-math-expert-q4_k_m.json",
+      "reason": "concurrent-run contamination; superseded by official-clean-qwen3-0.6b-math-expert-q4_k_m.json"
     }
   ],
   "source_urls": [
     "https://adtc-2026.devpost.com/",
     "https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler",
-    "https://github.com/Africa-Deep-Tech-Foundation/adtc-2026-submission-template"
+    "https://github.com/Africa-Deep-Tech-Foundation/adtc-2026-submission-template",
+    "https://huggingface.co/suayptalha/Qwen3-0.6B-Math-Expert",
+    "https://huggingface.co/mradermacher/Qwen3-0.6B-Math-Expert-GGUF",
+    "https://huggingface.co/datasets/nvidia/OpenMathReasoning",
+    "https://arxiv.org/abs/2504.16891",
+    "https://arxiv.org/abs/2505.11574",
+    "https://github.com/ggml-org/llama.cpp/blob/master/docs/speculative.md"
   ]
 }

@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "kind": "qualitative_live_prompt_acceptance",
+  "created_at": "2026-08-20T03:34:10.642056+00:00",
+  "binary": "/home/elijahnelson/Muta/runtime/build/bin/llama-server",
+  "binary_sha256": "43ed5a11149b9d1e7e9b8935fb2d9518e0723c14ec2d6bb58be787adefd0124a",
+  "settings": {
+    "threads": 2,
+    "ctx_size": 2048,
+    "temperature": 0,
+    "seed": 42,
+    "max_tokens": 256,
+    "enable_thinking": false
+  },
+  "models": [
+    {
+      "model_id": "qwen3.5-0.8b-q4_0",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Qwen3.5-0.8B-Q4_0.gguf",
+      "model_sha256": "444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c",
+      "model_bytes": 507154688,
+      "system_prompt_supplied": true,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "Here is the step-by-step solution to find the selling price of one crate.\n\n**1. Calculate the total cost of the crates.**\nThe trader bought 24 crates for a total of 18,000 naira.\n$$ \\text{Total Cost} = 18,000 \\text{ naira} $$\n$$ \\text{Cost per crate} = \\frac{18,000}{24} = 750 \\text{ naira} $$\n\n**2. Calculate the selling price.**\nThe trader sells the crates at a 25% profit. This means the selling price is 125% of the cost (since $100\\% + 25\\% = 125\\%$).\n$$ \\text{Profit Percentage} = 100\\% + 25\\% = 125\\% $$\n$$ \\text{Selling Price} = \\text{Cost} \\times \\frac{125}{100} $$\n$$ \\text{Selling Price} = 750 \\times 1.25 $$\n$$ \\text{Selling Price",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 11.765,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 189,
+            "total_tokens": 445,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "You made a mistake in the **addition** of fractions, not the multiplication.\n\n**What is wrong:**\nYou wrote: $1/2 + 1/3 = 2/5$.\n*   **The error:** You multiplied the numerators ($1 \\times 1$) and the denominators ($2 \\times 3$) to get $2/5$, but you did **not** add the fractions.\n*   **The correct operation:** To add fractions, you must add the **numerators** ($1 + 1$) and keep the **denominator** ($2 \\times 3 = 6$).\n\n**Why?**\n*   **Addition Rule:** When adding fractions with the same denominator, you simply add the top numbers together.\n*   **Multiplication Rule:** When multiplying fractions, you multiply the top numbers together and multiply the bottom numbers together.\n\n**The Correct Calculation:**\n$$ \\frac{1}{2} + \\frac{1}{3} = \\frac{1 + 1}{2 \\times 3} = \\frac{2}{6} $$\n*   Simplify the fraction: $\\frac{2}{6}$ becomes $\\frac{1",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.257,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 170,
+            "total_tokens": 426,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "**Step 1: Identify the given values.**\n*   Mass ($m$) = $2.0 \\text{ kg}$\n*   Initial Temperature ($T_i$) = $20^\\circ\\text{C}$\n*   Final Temperature ($T_f$) = $30^\\circ\\text{C}$\n*   Specific Heat Capacity ($c$) = $4200 \\text{ J/(kg}\\cdot^\\circ\\text{C)}$\n\n**Step 2: Calculate the change in temperature ($\\Delta T$).**\n$$ \\Delta T = T_f - T_i = 30^\\circ\\text{C} - 20^\\circ\\text{C} = 10^\\circ\\text{C} $$\n\n**Step 3: Calculate the energy transferred ($Q$).**\nUse the formula $Q = mc\\Delta T$:\n$$ Q = 2.0 \\text{ kg} \\times 4200 \\text{ J/(kg}\\cdot^\\circ\\text{C)} \\times 10^\\circ\\text{C} $$\n$$ Q = 2.0 \\times 4200 \\times ",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.419,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 194,
+            "total_tokens": 450,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "Here is the proof by contradiction that $\\sqrt{2}$ is irrational.\n\n**Step 1: Assume the opposite.**\nAssume that $\\sqrt{2}$ is **not** irrational.\n*   *Reason:* This means $\\sqrt{2}$ **is** an integer.\n\n**Step 2: Test the assumption.**\nLet $x = \\sqrt{2}$.\n*   *Check:* Is $x$ an integer?\n    *   If $x$ is an integer, then $x$ must be 1, 2, 3, 4, 5, ...\n    *   If $x = 1$, then $x^2 = 1$.\n    *   If $x = 2$, then $x^2 = 4$.\n    *   If $x = 3$, then $x^2 = 9$.\n    *   If $x = 4$, then $x^2 = 16$.\n    *   If $x = 5$, then $x^2 = 25$.\n    *   If $x = 6$, then $x^2 = 36$.\n    *   If $",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 10.193,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 168,
+            "total_tokens": 424,
+            "prompt_tokens_details": {
+              "cached_tokens": 135
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model_id": "qwen3-0.6b-math-expert-q4_k_m",
+      "model_path": "/home/elijahnelson/Muta/bench/measurements/campaign-20260820-overnight/models/Qwen3-0.6B-Math-Expert.Q4_K_M.gguf",
+      "model_sha256": "7f64c2e3bbd5c6fa570f49631cad5527ebd4acd7fcaf014963152027b2dae9a1",
+      "model_bytes": 396706176,
+      "system_prompt_supplied": true,
+      "responses": [
+        {
+          "prompt_id": "crate_profit",
+          "prompt": "A trader buys 24 identical crates for 18,000 naira and sells them at a 25% profit. What is the selling price of one crate? Show your working.",
+          "response": "To find the selling price of one crate, we need to follow these steps:\n\n1. **Calculate the cost price of one crate:**\n   - The trader buys 24 crates for 18,000 naira.\n   - So, the cost price per crate is:\n     \\[\n     \\frac{18,000}{24} = 750 \\text{ naira}\n     \\]\n\n2. **Calculate the selling price:**\n   - The trader sells the crates at a 25% profit.\n   - The selling price per crate is:\n     \\[\n     750 \\times (1 + 0.25) = 750 \\times 1.25 = 937.5 \\text{ naira}\n     \\]\n\n3. **State the final answer:**\n   - The selling price of one crate is:\n     \\[\n     \\boxed{937.5 \\text{ naira}}\n     \\]",
+          "reasoning": "",
+          "finish_reason": "stop",
+          "elapsed_s": 8.243,
+          "usage": {
+            "completion_tokens": 211,
+            "prompt_tokens": 189,
+            "total_tokens": 400,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "prompt_id": "fraction_misconception",
+          "prompt": "I think 1/2 + 1/3 = 2/5. Where did I go wrong?",
+          "response": "To solve \\( \\frac{1}{2} + \\frac{1}{3} \\):\n\n1. Find a common denominator: \\( 6 \\).\n2. Convert the fractions:\n   \\[\n   \\frac{1}{2} = \\frac{3}{6}, \\quad \\frac{1}{3} = \\frac{2}{6}\n   \\]\n3. Add the fractions:\n   \\[\n   \\frac{3}{6} + \\frac{2}{6} = \\frac{5}{6}\n   \\]\n\n**Check:**  \n\\[\n\\frac{1}{2} + \\frac{1}{3} = \\frac{3}{6} + \\frac{2}{6} = \\frac{5}{6}\n\\]\n\n**Final Answer:** \\(\\boxed{\\frac{5}{6}}\\)",
+          "reasoning": "",
+          "finish_reason": "stop",
+          "elapsed_s": 6.022,
+          "usage": {
+            "completion_tokens": 176,
+            "prompt_tokens": 170,
+            "total_tokens": 346,
+            "prompt_tokens_details": {
+              "cached_tokens": 138
+            }
+          }
+        },
+        {
+          "prompt_id": "thermal_energy",
+          "prompt": "A 2.0 kg sample of water warms from 20 C to 30 C. Using a specific heat capacity of 4200 J/(kg C), calculate the energy transferred and check the units.",
+          "response": "To calculate the energy transferred, we use the formula for heat transfer:\n\n$$\nQ = m \\cdot c \\cdot \\Delta T\n$$\n\nWhere:\n- $ m = 2.0 \\, \\text{kg} $ (mass of the water sample),\n- $ c = 4200 \\, \\text{J/(kg\u00b7C)} $ (specific heat capacity of water),\n- $ \\Delta T = 30 \\, \\text{C} - 20 \\, \\text{C} = 10 \\, \\text{C} $ (temperature change).\n\nSubstitute the values into the formula:\n\n$$\nQ = 2.0 \\, \\text{kg} \\cdot 4200 \\, \\text{J/(kg\u00b7C)} \\cdot 10 \\, \\text{C}\n$$\n\n$$\nQ = 2.0 \\cdot 4200 \\cdot 10 = 84000 \\, \\text{J}\n$$\n\n**Check the units:**\n- $ \\text{kg} \\cdot \\text{J/(kg\u00b7C)} = \\text{J/(C)} $\n- $ \\text{J",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 9.166,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 194,
+            "total_tokens": 450,
+            "prompt_tokens_details": {
+              "cached_tokens": 138
+            }
+          }
+        },
+        {
+          "prompt_id": "sqrt2_proof",
+          "prompt": "Give a concise proof by contradiction that sqrt(2) is irrational, written for a secondary-school student.",
+          "response": "**Proof by contradiction:**\n\n1. Assume that \\(\\sqrt{2}\\) is rational. That is, there exists some integer \\(n\\) such that \\(\\sqrt{2} = \\frac{n}{m}\\), where \\(n\\) and \\(m\\) are coprime integers.\n2. Square both sides: \\((\\sqrt{2})^2 = \\left(\\frac{n}{m}\\right)^2 \\Rightarrow 2 = \\frac{n^2}{m^2}\\).\n3. Multiply both sides by \\(m^2\\): \\(2m^2 = n^2\\).\n4. This equation shows that \\(2m^2\\) is a perfect square, which implies that \\(m^2\\) is a perfect square. Therefore, \\(m\\) must be a perfect square.\n5. Let \\(m = k^2\\), where \\(k\\) is an integer. Then \\(2m^2 = 2k^4\\).\n6. This implies that \\(2k^4\\) is a perfect square, which means \\(k^4\\) is a perfect square. Therefore, \\(k\\) must be a perfect square.\n7. Let \\(k = p^2\\), where \\(p\\) is an",
+          "reasoning": "",
+          "finish_reason": "length",
+          "elapsed_s": 8.982,
+          "usage": {
+            "completion_tokens": 256,
+            "prompt_tokens": 168,
+            "total_tokens": 424,
+            "prompt_tokens_details": {
+              "cached_tokens": 138
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
