@@ -57,7 +57,8 @@ const REPORT_FUNNEL = [
   { name: "Qwen3.5 2B", gb: 1.19, acc: 64.8, lane: "reasoning" },
   { name: "Qwen3.5 0.8B", gb: 0.50, acc: 51.3, lane: "reasoning" },
   { name: "Qwen3.5 0.8B final", gb: 0.47, acc: 64, lane: "audit", selected: true },
-  { name: "Math-Expert 0.6B", gb: 0.37, acc: 68, lane: "audit", leader: true },
+  { name: "Math-Expert 0.6B", gb: 0.37, acc: 68, lane: "audit" },
+  { name: "Qwen2.5 1.5B Q4_K_M", gb: 1.04, acc: 71.8, samples: 500, lane: "audit", leader: true },
   { name: "Qwen3 1.7B Q4_0", gb: 0.91, acc: 72, lane: "audit" },
   { name: "Qwen3.5 0.8B Q4_K_M", gb: 0.50, acc: 68, lane: "audit" },
   { name: "BitCPM4 8B TQ2_0", gb: 2.06, acc: 88, lane: "audit" },
@@ -87,7 +88,7 @@ const EXPERIMENTS = [
   { status: "adopted", name: "Fixed context budget", finding: "We replaced runtime defaults with explicit context and KV limits, fixing a memory variable for later comparisons.", source: "runtime configuration" },
   { status: "adopted", name: "4B reasoning baseline", finding: "The 4B model exceeded the 2B model by 15.7 points across three STEM tasks. The later audit used a different kernel configuration and a separate accuracy proxy.", source: "model-scale study" },
   { status: "neutral", name: "IQ4_XS importance matrix", finding: "Task scores moved in both directions by roughly one or two items, with no reliable accuracy gain.", source: "quantization study" },
-  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "Under AVX2, Q4_K_M recorded the highest total. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and throughput was lower.", source: "quantization sweep" },
+  { status: "adopted", name: "Uniform Qwen quant ladder", finding: "On the vector path, Q4_K_M recorded the highest total. Q5_K_M gained four ARC-Easy points, but the gain did not repeat on ARC-Challenge or SciQ and throughput was lower.", source: "quantization sweep" },
   { status: "rejected", name: "Mixed embedding and head precision", finding: "Q3_K_M with a Q6_K head fell to 66% ARC-Easy; IQ4_XS with a Q6_K head was slower and larger than uniform IQ4_XS.", source: "quantization sweep" },
   { status: "neutral", name: "Vendor importance matrix", finding: "The Qwen K-quant ladder used the vendor matrix consistently, but its calibration corpus is unpublished. We cannot independently verify dataset disjointness.", source: "quantization sweep" },
   { status: "neutral", name: "Metal offload", finding: "Hybrid 4B decode was neutral to slightly slower than CPU-only on the development Mac. GPU support remains optional.", source: "runtime optimisation study" },
@@ -103,11 +104,13 @@ const EXPERIMENTS = [
   { status: "rejected", name: "Custom tensor layout", finding: "We kept the stock quantiser layout. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "tensor-layout study" },
   { status: "adopted", name: "Embedded chat template", finding: "The GGUF contains the chat template and tutoring persona, both verified on a live server. They affect evaluator responses but do not affect raw ARC or throughput measurements.", source: "prompt-format study" },
   { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "weight-streaming study" },
-  { status: "adopted", name: "Runtime-conditional model choice", finding: "The expanded AVX2 search identifies Math-Expert Q4_K_M as the raw leader at 81.8803 using ARC-Easy-50. Qwen3.5 0.8B leads the larger 500-item AVX2 diagnostic, 76.8104 to 75.1803.", source: "expanded model search" },
+  { status: "adopted", name: "Runtime-conditional model choice", finding: "On the 500-question comparison, Qwen3.5 0.8B leads the scalar configuration at 72.7895 and Qwen2.5 1.5B leads the vector configuration at 80.7697. The supplied profiler therefore keeps Qwen3.5 as the submission recommendation.", source: "expanded model search" },
   { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "quantization sweep" },
   { status: "adopted", name: "Reproducible artifact build", finding: "We rebuilt the promoted candidate from its documented source. It matched byte-for-byte once we corrected a 32-byte metadata-name difference.", source: "artifact construction study" },
   { status: "adopted", name: "Direct participant-profiler campaign", finding: "Four models completed full participant runs. The 1.7B Q4_0 total exceeded the initially tested 0.8B Q4_K_M total by 0.92 points.", source: "direct profiler measurements" },
-  { status: "adopted", name: "Portable AVX2 score of record", finding: "The combined ledger contains seven models from the quantization sweep and expanded search. Math-Expert Q4_K_M has the highest ARC-Easy-50 fixed-15 total at 81.8803; Qwen3.5 0.8B is the larger-sample choice.", source: "combined AVX2 comparison" },
+  { status: "adopted", name: "Larger-sample vector validation", finding: "Qwen2.5 1.5B scored 71.8% over 500 ARC-Easy questions. Its vector total is 80.7697, 3.9593 points above the current Qwen3.5 candidate on the same sample size; its scalar total is only 63.8176.", source: "combined vector comparison" },
+  { status: "rejected", name: "Three-billion-parameter size rule", finding: "Qwen2.5 3B reached 78% ARC-Easy but only 67.0322 on the vector path. The 1.5B version reached 82.8697 because its throughput and memory gains outweighed the two-point accuracy difference.", source: "architecture screen" },
+  { status: "rejected", name: "Gemma 2 2B Q8_0", finding: "The higher-precision file reached 74% ARC-Easy, 6.47 tok/s, and 61.9274 on the vector path. It spent too much memory and throughput for no accuracy advantage over the smaller Qwen candidates.", source: "architecture screen" },
   { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "future model-development study" },
 ];
 
@@ -117,17 +120,17 @@ const CHALLENGE_FAQ = [
   { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is evaluated on the standard laptop profile.", progress: "We developed on an M2 Mac and a GCP x86 proxy. We classify Mac results as development evidence." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
   { q: "What does cross-disciplinary integration require?", rule: "The model must depend substantively on another deep-tech discipline.", progress: "Muta plans to combine scientific tutoring with verified mathematics and local retrieval. Several relevant routes remain incomplete or return 501, so this requirement is not yet satisfied." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The latest AVX2 score leader is the public Math-Expert Qwen3 fine-tune. The risk-adjusted Qwen3.5 recommendation still derives from an official Qwen checkpoint. We document both models’ source, licence, and transformation." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "The validated vector candidate, Qwen2.5 1.5B, and the scalar-profiler recommendation, Qwen3.5 0.8B, derive from official Qwen checkpoints. Math-Expert is a separately documented public fine-tune." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
   { q: "How is the team identified in the artifact?", rule: "Submission metadata must identify the registered team.", progress: "The current metadata uses team ID `team-muta`. Registration details still need a final submission check." },
   { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "The current Qwen3 base uses an open licence. We document its source model, conversion method, licence, and artifact size." },
-  { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "We measured the submitted GGUFs under matched scalar and AVX2 configurations. Custom streaming and lazy-mmap engines stay out of the scoring claim." },
+  { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "We measured the submitted GGUFs under matched scalar and vector configurations. Custom streaming and lazy-mmap engines stay out of the scoring claim." },
   { q: "What is the maximum model size?", rule: "The practical limit is the 7 GB memory ceiling on the standard machine.", progress: "The direct campaign spans about 0.50–2.31 GiB peak model footprints, all below the ceiling. Whole-tree RSS remains the unit of record." },
   { q: "Where should the final benchmark be run?", rule: "The organiser evaluates the artifact on its standard hardware; local results are preparatory.", progress: "We have full participant runs on a four-vCPU GCP x86 proxy under the competition procedure. Package temperature and physical-laptop bandwidth remain unmeasured." },
   { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "The repository contains the model metadata, reproducible experiments, runtime, and this report. Final packaging, the two submission prompts, and the video remain incomplete." },
-  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "On the controlled AVX2 proxy, both latest finalists reach S_perf 100.00. Estimated S_eff is 89.40 for Math-Expert and 87.05 for Qwen3.5. The corresponding ARC-Easy values remain internal accuracy proxies, not submitted S_acc values." },
+  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "Qwen2.5 1.5B reaches vector S_perf 100.00 and estimated S_eff 74.35. Qwen3.5 0.8B reaches vector S_perf 100.00 and estimated S_eff 87.05. ARC-Easy remains an internal accuracy proxy, not a submitted S_acc value." },
   { q: "Is the whole application evaluated, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "We record product improvements separately from model-only evidence. Retrieval, the custom streamer, and UI changes stay out of the GGUF campaign score." },
   { q: "How many prompts are visible before submission?", rule: "The FAQ describes two visible prompts plus hidden tests.", progress: "The local profiler path covers the visible task shape and accuracy proxies. Hidden-prompt performance remains unknown by design." },
   { q: "How is temperature handled?", rule: "Temperature is checked around evaluation and can trigger a 10-point penalty above the threshold or when throttling is detected.", progress: "The GCP host exposed no usable package sensor and reported no throttling. Temperature is recorded as unavailable." },
@@ -137,6 +140,56 @@ const CHALLENGE_FAQ = [
 ];
 
 const svgText = (x, y, value, attrs = "") => `<text x="${x}" y="${y}" ${attrs}>${esc(value)}</text>`;
+
+// One semantic palette for every report figure. Winner bars keep their lane
+// colour and receive an ink outline; they never introduce a new winner colour.
+const CHART_PALETTE = Object.freeze({
+  official: "#1b6ca8",
+  scalar: "#b57614",
+  avx2: "#31714f",
+  diagnostic: "#7d7873",
+  grid: "#e6e2db",
+  ink: "#282828",
+  muted: "#8a8580",
+});
+
+function verticalGroupedChart(items, series, options = {}) {
+  const width = options.width || Math.max(620, items.length * 82 + 90);
+  const height = options.height || 300;
+  const left = options.left || 44, right = options.right || 18;
+  const top = options.top || 22, bottom = options.bottom || 82;
+  const max = options.max || 100;
+  const ticks = options.ticks || [0, 20, 40, 60, 80, 100];
+  const plotW = width - left - right, plotH = height - top - bottom;
+  const groupW = plotW / items.length;
+  const gap = Math.max(2, Math.min(6, groupW * .06));
+  const barW = Math.max(7, Math.min(24, (groupW - gap * (series.length + 1)) / series.length));
+  const y = (value) => top + (max - Number(value)) / max * plotH;
+  const grid = ticks.map((tick) => {
+    const py = y(tick);
+    return `<line x1="${left}" y1="${py}" x2="${width - right}" y2="${py}" class="chart-grid"/>` +
+      svgText(left - 7, py + 3, tick, 'text-anchor="end" class="chart-tick"');
+  }).join("");
+  const bars = items.map((item, index) => {
+    const groupX = left + index * groupW;
+    const usedW = series.length * barW + (series.length - 1) * gap;
+    const startX = groupX + (groupW - usedW) / 2;
+    const mark = series.map((lane, laneIndex) => {
+      const value = Number(lane.value(item));
+      const px = startX + laneIndex * (barW + gap);
+      const py = y(value);
+      const winner = lane.winner && lane.winner(item);
+      return `<rect x="${px}" y="${py}" width="${barW}" height="${top + plotH - py}" rx="1.5" class="chart-bar ${lane.className}${winner ? " winner" : ""}"/>` +
+        svgText(px + barW / 2, py - 5, options.valueFormat ? options.valueFormat(value) : value.toFixed(1), 'text-anchor="middle" class="chart-value-label"');
+    }).join("");
+    const center = groupX + groupW / 2;
+    const labelY = height - bottom + 17;
+    return mark + svgText(center, labelY, options.label(item), `text-anchor="end" transform="rotate(-38 ${center} ${labelY})" class="chart-model-label"`);
+  }).join("");
+  return `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>
+    .chart-grid{stroke:${CHART_PALETTE.grid};stroke-width:1}.chart-tick{font-size:9px;fill:${CHART_PALETTE.muted}}.chart-model-label{font-size:9px;fill:#3c3836}.chart-value-label{font-size:8px;fill:#504945;font-weight:700}.chart-bar.official{fill:${CHART_PALETTE.official}}.chart-bar.scalar{fill:${CHART_PALETTE.scalar}}.chart-bar.avx2{fill:${CHART_PALETTE.avx2}}.chart-bar.diagnostic{fill:${CHART_PALETTE.diagnostic}}.chart-bar.winner{stroke:${CHART_PALETTE.ink};stroke-width:2}
+  </style>${grid}${bars}</svg>`;
+}
 
 function initReport() {
   renderRuntimeChart();
@@ -151,19 +204,10 @@ function initReport() {
 
 function renderRuntimeChart() {
   const el = $("runtime-chart");
-  const width = 700, height = 290, left = 165, right = 52, top = 22, rowH = 49;
-  const plotW = width - left - right;
-  const bars = REPORT_RUNTIME.map((item, i) => {
-    const y = top + i * rowH;
-    const tpsW = item.tps / 35 * plotW;
-    return `${svgText(left - 10, y + 15, item.name, 'text-anchor="end" class="svg-label"')}
-      <rect x="${left}" y="${y}" width="${tpsW}" height="13" rx="2" class="svg-throughput" />
-      ${svgText(left + tpsW + 6, y + 11, `${item.tps.toFixed(2)} tok/s`, 'class="svg-value"')}
-      ${svgText(left, y + 29, `Memory: ${item.memory}`, 'class="svg-value muted"')}`;
-  }).join("");
-  el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-    .svg-label{font-size:11px;fill:#3c3836}.svg-value{font-size:9px;fill:#427b58;font-weight:700}.svg-value.muted{fill:#8a8580;font-weight:400}.svg-throughput{fill:#427b58}
-  </style>${bars}${svgText(left, height - 8, "Generation bars share one scale; memory text preserves each source's recorded unit and caveat.", 'class="svg-foot"')}</svg>`;
+  el.innerHTML = verticalGroupedChart(REPORT_RUNTIME, [
+    {className: "diagnostic", value: (item) => item.tps},
+  ], {width: 700, height: 290, max: 35, ticks: [0, 10, 20, 30], label: (item) => item.name,
+    valueFormat: (value) => value.toFixed(2)});
 }
 
 function renderModelFunnelChart() {
@@ -180,8 +224,9 @@ function renderModelFunnelChart() {
   const renderRows = (items, startY, gap, lane) => items.map((item, i) => {
     const py = startY + i * gap, px = x(item.gb);
     const cls = item.selected ? "selected" : item.leader ? "leader" : item.muted ? "muted" : lane;
-    const status = item.selected ? " · risk-adjusted" : item.leader ? " · raw leader" : "";
-    const scoreLabel = lane === "reasoning" ? `${item.acc.toFixed(1)} four-task mean` : `${item.acc.toFixed(0)}% ARC proxy${status}`;
+    const status = item.selected ? " · risk-adjusted" : item.leader ? " · vector leader" : "";
+    const sampleLabel = item.samples ? `, n=${item.samples}` : "";
+    const scoreLabel = lane === "reasoning" ? `${item.acc.toFixed(1)} four-task mean` : `${item.acc.toFixed(1)}% ARC proxy${sampleLabel}${status}`;
     return `${svgText(left - 12, py + 3, item.name, 'text-anchor="end" class="svg-row-label"')}
       <line x1="${left}" y1="${py}" x2="${px}" y2="${py}" class="lollipop-line ${cls}"/>
       <circle cx="${px}" cy="${py}" r="${item.selected || item.leader ? 7 : 5}" class="svg-point ${cls}"/><title>${esc(item.name)}: ${item.gb} GiB; ${scoreLabel}</title>
@@ -189,7 +234,7 @@ function renderModelFunnelChart() {
   }).join("");
   const points = renderRows(reasoning, 82, 40, "reasoning") + renderRows(audit, 245, 29, "audit");
   el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-    .svg-grid{stroke:#e6e2db;stroke-width:1}.svg-tick{font-size:9px;fill:#8a8580}.panel-title{font-size:9px;fill:#504945;font-weight:800;letter-spacing:1px}.panel-note{font-size:8px;fill:#8a8580}.svg-row-label{font-size:8.5px;fill:#3c3836}.lollipop-line{stroke:#9dbcac;stroke-width:2}.lollipop-line.audit{stroke:#9dbcd5}.lollipop-line.muted{stroke:#cec8be}.lollipop-line.selected{stroke:#af3a03}.lollipop-line.leader{stroke:#427b58}.svg-point{fill:#427b58;stroke:#ffffff;stroke-width:2}.svg-point.audit{fill:#1b6ca8}.svg-point.selected{fill:#af3a03;stroke:#ffffff}.svg-point.leader{fill:#427b58;stroke:#282828}.svg-point.muted{fill:#aaa49d}.svg-score-label{font-size:8px;fill:#427b58}.svg-score-label.audit{fill:#1b6ca8}.svg-score-label.selected{fill:#af3a03;font-weight:800}.svg-score-label.leader{fill:#427b58;font-weight:800}.svg-score-label.muted{fill:#aaa49d}
+    .svg-grid{stroke:#e6e2db;stroke-width:1}.svg-tick{font-size:9px;fill:#8a8580}.panel-title{font-size:9px;fill:#504945;font-weight:800;letter-spacing:1px}.panel-note{font-size:8px;fill:#8a8580}.svg-row-label{font-size:8.5px;fill:#3c3836}.lollipop-line{stroke:#b9b4ae;stroke-width:2}.lollipop-line.audit{stroke:#9dbcd5}.lollipop-line.muted{stroke:#cec8be}.lollipop-line.selected{stroke:#1b6ca8}.lollipop-line.leader{stroke:#31714f}.svg-point{fill:#7d7873;stroke:#ffffff;stroke-width:2}.svg-point.audit{fill:#1b6ca8}.svg-point.selected{fill:#1b6ca8;stroke:#282828}.svg-point.leader{fill:#31714f;stroke:#282828}.svg-point.muted{fill:#aaa49d}.svg-score-label{font-size:8px;fill:#7d7873}.svg-score-label.audit{fill:#1b6ca8}.svg-score-label.selected{fill:#1b6ca8;font-weight:800}.svg-score-label.leader{fill:#31714f;font-weight:800}.svg-score-label.muted{fill:#aaa49d}
   </style>${grid}${svgText(0, 20, "REASONING STUDY", 'class="panel-title"')}${svgText(0, 34, "Four-task mean; development host", 'class="panel-note"')}${svgText(0, 196, "AUDIT CANDIDATES", 'class="panel-title"')}${svgText(0, 210, "ARC-Easy-50 proxy; separate task and engine regime", 'class="panel-note"')}<line x1="0" y1="180" x2="${width}" y2="180" class="svg-grid"/>${points}</svg>`;
 }
 
@@ -210,15 +255,19 @@ function renderStreamingChart() {
 
 function renderOfficialCharts() {
   const scoreEl = $("official-score-chart");
-  const width = 360, left = 116, right = 28, top = 25, rowH = 54;
-  const height = Math.max(330, top + REPORT_CURRENT_OFFICIAL.length * rowH + 48);
-  const plotW = width - left - right;
-  const rows = REPORT_CURRENT_OFFICIAL.map((item, i) => {
-    const y = top + i * rowH;
-    const a = item.sAcc * .5 / 85 * plotW, p = item.sPerf * .3 / 85 * plotW, e = item.sEff * .2 / 85 * plotW;
-    return `${svgText(left-7,y+15,item.name,'text-anchor="end" class="svg-label"')}<rect x="${left}" y="${y}" width="${a}" height="20" class="seg acc"/><rect x="${left+a}" y="${y}" width="${p}" height="20" class="seg perf"/><rect x="${left+a+p}" y="${y}" width="${e}" height="20" class="seg eff"/>${svgText(left+(item.total/85*plotW)+5,y+15,item.total.toFixed(2),'class="svg-total"')}`;
+  const width = 700, height = 300, left = 42, right = 18, top = 24, bottom = 86;
+  const plotW = width-left-right, plotH = height-top-bottom, groupW = plotW/REPORT_CURRENT_OFFICIAL.length;
+  const y = (value) => top + (85-value)/85*plotH;
+  const scoreGrid = [0,20,40,60,80].map((tick) => `<line x1="${left}" y1="${y(tick)}" x2="${width-right}" y2="${y(tick)}" class="score-grid"/>${svgText(left-6,y(tick)+3,tick,'text-anchor="end" class="score-tick"')}`).join("");
+  const bars = REPORT_CURRENT_OFFICIAL.map((item,i) => {
+    const x = left+i*groupW+groupW*.28, bw=groupW*.44;
+    const parts = [{v:item.sAcc*.5,c:"acc"},{v:item.sPerf*.3,c:"perf"},{v:item.sEff*.2,c:"eff"}];
+    let cumulative=0;
+    const rects=parts.map((part)=>{const y0=y(cumulative+part.v), h=y(cumulative)-y(cumulative+part.v); cumulative+=part.v; return `<rect x="${x}" y="${y0}" width="${bw}" height="${h}" class="score-seg ${part.c}"/>`;}).join("");
+    const cx=x+bw/2, ly=height-bottom+17;
+    return rects+svgText(cx,y(item.total)-5,item.total.toFixed(2),'text-anchor="middle" class="score-total"')+svgText(cx,ly,item.name,`text-anchor="end" transform="rotate(-38 ${cx} ${ly})" class="score-label"`);
   }).join("");
-  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.svg-label{font-size:8px;fill:#504945}.seg.acc{fill:#1b6ca8}.seg.perf{fill:#427b58}.seg.eff{fill:#b57614}.svg-total{font-size:9px;fill:#282828;font-weight:800}.legend{font-size:8px;fill:#6b6866}</style>${rows}<rect x="${left}" y="${height-35}" width="8" height="8" class="seg acc"/>${svgText(left+12,height-28,"Accuracy",'class="legend"')}<rect x="${left+65}" y="${height-35}" width="8" height="8" class="seg perf"/>${svgText(left+77,height-28,"Performance",'class="legend"')}<rect x="${left+145}" y="${height-35}" width="8" height="8" class="seg eff"/>${svgText(left+157,height-28,"Efficiency",'class="legend"')}</svg>`;
+  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>.score-grid{stroke:${CHART_PALETTE.grid}}.score-tick{font-size:9px;fill:${CHART_PALETTE.muted}}.score-seg.acc{fill:${CHART_PALETTE.official}}.score-seg.perf{fill:${CHART_PALETTE.avx2}}.score-seg.eff{fill:${CHART_PALETTE.scalar}}.score-total{font-size:8px;fill:${CHART_PALETTE.ink};font-weight:800}.score-label{font-size:8px;fill:#504945}</style>${scoreGrid}${bars}</svg>`;
 
   const scatterEl = $("official-scatter-chart");
   const sw=360, sh=330, sl=46, sr=20, st=25, sb=48;
@@ -235,7 +284,7 @@ function renderOfficialCharts() {
     { dx: -7, dy: 17, anchor: "end" },
   ];
   const pts=REPORT_CURRENT_OFFICIAL.map((d,i)=>{const label=labelOffsets[i];return `<circle cx="${sx(d.rss)}" cy="${sy(d.tps)}" r="${4+d.acc/25}" class="scatter-point ${i===0?'selected':''}"/><title>${esc(d.name)}: ${d.tps} tok/s, ${d.rss.toFixed(0)} MiB, ${d.acc}% ARC-Easy</title>${svgText(sx(d.rss)+label.dx,sy(d.tps)+label.dy,d.name,`text-anchor="${label.anchor}" class="scatter-label ${i===0?'selected':''}"`)}`}).join("");
-  scatterEl.innerHTML=`<svg viewBox="0 0 ${sw} ${sh}" aria-hidden="true"><style>.svg-grid{stroke:#e6e2db}.svg-tick{font-size:8px;fill:#8a8580}.scatter-point{fill:#9dbcd5;fill-opacity:.9;stroke:#fff;stroke-width:2}.scatter-point.selected{fill:#af3a03}.scatter-label{font-size:7.5px;fill:#6b6866}.scatter-label.selected{fill:#af3a03;font-weight:800}</style>${grid}${pts}${svgText(sw/2,sh-3,"Peak RSS (MiB)",'text-anchor="middle" class="svg-axis"')}</svg>`;
+  scatterEl.innerHTML=`<svg viewBox="0 0 ${sw} ${sh}" aria-hidden="true"><style>.svg-grid{stroke:#e6e2db}.svg-tick{font-size:8px;fill:#8a8580}.scatter-point{fill:#1b6ca8;fill-opacity:.72;stroke:#fff;stroke-width:2}.scatter-point.selected{fill:#1b6ca8;stroke:#282828}.scatter-label{font-size:7.5px;fill:#6b6866}.scatter-label.selected{fill:#1b6ca8;font-weight:800}</style>${grid}${pts}${svgText(sw/2,sh-3,"Peak RSS (MiB)",'text-anchor="middle" class="svg-axis"')}</svg>`;
 }
 
 function renderLedger(filter) {
@@ -294,8 +343,8 @@ function render() {
   renderCampaign(d.campaign, "campaign");
   renderCampaign(d.campaign_parity, "campaign-parity");
   renderCampaign(d.campaign_alternative, "campaign-alternative");
-  renderIsaComparison(d.campaign_avx2_score, d.overnight);
-  renderOvernight(d.overnight);
+  renderIsaComparison(d.campaign_avx2_score, d.overnight, d.model_extension);
+  renderOvernight(d.overnight, d.model_extension);
   renderCampaignSnapshotWarning(d.campaign);
   renderTpsRef(d);
   renderRunCard(d);
@@ -303,7 +352,7 @@ function render() {
   renderTable(d);
 }
 
-function renderOvernight(campaign) {
+function renderOvernight(campaign, modelExtension) {
   const scoreChart = $("overnight-score-chart");
   const scoreSummary = $("overnight-score-summary");
   const quantChart = $("overnight-quant-chart");
@@ -317,7 +366,7 @@ function renderOvernight(campaign) {
   if (!campaign || !campaign.finalists) {
     scoreChart.innerHTML = '<p class="chart-empty">The expanded campaign summary is unavailable.</p>';
     quantChart.innerHTML = '<p class="chart-empty">The quantization summary is unavailable.</p>';
-    avx2Chart.innerHTML = '<p class="chart-empty">The latest AVX2 finalist summary is unavailable.</p>';
+    avx2Chart.innerHTML = '<p class="chart-empty">The latest vector finalist summary is unavailable.</p>';
     avx2Table.innerHTML = "";
     finalistTable.innerHTML = "";
     screenTable.innerHTML = "";
@@ -330,75 +379,59 @@ function renderOvernight(campaign) {
     ? "Math-Expert 0.6B Q4_K_M" : "Qwen3.5 0.8B Q4_0";
 
   {
-    const width = 700, left = 192, right = 42, top = 34, groupH = 92, barH = 24;
-    const height = top + finalists.length * groupH + 42;
-    const plotW = width - left - right;
-    const x = (value) => left + Number(value) / 85 * plotW;
-    let grid = "";
-    [0, 20, 40, 60, 80].forEach((tick) => {
-      const px = x(tick);
-      grid += `<line x1="${px}" y1="${top - 15}" x2="${px}" y2="${height - 32}" class="overnight-grid"/>` +
-        svgText(px, height - 12, tick, 'text-anchor="middle" class="overnight-tick"');
-    });
-    const rows = finalists.map((entry, index) => {
-      const y = top + index * groupH;
-      const scalar = Number(entry.official.s_total);
-      const avx2 = Number(entry.avx2_fixed_15.arc_easy_50.s_total);
-      const avx2Winner = entry.official.model === campaign.official_profiler_winner;
-      return `${svgText(left - 12, y + 31, finalistLabel(entry.official.model), 'text-anchor="end" class="overnight-model"')}
-        <rect x="${left}" y="${y}" width="${x(scalar) - left}" height="${barH}" rx="2" class="overnight-bar direct"/>
-        ${svgText(left + 8, y + 16, scalar.toFixed(4), 'text-anchor="start" class="overnight-total"')}
-        <rect x="${left}" y="${y + 32}" width="${x(avx2) - left}" height="${barH}" rx="2" class="overnight-bar avx2 ${avx2Winner ? "latest-winner" : ""}"/>
-        ${svgText(left + 8, y + 48, avx2.toFixed(4), 'text-anchor="start" class="overnight-total"')}
-        ${avx2Winner ? svgText(x(avx2) + 8, y + 48, "highest AVX2 total", 'class="overnight-choice external"') : ""}`;
-    }).join("");
-    avx2Chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-model{font-size:12px;fill:#3c3836}.overnight-bar.direct{fill:#1b6ca8}.overnight-bar.avx2{fill:#31714f}.overnight-bar.latest-winner{stroke:#282828;stroke-width:2}.overnight-total{font-size:11px;fill:#fff;font-weight:800}.overnight-choice.external{font-size:10px;fill:#282828;font-weight:700}
-    </style>${grid}${rows}</svg>`;
+    avx2Chart.innerHTML = verticalGroupedChart(finalists, [
+      {className: "official", value: (entry) => entry.official.s_total,
+        winner: (entry) => entry.official.model === campaign.official_profiler_winner},
+      {className: "avx2", value: (entry) => entry.avx2_fixed_15.arc_easy_50.s_total,
+        winner: (entry) => entry.official.model === campaign.official_profiler_winner},
+    ], {width: 940, height: 285, max: 85, ticks: [0, 20, 40, 60, 80],
+      label: (entry) => finalistLabel(entry.official.model), valueFormat: (value) => value.toFixed(2)});
     avx2Summary.textContent = finalists.map((entry) =>
       `${finalistLabel(entry.official.model)}: direct scalar ${entry.official.s_total.toFixed(4)}, ` +
-      `portable AVX2 ${entry.avx2_fixed_15.arc_easy_50.s_total.toFixed(4)}`
+      `vector path ${entry.avx2_fixed_15.arc_easy_50.s_total.toFixed(4)}`
     ).join("; ") + ".";
 
-    avx2Table.innerHTML = `<thead><tr><th>Model</th><th>Direct scalar total</th><th>AVX2 pp512</th><th>AVX2 tg128</th><th>Est. AVX2 profiler RSS</th><th>ARC-Easy-50 AVX2 total</th><th>ARC-Easy-500 AVX2 diagnostic</th></tr></thead><tbody>` +
+    avx2Table.innerHTML = `<thead><tr><th>Model</th><th>Direct scalar total</th><th>Vector pp512</th><th>Vector tg128</th><th>Est. vector profiler RSS</th><th>ARC-Easy-50 vector total</th><th>ARC-Easy-500 vector diagnostic</th></tr></thead><tbody>` +
       finalists.map((entry) => {
         const avx = entry.avx2_fixed_15;
         const transfer = avx.transferred_from_tensor_identical_source
-          ? `<small>AVX2 measured on a tensor-identical parent quant</small>`
-          : `<small>AVX2 measured on the submitted model</small>`;
+          ? `<small>Vector path measured on a tensor-identical parent quant</small>`
+          : `<small>Vector path measured on the submitted model</small>`;
         return `<tr class="${entry.official.model === campaign.official_profiler_winner ? "avx2-selected-row" : ""}"><td><div class="model-name">${esc(finalistLabel(entry.official.model))}</div>${transfer}</td><td>${fmt.num(entry.official.s_total, 4)}</td><td>${fmt.num(avx.pp512_tps, 4)}</td><td>${fmt.num(avx.tg128_tps, 4)}</td><td>${fmt.num(avx.estimated_profiler_rss_mib, 1)} MiB<small>${fmt.num(avx.child_tree_rss_mib, 1)} measured + ${fmt.num(avx.profiler_root_rss_estimate_mib, 0)} estimated</small></td><td class="total">${fmt.num(avx.arc_easy_50.s_total, 4)}<small>${fmt.num(avx.arc_easy_50.accuracy_percent, 1)}% accuracy</small></td><td>${fmt.num(avx.arc_easy_500.s_total, 4)}<small>${fmt.num(avx.arc_easy_500.accuracy_percent, 1)}% accuracy</small></td></tr>`;
       }).join("") + "</tbody>";
   }
 
   {
-    const width = 620, left = 176, right = 38, top = 34, groupH = 92, barH = 24;
-    const height = top + finalists.length * groupH + 42;
-    const plotW = width - left - right;
-    const x = (value) => left + Number(value) / 85 * plotW;
-    let grid = "";
-    [0, 20, 40, 60, 80].forEach((tick) => {
-      const px = x(tick);
-      grid += `<line x1="${px}" y1="${top - 15}" x2="${px}" y2="${height - 32}" class="overnight-grid"/>` +
-        svgText(px, height - 12, tick, 'text-anchor="middle" class="overnight-tick"');
-    });
-    const rows = finalists.map((entry, index) => {
-      const y = top + index * groupH;
-      const direct = Number(entry.official.s_total);
-      const diagnostic = Number(entry.diagnostic_total_with_arc_easy_500);
-      const recommended = entry.official.model === campaign.risk_adjusted_recommendation;
-      return `${svgText(left - 12, y + 31, finalistLabel(entry.official.model), 'text-anchor="end" class="overnight-model"')}
-        <rect x="${left}" y="${y}" width="${x(direct) - left}" height="${barH}" rx="2" class="overnight-bar direct"/>
-        ${svgText(left + 8, y + 16, direct.toFixed(2), 'text-anchor="start" class="overnight-total"')}
-        <rect x="${left}" y="${y + 32}" width="${x(diagnostic) - left}" height="${barH}" rx="2" class="overnight-bar diagnostic ${recommended ? "recommended" : ""}"/>
-        ${svgText(left + 8, y + 48, diagnostic.toFixed(2), 'text-anchor="start" class="overnight-total"')}
-        ${recommended ? svgText(left + 55, y + 48, "risk-adjusted choice", 'class="overnight-choice"') : ""}`;
-    }).join("");
-    scoreChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-model{font-size:12px;fill:#3c3836}.overnight-bar.direct{fill:#1b6ca8}.overnight-bar.diagnostic{fill:#b8afa3}.overnight-bar.recommended{fill:#427b58;stroke:#282828;stroke-width:1.5}.overnight-total{font-size:11px;fill:#fff;font-weight:800}.overnight-choice{font-size:10px;fill:#fff;font-weight:700}
-    </style>${grid}${rows}</svg>`;
-    scoreSummary.textContent = finalists.map((entry) =>
-      `${finalistLabel(entry.official.model)}: profiler slice ${entry.official.s_total.toFixed(2)}, ` +
-      `larger-sample diagnostic ${entry.diagnostic_total_with_arc_easy_500.toFixed(2)}`
+    const sampleFinalists = finalists.map((entry) => ({
+      label: finalistLabel(entry.official.model),
+      score50: entry.avx2_fixed_15.arc_easy_50.s_total,
+      score500: entry.avx2_fixed_15.arc_easy_500.s_total,
+      accuracy50: entry.avx2_fixed_15.arc_easy_50.accuracy_percent,
+      accuracy500: entry.avx2_fixed_15.arc_easy_500.accuracy_percent,
+    }));
+    const extensionValidation = modelExtension && Array.isArray(modelExtension.models)
+      ? modelExtension.models.find((entry) => entry.accuracy_validation &&
+          entry.accuracy_validation.samples === 500)
+      : null;
+    if (extensionValidation) {
+      sampleFinalists.push({
+        label: `${extensionValidation.label} Q4_K_M`,
+        score50: extensionValidation.avx2.s_total,
+        score500: extensionValidation.avx2.s_total_accuracy_500,
+        accuracy50: extensionValidation.accuracy_percent,
+        accuracy500: extensionValidation.accuracy_validation.accuracy_percent,
+      });
+    }
+    const validatedWinner = [...sampleFinalists].sort((a, b) => b.score500 - a.score500)[0];
+    scoreChart.innerHTML = verticalGroupedChart(sampleFinalists, [
+      {className: "avx2", value: (entry) => entry.score50},
+      {className: "diagnostic", value: (entry) => entry.score500,
+        winner: (entry) => entry === validatedWinner},
+    ], {width: 620, height: 285, max: 85, ticks: [0, 20, 40, 60, 80],
+      label: (entry) => entry.label, valueFormat: (value) => value.toFixed(2)});
+    scoreSummary.textContent = sampleFinalists.map((entry) =>
+      `${entry.label}: 50-item vector total ${entry.score50.toFixed(2)}, ` +
+      `500-item vector total ${entry.score500.toFixed(2)}`
     ).join("; ") + ".";
   }
 
@@ -434,7 +467,7 @@ function renderOvernight(campaign) {
         svgText(px + dx, py + dy, shortQuant(entry.model), `text-anchor="${anchor}" class="overnight-point-label ${selected ? "selected" : ""}"`);
     }).join("");
     quantChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-point{fill:#b57614;stroke:#fff;stroke-width:2}.overnight-point.selected{fill:#1b6ca8;stroke:#282828}.overnight-point-label{font-size:9.5px;fill:#6b6866}.overnight-point-label.selected{fill:#1b6ca8;font-weight:800}
+      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-point{fill:#b57614;stroke:#fff;stroke-width:2}.overnight-point.selected{fill:#b57614;stroke:#282828}.overnight-point-label{font-size:9.5px;fill:#6b6866}.overnight-point-label.selected{fill:#b57614;font-weight:800}
     </style>${grid}${points}${svgText(width / 2, height - 2, "Scalar profiler-compatible generation tok/s", 'text-anchor="middle" class="svg-axis"')}${svgText(12, height / 2, "ARC-Easy", 'text-anchor="middle" transform="rotate(-90 12 180)" class="svg-axis"')}</svg>`;
     quantSummary.textContent = rows.map((entry) =>
       `${shortQuant(entry.model)}: ${entry.scalar.tg128_tps.toFixed(2)} tok/s and ${entry.accuracy.arc_easy.toFixed(0)}% ARC-Easy`
@@ -444,14 +477,38 @@ function renderOvernight(campaign) {
   {
     const taskOrder = ["arc_easy_50", "arc_easy_200", "arc_easy_500", "arc_challenge_50", "sciq_50", "gsm8k_10"];
     const taskLabel = {arc_easy_50:"ARC-Easy", arc_easy_200:"ARC-Easy", arc_easy_500:"ARC-Easy", arc_challenge_50:"ARC-Challenge", sciq_50:"SciQ", gsm8k_10:"GSM8K strict"};
-    const taskResult = (entry, key) => key === "arc_easy_50"
-      ? {score_percent: entry.official.arc_easy_50, samples: 50, ci95_percent: entry.official.arc_easy_50_ci95}
-      : entry.accuracy[key];
-    finalistTable.innerHTML = `<thead><tr><th>Task</th><th>Samples</th>${finalists.map((entry) => `<th>${esc(finalistLabel(entry.official.model))}</th>`).join("")}</tr></thead><tbody>` +
+    const accuracyColumns = finalists.map((entry) => ({
+      label: finalistLabel(entry.official.model),
+      results: {
+        arc_easy_50: {score_percent: entry.official.arc_easy_50, samples: 50, ci95_percent: entry.official.arc_easy_50_ci95},
+        ...entry.accuracy,
+      },
+    }));
+    const extensionValidation = modelExtension && Array.isArray(modelExtension.models)
+      ? modelExtension.models.find((entry) => entry.accuracy_validation && entry.accuracy_validation.samples === 500)
+      : null;
+    if (extensionValidation) {
+      accuracyColumns.push({
+        label: `${extensionValidation.label} Q4_K_M`,
+        results: {
+          arc_easy_50: {
+            score_percent: extensionValidation.accuracy_percent,
+            samples: extensionValidation.accuracy_samples,
+            ci95_percent: extensionValidation.accuracy_ci95_percent,
+          },
+          arc_easy_500: {
+            score_percent: extensionValidation.accuracy_validation.accuracy_percent,
+            samples: extensionValidation.accuracy_validation.samples,
+            ci95_percent: extensionValidation.accuracy_validation.ci95_percent,
+          },
+        },
+      });
+    }
+    finalistTable.innerHTML = `<thead><tr><th>Task</th><th>Samples</th>${accuracyColumns.map((entry) => `<th>${esc(entry.label)}</th>`).join("")}</tr></thead><tbody>` +
       taskOrder.map((key) => {
-        const first = taskResult(finalists[0], key);
-        return `<tr><td>${esc(taskLabel[key])}</td><td>${esc(first && first.samples || "—")}</td>` + finalists.map((entry) => {
-          const result = taskResult(entry, key);
+        const first = accuracyColumns.map((entry) => entry.results[key]).find(Boolean);
+        return `<tr><td>${esc(taskLabel[key])}</td><td>${esc(first && first.samples || "—")}</td>` + accuracyColumns.map((entry) => {
+          const result = entry.results[key];
           if (!result) return "<td>—</td>";
           const ci = result.ci95_percent || [];
           return `<td><strong>${fmt.num(result.score_percent, 1)}%</strong>${ci.length === 2 ? `<small>95% CI ${fmt.num(ci[0], 1)}–${fmt.num(ci[1], 1)}</small>` : ""}</td>`;
@@ -475,7 +532,7 @@ function renderOvernight(campaign) {
     };
     const rows = [...(campaign.screened_candidates || [])].sort((a, b) =>
       (b.scalar && b.scalar.tg128_tps || 0) - (a.scalar && a.scalar.tg128_tps || 0));
-    screenTable.innerHTML = `<thead><tr><th>Model</th><th>Scalar tg128</th><th>AVX2 tg128</th><th>Accuracy screen</th><th>Decision</th></tr></thead><tbody>` + rows.map((entry) => {
+    screenTable.innerHTML = `<thead><tr><th>Model</th><th>Scalar tg128</th><th>Vector tg128</th><th>Accuracy screen</th><th>Decision</th></tr></thead><tbody>` + rows.map((entry) => {
       const accuracy = Object.entries(entry.accuracy || {}).map(([task, value]) => `${task}: ${fmt.num(value, 0)}%`).join(" · ");
       return `<tr><td><div class="model-name">${esc(shortName(entry.model))}</div></td><td>${fmt.num(entry.scalar && entry.scalar.tg128_tps, 2)}</td><td>${fmt.num(entry.avx2 && entry.avx2.tg128_tps, 2)}</td><td>${esc(accuracy || "screened separately")}</td><td>${esc(disposition[entry.model] || "Rejected in staged screen")}</td></tr>`;
     }).join("") + "</tbody>";
@@ -560,15 +617,15 @@ function renderCampaign(campaign, prefix) {
   const evidenceSummary = isOfficialFullRun
     ? "Direct participant-profiler evidence. The performance reference is fixed at 15 tok/s"
     : isWebsiteAlternative
-      ? "Website-relative sensitivity only. AVX2 deployment measurements are rescored with the public cohort formula; each candidate is included in its effective denominator"
-      : "Profiler-parity estimate under the no-AVX audit kernel";
+      ? "Website-relative sensitivity only. Vector-path measurements are rescored with the public cohort formula; each candidate is included in its effective denominator"
+      : "Profiler-parity estimate under the scalar audit kernel";
   formula.textContent = `${evidenceSummary}. ${sentenceCase(campaign.accuracy_notice)}. ` +
     `${sentenceCase(campaign.rss_notice)}. ${sentenceCase(campaign.thermal_notice)}.` + (winnerText
       ? ` Highest score by ${isWebsiteAlternative ? "website-relative floor" : "profiler reference"}: ${winnerText}.`
       : "");
 }
 
-function renderIsaComparison(comparison, overnight) {
+function renderIsaComparison(comparison, overnight, modelExtension) {
   const chart = $("isa-score-chart");
   const summary = $("isa-score-summary");
   const sub = $("campaign-avx2-score-sub");
@@ -577,13 +634,13 @@ function renderIsaComparison(comparison, overnight) {
   if (!comparison || !Array.isArray(comparison.models)) {
     if (chart) chart.innerHTML = '<p class="chart-empty">The paired ISA comparison is unavailable.</p>';
     if (summary) summary.textContent = "The paired ISA comparison is unavailable.";
-    if (sub) sub.textContent = "No AVX2 score-of-record artifact is available at the configured path.";
+    if (sub) sub.textContent = "No vector score-of-record artifact is available at the configured path.";
     if (table) table.innerHTML = "";
     if (formula) formula.textContent = "";
     return;
   }
 
-  const label = (file) => ({
+  const label = (file, fallback) => fallback || ({
     "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf": "Qwen3.5 0.8B final",
     "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": "Math-Expert 0.6B",
     "muta-tutor-qwen3-1.7b-q4_0.gguf": "Q4_0 tied",
@@ -607,54 +664,62 @@ function renderIsaComparison(comparison, overnight) {
     },
     accuracy_proxy: entry.official.arc_easy_50,
   })) : [];
-  const models = [...latest, ...comparison.models];
+  const extension = modelExtension && Array.isArray(modelExtension.models)
+    ? modelExtension.models.map((entry) => ({
+      model: entry.model,
+      label: entry.label,
+      scalar: {
+        pp512_tps: entry.scalar.pp512_tps,
+        tg128_tps: entry.scalar.tg128_tps,
+        estimated_profiler_rss_mib: entry.scalar.estimated_profiler_rss_mib,
+        score: {s_total: entry.scalar.s_total},
+      },
+      avx2: {
+        pp512_tps: entry.avx2.pp512_tps,
+        tg128_tps: entry.avx2.tg128_tps,
+        estimated_profiler_rss_mib: entry.avx2.estimated_profiler_rss_mib,
+        score: {s_total: entry.avx2.s_total},
+      },
+      accuracy_proxy: entry.accuracy_percent,
+      accuracy_ci95_percent: entry.accuracy_ci95_percent,
+      accuracy_validation: entry.accuracy_validation,
+      scalar_total_accuracy_500: entry.scalar.s_total_accuracy_500,
+      avx2_total_accuracy_500: entry.avx2.s_total_accuracy_500,
+      decode_speedup: entry.decode_speedup,
+      extension: true,
+    })) : [];
+  const models = [...latest, ...comparison.models, ...extension];
   const scalarWinnerItem = [...models].sort((a, b) => b.scalar.score.s_total - a.scalar.score.s_total)[0];
   const avx2WinnerItem = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total)[0];
   const scalarWinner = {model: scalarWinnerItem.model, s_total: scalarWinnerItem.scalar.score.s_total};
   const avx2Winner = {model: avx2WinnerItem.model, s_total: avx2WinnerItem.avx2.score.s_total};
 
   if (chart) {
-    const width = 820, left = 196, right = 54, top = 40, groupH = 64, barH = 17;
-    const height = top + models.length * groupH + 38;
-    const plotW = width - left - right;
-    const x = (score) => left + Number(score) / 85 * plotW;
-    let grid = "";
-    [0, 20, 40, 60, 80].forEach((tick) => {
-      const px = x(tick);
-      grid += `<line x1="${px}" y1="${top - 12}" x2="${px}" y2="${height - 34}" class="isa-grid"/>` +
-        svgText(px, height - 14, tick, 'text-anchor="middle" class="isa-tick"');
-    });
-    const rows = models.map((item, index) => {
-      const y = top + index * groupH;
-      const scalar = Number(item.scalar.score.s_total);
-      const avx2 = Number(item.avx2.score.s_total);
-      const scalarIsWinner = item.model === scalarWinner.model;
-      const avx2IsWinner = item.model === avx2Winner.model;
-      return `${svgText(left - 12, y + 25, label(item.model), 'text-anchor="end" class="isa-model"')}
-        <rect x="${left}" y="${y}" width="${x(scalar) - left}" height="${barH}" rx="2" class="isa-bar scalar ${scalarIsWinner ? "winner" : ""}"/>
-        ${svgText(x(scalar) - 6, y + 12, scalar.toFixed(4), 'text-anchor="end" class="isa-total"')}
-        <rect x="${left}" y="${y + 22}" width="${x(avx2) - left}" height="${barH}" rx="2" class="isa-bar avx2 ${avx2IsWinner ? "winner" : ""}"/>
-        ${svgText(x(avx2) - 6, y + 34, avx2.toFixed(4), 'text-anchor="end" class="isa-total"')}
-        ${scalarIsWinner ? svgText(x(scalar) + 7, y + 12, "highest scalar total", 'class="isa-winner-label"') : ""}
-        ${avx2IsWinner ? svgText(x(avx2) + 7, y + 34, "highest AVX2 total", 'class="isa-winner-label"') : ""}`;
-    }).join("");
-    chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-      .isa-grid{stroke:#e6e2db;stroke-width:1}.isa-tick{font-size:9px;fill:#8a8580}.isa-model{font-size:10px;fill:#3c3836}.isa-bar.scalar{fill:#b57614}.isa-bar.avx2{fill:#31714f}.isa-bar.winner{stroke:#282828;stroke-width:2}.isa-total{font-size:8.5px;fill:#fff;font-weight:700}.isa-winner-label{font-size:8px;fill:#282828;font-weight:700}
-    </style>${grid}${rows}${svgText(left + plotW / 2, height - 1, "Capped-15 total score", 'text-anchor="middle" class="svg-axis"')}</svg>`;
+    chart.innerHTML = verticalGroupedChart(models, [
+      {className: "scalar", value: (item) => item.scalar.score.s_total,
+        winner: (item) => item.model === scalarWinner.model},
+      {className: "avx2", value: (item) => item.avx2.score.s_total,
+        winner: (item) => item.model === avx2Winner.model},
+    ], {width: 1360, height: 330, max: 85, ticks: [0, 20, 40, 60, 80],
+      label: (item) => label(item.model, item.label), valueFormat: (value) => value.toFixed(1)});
   }
   if (summary) {
     summary.textContent = models.map((item) =>
-      `${label(item.model)}: scalar ${item.scalar.score.s_total.toFixed(4)}, portable AVX2 ${item.avx2.score.s_total.toFixed(4)}`
-    ).join("; ") + `. Highest scalar total: ${label(scalarWinner.model)}. Highest AVX2 total: ${label(avx2Winner.model)}.`;
+      `${label(item.model, item.label)}: scalar ${item.scalar.score.s_total.toFixed(4)}, vector ${item.avx2.score.s_total.toFixed(4)}`
+    ).join("; ") + `. Highest scalar total: ${label(scalarWinner.model, scalarWinnerItem.label)}. Highest vector total: ${label(avx2Winner.model, avx2WinnerItem.label)}.`;
   }
 
   if (sub && table && formula) {
     const ranked = [...models].sort((a, b) => b.avx2.score.s_total - a.avx2.score.s_total);
-    sub.textContent = `${hardwareLabel(comparison.hardware_contexts.avx2)} · ${ranked.length} models · matched scalar and portable AVX2 measurements`;
-    table.innerHTML = `<thead><tr><th>Model</th><th>Scalar total</th><th>AVX2 total</th><th>Scalar → AVX2 tg128</th><th>Scalar → AVX2 est. RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
-      ranked.map((item) => `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td><div class="model-name">${esc(label(item.model))}</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.scalar.estimated_profiler_rss_mib, 1)} → ${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy</td></tr>`).join("") +
+    sub.textContent = `${hardwareLabel(comparison.hardware_contexts.avx2)} · ${ranked.length} models · matched scalar and vector measurements`;
+    table.innerHTML = `<thead><tr><th>Model</th><th>Scalar total</th><th>Vector total</th><th>Scalar → vector pp512</th><th>Scalar → vector tg128</th><th>Vector RSS</th><th>Accuracy proxy</th></tr></thead><tbody>` +
+      ranked.map((item) => {
+        const validatedTotal = item.avx2_total_accuracy_500 == null ? "" : `<small>n=500: ${fmt.num(item.avx2_total_accuracy_500, 4)}</small>`;
+        const validatedAccuracy = !item.accuracy_validation ? "" : `<small>n=500: ${fmt.num(item.accuracy_validation.accuracy_percent, 1)}%</small>`;
+        return `<tr class="${item.model === avx2Winner.model ? "avx2-winner-row" : ""}"><td><div class="model-name">${esc(label(item.model, item.label))}</div></td><td>${fmt.num(item.scalar.score.s_total, 4)}${item.scalar_total_accuracy_500 == null ? "" : `<small>n=500: ${fmt.num(item.scalar_total_accuracy_500, 4)}</small>`}</td><td class="total">${fmt.num(item.avx2.score.s_total, 4)}${validatedTotal}</td><td>${fmt.num(item.scalar.pp512_tps, 4)} → ${fmt.num(item.avx2.pp512_tps, 4)}</td><td>${fmt.num(item.scalar.tg128_tps, 4)} → ${fmt.num(item.avx2.tg128_tps, 4)}</td><td>${fmt.num(item.avx2.estimated_profiler_rss_mib, 1)} MiB</td><td>${fmt.num(item.accuracy_proxy, 0)}% ARC-Easy${validatedAccuracy}</td></tr>`;
+      }).join("") +
       `</tbody>`;
-    formula.textContent = `Matched scalar and AVX2 measurements on one GCP 2C/4T proxy · S_perf = 100 × min(TPS / 15, 1) · scalar finalist rows use direct profiler RSS; AVX2 rows use measured child-tree RSS + 45 MiB root estimate · thermal unknown. Highest scalar total: ${label(scalarWinner.model)} (${fmt.num(scalarWinner.s_total, 4)}). Highest portable AVX2 total: ${label(avx2Winner.model)} (${fmt.num(avx2Winner.s_total, 4)}).`;
+    formula.textContent = `Matched scalar and vector measurements on one GCP 2C/4T proxy · S_perf = 100 × min(TPS / 15, 1) · scalar finalist rows use direct profiler RSS; controlled rows add the 45 MiB profiler-root estimate · thermal unknown. Highest scalar total: ${label(scalarWinner.model, scalarWinnerItem.label)} (${fmt.num(scalarWinner.s_total, 4)}). Highest vector total: ${label(avx2Winner.model, avx2WinnerItem.label)} (${fmt.num(avx2Winner.s_total, 4)}).`;
   }
 }
 
@@ -753,18 +818,12 @@ function renderChart(d) {
     return;
   }
   scored.sort((a, b) => b.best.scores.s_total - a.best.scores.s_total);
-  const rows = scored.map((m) => {
-    const t = m.best.scores.s_total;
-    return `<div class="chart-row" data-chart-model="${esc(m.file)}">
-      <div class="chart-label">${esc(shortName(m.file))}</div>
-      <div class="bar-track"><div class="bar" style="width:${Math.min(100, t)}%"></div></div>
-      <div class="chart-value">${t.toFixed(1)}</div>
-    </div>`;
-  }).join("");
-  const axis = `<div class="chart-axis"><div></div><div class="ticks">
-      <span style="left:0">0</span><span style="left:25%">25</span><span style="left:50%">50</span>
-      <span style="left:75%">75</span><span style="left:100%">100</span></div><div></div></div>`;
-  el.innerHTML = rows + axis;
+  el.innerHTML = verticalGroupedChart(scored, [
+    {className: "official", value: (model) => model.best.scores.s_total,
+      winner: (model) => model === scored[0]},
+  ], {width: Math.max(700, scored.length * 88 + 80), height: 300, max: 100,
+    ticks: [0, 25, 50, 75, 100], label: (model) => shortName(model.file),
+    valueFormat: (value) => value.toFixed(1)});
 }
 
 function statusChips(run) {

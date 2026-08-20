@@ -1,0 +1,244 @@
+{
+  "schema_version": 2,
+  "evidence_tier": "controlled_scalar_and_vector_proxy",
+  "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t",
+  "hardware": {
+    "physical_cores": 2,
+    "logical_cpus": 4
+  },
+  "workload": {
+    "prompt_tokens": 512,
+    "generated_tokens": 128,
+    "samples_per_lane": 5
+  },
+  "performance_reference_tps": 15,
+  "profiler_root_rss_estimate_mib": 45,
+  "temperature": "unavailable",
+  "benchmark_identity_sha256": {
+    "scalar": "7f01dc0465d64f726b2b66139859a8ff1ca204f4901e18b71ddfa678dea19370",
+    "avx2": "4abfa11a3f86b8c5e4d508cce10daf8f381c968585a3e5961fea3d5cbe312fd8"
+  },
+  "source_evidence": {
+    "accuracy": "screen-accuracy.jsonl",
+    "throughput": "screen-throughput.jsonl",
+    "accuracy_validation": "qwen25-15b-arc-easy-500.jsonl"
+  },
+  "models": [
+    {
+      "model": "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
+      "label": "Qwen2.5 1.5B",
+      "bytes": 1117320736,
+      "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "accuracy_percent": 76.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        62.59,
+        85.7
+      ],
+      "scalar": {
+        "pp512_tps": 7.68239,
+        "tg128_tps": 5.691929,
+        "estimated_profiler_rss_mib": 1242.3,
+        "s_total": 65.9176,
+        "s_total_accuracy_500": 63.8176
+      },
+      "avx2": {
+        "pp512_tps": 59.97855,
+        "tg128_tps": 17.226522,
+        "estimated_profiler_rss_mib": 1838.7,
+        "s_total": 82.8697,
+        "s_total_accuracy_500": 80.7697
+      },
+      "decode_speedup": 3.026,
+      "accuracy_validation": {
+        "benchmark": "arc_easy",
+        "metric": "acc_norm",
+        "samples": 500,
+        "accuracy_percent": 71.8,
+        "ci95_percent": [
+          67.7,
+          75.57
+        ]
+      }
+    },
+    {
+      "model": "Qwen2-1.5B-Instruct-Q4_K_M.gguf",
+      "label": "Qwen2 1.5B",
+      "bytes": 986045824,
+      "model_sha256": "f521a15453fd7f820e8467f4a307c99e44f5ab9cc24273d2fe67cd7cb1288f05",
+      "accuracy_percent": 74.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        60.45,
+        84.13
+      ],
+      "scalar": {
+        "pp512_tps": 7.700011,
+        "tg128_tps": 5.697564,
+        "estimated_profiler_rss_mib": 1117.1,
+        "s_total": 65.2782
+      },
+      "avx2": {
+        "pp512_tps": 59.184633,
+        "tg128_tps": 16.815577,
+        "estimated_profiler_rss_mib": 1714.0,
+        "s_total": 82.2176
+      },
+      "decode_speedup": 2.951
+    },
+    {
+      "model": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+      "label": "Llama 3.2 1B",
+      "bytes": 807694464,
+      "model_sha256": "6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83",
+      "accuracy_percent": 64.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        50.14,
+        75.86
+      ],
+      "scalar": {
+        "pp512_tps": 10.67761,
+        "tg128_tps": 7.079481,
+        "estimated_profiler_rss_mib": 952.0,
+        "s_total": 63.5027
+      },
+      "avx2": {
+        "pp512_tps": 82.040245,
+        "tg128_tps": 21.759123,
+        "estimated_profiler_rss_mib": 1397.8,
+        "s_total": 78.0999
+      },
+      "decode_speedup": 3.074
+    },
+    {
+      "model": "Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+      "label": "Qwen2.5 3B",
+      "bytes": 2104932768,
+      "model_sha256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "accuracy_percent": 78.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        64.76,
+        87.25
+      ],
+      "scalar": {
+        "pp512_tps": 3.658355,
+        "tg128_tps": 2.91878,
+        "estimated_profiler_rss_mib": 2204.6,
+        "s_total": 58.6863
+      },
+      "avx2": {
+        "pp512_tps": 28.467925,
+        "tg128_tps": 8.858322,
+        "estimated_profiler_rss_mib": 3470.9,
+        "s_total": 67.0322
+      },
+      "decode_speedup": 3.035
+    },
+    {
+      "model": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+      "label": "Llama 3.2 3B",
+      "bytes": 2019377696,
+      "model_sha256": "6c1a2b41161032677be168d354123594c0e6e67d2b9227c84f296ad037c728ff",
+      "accuracy_percent": 72.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        58.33,
+        82.53
+      ],
+      "scalar": {
+        "pp512_tps": 3.625791,
+        "tg128_tps": 2.811849,
+        "estimated_profiler_rss_mib": 2155.0,
+        "s_total": 55.6109
+      },
+      "avx2": {
+        "pp512_tps": 28.15149,
+        "tg128_tps": 8.62537,
+        "estimated_profiler_rss_mib": 3454.6,
+        "s_total": 63.6118
+      },
+      "decode_speedup": 3.068
+    },
+    {
+      "model": "gemma-2-2b-it-Q8_0.gguf",
+      "label": "Gemma 2 2B Q8_0",
+      "bytes": 2784495456,
+      "model_sha256": "2d448a9aab894b8e8e18168cf3f490cb9f65632222f29f93514ac9ecc754debe",
+      "accuracy_percent": 74.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        60.45,
+        84.13
+      ],
+      "scalar": {
+        "pp512_tps": 5.519562,
+        "tg128_tps": 3.543507,
+        "estimated_profiler_rss_mib": 2870.8,
+        "s_total": 56.077
+      },
+      "avx2": {
+        "pp512_tps": 28.704794,
+        "tg128_tps": 6.46916,
+        "estimated_profiler_rss_mib": 2871.1,
+        "s_total": 61.9274
+      },
+      "decode_speedup": 1.826
+    },
+    {
+      "model": "Phi-4-mini-instruct-Q4_K_M.gguf",
+      "label": "Phi-4 Mini 3.8B",
+      "bytes": 2491874688,
+      "model_sha256": "01999f17c39cc3074afae5e9c539bc82d45f2dd7faa3917c66cbef76fce8c0c2",
+      "accuracy_percent": 78.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        64.76,
+        87.25
+      ],
+      "scalar": {
+        "pp512_tps": 3.12381,
+        "tg128_tps": 2.308376,
+        "estimated_profiler_rss_mib": 2614.1,
+        "s_total": 56.3229
+      },
+      "avx2": {
+        "pp512_tps": 19.395644,
+        "tg128_tps": 6.699454,
+        "estimated_profiler_rss_mib": 3827.2,
+        "s_total": 61.7203
+      },
+      "decode_speedup": 2.902
+    },
+    {
+      "model": "orca-mini-3b-Q4_K_M.gguf",
+      "label": "Orca Mini 3B",
+      "bytes": 2580139328,
+      "model_sha256": "9a30490567f7978eea4f8c0d05856bebef8435c9fa9a6f04701f61f663e9d6ce",
+      "accuracy_percent": 58.0,
+      "accuracy_samples": 50,
+      "accuracy_ci95_percent": [
+        44.23,
+        70.62
+      ],
+      "scalar": {
+        "pp512_tps": 0.897046,
+        "tg128_tps": 0.848242,
+        "estimated_profiler_rss_mib": 2759.1,
+        "s_total": 42.9981
+      },
+      "avx2": {
+        "pp512_tps": 13.048295,
+        "tg128_tps": 5.583597,
+        "estimated_profiler_rss_mib": 2759.3,
+        "s_total": 52.4683
+      },
+      "decode_speedup": 6.583
+    }
+  ],
+  "winner": {
+    "model": "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
+    "s_total": 82.8697
+  }
+}

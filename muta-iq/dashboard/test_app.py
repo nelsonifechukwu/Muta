@@ -33,6 +33,7 @@ def tmp_app_env():
             app.CAMPAIGN_ALTERNATIVE,
             app.CAMPAIGN_AVX2_SCORE,
             app.OVERNIGHT_SUMMARY,
+            app.MODEL_EXTENSION_SUMMARY,
         )
         (
             app.MODEL_DIR,
@@ -44,6 +45,7 @@ def tmp_app_env():
             app.CAMPAIGN_ALTERNATIVE,
             app.CAMPAIGN_AVX2_SCORE,
             app.OVERNIGHT_SUMMARY,
+            app.MODEL_EXTENSION_SUMMARY,
         ) = (
             tmp / "model",
             tmp / "profiler.db",
@@ -54,6 +56,7 @@ def tmp_app_env():
             tmp / "campaign-alternative.json",
             tmp / "campaign-avx2-score.json",
             tmp / "overnight-summary.json",
+            tmp / "model-extension-summary.json",
         )
         try:
             app.init_db()
@@ -69,6 +72,7 @@ def tmp_app_env():
                 app.CAMPAIGN_ALTERNATIVE,
                 app.CAMPAIGN_AVX2_SCORE,
                 app.OVERNIGHT_SUMMARY,
+                app.MODEL_EXTENSION_SUMMARY,
             ) = saved
 
 
@@ -303,6 +307,14 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             app.OVERNIGHT_SUMMARY.write_text(json.dumps(overnight))
             payload = app.state_payload()
             self.assertEqual(payload["overnight"], overnight)
+            self.assertIsNone(payload["campaign"])
+
+    def test_model_extension_is_exposed_separately(self):
+        with tmp_app_env():
+            extension = {"schema_version": 1, "winner": {"model": "qwen2.5"}}
+            app.MODEL_EXTENSION_SUMMARY.write_text(json.dumps(extension))
+            payload = app.state_payload()
+            self.assertEqual(payload["model_extension"], extension)
             self.assertIsNone(payload["campaign"])
 
 

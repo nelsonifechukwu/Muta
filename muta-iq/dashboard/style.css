@@ -218,6 +218,7 @@ code { color: var(--rejected); overflow-wrap: anywhere; }
 .regime-result-grid article { padding: 16px; background: var(--bg); }
 .regime-result-grid article.avx2-result { box-shadow: inset 0 2px var(--avx2); }
 .regime-result-grid article.scalar-result { box-shadow: inset 0 2px var(--official); }
+.regime-result-grid article.avx2-proxy-result { box-shadow: inset 0 2px var(--avx2); }
 .regime-result-grid article > p { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; font-family: var(--sans); }
 .regime-result-grid article > p strong { font-size: 14px; }
 .regime-result-grid dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
@@ -286,6 +287,7 @@ math { font-family: var(--serif); }
 .svg-chart { min-height: 240px; width: 100%; }
 .svg-chart svg { display: block; width: 100%; height: auto; overflow: visible; font-family: var(--sans); }
 .tall-chart { min-height: 310px; }
+.compact-bar-chart { min-height: 260px; }
 .svg-chart .svg-axis, .svg-chart .svg-foot { font-size: 11px; fill: var(--fg4); }
 .figure-head {
   display: flex; justify-content: space-between; align-items: baseline; gap: 18px;
@@ -295,12 +297,19 @@ math { font-family: var(--serif); }
 .figure-head .figure-kicker { margin: 0 0 3px; font-size: 12px; }
 .chart-legend { display: flex; gap: 14px; color: var(--fg3); font: 12px var(--sans); white-space: nowrap; }
 .chart-legend span::before {
-  content: ""; display: inline-block; width: 7px; height: 7px;
-  margin-right: 5px; border-radius: 50%; background: var(--adopted);
+  content: ""; display: inline-block; width: 10px; height: 10px;
+  margin-right: 6px; border-radius: 1px; background: var(--development);
 }
-.chart-legend .audit::before { background: var(--official); }
+.chart-legend .audit::before,
+.chart-legend .official::before,
+.chart-legend .accuracy::before { background: var(--official); }
+.chart-legend .q4::before { background: var(--adopted); }
 .chart-legend .scalar::before { background: var(--parity); }
-.chart-legend .avx2::before { background: var(--avx2); }
+.chart-legend .avx2::before,
+.chart-legend .performance::before { background: var(--avx2); }
+.chart-legend .efficiency::before { background: var(--parity); }
+.chart-legend .diagnostic::before,
+.chart-legend .development::before { background: var(--development); }
 
 /* figures that need more than the measure reach into the note rail */
 .wide-figure, .campaign-summary-grid, .editorial-table-wrap, .profiler-workspace {
@@ -362,8 +371,10 @@ input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var
 .finding-pair article { padding: 18px 0; border-top: 1px solid var(--rule); }
 .finding-pair h3 { margin: 6px 0 7px; font: 600 16px var(--serif); }
 .finding-pair article > p:last-child { margin: 0; color: var(--fg2); font-size: 14.5px; line-height: 1.5; }
+.overnight-decision-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .overnight-decision-grid article { padding: 20px; border: 1px solid var(--rule); background: var(--bg); }
-.overnight-decision-grid .preferred-decision { border-top: 3px solid var(--adopted); }
+.overnight-decision-grid .preferred-decision { border-top: 3px solid var(--official); }
+.overnight-decision-grid .vector-decision { border-top: 3px solid var(--avx2); }
 .compact-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin: 14px 0 16px; }
 .compact-metrics div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--rule); padding-bottom: 5px; }
 .compact-metrics dt { color: var(--muted); font-size: 12px; }
@@ -421,6 +432,8 @@ input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var
 .isa-policy .disabled { color: var(--fg3); background: var(--development-soft); border-color: var(--rule); }
 
 .avx2-table { min-width: 970px; }
+.editorial-table .scalar-selected-row { background: var(--parity-soft); }
+.editorial-table .scalar-selected-row td { border-color: color-mix(in srgb, var(--parity) 25%, var(--rule)); }
 .editorial-table .avx2-selected-row { background: var(--avx2-soft); }
 .editorial-table .avx2-selected-row td { border-color: color-mix(in srgb, var(--avx2) 25%, var(--rule)); }
 .avx2-note { border-top-color: var(--avx2); }
@@ -628,6 +641,7 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .hero { padding-top: 56px; }
   .verdict-stats { grid-template-columns: 1fr 1fr; }
   .artifact-line { grid-template-columns: 1fr 1fr; }
+  .overnight-decision-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 700px) {
@@ -644,12 +658,18 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .regime-result-grid { grid-template-columns: 1fr; }
   .score-breakdown { gap: 1px; }
   .finding-pair { gap: 0; }
-  .svg-chart { overflow-x: auto; overscroll-behavior-inline: contain; }
+  .svg-chart, .report-figure, .equation-figure {
+    max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain;
+  }
+  .figure-head { align-items: flex-start; }
+  .chart-legend { flex-wrap: wrap; white-space: normal; row-gap: 6px; }
   #runtime-chart svg, #model-funnel-chart svg, #sensitivity-chart svg { min-width: 600px; }
-  #isa-score-chart svg { min-width: 760px; }
+  #official-score-chart svg { min-width: 680px; }
+  #isa-score-chart svg { min-width: 1360px; }
   #overnight-avx2-score-chart { min-height: 240px; }
   #overnight-avx2-score-chart svg { min-width: 620px; }
-  #overnight-score-chart svg, #overnight-quant-chart svg { min-width: 0; }
+  #overnight-score-chart svg { min-width: 520px; }
+  #overnight-quant-chart svg { min-width: 0; }
   #streaming-chart svg { min-width: 420px; }
   .submission-classification svg { min-width: 700px; }
   .experiment-sequence article { grid-template-columns: 26px 1fr 62px; }
@@ -658,6 +678,9 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .ledger-entry p, .ledger-entry .ledger-source { grid-column: 2; }
   .faq-body { grid-template-columns: 1fr; padding-left: 40px; }
   .card { padding: 14px; }
+  .workspace-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .workspace-bar p { overflow-wrap: anywhere; }
+  .quick-toggle { flex-wrap: wrap; white-space: normal; }
 }
 
 @media (max-width: 480px) {
