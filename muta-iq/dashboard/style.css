@@ -382,6 +382,16 @@ input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var
 .finding-pair article { padding: 18px 0; border-top: 1px solid var(--rule); }
 .finding-pair h3 { margin: 6px 0 7px; font: 600 16px var(--serif); }
 .finding-pair article > p:last-child { margin: 0; color: var(--fg2); font-size: 14.5px; line-height: 1.5; }
+.overnight-decision-grid article { padding: 20px; border: 1px solid var(--rule); background: var(--bg); }
+.overnight-decision-grid .preferred-decision { border-top: 3px solid var(--adopted); }
+.compact-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin: 14px 0 16px; }
+.compact-metrics div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--rule); padding-bottom: 5px; }
+.compact-metrics dt { color: var(--muted); font-size: 12px; }
+.compact-metrics dd { margin: 0; color: var(--fg); font: 700 13px var(--sans); }
+.method-table td:first-child { width: 20%; font-weight: 700; }
+.method-table td:last-child { width: 32%; }
+#overnight-finalist-table td small { display: block; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+#overnight-screen-table code { font-size: 11px; }
 .result-tag { margin: 0; font: 500 12px var(--sans); }
 .result-tag.rejected { color: var(--rejected); }
 .result-tag.adopted { color: var(--adopted); }
@@ -665,6 +675,7 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .svg-chart { overflow-x: auto; overscroll-behavior-inline: contain; }
   #runtime-chart svg, #model-funnel-chart svg, #sensitivity-chart svg { min-width: 600px; }
   #isa-score-chart svg { min-width: 760px; }
+  #overnight-score-chart svg, #overnight-quant-chart svg { min-width: 0; }
   #streaming-chart svg { min-width: 420px; }
   .submission-classification svg { min-width: 700px; }
   .experiment-sequence article { grid-template-columns: 26px 1fr 62px; }

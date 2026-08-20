@@ -51,6 +51,10 @@ CAMPAIGN_AVX2_SCORE = Path(os.environ.get(
     "MUTA_CAMPAIGN_AVX2_SCORE",
     REPO_ROOT / "bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json",
 ))
+OVERNIGHT_SUMMARY = Path(os.environ.get(
+    "MUTA_OVERNIGHT_SUMMARY",
+    REPO_ROOT / "bench/measurements/campaign-20260820-overnight/summary.json",
+))
 
 # Historical archive constants. New campaign evidence is scored by bench/score.py and loaded
 # from CAMPAIGN_SUMMARY. The SQLite archive preserves its old capped fastest-local-run proxy
@@ -441,6 +445,10 @@ def state_payload() -> dict:
         campaign_avx2_score = json.loads(CAMPAIGN_AVX2_SCORE.read_text())
     except (OSError, json.JSONDecodeError):
         campaign_avx2_score = None
+    try:
+        overnight = json.loads(OVERNIGHT_SUMMARY.read_text())
+    except (OSError, json.JSONDecodeError):
+        overnight = None
     return {
         "models": models,
         "current": current,
@@ -457,6 +465,7 @@ def state_payload() -> dict:
         "campaign_parity": campaign_parity,
         "campaign_alternative": campaign_alternative,
         "campaign_avx2_score": campaign_avx2_score,
+        "overnight": overnight,
     }
 
 

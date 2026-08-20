@@ -58,6 +58,10 @@ def test_operational_profiler_controls_remain_present() -> None:
         "campaign-alternative-table",
         "campaign-avx2-score-table",
         "isa-score-chart",
+        "overnight-score-chart",
+        "overnight-quant-chart",
+        "overnight-finalist-table",
+        "overnight-screen-table",
         "run-card",
         "run-log",
         "chart",
@@ -68,23 +72,21 @@ def test_operational_profiler_controls_remain_present() -> None:
         assert f'id="{element_id}"' in html
 
 
-def test_static_verdict_matches_direct_campaign() -> None:
+def test_static_verdict_matches_overnight_recommendation() -> None:
     campaign_path = (
         REPOSITORY
-        / "bench/measurements/campaign-20260819/official-profiler/summary.json"
+        / "bench/measurements/campaign-20260820-overnight/summary.json"
     )
     campaign = json.loads(campaign_path.read_text())
-    winner = campaign["winners"]["15.0"]
-    model = next(item for item in campaign["models"] if item["model"] == winner["model"])
+    model = campaign["finalists"][campaign["risk_adjusted_recommendation"]]["official"]
     html = (DASHBOARD / "index.html").read_text()
 
     assert model["model"] in html
-    assert f'{winner["s_total"]:.2f}' in html
-    assert f'{model["tg_tps_mean"]:.2f} tok/s' in html
-    assert f'{model["first_token_latency_ms"] / 1000:.2f} s' in html
-    assert f'{model["model_bytes"]:,} bytes' in html
-    assert model["model_sha256"][:8] in html
-    assert model["model_sha256"][-5:] in html
+    assert f'{model["s_total"]:.2f}' in html
+    assert f'{model["tps"]:.2f} tok/s' in html
+    assert f'{model["bytes"]:,} bytes' in html
+    assert model["sha256"][:8] in html
+    assert model["sha256"][-5:] in html
 
 
 def test_tied_head_claim_uses_the_isolated_control() -> None:
@@ -137,13 +139,13 @@ def test_avx2_campaign_section_matches_comparison_artifact() -> None:
     assert comparison["avx2_binary_sha256"][-5:] in html
 
 
-def test_dual_regime_chart_and_current_choice_are_explicit() -> None:
+def test_historical_dual_regime_chart_and_current_choice_are_explicit() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert "Selected model · portable AVX2 configuration" in html
-    assert "Q4_K_M-tied.gguf" in html
-    assert "Use Q4_0 with the published scalar participant image" in html
+    assert "Risk-adjusted submission recommendation" in html
+    assert "Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf" in html
+    assert "Math-Expert Q4_K_M remains the exact-profiler proxy leader" in html
     assert 'class="isa-bar scalar' in script
     assert 'class="isa-bar avx2' in script
     assert "highest scalar total" in script

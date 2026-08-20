@@ -344,12 +344,146 @@ function render() {
   renderCampaign(d.campaign_parity, "campaign-parity");
   renderCampaign(d.campaign_alternative, "campaign-alternative");
   renderIsaComparison(d.campaign_avx2_score);
+  renderOvernight(d.overnight);
   renderCampaignSnapshotWarning(d.campaign);
   renderTpsRef(d);
   renderRunCard(d);
   renderChart(d);
   renderTable(d);
   renderSensitivity(d.campaign_alternative);
+}
+
+function renderOvernight(campaign) {
+  const scoreChart = $("overnight-score-chart");
+  const scoreSummary = $("overnight-score-summary");
+  const quantChart = $("overnight-quant-chart");
+  const quantSummary = $("overnight-quant-summary");
+  const finalistTable = $("overnight-finalist-table");
+  const screenTable = $("overnight-screen-table");
+  if (!scoreChart || !quantChart || !finalistTable || !screenTable) return;
+  if (!campaign || !campaign.finalists) {
+    scoreChart.innerHTML = '<p class="chart-empty">The overnight campaign summary is unavailable.</p>';
+    quantChart.innerHTML = '<p class="chart-empty">The quantization summary is unavailable.</p>';
+    finalistTable.innerHTML = "";
+    screenTable.innerHTML = "";
+    return;
+  }
+
+  const finalists = Object.values(campaign.finalists).sort((a, b) =>
+    b.official.s_total - a.official.s_total);
+  const finalistLabel = (model) => model.startsWith("Qwen3-0.6B")
+    ? "Math-Expert 0.6B Q4_K_M" : "Qwen3.5 0.8B Q4_0";
+
+  {
+    const width = 620, left = 176, right = 38, top = 34, groupH = 92, barH = 24;
+    const height = top + finalists.length * groupH + 42;
+    const plotW = width - left - right;
+    const x = (value) => left + Number(value) / 85 * plotW;
+    let grid = "";
+    [0, 20, 40, 60, 80].forEach((tick) => {
+      const px = x(tick);
+      grid += `<line x1="${px}" y1="${top - 15}" x2="${px}" y2="${height - 32}" class="overnight-grid"/>` +
+        svgText(px, height - 12, tick, 'text-anchor="middle" class="overnight-tick"');
+    });
+    const rows = finalists.map((entry, index) => {
+      const y = top + index * groupH;
+      const direct = Number(entry.official.s_total);
+      const diagnostic = Number(entry.diagnostic_total_with_arc_easy_500);
+      const recommended = entry.official.model === campaign.risk_adjusted_recommendation;
+      return `${svgText(left - 12, y + 31, finalistLabel(entry.official.model), 'text-anchor="end" class="overnight-model"')}
+        <rect x="${left}" y="${y}" width="${x(direct) - left}" height="${barH}" rx="2" class="overnight-bar direct"/>
+        ${svgText(left + 8, y + 16, direct.toFixed(2), 'text-anchor="start" class="overnight-total"')}
+        <rect x="${left}" y="${y + 32}" width="${x(diagnostic) - left}" height="${barH}" rx="2" class="overnight-bar diagnostic ${recommended ? "recommended" : ""}"/>
+        ${svgText(left + 8, y + 48, diagnostic.toFixed(2), 'text-anchor="start" class="overnight-total"')}
+        ${recommended ? svgText(left + 55, y + 48, "risk-adjusted choice", 'class="overnight-choice"') : ""}`;
+    }).join("");
+    scoreChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
+      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-model{font-size:12px;fill:#3c3836}.overnight-bar.direct{fill:#1b6ca8}.overnight-bar.diagnostic{fill:#b8afa3}.overnight-bar.recommended{fill:#427b58;stroke:#282828;stroke-width:1.5}.overnight-total{font-size:11px;fill:#fff;font-weight:800}.overnight-choice{font-size:10px;fill:#fff;font-weight:700}
+    </style>${grid}${rows}</svg>`;
+    scoreSummary.textContent = finalists.map((entry) =>
+      `${finalistLabel(entry.official.model)}: profiler slice ${entry.official.s_total.toFixed(2)}, ` +
+      `larger-sample diagnostic ${entry.diagnostic_total_with_arc_easy_500.toFixed(2)}`
+    ).join("; ") + ".";
+  }
+
+  {
+    const rows = (campaign.quantization_sweep || []).filter((entry) =>
+      entry.scalar && entry.accuracy && entry.accuracy.arc_easy != null);
+    const width = 620, height = 360, left = 58, right = 32, top = 28, bottom = 50;
+    const x = (tps) => left + Number(tps) / 24 * (width - left - right);
+    const y = (acc) => top + (72 - Number(acc)) / 24 * (height - top - bottom);
+    let grid = "";
+    [0, 5, 10, 15, 20].forEach((tick) => {
+      const px = x(tick);
+      grid += `<line x1="${px}" y1="${top}" x2="${px}" y2="${height - bottom}" class="overnight-grid"/>` +
+        svgText(px, height - 24, tick, 'text-anchor="middle" class="overnight-tick"');
+    });
+    [50, 60, 70].forEach((tick) => {
+      const py = y(tick);
+      grid += `<line x1="${left}" y1="${py}" x2="${width - right}" y2="${py}" class="overnight-grid"/>` +
+        svgText(left - 8, py + 3, `${tick}%`, 'text-anchor="end" class="overnight-tick"');
+    });
+    const shortQuant = (name) => name
+      .replace("Qwen3-0.6B-Math-Expert.", "")
+      .replace(".gguf", "")
+      .replace("Q4_0-body-", "body+")
+      .replace("Q4_0-Q5_0-last4-Q8_0-embd", "Q4_0 + last4 Q5_0");
+    const points = rows.map((entry, index) => {
+      const px = x(entry.scalar.tg128_tps), py = y(entry.accuracy.arc_easy);
+      const selected = entry.model.includes("Q4_K_M");
+      const anchor = px > width - 185 ? "end" : "start";
+      const dx = anchor === "end" ? -8 : 8;
+      const dy = index % 2 ? 14 : -8;
+      return `<circle cx="${px}" cy="${py}" r="${selected ? 7 : 5}" class="overnight-point ${selected ? "selected" : ""}"/><title>${esc(entry.model)}: ${entry.scalar.tg128_tps.toFixed(2)} tok/s, ${entry.accuracy.arc_easy.toFixed(0)}% ARC-Easy</title>` +
+        svgText(px + dx, py + dy, shortQuant(entry.model), `text-anchor="${anchor}" class="overnight-point-label ${selected ? "selected" : ""}"`);
+    }).join("");
+    quantChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
+      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-point{fill:#b57614;stroke:#fff;stroke-width:2}.overnight-point.selected{fill:#1b6ca8;stroke:#282828}.overnight-point-label{font-size:9.5px;fill:#6b6866}.overnight-point-label.selected{fill:#1b6ca8;font-weight:800}
+    </style>${grid}${points}${svgText(width / 2, height - 2, "Scalar profiler-compatible generation tok/s", 'text-anchor="middle" class="svg-axis"')}${svgText(12, height / 2, "ARC-Easy", 'text-anchor="middle" transform="rotate(-90 12 180)" class="svg-axis"')}</svg>`;
+    quantSummary.textContent = rows.map((entry) =>
+      `${shortQuant(entry.model)}: ${entry.scalar.tg128_tps.toFixed(2)} tok/s and ${entry.accuracy.arc_easy.toFixed(0)}% ARC-Easy`
+    ).join("; ") + ".";
+  }
+
+  {
+    const taskOrder = ["arc_easy_50", "arc_easy_200", "arc_easy_500", "arc_challenge_50", "sciq_50", "gsm8k_10"];
+    const taskLabel = {arc_easy_50:"ARC-Easy", arc_easy_200:"ARC-Easy", arc_easy_500:"ARC-Easy", arc_challenge_50:"ARC-Challenge", sciq_50:"SciQ", gsm8k_10:"GSM8K strict"};
+    const taskResult = (entry, key) => key === "arc_easy_50"
+      ? {score_percent: entry.official.arc_easy_50, samples: 50, ci95_percent: entry.official.arc_easy_50_ci95}
+      : entry.accuracy[key];
+    finalistTable.innerHTML = `<thead><tr><th>Task</th><th>Samples</th>${finalists.map((entry) => `<th>${esc(finalistLabel(entry.official.model))}</th>`).join("")}</tr></thead><tbody>` +
+      taskOrder.map((key) => {
+        const first = taskResult(finalists[0], key);
+        return `<tr><td>${esc(taskLabel[key])}</td><td>${esc(first && first.samples || "—")}</td>` + finalists.map((entry) => {
+          const result = taskResult(entry, key);
+          if (!result) return "<td>—</td>";
+          const ci = result.ci95_percent || [];
+          return `<td><strong>${fmt.num(result.score_percent, 1)}%</strong>${ci.length === 2 ? `<small>95% CI ${fmt.num(ci[0], 1)}–${fmt.num(ci[1], 1)}</small>` : ""}</td>`;
+        }).join("") + "</tr>";
+      }).join("") + "</tbody>";
+  }
+
+  {
+    const disposition = {
+      "OpenMath-Nemotron-1.5B-q4_0.gguf": "Reject: 44% ARC-Easy",
+      "Noema-2B-Q4_K_M.gguf": "Reject: 4.45 scalar tok/s",
+      "Noema-2B-pure-Q4_0.gguf": "Reject: 8.89 scalar tok/s",
+      "Qwen3.5-0.8B-Opus-Q4_K_M.gguf": "Reject: slower than Q4_0; teacher-data provenance",
+      "Qwen3-0.6B-Math-Expert.Q4_K_M.gguf": "Profiler-slice alternative",
+      "qwen2-0.5b-numina-math.Q4_K_M.gguf": "Reject: 54% ARC-Easy",
+      "Qwen3.5-2B-Q4_0.gguf": "Reject: 6.23 scalar tok/s",
+      "gemma-3-1b-it-Q4_0.gguf": "Reject: 58% ARC-Easy",
+      "VibeThinker-1.5B.Q4_K_M.gguf": "Reject: 36% ARC-Easy",
+      "Qwen3.5-0.8B-Q4_0.gguf": "Tensor-identical source of final recommendation",
+      "Qwen3.5-0.8B-Q4_K_M.gguf": "Reject: Q4_0 is faster and smaller",
+    };
+    const rows = [...(campaign.screened_candidates || [])].sort((a, b) =>
+      (b.scalar && b.scalar.tg128_tps || 0) - (a.scalar && a.scalar.tg128_tps || 0));
+    screenTable.innerHTML = `<thead><tr><th>Exact artifact</th><th>Scalar tg128</th><th>AVX2 tg128</th><th>Accuracy screen</th><th>Decision</th></tr></thead><tbody>` + rows.map((entry) => {
+      const accuracy = Object.entries(entry.accuracy || {}).map(([task, value]) => `${task}: ${fmt.num(value, 0)}%`).join(" · ");
+      return `<tr><td><code>${esc(entry.model)}</code></td><td>${fmt.num(entry.scalar && entry.scalar.tg128_tps, 2)}</td><td>${fmt.num(entry.avx2 && entry.avx2.tg128_tps, 2)}</td><td>${esc(accuracy || "screened separately")}</td><td>${esc(disposition[entry.model] || "Rejected in staged screen")}</td></tr>`;
+    }).join("") + "</tbody>";
+  }
 }
 
 function renderCampaign(campaign, prefix) {

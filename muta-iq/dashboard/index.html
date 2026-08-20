@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Muta IQ experiment report: model selection, runtime tests, GGUF optimisation, and the evidence behind the current Qwen3 1.7B choice.">
+<meta name="description" content="Muta IQ experiment report: model selection, runtime tests, GGUF optimisation, and the evidence behind the current submission recommendation.">
 <title>Muta IQ — Experiment report</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -13,11 +13,12 @@
 
 <header class="topbar">
   <a class="wordmark" href="#overview" aria-label="Muta IQ experiment report home">
-    <strong>Muta IQ</strong><small>Experiment report, 19 August 2026</small>
+    <strong>Muta IQ</strong><small>Experiment report, 20 August 2026</small>
   </a>
   <nav class="topnav" aria-label="Report shortcuts">
     <a href="#overview">Current result</a>
     <a href="#avx2-campaign">AVX2 rerun</a>
+    <a href="#overnight-search">Overnight search</a>
     <a href="#ledger">Experiment ledger</a>
     <a href="#faq">Challenge FAQ</a>
     <a href="#profiler">Profiler workspace</a>
@@ -39,14 +40,15 @@
       <li><a href="#streaming">Submission constraints</a></li>
       <li><a href="#campaign">Scalar profiler results</a></li>
       <li><a href="#avx2-campaign">AVX2 comparison</a></li>
+      <li><a href="#overnight-search">20 August model search</a></li>
       <li><a href="#ledger">Experiment decisions</a></li>
       <li><a href="#faq">Challenge requirements</a></li>
       <li><a href="#profiler">Profiler data</a></li>
     </ol>
     <div class="contents-note">
       <span class="status-dot official"></span>
-      Selected model by CPU policy<br>
-      <span id="contents-winner">Profiler: Qwen3 1.7B Q4_0<br>AVX2 proxy: Q4_K_M</span>
+      Current recommendation<br>
+      <span id="contents-winner">Risk-adjusted: Qwen3.5 0.8B Q4_0<br>Profiler slice: Math-Expert Q4_K_M</span>
     </div>
   </aside>
 
@@ -58,29 +60,29 @@
 
       <div class="verdict">
         <div>
-          <p class="verdict-label">Selected model · portable AVX2 configuration</p>
-          <h2><code>Q4_K_M-tied.gguf</code></h2>
-          <p>With portable AVX2, Q4_K_M records 80.4484: 72% ARC-Easy, 15.67 tok/s, and 1,989.7 MiB estimated RSS. The published scalar profiler instead selects Q4_0.</p>
+          <p class="verdict-label">Risk-adjusted submission recommendation</p>
+          <h2><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></h2>
+          <p>The 20 August search found a higher 50-item profiler total in Math-Expert Q4_K_M. The final Qwen3.5-0.8B file is retained because it is stronger on the larger ARC-Easy check and the matched science diagnostics. Its embedded template also disables hidden reasoning by default.</p>
         </div>
         <div class="regime-result-grid">
           <article class="avx2-result">
-            <p><span class="evidence-badge avx2">Portable AVX2 proxy</span><strong>Q4_K_M tied</strong></p>
-            <dl><div><dt>Total</dt><dd>80.4484</dd></div><div><dt>tg128</dt><dd>15.6714</dd></div><div><dt>Est. RSS</dt><dd>1,989.7 MiB</dd></div><div><dt>ARC-Easy</dt><dd>72%</dd></div></dl>
+            <p><span class="evidence-badge avx2">Risk-adjusted choice</span><strong>Qwen3.5 0.8B Q4_0</strong></p>
+            <dl><div><dt>Profiler total</dt><dd>75.39</dd></div><div><dt>Generation</dt><dd>12.63 tok/s</dd></div><div><dt>Peak RSS</dt><dd>670 MiB</dd></div><div><dt>ARC-Easy-500</dt><dd>58.8%</dd></div></dl>
           </article>
           <article class="scalar-result">
-            <p><span class="evidence-badge official">Participant profiler</span><strong>Q4_0 tied</strong></p>
-            <dl><div><dt>Total</dt><dd>72.47</dd></div><div><dt>Generation</dt><dd>9.79 tok/s</dd></div><div><dt>Peak RSS</dt><dd>1,116 MiB</dd></div><div><dt>ARC-Easy</dt><dd>72%</dd></div></dl>
+            <p><span class="evidence-badge official">50-item profiler leader</span><strong>Math-Expert 0.6B Q4_K_M</strong></p>
+            <dl><div><dt>Profiler total</dt><dd>77.93</dd></div><div><dt>Generation</dt><dd>12.72 tok/s</dd></div><div><dt>Peak RSS</dt><dd>540 MiB</dd></div><div><dt>ARC-Easy-500</dt><dd>54.6%</dd></div></dl>
           </article>
         </div>
       </div>
 
-      <p class="hero-caveat"><strong>Selection condition:</strong> Use Q4_K_M with portable AVX2 kernels. Use Q4_0 with the published scalar participant image. Physical-target temperature and a larger accuracy evaluation remain unmeasured.</p>
+      <p class="hero-caveat"><strong>Selection condition:</strong> Qwen3.5-0.8B Q4_0 is the current submission recommendation. Math-Expert Q4_K_M remains the exact-profiler proxy leader. The physical target and the judging-panel tutoring score remain unmeasured.</p>
       <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from this snapshot.</strong> The static text reports the 19 August campaign; the operational appendix shows the configured override.</p>
 
       <dl class="artifact-line">
-        <div><dt>Current artifact size</dt><dd>1,027,187,040 bytes</dd></div>
-        <div><dt>Current SHA-256</dt><dd><code>e8a41332…4c315</code></dd></div>
-        <div><dt>AVX2 binary</dt><dd><code>4abfa11a…12fd8</code></dd></div>
+        <div><dt>Recommended artifact size</dt><dd>507,156,160 bytes</dd></div>
+        <div><dt>Recommended SHA-256</dt><dd><code>c96df4ef…d5d7b</code></dd></div>
+        <div><dt>Profiler binary</dt><dd><code>7f01dc04…370</code></dd></div>
         <div><dt>GCP proxy host</dt><dd>n2-custom-4-8192</dd></div>
       </dl>
     </header>
@@ -580,9 +582,85 @@
       </aside>
     </section>
 
-    <section class="chapter" id="ledger" aria-labelledby="ledger-title">
+    <section class="chapter" id="overnight-search" aria-labelledby="overnight-search-title">
       <header class="chapter-head">
         <span class="chapter-number">10</span>
+        <div><p class="eyebrow">20 August model and GGUF search</p><h2 id="overnight-search-title">The profiler slice and the broader accuracy checks select different models</h2></div>
+      </header>
+      <p class="lead">Nine new model artifacts and eight Math-Expert quantization layouts were tested on the same GCP x86 proxy. Math-Expert Q4_K_M records the highest direct 50-item profiler total. Qwen3.5-0.8B Q4_0 performs better on the larger ARC-Easy check and on the matched science diagnostics, so it remains the lower-risk submission.</p>
+
+      <div class="finding-pair overnight-decision-grid">
+        <article>
+          <p class="figure-kicker">Exact profiler proxy</p>
+          <h3>Math-Expert 0.6B Q4_K_M</h3>
+          <dl class="compact-metrics"><div><dt>Total</dt><dd>77.9324</dd></div><div><dt>Generation</dt><dd>12.72 tok/s</dd></div><div><dt>Peak RSS</dt><dd>540.32 MiB</dd></div><div><dt>ARC-Easy-50</dt><dd>68%</dd></div></dl>
+          <p>Use this file only if the executable profiler's 50 ARC-Easy items are treated as the selection objective.</p>
+        </article>
+        <article class="preferred-decision">
+          <p class="figure-kicker">Risk-adjusted submission</p>
+          <h3><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></h3>
+          <dl class="compact-metrics"><div><dt>Total</dt><dd>75.3895</dd></div><div><dt>Generation</dt><dd>12.63 tok/s</dd></div><div><dt>Peak RSS</dt><dd>670.39 MiB</dd></div><div><dt>ARC-Easy-500</dt><dd>58.8%</dd></div></dl>
+          <p>This file has the stronger matched result outside the 50-item profiler slice and a shorter first-token time. The template supplies the tutor policy and disables hidden reasoning when the caller provides no setting.</p>
+        </article>
+      </div>
+
+      <div class="campaign-summary-grid">
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Sample sensitivity</p><h3>Profiler total and larger-sample diagnostic</h3></div><span class="evidence-badge official">Same TPS and RSS</span></div>
+          <div class="svg-chart tall-chart" id="overnight-score-chart" role="img" aria-label="Direct profiler total and larger-sample diagnostic total for the two finalists" aria-describedby="overnight-score-summary"></div>
+          <p class="sr-only" id="overnight-score-summary" aria-live="polite">Loading the overnight score comparison.</p>
+          <figcaption><span>Fig. 11</span> The solid bar uses the profiler's 50 ARC-Easy items. The paired bar substitutes the larger ARC-Easy estimate while preserving the same measured TPS and RSS. The second bar is diagnostic, not an official score.</figcaption>
+        </figure>
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Quantization search</p><h3>Speed and ARC-Easy trade-off</h3></div><span class="evidence-badge parity">Scalar screen</span></div>
+          <div class="svg-chart tall-chart" id="overnight-quant-chart" role="img" aria-label="Math-Expert quantization variants by scalar throughput and ARC-Easy accuracy" aria-describedby="overnight-quant-summary"></div>
+          <p class="sr-only" id="overnight-quant-summary" aria-live="polite">Loading the Math-Expert quantization sweep.</p>
+          <figcaption><span>Fig. 12</span> Uniform Q4_0 is the fastest layout but loses 16 ARC-Easy points. Q4_K_M retains the best measured score. Higher embedding precision and four higher-precision final layers do not recover the loss.</figcaption>
+        </figure>
+      </div>
+
+      <details class="reasoning-check measurement-disclosure" open>
+        <summary>Finalist accuracy checks</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-finalist-table" aria-label="Matched accuracy results for the overnight finalists"></table></div>
+        <p>Confidence intervals are Wilson 95% intervals. The task results are diagnostics, not the judging-panel tutoring score.</p></div>
+      </details>
+
+      <details class="reasoning-check measurement-disclosure">
+        <summary>Models screened and rejection reasons</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="overnight-screen-table" aria-label="Overnight model screen"></table></div></div>
+      </details>
+
+      <h3 class="section-title">Methods considered</h3>
+      <div class="table-wrap editorial-table-wrap"><table class="editorial-table method-table">
+        <thead><tr><th>Method</th><th>Test or constraint</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>Uniform quantization</td><td>Q4_0, Q5_0, Q4_K_S, Q4_K_M, and IQ4_XS from one pinned F16 source.</td><td>Keep Q4_K_M. Q4_0 is fast but loses too much accuracy; Q5_0 is slow on the scalar profiler kernel.</td></tr>
+          <tr><td>Mixed tensor precision</td><td>Q4_0 body with Q6_K or Q8_0 tied embedding; Q5_0 in the final four blocks.</td><td>Reject. None recovered enough ARC-Easy accuracy.</td></tr>
+          <tr><td>Architecture and specialist search</td><td>Qwen3/3.5, Gemma 3, Noema, VibeThinker, OpenMath-Nemotron, NuminaMath, and a reasoning distill.</td><td>Keep Qwen3.5-0.8B and Math-Expert as finalists. Other files lost on throughput, accuracy, licensing, or provenance.</td></tr>
+          <tr><td>Pruning and vocabulary reduction</td><td>Prior layer-pruning and BitCPM vocabulary results were retained; Qwen BPE vocabulary pruning cannot be reproduced safely with the current tool.</td><td>No new submission candidate.</td></tr>
+          <tr><td>Distillation and fine-tuning</td><td>Finished public fine-tunes were tested. A new training run was not promoted without a GPU, a complete dataset audit, and a reproducible conversion path.</td><td>Defer new training; do not submit a partially validated derivative.</td></tr>
+          <tr><td>MTP and speculative decoding</td><td><code>llama-bench</code> in the profiler does not invoke the runtime flags required by MTP or draft decoding.</td><td>Exclude from a GGUF-only profiler claim.</td></tr>
+          <tr><td>Context and embedded template</td><td>The profiler fixes p512/tg128. A live four-prompt test showed that unrestricted hidden reasoning could consume the full response allowance. The final GGUF embeds the tutor policy and forces non-thinking ChatML.</td><td>Adopt for interactive reliability; assign no profiler throughput gain.</td></tr>
+        </tbody>
+      </table></div>
+
+      <aside class="design-note warning-note">
+        <p class="design-note-label">Submission decision</p>
+        <p><strong>Submit <code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code> unless a physical-target, tutoring-aware evaluation reverses the broader accuracy result.</strong> Keep Math-Expert Q4_K_M as the profiler-proxy alternative. Both sub-1B models failed the difficult proof prompt in the live acceptance battery, so neither supports a guarantee about hidden judging quality.</p>
+      </aside>
+
+      <details class="reasoning-check">
+        <summary>Research and provenance</summary>
+        <div>
+          <p>The search used the public model cards, immutable revisions, exact SHA-256 hashes, the pinned quantizer, and the retained raw JSONL rows. The selected Math-Expert source is a full Qwen3-0.6B fine-tune on OpenMathReasoning-mini; its public card does not provide a complete training recipe or benchmark table. The Qwen3.5 artifact is derived from the official Qwen checkpoint.</p>
+          <p>Primary references: <a href="https://huggingface.co/suayptalha/Qwen3-0.6B-Math-Expert" target="_blank" rel="noreferrer">Math-Expert model card</a>, <a href="https://huggingface.co/mradermacher/Qwen3-0.6B-Math-Expert-GGUF" target="_blank" rel="noreferrer">GGUF repository</a>, <a href="https://huggingface.co/datasets/nvidia/OpenMathReasoning" target="_blank" rel="noreferrer">OpenMathReasoning dataset</a>, <a href="https://arxiv.org/abs/2504.16891" target="_blank" rel="noreferrer">OpenMathReasoning paper</a>, <a href="https://arxiv.org/abs/2505.11574" target="_blank" rel="noreferrer">low-bit reasoning study</a>, and <a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/speculative.md" target="_blank" rel="noreferrer">llama.cpp speculative-decoding documentation</a>.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="chapter" id="ledger" aria-labelledby="ledger-title">
+      <header class="chapter-head">
+        <span class="chapter-number">11</span>
         <div><p class="eyebrow">Experiment decisions</p><h2 id="ledger-title">Adopted, rejected, and deferred tests</h2></div>
       </header>
       <p class="lead">The measurements above produced the decisions below. Adopted changes appear first; the filters expose rejected, neutral, and deferred tests.</p>
@@ -598,7 +676,7 @@
 
     <section class="chapter" id="faq" aria-labelledby="faq-title">
       <header class="chapter-head">
-        <span class="chapter-number">11</span>
+        <span class="chapter-number">12</span>
         <div><p class="eyebrow">Challenge requirements</p><h2 id="faq-title">Requirement status</h2></div>
       </header>
       <p class="lead">Model selection also has to satisfy the published challenge requirements. Each entry pairs one requirement with Muta's recorded implementation status.</p>

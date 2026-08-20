@@ -376,3 +376,140 @@ misconceptions rather than just answering. Those are the behaviours a scarce tea
 thirty students at once. The streaming
 runtime in `opt/` exists so that the same file also fits beside a browser and a classroom server on
 that laptop.
+
+---
+
+## 20 August 2026 model search and current submission recommendation
+
+This section supersedes the earlier model choice above. The earlier experiments remain as a record
+of the path to the current result.
+
+### Measurement boundary
+
+The search ran on the GCP `n2-custom-4-8192` proxy: 2 physical cores, 4 threads, 8 GB RAM and no
+swap. It is not the physical target laptop and exposes no package-temperature sensor. Two b10175
+binaries were retained:
+
+- executable-profiler configuration: scalar x86 binary SHA-256 `7f01dc04…9370`;
+- controlled portable configuration: AVX/AVX2/FMA/F16C enabled, native and AVX-512 disabled,
+  binary SHA-256 `4abfa11a…2fd8`.
+
+Every promoted result records the exact GGUF SHA-256, binary SHA-256, model revision, command,
+sample count and raw output. The executable-profiler score uses
+`S_perf = 100 × min(TPS / 15, 1)`. Cohort-relative results are reported separately and are not
+averaged with it.
+
+### Model screen
+
+Nine new artifacts were tested. Staged screening used the same scalar and AVX2 binaries before the
+slow participant-profiler run. The table shows the scalar generation result because that binary
+matches the executable profiler.
+
+| Candidate | Scalar tg128, tok/s | ARC-Easy-50 | Decision |
+|---|---:|---:|---|
+| OpenMath-Nemotron 1.5B Q4_0 | 11.25 | 44% | reject: low accuracy |
+| Noema 2B Q4_K_M | 4.45 | 74% | reject: low scalar throughput |
+| Noema 2B pure Q4_0 | 8.89 | 70% | reject: lower combined result |
+| Qwen3.5 0.8B Opus reasoning distill Q4_K_M | 9.86 | 64% | reject: slower and weaker provenance |
+| Qwen3 0.6B Math-Expert Q4_K_M | 12.63 | 68% | promote |
+| Qwen2 0.5B NuminaMath Q4_K_M | 7.54 | 54% | reject |
+| Qwen3.5 2B Q4_0 | 6.23 | 70% | reject: low scalar throughput |
+| VibeThinker 1.5B Q4_K_M | 5.68 | 36% | reject |
+| Gemma 3 1B Q4_0 | 12.75 | 58% staged accuracy | reject |
+
+The retained general-model control was Qwen3.5 0.8B Q4_0. Its final participant-profiler run is
+reported below.
+
+### Math-Expert quantization sweep
+
+Eight layouts were derived from one pinned F16 source. This isolates quantization from model and
+training differences.
+
+| Layout | Scalar tg128 | AVX2 tg128 | ARC-Easy-50 | Decision |
+|---|---:|---:|---:|---|
+| pure Q4_0 | 22.79 | 43.31 | 52% | reject: 16-point loss |
+| pure Q5_0 | 3.97 | 28.61 | 70% | reject: scalar kernel cost |
+| Q4_K_S | 12.99 | 39.28 | 60% | reject |
+| **Q4_K_M** | **11.93** | **39.73** | **68%** | **retain** |
+| IQ4_XS | 7.64 | 35.65 | 62% | reject |
+| Q4_0 body + Q6_K tied embedding | 17.93 | 40.05 | 50% | reject |
+| Q4_0 body + Q8_0 tied embedding | 19.47 | 38.10 | 50% | reject |
+| Q4_0 body + Q5_0 final four blocks + Q8_0 embedding | 13.59 | — | 56% | reject |
+
+The mixed layouts show that the loss is distributed through the quantized body. Raising the tied
+embedding or the final four blocks does not recover enough accuracy. Q4_K_M remains the best tested
+Math-Expert layout.
+
+### Direct participant-profiler results
+
+| Exact artifact | Generation | Peak RSS | ARC-Easy-50 | Fixed-15 total |
+|---|---:|---:|---:|---:|
+| **Qwen3 0.6B Math-Expert Q4_K_M** `7f64c2…ae9a1` | **12.72 tok/s** | **540.32 MiB** | **68%** | **77.9324** |
+| Muta Tutor Qwen3.5 0.8B Q4_0 final `c96df4…d5d7b` | 12.63 tok/s | 670.39 MiB | 64% | 75.3895 |
+
+Math-Expert wins the executable profiler's 50-item ARC-Easy slice by 2.5429 total points. The 95%
+Wilson intervals are wide: 54.2–79.2% for Math-Expert and 50.1–75.9% for Qwen. The difference is
+not a reliable estimate of general task quality.
+
+### Larger matched checks
+
+| Task | Samples | Muta Tutor Qwen3.5 0.8B | Math-Expert 0.6B |
+|---|---:|---:|---:|
+| ARC-Easy | 500 | **58.8%** (54.4–63.0) | 54.6% (50.2–58.9) |
+| ARC-Challenge | 50 | **32%** | 30% |
+| SciQ | 50 | **92%** | 88% |
+| GSM8K strict | 10 | 30% | 30% |
+
+Substituting the 500-item ARC-Easy estimates while keeping each model's directly measured
+throughput and RSS gives a diagnostic fixed-15 total of **72.7895 for Qwen** and **71.2324 for
+Math-Expert**. This is not an official profiler score. It is the reason Qwen is the lower-risk
+choice: it leads every larger matched check except the tied GSM8K sample.
+
+### Cohort-relative sensitivity
+
+The public-page formula was also retained. The table uses the AVX2 generation results, the larger
+ARC-Easy estimates, and `max(pre-entry floor, candidate TPS)` as the effective denominator so no
+candidate receives performance above 100.
+
+| Pre-entry TPS floor | Qwen3.5 0.8B total | Math-Expert total | Higher result |
+|---:|---:|---:|---|
+| 15 | **76.8104** | 75.1803 | Qwen |
+| 30 | 73.9613 | **75.1803** | Math-Expert |
+| 45 | 64.9110 | **71.3350** | Math-Expert |
+| 60 | 60.3859 | **64.7963** | Math-Expert |
+| 100 | 54.9557 | **56.9499** | Math-Expert |
+| 150 | 52.2406 | **53.0267** | Math-Expert |
+
+These rows are sensitivity analysis. The cohort maximum and physical-laptop results are unknown.
+
+### Embedded template and live acceptance test
+
+The final Qwen file is tensor-identical to the pinned Q4_0 source. GGUF metadata adds the tutor
+policy, English language tag, sampling defaults and a ChatML template that forces non-thinking
+responses. The final file was rerun through the participant profiler after this rewrite.
+
+A deterministic four-prompt battery tested a profit calculation, fraction misconception, thermal
+energy calculation and proof that √2 is irrational. With unrestricted thinking, both finalists
+used the 256-token allowance on hidden reasoning and returned no usable answer. Disabling thinking
+produced direct answers. Both models still failed the proof prompt, and some Qwen answers reached
+the 256-token limit. This is a recorded quality limitation, not a pass.
+
+### Submission decision
+
+The current recommendation is:
+
+`Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`
+
+- size: 507,156,160 bytes;
+- SHA-256: `c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b`;
+- source revision: `unsloth/Qwen3.5-0.8B-GGUF@6ab461498e2023f6e3c1baea90a8f0fe38ab64d0`;
+- source SHA-256: `444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c`;
+- transformation: metadata and chat-template rewrite only; no tensor change.
+
+Keep `Qwen3-0.6B-Math-Expert.Q4_K_M.gguf` as the alternative if the objective is restricted to the
+current executable profiler's 50 ARC-Easy items. The broader evidence does not support replacing
+Qwen with Math-Expert. Neither result guarantees a hidden-panel win or measures thermal behaviour
+on the physical laptop.
+
+The complete manifest, raw rows, direct profiler reports, live responses, generator and summary
+are in `bench/measurements/campaign-20260820-overnight/`.

@@ -27,6 +27,33 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-08-20 — overnight model, quantization and template search
+
+**Current recommendation:** `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`, 507,156,160 bytes,
+SHA-256 `c96df4ef…d5d7b`. It is derived from pinned Qwen3.5-0.8B Q4_0 by a metadata-only rewrite:
+the tensors are unchanged, the tutor prompt is embedded, and the ChatML template forces
+non-thinking output.
+
+| Exact finalist | Direct profiler TPS | Peak RSS | ARC-Easy-50 | Fixed-15 total | ARC-Easy-500 | 500-item diagnostic total |
+|---|---:|---:|---:|---:|---:|---:|
+| Math-Expert 0.6B Q4_K_M `7f64c2…ae9a1` | **12.72** | **540.32 MiB** | **68%** | **77.9324** | 54.6% | 71.2324 |
+| **Muta Tutor Qwen3.5 0.8B Q4_0 final** `c96df4…d5d7b` | 12.63 | 670.39 MiB | 64% | 75.3895 | **58.8%** | **72.7895** |
+
+Math-Expert wins the profiler's 50-item slice. Qwen leads the matched 500-item ARC-Easy check,
+ARC-Challenge and SciQ; GSM8K-10 is tied. Qwen is retained as the risk-adjusted submission.
+
+The staged search tested nine new model artifacts and eight Math-Expert layouts. Q4_K_M is the
+best Math-Expert quant: pure Q4_0 reaches 22.79 scalar tok/s but falls to 52% ARC-Easy; Q4_0 with
+Q6_K/Q8_0 embeddings remains at 50%; raising the final four blocks reaches only 56%. A live
+four-prompt battery also found that both sub-1B finalists fail the √2 proof prompt. The final
+template prevents hidden reasoning from consuming the response allowance, but it does not remove
+the underlying quality limitation.
+
+Evidence: `bench/measurements/campaign-20260820-overnight/`. The GCP host is a sensorless 2C/4T
+proxy, so physical-laptop temperature and hidden judging quality remain unmeasured.
+
+---
+
 ## 2026-08-19 — seven-hour GGUF campaign, corrected profiler score-of-record
 
 **Provenance correction:** the project had no primary evidence for its claimed private

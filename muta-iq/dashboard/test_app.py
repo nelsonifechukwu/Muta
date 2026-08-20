@@ -32,6 +32,7 @@ def tmp_app_env():
             app.CAMPAIGN_PARITY,
             app.CAMPAIGN_ALTERNATIVE,
             app.CAMPAIGN_AVX2_SCORE,
+            app.OVERNIGHT_SUMMARY,
         )
         (
             app.MODEL_DIR,
@@ -42,6 +43,7 @@ def tmp_app_env():
             app.CAMPAIGN_PARITY,
             app.CAMPAIGN_ALTERNATIVE,
             app.CAMPAIGN_AVX2_SCORE,
+            app.OVERNIGHT_SUMMARY,
         ) = (
             tmp / "model",
             tmp / "profiler.db",
@@ -51,6 +53,7 @@ def tmp_app_env():
             tmp / "campaign-parity.json",
             tmp / "campaign-alternative.json",
             tmp / "campaign-avx2-score.json",
+            tmp / "overnight-summary.json",
         )
         try:
             app.init_db()
@@ -65,6 +68,7 @@ def tmp_app_env():
                 app.CAMPAIGN_PARITY,
                 app.CAMPAIGN_ALTERNATIVE,
                 app.CAMPAIGN_AVX2_SCORE,
+                app.OVERNIGHT_SUMMARY,
             ) = saved
 
 
@@ -291,6 +295,14 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             app.CAMPAIGN_AVX2_SCORE.write_text(json.dumps(avx2_score))
             payload = app.state_payload()
             self.assertEqual(payload["campaign_avx2_score"], avx2_score)
+            self.assertIsNone(payload["campaign"])
+
+    def test_overnight_campaign_is_exposed_separately(self):
+        with tmp_app_env():
+            overnight = {"schema_version": 1, "risk_adjusted_recommendation": "qwen"}
+            app.OVERNIGHT_SUMMARY.write_text(json.dumps(overnight))
+            payload = app.state_payload()
+            self.assertEqual(payload["overnight"], overnight)
             self.assertIsNone(payload["campaign"])
 
 
