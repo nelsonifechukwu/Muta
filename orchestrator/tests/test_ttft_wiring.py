@@ -90,7 +90,10 @@ def frames(response) -> list[dict]:
 
 def test_preamble_reaches_the_client_before_the_first_real_token(wired_with_preamble):
     with client.stream(
-        "POST", "/v1/chat/stream", json={"student_id": "s1", "message": "Solve x^2 = 9"}
+        "POST",
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Solve x^2 = 9"},
     ) as response:
         evs = frames(response)
 
@@ -103,7 +106,10 @@ def test_preamble_reaches_the_client_before_the_first_real_token(wired_with_prea
 
 def test_preamble_is_never_persisted_as_the_reply(wired_with_preamble):
     with client.stream(
-        "POST", "/v1/chat/stream", json={"student_id": "s1", "message": "Solve x^2 = 9"}
+        "POST",
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Solve x^2 = 9"},
     ) as response:
         frames(response)
     assert wired_with_preamble.persisted == ["x = 3"], "the stored reply must be engine-only"
@@ -113,7 +119,10 @@ def test_metrics_keep_the_two_first_token_numbers_apart(wired_with_preamble):
     """`ttft_s` is the tutor's. `preamble_ttft_s` is the pane's. Reporting the second as the
     first would be the dishonest version of this feature."""
     with client.stream(
-        "POST", "/v1/chat/stream", json={"student_id": "s1", "message": "Solve x^2 = 9"}
+        "POST",
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Solve x^2 = 9"},
     ) as response:
         done = frames(response)[-1]
 
@@ -126,7 +135,10 @@ def test_metrics_keep_the_two_first_token_numbers_apart(wired_with_preamble):
 
 def test_disabled_preamble_leaves_the_stream_unchanged(wired_without_preamble):
     with client.stream(
-        "POST", "/v1/chat/stream", json={"student_id": "s1", "message": "Solve x^2 = 9"}
+        "POST",
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Solve x^2 = 9"},
     ) as response:
         evs = frames(response)
 
@@ -158,7 +170,10 @@ def test_the_real_model_streams_through_the_real_route():
     app.dependency_overrides[deps.get_preamble_writer] = lambda: writer
     try:
         with client.stream(
-            "POST", "/v1/chat/stream", json={"student_id": "s1", "message": "Solve x^2 = 9"}
+            "POST",
+            "/v1/chat/stream",
+            headers={"Authorization": "Bearer s1"},
+            json={"student_id": "s1", "message": "Solve x^2 = 9"},
         ) as response:
             evs = frames(response)
     finally:

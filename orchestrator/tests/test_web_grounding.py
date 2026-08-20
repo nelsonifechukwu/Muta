@@ -47,7 +47,11 @@ def wired(monkeypatch):
 
 def _post(body_extra: dict | None = None) -> str:
     body = {"student_id": "s1", "message": "range of a projectile?", **(body_extra or {})}
-    return client.post("/v1/chat/stream", json=body).text
+    return client.post(
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json=body,
+    ).text
 
 
 def _done(text: str) -> dict:

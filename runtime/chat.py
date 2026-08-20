@@ -104,8 +104,12 @@ class ChatEngine:
         self.persist_interval_s = persist_interval_s
 
     def _open(self, student_id: str, conversation_id: str | None, **meta) -> str:
-        if conversation_id and self.store.get_conversation(conversation_id):
-            return conversation_id
+        if conversation_id:
+            conversation = self.store.get_conversation(conversation_id)
+            if conversation is not None and conversation.get("student_id") != student_id:
+                raise PermissionError("conversation belongs to another learner")
+            if conversation is not None:
+                return conversation_id
         return self.store.create_conversation(student_id, **meta)
 
     def _assemble(self, conversation_id: str, system_prompt: str | None, message: str) -> list[Message]:

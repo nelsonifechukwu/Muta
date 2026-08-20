@@ -74,6 +74,19 @@ def test_conversation_id_is_stable_across_turns(store):
     assert a.conversation_id == b.conversation_id
 
 
+def test_conversation_cannot_be_continued_by_another_student(store):
+    engine, _, store = _engine(store)
+    first = engine.chat("s1", "private question")
+
+    with pytest.raises(PermissionError, match="another learner"):
+        engine.chat("s2", "inject this", conversation_id=first.conversation_id)
+
+    assert [message["content"] for message in store.get_messages(first.conversation_id)] == [
+        "private question",
+        "reply-1",
+    ]
+
+
 def test_history_is_trimmed_to_max(store):
     engine, client, _ = _engine(store, max_history_messages=2)
     first = engine.chat("s1", "m0")

@@ -30,7 +30,7 @@ from orchestrator.bench_metrics import PIDFILE
 from orchestrator.bench_metrics import app as bench_app
 from orchestrator.exam.app import app as exam_app
 from orchestrator.gateway.audio_routes import router as audio_router
-from orchestrator.gateway.deps import get_vision, set_model_manager
+from orchestrator.gateway.deps import get_generation_manager, get_vision, set_model_manager
 from orchestrator.gateway.routes import router as gateway_router
 from orchestrator.logging_config import configure_logging
 from orchestrator.math.app import app as math_app
@@ -184,6 +184,8 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        with contextlib.suppress(Exception):
+            await asyncio.to_thread(get_generation_manager().shutdown)
         with contextlib.suppress(Exception):
             get_connectivity().stop()
         if engine_stop is not None:

@@ -103,6 +103,13 @@ class ChatRequest(BaseModel):
         max_length=64,
         description="Omit to start a new thread; pass to continue one (multi-turn memory).",
     )
+    client_request_id: str | None = Field(
+        None,
+        max_length=64,
+        description=(
+            "Browser-generated id for recovering a new-chat start across an immediate refresh."
+        ),
+    )
     mode: TutoringMode = TutoringMode.socratic
     persona: Persona = Persona.teacher
     subject: Subject = Subject.math
@@ -160,6 +167,7 @@ class GenerationStarted(BaseModel):
 
     job_id: str
     conversation_id: str
+    client_request_id: str | None = None
 
 
 class GenerationStatus(BaseModel):
@@ -167,6 +175,7 @@ class GenerationStatus(BaseModel):
     conversation_id: str
     state: Literal["running", "completed", "failed", "stopped"]
     created_at: str
+    client_request_id: str | None = None
 
 
 class GenerationList(BaseModel):

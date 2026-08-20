@@ -105,7 +105,7 @@ def get_engine() -> ChatEngine:
 @lru_cache(maxsize=1)
 def get_generation_manager() -> GenerationManager:
     """Live replay buffers outlive browser requests but not the gateway process."""
-    return GenerationManager()
+    return GenerationManager(max_active=RuntimeConfig().n_parallel)
 
 
 @lru_cache(maxsize=1)

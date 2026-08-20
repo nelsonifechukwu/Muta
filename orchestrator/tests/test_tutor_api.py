@@ -8,6 +8,8 @@ queue position, or an honest refusal — the paths a judge actually walks.
 from __future__ import annotations
 
 import io
+import threading
+import time
 
 import httpx
 import pytest
@@ -48,6 +50,10 @@ class FakeEngine:
 class FakeSettingsStore:
     def __init__(self) -> None:
         self.values: dict[str, dict] = {}
+        self.conversations: dict[str, dict] = {}
+
+    def get_conversation(self, conversation_id: str) -> dict | None:
+        return self.conversations.get(conversation_id)
 
     def get_settings(self, student_id: str) -> dict:
         return dict(self.values.get(student_id, {}))
@@ -65,7 +71,7 @@ def wired():
         slots_count=2, accepts_new_sessions=lambda: ladder.evaluate().accepts_new_sessions
     )
     vision = VisionManager(admit=lambda: ladder.evaluate().vision_allowed)
-    generations = GenerationManager()
+    generations = GenerationManager(max_active=2)
 
     app.dependency_overrides[deps.get_engine] = lambda: engine
     app.dependency_overrides[deps.get_ladder] = lambda: ladder
@@ -151,7 +157,10 @@ def test_chat_stream_announces_the_conversation_in_its_first_frame(wired):
     conversation its partial reply landed in — the id only arriving at `done` means stopping
     the first reply of a brand-new chat forks a second thread on the next message."""
     with client.stream(
-        "POST", "/v1/chat/stream", json={"student_id": "s1", "message": "Solve x^2 = 9"}
+        "POST",
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Solve x^2 = 9"},
     ) as response:
         events = [line for line in response.iter_lines() if line.startswith("data: ")]
     assert '"conversation_id": "conv-1"' in events[0]
@@ -173,6 +182,7 @@ def test_stream_done_reports_the_answer_source(wired):
     backend that answered. The fake engine has no client, which must read as local."""
     r = client.post(
         "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
         json={"student_id": "s1", "message": "hi", "stream": True},
     )
     assert '"source": "local"' in r.text.strip().splitlines()[-1]
@@ -207,6 +217,78 @@ def test_generation_replay_is_scoped_to_its_owner(wired):
         headers={"Authorization": "Bearer s2"},
     )
     assert response.status_code == 404
+
+
+def test_generation_start_hides_another_students_conversation(wired):
+    engine, *_ = wired
+    engine.store.conversations["private"] = {"id": "private", "student_id": "s1"}
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s2"},
+        json={"student_id": "s2", "conversation_id": "private", "message": "peek"},
+    )
+    assert response.status_code == 404
+
+
+def test_disabled_parallel_setting_is_enforced_by_the_server(wired):
+    engine, *_ = wired
+    reservation = app.dependency_overrides[deps.get_generation_manager]().reserve(
+        "s1", allow_parallel=True
+    )
+    engine.store.put_settings("s1", {"allow_parallel_chats": False})
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "second reply"},
+    )
+    app.dependency_overrides[deps.get_generation_manager]().cancel_reservation(reservation)
+    assert response.status_code == 409
+    assert "learner" in response.json()["detail"]
+
+
+def test_parallel_chat_completion_releases_only_its_own_admission_lease(wired):
+    engine, _, sessions, _ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    gates = [threading.Event(), threading.Event()]
+
+    def blocking_stream(**kwargs):
+        index = len(engine.calls)
+        engine.calls.append(kwargs)
+        cid = f"conv-{index + 1}"
+
+        def events():
+            yield "content", "working"
+            assert gates[index].wait(2.0)
+            yield "content", " done"
+
+        return cid, index + 1, events()
+
+    engine.stream_events_chat = blocking_stream
+    headers = {"Authorization": "Bearer s1"}
+    first = client.post(
+        "/v1/chat/generations", headers=headers, json={"student_id": "s1", "message": "one"}
+    )
+    second = client.post(
+        "/v1/chat/generations", headers=headers, json={"student_id": "s1", "message": "two"}
+    )
+    assert first.status_code == second.status_code == 202
+    assert sum(slot.busy for slot in sessions.slots) == 2
+
+    third = client.post(
+        "/v1/chat/generations",
+        headers=headers,
+        json={"student_id": "s1", "message": "must wait"},
+    )
+    assert third.status_code == 409
+
+    gates[0].set()
+    deadline = time.monotonic() + 1.0
+    while generations.running_count() != 1 and time.monotonic() < deadline:
+        time.sleep(0.005)
+    assert generations.running_count() == 1
+    assert sum(slot.busy for slot in sessions.slots) == 1
+
+    gates[1].set()
 
 
 def test_parallel_chat_setting_defaults_on_and_round_trips_privately(wired):

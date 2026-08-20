@@ -33,7 +33,11 @@ def _done(text: str) -> dict:
 
 
 def test_stream_done_carries_admission_state_and_releases_the_slot(_fakes):
-    body = client.post("/v1/chat/stream", json={"student_id": "s1", "message": "2+2?"}).text
+    body = client.post(
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "2+2?"},
+    ).text
     done = _done(body)
     assert "degradation_level" in done and done["queued"] is False
     # The slot was released: the manager reports no active sessions after the stream drained.
@@ -46,6 +50,10 @@ def test_stream_refuses_when_the_ladder_says_no_new_sessions(_fakes):
     refusing = SessionManager(slots_count=1, accepts_new_sessions=lambda: False)
     refusing.acquire("someone-else")  # occupy the only slot (busy, not idle-stealable)
     app.dependency_overrides[deps.get_sessions] = lambda: refusing
-    r = client.post("/v1/chat/stream", json={"student_id": "newcomer", "message": "hi"})
+    r = client.post(
+        "/v1/chat/stream",
+        headers={"Authorization": "Bearer newcomer"},
+        json={"student_id": "newcomer", "message": "hi"},
+    )
     assert r.status_code == 503
     assert "detail" in r.json()  # a friendly busy message, not a stack trace

@@ -14,7 +14,7 @@ import logging
 import threading
 import time
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -22,6 +22,10 @@ log = logging.getLogger("muta.gateway.generations")
 
 _DONE_MARKER = '"done": true'
 _ERROR_MARKER = '"error"'
+
+
+class GenerationCapacityError(RuntimeError):
+    """The fixed engine-slot budget or per-learner parallel policy rejected a new job."""
 
 
 def _sse(payload: dict) -> str:
@@ -35,6 +39,15 @@ class GenerationSnapshot:
     conversation_id: str
     state: str
     created_at: str
+    client_request_id: str | None = None
+
+
+@dataclass(frozen=True)
+class _Reservation:
+    student_id: str
+    conversation_id: str | None
+    client_request_id: str | None
+    created_at: float
 
 
 class GenerationJob:
@@ -47,17 +60,21 @@ class GenerationJob:
         conversation_id: str,
         producer: Iterator[str],
         job_id: str | None = None,
+        client_request_id: str | None = None,
     ) -> None:
         self.id = job_id or uuid.uuid4().hex
         self.student_id = student_id
         self.conversation_id = conversation_id
         self.created_at = datetime.now(timezone.utc).isoformat()
+        self.client_request_id = client_request_id
         self.completed_at: float | None = None
         self.state = "running"
         self._producer = producer
         self._condition = threading.Condition()
-        # The leading frame lets every subscriber bind the stream before replaying tokens.
-        self._events = [_sse({"job_id": self.id, "conversation_id": self.conversation_id})]
+        # The producer's leading conversation-id frame remains byte-compatible with the
+        # original /chat/stream contract. New job clients already receive both ids from the
+        # JSON start response, so injecting registry metadata here would duplicate that frame.
+        self._events: list[str] = []
         self._stop_requested = False
         self._thread = threading.Thread(
             target=self._run,
@@ -77,6 +94,7 @@ class GenerationJob:
             conversation_id=self.conversation_id,
             state=state,
             created_at=self.created_at,
+            client_request_id=self.client_request_id,
         )
 
     def request_stop(self) -> bool:
@@ -188,10 +206,80 @@ class GenerationJob:
 class GenerationManager:
     """Thread-safe process registry with bounded retention for completed replay buffers."""
 
-    def __init__(self, *, completed_ttl_s: float = 300.0) -> None:
+    def __init__(
+        self,
+        *,
+        completed_ttl_s: float = 300.0,
+        reservation_ttl_s: float = 300.0,
+        max_active: int | None = None,
+    ) -> None:
         self.completed_ttl_s = completed_ttl_s
+        self.reservation_ttl_s = reservation_ttl_s
+        self.max_active = max_active
         self._lock = threading.RLock()
         self._jobs: dict[str, GenerationJob] = {}
+        self._reservations: dict[str, _Reservation] = {}
+
+    def reserve(
+        self,
+        student_id: str,
+        *,
+        allow_parallel: bool,
+        conversation_id: str | None = None,
+        client_request_id: str | None = None,
+    ) -> str:
+        """Atomically reserve one already-budgeted engine lane before mutating chat history."""
+        with self._lock:
+            self._prune_locked()
+            occupied = sum(job.state == "running" for job in self._jobs.values()) + len(
+                self._reservations
+            )
+            if self.max_active is not None and occupied >= self.max_active:
+                raise GenerationCapacityError("all local inference slots are busy")
+            same_student = any(
+                job.student_id == student_id and job.state == "running"
+                for job in self._jobs.values()
+            ) or any(row.student_id == student_id for row in self._reservations.values())
+            if same_student and not allow_parallel:
+                raise GenerationCapacityError("a reply is already running for this learner")
+            if conversation_id and (
+                any(
+                    job.student_id == student_id
+                    and job.conversation_id == conversation_id
+                    and job.state == "running"
+                    for job in self._jobs.values()
+                )
+                or any(
+                    row.student_id == student_id and row.conversation_id == conversation_id
+                    for row in self._reservations.values()
+                )
+            ):
+                raise GenerationCapacityError("a reply is already running in this conversation")
+            if client_request_id and (
+                any(
+                    job.student_id == student_id
+                    and job.client_request_id == client_request_id
+                    for job in self._jobs.values()
+                )
+                or any(
+                    row.student_id == student_id
+                    and row.client_request_id == client_request_id
+                    for row in self._reservations.values()
+                )
+            ):
+                raise GenerationCapacityError("this generation request is already being handled")
+            reservation_id = uuid.uuid4().hex
+            self._reservations[reservation_id] = _Reservation(
+                student_id=student_id,
+                conversation_id=conversation_id,
+                client_request_id=client_request_id,
+                created_at=time.monotonic(),
+            )
+            return reservation_id
+
+    def cancel_reservation(self, reservation_id: str) -> None:
+        with self._lock:
+            self._reservations.pop(reservation_id, None)
 
     def start(
         self,
@@ -199,16 +287,44 @@ class GenerationManager:
         student_id: str,
         conversation_id: str,
         producer: Iterator[str],
+        reservation_id: str | None = None,
+        client_request_id: str | None = None,
     ) -> GenerationJob:
+        if reservation_id is None:
+            reservation_id = self.reserve(
+                student_id,
+                allow_parallel=True,
+                conversation_id=conversation_id,
+                client_request_id=client_request_id,
+            )
         job = GenerationJob(
             student_id=student_id,
             conversation_id=conversation_id,
             producer=producer,
+            client_request_id=client_request_id,
         )
         with self._lock:
             self._prune_locked()
+            reserved = self._reservations.get(reservation_id)
+            if reserved is None or reserved.student_id != student_id:
+                raise GenerationCapacityError("generation reservation expired")
+            if reserved.client_request_id != client_request_id:
+                raise GenerationCapacityError("generation reservation does not match this request")
+            if any(
+                existing.student_id == student_id
+                and existing.conversation_id == conversation_id
+                and existing.state == "running"
+                for existing in self._jobs.values()
+            ):
+                raise GenerationCapacityError("a reply is already running in this conversation")
+            self._reservations.pop(reservation_id, None)
             self._jobs[job.id] = job
-        job.start()
+        try:
+            job.start()
+        except Exception:
+            with self._lock:
+                self._jobs.pop(job.id, None)
+            raise
         return job
 
     def get(self, job_id: str, *, student_id: str | None = None) -> GenerationJob | None:
@@ -229,8 +345,48 @@ class GenerationManager:
             ]
         return sorted(rows, key=lambda row: row.created_at)
 
+    def matching(self, student_id: str, client_request_id: str) -> list[GenerationSnapshot]:
+        """Return retained jobs for one browser request, including completed replay buffers."""
+        with self._lock:
+            self._prune_locked()
+            rows = [
+                job.snapshot()
+                for job in self._jobs.values()
+                if job.student_id == student_id and job.client_request_id == client_request_id
+            ]
+        return sorted(rows, key=lambda row: row.created_at)
+
+    def running_count(self) -> int:
+        with self._lock:
+            self._prune_locked()
+            return sum(job.state == "running" for job in self._jobs.values())
+
+    def run_when_idle(self, operation: Callable[[], object]) -> object:
+        """Run a model lifecycle transition atomically against generation admission."""
+        with self._lock:
+            self._prune_locked()
+            if self.running_count() or self._reservations:
+                raise GenerationCapacityError("wait for active replies before changing models")
+            return operation()
+
+    def shutdown(self, timeout_s: float = 2.0) -> None:
+        """Request cancellation and briefly drain workers during application shutdown."""
+        with self._lock:
+            jobs = [job for job in self._jobs.values() if job.state == "running"]
+            self._reservations.clear()
+        for job in jobs:
+            job.request_stop()
+        deadline = time.monotonic() + max(0.0, timeout_s)
+        for job in jobs:
+            job._thread.join(timeout=max(0.0, deadline - time.monotonic()))
+
     def _prune_locked(self) -> None:
         now = time.monotonic()
+        self._reservations = {
+            reservation_id: reservation
+            for reservation_id, reservation in self._reservations.items()
+            if now - reservation.created_at < self.reservation_ttl_s
+        }
         expired = [
             job_id
             for job_id, job in self._jobs.items()

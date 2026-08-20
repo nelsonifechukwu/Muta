@@ -90,7 +90,11 @@ from orchestrator.gateway.deps import (
     load_prompt,
     refresh_engine_dependencies,
 )
-from orchestrator.gateway.generations import GenerationJob, GenerationManager
+from orchestrator.gateway.generations import (
+    GenerationCapacityError,
+    GenerationJob,
+    GenerationManager,
+)
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.preamble import with_preamble
@@ -218,7 +222,11 @@ def models(request: Request) -> ModelCatalogResponse:
 
 
 @router.post("/models/select", response_model=ModelSelectResponse, tags=["runtime"])
-def select_model(request: Request, req: ModelSelectRequest) -> ModelSelectResponse:
+def select_model(
+    request: Request,
+    req: ModelSelectRequest,
+    generations: GenerationManager = Depends(get_generation_manager),
+) -> ModelSelectResponse:
     manager = get_model_manager()
     if manager is None:
         raise HTTPException(status_code=409, detail="model switching is unavailable in this mode")
@@ -229,7 +237,9 @@ def select_model(request: Request, req: ModelSelectRequest) -> ModelSelectRespon
             detail="only the laptop operator can change the shared tutor model",
         )
     try:
-        status = manager.switch(req.model_id)
+        status = generations.run_when_idle(lambda: manager.switch(req.model_id))
+    except GenerationCapacityError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ModelSwitchError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     refresh_engine_dependencies()
@@ -444,6 +454,7 @@ def _start_chat_generation(
     ladder: DegradationLadder,
     preamble: PreambleWriter | None,
     generations: GenerationManager,
+    allow_parallel: bool,
 ) -> GenerationJob:
     """Prepare one turn and hand its iterator to the process-owned generation registry.
 
@@ -451,9 +462,28 @@ def _start_chat_generation(
     generator's persistence and session-release finalizers run even when every browser
     subscriber disconnects.
     """
+    if req.conversation_id:
+        conversation = engine.store.get_conversation(req.conversation_id)
+        if conversation is None or conversation.get("student_id") != req.student_id:
+            raise HTTPException(status_code=404, detail="unknown conversation")
+    try:
+        reservation_id = generations.reserve(
+            req.student_id,
+            allow_parallel=allow_parallel,
+            conversation_id=req.conversation_id,
+            client_request_id=req.client_request_id,
+        )
+    except GenerationCapacityError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    # A learner may own several simultaneous chats, so admission is leased per generation,
+    # not per student. Otherwise two replies reuse one busy SessionManager slot and the first
+    # completion falsely releases it while the second is still decoding.
+    admission_id = f"generation:{reservation_id}"
     state = ladder.evaluate()
-    decision = sessions.acquire(req.student_id)
+    decision = sessions.acquire(admission_id)
     if decision.admission is Admission.REFUSED:
+        generations.cancel_reservation(reservation_id)
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
     # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
@@ -506,7 +536,8 @@ def _start_chat_generation(
     except Exception:
         # The slot is released in the SSE generator's finally, which only runs once streaming
         # starts. A failure before that (store down, bad prompt) must free the lane here.
-        sessions.release(req.student_id)
+        sessions.release(admission_id)
+        generations.cancel_reservation(reservation_id)
         raise
     if req.attachment_ids:
         _link_attachments(engine, req.attachment_ids, cid, user_message_id)
@@ -567,7 +598,7 @@ def _start_chat_generation(
             # an admission slot on every disconnect during the prefill window.
             _close_events(streamed)
             _close_events(events)
-            sessions.release(req.student_id)  # free the admission slot for the next student
+            sessions.release(admission_id)  # free exactly this generation's admission lease
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
         # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
         # reads close to the engine's own generation rate rather than being dragged down by a
@@ -627,11 +658,20 @@ def _start_chat_generation(
             + "\n\n"
         )
 
-    return generations.start(
-        student_id=req.student_id,
-        conversation_id=cid,
-        producer=_sse(),
-    )
+    try:
+        return generations.start(
+            student_id=req.student_id,
+            conversation_id=cid,
+            producer=_sse(),
+            reservation_id=reservation_id,
+            client_request_id=req.client_request_id,
+        )
+    except Exception:
+        _close_events(streamed)
+        _close_events(events)
+        sessions.release(admission_id)
+        generations.cancel_reservation(reservation_id)
+        raise
 
 
 def _job_stream(job: GenerationJob, *, after: int = 0) -> StreamingResponse:
@@ -652,8 +692,11 @@ def chat_stream(
     ladder: DegradationLadder = Depends(get_ladder),
     preamble: PreambleWriter | None = Depends(get_preamble_writer),
     generations: GenerationManager = Depends(get_generation_manager),
+    caller: str = Depends(require_caller),
 ) -> StreamingResponse:
     """Backwards-compatible streaming start; disconnecting no longer cancels inference."""
+    if caller != req.student_id:
+        raise HTTPException(status_code=403, detail="you can only start your own generation")
     job = _start_chat_generation(
         req,
         engine=engine,
@@ -661,6 +704,7 @@ def chat_stream(
         ladder=ladder,
         preamble=preamble,
         generations=generations,
+        allow_parallel=False,
     )
     return _job_stream(job)
 
@@ -690,16 +734,27 @@ def generation_start(
         ladder=ladder,
         preamble=preamble,
         generations=generations,
+        allow_parallel=engine.store.get_settings(caller).get("allow_parallel_chats", True),
     )
-    return GenerationStarted(job_id=job.id, conversation_id=job.conversation_id)
+    return GenerationStarted(
+        job_id=job.id,
+        conversation_id=job.conversation_id,
+        client_request_id=job.client_request_id,
+    )
 
 
 @router.get("/chat/generations", response_model=GenerationList, tags=["tutor"])
 def generation_list(
+    client_request_id: str | None = None,
     generations: GenerationManager = Depends(get_generation_manager),
     caller: str = Depends(require_caller),
 ) -> GenerationList:
     """List the caller's live jobs so a refreshed UI can reconnect to each one."""
+    rows = (
+        generations.matching(caller, client_request_id)
+        if client_request_id
+        else generations.active(caller)
+    )
     return GenerationList(
         generations=[
             GenerationStatus(
@@ -707,8 +762,9 @@ def generation_list(
                 conversation_id=row.conversation_id,
                 state=row.state,
                 created_at=row.created_at,
+                client_request_id=row.client_request_id,
             )
-            for row in generations.active(caller)
+            for row in rows
         ]
     )
 

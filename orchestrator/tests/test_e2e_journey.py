@@ -73,7 +73,11 @@ def test_full_student_journey(journey):
     a_auth = _token(client, alice)
 
     # 1. Alice streams a lesson; the done event carries the self-check + admission state.
-    body = client.post("/v1/chat/stream", json={"student_id": alice, "message": "what is 2+2?"}).text
+    body = client.post(
+        "/v1/chat/stream",
+        headers={"Authorization": f"Bearer {alice}"},
+        json={"student_id": alice, "message": "what is 2+2?"},
+    ).text
     done = _done(body)
     cid = done["conversation_id"]
     assert done["verified"] is True  # "2 + 2 = 4" checked out

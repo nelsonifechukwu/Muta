@@ -4,7 +4,7 @@ import uuid
 
 from fastapi.testclient import TestClient
 
-from orchestrator.gateway import routes
+from orchestrator.gateway import deps, routes
 from orchestrator.gateway.deps import set_model_manager
 from orchestrator.main import app
 
@@ -81,6 +81,26 @@ def test_model_select_is_for_the_loopback_operator_only(monkeypatch):
     assert response.status_code == 403
     assert routes._model_switch_allowed("127.0.0.1") is True
     assert routes._model_switch_allowed("192.168.1.20") is False
+
+
+def test_model_select_refuses_to_interrupt_an_active_generation(monkeypatch):
+    manager = _Manager()
+
+    class _BusyGenerations:
+        def run_when_idle(self, operation):
+            raise routes.GenerationCapacityError("wait for active replies before changing models")
+
+    monkeypatch.setattr(routes, "_model_switch_allowed", lambda _: True)
+    app.dependency_overrides[deps.get_generation_manager] = lambda: _BusyGenerations()
+    set_model_manager(manager)
+    try:
+        response = TestClient(app).post("/v1/models/select", json={"model_id": "accuracy"})
+    finally:
+        app.dependency_overrides.clear()
+        set_model_manager(None)
+
+    assert response.status_code == 409
+    assert manager.active == "winner"
 
 
 def test_auth_session_unifies_only_loopback_operator_identity(monkeypatch, tmp_path):

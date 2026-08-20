@@ -109,12 +109,21 @@ paths:
       summary: Chat Stream
       description: Backwards-compatible streaming start; disconnecting no longer cancels inference.
       operationId: chat_stream_v1_chat_stream_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ChatRequest'
-        required: true
       responses:
         '200':
           description: SSE token stream
@@ -170,6 +179,14 @@ paths:
       description: List the caller's live jobs so a refreshed UI can reconnect to each one.
       operationId: generation_list_v1_chat_generations_get
       parameters:
+      - name: client_request_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Client Request Id
       - name: authorization
         in: header
         required: false
@@ -1202,6 +1219,13 @@ components:
           - type: 'null'
           title: Conversation Id
           description: Omit to start a new thread; pass to continue one (multi-turn memory).
+        client_request_id:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Client Request Id
+          description: Browser-generated id for recovering a new-chat start across an immediate refresh.
         mode:
           $ref: '#/components/schemas/TutoringMode'
           default: socratic
@@ -1554,6 +1578,11 @@ components:
         conversation_id:
           type: string
           title: Conversation Id
+        client_request_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Client Request Id
       type: object
       required:
       - job_id
@@ -1579,6 +1608,11 @@ components:
         created_at:
           type: string
           title: Created At
+        client_request_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Client Request Id
       type: object
       required:
       - job_id
