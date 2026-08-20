@@ -13,6 +13,7 @@ from pathlib import Path
 UI = Path(__file__).resolve().parents[1]
 HTML = (UI / "index.html").read_text()
 CSS = (UI / "styles.css").read_text()
+NGINX = (UI.parent / "docker" / "nginx.conf.template").read_text()
 
 
 def _hidden_elements() -> list[tuple[str, str]]:
@@ -115,6 +116,78 @@ def test_settings_exposes_a_persisted_parallel_chat_switch():
     assert "!allowParallelChats && generationJobs.size" in js
 
 
+def test_model_picker_uses_an_accessible_header_menu_instead_of_a_native_select():
+    js = (UI / "app.js").read_text()
+    assert 'id="model-trigger"' in HTML
+    assert 'aria-haspopup="menu"' in HTML
+    assert 'aria-controls="model-menu"' in HTML
+    assert 'aria-describedby="model-note"' in HTML
+    assert 'id="model-menu"' in HTML and 'role="menu"' in HTML
+    assert 'id="model-options"' in HTML
+    assert 'id="model-select"' not in HTML
+    assert 'option.setAttribute("role", "menuitemradio")' in js
+    assert 'option.setAttribute("aria-checked"' in js
+    assert 'check.textContent = "✓"' in js
+    assert "model.disabled_reason || modelSummary(model)" in js
+    assert 'option.dataset.selectable !== "true"' in js
+    assert 'modelTrigger.disabled = !inspectable' in js
+    assert 'event.key === "ArrowDown"' in js and 'event.key === "Enter"' in js
+    assert 'focus: event.detail === 0' in js
+    assert 'restoreFocus: true' in js
+    assert 'fetch("/v1/models/select"' in js
+
+
+def test_model_switch_transport_failure_stays_locked_until_authoritative_recovery():
+    js = (UI / "app.js").read_text()
+    assert "let modelSwitchUncertain = false" in js
+    assert "scheduleModelCatalogRecovery()" in js
+    assert 'modelTrigger.dataset.switching = "true"' in js
+    assert "The switch may still be completing" in js
+    assert "error.definitive = response.status >= 400" in js
+    assert "if (!error.definitive)" in js
+    assert "The connection dropped while switching models" in js
+
+
+def test_model_menu_remains_inspectable_when_selection_is_not_permitted():
+    js = (UI / "app.js").read_text()
+    assert "modelTrigger.disabled = false" in js
+    assert "option.dataset.selectable = String(selectionEnabled && model.available)" in js
+    assert '!catalog.selection_enabled' in js
+    assert "Only the laptop operator can change the shared tutor model." in js
+
+
+def test_settings_icon_has_intrinsic_dimensions_even_before_css_loads():
+    settings = re.search(r'<button id="settings-open".*?</button>', HTML, re.DOTALL)
+    assert settings
+    assert '<svg width="16" height="16"' in settings.group()
+
+
+def test_authored_entry_assets_share_one_cache_busting_revision():
+    versions = re.findall(
+        r'(?:href|src)="(?:styles\.css|math\.js|app\.js|audio\.js)\?v=([^"]+)"', HTML
+    )
+    assert len(versions) == 4
+    assert len(set(versions)) == 1
+
+
+def test_frontend_nginx_does_not_cache_static_ui_revisions():
+    assert 'default "no-store, max-age=0";' in NGINX
+    assert '~^/v1/ "";' in NGINX
+    assert "add_header Cache-Control $muta_cache_control always;" in NGINX
+
+
+def test_model_menu_is_contained_on_desktop_and_phone_layouts():
+    menu = "".join(_blocks(".model-menu"))
+    assert re.search(r"max-height\s*:", menu)
+    assert re.search(r"overflow-y\s*:\s*auto", menu)
+    assert "calc(100vw - 290px)" in menu
+    assert re.search(
+        r"@media\s*\(max-width:\s*720px\).*?\.model-menu\s*\{[^}]*position\s*:\s*fixed",
+        CSS,
+        re.DOTALL,
+    )
+
+
 def test_selected_conversation_lives_in_the_url_and_restores_on_startup():
     js = (UI / "app.js").read_text()
     assert 'searchParams.get("chat")' in js
@@ -181,9 +254,7 @@ def test_math_is_protected_before_markdown_and_loaded_before_the_chat_app():
     katex_at = math.index("global.katex.render(input.tex", restore_at)
     assert markdown_at < restore_at < katex_at
     assert 'slot.closest("pre, code, script, style, textarea, noscript, option, title")' in math
-    assert HTML.index('<script src="math.js"></script>') < HTML.index(
-        '<script src="app.js"></script>'
-    )
+    assert HTML.index('<script src="math.js?') < HTML.index('<script src="app.js?')
     assert "MutaMath.render(el, text)" in js
     assert 'last.matches(".katex, .katex-display")' in js
 

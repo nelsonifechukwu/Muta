@@ -76,6 +76,8 @@ let telemetryCloseTimer = null;
 // Reasoning effort for new turns: "off" (direct answer) | "auto" (think first) | "extended".
 let thinkingLevel = localStorage.getItem("muta-thinking") || "auto";
 let modelCatalog = null;
+let modelSwitchUncertain = false;
+let modelRecoveryTimer = null;
 
 const anyGeneration = () =>
   voiceModeActive || voiceGenerating || generationJobs.size > 0 || startingConversations.size > 0;
@@ -676,7 +678,8 @@ function viewingLiveStream() {
 function syncComposerState() {
   const busy = readingAnImage();
   const streaming = viewingLiveStream();
-  const switchingModel = $("#model-select")?.dataset.switching === "true";
+  const modelTrigger = $("#model-trigger");
+  const switchingModel = modelTrigger?.dataset.switching === "true";
   $("#btn-image").disabled = busy || switchingModel;
   $("#btn-audio").disabled = switchingModel;
   $("#btn-mic").disabled = switchingModel;
@@ -689,11 +692,17 @@ function syncComposerState() {
     startingConversations.has(startKeyFor(conversationId));
   sendBtn.classList.toggle("stop", Boolean(streaming));
   sendBtn.title = streaming ? "Stop the reply (Esc)" : "Send";
-  const modelSelect = $("#model-select");
-  if (modelSelect) {
-    const hasChoice = modelCatalog?.selection_enabled
-      && modelCatalog.models?.some((model) => model.available);
-    modelSelect.disabled = anyGeneration() || modelSelect.dataset.switching === "true" || !hasChoice;
+  if (modelTrigger) {
+    const inspectable = modelCatalog !== null || modelTrigger.dataset.loadFailed === "true";
+    modelTrigger.disabled = !inspectable;
+    modelTrigger.setAttribute("aria-disabled", String(modelTrigger.disabled));
+    modelTrigger.setAttribute("aria-busy", String(switchingModel));
+    $("#model-options")?.querySelectorAll(".model-option").forEach((option) => {
+      option.disabled = switchingModel
+        || anyGeneration()
+        || option.dataset.selectable !== "true";
+    });
+    if (modelTrigger.disabled && !$("#model-menu")?.hidden) setModelMenuOpen(false);
   }
 }
 
@@ -877,6 +886,12 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (!settingsModal.hidden) return;
     hideDropHint();
+    const modelMenuEl = $("#model-menu");
+    if (modelMenuEl && !modelMenuEl.hidden) {
+      setModelMenuOpen(false);
+      $("#model-trigger")?.focus();
+      return;
+    }
     const menu = $("#think-menu");
     if (menu && !menu.hidden) return openThinkMenu(false); // close the menu before stopping
     stopGeneration(); // no-op unless a chat stream is running
@@ -962,7 +977,7 @@ function restoreDraft(item) {
 
 function send(steer = false) {
   if (voiceModeActive) return toast("Finish voice mode before sending a typed message.");
-  if ($("#model-select")?.dataset.switching === "true") {
+  if ($("#model-trigger")?.dataset.switching === "true") {
     return toast("The selected model is still loading — your draft is safe.");
   }
   const typed = inputEl.value.trim();
@@ -1569,7 +1584,10 @@ refreshNetDot();
 setInterval(refreshNetDot, 60_000);
 
 // --- local model registry ---------------------------------------------------------------
-const modelSelect = $("#model-select");
+const modelTrigger = $("#model-trigger");
+const modelTriggerLabel = $("#model-trigger-label");
+const modelMenu = $("#model-menu");
+const modelOptions = $("#model-options");
 const modelNote = $("#model-note");
 
 function modelSummary(model) {
@@ -1581,67 +1599,137 @@ function modelSummary(model) {
   return [model.description, metrics.join(" · ")].filter(Boolean).join(" ");
 }
 
+function setModelMenuOpen(open, { focus = false, restoreFocus = false } = {}) {
+  const next = Boolean(open && !modelTrigger.disabled);
+  const focusWasInMenu = modelMenu.contains(document.activeElement);
+  modelMenu.hidden = !next;
+  modelTrigger.setAttribute("aria-expanded", String(next));
+  if (next && focus) {
+    modelOptions.querySelector(".model-option:not(:disabled)")?.focus();
+  } else if (!next && (restoreFocus || focusWasInMenu)) {
+    modelTrigger.focus();
+  }
+}
+
+function makeModelOption(model, activeId, selectionEnabled) {
+  const option = document.createElement("button");
+  option.type = "button";
+  option.className = "model-option";
+  option.dataset.modelId = model.id;
+  option.dataset.selectable = String(selectionEnabled && model.available);
+  option.setAttribute("role", "menuitemradio");
+  option.setAttribute("aria-checked", String(model.id === activeId));
+  option.disabled = option.dataset.selectable !== "true";
+
+  const title = document.createElement("span");
+  title.className = "model-option-title";
+  const label = document.createElement("span");
+  label.textContent = model.label;
+  title.append(label);
+  if (model.recommended) {
+    const badge = document.createElement("span");
+    badge.className = "model-badge";
+    badge.textContent = "Recommended";
+    title.append(badge);
+  }
+
+  const detail = document.createElement("span");
+  detail.className = "model-option-detail";
+  detail.textContent = model.disabled_reason || modelSummary(model) || "Local tutor model";
+  const check = document.createElement("span");
+  check.className = "model-check";
+  check.setAttribute("aria-hidden", "true");
+  check.textContent = "✓";
+  option.append(title, detail, check);
+  return option;
+}
+
 function renderModelCatalog(catalog) {
   modelCatalog = catalog;
   const models = catalog.models || [];
   const active = models.find((model) => model.id === catalog.active_id);
-  modelSelect.innerHTML = "";
-  // A custom --model path can be healthy without belonging to the fixed registry. Keep the
-  // visible value honest and give the first catalog item its own selectable transition.
-  if (!active) {
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = catalog.active_id
-      ? "Current engine · outside registry"
-      : "Select a local model…";
-    placeholder.selected = true;
-    placeholder.disabled = true;
-    modelSelect.append(placeholder);
-  }
+  modelOptions.innerHTML = "";
   for (const model of models) {
-    const option = document.createElement("option");
-    option.value = model.id;
-    option.textContent = model.label + (model.recommended ? " · recommended" : "");
-    option.disabled = !model.available;
-    if (model.disabled_reason) option.textContent += ` — ${model.disabled_reason}`;
-    option.selected = model.id === catalog.active_id;
-    modelSelect.append(option);
+    modelOptions.append(makeModelOption(model, catalog.active_id, catalog.selection_enabled));
   }
   const hasChoice = catalog.selection_enabled && models.some((model) => model.available);
-  modelNote.textContent = active
-    ? modelSummary(active)
-    : hasChoice
+  modelTriggerLabel.textContent = catalog.switching
+    ? "Switching model…"
+    : active?.label || (catalog.active_id ? "Current local model" : "Choose a model");
+  modelTrigger.title = active ? modelSummary(active) : "Choose the local tutor model";
+  modelNote.textContent = !catalog.selection_enabled
+    ? "Only the laptop operator can change the shared tutor model."
+    : active
+      ? modelSummary(active)
+      : hasChoice
       ? "The current engine is outside this registry. Choose an installed tutor model."
-      : catalog.selection_enabled
-        ? "No verified optional model is installed."
-        : "Only the laptop operator can change the shared tutor model.";
-  modelSelect.dataset.switching = String(catalog.switching === true);
-  modelSelect.disabled = anyGeneration() || catalog.switching === true || !hasChoice;
+      : "No verified optional model is installed.";
+  modelTrigger.dataset.loadFailed = "false";
+  modelTrigger.dataset.switching = String(catalog.switching === true);
+  modelTrigger.disabled = false;
+  if (catalog.switching) scheduleModelCatalogRecovery();
+  else if (modelRecoveryTimer !== null) {
+    clearTimeout(modelRecoveryTimer);
+    modelRecoveryTimer = null;
+  }
+  syncComposerState();
+}
+
+function scheduleModelCatalogRecovery() {
+  if (modelRecoveryTimer !== null) return;
+  modelRecoveryTimer = setTimeout(async () => {
+    modelRecoveryTimer = null;
+    const recovered = await refreshModelCatalog();
+    if (!recovered || modelTrigger.dataset.switching === "true") {
+      scheduleModelCatalogRecovery();
+    }
+  }, 2500);
 }
 
 async function refreshModelCatalog() {
+  const preserveSwitchLock = modelSwitchUncertain
+    || modelTrigger.dataset.switching === "true";
   try {
     const response = await fetch("/v1/models");
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    modelSwitchUncertain = false;
     renderModelCatalog(await response.json());
+    return true;
   } catch {
-    modelSelect.disabled = true;
-    modelNote.textContent = "Could not read the local model registry.";
+    modelTrigger.dataset.loadFailed = "true";
+    if (preserveSwitchLock) {
+      modelSwitchUncertain = true;
+      modelTrigger.dataset.switching = "true";
+      modelTriggerLabel.textContent = "Checking model status…";
+      modelNote.textContent = "The switch may still be completing. Choices stay locked until Muta reconnects.";
+      scheduleModelCatalogRecovery();
+    } else {
+      modelTrigger.dataset.switching = "false";
+      const active = modelCatalog?.models?.find((model) => model.id === modelCatalog.active_id);
+      modelTriggerLabel.textContent = active?.label || "Local model";
+      modelNote.textContent = "Could not read the local model registry.";
+    }
+    syncComposerState();
+    return false;
   }
 }
 
-modelSelect.addEventListener("change", async () => {
-  const target = modelSelect.value;
+async function selectModel(target) {
   const prior = modelCatalog && modelCatalog.active_id;
-  if (!target || target === prior) return;
+  if (!target || target === prior) {
+    setModelMenuOpen(false, { restoreFocus: true });
+    return;
+  }
   if (anyGeneration()) {
-    modelSelect.value = prior;
     toast("Stop the current reply before changing models.");
     return;
   }
   const chosen = modelCatalog.models.find((model) => model.id === target);
-  modelSelect.dataset.switching = "true";
-  modelSelect.disabled = true;
+  if (!chosen || !chosen.available || !modelCatalog.selection_enabled) return;
+  setModelMenuOpen(false, { restoreFocus: true });
+  modelSwitchUncertain = true;
+  modelTrigger.dataset.switching = "true";
+  modelTriggerLabel.textContent = `Loading ${chosen.label}…`;
   syncComposerState();
   modelNote.textContent = `Loading ${chosen.label}… The chat and saved conversations will stay open.`;
   toast(`Switching to ${chosen.label}…`, 120000);
@@ -1652,17 +1740,77 @@ modelSelect.addEventListener("change", async () => {
       body: JSON.stringify({ model_id: target }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(body.detail || `HTTP ${response.status}`);
+      error.definitive = response.status >= 400
+        && response.status < 500
+        && typeof body.detail === "string";
+      throw error;
+    }
+    modelSwitchUncertain = false;
     renderModelCatalog(body);
     toast(`${chosen.label} is ready. New replies will use it.`);
     announce(`${chosen.label} is ready.`);
   } catch (error) {
+    if (!error.definitive) {
+      modelTrigger.dataset.loadFailed = "true";
+      modelTriggerLabel.textContent = "Checking model status…";
+      modelNote.textContent = "The switch may still be completing. Choices stay locked until Muta reconnects.";
+      toast("The connection dropped while switching models. Muta is checking the result.");
+      scheduleModelCatalogRecovery();
+      return;
+    }
+    modelSwitchUncertain = false;
+    modelTrigger.dataset.switching = "false";
     toast(`Model switch failed: ${error.message}`);
     await refreshModelCatalog();
   } finally {
-    modelSelect.dataset.switching = "false";
     syncComposerState();
   }
+}
+
+modelTrigger.addEventListener("click", (event) => {
+  // Keyboard activation emits a zero-detail click. Move focus into the menu in that case;
+  // pointer users keep focus on the trigger until they choose a row.
+  setModelMenuOpen(modelMenu.hidden, { focus: event.detail === 0 });
+});
+modelTrigger.addEventListener("keydown", (event) => {
+  const opensMenu = event.key === "ArrowDown"
+    || event.key === "ArrowUp"
+    || event.key === "Enter"
+    || event.key === " ";
+  if (!opensMenu) return;
+  event.preventDefault();
+  const toggle = event.key === "Enter" || event.key === " ";
+  setModelMenuOpen(toggle ? modelMenu.hidden : true, { focus: true });
+});
+modelOptions.addEventListener("click", (event) => {
+  const option = event.target.closest(".model-option");
+  if (!option || option.disabled) return;
+  void selectModel(option.dataset.modelId);
+});
+modelMenu.addEventListener("keydown", (event) => {
+  const options = [...modelOptions.querySelectorAll(".model-option:not(:disabled)")];
+  const index = options.indexOf(document.activeElement);
+  let target = null;
+  if (event.key === "ArrowDown") target = options[(index + 1) % options.length];
+  if (event.key === "ArrowUp") target = options[(index - 1 + options.length) % options.length];
+  if (event.key === "Home") target = options[0];
+  if (event.key === "End") target = options[options.length - 1];
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    setModelMenuOpen(false);
+    modelTrigger.focus();
+    return;
+  }
+  if (target) {
+    event.preventDefault();
+    target.focus();
+  }
+});
+document.addEventListener("click", (event) => {
+  if (!modelMenu.hidden && !event.target.closest(".model-selector")) setModelMenuOpen(false);
 });
 
 refreshModelCatalog();

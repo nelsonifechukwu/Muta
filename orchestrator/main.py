@@ -37,6 +37,7 @@ from orchestrator.math.app import app as math_app
 from orchestrator.pedagogy.app import app as pedagogy_app
 from orchestrator.retrieval.app import app as retrieval_app
 from orchestrator.telemetry import get_hub
+from orchestrator.version import git_sha
 from runtime.config import RuntimeConfig
 from runtime.model_catalog import ModelManager
 from runtime.server import LlamaServer
@@ -231,6 +232,12 @@ async def _request_id(request, call_next):
     finally:
         request_id_var.reset(token)
     response.headers["X-Request-ID"] = rid
+    # `/ui` is a small, local bundle. Do not retain it: conditional Last-Modified handling can
+    # otherwise accept a stale authored asset after a same-second export or a rollback, combining
+    # a new index.html with an old app.js/stylesheet (the unauthenticated-client + huge-SVG bug).
+    if request.url.path == "/ui" or request.url.path.startswith("/ui/"):
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["X-Muta-UI-Revision"] = git_sha()
     return response
 
 

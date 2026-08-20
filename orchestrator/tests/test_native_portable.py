@@ -15,7 +15,8 @@ def test_sqlite_readiness_creates_portable_database(tmp_path):
 def test_checked_in_ui_is_mounted_without_nginx():
     assert any(getattr(route, "path", None) == "/ui" for route in app.routes)
     client = TestClient(app)
-    assert client.get("/ui/").status_code == 200
-    assert client.get("/ui/app.js").status_code == 200
-    assert client.get("/ui/styles.css").status_code == 200
-    assert client.get("/ui/worklet.js").status_code == 200
+    for path in ("/ui/", "/ui/app.js", "/ui/styles.css", "/ui/worklet.js"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-store, max-age=0"
+        assert response.headers["x-muta-ui-revision"]

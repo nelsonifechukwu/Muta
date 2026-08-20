@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Muta</title>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260820-chat-shell-2">
 </head>
 <body>
   <div id="app">
@@ -19,21 +19,33 @@
         <button id="new-chat" class="ghost" title="New chat">+ New chat</button>
       </div>
       <nav id="conversation-list" aria-label="Conversations"></nav>
-      <div class="model-picker">
-        <label for="model-select">Tutor model</label>
-        <select id="model-select" aria-describedby="model-note" disabled>
-          <option>Loading local models…</option>
-        </select>
-        <small id="model-note">The recommended model is selected by default.</small>
-      </div>
       <button id="settings-open" class="settings-open" type="button" aria-haspopup="dialog">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.38 2.8a.49.49 0 0 0-.49-.4h-3.84a.49.49 0 0 0-.49.4L9.2 5.32c-.58.24-1.12.56-1.62.94L5.19 5.3a.48.48 0 0 0-.61.22L2.66 8.84a.49.49 0 0 0 .12.64l2.03 1.58c-.05.31-.09.64-.09.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.12.22.39.31.61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.52c.05.24.25.4.49.4h3.84c.24 0 .44-.16.49-.4l.36-2.52c.58-.24 1.12-.56 1.62-.94l2.39.96c.22.08.49 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.38 2.8a.49.49 0 0 0-.49-.4h-3.84a.49.49 0 0 0-.49.4L9.2 5.32c-.58.24-1.12.56-1.62.94L5.19 5.3a.48.48 0 0 0-.61.22L2.66 8.84a.49.49 0 0 0 .12.64l2.03 1.58c-.05.31-.09.64-.09.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.12.22.39.31.61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.52c.05.24.25.4.49.4h3.84c.24 0 .44-.16.49-.4l.36-2.52c.58-.24 1.12-.56 1.62-.94l2.39.96c.22.08.49 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>
         <span>Settings</span>
       </button>
       <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label">offline · local CPU</span></div>
     </aside>
 
     <main id="main">
+      <header class="chat-header">
+        <div class="model-selector">
+          <button id="model-trigger" class="model-trigger" type="button" aria-haspopup="menu"
+            aria-expanded="false" aria-controls="model-menu" aria-describedby="model-note" disabled>
+            <span id="model-trigger-label">Loading models…</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div id="model-menu" class="model-menu" role="menu" aria-labelledby="model-trigger" hidden>
+            <div class="model-menu-heading">
+              <span>Choose a model</span>
+              <small>Runs on this machine</small>
+            </div>
+            <div id="model-options"></div>
+            <p id="model-note" role="status">The recommended model is selected by default.</p>
+          </div>
+        </div>
+      </header>
       <div id="chat-scroll">
         <div id="chat-column">
           <div id="empty-state">
@@ -132,8 +144,8 @@
   <script src="vendor/katex/katex.min.js"></script>
   <script src="vendor/marked.min.js"></script>
   <script src="vendor/purify.min.js"></script>
-  <script src="math.js"></script>
-  <script src="app.js"></script>
-  <script src="audio.js"></script>
+  <script src="math.js?v=20260820-chat-shell-2"></script>
+  <script src="app.js?v=20260820-chat-shell-2"></script>
+  <script src="audio.js?v=20260820-chat-shell-2"></script>
 </body>
 </html>
