@@ -27,6 +27,8 @@ import base64
 import hashlib
 import hmac
 import os
+import uuid
+from pathlib import Path
 
 from fastapi import Header, HTTPException, Query
 
@@ -34,6 +36,7 @@ _SECRET_ENV = "MUTA_AUTH_SECRET"
 # Bound the token so a signed value cannot be a prompt-bomb in its own right, and reject
 # absurd student ids early.
 MAX_STUDENT_ID = 128
+_OPERATOR_ID_FILE_ENV = "MUTA_OPERATOR_ID_FILE"
 
 
 def _secret() -> bytes | None:
@@ -56,6 +59,36 @@ def mint_token(student_id: str) -> str:
         return student_id
     raw = f"{student_id}:{_sign(student_id, secret)}"
     return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
+
+
+def operator_student_id() -> str:
+    """Return the persistent random identity used only for loopback operator sessions.
+
+    The id is deliberately stored outside browser state: browser storage is scoped by origin,
+    and an SSH tunnel's local port is part of that origin.  An exclusive mode-0600 create keeps
+    concurrent first requests from producing different ids.
+    """
+    path = Path(os.environ.get(_OPERATOR_ID_FILE_ENV, "data/operator-student-id"))
+
+    def read() -> str:
+        value = path.read_text().strip()
+        parsed = uuid.UUID(value)
+        if str(parsed) != value:
+            raise ValueError("operator student id must be a canonical UUID")
+        return value
+
+    try:
+        return read()
+    except FileNotFoundError:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        value = str(uuid.uuid4())
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            return read()
+        with os.fdopen(fd, "w") as stream:
+            stream.write(value + "\n")
+        return value
 
 
 def verify_token(token: str | None) -> str | None:

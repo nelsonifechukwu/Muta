@@ -269,6 +269,10 @@ native_linux_up() {
     require_native_port_free "${MUTA_NATIVE_PORT:-8000}" "gateway"
     export MUTA_RT_AUTOSTART=1
     export MUTA_RT_DB_URL="${MUTA_RT_DB_URL:-sqlite:///data/muta.sqlite3}"
+    # Browser storage is isolated by port. Native operator sessions instead receive one random,
+    # persistent loopback identity; LAN clients keep their per-browser ids.
+    export MUTA_UNIFY_LOOPBACK_CHATS="${MUTA_UNIFY_LOOPBACK_CHATS:-1}"
+    export MUTA_OPERATOR_ID_FILE="${MUTA_OPERATOR_ID_FILE:-$PWD/data/operator-student-id}"
     # Model replacement is a machine-wide operator action. The API also verifies that the
     # socket peer is loopback, so LAN classroom clients cannot restart the shared engine.
     export MUTA_ALLOW_MODEL_SWITCH="${MUTA_ALLOW_MODEL_SWITCH:-1}"

@@ -63,6 +63,12 @@ Selection is enabled only by the native Linux launcher and only for requests who
 is loopback. The laptop operator can use the local browser (or an SSH-forwarded browser), while
 LAN classroom clients may chat but cannot globally restart the shared engine.
 
+Native Linux mode also gives loopback browser sessions one persistent random operator identity.
+The identity is stored in `data/operator-student-id`, not browser storage, so changing an SSH
+tunnel's local port does not create a separate conversation list. Non-loopback clients keep their
+per-browser identities. This is an interim local-operator policy; the planned account layer will
+replace it when individual users are introduced.
+
 A model change interrupts an in-flight generation. The UI therefore disables the selector
 during a reply and disables new generation controls while the replacement is loading.
 

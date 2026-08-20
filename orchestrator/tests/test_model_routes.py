@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from fastapi.testclient import TestClient
 
 from orchestrator.gateway import routes
@@ -79,3 +81,31 @@ def test_model_select_is_for_the_loopback_operator_only(monkeypatch):
     assert response.status_code == 403
     assert routes._model_switch_allowed("127.0.0.1") is True
     assert routes._model_switch_allowed("192.168.1.20") is False
+
+
+def test_auth_session_unifies_only_loopback_operator_identity(monkeypatch, tmp_path):
+    operator_file = tmp_path / "operator-id"
+    monkeypatch.setenv("MUTA_UNIFY_LOOPBACK_CHATS", "1")
+    monkeypatch.setenv("MUTA_OPERATOR_ID_FILE", str(operator_file))
+    monkeypatch.setattr(routes, "_is_loopback_peer", lambda peer: peer == "testclient")
+    client = TestClient(app)
+
+    first = client.post("/v1/auth/session", json={"student_id": "port-one"}).json()
+    second = client.post("/v1/auth/session", json={"student_id": "port-two"}).json()
+
+    assert first["student_id"] == second["student_id"]
+    assert first["student_id"] not in {"port-one", "port-two"}
+    assert uuid.UUID(first["student_id"])
+    assert operator_file.stat().st_mode & 0o777 == 0o600
+
+
+def test_auth_session_keeps_non_loopback_identity(monkeypatch, tmp_path):
+    monkeypatch.setenv("MUTA_UNIFY_LOOPBACK_CHATS", "1")
+    monkeypatch.setenv("MUTA_OPERATOR_ID_FILE", str(tmp_path / "operator-id"))
+    monkeypatch.setattr(routes, "_is_loopback_peer", lambda _: False)
+
+    response = TestClient(app).post("/v1/auth/session", json={"student_id": "classroom-device"})
+
+    assert response.status_code == 200
+    assert response.json()["student_id"] == "classroom-device"
+    assert not (tmp_path / "operator-id").exists()

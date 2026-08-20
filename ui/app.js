@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-const studentId = (() => {
+let studentId = (() => {
   let id = localStorage.getItem("muta-student");
   if (!id) {
     id = crypto.randomUUID();
@@ -28,7 +28,14 @@ async function ensureAuth() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ student_id: studentId }),
     });
-    if (r.ok) authToken = (await r.json()).token || studentId;
+    if (r.ok) {
+      const session = await r.json();
+      // Native loopback mode returns one persistent operator id. Unlike localStorage, this is
+      // independent of the SSH tunnel's local port, so every operator URL sees the same chats.
+      studentId = session.student_id || studentId;
+      authToken = session.token || studentId;
+      localStorage.setItem("muta-student", studentId);
+    }
   } catch {
     /* offline / older server: fall back to the student id (dev-mode token) */
   }
@@ -1053,7 +1060,7 @@ inputEl.addEventListener("keydown", (e) => {
 
 // Exposed for audio.js (the voice loop reuses the transcript rendering).
 window.MutaChat = {
-  studentId,
+  get studentId() { return studentId; },
   getConversationId: () => conversationId,
   setConversationId: (cid) => {
     conversationId = cid;

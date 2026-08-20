@@ -64,7 +64,12 @@ from contracts.models import (
     VisionReply,
 )
 from orchestrator import bench_metrics
-from orchestrator.gateway.auth import caller_from_token, mint_token, require_caller
+from orchestrator.gateway.auth import (
+    caller_from_token,
+    mint_token,
+    operator_student_id,
+    require_caller,
+)
 from orchestrator.gateway.deps import (
     get_engine,
     get_ladder,
@@ -172,13 +177,19 @@ def ready() -> ReadyResponse:
     )
 
 
-def _model_switch_allowed(peer_host: str) -> bool:
-    if os.environ.get("MUTA_ALLOW_MODEL_SWITCH") != "1":
-        return False
+def _is_loopback_peer(peer_host: str) -> bool:
     try:
         return ipaddress.ip_address(peer_host).is_loopback
     except ValueError:
         return False
+
+
+def _model_switch_allowed(peer_host: str) -> bool:
+    return os.environ.get("MUTA_ALLOW_MODEL_SWITCH") == "1" and _is_loopback_peer(peer_host)
+
+
+def _unified_loopback_identity(peer_host: str) -> bool:
+    return os.environ.get("MUTA_UNIFY_LOOPBACK_CHATS") == "1" and _is_loopback_peer(peer_host)
 
 
 @router.get("/models", response_model=ModelCatalogResponse, tags=["runtime"])
@@ -726,15 +737,18 @@ def attachment(
 
 
 @router.post("/auth/session", response_model=AuthTokenResponse, tags=["ops"])
-def auth_session(req: AuthTokenRequest) -> AuthTokenResponse:
+def auth_session(request: Request, req: AuthTokenRequest) -> AuthTokenResponse:
     """Mint a bearer token for a per-device learner id. With MUTA_AUTH_SECRET set the token is
     HMAC-signed (unforgeable); without it the token is the id itself (opaque per-device
-    secret). The client sends it as `Authorization: Bearer <token>` on data endpoints."""
+    secret). Native loopback mode replaces port-scoped browser ids with one persistent operator
+    id. The client sends the token as `Authorization: Bearer <token>` on data endpoints."""
+    peer = request.client.host if request.client else ""
+    student_id = operator_student_id() if _unified_loopback_identity(peer) else req.student_id
     try:
-        token = mint_token(req.student_id)
+        token = mint_token(student_id)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
-    return AuthTokenResponse(student_id=req.student_id, token=token)
+    return AuthTokenResponse(student_id=student_id, token=token)
 
 
 @router.delete("/students/{student_id}", response_model=StudentErased, tags=["ops"])
