@@ -103,7 +103,7 @@ const EXPERIMENTS = [
   { status: "rejected", name: "Custom tensor layout", finding: "We kept the stock quantiser layout. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "tensor-layout study" },
   { status: "adopted", name: "Embedded chat template", finding: "The GGUF contains the chat template and tutoring persona, both verified on a live server. They affect evaluator responses but do not affect raw ARC or throughput measurements.", source: "prompt-format study" },
   { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "weight-streaming study" },
-  { status: "adopted", name: "Runtime-conditional model choice", finding: "Matched to the same 500-item ARC-Easy sample, Qwen3.5 0.8B leads the scalar comparison (72.7895) and Qwen2.5 1.5B leads the vector comparison (80.7697), with Math-Expert second under both (71.2324 / 75.1803). The submission choice depends on which CPU configuration the audit runs.", source: "expanded model search and second widening" },
+  { status: "adopted", name: "Runtime-conditional model choice", finding: "Matched to the same 500-item ARC-Easy sample, Qwen3.5 0.8B leads the scalar comparison (72.7895) and Qwen2.5 1.5B leads the vector comparison (80.7697). Math-Expert is second under scalar (71.2324) but third under vector (75.1803). The submission choice depends on which CPU configuration the audit runs.", source: "expanded model search and second widening" },
   { status: "adopted", name: "Second widening: Qwen2/2.5, Llama 3.2, Gemma 2, Phi-4 Mini, Orca Mini", finding: "Eight matched GGUFs under scalar and vector execution put Qwen2.5 1.5B Q4_K_M first on the vector total at 82.8697 (ARC-Easy-50). A 500-item rerun lowered that to 80.7697 at 71.8% accuracy, still the leading vector candidate.", source: "second model-architecture widening" },
   { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "quantization sweep" },
   { status: "adopted", name: "Reproducible artifact build", finding: "We rebuilt the promoted candidate from its documented source. It matched byte-for-byte once we corrected a 32-byte metadata-name difference.", source: "artifact construction study" },
@@ -118,7 +118,7 @@ const CHALLENGE_FAQ = [
   { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is evaluated on the standard laptop profile.", progress: "We developed on an M2 Mac and a GCP x86 proxy. We classify Mac results as development evidence." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
   { q: "What does cross-disciplinary integration require?", rule: "The model must depend substantively on another deep-tech discipline.", progress: "Muta plans to combine scientific tutoring with verified mathematics and local retrieval. Several relevant routes remain incomplete or return 501, so this requirement is not yet satisfied." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "Qwen2.5 1.5B, an official Qwen checkpoint, leads the current vector comparison at matched sample size. The final Qwen3.5 file, also derived from an official Qwen checkpoint, leads the matched scalar comparison. We document both models’ source, licence, and transformation." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "Math-Expert, a public Qwen3 fine-tune, is the scalar-configuration runner-up at matched sample size. The final Qwen3.5 recommendation and the Qwen2.5 vector candidate both derive from official Qwen checkpoints rather than a fine-tune. We document all three models’ source, licence, and transformation." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
@@ -175,7 +175,7 @@ function verticalGroupedChart(items, series, options = {}) {
     return mark + svgText(center, labelY, options.label(item), `text-anchor="end" transform="rotate(-38 ${center} ${labelY})" class="vgc-label"`);
   }).join("");
   return `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>
-    .vgc-grid{stroke:#e6e2db;stroke-width:1}.vgc-tick{font-size:9px;fill:#8a8580}.vgc-label{font-size:9px;fill:#3c3836}.vgc-bar.scalar{fill:#b57614}.vgc-bar.avx2{fill:#31714f}.vgc-bar.winner{stroke:#282828;stroke-width:2}.vgc-value{font-size:8px;fill:#504945;font-weight:700}
+    .vgc-grid{stroke:#e6e2db;stroke-width:1}.vgc-tick{font-size:9px;fill:#8a8580}.vgc-label{font-size:9px;fill:#3c3836}.vgc-bar.scalar{fill:#b57614}.vgc-bar.avx2{fill:#31714f}.vgc-bar.official{fill:#1b6ca8}.vgc-bar.diagnostic{fill:#b8afa3}.vgc-bar.throughput{fill:#427b58}.vgc-bar.winner{stroke:#282828;stroke-width:2}.vgc-value{font-size:8px;fill:#504945;font-weight:700}
   </style>${grid}${bars}</svg>`;
 }
 
@@ -192,19 +192,29 @@ function initReport() {
 
 function renderRuntimeChart() {
   const el = $("runtime-chart");
-  const width = 700, height = 290, left = 165, right = 52, top = 22, rowH = 49;
-  const plotW = width - left - right;
-  const bars = REPORT_RUNTIME.map((item, i) => {
-    const y = top + i * rowH;
-    const tpsW = item.tps / 35 * plotW;
-    return `${svgText(left - 10, y + 15, item.name, 'text-anchor="end" class="svg-label"')}
-      <rect x="${left}" y="${y}" width="${tpsW}" height="13" rx="2" class="svg-throughput" />
-      ${svgText(left + tpsW + 6, y + 11, `${item.tps.toFixed(2)} tok/s`, 'class="svg-value"')}
-      ${svgText(left, y + 29, `Memory: ${item.memory}`, 'class="svg-value muted"')}`;
+  const width = 560, height = 340, left = 44, right = 18, top = 22, bottom = 108;
+  const plotW = width - left - right, plotH = height - top - bottom;
+  const max = 35, ticks = [0, 10, 20, 30];
+  const groupW = plotW / REPORT_RUNTIME.length;
+  const barW = Math.max(16, Math.min(38, groupW * .5));
+  const y = (tps) => top + (max - tps) / max * plotH;
+  const grid = ticks.map((tick) => {
+    const py = y(tick);
+    return `<line x1="${left}" y1="${py}" x2="${width - right}" y2="${py}" class="vgc-grid"/>` +
+      svgText(left - 7, py + 3, tick, 'text-anchor="end" class="vgc-tick"');
   }).join("");
-  el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-    .svg-label{font-size:11px;fill:#3c3836}.svg-value{font-size:9px;fill:#427b58;font-weight:700}.svg-value.muted{fill:#8a8580;font-weight:400}.svg-throughput{fill:#427b58}
-  </style>${bars}${svgText(left, height - 8, "Generation bars share one scale; memory text preserves each source's recorded unit and caveat.", 'class="svg-foot"')}</svg>`;
+  const bars = REPORT_RUNTIME.map((item, index) => {
+    const groupX = left + index * groupW, cx = groupX + groupW / 2;
+    const px = cx - barW / 2, py = y(item.tps);
+    const labelY = height - bottom + 17;
+    return `<rect x="${px}" y="${py}" width="${barW}" height="${top + plotH - py}" rx="1.5" class="vgc-bar throughput"/>
+      ${svgText(cx, py - 6, `${item.tps.toFixed(2)} tok/s`, 'text-anchor="middle" class="vgc-value"')}
+      ${svgText(cx, labelY, item.name, `text-anchor="end" transform="rotate(-38 ${cx} ${labelY})" class="vgc-label"`)}
+      ${svgText(cx, labelY + 30, `Memory: ${item.memory}`, `text-anchor="end" transform="rotate(-38 ${cx} ${labelY + 30})" class="vgc-label muted"`)}`;
+  }).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>
+    .vgc-grid{stroke:#e6e2db;stroke-width:1}.vgc-tick{font-size:9px;fill:#8a8580}.vgc-label{font-size:9px;fill:#3c3836}.vgc-label.muted{fill:#8a8580}.vgc-bar.throughput{fill:#427b58}.vgc-value{font-size:8px;fill:#504945;font-weight:700}
+  </style>${grid}${bars}</svg>`;
 }
 
 function renderModelFunnelChart() {
@@ -251,15 +261,24 @@ function renderStreamingChart() {
 
 function renderOfficialCharts() {
   const scoreEl = $("official-score-chart");
-  const width = 360, left = 116, right = 28, top = 25, rowH = 54;
-  const height = Math.max(330, top + REPORT_CURRENT_OFFICIAL.length * rowH + 48);
-  const plotW = width - left - right;
-  const rows = REPORT_CURRENT_OFFICIAL.map((item, i) => {
-    const y = top + i * rowH;
-    const a = item.sAcc * .5 / 85 * plotW, p = item.sPerf * .3 / 85 * plotW, e = item.sEff * .2 / 85 * plotW;
-    return `${svgText(left-7,y+15,item.name,'text-anchor="end" class="svg-label"')}<rect x="${left}" y="${y}" width="${a}" height="20" class="seg acc"/><rect x="${left+a}" y="${y}" width="${p}" height="20" class="seg perf"/><rect x="${left+a+p}" y="${y}" width="${e}" height="20" class="seg eff"/>${svgText(left+(item.total/85*plotW)+5,y+15,item.total.toFixed(2),'class="svg-total"')}`;
+  const width = Math.max(420, REPORT_CURRENT_OFFICIAL.length * 78 + 90), height = 360;
+  const left = 44, right = 18, top = 26, bottom = 118, legendY = 16;
+  const plotW = width - left - right, plotH = height - top - bottom;
+  const max = 85, groupW = plotW / REPORT_CURRENT_OFFICIAL.length;
+  const barW = Math.max(20, Math.min(46, groupW * .55));
+  const bars = REPORT_CURRENT_OFFICIAL.map((item, index) => {
+    const groupX = left + index * groupW, cx = groupX + groupW / 2, px = cx - barW / 2;
+    const bottomY = top + plotH;
+    const accH = item.sAcc * .5 / max * plotH, perfH = item.sPerf * .3 / max * plotH, effH = item.sEff * .2 / max * plotH;
+    const accTop = bottomY - accH, perfTop = accTop - perfH, effTop = perfTop - effH;
+    const labelY = height - bottom + 17;
+    return `<rect x="${px}" y="${accTop}" width="${barW}" height="${accH}" class="seg acc"/>
+      <rect x="${px}" y="${perfTop}" width="${barW}" height="${perfH}" class="seg perf"/>
+      <rect x="${px}" y="${effTop}" width="${barW}" height="${effH}" class="seg eff"/>
+      ${svgText(cx, effTop - 6, item.total.toFixed(2), 'text-anchor="middle" class="svg-total"')}
+      ${svgText(cx, labelY, item.name, `text-anchor="end" transform="rotate(-38 ${cx} ${labelY})" class="svg-label"`)}`;
   }).join("");
-  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>.svg-label{font-size:8px;fill:#504945}.seg.acc{fill:#1b6ca8}.seg.perf{fill:#427b58}.seg.eff{fill:#b57614}.svg-total{font-size:9px;fill:#282828;font-weight:800}.legend{font-size:8px;fill:#6b6866}</style>${rows}<rect x="${left}" y="${height-35}" width="8" height="8" class="seg acc"/>${svgText(left+12,height-28,"Accuracy",'class="legend"')}<rect x="${left+65}" y="${height-35}" width="8" height="8" class="seg perf"/>${svgText(left+77,height-28,"Performance",'class="legend"')}<rect x="${left+145}" y="${height-35}" width="8" height="8" class="seg eff"/>${svgText(left+157,height-28,"Efficiency",'class="legend"')}</svg>`;
+  scoreEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>.svg-label{font-size:9px;fill:#3c3836}.seg.acc{fill:#1b6ca8}.seg.perf{fill:#427b58}.seg.eff{fill:#b57614}.svg-total{font-size:9px;fill:#282828;font-weight:800}.legend{font-size:8px;fill:#6b6866}</style>${bars}<rect x="${left}" y="${legendY}" width="8" height="8" class="seg acc"/>${svgText(left+12,legendY+7,"Accuracy",'class="legend"')}<rect x="${left+65}" y="${legendY}" width="8" height="8" class="seg perf"/>${svgText(left+77,legendY+7,"Performance",'class="legend"')}<rect x="${left+150}" y="${legendY}" width="8" height="8" class="seg eff"/>${svgText(left+162,legendY+7,"Efficiency",'class="legend"')}</svg>`;
 
   const scatterEl = $("official-scatter-chart");
   const sw=360, sh=330, sl=46, sr=20, st=25, sb=48;
@@ -373,31 +392,13 @@ function renderOvernight(campaign) {
     ? "Math-Expert 0.6B Q4_K_M" : "Qwen3.5 0.8B Q4_0";
 
   {
-    const width = 700, left = 192, right = 42, top = 34, groupH = 92, barH = 24;
-    const height = top + finalists.length * groupH + 42;
-    const plotW = width - left - right;
-    const x = (value) => left + Number(value) / 85 * plotW;
-    let grid = "";
-    [0, 20, 40, 60, 80].forEach((tick) => {
-      const px = x(tick);
-      grid += `<line x1="${px}" y1="${top - 15}" x2="${px}" y2="${height - 32}" class="overnight-grid"/>` +
-        svgText(px, height - 12, tick, 'text-anchor="middle" class="overnight-tick"');
-    });
-    const rows = finalists.map((entry, index) => {
-      const y = top + index * groupH;
-      const scalar = Number(entry.official.s_total);
-      const avx2 = Number(entry.avx2_fixed_15.arc_easy_50.s_total);
-      const avx2Winner = entry.official.model === campaign.official_profiler_winner;
-      return `${svgText(left - 12, y + 31, finalistLabel(entry.official.model), 'text-anchor="end" class="overnight-model"')}
-        <rect x="${left}" y="${y}" width="${x(scalar) - left}" height="${barH}" rx="2" class="overnight-bar direct"/>
-        ${svgText(left + 8, y + 16, scalar.toFixed(4), 'text-anchor="start" class="overnight-total"')}
-        <rect x="${left}" y="${y + 32}" width="${x(avx2) - left}" height="${barH}" rx="2" class="overnight-bar avx2 ${avx2Winner ? "latest-winner" : ""}"/>
-        ${svgText(left + 8, y + 48, avx2.toFixed(4), 'text-anchor="start" class="overnight-total"')}
-        ${avx2Winner ? svgText(x(avx2) + 8, y + 48, "highest vector total", 'class="overnight-choice external"') : ""}`;
-    }).join("");
-    avx2Chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-model{font-size:12px;fill:#3c3836}.overnight-bar.direct{fill:#1b6ca8}.overnight-bar.avx2{fill:#31714f}.overnight-bar.latest-winner{stroke:#282828;stroke-width:2}.overnight-total{font-size:11px;fill:#fff;font-weight:800}.overnight-choice.external{font-size:10px;fill:#282828;font-weight:700}
-    </style>${grid}${rows}</svg>`;
+    const officialWinnerModel = campaign.official_profiler_winner;
+    avx2Chart.innerHTML = verticalGroupedChart(finalists, [
+      {className: "scalar", value: (entry) => entry.official.s_total, winner: () => false},
+      {className: "avx2", value: (entry) => entry.avx2_fixed_15.arc_easy_50.s_total,
+        winner: (entry) => entry.official.model === officialWinnerModel},
+    ], {width: 420, height: 300, max: 85, ticks: [0, 20, 40, 60, 80],
+      label: (entry) => finalistLabel(entry.official.model), valueFormat: (value) => value.toFixed(1)});
     avx2Summary.textContent = finalists.map((entry) =>
       `${finalistLabel(entry.official.model)}: direct scalar ${entry.official.s_total.toFixed(4)}, ` +
       `vector ${entry.avx2_fixed_15.arc_easy_50.s_total.toFixed(4)}`
@@ -414,31 +415,13 @@ function renderOvernight(campaign) {
   }
 
   {
-    const width = 620, left = 176, right = 38, top = 34, groupH = 92, barH = 24;
-    const height = top + finalists.length * groupH + 42;
-    const plotW = width - left - right;
-    const x = (value) => left + Number(value) / 85 * plotW;
-    let grid = "";
-    [0, 20, 40, 60, 80].forEach((tick) => {
-      const px = x(tick);
-      grid += `<line x1="${px}" y1="${top - 15}" x2="${px}" y2="${height - 32}" class="overnight-grid"/>` +
-        svgText(px, height - 12, tick, 'text-anchor="middle" class="overnight-tick"');
-    });
-    const rows = finalists.map((entry, index) => {
-      const y = top + index * groupH;
-      const direct = Number(entry.official.s_total);
-      const diagnostic = Number(entry.diagnostic_total_with_arc_easy_500);
-      const recommended = entry.official.model === campaign.risk_adjusted_recommendation;
-      return `${svgText(left - 12, y + 31, finalistLabel(entry.official.model), 'text-anchor="end" class="overnight-model"')}
-        <rect x="${left}" y="${y}" width="${x(direct) - left}" height="${barH}" rx="2" class="overnight-bar direct"/>
-        ${svgText(left + 8, y + 16, direct.toFixed(2), 'text-anchor="start" class="overnight-total"')}
-        <rect x="${left}" y="${y + 32}" width="${x(diagnostic) - left}" height="${barH}" rx="2" class="overnight-bar diagnostic ${recommended ? "recommended" : ""}"/>
-        ${svgText(left + 8, y + 48, diagnostic.toFixed(2), 'text-anchor="start" class="overnight-total"')}
-        ${recommended ? svgText(left + 55, y + 48, "risk-adjusted choice", 'class="overnight-choice"') : ""}`;
-    }).join("");
-    scoreChart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><style>
-      .overnight-grid{stroke:#e6e2db}.overnight-tick{font-size:11px;fill:#8a8580}.overnight-model{font-size:12px;fill:#3c3836}.overnight-bar.direct{fill:#1b6ca8}.overnight-bar.diagnostic{fill:#b8afa3}.overnight-bar.recommended{fill:#427b58;stroke:#282828;stroke-width:1.5}.overnight-total{font-size:11px;fill:#fff;font-weight:800}.overnight-choice{font-size:10px;fill:#fff;font-weight:700}
-    </style>${grid}${rows}</svg>`;
+    const recommendedModel = campaign.risk_adjusted_recommendation;
+    scoreChart.innerHTML = verticalGroupedChart(finalists, [
+      {className: "official", value: (entry) => entry.official.s_total, winner: () => false},
+      {className: "diagnostic", value: (entry) => entry.diagnostic_total_with_arc_easy_500,
+        winner: (entry) => entry.official.model === recommendedModel},
+    ], {width: 420, height: 300, max: 85, ticks: [0, 20, 40, 60, 80],
+      label: (entry) => finalistLabel(entry.official.model), valueFormat: (value) => value.toFixed(1)});
     scoreSummary.textContent = finalists.map((entry) =>
       `${finalistLabel(entry.official.model)}: profiler slice ${entry.official.s_total.toFixed(2)}, ` +
       `larger-sample diagnostic ${entry.diagnostic_total_with_arc_easy_500.toFixed(2)}`

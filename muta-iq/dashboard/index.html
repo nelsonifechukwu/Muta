@@ -60,13 +60,17 @@
     <header class="hero" id="overview">
       <p class="eyebrow">The story of a competition entry</p>
       <h1>Teaching a laptop to tutor</h1>
-      <p class="dek">I picked Math &amp; Scientific Reasoning because pragmatic education is something African classrooms need and rarely get enough of. This is the story of fitting a model that teaches that way onto an 8 GB laptop, and everything we had to narrow down to make it fit.</p>
+      <p class="dek">I picked Math &amp; Scientific Reasoning because pragmatic education is something African classrooms need and rarely get enough of: too many students for one teacher, and too little time to slow down on the question any single student actually got wrong.</p>
+
+      <p class="dek">The catch is where it has to run. The competition doesn't judge a model in a data centre. It judges whatever fits on a $150–$500 laptop already sitting in that classroom, offline, on whatever battery and memory that laptop happens to have. That single constraint turns model selection into a fight between three things that all cost each other: a model has to know enough to teach, answer fast enough to hold a conversation, and fit in memory tight enough that most laptops would call it cramped. Push on any one of those and the other two push back.</p>
+
+      <p class="dek">This page is the story of that fight: the two approaches we tried, and everything we pulled on to make one of them fit.</p>
 
       <div class="verdict">
         <div>
           <p class="verdict-label">Where the story stands, for now</p>
           <h2><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></h2>
-          <p>That's still our supplied-profiler submission: once every finalist is matched to the same 500-item ARC-Easy sample, it leads the scalar comparison. Under the vector configuration, though, a candidate we hadn't even tested until the second widening below, Qwen2.5 1.5B Q4_K_M, leads instead. Which one the judges actually see depends on a CPU feature this page can't confirm from here. The rest of the page tells you how we got to that split.</p>
+          <p>That's still our supplied-profiler submission: once every finalist is matched to the same 500-item ARC-Easy sample, it leads the scalar comparison. Under the vector configuration, though, a different model leads instead: Qwen2.5 1.5B Q4_K_M, a candidate we hadn't even tested until the second widening below. Which one the judges actually see depends on a CPU feature this page can't confirm from here. The rest of the page tells you how we got to that split.</p>
         </div>
         <div class="regime-result-grid">
           <article class="scalar-result">
@@ -80,7 +84,7 @@
         </div>
       </div>
 
-      <p class="hero-caveat"><strong>Selection condition:</strong> submit Qwen3.5 if the audit runs the supplied scalar configuration, since it leads that matched comparison. Qwen2.5 1.5B leads the vector comparison, but still needs the physical-target run and the embedded-behaviour checks Qwen3.5 has already passed before it could replace it. Neither candidate is a guaranteed winner outside its own CPU configuration.</p>
+      <p class="hero-caveat"><strong>Selection condition:</strong> submit Qwen3.5 if the audit runs the supplied scalar configuration, since it leads that matched comparison. Qwen2.5 1.5B leads the vector comparison, but still needs the same physical-target run as Qwen3.5, plus the embedded-behaviour check Qwen3.5 has already been through, before it could replace it. Neither candidate is a guaranteed winner outside its own CPU configuration.</p>
       <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from the report snapshot.</strong> The operational appendix shows the configured campaign.</p>
 
       <dl class="artifact-line">
@@ -165,7 +169,7 @@
       <p class="lead">Once we knew the shape of the trade-off, the question became mechanical: which levers actually move file size, RAM, and speed on this exact evaluator? We ended up pulling nine of them, roughly in this order, and each one either survived and narrowed the model further, or it didn't and we recorded why not.</p>
 
       <div class="experiment-sequence" aria-label="Overview of methods explored">
-        <article><span>1</span><h3>Quantization</h3><p>Not just bits per weight, but which quantization type the audit binary can actually run fast.</p></article>
+        <article><span>1</span><h3>Quantization</h3><p>Which quantization type the audit binary can actually run fast, not just how many bits per weight.</p></article>
         <article><span>2</span><h3>Parameter deduplication</h3><p>Dropping the duplicated output head when embedding and head can share one matrix.</p></article>
         <article><span>3</span><h3>Vocabulary pruning</h3><p>Removing tokens the tutor will never emit, and checking token by token that nothing else changed.</p></article>
         <article><span>4</span><h3>Weight streaming</h3><p>Paging weights from disk instead of keeping the whole file resident, and finding the boundary the competition draws around it.</p></article>
@@ -176,7 +180,7 @@
         <article><span>9</span><h3>Runtime configuration we couldn't submit</h3><p>Repacking, mmap policy, thread count: real engineering wins that live in Muta's own runtime, not in the scored file.</p></article>
       </div>
 
-      <p>The first five apply directly to the file we ship, and the sixth changed which of them actually wins. The seventh and eighth ran in parallel with everything before them. The ninth taught us where the submission boundary actually sits, which mattered enough to shape how we read every other result below. Quantization first, since it's the lever every other decision had to route around.</p>
+      <p>Quantization, deduplication, and behaviour-baking are the three that live directly in the file we ship. Vocabulary pruning shaped the other road's file, the one that didn't win. Streaming and runtime tuning are engine-only: one got rejected outright, the other just makes every later comparison trustworthy. The sixth, instruction-set targeting, doesn't touch the file either, but it changes which quantization choice actually wins. Widening the search, twice, decided which model earns all of this. Quantization first, since it's the lever every other decision had to route around.</p>
     </section>
 
     <section class="chapter" id="quantization" aria-labelledby="quant-title">
@@ -356,7 +360,7 @@
 
       <aside class="design-note warning-note">
         <p class="design-note-label">Submission constraint</p>
-        <p>We still use the streaming engine and disabled repacking in Muta's own product, since they're real wins for anyone actually running the app. Neither one enters the competition score, because the organiser evaluates the GGUF with its own runtime, not ours.</p>
+        <p>We still use the streaming engine and disabled repacking in Muta's own product, since they're real wins for anyone running the app. Neither one enters the competition score, because the organiser evaluates the GGUF with its own runtime, not ours.</p>
       </aside>
     </section>
 
@@ -381,7 +385,7 @@
         <article><p class="result-tag adopted">Adopted</p><h3>Unified KV, two checkpoints</h3><p>This configuration cut retained state and sped up prefill without slowing decode.<span class="sidenote-number"></span><span class="sidenote">Unified KV shares capacity across active slots instead of reserving a fixed block per slot.</span></p></article>
       </div>
 
-      <p>Six threads and unified KV got us to 31.09 tok/s at 3,137 MiB, 83% of the estimated weight-bandwidth ceiling, on the development host. None of this configuration travels with the submitted GGUF; it's the ninth method from our list, the runtime work that stays ours to keep but never enters the score. It bought us trustworthy numbers, and that finally let us run the first real model-versus-model scoreboard.</p>
+      <p>Six threads and unified KV got us to 31.09 tok/s at 3,137 MiB, 83% of the estimated weight-bandwidth ceiling, on the development host. None of this configuration travels with the submitted GGUF; it's the fifth method from our list, the runtime work that stays ours to keep but never enters the score. It bought us trustworthy numbers, and that finally let us run the first real model-versus-model scoreboard.</p>
     </section>
 
     <section class="chapter" id="remaining-methods" aria-labelledby="remaining-methods-title">
@@ -389,7 +393,7 @@
         <span class="chapter-number">09</span>
         <div><p class="eyebrow">Six smaller questions</p><h2 id="remaining-methods-title">What we tried and didn't need</h2></div>
       </header>
-      <p class="lead">Six more levers sit next to the five that shipped, each tested once we had a trustworthy runtime to test them on. None of them changed the file we submit, but each one closed a question we'd otherwise still be asking.</p>
+      <p class="lead">Six more levers, each tested once we had a trustworthy runtime to test them on. None of them changed the file we submit, but each one closed a question we'd otherwise still be asking.</p>
 
       <section class="method-section" id="mixed-precision">
         <p class="figure-kicker">GGUF-contained</p><h3>Mixed tensor or layer quantization</h3>
@@ -402,7 +406,7 @@
         <p class="figure-kicker">GGUF-contained if supported</p><h3>Structured and unstructured pruning</h3>
         <p><strong>Meaning and score hypothesis.</strong> Structured pruning removes whole layers or low-rank factors a dense runtime can actually skip. Unstructured pruning zeros individual weights, and only helps if the file format and kernel give you credit for the zeros.</p>
         <p><strong>Artifacts and protocol.</strong> A Qwen control removed one layer and repeated throughput and ARC-Easy. The BitCPM branch, covered in full in the vocabulary-pruning chapter above, measured singular-value reconstruction error on its large matrices and checked whether dense GGUF storage could benefit from sparse zeros.</p>
-        <p><strong>Result and narrowing.</strong> Removing one Qwen layer gained about 3.7% decode speed but cost two ARC-Easy points, a bad trade under the decision rule from the first chapter. BitCPM's ternary matrices stayed full-rank, rank-2048 factorisation error near 0.80 before quantization, and dense GGUF storage gives unstructured zeros no credit at all. Reject every pruning branch we tested; the one pruning result that shipped was vocabulary pruning, which prunes tokens rather than weights.</p>
+        <p><strong>Result and narrowing.</strong> Removing one Qwen layer gained about 3.7% decode speed but cost two ARC-Easy points, worth a full accuracy-score point under the scoring formula, a bad trade for a few percent of throughput. BitCPM's ternary matrices stayed full-rank, rank-2048 factorisation error near 0.80 before quantization, and dense GGUF storage gives unstructured zeros no credit at all. Reject every pruning branch we tested; the one pruning result we kept was vocabulary pruning, which prunes tokens rather than weights.</p>
       </section>
 
       <section class="method-section" id="smaller-architectures">
@@ -501,7 +505,7 @@
         <figcaption><span>Fig. 10</span> Each model carries a scalar and a vector fixed-15 total, both using its ARC-Easy-50 proxy. The finalist scalar rows are participant-profiler results; the quantization-ladder rows are controlled scalar screens. Outlined bars mark the highest total in each CPU configuration.</figcaption>
       </figure>
 
-      <p>Turning the vector configuration on reordered the field, not only sped it up. Q4_K_M, penalised by the generic-C fallback under quantization's first lesson, jumped ahead of pure Q4_0 once it had a real vector kernel to run on: 80.4484 against 80.2818, a lead earned entirely by 59.7 MiB less repacking RSS, not by anything about the model, and not by any change to its measured accuracy. Even BitCPM, road two's abandoned bet, sped up 9.235× and became operationally viable, though its total still couldn't catch the Qwen variants.</p>
+      <p>Turning the vector configuration on reordered the field as well as sped it up. Q4_K_M, penalised by the generic-C fallback under quantization's first lesson, jumped ahead of pure Q4_0 once it had a real vector kernel to run on: 80.4484 against 80.2818, a lead earned entirely by 59.7 MiB less repacking RSS, not by anything about the model, and not by any change to its measured accuracy. Even BitCPM, road two's abandoned bet, sped up 9.235× and became operationally viable, though its total still couldn't catch the Qwen variants.</p>
 
       <details class="reasoning-check measurement-disclosure">
         <summary>Scalar and vector measurements</summary>
@@ -676,7 +680,7 @@
 
       <p>Under vector, Qwen2.5 1.5B leads all three finalists. Under scalar, the ranking reverses entirely: Qwen3.5 leads, Math-Expert follows, and Qwen2.5 falls to third, because the profiler kernel that runs Qwen2.5's Q4_K_M tensors is the same slow generic-C path that cost every k-quant in this story. Neither raw finalist we found first turns out to be the best answer in every regime; the honest one depends on which binary the final audit actually runs.</p>
 
-      <p>Put every model this project ever paired under matched scalar and vector execution on one axis, the seven-model quantization ladder from the first exploration alongside the eight-model architecture screen from this second one, and the same shape holds across all fifteen:</p>
+      <p>Put every model this project ever paired under matched scalar and vector execution on one axis, the seven from the first exploration alongside the eight from this one, and the same shape holds across all fifteen:</p>
 
       <figure class="report-figure wide-figure isa-score-figure">
         <div class="figure-head">
@@ -688,7 +692,7 @@
         <figcaption><span>Fig. 15</span> Fifteen GGUFs, matched scalar and vector totals, sorted by vector total. The first seven come from the quantization-ladder exploration above; the last eight are this section's screen. Qwen2.5 1.5B holds the highest vector total of any model measured in this project; Math-Expert holds the highest scalar total.</figcaption>
       </figure>
 
-      <p><strong>Narrowing.</strong> Qwen2.5 1.5B becomes the vector-configuration recommendation, provisionally, pending the same physical-target and embedded-behaviour checks Qwen3.5 has already passed. Qwen3.5 0.8B remains the scalar-configuration recommendation, ahead of Math-Expert once both are read at the same sample size. The submission choice depends on which CPU configuration the supplied profiler actually runs, not on either finalist's small-sample score alone.</p>
+      <p><strong>Narrowing.</strong> Qwen2.5 1.5B becomes the vector-configuration recommendation, provisionally, pending the same physical-target run and embedded-behaviour check Qwen3.5 has already been through. Qwen3.5 0.8B remains the scalar-configuration recommendation, ahead of Math-Expert once both are read at the same sample size. The submission choice depends on which CPU configuration the supplied profiler actually runs, not on either finalist's small-sample score alone.</p>
     </section>
 
     <section class="chapter" id="behaviour" aria-labelledby="behaviour-title">
@@ -775,7 +779,7 @@
 
       <aside class="design-note warning-note">
         <p class="design-note-label">Required validation</p>
-        <p>We still need to run the final Qwen3.5 file and Qwen2.5 1.5B on the physical target using the competition procedure, recording repeated throughput, whole-tree RSS, temperature, and throttling. Qwen2.5 also needs the same embedded chat-template and live-prompt acceptance check the final Qwen3.5 file has already passed, described in the next section.</p>
+        <p>We still need to run the final Qwen3.5 file and Qwen2.5 1.5B on the physical target using the competition procedure, recording repeated throughput, whole-tree RSS, temperature, and throttling. Qwen2.5 also needs the same embedded chat-template check the final Qwen3.5 file has already been through, described in the next section: template injection and stop-token behaviour both check out, but the hardest prompt in that battery still fails.</p>
       </aside>
 
       <aside class="design-note warning-note">
@@ -783,7 +787,7 @@
         <p><strong>We recommend submitting <code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code> under the supplied scalar profiler.</strong> Qwen2.5 1.5B Q4_K_M is the validated vector candidate; it replaces Qwen3.5 only if the final audit is confirmed to run the vector configuration and Qwen2.5 passes the physical-target and embedded-behaviour checks. Neither candidate is a guaranteed winner outside its own CPU configuration, and neither has yet passed the difficult proof prompt in our live acceptance battery.</p>
       </aside>
 
-      <p>Nine methods, two roads, two widenings, and one lesson that came back every time we changed the CPU configuration: on this evaluator, the quantization type is the kernel, not just the file size, and the kernel is the one thing that depends on hardware we can't fully confirm from here. Whatever this page says next time you read it, that's the one conclusion we don't expect to change.</p>
+      <p>Nine methods, two roads, two widenings, and one lesson that came back every time we changed the CPU configuration: on this evaluator, the kernel a quantization type runs on matters more than its file size, and the kernel is the one thing that depends on hardware we can't fully confirm from here. Whatever this page says next time you read it, that's the one conclusion we don't expect to change.</p>
     </section>
 
     <section class="chapter" id="ledger" aria-labelledby="ledger-title">
