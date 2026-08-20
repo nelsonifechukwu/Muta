@@ -50,7 +50,7 @@ const startingConversations = new Set(); // prevent duplicate sends while POST /
 let voiceGenerating = false;
 // Kept false until the Settings UI lands; the per-conversation machinery itself is already
 // capable of parallel jobs, while this gate preserves today's one-chat product behaviour.
-let allowParallelChats = false;
+let allowParallelChats = true;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
 let messageQueue = []; // {typed, attachments} — sent one by one when the tutor is free
 let telemetrySource = null;
@@ -1208,6 +1208,72 @@ window.MutaChat = {
   },
 };
 
+// --- settings --------------------------------------------------------------------------
+const settingsModal = $("#settings-modal");
+const parallelChatsToggle = $("#setting-parallel-chats");
+
+function setSettingsOpen(open) {
+  settingsModal.hidden = !open;
+  if (open) {
+    parallelChatsToggle.focus();
+  } else {
+    $("#settings-open").focus();
+  }
+}
+
+async function loadSettings() {
+  // localStorage is a compatibility fallback for an older gateway; the authenticated store
+  // is authoritative and makes the preference follow the unified loopback learner identity.
+  const cached = localStorage.getItem("muta-parallel-chats");
+  if (cached != null) allowParallelChats = cached === "true";
+  parallelChatsToggle.checked = allowParallelChats;
+  try {
+    const response = await fetch("/v1/settings", { headers: authHeaders() });
+    if (!response.ok) return;
+    const settings = await response.json();
+    allowParallelChats = settings.allow_parallel_chats !== false;
+    parallelChatsToggle.checked = allowParallelChats;
+    localStorage.setItem("muta-parallel-chats", String(allowParallelChats));
+  } catch {
+    /* keep the local fallback */
+  }
+}
+
+async function saveParallelChats(enabled) {
+  const previous = allowParallelChats;
+  allowParallelChats = enabled;
+  localStorage.setItem("muta-parallel-chats", String(enabled));
+  parallelChatsToggle.disabled = true;
+  try {
+    const response = await fetch("/v1/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ allow_parallel_chats: enabled }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  } catch {
+    allowParallelChats = previous;
+    parallelChatsToggle.checked = previous;
+    localStorage.setItem("muta-parallel-chats", String(previous));
+    toast("Couldn't save that setting.");
+  } finally {
+    parallelChatsToggle.disabled = false;
+    syncComposerState();
+  }
+}
+
+$("#settings-open").addEventListener("click", () => setSettingsOpen(true));
+$("#settings-close").addEventListener("click", () => setSettingsOpen(false));
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) setSettingsOpen(false);
+});
+parallelChatsToggle.addEventListener("change", () => {
+  void saveParallelChats(parallelChatsToggle.checked);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !settingsModal.hidden) setSettingsOpen(false);
+});
+
 // --- mobile sidebar drawer -------------------------------------------------------------
 const appEl = $("#app");
 const menuToggle = $("#menu-toggle");
@@ -1228,6 +1294,7 @@ if (menuToggle) {
 // Mint the bearer token (signed-mode servers), then load the sidebar. In default mode the
 // token already equals the student id, so a failed/slow mint never blocks startup.
 ensureAuth().then(async () => {
+  await loadSettings();
   await recoverGenerations();
   refreshSidebar();
 });

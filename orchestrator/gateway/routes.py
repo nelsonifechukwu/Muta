@@ -63,6 +63,7 @@ from contracts.models import (
     TelemetrySnapshot,
     TutorMode,
     TutorReply,
+    UserSettings,
     VerifyRequest,
     VerifyResponse,
     VisionReply,
@@ -743,6 +744,28 @@ def generation_stop(
     if job is None:
         raise HTTPException(status_code=404, detail="unknown generation")
     return GenerationStopped(job_id=job.id, stopping=job.request_stop())
+
+
+@router.get("/settings", response_model=UserSettings, tags=["conversations"])
+def user_settings(
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> UserSettings:
+    """Return private learner preferences, with contract defaults for an untouched account."""
+    return UserSettings(**engine.store.get_settings(caller))
+
+
+@router.put("/settings", response_model=UserSettings, tags=["conversations"])
+def user_settings_update(
+    requested: UserSettings,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> UserSettings:
+    """Replace the current documented settings while preserving future unknown keys."""
+    values = engine.store.get_settings(caller)
+    values.update(requested.model_dump())
+    engine.store.put_settings(caller, values)
+    return UserSettings(**values)
 
 
 @router.get("/conversations", response_model=ConversationList, tags=["conversations"])

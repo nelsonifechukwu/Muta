@@ -29,6 +29,7 @@ class FakeEngine:
         self.reply = reply
         self.raises = raises
         self.calls: list[dict] = []
+        self.store = FakeSettingsStore()
 
     def chat(self, **kwargs) -> ChatResult:
         if self.raises:
@@ -42,6 +43,17 @@ class FakeEngine:
         self.calls.append(kwargs)
         cid = kwargs.get("conversation_id") or "conv-1"
         return cid, 1, iter([("reasoning", "hmm"), ("content", "x = "), ("content", "2")])
+
+
+class FakeSettingsStore:
+    def __init__(self) -> None:
+        self.values: dict[str, dict] = {}
+
+    def get_settings(self, student_id: str) -> dict:
+        return dict(self.values.get(student_id, {}))
+
+    def put_settings(self, student_id: str, settings: dict) -> None:
+        self.values[student_id] = dict(settings)
 
 
 @pytest.fixture
@@ -195,6 +207,19 @@ def test_generation_replay_is_scoped_to_its_owner(wired):
         headers={"Authorization": "Bearer s2"},
     )
     assert response.status_code == 404
+
+
+def test_parallel_chat_setting_defaults_on_and_round_trips_privately(wired):
+    ada = {"Authorization": "Bearer ada"}
+    assert client.get("/v1/settings", headers=ada).json() == {"allow_parallel_chats": True}
+
+    updated = client.put("/v1/settings", headers=ada, json={"allow_parallel_chats": False})
+    assert updated.status_code == 200
+    assert updated.json() == {"allow_parallel_chats": False}
+    assert client.get("/v1/settings", headers=ada).json() == {"allow_parallel_chats": False}
+    assert client.get("/v1/settings", headers={"Authorization": "Bearer bimpe"}).json() == {
+        "allow_parallel_chats": True
+    }
 
 
 # --- vision -------------------------------------------------------------------------------

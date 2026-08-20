@@ -103,3 +103,13 @@ def test_switching_conversations_detaches_rendering_without_stopping_the_job():
     body = load.group("body")
     assert "leaving.handle = null" in body
     assert "stopGeneration" not in body
+
+
+def test_settings_exposes_a_persisted_parallel_chat_switch():
+    js = (UI / "app.js").read_text()
+    assert 'id="settings-modal"' in HTML
+    assert 'id="setting-parallel-chats"' in HTML
+    assert 'role="switch"' in HTML
+    assert 'fetch("/v1/settings"' in js
+    assert "allow_parallel_chats: enabled" in js
+    assert "!allowParallelChats && generationJobs.size" in js

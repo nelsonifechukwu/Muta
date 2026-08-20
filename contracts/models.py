@@ -178,6 +178,18 @@ class GenerationStopped(BaseModel):
     stopping: bool
 
 
+class UserSettings(BaseModel):
+    """Learner-facing product preferences stored with the existing private user record."""
+
+    allow_parallel_chats: bool = Field(
+        True,
+        description=(
+            "Allow a learner to use more than one of the operator-budgeted inference slots "
+            "across separate conversations. This never changes the server's slot/RAM ceiling."
+        ),
+    )
+
+
 # --- /diagnose -------------------------------------------------------------------------
 
 

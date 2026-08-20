@@ -26,6 +26,10 @@
         </select>
         <small id="model-note">The recommended model is selected by default.</small>
       </div>
+      <button id="settings-open" class="settings-open" type="button" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.38 2.8a.49.49 0 0 0-.49-.4h-3.84a.49.49 0 0 0-.49.4L9.2 5.32c-.58.24-1.12.56-1.62.94L5.19 5.3a.48.48 0 0 0-.61.22L2.66 8.84a.49.49 0 0 0 .12.64l2.03 1.58c-.05.31-.09.64-.09.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.12.22.39.31.61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.52c.05.24.25.4.49.4h3.84c.24 0 .44-.16.49-.4l.36-2.52c.58-.24 1.12-.56 1.62-.94l2.39.96c.22.08.49 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>
+        <span>Settings</span>
+      </button>
       <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label">offline · local CPU</span></div>
     </aside>
 
@@ -95,6 +99,26 @@
         <div class="fineprint">Muta runs entirely on this machine. Answers can be wrong — check the working.</div>
       </div>
     </main>
+  </div>
+
+  <div id="settings-modal" class="settings-modal" hidden>
+    <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <header>
+        <h2 id="settings-title">Settings</h2>
+        <button id="settings-close" type="button" aria-label="Close settings">✕</button>
+      </header>
+      <div class="settings-section">
+        <h3>General</h3>
+        <label class="settings-row" for="setting-parallel-chats">
+          <span>
+            <strong>Generate in multiple chats</strong>
+            <small>Keep one reply running while you start another. Parallel replies share the local CPU and may each run more slowly.</small>
+          </span>
+          <input id="setting-parallel-chats" type="checkbox" role="switch" checked>
+        </label>
+      </div>
+      <p class="settings-footnote">Muta stays within the operator’s fixed inference-slot and memory limits.</p>
+    </section>
   </div>
 
   <div id="drop-overlay" hidden><div>Drop an image or audio file to add it</div></div>

@@ -268,6 +268,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/settings:
+    get:
+      tags:
+      - conversations
+      summary: User Settings
+      description: Return private learner preferences, with contract defaults for an untouched account.
+      operationId: user_settings_v1_settings_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - conversations
+      summary: User Settings Update
+      description: Replace the current documented settings while preserving future unknown keys.
+      operationId: user_settings_update_v1_settings_put
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSettings'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/conversations:
     get:
       tags:
@@ -2001,6 +2064,17 @@ components:
       - subgoal
       title: TutoringMode
       description: The two MVP tutoring modes (ROADMAP 14 Jul scope).
+    UserSettings:
+      properties:
+        allow_parallel_chats:
+          type: boolean
+          title: Allow Parallel Chats
+          description: Allow a learner to use more than one of the operator-budgeted inference slots across
+            separate conversations. This never changes the server's slot/RAM ceiling.
+          default: true
+      type: object
+      title: UserSettings
+      description: Learner-facing product preferences stored with the existing private user record.
     ValidationError:
       properties:
         loc:
