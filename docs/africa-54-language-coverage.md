@@ -1,10 +1,10 @@
 # Africa-54 language coverage
 
-Muta's response-language catalog maps **85 candidate written languages across all 54 fully
-recognised African sovereign states**. Every mapped language appears by autonym in the Settings
-selector. Interface localization is a separate readiness boundary: a selection changes the menus
-only when its complete UI catalog exists; otherwise the menus remain in English while the chosen
-language still becomes the response preference for the next generation.
+Muta's internal catalog maps **85 candidate written languages across all 54 fully recognised
+African sovereign states**. Settings exposes the interface-ready subset by autonym: every visible
+explicit choice changes both the menus and the next response preference. Registry languages that
+still lack an accepted complete catalog remain in backend code and this planning matrix, but stay
+off the learner-facing selector until support becomes available.
 
 ## Scope and method
 
@@ -92,10 +92,11 @@ Language tags are BCP 47 / ISO identifiers. Their autonyms and writing direction
 
 ## Readiness rule
 
-- **Mapped:** present in the draft registry and selectable as a response-language preference.
-- **Interface-ready:** every required UI message is translated, so the selection also localizes
-  the browser chrome. Until then, the interface remains English rather than presenting a partial
-  translation as complete.
+- **Mapped:** present in the internal draft registry for backend and planning use.
+- **Interface-ready:** every required UI message is translated and has passed the mechanical
+  acceptance gates, so it is visible in Settings and localizes the browser chrome.
+- **Hidden:** retained in the registry but omitted from Settings because no exact translation source
+  passed the current gates. It can become visible without changing the backend language contract.
 - **Reviewed:** translation/community-review metadata has been recorded internally for the pack;
   review status is not shown in the learner-facing selector.
 - **Additional:** scheduled only after the Africa-54 baseline is mapped; it always appears

@@ -1,0 +1,318 @@
+{
+  "generated": {
+    "aa": {
+      "provenance": "google-web",
+      "target": "aa",
+      "review": "machine-assisted-unreviewed"
+    },
+    "af": {
+      "provenance": "google-web",
+      "target": "af",
+      "review": "machine-assisted-unreviewed"
+    },
+    "am": {
+      "provenance": "google-web+nllb:facebook/nllb-200-distilled-600M",
+      "target": "am",
+      "review": "machine-assisted-unreviewed"
+    },
+    "bem": {
+      "provenance": "google-web",
+      "target": "bem",
+      "review": "machine-assisted-unreviewed"
+    },
+    "din": {
+      "provenance": "google-web",
+      "target": "din",
+      "review": "machine-assisted-unreviewed"
+    },
+    "ff": {
+      "provenance": "google-web",
+      "target": "ff",
+      "review": "machine-assisted-unreviewed"
+    },
+    "ha": {
+      "provenance": "google-web",
+      "target": "ha",
+      "review": "machine-assisted-unreviewed"
+    },
+    "ig": {
+      "provenance": "google-web",
+      "target": "ig",
+      "review": "machine-assisted-unreviewed"
+    },
+    "kg": {
+      "provenance": "google-web",
+      "target": "kg",
+      "review": "machine-assisted-unreviewed"
+    },
+    "mg": {
+      "provenance": "google-web",
+      "target": "mg",
+      "review": "machine-assisted-unreviewed"
+    },
+    "ny": {
+      "provenance": "google-web",
+      "target": "ny",
+      "review": "machine-assisted-unreviewed"
+    },
+    "rn": {
+      "provenance": "google-web",
+      "target": "rn",
+      "review": "machine-assisted-unreviewed"
+    },
+    "rw": {
+      "provenance": "google-web",
+      "target": "rw",
+      "review": "machine-assisted-unreviewed"
+    },
+    "sn": {
+      "provenance": "google-web",
+      "target": "sn",
+      "review": "machine-assisted-unreviewed"
+    },
+    "so": {
+      "provenance": "google-web",
+      "target": "so",
+      "review": "machine-assisted-unreviewed"
+    },
+    "ss": {
+      "provenance": "google-web",
+      "target": "ss",
+      "review": "machine-assisted-unreviewed"
+    },
+    "st": {
+      "provenance": "google-web",
+      "target": "st",
+      "review": "machine-assisted-unreviewed"
+    },
+    "tn": {
+      "provenance": "google-web",
+      "target": "tn",
+      "review": "machine-assisted-unreviewed"
+    },
+    "xh": {
+      "provenance": "google-web",
+      "target": "xh",
+      "review": "machine-assisted-unreviewed"
+    },
+    "zu": {
+      "provenance": "google-web",
+      "target": "zu",
+      "review": "machine-assisted-unreviewed"
+    },
+    "es": {
+      "provenance": "google-web",
+      "target": "es",
+      "review": "machine-assisted-unreviewed"
+    },
+    "pt": {
+      "provenance": "google-web",
+      "target": "pt",
+      "review": "machine-assisted-unreviewed"
+    }
+  },
+  "overlays": {},
+  "hidden": {
+    "ak": [
+      "native-review:untranslated-english"
+    ],
+    "bci": [
+      "native-review:untranslated-english"
+    ],
+    "bm": [
+      "native-review:untranslated-english"
+    ],
+    "cri": [
+      "unsupported-by-translation-sources"
+    ],
+    "crs": [
+      "english-fragment:runtime.offlineLocal",
+      "english-fragment:telemetry.ramTitle",
+      "native-review:untranslated-english",
+      "untranslated-short:nav.home"
+    ],
+    "dag": [
+      "unsupported-by-translation-sources"
+    ],
+    "dje": [
+      "unsupported-by-translation-sources"
+    ],
+    "dyu": [
+      "native-review:untranslated-english"
+    ],
+    "ee": [
+      "native-review:untranslated-english"
+    ],
+    "fan": [
+      "unsupported-by-translation-sources"
+    ],
+    "fon": [
+      "native-review:untranslated-english"
+    ],
+    "kab": [
+      "english-fragment:model.chooseLocal",
+      "english-fragment:runtime.offlineLocal",
+      "repeated-word:telemetry.yes",
+      "semantic-collapse:model.readyNew=model.ready"
+    ],
+    "kbp": [
+      "degenerate-repetition:reason.offHelp",
+      "degenerate-repetition:voice.didNotCatch"
+    ],
+    "kea": [
+      "degenerate-repetition:attachment.imageRead",
+      "degenerate-repetition:queue.discardedMany",
+      "degenerate-repetition:queue.discardedOne",
+      "degenerate-repetition:settings.parallelHelp",
+      "repetition:attachment.imageRead",
+      "repetition:queue.discardedMany",
+      "repetition:queue.discardedOne",
+      "repetition:settings.parallelHelp"
+    ],
+    "kj": [
+      "unsupported-by-translation-sources"
+    ],
+    "kmb": [
+      "degenerate-repetition:model.defaultRecommended",
+      "degenerate-repetition:model.switchUncertain",
+      "degenerate-repetition:settings.limits"
+    ],
+    "kpe": [
+      "unsupported-by-translation-sources"
+    ],
+    "kri": [
+      "native-review:untranslated-english"
+    ],
+    "lg": [
+      "native-review:untranslated-english"
+    ],
+    "lir": [
+      "unsupported-by-translation-sources"
+    ],
+    "ln": [
+      "native-review:untranslated-english"
+    ],
+    "loz": [
+      "unsupported-by-translation-sources"
+    ],
+    "lua": [
+      "native-review:untranslated-english"
+    ],
+    "man": [
+      "unsupported-by-translation-sources"
+    ],
+    "men": [
+      "unsupported-by-translation-sources"
+    ],
+    "mfe": [
+      "english-fragment:telemetry.ramTitle",
+      "native-review:untranslated-english"
+    ],
+    "mkw": [
+      "target-mismatch:ktu"
+    ],
+    "mnk": [
+      "unsupported-by-translation-sources"
+    ],
+    "mos": [
+      "degenerate-repetition:model.outsideRegistry",
+      "repeated-word:reply.parallelDisabled"
+    ],
+    "naq": [
+      "unsupported-by-translation-sources"
+    ],
+    "nd": [
+      "unsupported-by-translation-sources"
+    ],
+    "ng": [
+      "unsupported-by-translation-sources"
+    ],
+    "nr": [
+      "native-review:untranslated-english"
+    ],
+    "nso": [
+      "native-review:untranslated-english"
+    ],
+    "nus": [
+      "native-review:untranslated-english"
+    ],
+    "om": [
+      "native-review:untranslated-english"
+    ],
+    "pcm": [
+      "unsupported-by-translation-sources"
+    ],
+    "pga-Latn": [
+      "unsupported-by-translation-sources"
+    ],
+    "pov": [
+      "unsupported-by-translation-sources"
+    ],
+    "ses": [
+      "unsupported-by-translation-sources"
+    ],
+    "sg": [
+      "native-review:untranslated-english"
+    ],
+    "snk": [
+      "unsupported-by-translation-sources"
+    ],
+    "srr": [
+      "unsupported-by-translation-sources"
+    ],
+    "sus": [
+      "english-fragment:model.loadingNamed",
+      "english-fragment:model.loadingNote",
+      "english-fragment:runtime.offlineLocal",
+      "english-fragment:telemetry.ramTitle",
+      "english-fragment:telemetry.tpsTitle",
+      "english-fragment:web.off",
+      "excessive-untranslated-labels:21",
+      "untranslated-short:badge.verified",
+      "untranslated-short:settings.general",
+      "untranslated-short:web.off"
+    ],
+    "tem": [
+      "unsupported-by-translation-sources"
+    ],
+    "ti": [
+      "native-review:untranslated-english"
+    ],
+    "toi": [
+      "unsupported-by-translation-sources"
+    ],
+    "ts": [
+      "native-review:untranslated-english"
+    ],
+    "ttq-Latn": [
+      "unsupported-by-translation-sources"
+    ],
+    "umb": [
+      "semantic-collapse:settings.saveFailed=voice.didNotCatch"
+    ],
+    "ve": [
+      "native-review:untranslated-english"
+    ],
+    "vmw": [
+      "unsupported-by-translation-sources"
+    ],
+    "wes": [
+      "unsupported-by-translation-sources"
+    ],
+    "wni": [
+      "unsupported-by-translation-sources"
+    ],
+    "wlc": [
+      "unsupported-by-translation-sources"
+    ],
+    "wo": [
+      "native-review:untranslated-english"
+    ],
+    "zdj": [
+      "unsupported-by-translation-sources"
+    ],
+    "zgh": [
+      "target-mismatch:ber"
+    ]
+  }
+}

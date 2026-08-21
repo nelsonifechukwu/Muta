@@ -4,10 +4,6 @@
 
 (() => {
   const definitions = globalThis.MutaInterfaceLocales || [];
-  const registered = [
-    ...(globalThis.MutaAfricaLanguages?.languages || []),
-    ...definitions,
-  ];
   const normalize = (value) => typeof value === "string"
     ? value.trim().replaceAll("_", "-").toLowerCase()
     : "";
@@ -24,11 +20,10 @@
     /* Storage can be unavailable in a locked-down browser. */
   }
   const defaultLocale = match("en", definitions);
-  const savedPreference = match(saved, registered);
+  const savedPreference = match(saved, definitions);
   const followsBrowser = !normalize(saved) || normalize(saved) === "auto" || !savedPreference;
   const browserPreferences = globalThis.navigator?.languages || [globalThis.navigator?.language];
-  // A known response language without a complete interface pack pre-paints the English UI.
-  // Auto (and an invalid saved value) instead follows the first complete browser-language pack.
+  // Auto and legacy/invalid hidden values follow the first complete browser-language pack.
   const locale = followsBrowser
     ? browserPreferences.map((preference) => match(preference, definitions)).find(Boolean)
       || defaultLocale

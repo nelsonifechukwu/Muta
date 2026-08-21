@@ -16,9 +16,11 @@ require("../africa-languages.js");
 require("../locale-manifest.js");
 require("../i18n.js");
 require("../locale-fr.js");
+require("../locale-generated.js");
 require("../locales.js");
 
 const i18n = globalThis.MutaI18n;
+const generatedMetadata = require("../locale-generated.meta.json");
 
 class FakeElement {
   constructor(tag = "div") {
@@ -62,7 +64,7 @@ function fakeDocument(elementsBySelector = {}) {
 test("only complete packs localize the interface", () => {
   const required = Object.keys(i18n.catalogs.en).sort();
   const supported = i18n.supportedDefinitions();
-  assert.deepEqual(supported.map((locale) => locale.tag), ["ar", "sw", "yo", "en", "fr", "de"]);
+  assert.equal(supported.length, 28);
   assert.deepEqual(
     supported.map((locale) => ({ tag: locale.tag, direction: locale.direction })),
     i18n.interfaceLocaleManifest,
@@ -84,7 +86,63 @@ test("only complete packs localize the interface", () => {
   }
 });
 
-test("the selector puts Auto first and exposes every registered language", () => {
+test("machine-assisted packs retain provenance and hide every rejected registry tag", () => {
+  const generatedTags = Object.keys(generatedMetadata.generated);
+  const hiddenTags = Object.keys(generatedMetadata.hidden);
+  assert.equal(generatedTags.length, 22);
+  assert.equal(hiddenTags.length, 58);
+  assert.equal(new Set([...generatedTags, ...hiddenTags]).size, 80);
+  for (const tag of generatedTags) {
+    const record = generatedMetadata.generated[tag];
+    assert.match(record.provenance, /^(google-web(?:\+nllb:.*)?|nllb:)/);
+    assert.equal(record.review, "machine-assisted-unreviewed");
+    assert.equal(record.target.split("_", 1)[0], tag.split("-", 1)[0]);
+    assert.ok(i18n.supportedDefinitions().some((locale) => locale.tag === tag));
+    const catalog = i18n.catalogs[tag];
+    for (const [key, value] of Object.entries(catalog)) {
+      assert.doesNotMatch(value, /ZXQMUTA|86\d{8}|Translating\.\.\.|Translation results/);
+      assert.doesNotMatch(value, /(?:^|\s)\d{3,4}\s*[:፡]/u, `${tag}:${key} merged row`);
+      assert.doesNotMatch(
+        value,
+        /Couldn[’']t (?:start|stop)|Show more|Select the local tutor model|Web grounding (?:on|off)|sources will cited|I[’']m still listening|operator[’']s fixed inference-slot|shared tutor model|Enter to send|Ctrl\+Enter to interrupt|Ground answers|off by default|Tokens per second|Loading \{model\}|offline · local CPU|backend process tree|\(voice loop\)/i,
+        `${tag}:${key} English/browser fragment`,
+      );
+      if (i18n.catalogs.en[key].length > 24) {
+        assert.notEqual(value.trim(), i18n.catalogs.en[key].trim(), `${tag}:${key} untranslated`);
+      }
+    }
+    for (const key of [
+      "country.southAfrica",
+      "nav.aboutMuta",
+      "nav.home",
+      "settings.general",
+      "model.loadingNamed",
+      "web.off",
+      "badge.verified",
+      "telemetry.throttleTitle",
+    ]) {
+      if (tag === "es" && key === "settings.general") continue;
+      assert.notEqual(
+        catalog[key].trim(),
+        i18n.catalogs.en[key].trim(),
+        `${tag}:${key} untranslated short UI label`,
+      );
+    }
+    assert.notEqual(catalog["model.readyNew"].trim(), catalog["model.ready"].trim());
+    assert.notEqual(catalog["settings.saveFailed"].trim(), catalog["voice.didNotCatch"].trim());
+  }
+  for (const tag of hiddenTags) {
+    assert.ok(i18n.normalizeKnownLocale(tag), `${tag} must remain registered internally`);
+    assert.equal(i18n.normalizeLocale(tag), null, `${tag} must remain hidden`);
+    assert.ok(generatedMetadata.hidden[tag].length > 0);
+  }
+  const joinedAmharic = Object.values(i18n.catalogs.am).join(" ");
+  assert.ok((joinedAmharic.match(/[\u1200-\u137f]/g) || []).length > 500);
+  assert.ok(generatedMetadata.hidden.ti.includes("native-review:untranslated-english"));
+  assert.ok(generatedMetadata.hidden.zgh.some((reason) => reason.startsWith("target-mismatch:")));
+});
+
+test("the selector puts Auto first and exposes only complete interface languages", () => {
   const select = new FakeElement("select");
   const doc = fakeDocument({ "#setting-language": [select] });
   i18n.setLocale("en", { persist: false, doc });
@@ -96,17 +154,20 @@ test("the selector puts Auto first and exposes every registered language", () =>
   const african = select.children[1].children;
   const other = select.children[2].children;
   const options = [...african, ...other];
-  assert.equal(options.length, i18n.localeDefinitions.length);
+  assert.equal(options.length, i18n.supportedDefinitions().length);
   assert.deepEqual(
     options.map((option) => option.value),
-    i18n.localeDefinitions
+    i18n.supportedDefinitions()
       .filter((locale) => locale.group === "african")
-      .concat(i18n.localeDefinitions.filter((locale) => locale.group === "other"))
+      .concat(i18n.supportedDefinitions().filter((locale) => locale.group === "other"))
       .map((locale) => locale.tag),
   );
   assert.ok(options.every((option) => option.disabled === false));
-  for (const tag of ["am", "ha", "ig", "pga-Latn", "zu", "de"]) {
+  for (const tag of ["am", "ha", "ig", "zu", "de"]) {
     assert.ok(options.some((option) => option.value === tag), `missing ${tag}`);
+  }
+  for (const tag of ["cri", "pga-Latn", "ttq-Latn", "wlc"]) {
+    assert.ok(!options.some((option) => option.value === tag), `unsupported ${tag} is visible`);
   }
   assert.ok(options.every((option) => !/pending|review/i.test(option.textContent)));
   assert.ok(options.every((option) => !option.textContent.includes("🇩🇪")));
@@ -213,7 +274,7 @@ test("locale changes text, attributes, direction, interpolation, and persistence
   assert.equal(i18n.setLocale("not-a-locale", { persist: false, doc }), false);
 });
 
-test("a language without an interface pack persists and controls the next response", () => {
+test("a hidden registry language cannot become a UI preference", () => {
   const heading = new FakeElement();
   heading.dataset.i18n = "settings.title";
   const select = new FakeElement("select");
@@ -222,15 +283,11 @@ test("a language without an interface pack persists and controls the next respon
     "#setting-language": [select],
   });
   try {
-    assert.equal(i18n.setLocale("ig-NG", { doc }), true);
-    assert.equal(i18n.languagePreference, "ig");
-    assert.equal(i18n.responseLanguage, "ig");
-    assert.equal(i18n.locale, "en");
-    assert.equal(doc.documentElement.lang, "en");
-    assert.equal(doc.documentElement.dir, "ltr");
-    assert.equal(heading.textContent, "Settings");
-    assert.equal(select.value, "ig");
-    assert.equal(saved.get(i18n.STORAGE_KEY), "ig");
+    saved.delete(i18n.STORAGE_KEY);
+    i18n.setLocale("fr", { persist: false, doc });
+    assert.equal(i18n.setLocale("pga-Latn", { doc }), false);
+    assert.equal(i18n.languagePreference, "fr");
+    assert.equal(saved.has(i18n.STORAGE_KEY), false);
   } finally {
     saved.delete(i18n.STORAGE_KEY);
     i18n.setLocale("en", { persist: false, doc });
@@ -245,9 +302,9 @@ test("startup uses a saved explicit locale, otherwise Auto resolves browser then
       configurable: true,
       value: { languages: ["de-DE", "en-GB"] },
     });
-    saved.set(i18n.STORAGE_KEY, "ig");
-    assert.equal(i18n.initialize(doc), "en");
-    assert.equal(i18n.languagePreference, "ig");
+    saved.set(i18n.STORAGE_KEY, "pga-Latn");
+    assert.equal(i18n.initialize(doc), "de");
+    assert.equal(i18n.languagePreference, "auto");
 
     saved.set(i18n.STORAGE_KEY, "sw");
     assert.equal(i18n.initialize(doc), "sw");
@@ -317,6 +374,7 @@ test("every translation key used by authored markup exists and localization load
   const i18nIndex = scripts.findIndex((source) => source.startsWith("i18n.js"));
   const localesIndex = scripts.findIndex((source) => source.startsWith("locales.js"));
   const frenchIndex = scripts.findIndex((source) => source.startsWith("locale-fr.js"));
+  const generatedIndex = scripts.findIndex((source) => source.startsWith("locale-generated.js"));
   const appIndex = scripts.findIndex((source) => source.startsWith("app.js"));
   assert.ok(
     africaIndex >= 0
@@ -324,6 +382,7 @@ test("every translation key used by authored markup exists and localization load
       && bootstrapIndex >= 0
       && i18nIndex >= 0
       && frenchIndex >= 0
+      && generatedIndex >= 0
       && localesIndex >= 0
       && appIndex >= 0,
   );
@@ -332,6 +391,8 @@ test("every translation key used by authored markup exists and localization load
   assert.ok(africaIndex < i18nIndex);
   assert.ok(i18nIndex < frenchIndex);
   assert.ok(frenchIndex < localesIndex);
+  assert.ok(frenchIndex < generatedIndex);
+  assert.ok(generatedIndex < localesIndex);
   assert.ok(i18nIndex < localesIndex);
   assert.ok(localesIndex < appIndex);
 });
@@ -369,7 +430,11 @@ test("the pre-paint bootstrap uses only complete packs and honors saved RTL pref
   );
   assert.deepEqual(
     { ...run({ savedLocale: "ig", languages: ["de-DE"] }) },
-    { lang: "en", dir: "ltr" },
+    { lang: "ig", dir: "ltr" },
+  );
+  assert.deepEqual(
+    { ...run({ savedLocale: "pga-Latn", languages: ["de-DE"] }) },
+    { lang: "de", dir: "ltr" },
   );
   assert.deepEqual(
     { ...run({ savedLocale: "not-a-locale", languages: ["de-DE"] }) },
