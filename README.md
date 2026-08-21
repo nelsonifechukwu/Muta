@@ -1,6 +1,9 @@
 # ADTC 2026 — Math & Scientific Reasoning (Education)
 
-Offline, adaptive AI tutor for math and scientific reasoning, running on the 8 GB ADTC laptop. [Brilliant](http://brilliant.org)'s / [Marble's](https://withmarble.com/) interactivity + Khan Academy's curriculum breadth + Encarta/Britannica's self-containedness — no server required. Groups below follow dependency order: each rests on the one above it.
+Offline, adaptive AI tutor for math and scientific reasoning, running on the 8 GB ADTC laptop. [Brilliant](http://brilliant.org)'s / [Marble's](https://withmarble.com/) interactivity + Khan Academy's curriculum breadth + Encarta/Britannica's self-containedness — no server required. 
+
+**[Moat](https://chatgpt.com/share/6a885ad3-2a20-83ed-acc2-cc44a665dd9e)**: Muta’s moat is the deeply integrated educational intelligence layer that connects students, teachers, parents, institutions, and curriculum—accumulating context, workflows, and learning data over time. The underlying AI model can be swapped; **Muta’s education graph, relationships, and institutional integration cannot be easily replicated.** See also [Marble](https://withmarble.com/#:~:text=03-,Marble,-follows%20their%20curiosity).
+
 
 ```
 Constraint → Model → Inference → Correctness/Safety → Pedagogy
