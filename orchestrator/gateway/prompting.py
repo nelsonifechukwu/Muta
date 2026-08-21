@@ -24,22 +24,33 @@ _PERSONA = {
 #: language tag → human name. Covers the README's target set; unknown tags pass through as-is
 #: so an unlisted BCP-47 code still instructs the model to use that language.
 _LANGUAGE = {
-    "en": "English", "fr": "French", "ar": "Arabic", "sw": "Swahili", "ha": "Hausa",
-    "yo": "Yoruba", "ig": "Igbo", "am": "Amharic", "zu": "Zulu",
+    "am": "Amharic",
+    "ar": "Arabic",
+    "de": "German",
+    "en": "English",
+    "fr": "French",
+    "ha": "Hausa",
+    "ig": "Igbo",
+    "sw": "Swahili",
+    "yo": "Yoruba",
+    "zu": "Zulu",
 }
 
 
 def persona_language_directive(persona: str, language: str, subject: str | None = None) -> str:
-    """A compact per-student voice/language line. English gets no language clause (the model's
-    default) so an English session's prefix stays as short as possible."""
+    """A compact per-student voice/language instruction for the trusted system context."""
     parts = [_PERSONA.get(persona, _PERSONA["teacher"])]
     lang = (language or "en").strip()
-    if lang and lang != "en":
-        name = _LANGUAGE.get(lang, lang)
-        parts.append(
-            f"Respond in {name}. Use culturally familiar examples where natural, and always "
-            "write mathematics in LaTeX regardless of the language."
-        )
+    base_lang = lang.split("-", 1)[0].lower()
+    name = _LANGUAGE.get(base_lang, lang)
+    label = name if name.lower() == lang.lower() else f"{name} ({lang})"
+    parts.append(
+        f"The user's preferred response language is {label}. Always respond in that language "
+        "unless the user explicitly requests another language for this specific task. Do not "
+        "translate source code, variable names, commands, URLs, or proper nouns. Translate "
+        "explanations naturally rather than literally. Use culturally familiar examples where "
+        "natural, and always write mathematics in LaTeX regardless of the language."
+    )
     if subject and subject != "math":
         parts.append(f"The student is working on {subject}.")
     return " ".join(parts)
@@ -57,8 +68,8 @@ def assemble_system_prompt(
 ) -> str:
     """Compose the full system prompt: the mode's stable prefix, then the per-student block.
 
-    Only non-empty layers are appended, so an English teacher-persona turn with no twin, web,
-    or RAG context is byte-identical to the bare mode prompt (maximising cache reuse)."""
+    Only non-empty contextual layers are appended. The shared mode prompt remains byte-identical
+    at the front, while persona and language stay in the variable suffix."""
     blocks = [base_prompt.rstrip()]
     directive = persona_language_directive(persona, language, subject)
     if directive:

@@ -15,10 +15,12 @@ def test_ui_exposes_catalog_selector_and_never_sends_a_model_path():
 
 def test_outside_catalog_engine_gets_an_honest_selectable_placeholder():
     script = Path("ui/app.js").read_text()
+    i18n = Path("ui/i18n.js").read_text()
 
     assert "const active = models.find((model) => model.id === catalog.active_id);" in script
-    assert 'catalog.active_id ? "Current local model" : "Choose a model"' in script
-    assert "The current engine is outside this registry" in script
+    assert 'catalog.active_id ? t("model.currentLocal") : t("model.choose")' in script
+    assert 't("model.outsideRegistry")' in script
+    assert "The current engine is outside this registry" in i18n
 
 
 def test_loopback_session_can_replace_the_port_scoped_browser_identity():

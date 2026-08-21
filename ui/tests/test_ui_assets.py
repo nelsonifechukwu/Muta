@@ -13,6 +13,7 @@ from pathlib import Path
 UI = Path(__file__).resolve().parents[1]
 HTML = (UI / "index.html").read_text()
 CSS = (UI / "styles.css").read_text()
+I18N = (UI / "i18n.js").read_text()
 NGINX = (UI.parent / "docker" / "nginx.conf.template").read_text()
 
 
@@ -77,9 +78,7 @@ def test_streaming_only_follows_while_the_reader_is_near_the_bottom():
     following for the rest of the page lifetime even after the reader returned to the tail.
     """
     js = (UI / "app.js").read_text()
-    helper = re.search(
-        r"function scrollToBottom\([^)]*\)\s*\{(?P<body>.*?)\n\}", js, re.DOTALL
-    )
+    helper = re.search(r"function scrollToBottom\([^)]*\)\s*\{(?P<body>.*?)\n\}", js, re.DOTALL)
     assert helper, "scrollToBottom helper missing"
     assert "!autoFollow" in helper.group("body")
     assert 'chatScroller.addEventListener("scroll"' in js
@@ -182,12 +181,25 @@ def test_chat_generation_is_server_owned_and_recovered_after_reload():
     assert 'fetch("/v1/chat/stream"' not in js, "a page-owned POST stream stops on refresh"
 
 
+def test_selected_locale_is_generation_metadata_not_a_user_message_prefix():
+    js = (UI / "app.js").read_text()
+    audio = (UI / "audio.js").read_text()
+    start = js.index('fetch("/v1/chat/generations"')
+    request = js[start : js.index("if (!res.ok)", start)]
+    assert "message," in request
+    assert "language: window.MutaI18n.locale" in request
+    assert "composeOutgoingMessage" not in request
+    assert "language: window.MutaI18n.locale" in audio
+    assert '{ type: "language", language: window.MutaI18n.locale }' in audio
+
+
 def test_refresh_retries_recovery_and_keeps_same_chat_followups():
     js = (UI / "app.js").read_text()
     assert "async function recoverGenerations({ attempts = 6" in js
     assert "await recoverGenerations({ attempts: 4, delayMs: 400 })" in js
     assert "reply is already running" in js
-    assert "The earlier reply is still running. This message is queued" in js
+    assert 't("reply.earlierRunning")' in js
+    assert "The earlier reply is still running. This message is queued" in I18N
     assert 'const MESSAGE_QUEUE_STORAGE_KEY = "muta-message-queue"' in js
     assert "persistMessageQueue()" in js and "restoreMessageQueue()" in js
     assert "item.cid === conversationId" in js
@@ -195,19 +207,23 @@ def test_refresh_retries_recovery_and_keeps_same_chat_followups():
     assert "fallbackConversation: startedIn" in js
     assert "identityReady = true" in js and "while (!(await ensureAuth()))" in js
     assert "!identityReady ||" in js
-    assert "Starting your previous message — this draft is still here." in js
+    assert 't("reply.previousStarting")' in js
+    assert "Starting your previous message — this draft is still here." in I18N
     assert js.index("startingConversations.has(startKeyFor(conversationId))") < js.index(
         'inputEl.value = ""', js.index("function send(")
     )
     assert "expectedViewStillVisible" in js and "returnedToConversation" in js
-    assert "This message remains queued until it can send." in js
+    assert 't("reply.earlierFinishing")' in js
+    assert "This message remains queued until it can send." in I18N
     assert "setTimeout(() => drainQueue(startedIn), 0)" in js
     assert "retryUnavailable: true" in js
 
 
 def test_refresh_only_clears_selected_chat_after_a_definitive_not_found():
     js = (UI / "app.js").read_text()
-    load = js[js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")]
+    load = js[
+        js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")
+    ]
     assert "if (!r)" in load and "if (r.status === 404)" in load
     assert load.index("if (!r)") < load.index("if (r.status === 404)")
     unavailable = load[load.index("if (!r)") : load.index("if (r.status === 404)")]
@@ -223,39 +239,44 @@ def test_refresh_only_clears_selected_chat_after_a_definitive_not_found():
 
 def test_full_inference_slots_become_a_durable_visible_queue():
     js = (UI / "app.js").read_text()
-    assert "started.state || \"running\"" in js
-    assert "active.state || \"running\"" in js
+    assert 'started.state || "running"' in js
+    assert 'active.state || "running"' in js
     assert "ev.queued === true && !ev.done" in js
     assert "ev.started" in js
     assert "showQueued(position = 1)" in js
     assert "startQueued()" in js
+    assert '"queue.waiting"' in js
     assert (
         "Queued — other responses are running. Your answer will start automatically "
         "as soon as a slot is free."
-    ) in js
+    ) in I18N
     assert 'backgroundJob.state === "queued"' in js
 
     queued = "".join(_blocks(".reply-queued .prose"))
     queued_dot = "".join(_blocks(".conv-generating.queued"))
-    assert "border-left" in queued and "background" in queued
+    assert "border-inline-start" in queued and "background" in queued
     assert "animation: none" in queued_dot
 
 
 def test_transient_engine_drop_shows_automatic_recovery_not_a_terminal_disconnect():
     js = (UI / "app.js").read_text()
     assert "ev.recovering" in js
-    assert "showRecovering(message)" in js
-    assert "resuming automatically" in js
+    assert "showRecovering()" in js
+    assert "job.recovering = true" in js
+    assert 't("queue.recovering")' in js
+    assert "resuming automatically" in I18N
     assert "the tutor dropped the connection" not in js.lower()
     recovering = "".join(_blocks(".reply-recovering"))
     assert "background" in recovering and "color" in recovering
-    assert 'ev.source && !ev.done' in js
-    assert 'source: ev.source || job.source' in js
+    assert "ev.source && !ev.done" in js
+    assert "source: ev.source || job.source" in js
 
 
 def test_switching_conversations_detaches_rendering_without_stopping_the_job():
     js = (UI / "app.js").read_text()
-    body = js[js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")]
+    body = js[
+        js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")
+    ]
     assert "leaving.handle = null" in body
     assert "stopGeneration" not in body
 
@@ -282,12 +303,12 @@ def test_model_picker_uses_an_accessible_header_menu_instead_of_a_native_select(
     assert 'option.setAttribute("role", "menuitemradio")' in js
     assert 'option.setAttribute("aria-checked"' in js
     assert 'check.textContent = "✓"' in js
-    assert "model.disabled_reason || modelSummary(model)" in js
+    assert 't("model.unavailable")' in js
     assert 'option.dataset.selectable !== "true"' in js
-    assert 'modelTrigger.disabled = !inspectable' in js
+    assert "modelTrigger.disabled = !inspectable" in js
     assert 'event.key === "ArrowDown"' in js and 'event.key === "Enter"' in js
-    assert 'focus: event.detail === 0' in js
-    assert 'restoreFocus: true' in js
+    assert "focus: event.detail === 0" in js
+    assert "restoreFocus: true" in js
     assert 'fetch("/v1/models/select"' in js
 
 
@@ -296,24 +317,75 @@ def test_model_switch_transport_failure_stays_locked_until_authoritative_recover
     assert "let modelSwitchUncertain = false" in js
     assert "scheduleModelCatalogRecovery()" in js
     assert 'modelTrigger.dataset.switching = "true"' in js
-    assert "The switch may still be completing" in js
+    assert 't("model.switchUncertain")' in js
+    assert "The switch may still be completing" in I18N
     assert "error.definitive = response.status >= 400" in js
     assert "if (!error.definitive)" in js
-    assert "The connection dropped while switching models" in js
+    assert 't("model.connectionDropped")' in js
+    assert "The connection dropped while switching models" in I18N
+
+
+def test_locale_change_cannot_unlock_a_model_switch_in_flight():
+    js = (UI / "app.js").read_text()
+    helper = js[
+        js.index("function localizeModelCatalog()") : js.index(
+            "window.MutaI18n.subscribe", js.index("function localizeModelCatalog()")
+        )
+    ]
+    assert 'modelTrigger.dataset.switching === "true"' in helper
+    assert "syncComposerState()" in helper
+    assert "renderModelCatalog(modelCatalog)" in helper
+    switching = helper[: helper.index("renderModelCatalog(modelCatalog)")]
+    assert "return;" in switching
+    subscriber_start = js.index("window.MutaI18n.subscribe")
+    subscriber = js[subscriber_start : js.index("refreshModelCatalog();", subscriber_start)]
+    assert "localizeModelCatalog()" in subscriber
+    assert "renderModelCatalog(modelCatalog)" not in subscriber
 
 
 def test_model_menu_remains_inspectable_when_selection_is_not_permitted():
     js = (UI / "app.js").read_text()
     assert "modelTrigger.disabled = false" in js
     assert "option.dataset.selectable = String(selectionEnabled && model.available)" in js
-    assert '!catalog.selection_enabled' in js
-    assert "Only the laptop operator can change the shared tutor model." in js
+    assert "!catalog.selection_enabled" in js
+    assert 't("model.operatorOnly")' in js
+    assert "Only the laptop operator can change the shared tutor model." in I18N
 
 
 def test_settings_icon_has_intrinsic_dimensions_even_before_css_loads():
     settings = re.search(r'<button id="settings-open".*?</button>', HTML, re.DOTALL)
     assert settings
     assert '<svg width="16" height="16"' in settings.group()
+
+
+def test_localized_dynamic_controls_remain_keyboard_and_screen_reader_operable():
+    js = (UI / "app.js").read_text()
+    audio = (UI / "audio.js").read_text()
+    assert 'open.className = "conv-open"' in js
+    assert 'open.setAttribute("aria-label", t("conversation.open"' in js
+    assert 'del.setAttribute("aria-label", t("conversation.delete"))' in js
+    assert 'x.setAttribute("aria-label", t("attachment.remove"))' in js
+    assert 'x.setAttribute("aria-label", t("queue.dontSend"))' in js
+    assert '$("#app").inert = open' in js
+    assert 'settingsModal.addEventListener("keydown"' in js
+    assert 'event.key !== "Tab"' in js
+    assert 'micBtn.setAttribute("aria-pressed", String(active))' in audio
+    assert 'micBtn.setAttribute("aria-label", t(active ? "voice.stop" : "voice.talk"))' in audio
+
+
+def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
+    js = (UI / "app.js").read_text()
+    html = (UI / "index.html").read_text()
+    for assignment in (
+        'bubble.dir = "auto"',
+        'prose.dir = "auto"',
+        'liveLine.dir = "auto"',
+        'thought.dir = "auto"',
+        'preambleText.dir = "auto"',
+        'link.dir = "auto"',
+    ):
+        assert assignment in js
+    assert '<textarea id="input" rows="1" dir="auto"' in html
 
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
@@ -346,7 +418,7 @@ def test_selected_conversation_lives_in_the_url_and_restores_on_startup():
     js = (UI / "app.js").read_text()
     assert 'searchParams.get("chat")' in js
     assert 'url.searchParams.set("chat", cid)' in js
-    assert "history[mode === \"replace\" ? \"replaceState\" : \"pushState\"]" in js
+    assert 'history[mode === "replace" ? "replaceState" : "pushState"]' in js
     assert "const selected = conversationFromLocation()" in js
     assert 'window.addEventListener("popstate"' in js
     assert 'setConversationLocation(conversationId, { mode: "replace" })' in js
@@ -358,7 +430,7 @@ def test_new_chat_start_can_be_recovered_if_the_page_refreshes_immediately():
     assert "setPendingLocation(clientRequestId)" in js
     assert "/v1/chat/generations?client_request_id=" in js
     assert "recoverPendingGeneration(pending)" in js
-    assert 'if (job.terminal)' in js and 'job.error = ev.error' in js
+    assert "if (job.terminal)" in js and "job.error = true" in js
     assert "if (startRejected" in js
 
 
@@ -379,7 +451,7 @@ def test_only_the_latest_conversation_navigation_can_commit():
 def test_settings_escape_is_consumed_before_the_stop_shortcut():
     js = (UI / "app.js").read_text()
     assert "event.stopPropagation()" in js
-    assert 'if (!settingsModal.hidden) return;' in js
+    assert "if (!settingsModal.hidden) return;" in js
 
 
 def test_voice_status_uses_the_same_guarded_auto_follow_policy():

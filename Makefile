@@ -3,7 +3,7 @@
 .DEFAULT_GOAL := help
 PY ?= python3
 
-.PHONY: help install dev test lint fmt contract contract-test build up down smoke \
+.PHONY: help install dev test ui-test lint fmt contract contract-test build up down smoke \
 	model fetch-models verify-models serve profiles core-cmd kv-budget index audio \
 	bench profile monitor bench-target eval backup restore \
 	bench-native-linux export-native-linux
@@ -20,6 +20,9 @@ dev: ## Run the gateway with reload on the host (SQLite; http://127.0.0.1:8000)
 
 test: ## Run tests (portable SQLite always; Postgres parity tests use compose db or skip)
 	$(PY) -m pytest
+
+ui-test: ## Run browser-client unit tests without starting the backend
+	node --test ui/tests/*.test.js
 
 lint: ## Lint (ruff)
 	$(PY) -m ruff check .

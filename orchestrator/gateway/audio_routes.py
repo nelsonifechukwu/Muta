@@ -2,9 +2,10 @@
 `WS /v1/audio/voice` (TDD §7.2's designed-but-unbuilt `WS /v1/audio/stream`, realised).
 
 Voice protocol (client ↔ server over one socket):
-- client → text `{"type":"start","student_id","conversation_id":null|id,"mode":"socratic"}`
+- client → text `{"type":"start","student_id","conversation_id":null|id,"mode":"socratic","language":"en"}`
 - client → binary frames: 16 kHz mono int16 PCM (~320 ms each)
-- client → text `{"type":"stop"}` force the endpoint; `{"type":"barge"}` cancel the reply
+- client → text `{"type":"language","language":"de"}` updates the next turn;
+  `{"type":"stop"}` forces the endpoint; `{"type":"barge"}` cancels the reply
 - server → `{"type":"transcript","text","conversation_id"}` at the VAD endpoint
 - server → `{"type":"reasoning"|"delta","text"}` while the model generates
 - server → per sentence: `{"type":"tts_start","sample_rate"}`, binary PCM, `{"type":"tts_end"}`
@@ -35,6 +36,7 @@ from orchestrator.audio.engines import AsrEngine, SileroVad, TtsEngine, load_eng
 from orchestrator.audio.mathspeech import to_speech
 from orchestrator.audio.vad import Endpointer
 from orchestrator.gateway.deps import get_engine, load_prompt
+from orchestrator.gateway.prompting import assemble_system_prompt
 from orchestrator.telemetry import get_hub
 from runtime.chat import ChatEngine
 
@@ -44,6 +46,7 @@ router = APIRouter()
 
 SAMPLE_RATE = 16000
 _SENTENCE_END = re.compile(r"(?<=[.!?:;])\s+")
+_LANGUAGE_TAG = re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$")
 
 # Bound the intake so a small, highly-compressed upload cannot decode to gigabytes of PCM and
 # OOM the 8GB backend (which would kill the tutor for the whole classroom). Two independent
@@ -51,7 +54,14 @@ _SENTENCE_END = re.compile(r"(?<=[.!?:;])\s+")
 MAX_AUDIO_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_AUDIO_SECONDS = 300  # 5 minutes of speech is far past any real tutoring question
 # Never re-serve a client-declared audio type verbatim (stored-XSS vector); store a safe one.
-_SAFE_AUDIO_MIME = {"audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav"}
+_SAFE_AUDIO_MIME = {
+    "audio/webm",
+    "audio/ogg",
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/wav",
+    "audio/x-wav",
+}
 
 
 def _safe_audio_mime(declared: str | None) -> str:
@@ -104,9 +114,23 @@ def _ffmpeg_to_pcm16k(data: bytes) -> bytes | None:
             # so a compressed-silence bomb can no longer expand to gigabytes of PCM within the
             # wall-clock timeout. Output is still bounded a second way by MAX_AUDIO_SECONDS ×
             # 16 kHz × 2 bytes ≈ 9.6 MB.
-            ["ffmpeg", "-hide_banner", "-loglevel", "error",
-             "-i", "pipe:0", "-t", str(MAX_AUDIO_SECONDS),
-             "-f", "s16le", "-ac", "1", "-ar", str(SAMPLE_RATE), "pipe:1"],
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                "pipe:0",
+                "-t",
+                str(MAX_AUDIO_SECONDS),
+                "-f",
+                "s16le",
+                "-ac",
+                "1",
+                "-ar",
+                str(SAMPLE_RATE),
+                "pipe:1",
+            ],
             input=data,
             capture_output=True,
             timeout=30,
@@ -180,6 +204,16 @@ def _split_sentences(buf: str) -> tuple[list[str], str]:
     return [p for p in parts[:-1] if p.strip()], parts[-1]
 
 
+def _preferred_language(value: object) -> str:
+    """Accept the same compact BCP 47 subset as ChatRequest; malformed WS metadata is English."""
+    candidate = str(value or "en").strip()
+    return candidate if len(candidate) <= 16 and _LANGUAGE_TAG.fullmatch(candidate) else "en"
+
+
+def _voice_system_prompt(mode: str, language: str) -> str:
+    return assemble_system_prompt(load_prompt(mode), language=_preferred_language(language))
+
+
 @router.websocket("/audio/voice")
 async def audio_voice(ws: WebSocket) -> None:
     await ws.accept()
@@ -203,7 +237,10 @@ async def audio_voice(ws: WebSocket) -> None:
         return
     student_id = start.get("student_id") or "voice-user"
     mode = start.get("mode") or "socratic"
-    state = {"conversation_id": start.get("conversation_id")}
+    state = {
+        "conversation_id": start.get("conversation_id"),
+        "language": _preferred_language(start.get("language")),
+    }
 
     vad = await run_in_threadpool(SileroVad, stack.config)
     endpointer = Endpointer(
@@ -268,8 +305,9 @@ async def audio_voice(ws: WebSocket) -> None:
                 student_id=student_id,
                 message=text,
                 conversation_id=state["conversation_id"],
-                system_prompt=load_prompt(mode),
+                system_prompt=_voice_system_prompt(mode, state["language"]),
                 mode=mode,
+                language=state["language"],
                 title=text[:80],
             )
         )
@@ -320,9 +358,7 @@ async def audio_voice(ws: WebSocket) -> None:
                 break
             # After a barge the old task may still be winding down — treat as not busy so
             # the student's next words aren't eaten.
-            busy = (
-                respond_task is not None and not respond_task.done() and not cancel.is_set()
-            )
+            busy = respond_task is not None and not respond_task.done() and not cancel.is_set()
             frame = msg.get("bytes")
             if frame is not None:
                 if busy:
@@ -361,6 +397,9 @@ async def audio_voice(ws: WebSocket) -> None:
                         await _endpoint(utt)
                 elif kind == "barge":
                     cancel.set()
+                elif kind == "language":
+                    # A settings change affects the next utterance, never a turn already running.
+                    state["language"] = _preferred_language(data.get("language"))
     except WebSocketDisconnect:
         pass
     finally:

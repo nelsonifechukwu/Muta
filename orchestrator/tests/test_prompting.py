@@ -7,22 +7,31 @@ from orchestrator.gateway.prompting import assemble_system_prompt, persona_langu
 BASE = "You are Muta.\n\n--- per-student context (variable — keep last) ---"
 
 
-def test_english_teacher_turn_appends_only_the_persona_line():
+def test_english_teacher_turn_includes_the_explicit_preference():
     out = assemble_system_prompt(BASE, persona="teacher", language="en")
     assert out.startswith(BASE.rstrip())
     assert "teacher's voice" in out
-    assert "Respond in" not in out  # English adds no language clause
+    assert "preferred response language is English (en)" in out
 
 
 def test_non_english_language_is_instructed():
     out = assemble_system_prompt(BASE, persona="friend", language="yo")
-    assert "Respond in Yoruba" in out
+    assert "preferred response language is Yoruba (yo)" in out
+    assert "unless the user explicitly requests another language" in out
     assert "classmate" in out
     assert "LaTeX" in out
 
 
+def test_language_directive_protects_literal_content_and_requests_natural_explanations():
+    out = persona_language_directive("teacher", "de")
+    assert "German (de)" in out
+    for protected in ("source code", "variable names", "commands", "URLs", "proper nouns"):
+        assert protected in out
+    assert "naturally rather than literally" in out
+
+
 def test_unknown_language_tag_passes_through():
-    assert "Respond in zz" in persona_language_directive("teacher", "zz")
+    assert "preferred response language is zz" in persona_language_directive("teacher", "zz")
 
 
 def test_exam_persona_is_minimal_hints():
@@ -32,7 +41,9 @@ def test_exam_persona_is_minimal_hints():
 def test_layers_only_appear_when_present():
     plain = assemble_system_prompt(BASE, persona="teacher", language="en")
     withctx = assemble_system_prompt(
-        BASE, persona="teacher", language="en",
+        BASE,
+        persona="teacher",
+        language="en",
         twin_summary="Working on: quadratics.",
         web_lines="[1] Foo — bar.",
         rag_block="<<<reference-material>>>\n[a:1] text\n<<<end-reference-material>>>",

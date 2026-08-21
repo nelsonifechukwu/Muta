@@ -11,6 +11,7 @@
 (() => {
   const TARGET_RATE = 16000;
   const BATCH_SAMPLES = 5120; // ~320 ms at 16 kHz
+  const t = (key, variables) => window.MutaI18n.t(key, variables);
 
   const micBtn = document.querySelector("#btn-mic");
   const chat = window.MutaChat;
@@ -30,6 +31,8 @@
   let ttsRate = 22050;
   let assistant = null;
   let statusEl = null;
+  let statusKey = null;
+  let statusVariables = {};
 
   // --- capture pipeline ---------------------------------------------------
 
@@ -128,25 +131,35 @@
   function maybeResumeListening() {
     if (!replying && activeSources.length === 0 && active) {
       micMuted = false;
-      setStatus("Listening…");
+      setStatus("voice.listening");
     }
   }
 
   // --- UI status ----------------------------------------------------------
 
-  function setStatus(text) {
+  function setStatus(key, variables = {}) {
     if (!active) {
       if (statusEl) statusEl.remove();
       statusEl = null;
+      statusKey = null;
+      statusVariables = {};
       return;
     }
+    statusKey = key;
+    statusVariables = variables;
     if (!statusEl) {
       statusEl = document.createElement("div");
       statusEl.className = "voice-status";
       document.querySelector("#messages").appendChild(statusEl);
     }
-    statusEl.textContent = "🎙 " + text;
+    statusEl.textContent = "🎙 " + t(key, variables);
     chat.scrollIfFollowing();
+  }
+
+  function syncMicAccessibility() {
+    micBtn.setAttribute("aria-pressed", String(active));
+    micBtn.title = t(active ? "voice.stopTitle" : "voice.talkTitle");
+    micBtn.setAttribute("aria-label", t(active ? "voice.stop" : "voice.talk"));
   }
 
   // --- websocket voice session ---------------------------------------------
@@ -157,11 +170,11 @@
   }
 
   async function startVoice() {
-    if (chat.isGenerating()) return chat.toast("Wait for the current reply to finish.");
+    if (chat.isGenerating()) return chat.toast(t("voice.wait"));
     try {
       await startCapture();
     } catch {
-      return chat.toast("Microphone access was refused — voice needs it (and http://localhost).");
+      return chat.toast(t("voice.permission"));
     }
     ws = new WebSocket(wsUrl());
     ws.binaryType = "arraybuffer";
@@ -172,6 +185,7 @@
           student_id: chat.studentId,
           conversation_id: chat.getConversationId(),
           mode: "socratic",
+          language: window.MutaI18n.locale,
         })
       );
       active = true;
@@ -179,11 +193,11 @@
       replying = false;
       micMuted = false;
       micBtn.classList.add("recording");
-      micBtn.title = "Stop voice (click while it speaks to interrupt)";
-      setStatus("Listening…");
+      syncMicAccessibility();
+      setStatus("voice.listening");
     };
     ws.onmessage = onWsMessage;
-    ws.onerror = () => stopVoice("Voice connection failed.");
+    ws.onerror = () => stopVoice(t("voice.connectionFailed"));
     ws.onclose = () => {
       if (active) stopVoice();
     };
@@ -215,11 +229,11 @@
           chat.setGenerating(false);
           chat.closeTelemetry();
           micMuted = false;
-          setStatus("Listening…");
-          chat.toast("That answer failed — I'm still listening, ask again.");
+          setStatus("voice.listening");
+          chat.toast(t("voice.answerFailed"));
           break;
         }
-        stopVoice(msg.fallback ? `Voice unavailable — ${msg.fallback}.` : "Voice unavailable.");
+        stopVoice(t("voice.unavailable"));
         break;
       case "transcript":
         suppressTts = false; // a new turn: play its speech
@@ -230,7 +244,7 @@
         chat.openTelemetry(msg.conversation_id);
         replying = true;
         micMuted = true;
-        setStatus("Thinking…");
+        setStatus("voice.thinking");
         break;
       case "reasoning":
         if (assistant) assistant.pushThought(msg.text);
@@ -242,13 +256,13 @@
         if (suppressTts) break; // barged: don't re-mute the mic we just freed
         ttsRate = msg.sample_rate || ttsRate;
         micMuted = true;
-        setStatus("Speaking…");
+        setStatus("voice.speaking");
         break;
       case "tts_end":
         break;
       case "done":
         if (msg.heard === false) {
-          setStatus("Didn't catch that — try again.");
+          setStatus("voice.didNotCatch");
         } else if (assistant) {
           assistant.finalize();
         }
@@ -269,7 +283,7 @@
     micMuted = false;
     stopPlayback();
     stopCapture();
-    setStatus("");
+    setStatus(null);
     if (ws) {
       try {
         ws.close();
@@ -285,7 +299,7 @@
     chat.setGenerating(false);
     chat.closeTelemetry();
     micBtn.classList.remove("recording");
-    micBtn.title = "Talk to the tutor (voice loop)";
+    syncMicAccessibility();
     if (toastText) chat.toast(toastText);
   }
 
@@ -301,8 +315,18 @@
     replying = false;
     chat.setGenerating(false);
     micMuted = false;
-    setStatus("Listening…");
+    setStatus("voice.listening");
   }
+
+  window.MutaI18n.subscribe(() => {
+    if (statusKey && active) setStatus(statusKey, statusVariables);
+    if (active && ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "language", language: window.MutaI18n.locale }));
+    }
+    syncMicAccessibility();
+  });
+
+  syncMicAccessibility();
 
   micBtn.addEventListener("click", () => {
     if (!active) startVoice();

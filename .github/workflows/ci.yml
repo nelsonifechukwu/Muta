@@ -2,9 +2,9 @@
 #
 # What each job gates:
 #   lint          — ruff check + ruff format --check across the tree (style + import sort).
-#   test          — pytest against a real Postgres service container, so the store tests in
-#                   runtime/tests actually RUN instead of skipping. `addopts` in pyproject
-#                   already deselects `-m integration`, so only unit/store tests execute.
+#   test          — pytest against a real Postgres service container plus Node's dependency-free
+#                   UI tests. Store tests RUN instead of skipping; `addopts` in pyproject already
+#                   deselects `-m integration`, so only unit/store tests execute.
 #   contract-drift— regenerates contracts/openapi.yaml the same way `make contract` does
 #                   (python -m contracts.openapi) and fails if the committed YAML is stale.
 #   build         — validates docker-compose.yml with `docker compose config`.
@@ -72,11 +72,16 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Install (app + dev extras)
         run: pip install -e ".[dev]"
       - name: pytest
         # bench/adtc-profiler is a separate project (its own venv/integration tests) — skip it.
         run: python -m pytest --ignore=bench/adtc-profiler
+      - name: UI tests
+        run: make ui-test
 
   contract-drift:
     runs-on: ubuntu-latest

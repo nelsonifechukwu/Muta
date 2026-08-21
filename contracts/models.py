@@ -114,7 +114,15 @@ class ChatRequest(BaseModel):
     persona: Persona = Persona.teacher
     subject: Subject = Subject.math
     language: str = Field(
-        "en", max_length=16, description="BCP-47-ish tag: en, fr, ha, yo, ig, sw, ar, am, zu."
+        "en",
+        min_length=2,
+        max_length=16,
+        pattern=r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$",
+        description=(
+            "Preferred response language as a BCP 47 tag (for example en, de, sw, ar, "
+            "pga-Latn). The gateway places this preference in the system prompt; it does "
+            "not modify the user's message."
+        ),
     )
     stream: bool = Field(
         False, description="When true the server replies with an SSE token stream instead."

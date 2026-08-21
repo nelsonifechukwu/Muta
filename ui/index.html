@@ -4,26 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
   <title>Muta</title>
+  <script src="africa-languages.js?v=20260821-i18n-2"></script>
+  <script src="locale-bootstrap.js?v=20260821-i18n-2"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260820-stream-recovery-1">
+  <link rel="stylesheet" href="styles.css?v=20260821-i18n-2">
 </head>
 <body>
   <div id="app">
-    <button id="menu-toggle" class="menu-toggle" aria-label="Show conversations" aria-expanded="false" aria-controls="sidebar">
+    <button id="menu-toggle" class="menu-toggle" aria-label="Show conversations" data-i18n-aria-label="nav.showConversations" aria-expanded="false" aria-controls="sidebar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
     </button>
     <div id="sidebar-backdrop" hidden></div>
     <aside id="sidebar">
       <div class="sidebar-head">
         <span class="brand">Muta</span>
-        <button id="new-chat" class="ghost" title="New chat">+ New chat</button>
+        <button id="new-chat" class="ghost" title="New chat" data-i18n="nav.newChat" data-i18n-title="nav.newChat">+ New chat</button>
       </div>
-      <nav id="conversation-list" aria-label="Conversations"></nav>
+      <nav id="conversation-list" aria-label="Conversations" data-i18n-aria-label="nav.conversations"></nav>
       <button id="settings-open" class="settings-open" type="button" aria-haspopup="dialog">
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.38 2.8a.49.49 0 0 0-.49-.4h-3.84a.49.49 0 0 0-.49.4L9.2 5.32c-.58.24-1.12.56-1.62.94L5.19 5.3a.48.48 0 0 0-.61.22L2.66 8.84a.49.49 0 0 0 .12.64l2.03 1.58c-.05.31-.09.64-.09.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.12.22.39.31.61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.52c.05.24.25.4.49.4h3.84c.24 0 .44-.16.49-.4l.36-2.52c.58-.24 1.12-.56 1.62-.94l2.39.96c.22.08.49 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>
-        <span>Settings</span>
+        <span data-i18n="settings.title">Settings</span>
       </button>
-      <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label">offline · local CPU</span></div>
+      <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label" data-i18n="runtime.offlineLocal">offline · local CPU</span></div>
     </aside>
 
     <main id="main">
@@ -31,84 +33,83 @@
         <div class="model-selector">
           <button id="model-trigger" class="model-trigger" type="button" aria-haspopup="menu"
             aria-expanded="false" aria-controls="model-menu" aria-describedby="model-note" disabled>
-            <span id="model-trigger-label">Loading models…</span>
+            <span id="model-trigger-label" dir="auto" data-i18n="model.loading">Loading models…</span>
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
           <div id="model-menu" class="model-menu" role="menu" aria-labelledby="model-trigger" hidden>
             <div class="model-menu-heading">
-              <span>Choose a model</span>
-              <small>Runs on this machine</small>
+              <span data-i18n="model.choose">Choose a model</span>
+              <small data-i18n="model.runsLocal">Runs on this machine</small>
             </div>
             <div id="model-options"></div>
-            <p id="model-note" role="status">The recommended model is selected by default.</p>
+            <p id="model-note" role="status" data-i18n="model.defaultRecommended">The recommended model is selected by default.</p>
           </div>
         </div>
       </header>
       <div id="chat-scroll">
         <div id="chat-column">
           <div id="empty-state">
-            <h1>What are we working on?</h1>
-            <p>Ask a maths or science question, drop in a photo of your working, or hold the
-              mic and just say it.</p>
+            <h1 data-i18n="empty.title">What are we working on?</h1>
+            <p data-i18n="empty.body">Ask a maths or science question, drop in a photo of your working, or hold the mic and just say it.</p>
           </div>
-          <div id="messages" role="log" aria-label="Conversation"></div>
+          <div id="messages" role="log" aria-label="Conversation" data-i18n-aria-label="chat.conversation"></div>
         </div>
       </div>
 
       <div id="composer-wrap">
         <div id="telemetry" class="telemetry" hidden>
-          <span id="t-ram" title="Current RSS of the backend process tree">RAM —</span>
+          <span id="t-ram" title="Current RSS of the backend process tree" data-i18n-title="telemetry.ramTitle">RAM —</span>
           <span class="dot">·</span>
-          <span id="t-peak" title="Peak RSS since backend start">peak —</span>
+          <span id="t-peak" title="Peak RSS since backend start" data-i18n-title="telemetry.peakTitle">peak —</span>
           <span class="dot">·</span>
-          <span id="t-temp" title="CPU package temperature">— °C</span>
+          <span id="t-temp" title="CPU package temperature" data-i18n-title="telemetry.tempTitle">— °C</span>
           <span class="dot">·</span>
-          <span id="t-throttle" title="Thermal throttling">throttle —</span>
+          <span id="t-throttle" title="Thermal throttling" data-i18n-title="telemetry.throttleTitle">throttle —</span>
           <span class="dot">·</span>
-          <span id="t-tps" title="Tokens per second (this conversation)">— tok/s</span>
+          <span id="t-tps" title="Tokens per second (this conversation)" data-i18n-title="telemetry.tpsTitle">— tok/s</span>
         </div>
 
-        <div id="queue" hidden aria-label="Queued messages"></div>
+        <div id="queue" hidden aria-label="Queued messages" data-i18n-aria-label="queue.messages"></div>
 
         <div id="composer">
           <div id="attachment-chips"></div>
-          <textarea id="input" rows="1"
+          <textarea id="input" rows="1" dir="auto" data-i18n-placeholder="composer.placeholder"
             placeholder="Ask anything — Enter to send (queues while replying), Ctrl+Enter to interrupt &amp; send"></textarea>
           <div id="composer-buttons">
             <div class="left">
-              <button id="btn-image" class="icon" title="Attach an image (or drag one in)" aria-label="Attach an image">
+              <button id="btn-image" class="icon" title="Attach an image (or drag one in)" aria-label="Attach an image" data-i18n-title="composer.attachImageTitle" data-i18n-aria-label="composer.attachImage">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm-3.5 8 4.5-6 3.5 4.5 2.5-3L20 19H5z"/></svg>
               </button>
-              <button id="btn-audio" class="icon" title="Attach an audio file (or drag one in)" aria-label="Attach an audio file">
+              <button id="btn-audio" class="icon" title="Attach an audio file (or drag one in)" aria-label="Attach an audio file" data-i18n-title="composer.attachAudioTitle" data-i18n-aria-label="composer.attachAudio">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l12-3v12.5a3.5 3.5 0 1 1-2-3.16V7.6L11 9.9v9.6A3.5 3.5 0 1 1 9 18z"/></svg>
               </button>
-              <button id="btn-mic" class="icon" title="Talk to the tutor (voice loop)" aria-label="Talk to the tutor" aria-pressed="false">
+              <button id="btn-mic" class="icon" title="Talk to the tutor (voice loop)" aria-label="Talk to the tutor" data-i18n-title="voice.talkTitle" data-i18n-aria-label="voice.talk" aria-pressed="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg>
               </button>
-              <button id="btn-web" class="icon" title="Ground answers with the web when online (off by default)" aria-label="Ground answers with the web" aria-pressed="false">
+              <button id="btn-web" class="icon" title="Ground answers with the web when online (off by default)" aria-label="Ground answers with the web" data-i18n-title="web.title" data-i18n-aria-label="web.label" aria-pressed="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.93 9h-3.02a15.6 15.6 0 0 0-1.18-5.24A8.03 8.03 0 0 1 19.93 11zM12 4.07c.9 1.22 1.63 3.1 1.9 4.93h-3.8c.27-1.83 1-3.71 1.9-4.93zM4.07 13h3.02c.14 1.86.55 3.66 1.18 5.24A8.03 8.03 0 0 1 4.07 13zm3.02-2H4.07a8.03 8.03 0 0 1 4.2-5.24A15.6 15.6 0 0 0 7.09 11zM12 19.93c-.9-1.22-1.63-3.1-1.9-4.93h3.8c-.27 1.83-1 3.71-1.9 4.93zM10.1 13h3.8a13.7 13.7 0 0 1-1.9 4.93A13.7 13.7 0 0 1 10.1 13zm5.63 5.24c.63-1.58 1.04-3.38 1.18-5.24h3.02a8.03 8.03 0 0 1-4.2 5.24z"/></svg>
               </button>
               <div class="think-select">
-                <button id="btn-think" class="icon think-btn" type="button" aria-haspopup="menu" aria-expanded="false" title="Reasoning effort">
+                <button id="btn-think" class="icon think-btn" type="button" aria-haspopup="menu" aria-expanded="false" title="Reasoning effort" data-i18n-title="reason.title">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21h6v-1H9v1zm3-19a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2zm2.85 11.1-.85.6V16h-4v-2.3l-.85-.6a5 5 0 1 1 5.7 0z"/></svg>
-                  <span id="think-current" class="think-current">Thinking</span>
+                  <span id="think-current" class="think-current" data-i18n="reason.auto">Thinking</span>
                 </button>
-                <div id="think-menu" class="think-menu" role="menu" aria-label="Reasoning effort" hidden>
-                  <button role="menuitemradio" type="button" data-level="off">Instant<small>Answers directly — fastest</small></button>
-                  <button role="menuitemradio" type="button" data-level="auto">Thinking<small>Reasons first — default</small></button>
-                  <button role="menuitemradio" type="button" data-level="extended">Extended<small>Thinks longer — hardest problems</small></button>
+                <div id="think-menu" class="think-menu" role="menu" aria-label="Reasoning effort" data-i18n-aria-label="reason.title" hidden>
+                  <button role="menuitemradio" type="button" data-level="off"><span data-i18n="reason.off">Instant</span><small data-i18n="reason.offHelp">Answers directly — fastest</small></button>
+                  <button role="menuitemradio" type="button" data-level="auto"><span data-i18n="reason.auto">Thinking</span><small data-i18n="reason.autoHelp">Reasons first — default</small></button>
+                  <button role="menuitemradio" type="button" data-level="extended"><span data-i18n="reason.extended">Extended</span><small data-i18n="reason.extendedHelp">Thinks longer — hardest problems</small></button>
                 </div>
               </div>
             </div>
-            <button id="btn-send" class="send" title="Send" aria-label="Send message">
+            <button id="btn-send" class="send" title="Send" aria-label="Send message" data-i18n-title="composer.send" data-i18n-aria-label="composer.sendMessage">
               <svg class="icon-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87z"/></svg>
               <svg class="icon-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
             </button>
           </div>
         </div>
-        <div class="fineprint">Muta runs entirely on this machine. Answers can be wrong — check the working.</div>
+        <div class="fineprint" data-i18n="fineprint">Muta runs entirely on this machine. Answers can be wrong — check the working.</div>
       </div>
     </main>
   </div>
@@ -116,25 +117,41 @@
   <div id="settings-modal" class="settings-modal" hidden>
     <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <header>
-        <h2 id="settings-title">Settings</h2>
-        <button id="settings-close" type="button" aria-label="Close settings">✕</button>
+        <h2 id="settings-title" data-i18n="settings.title">Settings</h2>
+        <button id="settings-close" type="button" aria-label="Close settings" data-i18n-aria-label="settings.close">✕</button>
       </header>
       <div class="settings-section">
-        <h3>General</h3>
+        <h3 data-i18n="settings.interface">Interface</h3>
+        <label class="settings-row language-row" for="setting-language">
+          <span>
+            <strong data-i18n="settings.language">Language</strong>
+            <small data-i18n="settings.languageHelp">Changes Muta’s menus, controls, and tutor response language on this device.</small>
+          </span>
+          <select id="setting-language" aria-describedby="language-review-note"></select>
+        </label>
+        <p id="language-review-note" class="language-review-note" data-i18n="settings.languageReview">Every listed choice covers the full interface. Community language review is ongoing; inspect the Africa-54 queue below for planned packs.</p>
+        <p id="africa-coverage-note" class="language-review-note" data-i18n="settings.africaCoverage">Draft Africa-54 translation queue: 85 candidate written-language packs mapped across 54 countries; 4 packs are currently selectable.</p>
+        <details class="language-coverage">
+          <summary data-i18n="settings.coverageTitle">Inspect Africa-54 country coverage</summary>
+          <div id="language-coverage-list"></div>
+        </details>
+      </div>
+      <div class="settings-section">
+        <h3 data-i18n="settings.general">General</h3>
         <label class="settings-row" for="setting-parallel-chats">
           <span>
-            <strong>Generate in multiple chats</strong>
-            <small>Keep one reply running while you start another. Parallel replies share the local CPU and may each run more slowly.</small>
+            <strong data-i18n="settings.parallel">Generate in multiple chats</strong>
+            <small data-i18n="settings.parallelHelp">Keep one reply running while you start another. Parallel replies share the local CPU and may each run more slowly.</small>
           </span>
           <input id="setting-parallel-chats" type="checkbox" role="switch" checked>
         </label>
       </div>
-      <p class="settings-footnote">Muta stays within the operator’s fixed inference-slot and memory limits.</p>
+      <p class="settings-footnote" data-i18n="settings.limits">Muta stays within the operator’s fixed inference-slot and memory limits.</p>
     </section>
   </div>
 
-  <div id="drop-overlay" hidden><div>Drop an image or audio file to add it</div></div>
-  <div id="toast" role="status" aria-live="assertive" hidden></div>
+  <div id="drop-overlay" hidden><div data-i18n="drop.addFile">Drop an image or audio file to add it</div></div>
+  <div id="toast" dir="auto" role="status" aria-live="assertive" hidden></div>
   <!-- Screen-reader announcements: the finalized reply and status changes, without spamming
        every streamed token. app.js writes here; visually hidden (see .sr-only). -->
   <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
@@ -144,8 +161,10 @@
   <script src="vendor/katex/katex.min.js"></script>
   <script src="vendor/marked.min.js"></script>
   <script src="vendor/purify.min.js"></script>
-  <script src="math.js?v=20260820-stream-recovery-1"></script>
-  <script src="app.js?v=20260820-stream-recovery-1"></script>
-  <script src="audio.js?v=20260820-stream-recovery-1"></script>
+  <script src="i18n.js?v=20260821-i18n-2"></script>
+  <script src="locales.js?v=20260821-i18n-2"></script>
+  <script src="math.js?v=20260821-i18n-2"></script>
+  <script src="app.js?v=20260821-i18n-2"></script>
+  <script src="audio.js?v=20260821-i18n-2"></script>
 </body>
 </html>

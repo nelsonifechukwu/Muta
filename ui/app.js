@@ -1,6 +1,8 @@
 /* Muta chat client. Same-origin /v1 (nginx proxies to the backend). No framework. */
 "use strict";
 
+const t = (key, variables) => window.MutaI18n.t(key, variables);
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -373,7 +375,10 @@ function addUserMessage(text, attachments = []) {
       } else {
         const chip = document.createElement("span");
         chip.className = "audio-chip";
-        chip.textContent = "🎙 audio";
+        const label = document.createElement("span");
+        label.dataset.i18n = "attachment.audio";
+        label.textContent = t("attachment.audio");
+        chip.append("🎙 ", label);
         row.appendChild(chip);
       }
     }
@@ -381,6 +386,7 @@ function addUserMessage(text, attachments = []) {
   }
   const bubble = document.createElement("div");
   bubble.className = "bubble";
+  bubble.dir = "auto";
   bubble.textContent = text;
   inner.appendChild(bubble);
   wrap.appendChild(inner);
@@ -401,15 +407,18 @@ function beginAssistantMessage(onAnswerNow) {
   dot.className = "think-dot"; // pulsing while thinking, becomes a check when settled
   const label = document.createElement("span");
   label.className = "think-label";
-  label.textContent = "Thinking";
+  label.dataset.i18n = "thinking.label";
+  label.textContent = t("thinking.label");
   const liveLine = document.createElement("span");
   liveLine.className = "think-line";
+  liveLine.dir = "auto";
   // "Answer now" — skip the thinking and get a direct answer. Lives in the summary but must
   // not toggle the <details>, so it swallows the click.
   const answerNowBtn = document.createElement("button");
   answerNowBtn.type = "button";
   answerNowBtn.className = "answer-now";
-  answerNowBtn.textContent = "Answer now";
+  answerNowBtn.dataset.i18n = "thinking.answerNow";
+  answerNowBtn.textContent = t("thinking.answerNow");
   answerNowBtn.hidden = true;
   answerNowBtn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -420,6 +429,7 @@ function beginAssistantMessage(onAnswerNow) {
   summary.append(dot, label, liveLine, answerNowBtn);
   const thought = document.createElement("div");
   thought.className = "thought";
+  thought.dir = "auto";
   thinking.append(summary, thought);
 
   // TTFT preamble: filler from the 1M-parameter warm-up model, shown only while the real
@@ -431,13 +441,16 @@ function beginAssistantMessage(onAnswerNow) {
   preamble.hidden = true;
   const preambleLabel = document.createElement("span");
   preambleLabel.className = "preamble-label";
-  preambleLabel.textContent = "warming up";
+  preambleLabel.dataset.i18n = "thinking.warming";
+  preambleLabel.textContent = t("thinking.warming");
   const preambleText = document.createElement("span");
   preambleText.className = "preamble-text";
+  preambleText.dir = "auto";
   preamble.append(preambleLabel, preambleText);
 
   const prose = document.createElement("div");
   prose.className = "prose cursor";
+  prose.dir = "auto";
 
   const recovering = document.createElement("div");
   recovering.className = "reply-recovering";
@@ -499,7 +512,13 @@ function beginAssistantMessage(onAnswerNow) {
     if (!thinkStartedAt || thinkSettled) return;
     thinkSettled = true;
     const s = Math.max(1, Math.round((performance.now() - thinkStartedAt) / 1000));
-    label.textContent = s < 60 ? `Thought for ${s}s` : `Thought for ${Math.floor(s / 60)}m ${s % 60}s`;
+    const key = s < 60 ? "thinking.seconds" : "thinking.minutes";
+    const variables = s < 60
+      ? { seconds: s }
+      : { minutes: Math.floor(s / 60), seconds: s % 60 };
+    label.dataset.i18n = key;
+    label.setAttribute("data-i18n-vars", JSON.stringify(variables));
+    label.textContent = t(key, variables);
     label.classList.remove("shimmer");
     thinking.classList.add("settled"); // dot → check, stop the pulse
     liveLine.textContent = ""; // the trace is the expandable body now, not a ticker
@@ -515,6 +534,8 @@ function beginAssistantMessage(onAnswerNow) {
     if (!queuedNotice) return;
     queuedNotice = false;
     wrap.classList.remove("reply-queued");
+    delete prose.dataset.i18n;
+    prose.removeAttribute("data-i18n-vars");
     prose.textContent = "";
     prose.classList.add("cursor");
   };
@@ -530,30 +551,35 @@ function beginAssistantMessage(onAnswerNow) {
       queuedNotice = true;
       wrap.classList.add("reply-queued");
       prose.classList.remove("cursor");
-      prose.textContent = position > 1
-        ? `Queued #${position} — other responses are running. Your answer will start automatically as soon as a slot is free.`
-        : "Queued — other responses are running. Your answer will start automatically as soon as a slot is free.";
+      const key = position > 1 ? "queue.position" : "queue.waiting";
+      const variables = position > 1 ? { position } : {};
+      prose.dataset.i18n = key;
+      prose.setAttribute("data-i18n-vars", JSON.stringify(variables));
+      prose.textContent = t(key, variables);
       scrollToBottom();
     },
     startQueued() {
       if (!queuedNotice) return;
-      prose.textContent = "A slot is free — starting your answer…";
+      prose.dataset.i18n = "queue.slotFree";
+      prose.removeAttribute("data-i18n-vars");
+      prose.textContent = t("queue.slotFree");
       scrollToBottom();
     },
-    showRecovering(message) {
+    showRecovering() {
       clearQueuedNotice();
-      recovering.textContent = message || "The tutor paused briefly — resuming automatically…";
+      recovering.dataset.i18n = "queue.recovering";
+      recovering.textContent = t("queue.recovering");
       recovering.hidden = false;
       scrollToBottom();
     },
-    pushPreamble(t) {
+    pushPreamble(chunk) {
       clearQueuedNotice();
       clearRecovering();
       if (preamble.hidden) {
         preamble.hidden = false;
-        announce("Tutor is warming up.");
+        announce(t("thinking.warmingAnnouncement"));
       }
-      preambleText.textContent += t;
+      preambleText.textContent += chunk;
       scrollToBottom();
     },
     pushThought(t) {
@@ -598,13 +624,19 @@ function beginAssistantMessage(onAnswerNow) {
       cancelRender();
       wrap.remove();
     },
-    fail(message) {
+    fail(message, translationKey = null, variables = {}) {
       wrap.classList.remove("reply-queued");
       queuedNotice = false;
+      delete prose.dataset.i18n;
+      prose.removeAttribute("data-i18n-vars");
       clearRecovering();
       settleThinking();
       cancelRender();
       if (!full) {
+        if (translationKey) {
+          prose.dataset.i18n = translationKey;
+          prose.setAttribute("data-i18n-vars", JSON.stringify(variables));
+        }
         prose.textContent = message;
       } else {
         // A partial reply exists: render it, but never let a truncated answer look finished —
@@ -612,7 +644,12 @@ function beginAssistantMessage(onAnswerNow) {
         renderMarkdown(prose, full);
         const warn = document.createElement("div");
         warn.className = "reply-incomplete";
-        warn.textContent = message || "Connection lost — this answer is incomplete.";
+        const key = translationKey || (!message ? "reply.connectionLost" : null);
+        if (key) {
+          warn.dataset.i18n = key;
+          warn.setAttribute("data-i18n-vars", JSON.stringify(variables));
+        }
+        warn.textContent = message || t("reply.connectionLost");
         prose.appendChild(warn);
       }
       clearCursor(prose);
@@ -629,6 +666,7 @@ function renderHistoryMessage(m) {
     wrap.className = "msg assistant";
     const prose = document.createElement("div");
     prose.className = "prose";
+    prose.dir = "auto";
     renderMarkdown(prose, m.content);
     wrap.appendChild(prose);
     messagesEl.appendChild(wrap);
@@ -641,19 +679,22 @@ function renderHistoryMessage(m) {
 const fmt = {
   gb: (v) => (v == null ? "—" : v.toFixed(2) + " GB"),
   temp: (v) => (v == null ? "—" : Math.round(v)) + " °C",
-  flag: (v) => (v == null ? "—" : v ? "YES" : "no"),
+  flag: (v) => (v == null ? "—" : v ? t("telemetry.yes") : t("telemetry.no")),
   tps: (v) => (v == null ? "—" : v.toFixed(1)) + " tok/s",
 };
 
-function updateTelemetry(t) {
+let latestTelemetry = null;
+
+function updateTelemetry(telemetry) {
+  latestTelemetry = telemetry;
   $("#telemetry").hidden = false;
-  $("#t-ram").textContent = "RAM " + fmt.gb(t.rss_gb);
-  $("#t-peak").textContent = "peak " + fmt.gb(t.peak_rss_gb);
-  $("#t-temp").textContent = fmt.temp(t.cpu_temp_c);
+  $("#t-ram").textContent = "RAM " + fmt.gb(telemetry.rss_gb);
+  $("#t-peak").textContent = t("telemetry.peak") + " " + fmt.gb(telemetry.peak_rss_gb);
+  $("#t-temp").textContent = fmt.temp(telemetry.cpu_temp_c);
   const th = $("#t-throttle");
-  th.textContent = "throttle " + fmt.flag(t.throttled);
-  th.classList.toggle("hot", t.throttled === true);
-  $("#t-tps").textContent = fmt.tps(t.tokens_per_second);
+  th.textContent = t("telemetry.throttle") + " " + fmt.flag(telemetry.throttled);
+  th.classList.toggle("hot", telemetry.throttled === true);
+  $("#t-tps").textContent = fmt.tps(telemetry.tokens_per_second);
 }
 
 function openTelemetry(cid) {
@@ -698,21 +739,33 @@ async function refreshSidebar() {
       item.className = "conv-item" +
         (c.id === conversationId ? " active" : "") +
         (backgroundJob ? " generating" : "");
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "conv-open";
       const title = document.createElement("span");
       title.className = "conv-title";
-      title.textContent = c.title || "Untitled";
+      const displayTitle = c.title || t("conversation.untitled");
+      title.textContent = displayTitle;
+      open.setAttribute("aria-label", t("conversation.open", { title: displayTitle }));
+      if (c.id === conversationId) open.setAttribute("aria-current", "page");
       if (backgroundJob) {
         const dot = document.createElement("span");
         dot.className = "conv-generating" + (backgroundJob.state === "queued" ? " queued" : "");
         dot.title = backgroundJob.state === "queued"
-          ? `Queued${backgroundJob.queuePosition ? ` #${backgroundJob.queuePosition}` : ""} — waiting for a slot`
-          : "Replying in the background";
-        item.appendChild(dot);
+          ? t("queue.waitingSlot", {
+            position: backgroundJob.queuePosition ? ` #${backgroundJob.queuePosition}` : "",
+          })
+          : t("conversation.background");
+        open.appendChild(dot);
       }
+      open.appendChild(title);
+      open.addEventListener("click", () => loadConversation(c.id));
       const del = document.createElement("button");
+      del.type = "button";
       del.className = "conv-del";
       del.textContent = "✕";
-      del.title = "Delete conversation";
+      del.title = t("conversation.delete");
+      del.setAttribute("aria-label", t("conversation.delete"));
       del.addEventListener("click", async (ev) => {
         ev.stopPropagation();
         if (backgroundJob) await stopGeneration(backgroundJob);
@@ -721,8 +774,7 @@ async function refreshSidebar() {
         if (c.id === conversationId) newChat();
         refreshSidebar();
       });
-      item.append(title, del);
-      item.addEventListener("click", () => loadConversation(c.id));
+      item.append(open, del);
       list.appendChild(item);
     }
   } catch {
@@ -767,7 +819,7 @@ async function loadConversation(
   }
   if (voiceModeActive) {
     setConversationLocation(conversationId, { mode: "replace" });
-    toast("Finish or stop voice mode before changing chats.");
+    toast(t("conversation.voiceChanging"));
     return null;
   }
   const requestedNavigation = ++navigationVersion;
@@ -800,14 +852,14 @@ async function loadConversation(
     // A 5xx/network outage says nothing about whether this chat exists. Preserve the selected
     // URL and keep trying in the background; only a definitive 404 may clear it.
     if (retryUnavailable) scheduleConversationRetry(cid);
-    if (!quietUnavailable) toast("That conversation is temporarily unavailable — retrying.");
+    if (!quietUnavailable) toast(t("conversation.unavailable"));
     return null;
   }
   if (r.status === 404) {
     pendingConversationLoad = null;
     conversationRetryTarget = null;
     setConversationLocation(conversationId, { mode: "replace" });
-    toast("Couldn't find that conversation.");
+    toast(t("conversation.notFound"));
     return false;
   }
   const body = await r.json();
@@ -860,13 +912,13 @@ function reattachJob(job) {
   else if (job.preamble) handle.pushPreamble(job.preamble);
   if (job.reasoning) handle.pushThought(job.reasoning);
   if (job.content) handle.pushDelta(job.content);
-  if (job.recovering) handle.showRecovering(job.recovering);
+  if (job.recovering) handle.showRecovering();
   job.handle = handle;
   if (job.source) decorateCompletedReply(job, { source: job.source });
   // Replay can finish while the history request is still in flight. In that ordering the
   // terminal event had no view handle to settle, so settle the freshly attached bubble now.
   if (job.terminal) {
-    if (job.failed) handle.fail(job.error || "The tutor couldn't finish that reply.");
+    if (job.failed) handle.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
     else handle.finalize();
   }
 }
@@ -877,7 +929,7 @@ function newChat({ historyMode = "push" } = {}) {
   conversationRetryTarget = null;
   if (voiceModeActive) {
     setConversationLocation(conversationId, { mode: "replace" });
-    return toast("Finish or stop voice mode before changing chats.");
+    return toast(t("conversation.voiceChanging"));
   }
   navigationVersion += 1;
   pendingConversationLoad = null;
@@ -934,7 +986,8 @@ function syncComposerState() {
     voiceModeActive ||
     startingConversations.has(startKeyFor(conversationId));
   sendBtn.classList.toggle("stop", Boolean(streaming));
-  sendBtn.title = streaming ? "Stop the reply (Esc)" : "Send";
+  sendBtn.title = streaming ? t("composer.stop") : t("composer.send");
+  sendBtn.setAttribute("aria-label", streaming ? t("composer.stop") : t("composer.sendMessage"));
   if (modelTrigger) {
     const inspectable = modelCatalog !== null || modelTrigger.dataset.loadFailed === "true";
     modelTrigger.disabled = !inspectable;
@@ -962,7 +1015,7 @@ async function stopGeneration(job = viewingLiveStream()) {
   } catch {
     job.stopping = false;
     syncComposerState();
-    toast("Couldn't stop that reply yet — it is still running.");
+    toast(t("reply.stopFailed"));
   }
 }
 
@@ -977,20 +1030,24 @@ function renderChips() {
       img.src = a.previewUrl;
       chip.appendChild(img);
     } else {
-      chip.append(a.kind === "audio" ? "🎙 audio" : "📎 file");
+      chip.append(a.kind === "audio" ? `🎙 ${t("attachment.audio")}` : `📎 ${t("attachment.file")}`);
     }
     if (a.status === "reading" || a.status === "failed") {
       // Durable, not a toast that has already faded: this is the only signal that tells the
       // student whether the tutor can actually see what they attached.
       const label = document.createElement("span");
       label.className = "chip-status";
-      label.textContent = a.status === "reading" ? "reading…" : "couldn't read it";
-      if (a.detail) label.title = a.detail;
+      label.textContent = a.status === "reading" ? t("attachment.reading") : t("attachment.readFailed");
+      if (a.detailKey) label.title = t(a.detailKey);
+      else if (a.detail) label.title = a.detail;
       chip.appendChild(label);
     }
     const x = document.createElement("button");
+    x.type = "button";
     x.className = "x";
     x.textContent = "✕";
+    x.title = t("attachment.remove");
+    x.setAttribute("aria-label", t("attachment.remove"));
     x.addEventListener("click", () => {
       pendingAttachments = pendingAttachments.filter((p) => p !== a);
       renderChips();
@@ -1019,9 +1076,9 @@ async function addImage(file) {
   if (conversationId) form.append("conversation_id", conversationId);
   form.append("image", file);
 
-  const settle = (status, detail) => {
+  const settle = (status, detailKey = null) => {
     entry.status = status;
-    entry.detail = detail || "";
+    entry.detailKey = detailKey;
     renderChips();
   };
 
@@ -1030,27 +1087,27 @@ async function addImage(file) {
     const r = await fetch("/v1/tutor/vision", { method: "POST", body: form });
     body = await r.json();
   } catch {
-    settle("failed", "the upload never reached the tutor");
-    return toast("Image upload failed — is the backend up?");
+    settle("failed", "attachment.imageUploadFailed");
+    return toast(t("attachment.imageUploadFailed"));
   }
   entry.id = body.attachment_id ?? null;
   if (body.accepted && body.transcription) {
     entry.transcription = body.transcription;
     settle("ready");
-    toast("Image read. Ask your question and send.", 3000);
+    toast(t("attachment.imageRead"), 3000);
   } else if (body.accepted) {
     // The reader ran but saw nothing it could transcribe — a camera problem, not a system
     // problem. Say so: "couldn't be read" sends the student hunting for a bug that isn't there.
-    settle("failed", "the photo came back empty — try a closer, sharper shot");
-    toast(entry.detail);
+    settle("failed", "attachment.photoEmpty");
+    toast(t("attachment.photoEmpty"));
   } else {
-    settle("failed", body.detail || "the image couldn't be read");
-    toast(entry.detail);
+    settle("failed", "attachment.imageUnreadable");
+    toast(t("attachment.imageUnreadable"));
   }
 }
 
 async function addAudio(file) {
-  toast("Transcribing the audio…", 3000);
+  toast(t("attachment.transcribing"), 3000);
   const form = new FormData();
   if (conversationId) form.append("conversation_id", conversationId);
   form.append("student_id", studentId); // owner, so the stored recording is scoped to us
@@ -1059,12 +1116,11 @@ async function addAudio(file) {
   try {
     const r = await fetch("/v1/audio/transcribe", { method: "POST", body: form });
     if (r.status === 503) {
-      const detail = (await r.json()).detail;
-      return toast(detail || "Speech recognition isn't available — type the question instead.");
+      return toast(t("attachment.speechUnavailable"));
     }
     body = await r.json();
   } catch {
-    return toast("Audio upload failed — is the backend up?");
+    return toast(t("attachment.audioUploadFailed"));
   }
   if (body.attachment_id != null) {
     pendingAttachments.push({ id: body.attachment_id, kind: "audio" });
@@ -1075,7 +1131,7 @@ async function addAudio(file) {
     autoGrow();
     send(); // spoken/uploaded question goes straight to the tutor
   } else {
-    toast("Couldn't hear anything in that file.");
+    toast(t("attachment.heardNothing"));
   }
 }
 
@@ -1146,7 +1202,7 @@ window.addEventListener("drop", (e) => {
   for (const file of e.dataTransfer.files) {
     if (file.type.startsWith("image/")) addImage(file);
     else if (file.type.startsWith("audio/")) addAudio(file);
-    else toast(`Not sure what to do with ${file.name}`);
+    else toast(t("attachment.unknownFile", { file: file.name }));
   }
 });
 
@@ -1245,11 +1301,13 @@ function renderQueue() {
     label.className = "queued-text";
     const imgs = item.attachments.filter((a) => a.kind === "image").length;
     label.textContent =
-      (imgs ? `🖼 ` : "") + (item.typed || "(from my image)");
+      (imgs ? `🖼 ` : "") + (item.typed || t("queue.fromImage"));
     const x = document.createElement("button");
+    x.type = "button";
     x.className = "x";
     x.textContent = "✕";
-    x.title = "Don't send this";
+    x.title = t("queue.dontSend");
+    x.setAttribute("aria-label", t("queue.dontSend"));
     x.addEventListener("click", () => {
       messageQueue = messageQueue.filter((q) => q !== item);
       persistMessageQueue();
@@ -1263,7 +1321,7 @@ function renderQueue() {
 function discardQueue(cid = conversationId, { announce = true } = {}) {
   const removed = messageQueue.filter((item) => item.cid === cid).length;
   if (removed && announce) {
-    toast(`Discarded ${removed} queued message${removed > 1 ? "s" : ""}.`);
+    toast(t(removed > 1 ? "queue.discardedMany" : "queue.discardedOne", { count: removed }));
   }
   messageQueue = messageQueue.filter((item) => item.cid !== cid);
   persistMessageQueue();
@@ -1293,16 +1351,16 @@ function restoreDraft(item) {
 }
 
 function send(steer = false) {
-  if (!identityReady) return toast("Opening your chats — your draft is safe.");
-  if (voiceModeActive) return toast("Finish voice mode before sending a typed message.");
+  if (!identityReady) return toast(t("reply.openingChats"));
+  if (voiceModeActive) return toast(t("reply.voiceTyped"));
   if ($("#model-trigger")?.dataset.switching === "true") {
-    return toast("The selected model is still loading — your draft is safe.");
+    return toast(t("reply.modelLoading"));
   }
   const typed = inputEl.value.trim();
-  if (readingAnImage()) return toast("Still reading your image — one moment.");
+  if (readingAnImage()) return toast(t("reply.imageReading"));
   if (!typed && !pendingAttachments.some((a) => a.transcription)) return;
   if (startingConversations.has(startKeyFor(conversationId))) {
-    return toast("Starting your previous message — this draft is still here.");
+    return toast(t("reply.previousStarting"));
   }
 
   const item = { typed, attachments: pendingAttachments.slice() };
@@ -1332,7 +1390,7 @@ function send(steer = false) {
   }
   if (!allowParallelChats && generationJobs.size) {
     restoreDraft(item);
-    return toast("A reply is running in another chat. Enable multiple chats in Settings to continue here.");
+    return toast(t("reply.parallelDisabled"));
   }
   dispatch(item);
 }
@@ -1355,7 +1413,7 @@ async function dispatch(item, opts = {}) {
   // A regenerate ("answer now") re-answers the turn already on screen, so it neither adds a
   // new user bubble nor re-links attachments — the backend re-runs the last user turn.
   const renderingHere = currentViewId === startedView;
-  if (!regenerate && renderingHere) addUserMessage(item.typed || "(from my image)", item.attachments);
+  if (!regenerate && renderingHere) addUserMessage(item.typed || t("queue.fromImage"), item.attachments);
   // "Answer now" is offered while the tutor is thinking: it cancels this stream and asks for
   // a direct answer to the same question. Not offered on a regenerate (it is already the
   // direct answer — thinking is off — so it can't loop).
@@ -1396,6 +1454,9 @@ async function dispatch(item, opts = {}) {
         use_web: useWeb,
         thinking,
         regenerate,
+        // Response-language preference is trusted request metadata. Never prefix or rewrite
+        // `message`: the gateway puts this value in the system prompt instead.
+        language: window.MutaI18n.locale,
       }),
     });
     if (!res.ok) {
@@ -1420,7 +1481,7 @@ async function dispatch(item, opts = {}) {
           if (currentViewId === startedView) {
             await loadConversation(startedIn, { historyMode: "none" });
           }
-          toast("The earlier reply is still running. This message is queued and will send automatically.", 5000);
+          toast(t("reply.earlierRunning"), 5000);
           // If that reply finished during the canonical history load, its normal drain ran
           // while this rejected start key was still held. Retry once the finally block frees it.
           setTimeout(() => drainQueue(startedIn), 0);
@@ -1437,14 +1498,17 @@ async function dispatch(item, opts = {}) {
         if (currentViewId === startedView) {
           await loadConversation(startedIn, { historyMode: "none" });
         }
-        toast("The earlier reply is finishing. This message remains queued until it can send.", 5000);
+        toast(t("reply.earlierFinishing"), 5000);
         setTimeout(async () => {
           await recoverGenerations({ attempts: 4, delayMs: 500 });
           if (!jobForConversation(startedIn)) drainQueue(startedIn);
         }, retries < 2 ? 500 : 2000);
         return;
       }
-      if (assistant) assistant.fail(detail || `The tutor couldn't answer (HTTP ${res.status}).`);
+      if (assistant) {
+        const variables = { status: res.status };
+        assistant.fail(t("reply.httpAnswerFailed", variables), "reply.httpAnswerFailed", variables);
+      }
       return;
     }
     const started = await res.json();
@@ -1483,7 +1547,7 @@ async function dispatch(item, opts = {}) {
     generationJobs.set(job.id, job);
     if (job.state === "queued") {
       job.handle?.showQueued(job.queuePosition);
-      toast("Queued — other responses are running. Your answer will start automatically when a slot is free.", 5000);
+      toast(t("queue.automatic"), 5000);
     }
     refreshSidebar();
     // Begin the replacement load first so it captures this job synchronously, before a very
@@ -1497,7 +1561,7 @@ async function dispatch(item, opts = {}) {
       expectedViewId: startedView,
     });
     if (!recovered && assistant) {
-      assistant.fail("Couldn't start that reply — your message is saved above.");
+      assistant.fail(t("reply.startFailed"), "reply.startFailed");
     }
   } finally {
     if (startRejected) sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
@@ -1531,7 +1595,7 @@ async function followGeneration(job) {
     } catch {
       if (job.terminal) break;
       if (!reconnectNoticeShown && conversationId === job.cid) {
-        toast("Connection interrupted — reconnecting while the tutor keeps working.");
+        toast(t("reply.reconnecting"));
         reconnectNoticeShown = true;
       }
       await new Promise((resolve) => setTimeout(resolve, 750));
@@ -1574,8 +1638,8 @@ async function pumpSse(res, job) {
           job.handle?.startQueued();
           refreshSidebar();
         } else if (ev.recovering) {
-          job.recovering = ev.recovering;
-          job.handle?.showRecovering(ev.recovering);
+          job.recovering = true;
+          job.handle?.showRecovering();
         } else if (ev.source && !ev.done) {
           if (ev.source === "cloud") job.source = "cloud";
           decorateCompletedReply(job, { source: job.source || ev.source });
@@ -1593,15 +1657,15 @@ async function pumpSse(res, job) {
           job.handle?.pushDelta(ev.delta);
         } else if (ev.error) {
           job.failed = true;
-          job.error = ev.error;
-          job.handle?.fail(ev.error);
+          job.error = true;
+          job.handle?.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
         } else if (ev.done) {
           job.terminal = true;
           if (ev.stopped && job.pendingRegen) job.handle?.remove();
-          else if (ev.stopped) job.handle?.fail("Stopped.");
+          else if (ev.stopped) job.handle?.fail(t("reply.stopped"), "reply.stopped");
           else if (!job.failed) job.handle?.finalize();
           decorateCompletedReply(job, { ...ev, source: ev.source || job.source });
-          if (conversationId === job.cid) announce("Tutor replied.");
+          if (conversationId === job.cid) announce(t("reply.tutorReplied"));
         }
         if (!job.telemetryOpened && (ev.reasoning || ev.delta) && conversationId === job.cid) {
           openTelemetry(job.cid);
@@ -1625,10 +1689,14 @@ function decorateCompletedReply(job, ev) {
   if (Array.isArray(ev.sources) && ev.sources.length && !last.querySelector(".sources")) {
     const box = document.createElement("div");
     box.className = "sources";
-    box.append("Sources: ");
+    const heading = document.createElement("span");
+    heading.dataset.i18n = "badge.sources";
+    heading.textContent = t("badge.sources");
+    box.append(heading);
     ev.sources.forEach((source, i) => {
       const safe = safeHttpUrl(source.url);
       const link = document.createElement(safe ? "a" : "span");
+      link.dir = "auto";
       if (safe) {
         link.href = safe;
         link.target = "_blank";
@@ -1643,19 +1711,23 @@ function decorateCompletedReply(job, ev) {
   if (ev.source === "cloud" && !last.querySelector(".src-badge")) {
     const badge = document.createElement("span");
     badge.className = "src-badge";
-    badge.textContent = "answered via cloud";
+    badge.dataset.i18n = "badge.cloud";
+    badge.textContent = t("badge.cloud");
     last.appendChild(badge);
   }
   if (ev.check_note) {
     const warn = document.createElement("div");
     warn.className = "reply-incomplete";
-    warn.textContent = ev.check_note;
+    warn.dataset.i18n = "badge.checkFailed";
+    warn.textContent = t("badge.checkFailed");
     last.querySelector(".prose")?.appendChild(warn);
   } else if (ev.verified === true && !last.querySelector(".verified-badge")) {
     const badge = document.createElement("span");
     badge.className = "verified-badge";
-    badge.textContent = "✓ steps checked";
-    badge.title = "The explicit arithmetic in this reply was verified with a math engine.";
+    badge.dataset.i18n = "badge.verified";
+    badge.setAttribute("data-i18n-title", "badge.verifiedTitle");
+    badge.textContent = t("badge.verified");
+    badge.title = t("badge.verifiedTitle");
     last.appendChild(badge);
   }
 }
@@ -1792,7 +1864,7 @@ async function recoverPendingGeneration(
     setConversationLocation(null, { mode: "replace" });
     currentViewId = newViewId();
   }
-  if (!quiet) toast("That reply did not start. Your conversation list is still intact.");
+  if (!quiet) toast(t("reply.didNotStart"));
   return false;
 }
 
@@ -1839,11 +1911,13 @@ window.MutaChat = {
 // --- settings --------------------------------------------------------------------------
 const settingsModal = $("#settings-modal");
 const parallelChatsToggle = $("#setting-parallel-chats");
+const languageSelect = $("#setting-language");
 
 function setSettingsOpen(open) {
   settingsModal.hidden = !open;
+  $("#app").inert = open;
   if (open) {
-    parallelChatsToggle.focus();
+    languageSelect.focus();
   } else {
     $("#settings-open").focus();
   }
@@ -1883,7 +1957,7 @@ async function saveParallelChats(enabled) {
     allowParallelChats = previous;
     parallelChatsToggle.checked = previous;
     localStorage.setItem("muta-parallel-chats", String(previous));
-    toast("Couldn't save that setting.");
+    toast(t("settings.saveFailed"));
   } finally {
     parallelChatsToggle.disabled = false;
     syncComposerState();
@@ -1895,8 +1969,27 @@ $("#settings-close").addEventListener("click", () => setSettingsOpen(false));
 settingsModal.addEventListener("click", (event) => {
   if (event.target === settingsModal) setSettingsOpen(false);
 });
+settingsModal.addEventListener("keydown", (event) => {
+  if (event.key !== "Tab" || settingsModal.hidden) return;
+  const focusable = [...settingsModal.querySelectorAll(
+    'button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  )].filter((element) => !element.hidden);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 parallelChatsToggle.addEventListener("change", () => {
   void saveParallelChats(parallelChatsToggle.checked);
+});
+languageSelect.addEventListener("change", () => {
+  window.MutaI18n.setLocale(languageSelect.value);
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !settingsModal.hidden) {
@@ -1976,12 +2069,12 @@ window.addEventListener("popstate", () => {
 });
 
 // --- thinking-level selector ------------------------------------------------------------
-const THINK_LABELS = { off: "Instant", auto: "Thinking", extended: "Extended" };
 const thinkBtn = $("#btn-think");
 const thinkMenu = $("#think-menu");
 const thinkCurrent = $("#think-current");
+const thinkingLabel = (level) => t(`reason.${level === "off" || level === "extended" ? level : "auto"}`);
 function applyThinkingLabel() {
-  thinkCurrent.textContent = THINK_LABELS[thinkingLevel] || "Thinking";
+  thinkCurrent.textContent = thinkingLabel(thinkingLevel);
   thinkMenu.querySelectorAll("[data-level]").forEach((b) => {
     b.setAttribute("aria-checked", String(b.dataset.level === thinkingLevel));
     b.classList.toggle("active", b.dataset.level === thinkingLevel);
@@ -2001,7 +2094,7 @@ thinkMenu.querySelectorAll("[data-level]").forEach((b) => {
     localStorage.setItem("muta-thinking", thinkingLevel);
     applyThinkingLabel();
     openThinkMenu(false);
-    toast(`Reasoning: ${THINK_LABELS[thinkingLevel]}.`, 2000);
+    toast(t("reason.changed", { level: thinkingLabel(thinkingLevel) }), 2000);
   });
 });
 document.addEventListener("click", (e) => {
@@ -2016,7 +2109,7 @@ $("#btn-web").addEventListener("click", () => {
   const btn = $("#btn-web");
   btn.classList.toggle("active", useWeb);
   btn.setAttribute("aria-pressed", String(useWeb));
-  toast(useWeb ? "Web grounding on — sources will be cited when online." : "Web grounding off.", 2500);
+  toast(t(useWeb ? "web.on" : "web.off"), 2500);
 });
 
 // --- connectivity dot: /v1/ready.online, polled slowly ---------------------------------
@@ -2028,7 +2121,7 @@ async function refreshNetDot() {
     if (body.online == null) return; // probe hasn't run yet — keep the dot hidden
     dot.hidden = false;
     dot.classList.toggle("online", body.online === true);
-    dot.title = body.online ? "internet available" : "offline";
+    dot.title = t(body.online ? "network.online" : "network.offline");
   } catch {
     /* the ready poll failing is not worth a toast */
   }
@@ -2049,7 +2142,8 @@ function modelSummary(model) {
   if (model.audit_proxy_tps != null) {
     metrics.push(`audit proxy ${model.audit_proxy_tps.toFixed(1)} tok/s`);
   }
-  return [model.description, metrics.join(" · ")].filter(Boolean).join(" ");
+  const description = window.MutaI18n.locale === "en" ? model.description : "";
+  return [description, metrics.join(" · ")].filter(Boolean).join(" ");
 }
 
 function setModelMenuOpen(open, { focus = false, restoreFocus = false } = {}) {
@@ -2077,18 +2171,23 @@ function makeModelOption(model, activeId, selectionEnabled) {
   const title = document.createElement("span");
   title.className = "model-option-title";
   const label = document.createElement("span");
+  label.dir = "auto";
   label.textContent = model.label;
   title.append(label);
   if (model.recommended) {
     const badge = document.createElement("span");
     badge.className = "model-badge";
-    badge.textContent = "Recommended";
+    badge.dataset.i18n = "model.recommended";
+    badge.textContent = t("model.recommended");
     title.append(badge);
   }
 
   const detail = document.createElement("span");
   detail.className = "model-option-detail";
-  detail.textContent = model.disabled_reason || modelSummary(model) || "Local tutor model";
+  detail.dir = "auto";
+  detail.textContent = !model.available
+    ? t("model.unavailable")
+    : modelSummary(model) || t("model.localTutor");
   const check = document.createElement("span");
   check.className = "model-check";
   check.setAttribute("aria-hidden", "true");
@@ -2107,16 +2206,16 @@ function renderModelCatalog(catalog) {
   }
   const hasChoice = catalog.selection_enabled && models.some((model) => model.available);
   modelTriggerLabel.textContent = catalog.switching
-    ? "Switching model…"
-    : active?.label || (catalog.active_id ? "Current local model" : "Choose a model");
-  modelTrigger.title = active ? modelSummary(active) : "Choose the local tutor model";
+    ? t("model.switching")
+    : active?.label || (catalog.active_id ? t("model.currentLocal") : t("model.choose"));
+  modelTrigger.title = active ? modelSummary(active) : t("model.chooseLocal");
   modelNote.textContent = !catalog.selection_enabled
-    ? "Only the laptop operator can change the shared tutor model."
+    ? t("model.operatorOnly")
     : active
       ? modelSummary(active)
       : hasChoice
-      ? "The current engine is outside this registry. Choose an installed tutor model."
-      : "No verified optional model is installed.";
+      ? t("model.outsideRegistry")
+      : t("model.noneInstalled");
   modelTrigger.dataset.loadFailed = "false";
   modelTrigger.dataset.switching = String(catalog.switching === true);
   modelTrigger.disabled = false;
@@ -2153,14 +2252,14 @@ async function refreshModelCatalog() {
     if (preserveSwitchLock) {
       modelSwitchUncertain = true;
       modelTrigger.dataset.switching = "true";
-      modelTriggerLabel.textContent = "Checking model status…";
-      modelNote.textContent = "The switch may still be completing. Choices stay locked until Muta reconnects.";
+      modelTriggerLabel.textContent = t("model.checking");
+      modelNote.textContent = t("model.switchUncertain");
       scheduleModelCatalogRecovery();
     } else {
       modelTrigger.dataset.switching = "false";
       const active = modelCatalog?.models?.find((model) => model.id === modelCatalog.active_id);
-      modelTriggerLabel.textContent = active?.label || "Local model";
-      modelNote.textContent = "Could not read the local model registry.";
+      modelTriggerLabel.textContent = active?.label || t("model.localTutor");
+      modelNote.textContent = t("model.registryFailed");
     }
     syncComposerState();
     return false;
@@ -2174,7 +2273,7 @@ async function selectModel(target) {
     return;
   }
   if (anyGeneration()) {
-    toast("Stop the current reply before changing models.");
+    toast(t("model.stopBeforeChange"));
     return;
   }
   const chosen = modelCatalog.models.find((model) => model.id === target);
@@ -2182,10 +2281,10 @@ async function selectModel(target) {
   setModelMenuOpen(false, { restoreFocus: true });
   modelSwitchUncertain = true;
   modelTrigger.dataset.switching = "true";
-  modelTriggerLabel.textContent = `Loading ${chosen.label}…`;
+  modelTriggerLabel.textContent = t("model.loadingNamed", { model: chosen.label });
   syncComposerState();
-  modelNote.textContent = `Loading ${chosen.label}… The chat and saved conversations will stay open.`;
-  toast(`Switching to ${chosen.label}…`, 120000);
+  modelNote.textContent = t("model.loadingNote", { model: chosen.label });
+  toast(t("model.switchingNamed", { model: chosen.label }), 120000);
   try {
     const response = await fetch("/v1/models/select", {
       method: "POST",
@@ -2202,20 +2301,20 @@ async function selectModel(target) {
     }
     modelSwitchUncertain = false;
     renderModelCatalog(body);
-    toast(`${chosen.label} is ready. New replies will use it.`);
-    announce(`${chosen.label} is ready.`);
+    toast(t("model.readyNew", { model: chosen.label }));
+    announce(t("model.ready", { model: chosen.label }));
   } catch (error) {
     if (!error.definitive) {
       modelTrigger.dataset.loadFailed = "true";
-      modelTriggerLabel.textContent = "Checking model status…";
-      modelNote.textContent = "The switch may still be completing. Choices stay locked until Muta reconnects.";
-      toast("The connection dropped while switching models. Muta is checking the result.");
+      modelTriggerLabel.textContent = t("model.checking");
+      modelNote.textContent = t("model.switchUncertain");
+      toast(t("model.connectionDropped"));
       scheduleModelCatalogRecovery();
       return;
     }
     modelSwitchUncertain = false;
     modelTrigger.dataset.switching = "false";
-    toast(`Model switch failed: ${error.message}`);
+    toast(t("model.switchFailed"));
     await refreshModelCatalog();
   } finally {
     syncComposerState();
@@ -2264,6 +2363,32 @@ modelMenu.addEventListener("keydown", (event) => {
 });
 document.addEventListener("click", (event) => {
   if (!modelMenu.hidden && !event.target.closest(".model-selector")) setModelMenuOpen(false);
+});
+
+function localizeModelCatalog() {
+  if (!modelCatalog) return;
+  // A locale change must never replay a stale pre-switch catalog through renderModelCatalog:
+  // that would overwrite dataset.switching and unlock controls while /models/select is still
+  // in flight. Translate the transient status in place and let the authoritative response own
+  // the next state transition.
+  if (modelTrigger.dataset.switching === "true") {
+    modelTriggerLabel.textContent = t(modelSwitchUncertain ? "model.checking" : "model.switching");
+    modelNote.textContent = t("model.switchUncertain");
+    syncComposerState();
+    return;
+  }
+  renderModelCatalog(modelCatalog);
+}
+
+window.MutaI18n.subscribe(() => {
+  applyThinkingLabel();
+  renderChips();
+  renderQueue();
+  refreshSidebar();
+  syncComposerState();
+  if (latestTelemetry) updateTelemetry(latestTelemetry);
+  localizeModelCatalog();
+  void refreshNetDot();
 });
 
 refreshModelCatalog();

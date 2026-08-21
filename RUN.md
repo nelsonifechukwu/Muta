@@ -349,4 +349,6 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 
 `make help` lists everything. The stack lives behind `./run.sh` / `make up` / `make down`;
 `make dev` runs the gateway on the host against the compose db for a fast edit loop;
-`make test` / `make lint` / `make contract` are the per-task developer surface.
+`make test` / `make lint` / `make contract` are the per-task developer surface. The static
+browser client also has dependency-free Node 22 tests at `make ui-test`; CI runs both suites,
+while the deploy image remains Python-only.

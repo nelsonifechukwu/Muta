@@ -66,7 +66,7 @@ body {
   width: 260px;
   min-width: 200px;
   background: var(--sidebar);
-  border-right: 1px solid var(--border);
+  border-inline-end: 1px solid var(--border);
   display: flex;
   flex-direction: column;
 }
@@ -87,11 +87,17 @@ button.ghost:hover { background: var(--accent-soft); }
 #conversation-list { flex: 1; overflow-y: auto; padding: 6px; }
 .conv-item {
   display: flex; align-items: center; gap: 6px;
-  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  padding: 8px 10px; border-radius: 8px;
   color: var(--text); font-size: 0.88rem;
 }
 .conv-item:hover { background: rgba(0, 0, 0, 0.04); }
 .conv-item.active { background: var(--accent-soft); }
+.conv-open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+  padding: 0; border: 0; background: transparent; color: inherit;
+  font: inherit; text-align: start; cursor: pointer;
+}
+.conv-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .conv-generating {
   flex: none; width: 7px; height: 7px; border-radius: 50%;
   background: var(--accent-strong); animation: think-pulse 1.4s ease-in-out infinite;
@@ -104,13 +110,16 @@ button.ghost:hover { background: var(--accent-soft); }
   visibility: hidden; border: none; background: none; cursor: pointer;
   color: var(--muted); font-size: 0.9rem; padding: 0 2px;
 }
-.conv-item:hover .conv-del { visibility: visible; }
+.conv-item:hover .conv-del, .conv-item:focus-within .conv-del { visibility: visible; }
 .conv-del:hover { color: var(--danger); }
+.conv-del:focus-visible, .chip .x:focus-visible, .queued .x:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+}
 .settings-open {
   display: flex; align-items: center; gap: 9px; width: calc(100% - 16px);
   min-height: 40px; margin: 0 8px 6px; padding: 8px 10px;
   border: 0; border-radius: 8px; background: transparent; color: var(--text);
-  font: inherit; font-size: 0.84rem; cursor: pointer; text-align: left;
+  font: inherit; font-size: 0.84rem; cursor: pointer; text-align: start;
 }
 .settings-open:hover { background: rgba(0, 0, 0, 0.04); }
 .settings-open svg {
@@ -122,7 +131,7 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .net-dot {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-  margin-right: 6px; background: #b0aca4; vertical-align: 1px;
+  margin-inline-end: 6px; background: #b0aca4; vertical-align: 1px;
 }
 /* The display rule above outranks the UA's [hidden] rule (author origin beats UA). */
 .net-dot[hidden] { display: none; }
@@ -135,7 +144,7 @@ button.ghost:hover { background: var(--accent-soft); }
 .sources {
   display: block; margin-top: 6px; font-size: 0.72rem; color: var(--muted);
 }
-.sources a { color: inherit; text-decoration: underline; margin-right: 2px; }
+.sources a { color: inherit; text-decoration: underline; margin-inline-end: 2px; }
 /* Self-check outcomes: a quiet green "steps checked" badge, or a warm caution when a step
    didn't hold / the reply was cut off. */
 .verified-badge {
@@ -144,15 +153,16 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .reply-incomplete {
   margin-top: 8px; font-size: 0.8rem; color: var(--danger);
-  border-left: 3px solid var(--danger); padding-left: 8px;
+  border-inline-start: 3px solid var(--danger); padding-inline-start: 8px;
 }
 .reply-recovering {
   width: fit-content; margin-top: 7px; padding: 5px 9px; border-radius: 8px;
   color: var(--muted); background: var(--accent-soft); font: 0.76rem/1.4 var(--sans);
 }
 .reply-queued .prose {
-  max-width: 34rem; padding: 10px 12px; border-left: 3px solid var(--accent-strong);
-  border-radius: 0 10px 10px 0; background: var(--accent-soft);
+  max-width: 34rem; padding: 10px 12px; border-inline-start: 3px solid var(--accent-strong);
+  border-start-start-radius: 0; border-end-start-radius: 0;
+  border-start-end-radius: 10px; border-end-end-radius: 10px; background: var(--accent-soft);
   color: var(--muted); font-family: var(--sans); font-size: 0.88rem; line-height: 1.5;
 }
 
@@ -184,7 +194,7 @@ button.ghost:hover { background: var(--accent-soft); }
 .model-trigger svg { flex: 0 0 16px; transition: transform 0.16s ease; }
 .model-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
 .model-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; width: min(25rem, calc(100vw - 290px));
+  position: absolute; top: calc(100% + 6px); inset-inline-start: 0; width: min(25rem, calc(100vw - 290px));
   min-width: 19rem; max-height: min(32rem, calc(100dvh - 86px)); overflow-y: auto;
   padding: 8px; border: 1px solid var(--border); border-radius: 14px;
   background: var(--card); box-shadow: 0 14px 44px rgba(45, 43, 38, 0.18);
@@ -198,7 +208,7 @@ button.ghost:hover { background: var(--accent-soft); }
 .model-option {
   display: grid; grid-template-columns: minmax(0, 1fr) 18px; gap: 4px 10px;
   width: 100%; padding: 10px; border: 0; border-radius: 10px;
-  background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  background: transparent; color: var(--text); font: inherit; text-align: start; cursor: pointer;
 }
 .model-option:hover:not(:disabled), .model-option:focus-visible {
   background: var(--accent-soft); outline: none;
@@ -290,7 +300,7 @@ button.ghost:hover { background: var(--accent-soft); }
 .prose h1 { font-size: 1.4rem; }
 .prose h2 { font-size: 1.2rem; }
 .prose h3 { font-size: 1.05rem; }
-.prose ul, .prose ol { margin: 0.7em 0; padding-left: 1.4em; }
+.prose ul, .prose ol { margin: 0.7em 0; padding-inline-start: 1.4em; }
 .prose li { margin: 0.25em 0; }
 .prose li > p { margin: 0.3em 0; }  /* marked wraps loose list items in <p> */
 .prose hr { border: none; border-top: 1px solid var(--border); margin: 1.6em 0; }
@@ -315,11 +325,12 @@ button.ghost:hover { background: var(--accent-soft); }
   border-collapse: collapse; margin: 0.9em 0;
   border: 1px solid var(--border); border-radius: 10px;
 }
-.prose th, .prose td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; }
+.prose th, .prose td { border: 1px solid var(--border); padding: 6px 12px; text-align: start; }
 .prose thead th { background: var(--sidebar); font-weight: 600; }
 .prose tbody tr:nth-child(even) { background: rgba(0, 0, 0, 0.015); }
 .prose blockquote {
-  border-left: 3px solid var(--accent-strong); margin: 0.9em 0; padding: 0.1em 0 0.1em 14px;
+  border-inline-start: 3px solid var(--accent-strong); margin: 0.9em 0;
+  padding-block: 0.1em; padding-inline: 14px 0;
   color: var(--muted); font-style: italic;
 }
 .prose img { max-width: 100%; height: auto; border-radius: 10px; }
@@ -380,7 +391,7 @@ details.thinking.settled .think-dot {
 }
 /* "Answer now" — a quiet pill pushed to the right of the summary. */
 .answer-now {
-  margin-left: auto; flex: none;
+  margin-inline-start: auto; flex: none;
   border: 1px solid var(--border); background: var(--card); color: var(--accent);
   font: inherit; font-size: 0.74rem; font-weight: 600;
   padding: 2px 10px; border-radius: 999px; cursor: pointer;
@@ -399,7 +410,7 @@ details.thinking .think-line {
 details[open].thinking .think-line { display: none; }
 details.thinking .thought {
   white-space: pre-wrap; margin-top: 8px;
-  border-left: 2px solid var(--border); padding-left: 10px;
+  border-inline-start: 2px solid var(--border); padding-inline-start: 10px;
   max-height: 16rem; overflow-y: auto;
   animation: think-appear 0.2s ease both;
 }
@@ -410,21 +421,21 @@ details.thinking .thought {
 .think-btn .think-current { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
 .think-btn svg { width: 17px; height: 17px; }
 .think-menu {
-  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 30;
+  position: absolute; bottom: calc(100% + 8px); inset-inline-start: 0; z-index: 30;
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12); padding: 5px; min-width: 15rem;
   animation: think-appear 0.16s ease both;
 }
 .think-menu button {
   display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-  width: 100%; text-align: left; border: none; background: none; cursor: pointer;
+  width: 100%; text-align: start; border: none; background: none; cursor: pointer;
   font: inherit; color: var(--text); padding: 8px 10px; border-radius: 8px;
 }
 .think-menu button small { color: var(--muted); font-size: 0.72rem; }
 .think-menu button:hover { background: var(--accent-soft); }
 .think-menu button.active { background: var(--accent-soft); color: var(--accent); }
 .think-menu button.active::after {
-  content: "✓"; position: absolute; right: 14px; color: var(--accent); font-weight: 700;
+  content: "✓"; position: absolute; inset-inline-end: 14px; color: var(--accent); font-weight: 700;
 }
 .think-menu button { position: relative; }
 /* Streaming: a light sweep across the "Thinking…" label, Claude-style. */
@@ -447,11 +458,11 @@ details.thinking .think-label.shimmer {
   font-family: var(--sans); font-size: 0.82rem; font-style: italic;
   color: var(--muted); line-height: 1.5;
   margin: 2px 0 10px; padding: 8px 12px;
-  border-left: 2px dashed var(--line);
+  border-inline-start: 2px dashed var(--line);
   opacity: 0.75;
 }
 .preamble-label {
-  display: inline-block; margin-right: 8px; padding: 1px 7px;
+  display: inline-block; margin-inline-end: 8px; padding: 1px 7px;
   border-radius: 999px; background: var(--accent-soft); color: var(--accent);
   font-style: normal; font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase;
 }
@@ -636,14 +647,37 @@ button.send.stop { background: var(--danger); }
   background: #b6b2a8; cursor: pointer; position: relative; transition: background 0.16s ease;
 }
 .settings-row input::after {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  content: ""; position: absolute; top: 3px; inset-inline-start: 3px;
+  width: 16px; height: 16px;
   border-radius: 50%; background: white; transition: transform 0.16s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
 }
 .settings-row input:checked { background: var(--accent-strong); }
 .settings-row input:checked::after { transform: translateX(18px); }
+html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px); }
 .settings-row input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .settings-row input:disabled { opacity: 0.55; cursor: wait; }
+.settings-row select {
+  flex: 0 1 13rem; min-width: 9rem; max-width: 48%;
+  padding-block: 7px; padding-inline: 10px 30px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--card);
+  color: var(--text); font: inherit; font-size: 0.86rem; cursor: pointer;
+}
+.settings-row select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.language-review-note {
+  margin: 4px 2px 0; color: var(--muted); font-size: 0.7rem; line-height: 1.45;
+}
+.language-coverage { margin: 10px 2px 0; font-size: 0.75rem; }
+.language-coverage > summary { color: var(--accent); cursor: pointer; font-weight: 600; }
+.language-coverage > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.coverage-countries {
+  max-height: 18rem; overflow-y: auto; margin: 10px 0 0; padding-inline-start: 20px;
+}
+.coverage-countries > li { margin-block: 8px; }
+.coverage-countries strong { display: block; color: var(--text); }
+.coverage-packs { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; }
+.coverage-packs > span { color: var(--muted); }
+.coverage-packs > .coverage-ready { color: var(--accent-strong); }
 .settings-footnote { margin: 16px 2px 0; color: var(--muted); font-size: 0.72rem; }
 
 @media (max-width: 720px) {
@@ -662,13 +696,18 @@ button.send.stop { background: var(--danger); }
   /* A backdrop filter establishes a containing block for fixed descendants. Disable it here
      so the fixed, phone-width model menu uses the visual-viewport coordinates below exactly
      once instead of adding the header's offset a second time. The 92% opaque header remains. */
-  .chat-header { padding-left: 58px; backdrop-filter: none; }
+  .chat-header { padding-inline-start: 58px; backdrop-filter: none; }
   .model-trigger { max-width: calc(100vw - 80px); }
   .model-menu {
     position: fixed; top: calc(var(--app-top, 0px) + 58px);
     left: 10px; right: 10px; width: auto; min-width: 0;
     max-height: calc(var(--app-height, 100dvh) - 76px);
   }
+}
+@media (max-width: 720px) {
+  html[dir="rtl"] .menu-toggle { left: auto; right: 10px; }
+  html[dir="rtl"] #sidebar { left: auto; right: 0; transform: translateX(100%); }
+  html[dir="rtl"] #app.sidebar-open #sidebar { transform: translateX(0); }
 }
 /* When a phone keyboard leaves less than 240 px, preserve the two controls that matter:
    the editable prompt and Send/Stop. Telemetry and fine print can return when the keyboard
