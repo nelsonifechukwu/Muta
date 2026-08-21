@@ -52,14 +52,40 @@ def test_landing_is_wired_into_both_deployment_topologies() -> None:
 
 def test_every_open_muta_action_targets_the_canonical_chat_route() -> None:
     html = (LANDING / "index.html").read_text()
+    chat_html = (ROOT / "ui" / "index.html").read_text()
     script = (LANDING / "script.js").read_text()
 
     assert html.count('href="/chat/"') == 4
     assert 'href="/ui/"' not in html
     assert 'href: "/ui/"' not in script
     assert script.count('href: "/chat/"') == 2
+    assert chat_html.count('href="/"') == 3
+    assert 'class="brand" href="/"' in chat_html
+    assert 'class="product-home-link" href="/"' in chat_html
+    assert 'class="mobile-home-link" href="/"' in chat_html
 
 
 def test_landing_has_no_dead_public_repository_links() -> None:
     html = (LANDING / "index.html").read_text()
     assert "github.com/nelsonifechukwu/Muta" not in html
+
+
+def test_learning_examples_cover_all_tracks_and_pause_during_interaction() -> None:
+    html = (LANDING / "index.html").read_text()
+    script = (LANDING / "script.js").read_text()
+
+    assert html.count("data-learning-slide") == 3
+    for category in ("sciences", "humanities", "business"):
+        assert f'data-category="{category}"' in html
+    assert "data-carousel-toggle" in html
+    assert "Humanities (Arts)" in html
+    assert "Business (Commercial)" in html
+    assert "perspective-choices" in html
+    assert "price-slider" in html and "units-slider" in html
+    assert "AUTO_ADVANCE_MS" in script
+    assert 'learningCarousel.matches(":hover")' in script
+    assert "keyboardMode" in script
+    assert 'prefers-reduced-motion: reduce' in script
+    assert "IntersectionObserver" in script
+    assert "cancelAnimationFrame" in script
+    assert "scrollIntoView" not in script

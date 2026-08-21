@@ -97,6 +97,286 @@
     });
   });
 
+  const learningCarousel = document.querySelector("[data-learning-carousel]");
+  const carouselTrack = document.querySelector("[data-carousel-track]");
+  const learningSlides = Array.from(document.querySelectorAll("[data-learning-slide]"));
+  const carouselTabs = Array.from(document.querySelectorAll("[data-carousel-tab]"));
+  const carouselProgress = document.querySelector("[data-carousel-progress]");
+  const carouselCount = document.querySelector("[data-carousel-count]");
+  const carouselToggle = document.querySelector("[data-carousel-toggle]");
+  const carouselToggleIcon = document.querySelector("[data-carousel-toggle-icon]");
+  const carouselToggleLabel = document.querySelector("[data-carousel-toggle-label]");
+  const carouselPrev = document.querySelector("[data-carousel-prev]");
+  const carouselNext = document.querySelector("[data-carousel-next]");
+
+  if (learningCarousel && carouselTrack && learningSlides.length && carouselTabs.length) {
+    const AUTO_ADVANCE_MS = 9000;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const hoverCapable = window.matchMedia("(hover: hover)");
+    let activeSlide = 0;
+    let elapsed = 0;
+    let lastFrame = performance.now();
+    let userPaused = false;
+    let pointerActive = false;
+    let keyboardMode = false;
+    let carouselVisible = !("IntersectionObserver" in window);
+    let animationFrame = null;
+
+    const hasKeyboardFocus = () => keyboardMode && learningCarousel.contains(document.activeElement);
+
+    const temporarilyPaused = () => (
+      pointerActive
+      || (hoverCapable.matches && learningCarousel.matches(":hover"))
+      || hasKeyboardFocus()
+    );
+
+    const paused = () => (
+      userPaused
+      || reducedMotion.matches
+      || temporarilyPaused()
+      || !carouselVisible
+      || document.hidden
+    );
+
+    const updateProgress = () => {
+      if (carouselProgress) carouselProgress.style.transform = `scaleX(${Math.min(elapsed / AUTO_ADVANCE_MS, 1)})`;
+    };
+
+    const updateToggle = () => {
+      if (!carouselToggle || !carouselToggleLabel || !carouselToggleIcon) return;
+      carouselToggle.hidden = reducedMotion.matches;
+      carouselToggleLabel.textContent = userPaused ? "Play" : "Pause";
+      carouselToggleIcon.textContent = userPaused ? "▶" : "Ⅱ";
+      carouselToggle.setAttribute("aria-label", userPaused ? "Play learning examples" : "Pause learning examples");
+    };
+
+    const setSlide = (nextIndex, { focusTab = false, resetClock = true } = {}) => {
+      activeSlide = (nextIndex + learningSlides.length) % learningSlides.length;
+      carouselTrack.style.transform = `translateX(-${activeSlide * 100}%)`;
+
+      learningSlides.forEach((slide, index) => {
+        const selected = index === activeSlide;
+        slide.setAttribute("aria-hidden", String(!selected));
+        slide.toggleAttribute("inert", !selected);
+      });
+
+      carouselTabs.forEach((tab, index) => {
+        const selected = index === activeSlide;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
+
+      const currentTab = carouselTabs[activeSlide];
+      const centredTabOffset = currentTab.offsetLeft - ((carouselTabs[0].parentElement.clientWidth - currentTab.offsetWidth) / 2);
+      carouselTabs[0].parentElement.scrollTo({
+        left: Math.max(centredTabOffset, 0),
+        behavior: reducedMotion.matches ? "auto" : "smooth",
+      });
+      if (focusTab) currentTab.focus();
+      if (carouselCount) carouselCount.textContent = `${String(activeSlide + 1).padStart(2, "0")} / ${String(learningSlides.length).padStart(2, "0")}`;
+      if (resetClock) {
+        elapsed = 0;
+        updateProgress();
+      }
+    };
+
+    const stopAnimation = () => {
+      if (animationFrame === null) return;
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    };
+
+    const advance = (now) => {
+      animationFrame = null;
+      if (paused()) return;
+      const delta = Math.min(now - lastFrame, 100);
+      lastFrame = now;
+      elapsed += delta;
+      if (elapsed >= AUTO_ADVANCE_MS) setSlide(activeSlide + 1);
+      updateProgress();
+      animationFrame = window.requestAnimationFrame(advance);
+    };
+
+    const syncAnimation = () => {
+      const isPaused = paused();
+      learningCarousel.classList.toggle("is-auto-paused", isPaused);
+      if (isPaused) {
+        stopAnimation();
+        return;
+      }
+      if (animationFrame === null) {
+        lastFrame = performance.now();
+        animationFrame = window.requestAnimationFrame(advance);
+      }
+    };
+
+    carouselTabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => setSlide(index));
+      tab.addEventListener("keydown", (event) => {
+        let nextIndex = null;
+        if (event.key === "ArrowRight") nextIndex = index + 1;
+        if (event.key === "ArrowLeft") nextIndex = index - 1;
+        if (event.key === "Home") nextIndex = 0;
+        if (event.key === "End") nextIndex = learningSlides.length - 1;
+        if (nextIndex === null) return;
+        event.preventDefault();
+        setSlide(nextIndex, { focusTab: true });
+      });
+    });
+
+    carouselPrev?.addEventListener("click", () => setSlide(activeSlide - 1));
+    carouselNext?.addEventListener("click", () => setSlide(activeSlide + 1));
+    carouselToggle?.addEventListener("click", () => {
+      userPaused = !userPaused;
+      updateToggle();
+      syncAnimation();
+    });
+
+    document.addEventListener("keydown", () => {
+      keyboardMode = true;
+      syncAnimation();
+    }, true);
+    document.addEventListener("pointerdown", () => { keyboardMode = false; }, true);
+    learningCarousel.addEventListener("pointerdown", () => {
+      pointerActive = true;
+      syncAnimation();
+    });
+    learningCarousel.addEventListener("pointerenter", syncAnimation);
+    learningCarousel.addEventListener("pointerleave", syncAnimation);
+    learningCarousel.addEventListener("focusin", syncAnimation);
+    learningCarousel.addEventListener("focusout", syncAnimation);
+    window.addEventListener("pointerup", () => {
+      pointerActive = false;
+      syncAnimation();
+    });
+    window.addEventListener("pointercancel", () => {
+      pointerActive = false;
+      syncAnimation();
+    });
+    window.addEventListener("blur", () => {
+      pointerActive = false;
+      syncAnimation();
+    });
+    document.addEventListener("visibilitychange", syncAnimation);
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([entry]) => {
+        carouselVisible = entry.isIntersecting;
+        syncAnimation();
+      }, { threshold: 0.18 }).observe(learningCarousel);
+    }
+
+    const onMotionPreference = () => {
+      if (reducedMotion.matches) elapsed = 0;
+      updateToggle();
+      updateProgress();
+      syncAnimation();
+    };
+    reducedMotion.addEventListener?.("change", onMotionPreference);
+
+    setSlide(0);
+    updateToggle();
+    syncAnimation();
+  }
+
+  const perspectiveCopy = {
+    organiser: {
+      label: "The organiser",
+      passage: "“By sunrise, the square answered our call; the crowd was ready, and change felt close enough to touch.”",
+      clues: ["answered our call", "ready", "change"],
+      prompt: "What does the organiser want us to feel — and which words do that work?",
+      feedback: "The organiser uses collective, hopeful language to make the gathering feel purposeful.",
+    },
+    witness: {
+      label: "A witness",
+      passage: "“By sunrise, the square was humming. I watched from my doorway as neighbours arrived, some smiling, some looking over their shoulders.”",
+      clues: ["I watched", "some smiling", "looking over"],
+      prompt: "Which details reveal uncertainty, even though the witness never names it?",
+      feedback: "The witness mixes observation with personal position, giving us detail but only from one doorway.",
+    },
+    reporter: {
+      label: "The reporter",
+      passage: "“Residents gathered in the central square shortly after sunrise, following notices circulated the previous evening.”",
+      clues: ["residents", "shortly after", "following notices"],
+      prompt: "What does this version gain in precision — and what feeling does it leave out?",
+      feedback: "The reporter favours verifiable time, place, and cause. The tone sounds neutral, but selection still shapes the account.",
+    },
+  };
+
+  const perspectiveButtons = Array.from(document.querySelectorAll("[data-perspective]"));
+  const voiceLabel = document.getElementById("voice-label");
+  const voicePassage = document.getElementById("voice-passage");
+  const languageClues = document.getElementById("language-clues");
+  const humanitiesPrompt = document.getElementById("humanities-prompt");
+  const humanitiesStatus = document.getElementById("humanities-status");
+
+  perspectiveButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const copy = perspectiveCopy[button.dataset.perspective];
+      if (!copy || !voiceLabel || !voicePassage || !languageClues || !humanitiesPrompt || !humanitiesStatus) return;
+      perspectiveButtons.forEach((choice) => choice.setAttribute("aria-pressed", String(choice === button)));
+      voiceLabel.textContent = copy.label;
+      voicePassage.textContent = copy.passage;
+      humanitiesPrompt.textContent = copy.prompt;
+      humanitiesStatus.textContent = copy.feedback;
+      languageClues.replaceChildren(...copy.clues.map((clue) => {
+        const chip = document.createElement("span");
+        chip.textContent = clue;
+        return chip;
+      }));
+    });
+  });
+
+  const priceSlider = document.getElementById("price-slider");
+  const unitsSlider = document.getElementById("units-slider");
+  const priceOutput = document.getElementById("price-output");
+  const unitsOutput = document.getElementById("units-output");
+  const revenueValue = document.getElementById("revenue-value");
+  const costValue = document.getElementById("cost-value");
+  const profitValue = document.getElementById("profit-value");
+  const revenueBar = document.getElementById("revenue-bar");
+  const costBar = document.getElementById("cost-bar");
+  const businessPrompt = document.getElementById("business-prompt");
+  const businessStatus = document.getElementById("business-status");
+
+  if (priceSlider && unitsSlider) {
+    const FIXED_COST = 6000;
+    const UNIT_COST = 500;
+    const naira = (value) => `₦${Math.abs(Math.round(value)).toLocaleString("en-NG")}`;
+
+    const updateBusiness = () => {
+      const price = Number(priceSlider.value);
+      const units = Number(unitsSlider.value);
+      const revenue = price * units;
+      const totalCost = FIXED_COST + UNIT_COST * units;
+      const profit = revenue - totalCost;
+      const breakEven = Math.ceil(FIXED_COST / (price - UNIT_COST));
+      const scale = Math.max(revenue, totalCost, 1) * 1.05;
+
+      if (priceOutput) priceOutput.textContent = naira(price);
+      if (unitsOutput) unitsOutput.textContent = String(units);
+      if (revenueValue) revenueValue.textContent = naira(revenue);
+      if (costValue) costValue.textContent = naira(totalCost);
+      if (profitValue) {
+        profitValue.textContent = `${profit >= 0 ? "+" : "−"}${naira(profit)}`;
+        profitValue.dataset.state = profit >= 0 ? "profit" : "loss";
+      }
+      if (revenueBar) revenueBar.style.width = `${(revenue / scale) * 100}%`;
+      if (costBar) costBar.style.width = `${(totalCost / scale) * 100}%`;
+      priceSlider.setAttribute("aria-valuetext", naira(price));
+      unitsSlider.setAttribute("aria-valuetext", `${units} notebooks`);
+      if (businessPrompt) businessPrompt.textContent = `At ${naira(price)} each, the shop breaks even at ${breakEven} notebook${breakEven === 1 ? "" : "s"}. What changes when quantity moves?`;
+      if (businessStatus) {
+        const result = profit >= 0 ? `profit is ${naira(profit)}` : `the loss is ${naira(profit)}`;
+        businessStatus.textContent = `Revenue is ${naira(revenue)}. After ${naira(FIXED_COST)} fixed costs and ${naira(UNIT_COST)} per notebook, ${result}.`;
+      }
+    };
+
+    priceSlider.addEventListener("input", updateBusiness);
+    unitsSlider.addEventListener("input", updateBusiness);
+    updateBusiness();
+  }
+
   const canvas = document.getElementById("derivative-canvas");
   const slider = document.getElementById("derivative-slider");
   const readoutX = document.getElementById("readout-x");

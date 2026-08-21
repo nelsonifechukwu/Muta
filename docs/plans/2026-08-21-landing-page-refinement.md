@@ -2,9 +2,9 @@
 
 ## Objective
 
-Refine the standalone `landing/` page on the existing `landing-page` branch so it presents
-Muta as it actually exists today, gives the future product room to grow, and makes the
-pedagogical idea tangible rather than describing it as a long feature list.
+Refine the standalone `landing/` page and connect it coherently to the tutor at `/chat/` so
+Muta presents as one product: an inviting public explanation followed by a focused learning
+workspace, with an obvious route in both directions.
 
 The page remains an offline-friendly, framework-free HTML/CSS/JavaScript surface. It must
 look and feel related to the product UI in `ui/`: warm cream, terracotta, quiet typography,
@@ -57,11 +57,12 @@ The landing page must not flatten those two lists into a single present-tense cl
 1. **Hero:** retain the strongest existing proposition, “A tutor that asks before it tells,”
    paired with a product-like conversation that can switch between asking, showing a photo,
    and speaking.
-2. **Trust strip:** concise, defensible proof points: local, offline-first, maths and science,
-   learner-owned progress.
-3. **Interactive lesson:** a draggable derivative/tangent demonstration that turns the
-   speedometer analogy into something visitors can manipulate. Canvas keeps it lightweight and
-   avoids an ornamental illustration pretending to be product UI.
+2. **Trust strip:** concise, defensible proof points: local, offline-first, multimodal input,
+   learner-owned progress, and checked working where verification applies.
+3. **Interactive lesson carousel:** three distinct demonstrations show how Muta can teach across
+   Sciences, Humanities, and Business: a draggable derivative/tangent lab, a point-of-view
+   reading studio, and a live break-even model. The carousel advances only while idle, pauses
+   for pointer/keyboard interaction, provides manual controls, and respects reduced motion.
 4. **Teaching loop:** intuition → learner explanation → checked steps. This replaces abstract
    pedagogy cards with a sequence.
 5. **Available now:** concrete current capabilities, visually grounded in the current app.
@@ -71,9 +72,23 @@ The landing page must not flatten those two lists into a single present-tense cl
 8. **Closing call to action:** open the current local interface when deployed with Muta, or view
    the source/project in the meantime.
 
+## Cross-surface product shell
+
+- The Muta wordmark is a home link on both surfaces and uses the same serif face, full stop,
+  ink colour, and focus treatment.
+- The tutor sidebar includes an explicit “About Muta” destination above utility settings so
+  returning to the landing page never depends on knowing that logos are links.
+- When the sidebar becomes a drawer on phones, a compact Muta home link remains visible in the
+  chat header.
+- Navigation uses ordinary same-origin anchors (`/` and `/chat/`) so it works offline, without
+  JavaScript, and in both native FastAPI and nginx deployments.
+- The chat adopts the landing page's core paper, ink, border, terracotta, and type tokens while
+  retaining its denser workspace layout.
+
 ## Visual system
 
-- Reuse `ui/styles.css` brand foundations: `#faf9f5`, `#3d3929`, `#bd5d3a`.
+- Share the core brand foundations across both surfaces: paper `#faf9f5`, ink `#302d24`,
+  terracotta `#ad4f31`, paper-deep `#f1ede3`, and border `#dfddd4`.
 - Add a dark aubergine/ink surface only for the interactive lesson; use a restrained green for
   verified/progress states.
 - Use system fonts only so the page works fully offline.
@@ -89,9 +104,13 @@ The landing page must not flatten those two lists into a single present-tense cl
 - No unsupported present-tense feature claims.
 - One `h1`; semantic sections and navigation landmarks; visible keyboard focus.
 - Mobile menu works and closes after navigation; no horizontal overflow at 320 px.
-- Interactive lesson is usable with its range input and has a textual fallback/status.
+- All three interactive lessons work with keyboard and pointer input and have textual status.
+- The lesson carousel pauses during interaction, resumes when idle, exposes a manual pause
+  control, and never auto-advances under `prefers-reduced-motion`.
 - Desktop and mobile screenshots show the complete first viewport without invisible reveal
   content.
 - All internal anchors and external links resolve as intended.
+- The chat wordmark and explicit sidebar destination reach `/`; the landing CTAs reach
+  `/chat/`; the mobile header keeps a visible home route while the sidebar is closed.
 - Existing repository tests remain green, with a small landing asset test added if useful.
 - Leave the branch uncommitted and unpushed for review.

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#faf9f5">
   <title>Muta — Learn by thinking it through</title>
-  <meta name="description" content="Muta is an offline-first AI tutor for maths and science. It starts with what you know, helps you reason through the next step, and runs on the laptop in front of you.">
+  <meta name="description" content="Muta is an offline-first learning companion for Sciences, Humanities (Arts), and Business (Commercial). It starts with what you know, helps you reason through the next step, and runs on the laptop in front of you.">
   <meta property="og:title" content="Muta — A tutor that asks before it tells">
-  <meta property="og:description" content="An offline-first AI tutor for maths and science, built around understanding.">
+  <meta property="og:description" content="An offline-first learning companion across Sciences, Humanities (Arts), and Business (Commercial), built around understanding.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="og.png">
   <meta name="twitter:card" content="summary_large_image">
@@ -47,7 +47,7 @@
   <section class="hero">
     <div class="shell hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">Offline-first AI tutor for maths &amp; science</p>
+        <p class="eyebrow">Offline-first learning companion · every track</p>
         <h1>A tutor that asks<br> before it tells.</h1>
         <p class="hero-intro">Muta starts with what already makes sense to you, then turns that intuition into the next step. It runs on the laptop in front of you, remembers the thread, and stays useful when the internet does not.</p>
         <div class="hero-actions">
@@ -101,38 +101,154 @@
     </div>
   </section>
 
-  <section class="lesson-section" id="lesson">
-    <div class="shell lesson-grid">
-      <div class="lesson-copy">
-        <p class="eyebrow eyebrow-light">A small lesson, right here</p>
-        <h2>Make “rate of change” move.</h2>
-        <p>A definition is easy to repeat. An idea is easier to keep when you can touch it. Move the point and watch the curve's steepness become a number.</p>
-        <div class="lesson-question">
-          <span>Notice</span>
-          <p id="lesson-status">At x = 2.2, the curve is rising 4.4 units for every step to the right.</p>
+  <section class="lesson-section" id="lesson" data-learning-carousel aria-labelledby="learning-examples-title">
+    <div class="shell">
+      <div class="lesson-carousel-head">
+        <div>
+          <p class="eyebrow eyebrow-light">Three tracks · ideas you can touch</p>
+          <h2 id="learning-examples-title">Understanding is bigger than one subject.</h2>
+          <p>Move a tangent. Change a narrator. Find the moment a business turns a profit. Muta meets the kind of thinking each subject asks for.</p>
         </div>
-        <p class="lesson-bridge">That number is the derivative at that exact point — the graph's speedometer.</p>
+        <div class="carousel-controls" aria-label="Example controls">
+          <button class="carousel-control carousel-toggle" type="button" data-carousel-toggle aria-label="Pause learning examples">
+            <span aria-hidden="true" data-carousel-toggle-icon>Ⅱ</span>
+            <span data-carousel-toggle-label>Pause</span>
+          </button>
+          <button class="carousel-control carousel-arrow" type="button" data-carousel-prev aria-label="Previous learning example">←</button>
+          <button class="carousel-control carousel-arrow" type="button" data-carousel-next aria-label="Next learning example">→</button>
+        </div>
       </div>
 
-      <div class="lab-panel">
-        <div class="lab-head">
-          <div>
-            <span>Mini lab</span>
-            <strong>y = x²</strong>
-          </div>
-          <span class="live-pill"><i aria-hidden="true"></i> interactive</span>
+      <div class="track-tabs" role="tablist" aria-label="Learning tracks">
+        <button id="track-sciences-tab" type="button" role="tab" aria-selected="true" aria-controls="track-sciences-panel" tabindex="0" data-carousel-tab="0">
+          <span>01</span><strong>Sciences</strong><small>Biology · Physics · Further Maths</small>
+        </button>
+        <button id="track-humanities-tab" type="button" role="tab" aria-selected="false" aria-controls="track-humanities-panel" tabindex="-1" data-carousel-tab="1">
+          <span>02</span><strong>Humanities</strong><small>Arts · Literature · Government</small>
+        </button>
+        <button id="track-business-tab" type="button" role="tab" aria-selected="false" aria-controls="track-business-panel" tabindex="-1" data-carousel-tab="2">
+          <span>03</span><strong>Business</strong><small>Commercial · Accounting · Economics</small>
+        </button>
+      </div>
+
+      <div class="lesson-viewport">
+        <div class="lesson-track" data-carousel-track>
+          <article class="learning-slide" id="track-sciences-panel" role="tabpanel" aria-labelledby="track-sciences-tab" data-learning-slide data-category="sciences">
+            <div class="lesson-grid">
+              <div class="lesson-copy">
+                <p class="slide-kicker">Physics · Further Mathematics</p>
+                <h3>Make “rate of change” move.</h3>
+                <p>A definition is easy to repeat. An idea is easier to keep when you can touch it. Move the point and watch the curve's steepness become a number.</p>
+                <div class="lesson-question">
+                  <span>Notice</span>
+                  <p id="lesson-status">At x = 2.2, the curve is rising 4.4 units for every step to the right.</p>
+                </div>
+                <p class="lesson-bridge">That number is the derivative at that exact point — the graph's speedometer.</p>
+              </div>
+
+              <div class="lab-panel">
+                <div class="lab-head">
+                  <div><span>Mini lab</span><strong>y = x²</strong></div>
+                  <span class="live-pill"><i aria-hidden="true"></i> interactive</span>
+                </div>
+                <canvas id="derivative-canvas" width="720" height="420" aria-label="Graph of y equals x squared with a movable point and tangent line. Use the slider below to move the point.">Your browser does not support the interactive graph. The derivative of x squared is 2x.</canvas>
+                <div class="lab-readout" aria-hidden="true">
+                  <div><span>position</span><strong id="readout-x">2.2</strong></div>
+                  <div><span>height</span><strong id="readout-y">4.84</strong></div>
+                  <div><span>instant slope</span><strong id="readout-slope">4.4</strong></div>
+                </div>
+                <label class="slider-label" for="derivative-slider">
+                  <span>Move the point</span><span>slow rise&nbsp;&nbsp;→&nbsp;&nbsp;steep rise</span>
+                </label>
+                <input id="derivative-slider" type="range" min="0.4" max="4.5" step="0.1" value="2.2" aria-describedby="lesson-status">
+              </div>
+            </div>
+          </article>
+
+          <article class="learning-slide" id="track-humanities-panel" role="tabpanel" aria-labelledby="track-humanities-tab" aria-hidden="true" inert data-learning-slide data-category="humanities">
+            <div class="lesson-grid">
+              <div class="lesson-copy">
+                <p class="slide-kicker">Literature · Government · History</p>
+                <h3>Who gets to tell the story?</h3>
+                <p>The facts can stay still while the meaning shifts. Choose a narrator and notice how position, motive, and language change what the reader believes.</p>
+                <div class="lesson-question">
+                  <span>Ask yourself</span>
+                  <p id="humanities-prompt">What does the organiser want us to feel — and which words do that work?</p>
+                </div>
+                <p class="lesson-bridge">Critical reading begins when we separate what happened from how it is being framed.</p>
+              </div>
+
+              <div class="lab-panel humanities-lab">
+                <div class="lab-head">
+                  <div><span>Perspective studio</span><strong>The morning gathering</strong></div>
+                  <span class="live-pill"><i aria-hidden="true"></i> interactive</span>
+                </div>
+                <div class="passage-card">
+                  <span id="voice-label">The organiser</span>
+                  <blockquote id="voice-passage">“By sunrise, the square answered our call; the crowd was ready, and change felt close enough to touch.”</blockquote>
+                  <div class="language-clues" id="language-clues" aria-label="Language clues">
+                    <span>answered our call</span><span>ready</span><span>change</span>
+                  </div>
+                </div>
+                <fieldset class="perspective-choices" aria-describedby="humanities-status">
+                  <legend>Change the point of view</legend>
+                  <button type="button" aria-pressed="true" data-perspective="organiser">Organiser</button>
+                  <button type="button" aria-pressed="false" data-perspective="witness">Witness</button>
+                  <button type="button" aria-pressed="false" data-perspective="reporter">Reporter</button>
+                </fieldset>
+                <p class="lab-feedback" id="humanities-status" aria-live="polite">The organiser uses collective, hopeful language to make the gathering feel purposeful.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="learning-slide" id="track-business-panel" role="tabpanel" aria-labelledby="track-business-tab" aria-hidden="true" inert data-learning-slide data-category="business">
+            <div class="lesson-grid">
+              <div class="lesson-copy">
+                <p class="slide-kicker">Accounting · Commerce · Economics</p>
+                <h3>When does the shop begin to earn?</h3>
+                <p>A profit formula becomes useful when it can answer a decision. Change the selling price and quantity, then watch revenue race against total cost.</p>
+                <div class="lesson-question">
+                  <span>Decision</span>
+                  <p id="business-prompt">At ₦900 each, the shop breaks even at 15 notebooks. What happens if the price falls?</p>
+                </div>
+                <p class="lesson-bridge">Business thinking connects the calculation to the choice it helps someone make.</p>
+              </div>
+
+              <div class="lab-panel business-lab">
+                <div class="lab-head">
+                  <div><span>Break-even studio</span><strong>Notebook pop-up shop</strong></div>
+                  <span class="live-pill"><i aria-hidden="true"></i> interactive</span>
+                </div>
+                <div class="money-readout" aria-hidden="true">
+                  <div><span>revenue</span><strong id="revenue-value">₦18,000</strong></div>
+                  <div><span>total cost</span><strong id="cost-value">₦16,000</strong></div>
+                  <div><span>profit / loss</span><strong id="profit-value">+₦2,000</strong></div>
+                </div>
+                <div class="money-bars" aria-hidden="true">
+                  <div><span>Revenue</span><i><b id="revenue-bar"></b></i></div>
+                  <div><span>Cost</span><i><b id="cost-bar"></b></i></div>
+                </div>
+                <div class="business-controls">
+                  <div>
+                    <label for="price-slider"><span>Selling price</span><output id="price-output" for="price-slider">₦900</output></label>
+                    <input id="price-slider" type="range" min="600" max="1400" step="50" value="900">
+                  </div>
+                  <div>
+                    <label for="units-slider"><span>Notebooks sold</span><output id="units-output" for="units-slider">20</output></label>
+                    <input id="units-slider" type="range" min="5" max="40" step="1" value="20">
+                  </div>
+                </div>
+                <p class="lab-feedback" id="business-status" aria-live="polite">Revenue is ₦18,000. After ₦6,000 fixed costs and ₦500 per notebook, profit is ₦2,000.</p>
+              </div>
+            </div>
+          </article>
         </div>
-        <canvas id="derivative-canvas" width="720" height="420" aria-label="Graph of y equals x squared with a movable point and tangent line. Use the slider below to move the point.">Your browser does not support the interactive graph. The derivative of x squared is 2x.</canvas>
-        <div class="lab-readout" aria-hidden="true">
-          <div><span>position</span><strong id="readout-x">2.2</strong></div>
-          <div><span>height</span><strong id="readout-y">4.84</strong></div>
-          <div><span>instant slope</span><strong id="readout-slope">4.4</strong></div>
-        </div>
-        <label class="slider-label" for="derivative-slider">
-          <span>Move the point</span>
-          <span>slow rise&nbsp;&nbsp;→&nbsp;&nbsp;steep rise</span>
-        </label>
-        <input id="derivative-slider" type="range" min="0.4" max="4.5" step="0.1" value="2.2" aria-describedby="lesson-status">
+      </div>
+
+      <div class="carousel-footer">
+        <div class="carousel-progress" aria-hidden="true"><span data-carousel-progress></span></div>
+        <p>Examples move on when left alone and pause while you explore. You can pause them completely at any time.</p>
+        <span data-carousel-count>01 / 03</span>
       </div>
     </div>
   </section>
@@ -285,7 +401,7 @@
   <div class="shell footer-grid">
     <div>
       <a class="brand" href="#top">Muta<span aria-hidden="true">.</span></a>
-      <p>An offline-first tutor for maths and scientific reasoning.</p>
+      <p>An offline-first learning companion across Sciences, Humanities (Arts), and Business (Commercial).</p>
     </div>
     <nav aria-label="Footer navigation">
       <a href="#lesson">Try a lesson</a>
