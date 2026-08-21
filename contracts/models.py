@@ -297,7 +297,16 @@ class ChatTurn(BaseModel):
     session_id: str = Field(description="One student's tutoring session; keys slot + twin.")
     text: str = Field(max_length=4096, description="Input cap per turn (S12: prompt-bomb guard).")
     mode: TutorMode = TutorMode.dialogue
-    lang: str = "en"
+    lang: str = Field(
+        "en",
+        min_length=2,
+        max_length=16,
+        pattern=r"^(?:auto|[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2})$",
+        description=(
+            "Preferred response language as 'auto' or a BCP 47 tag. It is generation "
+            "metadata and is never added to the learner's text."
+        ),
+    )
     student_id: str | None = Field(None, description="Defaults to session_id when omitted.")
     stream: bool = Field(
         False,

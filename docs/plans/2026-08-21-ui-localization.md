@@ -57,6 +57,12 @@ reviewed model capability.
    overlays the complete set into `ui/dist` before the gateway starts. Verification follows every
    relative `src` and `href` in `index.html`; a mixed bundle with missing localization scripts is
    rejected instead of serving a non-responsive interface.
+9. Context fitting preserves both the trusted system-prefix head and the first per-student block.
+   The active language instruction lives at the start of that protected block, so a long English
+   conversation cannot truncate the next turn's newly selected response language.
+10. Apply the same system-level language assembly to both `/chat*` and `/tutor/chat*` contract
+    families. Validate language metadata as bounded BCP 47 before it reaches prompt assembly or
+    persistence; no client path may interpolate an unconstrained value into trusted context.
 
 ## Verification
 
@@ -68,6 +74,10 @@ reviewed model capability.
   reaches the inference engine unchanged; static client tests cover typed and voice transports.
 - A multi-turn engine test proves that changing an explicit language to Auto replaces only the
   next system instruction while replaying the prior conversation history unchanged.
+- A constrained-context regression proves the byte-safe fallback retains both the safety-prefix
+  head and a changed response-language instruction at the system prompt's variable tail.
+- JSON and streaming tests for both chat route families prove the validated language tag reaches
+  the system prompt while the learner's message remains byte-for-byte unchanged.
 - Native-export tests prove that newly added UI scripts are discovered, copied, resealed in the
   manifest, and rejected when `index.html` references an absent asset.
 - Existing UI and backend tests remain green.

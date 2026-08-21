@@ -1162,7 +1162,10 @@ def tutor_chat(
             student_id=student_id,
             message=turn.text,
             conversation_id=turn.session_id,
-            system_prompt=load_prompt(_prompt_for(turn.mode)),
+            system_prompt=assemble_system_prompt(
+                load_prompt(_prompt_for(turn.mode)),
+                language=turn.lang,
+            ),
             mode=turn.mode.value,
             language=turn.lang,
             **sampling_params,
@@ -1224,7 +1227,10 @@ def tutor_chat_stream(
             student_id=turn.student_id or turn.session_id,
             message=turn.text,
             conversation_id=turn.session_id,
-            system_prompt=load_prompt(_prompt_for(turn.mode)),
+            system_prompt=assemble_system_prompt(
+                load_prompt(_prompt_for(turn.mode)),
+                language=turn.lang,
+            ),
             mode=turn.mode.value,
             language=turn.lang,
             **sampling_params,

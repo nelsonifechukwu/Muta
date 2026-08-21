@@ -20,6 +20,8 @@ from runtime.memory import ConversationStore
 
 _MESSAGE_OVERHEAD_TOKENS = 8
 _MIN_REPLY_TOKENS = 64
+_PER_STUDENT_CONTEXT = "--- per-student context (variable — keep last) ---".encode()
+_LIVE_CONTEXT = b"\n[MUTA-LIVE]\n"
 _RESUME_PROMPT = (
     "Continue the interrupted assistant response directly from its exact final character. "
     "Do not repeat or restart any part, apologize, mention the interruption, or add a new "
@@ -64,7 +66,54 @@ def _truncate_message(message: Message, token_budget: int) -> Message:
     marker = "\n[…]\n".encode()
     usable = max(1, max_bytes - len(marker))
     if message.get("role") == "system":
-        clipped = raw[:max_bytes]
+        # The stable safety/pedagogy prefix is deliberately first for prompt caching, while
+        # live persona/language instructions begin at the per-student separator. Keeping only
+        # the head silently drops "respond in German" on a full conversation and lets older
+        # English history win. Preserve the prefix head plus the complete first variable block;
+        # optional twin/RAG/web blocks after it are lower-priority when the context is this full.
+        # The full authored separator becomes a compact private boundary after the first clip.
+        # Keeping that boundary makes every later exact-token fitting pass rediscover the live
+        # directive instead of falling back to head-only truncation. Optional retrieved/web text
+        # is untrusted, so the earliest recognized boundary wins; appended lookalikes come later.
+        original_start = raw.find(_PER_STUDENT_CONTEXT)
+        live_start = raw.find(_LIVE_CONTEXT)
+        boundaries = [
+            (position, token)
+            for position, token in (
+                (original_start, _PER_STUDENT_CONTEXT),
+                (live_start, _LIVE_CONTEXT),
+            )
+            if position >= 0
+        ]
+        context_start, context_token = min(boundaries, default=(-1, b""), key=lambda item: item[0])
+        if context_start >= 0:
+            directive_start = context_start + len(context_token)
+            while directive_start < len(raw) and raw[directive_start] in b"\r\n":
+                directive_start += 1
+            directive_end = raw.find(b"\n\n", directive_start)
+            if directive_end < 0:
+                directive_end = len(raw)
+            directive = raw[directive_start:directive_end]
+            prefix = raw[:context_start]
+            while prefix.endswith(marker):
+                prefix = prefix[: -len(marker)]
+            system_usable = max(1, max_bytes - len(marker) - len(_LIVE_CONTEXT))
+            if len(directive) <= system_usable:
+                head_budget = min(len(prefix), system_usable - len(directive))
+                optional_budget = system_usable - head_budget - len(directive)
+                optional = raw[directive_end : directive_end + optional_budget]
+                clipped = prefix[:head_budget] + marker + _LIVE_CONTEXT + directive + optional
+            else:
+                head_budget = min(len(prefix), system_usable // 4)
+                directive_budget = max(1, system_usable - head_budget)
+                clipped = (
+                    prefix[:head_budget]
+                    + marker
+                    + _LIVE_CONTEXT
+                    + directive[:directive_budget]
+                )
+        else:
+            clipped = raw[:max_bytes]
     else:
         # A long question needs its setup and its actual ask; an interrupted assistant needs
         # the immediate tail. Keeping both is safer than blindly retaining one side.

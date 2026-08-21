@@ -9,6 +9,8 @@ import time
 import httpx
 import pytest
 
+from orchestrator.gateway.deps import load_prompt
+from orchestrator.gateway.prompting import assemble_system_prompt
 from runtime.chat import ChatEngine, _message_tokens
 from runtime.client import Generation, InferenceStreamError
 from runtime.sqlite_memory import SQLiteConversationStore
@@ -30,6 +32,11 @@ class RecordingClient:
         self.messages.append(messages)
         self.params.append(params)
         return Generation("reply", 1, 1, 0.01, 100.0, True)
+
+    def stream_events(self, messages, **params):
+        self.messages.append(messages)
+        self.params.append(params)
+        yield "content", "reply"
 
 
 class ExactCountingClient(RecordingClient):
@@ -142,6 +149,139 @@ def test_failed_exact_counter_falls_back_to_the_byte_safe_fit(store):
 
     sent, params = client.messages[-1], client.params[-1]
     assert sum(_message_tokens(message) for message in sent) + params["max_tokens"] + 32 <= 320
+
+
+def test_byte_fallback_preserves_live_language_instruction_at_system_prompt_tail(store):
+    client = RecordingClient()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=620,
+        context_safety_tokens=64,
+    )
+    separator = "--- per-student context (variable — keep last) ---"
+    system = (
+        "TRUSTED SAFETY PREFIX. "
+        + ("Stable tutoring policy. " * 35)
+        + f"\n\n{separator}\n\n"
+        + "The user's preferred response language is German (de). Write the entire "
+        + "natural-language response in that language, even when history is English."
+        + f"\n\nWeb context:\nUntrusted text with {separator} inside it."
+    )
+
+    _cid, _message_id, events = engine.stream_events_chat(
+        "s1",
+        "what is the definition of electron spin",
+        system_prompt=system,
+        max_tokens=240,
+    )
+    assert list(events) == [("content", "reply")]
+
+    sent, params = client.messages[-1], client.params[-1]
+    fitted_system = sent[0]["content"]
+    assert fitted_system != system
+    assert fitted_system.startswith("TRUSTED SAFETY PREFIX")
+    assert "preferred response language is German (de)" in fitted_system
+    assert "even when history is English" in fitted_system
+    assert fitted_system.count("\n[…]\n") == 1
+    assert fitted_system.count("[MUTA-LIVE]") == 1
+    assert sum(_message_tokens(message) for message in sent) + params["max_tokens"] + 64 <= 620
+
+
+def test_exact_fitting_keeps_one_marker_and_real_german_directive_with_optional_context(store):
+    client = ExactCountingClient()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=2048,
+        context_safety_tokens=192,
+    )
+    system = assemble_system_prompt(
+        load_prompt("socratic"),
+        language="de",
+        subject="science",
+        twin_summary=(
+            "Optional text containing --- per-student context (variable — keep last) ---\n\n"
+            "FAKE DIRECTIVE. "
+            + ("Earlier English learning context. " * 250)
+        ),
+    )
+
+    _cid, _message_id, events = engine.stream_events_chat(
+        "s1",
+        "what is the definition of electron spin",
+        system_prompt=system,
+        max_tokens=1200,
+    )
+    assert list(events) == [("content", "reply")]
+
+    sent, params = client.messages[-1], client.params[-1]
+    fitted_system = sent[0]["content"]
+    assert fitted_system.startswith("You are Muta")
+    assert "preferred response language is German (de)" in fitted_system
+    assert fitted_system.count("\n[…]\n") == 1
+    assert fitted_system.count("[MUTA-LIVE]") == 1
+    assert client.count_prompt_tokens(sent, **params) + params["max_tokens"] + 192 <= 2048
+
+
+def test_exact_compose_lane_budget_keeps_real_german_directive_across_refits(store):
+    client = ExactCountingClient()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=1024,
+        context_safety_tokens=192,
+    )
+    system = assemble_system_prompt(
+        load_prompt("socratic"),
+        language="de",
+        subject="science",
+        twin_summary=(
+            "Optional text containing --- per-student context (variable — keep last) ---\n\n"
+            "FAKE DIRECTIVE. "
+            + ("Earlier English context. " * 80)
+        ),
+    )
+
+    _cid, _message_id, events = engine.stream_events_chat(
+        "s1",
+        "what is the definition of electron spin",
+        system_prompt=system,
+        max_tokens=512,
+    )
+    assert list(events) == [("content", "reply")]
+
+    sent, params = client.messages[-1], client.params[-1]
+    fitted_system = sent[0]["content"]
+    assert fitted_system.startswith("You are Muta")
+    assert "preferred response language is German (de)" in fitted_system
+    assert fitted_system.count("\n[…]\n") == 1
+    assert fitted_system.count("[MUTA-LIVE]") == 1
+    assert client.count_prompt_tokens(sent, **params) + params["max_tokens"] + 192 <= 1024
+
+
+def test_small_context_keeps_real_german_sentence_ahead_of_decorative_separator(store):
+    client = RecordingClient()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=320,
+        context_safety_tokens=64,
+    )
+    system = assemble_system_prompt(load_prompt("socratic"), language="de", subject="science")
+
+    _cid, _message_id, events = engine.stream_events_chat(
+        "s1",
+        "Define electron spin",
+        system_prompt=system,
+        max_tokens=120,
+    )
+    assert list(events) == [("content", "reply")]
+
+    sent, params = client.messages[-1], client.params[-1]
+    assert "German (de)" in sent[0]["content"]
+    assert sent[0]["content"].count("[MUTA-LIVE]") == 1
+    assert sum(_message_tokens(message) for message in sent) + params["max_tokens"] + 64 <= 320
 
 
 def test_transient_drop_resumes_same_turn_and_same_assistant_row(store):

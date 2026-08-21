@@ -1335,7 +1335,12 @@ components:
           default: dialogue
         lang:
           type: string
+          maxLength: 16
+          minLength: 2
+          pattern: ^(?:auto|[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2})$
           title: Lang
+          description: Preferred response language as 'auto' or a BCP 47 tag. It is generation metadata
+            and is never added to the learner's text.
           default: en
         student_id:
           anyOf:

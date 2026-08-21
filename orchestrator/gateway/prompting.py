@@ -11,6 +11,8 @@ Kept as pure string functions (no I/O, no deps) so they're trivially testable an
 
 from __future__ import annotations
 
+import re
+
 #: persona → a one-line voice directive. The contract's persona vocabulary is about tone;
 #: this table turns it into an instruction the model actually receives (it was a dead param).
 _PERSONA = {
@@ -35,12 +37,14 @@ _LANGUAGE = {
     "yo": "Yoruba",
     "zu": "Zulu",
 }
+_LANGUAGE_TAG = re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$")
 
 
 def persona_language_directive(persona: str, language: str, subject: str | None = None) -> str:
     """A compact per-student voice/language instruction for the trusted system context."""
-    parts = [_PERSONA.get(persona, _PERSONA["teacher"])]
-    lang = (language or "en").strip()
+    parts: list[str] = []
+    candidate = (language or "en").strip()
+    lang = candidate if candidate.lower() == "auto" or _LANGUAGE_TAG.fullmatch(candidate) else "en"
     if lang.lower() == "auto":
         parts.append(
             "The user's response language preference is AUTO. Respond in the primary natural "
@@ -55,10 +59,14 @@ def persona_language_directive(persona: str, language: str, subject: str | None 
         name = _LANGUAGE.get(base_lang, lang)
         label = name if name.lower() == lang.lower() else f"{name} ({lang})"
         parts.append(
-            f"The user's preferred response language is {label}. Always respond in that "
-            "language unless the user explicitly requests another language for this specific "
-            "task."
+            f"The user's preferred response language is {label}. Write the entire natural-"
+            "language response in that language, even when the latest message or earlier "
+            "conversation is in another language. Use another language only when the user "
+            "explicitly requests it for this specific task."
         )
+    # Language is the highest-priority live preference and stays first in the variable block.
+    # This also keeps it inside the protected portion when context fitting must trim the prompt.
+    parts.append(_PERSONA.get(persona, _PERSONA["teacher"]))
     parts.append(
         "When identifying or writing the response language, treat source code, variable names, "
         "commands, URLs, and proper nouns as literal content rather than language evidence, and "
