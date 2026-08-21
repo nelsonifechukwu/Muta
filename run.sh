@@ -38,7 +38,7 @@ Usage: ./run.sh [--native|--native-linux|--native-engine] [--model PATH]
   --native-linux
               Linux x86-64: run the full product without Docker. The gateway supervises
               the extracted AVX2 engine, persists to data/muta.sqlite3, and serves the UI
-              at http://127.0.0.1:8000/ui/. Uses Muta Tutor Qwen3-1.7B when provisioned;
+              at http://127.0.0.1:8000/chat/. Uses Muta Tutor Qwen3-1.7B when provisioned;
               its UI model menu can hot-switch to the verified BitCPM-CANN-8B artifact.
               Run export-linux once first.
   --native-engine
@@ -178,7 +178,7 @@ native_up() {
         || die "frontend failed to start"
     bold "Native dev mode — backend runs in THIS terminal. Ctrl-C stops it; './run.sh down' stops the containers."
     info "landing:   http://localhost:3000"
-    info "Muta app:  http://localhost:3000/ui/   (proxies 502 until the model finishes loading — seconds natively)"
+    info "Muta app:  http://localhost:3000/chat/   (proxies 502 until the model finishes loading — seconds natively)"
     info "API:       http://localhost:8000/v1  (docs at http://localhost:8000/docs)"
     export MUTA_RT_AUTOSTART=1
     export MUTA_RT_MODEL_DIR="$MODEL_DIR"
@@ -278,7 +278,8 @@ native_linux_up() {
     # socket peer is loopback, so LAN classroom clients cannot restart the shared engine.
     export MUTA_ALLOW_MODEL_SWITCH="${MUTA_ALLOW_MODEL_SWITCH:-1}"
     bold "Native Linux mode — no Docker, PostgreSQL, nginx, or network required."
-    info "UI:        http://127.0.0.1:8000/ui/"
+    info "landing:   http://127.0.0.1:8000/"
+    info "Muta app:  http://127.0.0.1:8000/chat/"
     info "API:       http://127.0.0.1:8000/v1  (docs at http://127.0.0.1:8000/docs)"
     info "data:      ${MUTA_RT_DB_URL}"
     info "Ctrl-C stops the gateway and its supervised llama-server child."
@@ -521,6 +522,6 @@ fi
 
 bold  "Muta is up."
 info  "landing:   http://localhost:3000"
-info  "Muta app:  http://localhost:3000/ui/   (open in a browser; mic needs localhost, not a LAN IP)"
+info  "Muta app:  http://localhost:3000/chat/   (open in a browser; mic needs localhost, not a LAN IP)"
 info  "API:       http://localhost:8000/v1  (docs at http://localhost:8000/docs)"
 info  "stop with: ./run.sh down"

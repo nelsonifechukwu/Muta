@@ -7,7 +7,7 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 
-# The frontend container serves both `/` and `/ui/` itself, so FastAPI's cache policy never
+# The frontend container serves both `/` and `/chat/` itself, so FastAPI's cache policy never
 # sees these responses. Keep authored HTML/CSS/JS and their pinned dependencies as one revision;
 # the bundle is small and local, while a mixed cached revision can break auth and layout.
 map $uri $muta_cache_control {
@@ -58,6 +58,16 @@ server {
         proxy_send_timeout 3600s;
         # Image guard allows 8 MiB; audio uploads can be larger. Default 1m would 413.
         client_max_body_size 32m;
+    }
+
+    # `/ui` was the original public app path. Keep bookmarks and old handouts working while
+    # serving only one canonical tutor bundle at `/chat/`.
+    location = /ui {
+        return 308 /chat/;
+    }
+
+    location ~ ^/ui/(.*)$ {
+        return 308 /chat/$1;
     }
 
     location / {

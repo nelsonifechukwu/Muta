@@ -22,7 +22,8 @@ import threading
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from orchestrator.bench_metrics import PIDFILE
@@ -236,10 +237,10 @@ async def _request_id(request, call_next):
     finally:
         request_id_var.reset(token)
     response.headers["X-Request-ID"] = rid
-    # `/ui` is a small, local bundle. Do not retain it: conditional Last-Modified handling can
+    # `/chat` is a small, local bundle. Do not retain it: conditional Last-Modified handling can
     # otherwise accept a stale authored asset after a same-second export or a rollback, combining
     # a new index.html with an old app.js/stylesheet (the unauthenticated-client + huge-SVG bug).
-    if request.url.path == "/ui" or request.url.path.startswith("/ui/"):
+    if request.url.path == "/chat" or request.url.path.startswith("/chat/"):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["X-Muta-UI-Revision"] = git_sha()
     return response
@@ -261,12 +262,38 @@ app.mount("/internal/bench", bench_app)
 
 # Static browser surfaces, mounted only when their checked-in bundles are present. The app
 # stays the first client of /v1, not a privileged one. Mount the public landing page last so
-# its root catch-all cannot shadow the API, docs, internal services, or the app at /ui.
+# its root catch-all cannot shadow the API, docs, internal services, or the app at /chat.
 _ui_root = Path(__file__).resolve().parent.parent / "ui"
 _ui_dist = _ui_root / "dist"
 _ui_assets = _ui_dist if _ui_dist.is_dir() else _ui_root
+
+
+def _redirect_with_query(request: Request, target: str) -> RedirectResponse:
+    query = request.url.query
+    url = f"{target}?{query}" if query else target
+    return RedirectResponse(url=url, status_code=308)
+
+
+@app.get("/chat", include_in_schema=False)
+def chat_root(request: Request) -> RedirectResponse:
+    """Give the canonical app route its trailing slash so relative assets resolve correctly."""
+    return _redirect_with_query(request, "/chat/")
+
+
 if (_ui_assets / "index.html").is_file():
-    app.mount("/ui", StaticFiles(directory=str(_ui_assets), html=True), name="ui")
+    app.mount("/chat", StaticFiles(directory=str(_ui_assets), html=True), name="chat")
+
+
+@app.get("/ui", include_in_schema=False)
+def legacy_ui_root(request: Request) -> RedirectResponse:
+    """Keep old bookmarks working after the public tutor moved to `/chat/`."""
+    return _redirect_with_query(request, "/chat/")
+
+
+@app.get("/ui/{asset_path:path}", include_in_schema=False)
+def legacy_ui_path(asset_path: str, request: Request) -> RedirectResponse:
+    """Preserve legacy deep asset paths without exposing a second copy of the app."""
+    return _redirect_with_query(request, f"/chat/{asset_path.lstrip('/')}")
 
 _landing_assets = Path(__file__).resolve().parent.parent / "landing"
 if (_landing_assets / "index.html").is_file():

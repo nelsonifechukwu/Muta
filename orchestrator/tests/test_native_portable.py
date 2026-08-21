@@ -13,13 +13,33 @@ def test_sqlite_readiness_creates_portable_database(tmp_path):
 
 
 def test_checked_in_ui_is_mounted_without_nginx():
-    assert any(getattr(route, "path", None) == "/ui" for route in app.routes)
+    assert any(getattr(route, "path", None) == "/chat" for route in app.routes)
     client = TestClient(app)
-    for path in ("/ui/", "/ui/app.js", "/ui/styles.css", "/ui/worklet.js"):
+    chat_root = client.get("/chat", follow_redirects=False)
+    assert chat_root.status_code == 308
+    assert chat_root.headers["location"] == "/chat/"
+    chat_bookmark = client.get("/chat?chat=abc", follow_redirects=False)
+    assert chat_bookmark.headers["location"] == "/chat/?chat=abc"
+    for path in ("/chat/", "/chat/app.js", "/chat/styles.css", "/chat/worklet.js"):
         response = client.get(path)
         assert response.status_code == 200
         assert response.headers["cache-control"] == "no-store, max-age=0"
         assert response.headers["x-muta-ui-revision"]
+
+
+def test_legacy_ui_paths_redirect_to_chat_without_duplicate_assets():
+    client = TestClient(app)
+    expected = {
+        "/ui": "/chat/",
+        "/ui/": "/chat/",
+        "/ui/app.js": "/chat/app.js",
+        "/ui/?chat=abc": "/chat/?chat=abc",
+        "/ui/app.js?v=20260821": "/chat/app.js?v=20260821",
+    }
+    for source, target in expected.items():
+        response = client.get(source, follow_redirects=False)
+        assert response.status_code == 308
+        assert response.headers["location"] == target
 
 
 def test_checked_in_landing_page_is_served_at_root_without_nginx():

@@ -11,7 +11,7 @@ That's it. It builds the three images if they're missing, downloads the model ro
 dependency order, waits for health, and prints the UI URL:
 
 - **Landing page:** http://localhost:3000
-- **Muta app:** http://localhost:3000/ui/
+- **Muta app:** http://localhost:3000/chat/
 - **API:** http://localhost:8000/v1 (interactive docs at http://localhost:8000/docs)
 
 ```bash
@@ -86,7 +86,7 @@ After the host venv is installed (`python3 -m venv .venv`, then
 ```
 
 Full native mode serves the landing page at <http://127.0.0.1:8000/>, the app at
-<http://127.0.0.1:8000/ui/>, and stores conversations
+<http://127.0.0.1:8000/chat/>, and stores conversations
 in `data/muta.sqlite3`; it does not start PostgreSQL or nginx. `MUTA_OFFLINE=1` is set by
 default, disabling even the connectivity probe (set it to `0` only for an intentional cloud
 test). Bind stays on loopback. From a
@@ -189,7 +189,7 @@ is provider-dependent, and package temperature is unavailable.
 |---|---|---|---|
 | `db` | `postgres:16-alpine` | conversations, messages, attachments, user settings | 127.0.0.1:15432 (host tests) |
 | `backend` | `docker/backend.Dockerfile` | FastAPI gateway (uvicorn) which supervises `llama-server` as a child; vision spawns a second, TTL-reaped llama-server on demand | 8000 |
-| `frontend` | `docker/frontend.Dockerfile` | nginx serving the landing page at `/`, the app at `/ui/`, and proxying `/v1` (same origin ⇒ no CORS; SSE unbuffered; WebSocket upgrade) | 3000 |
+| `frontend` | `docker/frontend.Dockerfile` | nginx serving the landing page at `/`, the app at `/chat/`, and proxying `/v1` (same origin ⇒ no CORS; SSE unbuffered; WebSocket upgrade) | 3000 |
 
 Startup ordering is enforced with healthchecks: `db` must accept connections before
 `backend` starts; `backend` is *healthy* only once `/v1/ready` reports

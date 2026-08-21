@@ -3,7 +3,7 @@
 # offline at runtime: no CDN, ever.
 FROM --platform=linux/amd64 nginx:1.27-alpine
 
-WORKDIR /usr/share/nginx/html/ui
+WORKDIR /usr/share/nginx/html/chat
 # curl (not busybox wget): GitHub's signed release redirects need real TLS + redirect
 # handling; busybox wget fails on them under emulation.
 RUN apk add --no-cache curl \
@@ -18,5 +18,5 @@ RUN apk add --no-cache curl \
 # Rendered to /etc/nginx/conf.d/default.conf at start by the image's envsubst entrypoint,
 # substituting ${BACKEND_UPSTREAM} (see docker-compose.yml / run.sh --native).
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY ui/ /usr/share/nginx/html/ui/
+COPY ui/ /usr/share/nginx/html/chat/
 COPY landing/ /usr/share/nginx/html/
