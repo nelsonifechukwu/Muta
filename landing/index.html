@@ -102,13 +102,16 @@
   </section>
 
   <section class="lesson-section" id="lesson" data-learning-carousel aria-labelledby="learning-examples-title">
-    <div class="shell">
-      <div class="lesson-carousel-head">
-        <div>
-          <p class="eyebrow eyebrow-light">Three tracks · ideas you can touch</p>
-          <h2 id="learning-examples-title">Understanding is bigger than one subject.</h2>
-          <p>Move a tangent. Change a narrator. Find the moment a business turns a profit. Muta meets the kind of thinking each subject asks for.</p>
+    <div class="shell lesson-layout">
+      <div class="lesson-intro">
+        <p class="eyebrow eyebrow-light">Three tracks · ideas you can touch</p>
+        <h2 id="learning-examples-title">Understanding is bigger than one subject.</h2>
+        <p>Muta turns an idea into something you can change, compare, and explain — whether you are tracing a curve, reading a narrator, or planning a business.</p>
+        <div class="lesson-rhythm" aria-label="Muta's interactive learning rhythm">
+          <span>One learning rhythm</span>
+          <strong>Move something. Notice what changes. Explain why.</strong>
         </div>
+        <p class="lesson-track-list">Sciences · Humanities (Arts) · Business (Commercial)</p>
         <div class="carousel-controls" aria-label="Example controls">
           <button class="carousel-control carousel-toggle" type="button" data-carousel-toggle aria-label="Pause learning examples">
             <span aria-hidden="true" data-carousel-toggle-icon>Ⅱ</span>
@@ -119,36 +122,25 @@
         </div>
       </div>
 
-      <div class="track-tabs" role="tablist" aria-label="Learning tracks">
-        <button id="track-sciences-tab" type="button" role="tab" aria-selected="true" aria-controls="track-sciences-panel" tabindex="0" data-carousel-tab="0">
-          <span>01</span><strong>Sciences</strong><small>Biology · Physics · Further Maths</small>
-        </button>
-        <button id="track-humanities-tab" type="button" role="tab" aria-selected="false" aria-controls="track-humanities-panel" tabindex="-1" data-carousel-tab="1">
-          <span>02</span><strong>Humanities</strong><small>Arts · Literature · Government</small>
-        </button>
-        <button id="track-business-tab" type="button" role="tab" aria-selected="false" aria-controls="track-business-panel" tabindex="-1" data-carousel-tab="2">
-          <span>03</span><strong>Business</strong><small>Commercial · Accounting · Economics</small>
-        </button>
-      </div>
+      <div class="lesson-showcase" data-carousel-interaction>
+        <div class="track-tabs" role="tablist" aria-label="Learning tracks">
+          <button id="track-sciences-tab" type="button" role="tab" aria-selected="true" aria-controls="track-sciences-panel" tabindex="0" data-carousel-tab="0">
+            <span>01</span><strong>Sciences</strong><small>Physics · Further Maths</small>
+          </button>
+          <button id="track-humanities-tab" type="button" role="tab" aria-selected="false" aria-controls="track-humanities-panel" tabindex="-1" data-carousel-tab="1">
+            <span>02</span><strong>Humanities</strong><small>Literature · Government</small>
+          </button>
+          <button id="track-business-tab" type="button" role="tab" aria-selected="false" aria-controls="track-business-panel" tabindex="-1" data-carousel-tab="2">
+            <span>03</span><strong>Business</strong><small>Accounting · Economics</small>
+          </button>
+        </div>
 
-      <div class="lesson-viewport">
-        <div class="lesson-track" data-carousel-track>
-          <article class="learning-slide" id="track-sciences-panel" role="tabpanel" aria-labelledby="track-sciences-tab" data-learning-slide data-category="sciences">
-            <div class="lesson-grid">
-              <div class="lesson-copy">
-                <p class="slide-kicker">Physics · Further Mathematics</p>
-                <h3>Make “rate of change” move.</h3>
-                <p>A definition is easy to repeat. An idea is easier to keep when you can touch it. Move the point and watch the curve's steepness become a number.</p>
-                <div class="lesson-question">
-                  <span>Notice</span>
-                  <p id="lesson-status">At x = 2.2, the curve is rising 4.4 units for every step to the right.</p>
-                </div>
-                <p class="lesson-bridge">That number is the derivative at that exact point — the graph's speedometer.</p>
-              </div>
-
+        <div class="lesson-viewport">
+          <div class="lesson-track" data-carousel-track>
+            <article class="learning-slide" id="track-sciences-panel" role="tabpanel" aria-labelledby="track-sciences-tab" data-learning-slide data-category="sciences">
               <div class="lab-panel">
                 <div class="lab-head">
-                  <div><span>Mini lab</span><strong>y = x²</strong></div>
+                  <div><span>Sciences · mini lab</span><strong>Rate of change · y = x²</strong></div>
                   <span class="live-pill"><i aria-hidden="true"></i> interactive</span>
                 </div>
                 <canvas id="derivative-canvas" width="720" height="420" aria-label="Graph of y equals x squared with a movable point and tangent line. Use the slider below to move the point.">Your browser does not support the interactive graph. The derivative of x squared is 2x.</canvas>
@@ -161,26 +153,14 @@
                   <span>Move the point</span><span>slow rise&nbsp;&nbsp;→&nbsp;&nbsp;steep rise</span>
                 </label>
                 <input id="derivative-slider" type="range" min="0.4" max="4.5" step="0.1" value="2.2" aria-describedby="lesson-status">
+                <p class="lab-feedback" id="lesson-status" aria-live="polite">At x = 2.2, the curve is rising 4.4 units for every step to the right.</p>
               </div>
-            </div>
-          </article>
+            </article>
 
-          <article class="learning-slide" id="track-humanities-panel" role="tabpanel" aria-labelledby="track-humanities-tab" aria-hidden="true" inert data-learning-slide data-category="humanities">
-            <div class="lesson-grid">
-              <div class="lesson-copy">
-                <p class="slide-kicker">Literature · Government · History</p>
-                <h3>Who gets to tell the story?</h3>
-                <p>The facts can stay still while the meaning shifts. Choose a narrator and notice how position, motive, and language change what the reader believes.</p>
-                <div class="lesson-question">
-                  <span>Ask yourself</span>
-                  <p id="humanities-prompt">What does the organiser want us to feel — and which words do that work?</p>
-                </div>
-                <p class="lesson-bridge">Critical reading begins when we separate what happened from how it is being framed.</p>
-              </div>
-
+            <article class="learning-slide" id="track-humanities-panel" role="tabpanel" aria-labelledby="track-humanities-tab" aria-hidden="true" inert data-learning-slide data-category="humanities">
               <div class="lab-panel humanities-lab">
                 <div class="lab-head">
-                  <div><span>Perspective studio</span><strong>The morning gathering</strong></div>
+                  <div><span>Humanities · perspective studio</span><strong>Who gets to tell the story?</strong></div>
                   <span class="live-pill"><i aria-hidden="true"></i> interactive</span>
                 </div>
                 <div class="passage-card">
@@ -198,25 +178,12 @@
                 </fieldset>
                 <p class="lab-feedback" id="humanities-status" aria-live="polite">The organiser uses collective, hopeful language to make the gathering feel purposeful.</p>
               </div>
-            </div>
-          </article>
+            </article>
 
-          <article class="learning-slide" id="track-business-panel" role="tabpanel" aria-labelledby="track-business-tab" aria-hidden="true" inert data-learning-slide data-category="business">
-            <div class="lesson-grid">
-              <div class="lesson-copy">
-                <p class="slide-kicker">Accounting · Commerce · Economics</p>
-                <h3>When does the shop begin to earn?</h3>
-                <p>A profit formula becomes useful when it can answer a decision. Change the selling price and quantity, then watch revenue race against total cost.</p>
-                <div class="lesson-question">
-                  <span>Decision</span>
-                  <p id="business-prompt">At ₦900 each, the shop breaks even at 15 notebooks. What happens if the price falls?</p>
-                </div>
-                <p class="lesson-bridge">Business thinking connects the calculation to the choice it helps someone make.</p>
-              </div>
-
+            <article class="learning-slide" id="track-business-panel" role="tabpanel" aria-labelledby="track-business-tab" aria-hidden="true" inert data-learning-slide data-category="business">
               <div class="lab-panel business-lab">
                 <div class="lab-head">
-                  <div><span>Break-even studio</span><strong>Notebook pop-up shop</strong></div>
+                  <div><span>Business · break-even studio</span><strong>When does the shop begin to earn?</strong></div>
                   <span class="live-pill"><i aria-hidden="true"></i> interactive</span>
                 </div>
                 <div class="money-readout" aria-hidden="true">
@@ -240,15 +207,15 @@
                 </div>
                 <p class="lab-feedback" id="business-status" aria-live="polite">Revenue is ₦18,000. After ₦6,000 fixed costs and ₦500 per notebook, profit is ₦2,000.</p>
               </div>
-            </div>
-          </article>
+            </article>
+          </div>
         </div>
-      </div>
 
-      <div class="carousel-footer">
-        <div class="carousel-progress" aria-hidden="true"><span data-carousel-progress></span></div>
-        <p>Examples move on when left alone and pause while you explore. You can pause them completely at any time.</p>
-        <span data-carousel-count>01 / 03</span>
+        <div class="carousel-footer">
+          <div class="carousel-progress" aria-hidden="true"><span data-carousel-progress></span></div>
+          <span data-carousel-count>01 / 03</span>
+          <p>Examples move on when left alone and pause while you explore.</p>
+        </div>
       </div>
     </div>
   </section>

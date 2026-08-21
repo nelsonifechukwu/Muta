@@ -98,6 +98,7 @@
   });
 
   const learningCarousel = document.querySelector("[data-learning-carousel]");
+  const carouselInteraction = document.querySelector("[data-carousel-interaction]");
   const carouselTrack = document.querySelector("[data-carousel-track]");
   const learningSlides = Array.from(document.querySelectorAll("[data-learning-slide]"));
   const carouselTabs = Array.from(document.querySelectorAll("[data-carousel-tab]"));
@@ -122,11 +123,18 @@
     let carouselVisible = !("IntersectionObserver" in window);
     let animationFrame = null;
 
-    const hasKeyboardFocus = () => keyboardMode && learningCarousel.contains(document.activeElement);
+    const isUsingCarousel = (element) => (
+      carouselInteraction?.contains(element)
+      || carouselToggle?.contains(element)
+      || carouselPrev?.contains(element)
+      || carouselNext?.contains(element)
+    );
+
+    const hasKeyboardFocus = () => keyboardMode && isUsingCarousel(document.activeElement);
 
     const temporarilyPaused = () => (
       pointerActive
-      || (hoverCapable.matches && learningCarousel.matches(":hover"))
+      || (hoverCapable.matches && Boolean(carouselInteraction?.matches(":hover")))
       || hasKeyboardFocus()
     );
 
@@ -241,8 +249,8 @@
       pointerActive = true;
       syncAnimation();
     });
-    learningCarousel.addEventListener("pointerenter", syncAnimation);
-    learningCarousel.addEventListener("pointerleave", syncAnimation);
+    carouselInteraction?.addEventListener("pointerenter", syncAnimation);
+    carouselInteraction?.addEventListener("pointerleave", syncAnimation);
     learningCarousel.addEventListener("focusin", syncAnimation);
     learningCarousel.addEventListener("focusout", syncAnimation);
     window.addEventListener("pointerup", () => {
@@ -284,21 +292,18 @@
       label: "The organiser",
       passage: "“By sunrise, the square answered our call; the crowd was ready, and change felt close enough to touch.”",
       clues: ["answered our call", "ready", "change"],
-      prompt: "What does the organiser want us to feel — and which words do that work?",
       feedback: "The organiser uses collective, hopeful language to make the gathering feel purposeful.",
     },
     witness: {
       label: "A witness",
       passage: "“By sunrise, the square was humming. I watched from my doorway as neighbours arrived, some smiling, some looking over their shoulders.”",
       clues: ["I watched", "some smiling", "looking over"],
-      prompt: "Which details reveal uncertainty, even though the witness never names it?",
       feedback: "The witness mixes observation with personal position, giving us detail but only from one doorway.",
     },
     reporter: {
       label: "The reporter",
       passage: "“Residents gathered in the central square shortly after sunrise, following notices circulated the previous evening.”",
       clues: ["residents", "shortly after", "following notices"],
-      prompt: "What does this version gain in precision — and what feeling does it leave out?",
       feedback: "The reporter favours verifiable time, place, and cause. The tone sounds neutral, but selection still shapes the account.",
     },
   };
@@ -307,17 +312,15 @@
   const voiceLabel = document.getElementById("voice-label");
   const voicePassage = document.getElementById("voice-passage");
   const languageClues = document.getElementById("language-clues");
-  const humanitiesPrompt = document.getElementById("humanities-prompt");
   const humanitiesStatus = document.getElementById("humanities-status");
 
   perspectiveButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const copy = perspectiveCopy[button.dataset.perspective];
-      if (!copy || !voiceLabel || !voicePassage || !languageClues || !humanitiesPrompt || !humanitiesStatus) return;
+      if (!copy || !voiceLabel || !voicePassage || !languageClues || !humanitiesStatus) return;
       perspectiveButtons.forEach((choice) => choice.setAttribute("aria-pressed", String(choice === button)));
       voiceLabel.textContent = copy.label;
       voicePassage.textContent = copy.passage;
-      humanitiesPrompt.textContent = copy.prompt;
       humanitiesStatus.textContent = copy.feedback;
       languageClues.replaceChildren(...copy.clues.map((clue) => {
         const chip = document.createElement("span");
@@ -336,7 +339,6 @@
   const profitValue = document.getElementById("profit-value");
   const revenueBar = document.getElementById("revenue-bar");
   const costBar = document.getElementById("cost-bar");
-  const businessPrompt = document.getElementById("business-prompt");
   const businessStatus = document.getElementById("business-status");
 
   if (priceSlider && unitsSlider) {
@@ -350,7 +352,6 @@
       const revenue = price * units;
       const totalCost = FIXED_COST + UNIT_COST * units;
       const profit = revenue - totalCost;
-      const breakEven = Math.ceil(FIXED_COST / (price - UNIT_COST));
       const scale = Math.max(revenue, totalCost, 1) * 1.05;
 
       if (priceOutput) priceOutput.textContent = naira(price);
@@ -365,7 +366,6 @@
       if (costBar) costBar.style.width = `${(totalCost / scale) * 100}%`;
       priceSlider.setAttribute("aria-valuetext", naira(price));
       unitsSlider.setAttribute("aria-valuetext", `${units} notebooks`);
-      if (businessPrompt) businessPrompt.textContent = `At ${naira(price)} each, the shop breaks even at ${breakEven} notebook${breakEven === 1 ? "" : "s"}. What changes when quantity moves?`;
       if (businessStatus) {
         const result = profit >= 0 ? `profit is ${naira(profit)}` : `the loss is ${naira(profit)}`;
         businessStatus.textContent = `Revenue is ${naira(revenue)}. After ${naira(FIXED_COST)} fixed costs and ${naira(UNIT_COST)} per notebook, ${result}.`;

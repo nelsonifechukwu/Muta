@@ -82,8 +82,16 @@ def test_learning_examples_cover_all_tracks_and_pause_during_interaction() -> No
     assert "Business (Commercial)" in html
     assert "perspective-choices" in html
     assert "price-slider" in html and "units-slider" in html
+    assert html.index('class="lesson-intro"') < html.index('data-carousel-track')
+    assert html.count('class="lesson-intro"') == 1
+    assert "lesson-copy" not in html
+    assert ".lesson-viewport { overflow: hidden; overflow: clip;" in (LANDING / "styles.css").read_text()
     assert "AUTO_ADVANCE_MS" in script
-    assert 'learningCarousel.matches(":hover")' in script
+    assert 'carouselInteraction?.matches(":hover")' in script
+    assert 'carouselInteraction?.addEventListener("pointerleave"' in script
+    assert 'learningCarousel.addEventListener("pointerleave"' not in script
+    assert "humanitiesPrompt" not in script and "businessPrompt" not in script
+    assert ".track-tabs button:focus-visible" in (LANDING / "styles.css").read_text()
     assert "keyboardMode" in script
     assert 'prefers-reduced-motion: reduce' in script
     assert "IntersectionObserver" in script

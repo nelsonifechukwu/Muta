@@ -59,10 +59,11 @@ The landing page must not flatten those two lists into a single present-tense cl
    and speaking.
 2. **Trust strip:** concise, defensible proof points: local, offline-first, multimodal input,
    learner-owned progress, and checked working where verification applies.
-3. **Interactive lesson carousel:** three distinct demonstrations show how Muta can teach across
-   Sciences, Humanities, and Business: a draggable derivative/tangent lab, a point-of-view
-   reading studio, and a live break-even model. The carousel advances only while idle, pauses
-   for pointer/keyboard interaction, provides manual controls, and respects reduced motion.
+3. **Interactive lesson carousel:** keep one compact editorial explanation fixed on the left
+   while only the equally sized lab on the right rotates across Sciences, Humanities, and
+   Business: a draggable derivative/tangent lab, a point-of-view reading studio, and a live
+   break-even model. The carousel advances only while idle, pauses for pointer/keyboard
+   interaction, provides manual controls, and respects reduced motion.
 4. **Teaching loop:** intuition → learner explanation → checked steps. This replaces abstract
    pedagogy cards with a sequence.
 5. **Available now:** concrete current capabilities, visually grounded in the current app.
