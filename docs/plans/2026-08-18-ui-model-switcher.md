@@ -4,7 +4,7 @@
 
 Keep the benchmark-selected Muta Tutor Qwen3-1.7B Q4_0 model as the native Linux default,
 while letting a local user switch the running engine to the accuracy-max BitCPM-CANN-8B
-TQ2_0 vocabulary-pruned model from `/ui` and switch back without restarting the gateway or
+TQ2_0 vocabulary-pruned model from `/chat` and switch back without restarting the gateway or
 losing SQLite conversation history.
 
 This implements the local-only thin slice specified by ROADMAP 2 Aug: a backend registry is
@@ -57,7 +57,7 @@ offline.
 ## Acceptance
 
 - `/v1/models` reports Muta Tutor active and BitCPM available with exact hashes.
-- Selecting BitCPM returns only after its engine health check succeeds; `/ui` reflects it.
+- Selecting BitCPM returns only after its engine health check succeeds; `/chat` reflects it.
 - A fixed UI/API prompt completes on BitCPM; switching back completes on Muta Tutor.
 - At all checkpoints there is at most one `llama-server` process.
 - A missing/corrupt model is disabled and cannot take down the current engine.

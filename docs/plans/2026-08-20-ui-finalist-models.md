@@ -2,7 +2,7 @@
 
 ## Goal
 
-Expose the two current submission finalists in the native Linux `/ui` model selector:
+Expose the two current submission finalists in the native Linux `/chat` model selector:
 
 - Muta Tutor Qwen3.5 0.8B Q4_0, the risk-adjusted recommendation.
 - Qwen3 0.6B Math-Expert Q4_K_M, the raw fixed-15 Scalar and AVX2 leader on ARC-Easy-50.

@@ -60,18 +60,18 @@ server {
         client_max_body_size 32m;
     }
 
-    # `/ui` was the original public app path. Keep bookmarks and old handouts working while
-    # serving only one canonical tutor bundle at `/chat/`.
-    location = /ui {
+    location = /chat {
         return 308 /chat/;
     }
 
-    location ~ ^/ui/(.*)$ {
-        return 308 /chat/$1;
+    # The tutor has no path-based client router: a missing asset is genuinely missing. Failing
+    # closed prevents a stale URL from breaking out into the landing page with a misleading 200.
+    location /chat/ {
+        try_files $uri $uri/ =404;
     }
 
     location / {
-        try_files $uri /index.html;
+        try_files $uri $uri/ =404;
     }
 }
 

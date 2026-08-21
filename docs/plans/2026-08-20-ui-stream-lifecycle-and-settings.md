@@ -29,7 +29,7 @@ allowed to occupy more than one of those already-budgeted slots.
    gateway's fixed inference-slot/RAM ceiling authoritative; the switch controls whether the
    UI may submit into another conversation while a reply is active and warns that parallel
    decoding can slow each reply.
-5. Put the selected conversation id in the `/ui/` query string and restore it after auth on
+5. Put the selected conversation id in the `/chat/` query string and restore it after auth on
    startup. Use history navigation for conversation selection and clear the parameter for a
    new chat.
 6. Harden the lifecycle after adversarial review: reserve capacity atomically per generation,

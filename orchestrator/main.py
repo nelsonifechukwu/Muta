@@ -284,17 +284,6 @@ if (_ui_assets / "index.html").is_file():
     app.mount("/chat", StaticFiles(directory=str(_ui_assets), html=True), name="chat")
 
 
-@app.get("/ui", include_in_schema=False)
-def legacy_ui_root(request: Request) -> RedirectResponse:
-    """Keep old bookmarks working after the public tutor moved to `/chat/`."""
-    return _redirect_with_query(request, "/chat/")
-
-
-@app.get("/ui/{asset_path:path}", include_in_schema=False)
-def legacy_ui_path(asset_path: str, request: Request) -> RedirectResponse:
-    """Preserve legacy deep asset paths without exposing a second copy of the app."""
-    return _redirect_with_query(request, f"/chat/{asset_path.lstrip('/')}")
-
 _landing_assets = Path(__file__).resolve().parent.parent / "landing"
 if (_landing_assets / "index.html").is_file():
     app.mount("/", StaticFiles(directory=str(_landing_assets), html=True), name="landing")

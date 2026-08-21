@@ -3,7 +3,7 @@
 ## Goal
 
 Expose the exact benchmarked Qwen2.5 1.5B Instruct Q4_K_M artifact in the native
-Linux `/ui` model selector without changing the recommended default.
+Linux `/chat` model selector without changing the recommended default.
 
 ## Implementation
 

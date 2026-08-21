@@ -27,19 +27,10 @@ def test_checked_in_ui_is_mounted_without_nginx():
         assert response.headers["x-muta-ui-revision"]
 
 
-def test_legacy_ui_paths_redirect_to_chat_without_duplicate_assets():
+def test_removed_ui_paths_and_missing_chat_assets_return_404():
     client = TestClient(app)
-    expected = {
-        "/ui": "/chat/",
-        "/ui/": "/chat/",
-        "/ui/app.js": "/chat/app.js",
-        "/ui/?chat=abc": "/chat/?chat=abc",
-        "/ui/app.js?v=20260821": "/chat/app.js?v=20260821",
-    }
-    for source, target in expected.items():
-        response = client.get(source, follow_redirects=False)
-        assert response.status_code == 308
-        assert response.headers["location"] == target
+    for path in ("/ui", "/ui/", "/ui/app.js", "/chat/missing.js", "/missing"):
+        assert client.get(path, follow_redirects=False).status_code == 404
 
 
 def test_checked_in_landing_page_is_served_at_root_without_nginx():

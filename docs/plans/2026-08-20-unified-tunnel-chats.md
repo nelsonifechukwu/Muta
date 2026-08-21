@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make native Linux `/ui` sessions reached through different SSH tunnel ports use one persistent
+Make native Linux `/chat` sessions reached through different SSH tunnel ports use one persistent
 operator identity. Keep LAN classroom clients on their existing per-browser identities until the
 planned user-account layer is implemented.
 

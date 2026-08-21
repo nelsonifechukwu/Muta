@@ -44,9 +44,10 @@ def test_landing_is_wired_into_both_deployment_topologies() -> None:
     assert "COPY landing/ /usr/share/nginx/html/" in frontend
     assert "COPY ui/ /usr/share/nginx/html/chat/" in frontend
     assert '"/usr/share/nginx/html/chat"' in exporter
-    assert "location = /ui" in nginx
-    assert "location ~ ^/ui/(.*)$" in nginx
-    assert nginx.count("return 308 /chat/") == 2
+    assert "location = /chat" in nginx
+    assert "location /chat/" in nginx
+    assert "/ui" not in nginx
+    assert nginx.count("try_files $uri $uri/ =404;") == 2
 
 
 def test_every_open_muta_action_targets_the_canonical_chat_route() -> None:
