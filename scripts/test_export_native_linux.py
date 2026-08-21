@@ -251,6 +251,52 @@ def test_ui_verifier_rejects_root_absolute_assets(tmp_path):
 @pytest.mark.parametrize(
     "reference",
     (
+        '<script src="https://cdn.example/app.js"></script>',
+        '<link rel="stylesheet" href="//cdn.example/styles.css">',
+    ),
+)
+def test_ui_verifier_rejects_remote_assets(tmp_path, reference):
+    for relative in export.UI_REQUIRED:
+        asset = tmp_path / relative
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_text(relative)
+    (tmp_path / "index.html").write_text(reference)
+
+    with pytest.raises(export.ExportError, match="remote asset URLs"):
+        export._verify_ui(tmp_path)
+
+
+def test_ui_verifier_rejects_root_absolute_v1_assets(tmp_path):
+    for relative in export.UI_REQUIRED:
+        asset = tmp_path / relative
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_text(relative)
+    (tmp_path / "index.html").write_text('<script src="/v1/missing.js"></script>')
+
+    with pytest.raises(export.ExportError, match="root-absolute"):
+        export._verify_ui(tmp_path)
+
+
+def test_ui_verifier_allows_same_origin_navigation_links(tmp_path):
+    for relative in export.UI_REQUIRED:
+        asset = tmp_path / relative
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_text(relative)
+    (tmp_path / "index.html").write_text(
+        '<a href="/">Muta home</a>'
+        '<a href="/chat/">Open Muta</a>'
+        '<link rel="stylesheet" href="styles.css">'
+        '<script src="app.js"></script>'
+    )
+
+    verified = export._verify_ui(tmp_path)
+
+    assert "app.js" in verified["files"]
+
+
+@pytest.mark.parametrize(
+    "reference",
+    (
         "<script src='missing-locale.js?v=new'></script>",
         "<SCRIPT SRC = 'missing-locale.js?v=new'></SCRIPT>",
         "<script src=missing-locale.js?v=new></script>",

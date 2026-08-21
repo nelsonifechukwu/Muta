@@ -72,9 +72,19 @@ class _IndexAssetParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.references: list[str] = []
 
-    def handle_starttag(self, _tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """Collect bundle assets without mistaking ordinary navigation for files.
+
+        Every ``src`` is an asset. Only ``<link href>`` is: anchor ``href`` values such as
+        ``/`` and ``/chat/`` are same-origin product routes and must remain valid in the
+        portable gateway.
+        """
+        tag = tag.lower()
         self.references.extend(
-            value for name, value in attrs if name.lower() in {"href", "src"} and value is not None
+            value
+            for name, value in attrs
+            if value is not None
+            and (name.lower() == "src" or (tag == "link" and name.lower() == "href"))
         )
 
 
@@ -216,21 +226,28 @@ def _verify_ui(path: Path) -> dict:
     parser = _IndexAssetParser()
     parser.feed(index)
     absolute_assets = []
+    remote_assets = []
     missing_references = []
     for reference in parser.references:
         parsed = urlsplit(reference.strip())
+        if parsed.scheme == "data" and not parsed.netloc:
+            continue
         if parsed.scheme or parsed.netloc:
+            remote_assets.append(reference)
             continue
         relative = unquote(parsed.path)
         if not relative:
             continue
         if relative.startswith("/"):
-            if not relative.startswith("/v1/"):
-                absolute_assets.append(relative.lstrip("/"))
+            absolute_assets.append(relative.lstrip("/"))
             continue
         asset = _safe_child_path(path, relative, label="native UI index asset")
         if not asset.is_file():
             missing_references.append(relative)
+    if remote_assets:
+        raise ExportError(
+            "native UI contains remote asset URLs: " + ", ".join(sorted(remote_assets))
+        )
     if absolute_assets:
         raise ExportError(
             "native UI contains root-absolute asset URLs: " + ", ".join(sorted(absolute_assets))
