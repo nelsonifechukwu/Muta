@@ -17,7 +17,9 @@ import shutil
 import subprocess
 import tempfile
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_IMAGE = "muta-backend:latest"
@@ -27,24 +29,76 @@ DEFAULT_UI_OUTPUT = ROOT / "ui" / "dist"
 EXPECTED_TAG = "b10035"
 EXPECTED_COMMIT = "602f828"
 BINARIES = ("llama-server", "llama-bench")
-UI_REQUIRED = (
-    "index.html",
-    "app.js",
-    "math.js",
-    "audio.js",
-    "worklet.js",
-    "styles.css",
+UI_SOURCE_EXTENSIONS = frozenset({".css", ".html", ".js"})
+UI_VENDOR_REQUIRED = (
     "vendor/marked.min.js",
     "vendor/purify.min.js",
     "vendor/katex/katex.min.js",
     "vendor/katex/katex.min.css",
 )
-UI_SOURCE_FILES = ("index.html", "app.js", "math.js", "audio.js", "worklet.js", "styles.css")
 FORBIDDEN_AVX512 = re.compile(rb"\s(vpxord|vpternlogd|kmovw|vpbroadcastmw2d)\s")
 
 
 class ExportError(RuntimeError):
     pass
+
+
+def _discover_ui_source_files(source_path: Path) -> tuple[str, ...]:
+    """Return every authored top-level browser asset, excluding metadata and test files.
+
+    Native startup overlays this inventory into the exported frontend. Discovering it from the
+    checkout prevents a new script from being referenced by ``index.html`` but omitted from the
+    deployed bundle because somebody forgot to extend a second hard-coded list.
+    """
+    candidates = [
+        item
+        for item in source_path.iterdir()
+        if not item.name.startswith(".")
+        and item.suffix.lower() in UI_SOURCE_EXTENSIONS
+        and not item.name.lower().endswith((".spec.js", ".test.js"))
+    ]
+    symlinks = sorted(item.name for item in candidates if item.is_symlink())
+    if symlinks:
+        raise ExportError("native UI source assets cannot be symlinks: " + ", ".join(symlinks))
+    return tuple(sorted(item.name for item in candidates if item.is_file()))
+
+
+UI_SOURCE_FILES = _discover_ui_source_files(ROOT / "ui")
+UI_REQUIRED = (*UI_SOURCE_FILES, *UI_VENDOR_REQUIRED)
+
+
+class _IndexAssetParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.references: list[str] = []
+
+    def handle_starttag(self, _tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.references.extend(
+            value for name, value in attrs if name.lower() in {"href", "src"} and value is not None
+        )
+
+
+def _safe_child_path(root: Path, relative: object, *, label: str) -> Path:
+    if not isinstance(relative, str) or not relative.strip():
+        raise ExportError(f"{label} must be a non-empty relative path")
+    if "\\" in relative:
+        raise ExportError(f"{label} contains a non-portable path separator: {relative}")
+    candidate = Path(relative)
+    if candidate.is_absolute():
+        raise ExportError(f"{label} must be relative: {relative}")
+    resolved_root = root.resolve()
+    resolved = (resolved_root / candidate).resolve()
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ExportError(f"{label} escapes its allowed root: {relative}") from exc
+    return resolved
+
+
+def _manifest_ui_path(ui: object) -> Path:
+    if not isinstance(ui, dict):
+        raise ExportError("native manifest UI metadata must be an object")
+    return _safe_child_path(ROOT, ui.get("path", "ui/dist"), label="native manifest UI path")
 
 
 def _run(args: list[str], *, text: bool = True) -> subprocess.CompletedProcess:
@@ -159,10 +213,32 @@ def _verify_ui(path: Path) -> dict:
     if missing:
         raise ExportError(f"frontend image is missing native UI assets: {', '.join(missing)}")
     index = (path / "index.html").read_text()
-    absolute_assets = re.findall(r'(?:src|href)="/(?!v1/)([^"]+)"', index)
+    parser = _IndexAssetParser()
+    parser.feed(index)
+    absolute_assets = []
+    missing_references = []
+    for reference in parser.references:
+        parsed = urlsplit(reference.strip())
+        if parsed.scheme or parsed.netloc:
+            continue
+        relative = unquote(parsed.path)
+        if not relative:
+            continue
+        if relative.startswith("/"):
+            if not relative.startswith("/v1/"):
+                absolute_assets.append(relative.lstrip("/"))
+            continue
+        asset = _safe_child_path(path, relative, label="native UI index asset")
+        if not asset.is_file():
+            missing_references.append(relative)
     if absolute_assets:
         raise ExportError(
-            "native UI contains root-absolute asset URLs: " + ", ".join(absolute_assets)
+            "native UI contains root-absolute asset URLs: " + ", ".join(sorted(absolute_assets))
+        )
+    if missing_references:
+        raise ExportError(
+            "native UI index references missing assets: "
+            + ", ".join(sorted(set(missing_references)))
         )
     files = {}
     for file_path in sorted(item for item in path.rglob("*") if item.is_file()):
@@ -273,17 +349,28 @@ def verify_manifest(output: Path, *, allow_source_overlay: bool = False) -> Path
         if actual != expected:
             raise ExportError(f"native artifact hash mismatch for {name}: {actual} != {expected}")
     ui = manifest.get("ui", {})
-    ui_path = ROOT / ui.get("path", "ui/dist")
-    for relative, metadata in ui.get("files", {}).items():
+    ui_path = _manifest_ui_path(ui)
+    files = ui.get("files")
+    if not isinstance(files, dict) or not files:
+        raise ExportError("native manifest has no UI file metadata")
+    overlay_files = set(UI_SOURCE_FILES) if allow_source_overlay else set()
+    required_metadata = set(UI_REQUIRED) - overlay_files
+    missing_metadata = sorted(required_metadata - set(files))
+    if missing_metadata:
+        raise ExportError(
+            "native manifest is missing UI hash metadata: " + ", ".join(missing_metadata)
+        )
+    for relative, metadata in files.items():
         if allow_source_overlay and relative in UI_SOURCE_FILES:
             continue
-        asset = ui_path / relative
-        if not asset.is_file() or _sha256(asset) != metadata.get("sha256"):
+        asset = _safe_child_path(ui_path, relative, label="native manifest UI asset")
+        expected = metadata.get("sha256") if isinstance(metadata, dict) else None
+        if not isinstance(expected, str) or not asset.is_file() or _sha256(asset) != expected:
             raise ExportError(f"native UI artifact hash mismatch for {relative}")
-    required = set(UI_REQUIRED)
-    if allow_source_overlay:
-        required.difference_update(UI_SOURCE_FILES)
-    if not ui.get("files") or any(not (ui_path / item).is_file() for item in required):
+    if any(
+        not _safe_child_path(ui_path, item, label="required native UI asset").is_file()
+        for item in required_metadata
+    ):
         raise ExportError("native UI artifact is incomplete")
     return manifest_path
 
@@ -298,7 +385,7 @@ def sync_source_ui(output: Path) -> Path:
     manifest_path = verify_manifest(output, allow_source_overlay=True)
     manifest = json.loads(manifest_path.read_text())
     ui = manifest["ui"]
-    ui_path = ROOT / ui.get("path", "ui/dist")
+    ui_path = _manifest_ui_path(ui)
     source_path = ROOT / "ui"
     for relative in UI_SOURCE_FILES:
         source = source_path / relative

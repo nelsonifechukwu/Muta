@@ -50,6 +50,10 @@ reviewed model capability.
    unchanged to the gateway; the system instruction performs per-turn language selection without
    a language-detection service. If the latest message is too short or ambiguous, continue the
    most recently established response language, then fall back to English.
+8. Native deployment discovers every top-level authored HTML, CSS, and JavaScript asset and
+   overlays the complete set into `ui/dist` before the gateway starts. Verification follows every
+   relative `src` and `href` in `index.html`; a mixed bundle with missing localization scripts is
+   rejected instead of serving a non-responsive interface.
 
 ## Verification
 
@@ -61,6 +65,8 @@ reviewed model capability.
   reaches the inference engine unchanged; static client tests cover typed and voice transports.
 - A multi-turn engine test proves that changing an explicit language to Auto replaces only the
   next system instruction while replaying the prior conversation history unchanged.
+- Native-export tests prove that newly added UI scripts are discovered, copied, resealed in the
+  manifest, and rejected when `index.html` references an absent asset.
 - Existing UI and backend tests remain green.
 - A fresh-context reviewer probes missing dynamic strings, misleading language claims,
   persistence failures, accessibility regressions, and RTL layout hazards.
