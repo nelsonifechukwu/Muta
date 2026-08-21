@@ -107,7 +107,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - [Guided discovery approach](https://youtu.be/6rkSPPyz_Bo) and [demonstrative learning](https://youtube.com/shorts/SHec9Qv8u3E?si=AULeO-BnjXIUC6au)
 - Make the entire WAEC (or other African education) curriculum like [ANATOMY](https://anatomy-livid.vercel.app/)
 - Connect the model to the internet to search for more info and improve correctness (it can download more info routinely and fine-tune itself periodically)
-- available courses or explanations (with options to create and share publicly in public catalog or privately). Ships with some default courses like in <a href="#marble-location">Marble</a> or ANATOMY.
+- available courses or explanations (with options to create and share publicly in public catalog or privately). Ships with some default courses like in <a href="#similar-products">Marble/ANATOMY</a>.
 
 ## 5. Exam-Prep & Skills Training Layer (Africa)
 - Target exams: WAEC/WASSCE, BECE, JAMB, NECO, KCSE, Matric, university entrance.
@@ -150,12 +150,13 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Run the ADTC local profiler on every commit, not just once at the end.
 - Target Best African Use Case explicitly: multi-country exams + multilingual + shared-laptop mode.
 
-## 10. Similar Products
+## 10. Similar Products 
+<span id="similar-products"></span>
 - [Learning Equity](https://learningequality.org/)
 - Khan Academy
 - [Brilliant](brilliant.org)
 - [Opennote.com](https://withmarble.com/)
-- <span id="marble-location"></span>[Marble](https://withmarble.com/): [solar-system](https://withmarble.com/solar-system/), [ecosystem](https://withmarble.com/ecosystem-simulator), [heat](https://withmarble.com/water-lab)
+- [Marble](https://withmarble.com/): [solar-system](https://withmarble.com/solar-system/), [ecosystem](https://withmarble.com/ecosystem-simulator), [heat](https://withmarble.com/water-lab)
 - [Khanmigo](https://www.khanmigo.ai/)
 - [RACHEL](https://worldpossible.org/products/rachel-5-500)
 - [HEY CLICKY](https://www.heyclicky.com/)
