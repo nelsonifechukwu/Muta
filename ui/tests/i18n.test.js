@@ -253,6 +253,10 @@ test("startup uses a saved explicit locale, otherwise Auto resolves browser then
     assert.equal(i18n.initialize(doc), "sw");
     assert.equal(i18n.languagePreference, "sw");
 
+    saved.set(i18n.STORAGE_KEY, "fr");
+    assert.equal(i18n.initialize(doc), "fr");
+    assert.equal(i18n.languagePreference, "fr");
+
     saved.delete(i18n.STORAGE_KEY);
     assert.equal(i18n.initialize(doc), "de");
     assert.equal(i18n.languagePreference, "auto");
@@ -297,6 +301,8 @@ test("Auto persists as the response preference while the interface follows the b
 
 test("every translation key used by authored markup exists and localization loads first", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /<html\b[^>]*\btranslate="no"[^>]*\bclass="notranslate"/);
+  assert.match(html, /<meta\s+name="google"\s+content="notranslate">/);
   assert.doesNotMatch(html, /language-review-note|africa-coverage-note|language-coverage-list/);
   const keys = [...html.matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(keys.length > 30);
@@ -356,6 +362,10 @@ test("the pre-paint bootstrap uses only complete packs and honors saved RTL pref
   assert.deepEqual(
     { ...run({ savedLocale: "ar", languages: ["de-DE"] }) },
     { lang: "ar", dir: "rtl" },
+  );
+  assert.deepEqual(
+    { ...run({ savedLocale: "fr", languages: ["en-GB"] }) },
+    { lang: "fr", dir: "ltr" },
   );
   assert.deepEqual(
     { ...run({ savedLocale: "ig", languages: ["de-DE"] }) },
