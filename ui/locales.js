@@ -1,5 +1,5 @@
-/* Complete offline interface packs. Every registered language remains selectable as a response
- * preference; these catalogs additionally translate the browser interface. */
+/* Hand-authored complete offline interface packs. Machine-assisted complete packs are registered
+ * separately by locale-generated.js; unfinished registry languages stay hidden from Settings. */
 "use strict";
 
 (() => {

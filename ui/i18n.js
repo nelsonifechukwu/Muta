@@ -245,7 +245,9 @@
     if (typeof candidate === "string" && candidate.trim().toLowerCase() === AUTO_LANGUAGE) {
       return AUTO_LANGUAGE;
     }
-    return normalizeKnownLocale(candidate);
+    // The internal registry retains planned languages, but Settings may select only complete
+    // interface packs. This keeps the visible product promise and response preference aligned.
+    return normalizeLocale(candidate);
   }
 
   function startupLanguagePreference() {
@@ -312,12 +314,13 @@
     autoOption.value = AUTO_LANGUAGE;
     autoOption.textContent = t("settings.languageAuto");
     select.appendChild(autoOption);
-    const autonymCounts = localeDefinitions.reduce((counts, locale) => {
+    const visibleDefinitions = supportedDefinitions();
+    const autonymCounts = visibleDefinitions.reduce((counts, locale) => {
       counts.set(locale.autonym, (counts.get(locale.autonym) || 0) + 1);
       return counts;
     }, new Map());
     for (const groupName of ["african", "other"]) {
-      const locales = localeDefinitions.filter(
+      const locales = visibleDefinitions.filter(
         (locale) => locale.group === groupName,
       );
       if (!locales.length) continue;
@@ -367,7 +370,7 @@
 
   function registerLocale(definition, messages) {
     if (!definition?.tag || !messages) return false;
-    catalogs[definition.tag] = { ...messages };
+    catalogs[definition.tag] = { ...(catalogs[definition.tag] || {}), ...messages };
     const index = localeDefinitions.findIndex((item) => item.tag === definition.tag);
     if (index >= 0) localeDefinitions[index] = { ...localeDefinitions[index], ...definition };
     else localeDefinitions.push({ ...definition });

@@ -23,8 +23,8 @@ basis/source and regional review.
 - Identify languages with BCP 47 / ISO language tags and display autonyms rather than flags.
 - Keep sign-language accessibility on the product accessibility roadmap; a written interface
   pack must not falsely claim to provide sign-language localization.
-- Keep interface-translation readiness separate from response-language mapping. Every mapped tag
-  is selectable as a response preference; only complete UI catalogs localize the browser chrome.
+- Keep interface-translation readiness separate from the backend registry. Settings exposes only
+  tags with complete accepted UI catalogs; those visible choices also set response language.
 - Keep country coverage and review status in project documentation rather than adding planning
   information to the learner-facing Settings panel.
 - Record community-review status independently. Machine-generated or unreviewed copy must never
@@ -34,8 +34,8 @@ basis/source and regional review.
 
 1. Add a standalone `ui/africa-languages.js` registry containing the 54-country matrix and the
    deduplicated baseline language definitions.
-2. Build the African section of the Settings selector from every mapped tag, before the existing
-   "Other languages" group, and keep every option enabled as a response preference.
+2. Build the African section of Settings from interface-ready mapped tags, before the existing
+   "Other languages" group. Retain the full mapping in the registry for later enablement.
 3. Keep the country matrix in documentation for coverage auditing and community review; do not
    reproduce the planning matrix in the learner-facing Settings panel.
 4. Add tests that fail if there are not exactly 54 unique countries, a country has no main
@@ -53,8 +53,7 @@ basis/source and regional review.
 
 ## Completion boundary
 
-This change maps every baseline language into a visible, test-gated response-language choice.
-That makes the preference available to the trusted generation instruction, but does not by itself
-prove model response quality or complete UI localization in every language. Translation and
-community review proceed country by country until selecting each baseline language also translates
-the whole interface.
+This change maps every baseline language into the backend registry. A language becomes a visible,
+test-gated preference only after its UI catalog passes the acceptance boundary. Translation and
+community review proceed country by country; hidden tags remain available for later enablement
+without changing the backend contract.

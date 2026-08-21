@@ -15,13 +15,12 @@ reviewed model capability.
 - Identify locales with BCP 47 tags and show every language by its autonym.
 - Do not assign a single national flag to languages that cross borders.
 - Group the initial African-language packs before other languages in the selector.
-- Every registered language is selectable as the tutor's response-language preference. A locale
-  changes the browser interface only when it contains the complete required UI message set;
-  otherwise the interface remains English while the selected response preference still applies.
-- Initial complete interface tranche: English, Deutsch, French, Arabic, Kiswahili, and Yoruba. The
-  dropdown also includes the 85-language Africa-54 baseline and can accept additional languages
-  without changing application code. Country-coverage planning stays in project documentation,
-  not in the learner-facing Settings panel.
+- Every language shown in Settings has the complete required UI message set and changes both the
+  browser interface and response preference. The 85-language Africa-54 registry remains the
+  backend planning inventory; a tag without an accepted catalog stays hidden until support lands.
+- Initial hand-authored interface tranche: English, Deutsch, French, Arabic, Kiswahili, and Yoruba.
+  Machine-assisted packs pass the same key, placeholder, truncation, script, and repetition gates
+  before joining the dropdown. Country-coverage planning stays in project documentation.
 - Set both `document.documentElement.lang` and `dir`; Arabic is right-to-left.
 - Offer `Auto` before the explicit languages. Auto resolves the interface against the best
   complete browser-language pack, but keeps `auto` as the response-language preference so the
@@ -47,9 +46,9 @@ reviewed model capability.
    for another language for that task, preserves code/variables/commands/URLs/proper nouns, and
    asks for natural rather than literal explanations. Locale changes apply to the next turn in
    an existing conversation; persisted user-message content stays byte-for-byte unchanged.
-7. Keep `languagePreference` separate from the resolved interface `locale`. Every explicit choice
-   is sent unchanged to the gateway; choices with a complete interface catalog use it, while the
-   rest retain English chrome. `auto` follows the browser for interface chrome and is sent
+7. Keep `languagePreference` separate from the resolved interface `locale`. Every visible explicit
+   choice is complete and is sent unchanged to the gateway. Hidden registry tags remain available
+   to backend code but are not accepted as browser preferences. `auto` follows the browser and is sent
    unchanged to the gateway; the system instruction performs per-turn language selection without
    a language-detection service. If the latest message is too short or ambiguous, continue the
    most recently established response language, then fall back to English.
@@ -72,8 +71,8 @@ reviewed model capability.
 
 ## Verification
 
-- Static tests assert that every complete interface pack has every marked key, every registered
-  response language is selectable, and the language selector/runtime load before the application.
+- Static tests assert that every visible language has every marked key, hidden registry tags do not
+  leak into Settings, and the language selector/runtime load before the application.
 - JavaScript tests cover startup resolution, persistence, fallback, interpolation, DOM
   attributes, and right-to-left switching.
 - Prompt and route tests prove that the locale lands in the system prompt while the user message
