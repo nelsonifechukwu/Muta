@@ -83,6 +83,7 @@ def test_language_change_replaces_only_the_next_system_prompt_and_keeps_history(
             "s1",
             "Explain projectile motion.",
             system_prompt="SYSTEM: respond in English",
+            turn_instruction="TURN: respond in English",
             language="en",
         )
         engine.chat(
@@ -90,6 +91,7 @@ def test_language_change_replaces_only_the_next_system_prompt_and_keeps_history(
             "Kannst du das einfacher erklären?",
             conversation_id=first.conversation_id,
             system_prompt="SYSTEM: AUTO follows the latest user message",
+            turn_instruction="",
             language="auto",
         )
 
@@ -120,6 +122,7 @@ def test_stream_language_change_keeps_earlier_turns_byte_identical(tmp_path):
             "s1",
             "Explain projectile motion.",
             system_prompt="SYSTEM: respond in English",
+            turn_instruction="TURN: respond in English",
             language="en",
         )
         assert list(first_events) == [("content", "reply-1")]
@@ -129,6 +132,7 @@ def test_stream_language_change_keeps_earlier_turns_byte_identical(tmp_path):
             "Kannst du das einfacher erklären?",
             conversation_id=conversation_id,
             system_prompt="SYSTEM: AUTO follows the latest user message",
+            turn_instruction="",
             language="auto",
         )
         assert repeated_id == conversation_id
@@ -358,7 +362,11 @@ def test_regenerate_reanswers_the_last_user_turn_without_adding_one(store):
     store.add_message(cid, "user", "what is 2+2?")
 
     cid2, mid, gen = engine.stream_events_chat(
-        "s1", "what is 2+2?", conversation_id=cid, regenerate=True
+        "s1",
+        "what is 2+2?",
+        conversation_id=cid,
+        turn_instruction="TURN: respond in German",
+        regenerate=True,
     )
     assert cid2 == cid
     assert mid is None  # no new user message row
@@ -366,8 +374,69 @@ def test_regenerate_reanswers_the_last_user_turn_without_adding_one(store):
 
     msgs = store.get_messages(cid)
     assert [m["role"] for m in msgs] == ["user", "assistant"]  # NOT a duplicated user turn
-    # The prompt the client saw was history-only: it ended with the existing user turn.
-    assert engine.client.seen[-1][-1] == {"role": "user", "content": "what is 2+2?"}
+    # The request copy is wrapped, while the existing persisted user turn stays unchanged.
+    assert engine.client.seen[-1][-1] == {
+        "role": "user",
+        "content": (
+            "what is 2+2?\n\n"
+            "[MUTA RUNTIME INSTRUCTION — not part of the learner's message]\n"
+            "TURN: respond in German"
+        ),
+    }
+
+
+def test_nonstream_regenerate_reanswers_without_duplicating_the_user_turn(store):
+    engine, client, store = _engine(store)
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "what is electron spin?")
+
+    result = engine.chat(
+        "s1",
+        "what is electron spin?",
+        conversation_id=cid,
+        turn_instruction="TURN: respond in German",
+        regenerate=True,
+    )
+
+    assert result.user_message_id is None
+    assert [message["role"] for message in client.seen[-1]] == ["system", "user"]
+    assert client.seen[-1][-1]["content"].startswith("what is electron spin?")
+    assert client.seen[-1][-1]["content"].endswith("TURN: respond in German")
+    assert [(message["role"], message["content"]) for message in store.get_messages(cid)] == [
+        ("user", "what is electron spin?"),
+        ("assistant", "reply-1"),
+    ]
+
+
+def test_regenerate_rejects_a_conversation_that_already_has_an_answer(store):
+    engine, _client, store = _engine(store)
+    first = engine.chat("s1", "what is electron spin?")
+    stored = store.get_messages(first.conversation_id)
+
+    with pytest.raises(ValueError, match="last message is the user"):
+        engine.chat(
+            "s1",
+            "what is electron spin?",
+            conversation_id=first.conversation_id,
+            regenerate=True,
+        )
+
+    assert store.get_messages(first.conversation_id) == stored
+
+
+@pytest.mark.parametrize("conversation_id", [None, "missing-conversation"])
+def test_regenerate_rejects_missing_conversation_without_creating_a_ghost(store, conversation_id):
+    engine, _client, store = _engine(store)
+
+    with pytest.raises(ValueError, match="existing conversation"):
+        engine.chat(
+            "s1",
+            "what is electron spin?",
+            conversation_id=conversation_id,
+            regenerate=True,
+        )
+
+    assert store.list_conversations("s1") == []
 
 
 # --- write-through streaming ------------------------------------------------------------

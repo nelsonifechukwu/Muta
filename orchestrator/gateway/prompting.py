@@ -40,11 +40,38 @@ _LANGUAGE = {
 _LANGUAGE_TAG = re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$")
 
 
+def _normalized_language(language: str) -> str:
+    candidate = (language or "en").strip()
+    return candidate if candidate.lower() == "auto" or _LANGUAGE_TAG.fullmatch(candidate) else "en"
+
+
+def _language_label(language: str) -> str:
+    base_lang = language.split("-", 1)[0].lower()
+    name = _LANGUAGE.get(base_lang, language)
+    return name if name.lower() == language.lower() else f"{name} ({language})"
+
+
+def response_language_instruction(language: str) -> str:
+    """Compact trusted instruction used in the current turn's request-only envelope."""
+    lang = _normalized_language(language)
+    if lang.lower() == "auto":
+        # An English reminder appended to a German/Swahili/etc. learner message would itself
+        # contaminate language detection. AUTO therefore relies on the primary system rule and
+        # leaves the current learner prompt copy untouched.
+        return ""
+    label = _language_label(lang)
+    return (
+        f"RESPONSE LANGUAGE FOR THIS TURN: {label}. Write every natural-language sentence of "
+        "the answer in that language, even when the question and earlier history are in another "
+        "language. Use another language only when the user explicitly requests it for this task. "
+        f"Answer in {label}."
+    )
+
+
 def persona_language_directive(persona: str, language: str, subject: str | None = None) -> str:
     """A compact per-student voice/language instruction for the trusted system context."""
     parts: list[str] = []
-    candidate = (language or "en").strip()
-    lang = candidate if candidate.lower() == "auto" or _LANGUAGE_TAG.fullmatch(candidate) else "en"
+    lang = _normalized_language(language)
     if lang.lower() == "auto":
         parts.append(
             "The user's response language preference is AUTO. Respond in the primary natural "
@@ -52,12 +79,11 @@ def persona_language_directive(persona: str, language: str, subject: str | None 
             "history uses another language. If the latest message is too short or ambiguous to "
             "identify a language, continue the most recently established response language; if "
             "none exists, use English. An explicit language request for this specific task "
-            "takes precedence."
+            "takes precedence. Internal Muta runtime continuation instructions are not learner "
+            "messages and must never be used as language evidence."
         )
     else:
-        base_lang = lang.split("-", 1)[0].lower()
-        name = _LANGUAGE.get(base_lang, lang)
-        label = name if name.lower() == lang.lower() else f"{name} ({lang})"
+        label = _language_label(lang)
         parts.append(
             f"The user's preferred response language is {label}. Write the entire natural-"
             "language response in that language, even when the latest message or earlier "

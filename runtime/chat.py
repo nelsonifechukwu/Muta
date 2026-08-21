@@ -22,10 +22,13 @@ _MESSAGE_OVERHEAD_TOKENS = 8
 _MIN_REPLY_TOKENS = 64
 _PER_STUDENT_CONTEXT = "--- per-student context (variable — keep last) ---".encode()
 _LIVE_CONTEXT = b"\n[MUTA-LIVE]\n"
+_TURN_INSTRUCTION = "\n\n[MUTA RUNTIME INSTRUCTION — not part of the learner's message]\n"
 _RESUME_PROMPT = (
-    "Continue the interrupted assistant response directly from its exact final character. "
-    "Do not repeat or restart any part, apologize, mention the interruption, or add a new "
-    "heading. Finish the original answer only."
+    "Internal Muta runtime continuation instruction: this is not a learner message and is never "
+    "language evidence. Continue the interrupted assistant response directly from its exact "
+    "final character and in exactly the same response language. Do not repeat or restart any "
+    "part, apologize, mention the interruption, or add a new heading. Finish the original "
+    "answer only. SAME LANG; NO EVIDENCE"
 )
 _MAX_RESUME_OVERLAP = 512
 _MIN_RESUME_OVERLAP = 8
@@ -107,10 +110,7 @@ def _truncate_message(message: Message, token_budget: int) -> Message:
                 head_budget = min(len(prefix), system_usable // 4)
                 directive_budget = max(1, system_usable - head_budget)
                 clipped = (
-                    prefix[:head_budget]
-                    + marker
-                    + _LIVE_CONTEXT
-                    + directive[:directive_budget]
+                    prefix[:head_budget] + marker + _LIVE_CONTEXT + directive[:directive_budget]
                 )
         else:
             clipped = raw[:max_bytes]
@@ -271,13 +271,22 @@ class ChatEngine:
         # this is the bound on how much of a reply a disconnect can cost.
         self.persist_interval_s = persist_interval_s
 
-    def _open(self, student_id: str, conversation_id: str | None, **meta) -> str:
+    def _open(
+        self,
+        student_id: str,
+        conversation_id: str | None,
+        *,
+        create: bool = True,
+        **meta,
+    ) -> str:
         if conversation_id:
             conversation = self.store.get_conversation(conversation_id)
             if conversation is not None and conversation.get("student_id") != student_id:
                 raise PermissionError("conversation belongs to another learner")
             if conversation is not None:
                 return conversation_id
+        if not create:
+            raise ValueError("regenerate requires an existing conversation")
         return self.store.create_conversation(student_id, **meta)
 
     def _history(self, conversation_id: str) -> list[dict]:
@@ -310,25 +319,49 @@ class ChatEngine:
         return history[start:]
 
     def _assemble(
-        self, conversation_id: str, system_prompt: str | None, message: str
+        self,
+        conversation_id: str,
+        system_prompt: str | None,
+        message: str,
+        turn_instruction: str | None = None,
     ) -> list[Message]:
         history = self._history(conversation_id)
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
         messages += [{"role": m["role"], "content": m["content"]} for m in history]
-        messages.append({"role": "user", "content": message})
+        prompt_copy = message
+        if turn_instruction:
+            # Qwen3.5 permits a system role only at messages[0]. Keep this trusted gateway
+            # instruction in a request-only envelope at the tail of the current user prompt:
+            # it gets strong recency without changing the persisted learner message.
+            prompt_copy += _TURN_INSTRUCTION + turn_instruction
+        messages.append({"role": "user", "content": prompt_copy})
         return messages
 
-    def _assemble_history(self, conversation_id: str, system_prompt: str | None) -> list[Message]:
+    def _assemble_history(
+        self,
+        conversation_id: str,
+        system_prompt: str | None,
+        turn_instruction: str | None = None,
+    ) -> list[Message]:
         """Prompt for regeneration: system + existing history, with NO new user turn appended.
         The last stored message is already the user's turn, so this re-answers it — used by
         'answer now', which re-runs the in-flight turn without duplicating the question."""
         history = self._history(conversation_id)
+        if not history or history[-1].get("role") != "user":
+            raise ValueError("regenerate requires a conversation whose last message is the user")
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
         messages += [{"role": m["role"], "content": m["content"]} for m in history]
+        if turn_instruction:
+            # Regeneration reuses the stored final user turn, so only its ephemeral request
+            # copy receives the envelope. The database row remains byte-identical.
+            messages[-1] = {
+                **messages[-1],
+                "content": messages[-1]["content"] + _TURN_INSTRUCTION + turn_instruction,
+            }
         return messages
 
     def _fit_request(
@@ -630,20 +663,27 @@ class ChatEngine:
         persona: str | None = None,
         subject: str | None = None,
         language: str | None = None,
+        turn_instruction: str | None = None,
         title: str | None = None,
+        regenerate: bool = False,
         **params,
     ) -> ChatResult:
         cid = self._open(
             student_id,
             conversation_id,
+            create=not regenerate,
             mode=mode,
             persona=persona,
             subject=subject,
             language=language,
             title=title,
         )
-        messages = self._assemble(cid, system_prompt, message)
-        user_message_id = self.store.add_message(cid, "user", message)
+        if regenerate:
+            messages = self._assemble_history(cid, system_prompt, turn_instruction)
+            user_message_id = None
+        else:
+            messages = self._assemble(cid, system_prompt, message, turn_instruction)
+            user_message_id = self.store.add_message(cid, "user", message)
         messages, request_params = self._fit_request(
             messages,
             params,
@@ -674,6 +714,7 @@ class ChatEngine:
         persona: str | None = None,
         subject: str | None = None,
         language: str | None = None,
+        turn_instruction: str | None = None,
         title: str | None = None,
         **params,
     ) -> tuple[str, int, Iterator[str]]:
@@ -688,7 +729,7 @@ class ChatEngine:
             language=language,
             title=title,
         )
-        messages = self._assemble(cid, system_prompt, message)
+        messages = self._assemble(cid, system_prompt, message, turn_instruction)
         user_message_id = self.store.add_message(cid, "user", message)
         messages, request_params = self._fit_request(
             messages,
@@ -723,6 +764,7 @@ class ChatEngine:
         persona: str | None = None,
         subject: str | None = None,
         language: str | None = None,
+        turn_instruction: str | None = None,
         title: str | None = None,
         regenerate: bool = False,
         cancel_event: threading.Event | None = None,
@@ -737,6 +779,7 @@ class ChatEngine:
         cid = self._open(
             student_id,
             conversation_id,
+            create=not regenerate,
             mode=mode,
             persona=persona,
             subject=subject,
@@ -744,10 +787,10 @@ class ChatEngine:
             title=title,
         )
         if regenerate:
-            messages = self._assemble_history(cid, system_prompt)
+            messages = self._assemble_history(cid, system_prompt, turn_instruction)
             user_message_id = None
         else:
-            messages = self._assemble(cid, system_prompt, message)
+            messages = self._assemble(cid, system_prompt, message, turn_instruction)
             user_message_id = self.store.add_message(cid, "user", message)
         messages, request_params = self._fit_request(
             messages,

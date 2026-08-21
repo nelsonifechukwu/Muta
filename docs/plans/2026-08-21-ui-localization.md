@@ -63,6 +63,12 @@ reviewed model capability.
 10. Apply the same system-level language assembly to both `/chat*` and `/tutor/chat*` contract
     families. Validate language metadata as bounded BCP 47 before it reaches prompt assembly or
     persistence; no client path may interpolate an unconstrained value into trusted context.
+11. For explicit choices, add a compact, validated response-language instruction to a request-only
+    envelope at the tail of the current user prompt copy. The primary preference remains in the
+    system prompt; this template-compatible reminder reinforces it for small models after a long
+    history in another language without modifying the persisted user's message. Auto deliberately
+    leaves the prompt copy untouched so English instruction text cannot contaminate detection.
+    Regeneration wraps only the already-stored final user turn's ephemeral copy.
 
 ## Verification
 
@@ -78,6 +84,8 @@ reviewed model capability.
   head and a changed response-language instruction at the system prompt's variable tail.
 - JSON and streaming tests for both chat route families prove the validated language tag reaches
   the system prompt while the learner's message remains byte-for-byte unchanged.
+- Turn-order tests prove the compact language instruction stays at the current prompt copy's tail,
+  changes on the next generation, uses no late system role, and never enters persisted history.
 - Native-export tests prove that newly added UI scripts are discovered, copied, resealed in the
   manifest, and rejected when `index.html` references an absent asset.
 - Existing UI and backend tests remain green.

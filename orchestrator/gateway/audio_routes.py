@@ -36,7 +36,7 @@ from orchestrator.audio.engines import AsrEngine, SileroVad, TtsEngine, load_eng
 from orchestrator.audio.mathspeech import to_speech
 from orchestrator.audio.vad import Endpointer
 from orchestrator.gateway.deps import get_engine, load_prompt
-from orchestrator.gateway.prompting import assemble_system_prompt
+from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
 from orchestrator.telemetry import get_hub
 from runtime.chat import ChatEngine
 
@@ -308,6 +308,7 @@ async def audio_voice(ws: WebSocket) -> None:
                 message=text,
                 conversation_id=state["conversation_id"],
                 system_prompt=_voice_system_prompt(mode, state["language"]),
+                turn_instruction=response_language_instruction(state["language"]),
                 mode=mode,
                 language=state["language"],
                 title=text[:80],

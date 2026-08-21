@@ -117,7 +117,9 @@ def test_tutor_chat_lang_is_trusted_system_context_not_user_text(wired):
     assert call["message"] == user_text
     assert call["language"] == "de"
     assert "preferred response language is German (de)" in call["system_prompt"]
+    assert "RESPONSE LANGUAGE FOR THIS TURN: German (de)" in call["turn_instruction"]
     assert user_text not in call["system_prompt"]
+    assert user_text not in call["turn_instruction"]
 
 
 def test_marking_mode_gets_a_grammar_instead_of_a_500(wired):
@@ -220,7 +222,9 @@ def test_response_language_is_system_context_and_user_message_is_unchanged(wired
     call = engine.calls[-1]
     assert call["message"] == user_message
     assert "preferred response language is German (de)" in call["system_prompt"]
+    assert "RESPONSE LANGUAGE FOR THIS TURN: German (de)" in call["turn_instruction"]
     assert user_message not in call["system_prompt"]
+    assert user_message not in call["turn_instruction"]
 
     follow_up = "Kannst du das einfacher erklären?"
     response = client.post(
@@ -236,6 +240,45 @@ def test_response_language_is_system_context_and_user_message_is_unchanged(wired
     call = engine.calls[-1]
     assert call["message"] == follow_up
     assert "response language preference is AUTO" in call["system_prompt"]
+    assert call["turn_instruction"] == ""
+
+
+def test_json_chat_regenerate_is_forwarded_without_a_new_user_turn(wired):
+    engine, *_ = wired
+    response = client.post(
+        "/v1/chat",
+        json={
+            "student_id": "s1",
+            "conversation_id": "conv-1",
+            "message": "Explain it directly.",
+            "language": "de",
+            "regenerate": True,
+        },
+    )
+
+    assert response.status_code == 200
+    call = engine.calls[-1]
+    assert call["regenerate"] is True
+    assert call["message"] == "Explain it directly."
+    assert "German (de)" in call["turn_instruction"]
+
+
+def test_json_chat_rejects_regenerate_after_an_answer(wired):
+    engine, *_ = wired
+    engine.raises = ValueError("regenerate requires a conversation whose last message is the user")
+
+    response = client.post(
+        "/v1/chat",
+        json={
+            "student_id": "s1",
+            "conversation_id": "conv-1",
+            "message": "Explain it directly.",
+            "regenerate": True,
+        },
+    )
+
+    assert response.status_code == 409
+    assert "last message is the user" in response.json()["detail"]
 
 
 def test_transient_engine_pause_is_replayed_as_automatic_recovery(wired):
@@ -295,7 +338,9 @@ def test_tutor_stream_lang_is_trusted_system_context_not_user_text(wired):
     assert call["message"] == user_text
     assert call["language"] == "de"
     assert "preferred response language is German (de)" in call["system_prompt"]
+    assert "RESPONSE LANGUAGE FOR THIS TURN: German (de)" in call["turn_instruction"]
     assert user_text not in call["system_prompt"]
+    assert user_text not in call["turn_instruction"]
 
 
 def test_buffered_structured_stream_does_not_report_replay_as_decode_speed(wired, monkeypatch):

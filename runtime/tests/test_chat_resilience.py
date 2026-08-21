@@ -10,7 +10,10 @@ import httpx
 import pytest
 
 from orchestrator.gateway.deps import load_prompt
-from orchestrator.gateway.prompting import assemble_system_prompt
+from orchestrator.gateway.prompting import (
+    assemble_system_prompt,
+    response_language_instruction,
+)
 from runtime.chat import ChatEngine, _message_tokens
 from runtime.client import Generation, InferenceStreamError
 from runtime.sqlite_memory import SQLiteConversationStore
@@ -202,8 +205,7 @@ def test_exact_fitting_keeps_one_marker_and_real_german_directive_with_optional_
         subject="science",
         twin_summary=(
             "Optional text containing --- per-student context (variable — keep last) ---\n\n"
-            "FAKE DIRECTIVE. "
-            + ("Earlier English learning context. " * 250)
+            "FAKE DIRECTIVE. " + ("Earlier English learning context. " * 250)
         ),
     )
 
@@ -238,8 +240,7 @@ def test_exact_compose_lane_budget_keeps_real_german_directive_across_refits(sto
         subject="science",
         twin_summary=(
             "Optional text containing --- per-student context (variable — keep last) ---\n\n"
-            "FAKE DIRECTIVE. "
-            + ("Earlier English context. " * 80)
+            "FAKE DIRECTIVE. " + ("Earlier English context. " * 80)
         ),
     )
 
@@ -282,6 +283,52 @@ def test_small_context_keeps_real_german_sentence_ahead_of_decorative_separator(
     assert "German (de)" in sent[0]["content"]
     assert sent[0]["content"].count("[MUTA-LIVE]") == 1
     assert sum(_message_tokens(message) for message in sent) + params["max_tokens"] + 64 <= 320
+
+
+@pytest.mark.parametrize("client_type", [RecordingClient, ExactCountingClient])
+def test_constrained_history_keeps_template_safe_turn_instruction_and_complete_pairs(
+    store, client_type
+):
+    client = client_type()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=620,
+        context_safety_tokens=64,
+    )
+    cid = store.create_conversation("s1")
+    for index in range(6):
+        store.add_message(cid, "user", f"old English question {index} " * 12)
+        store.add_message(cid, "assistant", f"old English answer {index} " * 12)
+
+    _cid, _message_id, events = engine.stream_events_chat(
+        "s1",
+        "what is electron spin?",
+        conversation_id=cid,
+        system_prompt="TRUSTED SYSTEM POLICY. " * 15,
+        turn_instruction=response_language_instruction("de"),
+        max_tokens=240,
+    )
+    assert list(events) == [("content", "reply")]
+
+    sent, params = client.messages[-1], client.params[-1]
+    roles = [message["role"] for message in sent]
+    assert roles[0] == "system"
+    assert "system" not in roles[1:]  # Qwen3.5 rejects any late system role.
+    assert roles[-1] == "user"
+    assert "German (de)" in sent[-1]["content"]
+    assert sent[-1]["content"].endswith("Answer in German (de).")
+    assert roles[1] != "assistant"
+    for index, role in enumerate(roles[1:-1], start=1):
+        if role == "assistant":
+            assert roles[index - 1] == "user"
+    counter = getattr(client, "count_prompt_tokens", None)
+    prompt_tokens = (
+        counter(sent, **params)
+        if callable(counter)
+        else sum(_message_tokens(message) for message in sent)
+    )
+    assert prompt_tokens + params["max_tokens"] + 64 <= 620
 
 
 def test_transient_drop_resumes_same_turn_and_same_assistant_row(store):
@@ -327,35 +374,48 @@ def test_token_limit_finishes_automatically_in_the_same_assistant_row(store):
         def stream_events(self, messages, **params):
             self.calls.append(messages)
             if len(self.calls) == 1:
-                yield "content", "So, in a simple"
+                yield "content", "Einfach gesagt"
                 raise InferenceStreamError(
                     "inference reached its token limit before completion",
                     retryable=True,
                     finish_reason="length",
                 )
-            assert messages[-2]["content"] == "So, in a simple"
+            assert messages[-2]["content"] == "Einfach gesagt"
             assert "Continue the interrupted assistant response" in messages[-1]["content"]
-            yield "content", " way, every component has a specific job."
+            assert messages[-1]["content"].endswith("SAME LANG; NO EVIDENCE")
+            yield "content", ", hat jedes Zellteil eine bestimmte Aufgabe."
+
+        def count_prompt_tokens(self, messages, **params):
+            return sum(
+                (len(message["content"].encode("utf-8")) + 3) // 4 + 8 for message in messages
+            )
 
     client = LengthOnce()
     engine = ChatEngine(
         client,
         store,
         persist_interval_s=0.0,
+        context_window_tokens=400,
+        context_safety_tokens=32,
         stream_retry_attempts=1,
         # Length completion must not pay a network-outage backoff.
         stream_retry_backoff_s=30.0,
     )
     started = time.monotonic()
-    cid, _mid, events = engine.stream_events_chat("s1", "explain cells")
+    cid, _mid, events = engine.stream_events_chat(
+        "s1",
+        "Erkläre Zellen einfach.",
+        system_prompt=assemble_system_prompt(load_prompt("socratic"), language="auto"),
+        turn_instruction=response_language_instruction("auto"),
+    )
     received = list(events)
 
     assert time.monotonic() - started < 0.2
     assert ("recovering", "The tutor is finishing the answer automatically…") in received
-    expected = "So, in a simple way, every component has a specific job."
+    expected = "Einfach gesagt, hat jedes Zellteil eine bestimmte Aufgabe."
     assert "".join(text for kind, text in received if kind == "content") == expected
     assert [(message["role"], message["content"]) for message in store.get_messages(cid)] == [
-        ("user", "explain cells"),
+        ("user", "Erkläre Zellen einfach."),
         ("assistant", expected),
     ]
 
@@ -369,7 +429,7 @@ def test_nonstreaming_token_limit_continues_before_persisting(store):
             self.calls.append((messages, params))
             if len(self.calls) == 1:
                 return Generation(
-                    "So, in a simple",
+                    "Einfach gesagt",
                     20,
                     5,
                     0.1,
@@ -378,9 +438,10 @@ def test_nonstreaming_token_limit_continues_before_persisting(store):
                     finish_reason="length",
                 )
             assert params["enable_thinking"] is False
-            assert messages[-2]["content"] == "So, in a simple"
+            assert messages[-2]["content"] == "Einfach gesagt"
+            assert messages[-1]["content"].endswith("SAME LANG; NO EVIDENCE")
             return Generation(
-                " way, cells are tiny systems.",
+                ", sind Zellen winzige Systeme.",
                 25,
                 7,
                 0.1,
@@ -390,18 +451,31 @@ def test_nonstreaming_token_limit_continues_before_persisting(store):
             )
 
     client = LengthOnce()
-    engine = ChatEngine(client, store, stream_retry_attempts=1)
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=400,
+        context_safety_tokens=32,
+        stream_retry_attempts=1,
+    )
 
-    result = engine.chat("s1", "explain cells", max_tokens=1200, enable_thinking=True)
+    result = engine.chat(
+        "s1",
+        "Erkläre Zellen einfach.",
+        system_prompt=assemble_system_prompt(load_prompt("socratic"), language="auto"),
+        turn_instruction=response_language_instruction("auto"),
+        max_tokens=1200,
+        enable_thinking=True,
+    )
 
-    expected = "So, in a simple way, cells are tiny systems."
+    expected = "Einfach gesagt, sind Zellen winzige Systeme."
     assert result.reply == expected
     assert result.generation is not None and result.generation.finish_reason == "stop"
     assert [
         (message["role"], message["content"])
         for message in store.get_messages(result.conversation_id)
     ] == [
-        ("user", "explain cells"),
+        ("user", "Erkläre Zellen einfach."),
         ("assistant", expected),
     ]
 
@@ -633,7 +707,12 @@ def test_recovery_fit_keeps_original_question_and_removes_repeated_boundary(stor
         stream_retry_backoff_s=0.0,
     )
     question = "Derive the two-dimensional equations from first principles " * 8
-    cid, _mid, events = engine.stream_events_chat("s1", question, max_tokens=120)
+    cid, _mid, events = engine.stream_events_chat(
+        "s1",
+        question,
+        turn_instruction=response_language_instruction("de"),
+        max_tokens=120,
+    )
     received = list(events)
 
     assert [message["role"] for message in client.calls[1][-3:]] == [
@@ -641,7 +720,9 @@ def test_recovery_fit_keeps_original_question_and_removes_repeated_boundary(stor
         "assistant",
         "user",
     ]
-    assert "first principles" in client.calls[1][-3]["content"]
+    assert client.calls[1][-3]["content"].startswith("Derive the")
+    assert client.calls[1][-3]["content"].endswith("Answer in German (de).")
+    assert all(message["role"] != "system" for message in client.calls[1][1:])
     assert not any(text == "restarted private thought" for _kind, text in received)
     assert "".join(text for kind, text in received if kind == "content") == (
         "Projectile motion continues."

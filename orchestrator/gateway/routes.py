@@ -99,7 +99,7 @@ from orchestrator.gateway.generations import (
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.preamble import with_preamble
-from orchestrator.gateway.prompting import assemble_system_prompt
+from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.selfcheck import scan_claims, self_check
 from orchestrator.gateway.sessions import Admission, SessionManager
@@ -433,13 +433,17 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
+            turn_instruction=response_language_instruction(req.language),
             mode=req.mode.value,
             persona=req.persona.value,
             subject=req.subject.value,
             language=req.language,
             title=req.message[:80],
+            regenerate=req.regenerate,
             **_apply_thinking(params_for_mode(req.mode.value), req.thinking),
         )
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/chat") from e
     if req.attachment_ids:
@@ -538,6 +542,7 @@ def _start_chat_generation(
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
+            turn_instruction=response_language_instruction(req.language),
             mode=req.mode.value,
             persona=req.persona.value,
             subject=req.subject.value,
@@ -550,6 +555,9 @@ def _start_chat_generation(
             # student holding a slot indefinitely, and with thinking on it filled the context).
             **sampling_params,
         )
+    except ValueError as exc:
+        generations.cancel_reservation(reservation_id)
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception:
         # Physical admission happens only at FIFO-head promotion, after preparation succeeds.
         # At this point only the bounded registry reservation needs to be released.
@@ -1166,6 +1174,7 @@ def tutor_chat(
                 load_prompt(_prompt_for(turn.mode)),
                 language=turn.lang,
             ),
+            turn_instruction=response_language_instruction(turn.lang),
             mode=turn.mode.value,
             language=turn.lang,
             **sampling_params,
@@ -1231,6 +1240,7 @@ def tutor_chat_stream(
                 load_prompt(_prompt_for(turn.mode)),
                 language=turn.lang,
             ),
+            turn_instruction=response_language_instruction(turn.lang),
             mode=turn.mode.value,
             language=turn.lang,
             **sampling_params,

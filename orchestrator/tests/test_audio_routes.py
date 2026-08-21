@@ -168,3 +168,4 @@ def test_voice_language_frame_updates_the_next_generation(monkeypatch):
     assert engine.calls[0]["message"] == "hi"
     assert engine.calls[0]["language"] == "auto"
     assert "response language preference is AUTO" in engine.calls[0]["system_prompt"]
+    assert engine.calls[0]["turn_instruction"] == ""
