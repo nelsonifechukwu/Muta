@@ -292,7 +292,7 @@ def export(image: str, frontend_image: str, output: Path, ui_output: Path) -> Pa
 
     with tempfile.TemporaryDirectory(prefix="muta-native-ui-") as temp:
         ui_stage = Path(temp)
-        _copy_from_image(frontend_image, "/usr/share/nginx/html", ui_stage)
+        _copy_from_image(frontend_image, "/usr/share/nginx/html/ui", ui_stage)
         ui_verified = _verify_ui(ui_stage)
         _install_ui(ui_stage, ui_output)
 

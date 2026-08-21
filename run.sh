@@ -13,7 +13,7 @@
 #   ./run.sh --build    force a clean image rebuild first
 #
 # Three containers, all linux/amd64: db (Postgres), backend (llama-server + FastAPI
-# gateway), frontend (nginx serving the chat UI, proxying /v1). Weights live in ./models
+# gateway), frontend (nginx serving the landing page and chat UI, proxying /v1). Weights live in ./models
 # on the host and are volume-mounted — never baked into an image.
 set -euo pipefail
 
@@ -177,7 +177,8 @@ native_up() {
     BACKEND_UPSTREAM="host.docker.internal:8000" docker compose up -d --no-deps frontend \
         || die "frontend failed to start"
     bold "Native dev mode — backend runs in THIS terminal. Ctrl-C stops it; './run.sh down' stops the containers."
-    info "chat UI:   http://localhost:3000   (proxies 502 until the model finishes loading — seconds natively)"
+    info "landing:   http://localhost:3000"
+    info "Muta app:  http://localhost:3000/ui/   (proxies 502 until the model finishes loading — seconds natively)"
     info "API:       http://localhost:8000/v1  (docs at http://localhost:8000/docs)"
     export MUTA_RT_AUTOSTART=1
     export MUTA_RT_MODEL_DIR="$MODEL_DIR"
@@ -519,6 +520,7 @@ if ! docker compose up -d --wait $PULL_NEVER; then
 fi
 
 bold  "Muta is up."
-info  "chat UI:   http://localhost:3000   (open in a browser; mic needs localhost, not a LAN IP)"
+info  "landing:   http://localhost:3000"
+info  "Muta app:  http://localhost:3000/ui/   (open in a browser; mic needs localhost, not a LAN IP)"
 info  "API:       http://localhost:8000/v1  (docs at http://localhost:8000/docs)"
 info  "stop with: ./run.sh down"

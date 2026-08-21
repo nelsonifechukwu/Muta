@@ -20,3 +20,14 @@ def test_checked_in_ui_is_mounted_without_nginx():
         assert response.status_code == 200
         assert response.headers["cache-control"] == "no-store, max-age=0"
         assert response.headers["x-muta-ui-revision"]
+
+
+def test_checked_in_landing_page_is_served_at_root_without_nginx():
+    client = TestClient(app)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "A tutor that asks" in response.text
+    assert client.get("/styles.css").status_code == 200
+    assert client.get("/script.js").status_code == 200
+    assert client.get("/og.png").status_code == 200

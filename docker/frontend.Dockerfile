@@ -1,9 +1,9 @@
-# Frontend image — nginx serving the static UI and proxying /v1 to the backend.
+# Frontend image — nginx serving the landing page + app and proxying /v1 to the backend.
 # Vendored assets are fetched at BUILD time (pinned versions) so the served page is fully
 # offline at runtime: no CDN, ever.
 FROM --platform=linux/amd64 nginx:1.27-alpine
 
-WORKDIR /usr/share/nginx/html
+WORKDIR /usr/share/nginx/html/ui
 # curl (not busybox wget): GitHub's signed release redirects need real TLS + redirect
 # handling; busybox wget fails on them under emulation.
 RUN apk add --no-cache curl \
@@ -18,4 +18,5 @@ RUN apk add --no-cache curl \
 # Rendered to /etc/nginx/conf.d/default.conf at start by the image's envsubst entrypoint,
 # substituting ${BACKEND_UPSTREAM} (see docker-compose.yml / run.sh --native).
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY ui/ /usr/share/nginx/html/
+COPY ui/ /usr/share/nginx/html/ui/
+COPY landing/ /usr/share/nginx/html/

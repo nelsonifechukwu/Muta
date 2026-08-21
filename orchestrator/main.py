@@ -23,7 +23,6 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from orchestrator.bench_metrics import PIDFILE
@@ -260,17 +259,15 @@ app.mount("/internal/bench", bench_app)
 
 
 
-@app.get("/", include_in_schema=False)
-def root() -> JSONResponse:
-    return JSONResponse(
-        {"service": "muta", "contract": API_PREFIX, "docs": "/docs", "openapi": "/openapi.json"}
-    )
-
-
-# Static UI, served only once built (ROADMAP 18 Jul: bundled, no CDN). Mounted last so it
-# can never shadow the API. The browser UI is the first client of /v1, not a privileged one.
+# Static browser surfaces, mounted only when their checked-in bundles are present. The app
+# stays the first client of /v1, not a privileged one. Mount the public landing page last so
+# its root catch-all cannot shadow the API, docs, internal services, or the app at /ui.
 _ui_root = Path(__file__).resolve().parent.parent / "ui"
 _ui_dist = _ui_root / "dist"
 _ui_assets = _ui_dist if _ui_dist.is_dir() else _ui_root
 if (_ui_assets / "index.html").is_file():
     app.mount("/ui", StaticFiles(directory=str(_ui_assets), html=True), name="ui")
+
+_landing_assets = Path(__file__).resolve().parent.parent / "landing"
+if (_landing_assets / "index.html").is_file():
+    app.mount("/", StaticFiles(directory=str(_landing_assets), html=True), name="landing")
