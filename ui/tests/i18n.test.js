@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
 
 global.window = globalThis;
 const saved = new Map();
@@ -12,6 +13,7 @@ global.localStorage = {
   setItem: (key, value) => saved.set(key, String(value)),
 };
 require("../africa-languages.js");
+require("../locale-manifest.js");
 require("../i18n.js");
 require("../locales.js");
 
@@ -60,22 +62,28 @@ test("only complete packs become selectable", () => {
   const required = Object.keys(i18n.catalogs.en).sort();
   const supported = i18n.supportedDefinitions();
   assert.deepEqual(supported.map((locale) => locale.tag), ["ar", "sw", "yo", "en", "de"]);
+  assert.deepEqual(
+    supported.map((locale) => ({ tag: locale.tag, direction: locale.direction })),
+    i18n.interfaceLocaleManifest,
+  );
   for (const locale of supported) {
     assert.deepEqual(Object.keys(i18n.catalogs[locale.tag]).sort(), required);
   }
 });
 
-test("the actionable selector contains only complete packs with African choices first", () => {
+test("the actionable selector puts Auto first, then complete African packs", () => {
   const select = new FakeElement("select");
   const doc = fakeDocument({ "#setting-language": [select] });
   i18n.setLocale("en", { persist: false, doc });
   i18n.populateSelector(select, doc);
 
-  assert.equal(select.children[0].label, "African languages");
-  const african = select.children[0].children;
+  assert.equal(select.children[0].value, "auto");
+  assert.equal(select.children[0].textContent, "Auto");
+  assert.equal(select.children[1].label, "African languages");
+  const african = select.children[1].children;
   assert.deepEqual(african.map((option) => option.value), ["ar", "sw", "yo"]);
   assert.ok(african.every((option) => option.disabled === false));
-  assert.deepEqual(select.children[1].children.map((option) => option.value), ["en", "de"]);
+  assert.deepEqual(select.children[2].children.map((option) => option.value), ["en", "de"]);
   assert.ok(african.every((option) => !option.textContent.includes("🇩🇪")));
 });
 
@@ -170,6 +178,8 @@ test("locale changes text, attributes, direction, interpolation, and persistence
   });
 
   assert.equal(i18n.setLocale("ar-EG", { doc }), true);
+  assert.equal(i18n.languagePreference, "ar");
+  assert.equal(i18n.responseLanguage, "ar");
   assert.equal(doc.documentElement.lang, "ar");
   assert.equal(doc.documentElement.dir, "rtl");
   assert.equal(heading.textContent, "الإعدادات");
@@ -178,13 +188,14 @@ test("locale changes text, attributes, direction, interpolation, and persistence
   assert.equal(saved.get(i18n.STORAGE_KEY), "ar");
 
   assert.equal(i18n.setLocale("de-DE", { persist: false, doc }), true);
+  assert.equal(i18n.languagePreference, "de");
   assert.equal(doc.documentElement.lang, "de");
   assert.equal(doc.documentElement.dir, "ltr");
   assert.equal(heading.textContent, "Einstellungen");
   assert.equal(i18n.setLocale("not-a-locale", { persist: false, doc }), false);
 });
 
-test("startup precedence is saved locale, browser locale, then English", () => {
+test("startup uses a saved explicit locale, otherwise Auto resolves browser then English", () => {
   const doc = fakeDocument();
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   try {
@@ -194,15 +205,42 @@ test("startup precedence is saved locale, browser locale, then English", () => {
     });
     saved.set(i18n.STORAGE_KEY, "sw");
     assert.equal(i18n.initialize(doc), "sw");
+    assert.equal(i18n.languagePreference, "sw");
 
     saved.delete(i18n.STORAGE_KEY);
     assert.equal(i18n.initialize(doc), "de");
+    assert.equal(i18n.languagePreference, "auto");
 
     Object.defineProperty(globalThis, "navigator", {
       configurable: true,
       value: { languages: ["xx-YY"] },
     });
     assert.equal(i18n.initialize(doc), "en");
+    assert.equal(i18n.languagePreference, "auto");
+  } finally {
+    saved.delete(i18n.STORAGE_KEY);
+    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+    else delete globalThis.navigator;
+    i18n.setLocale("en", { persist: false, doc });
+  }
+});
+
+test("Auto persists as the response preference while the interface follows the browser", () => {
+  const select = new FakeElement("select");
+  const doc = fakeDocument({ "#setting-language": [select] });
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  try {
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: { languages: ["de-DE", "en-GB"] },
+    });
+    assert.equal(i18n.setLocale("auto", { doc }), true);
+    assert.equal(i18n.locale, "de");
+    assert.equal(i18n.languagePreference, "auto");
+    assert.equal(i18n.responseLanguage, "auto");
+    assert.equal(doc.documentElement.lang, "de");
+    assert.equal(select.value, "auto");
+    assert.equal(saved.get(i18n.STORAGE_KEY), "auto");
   } finally {
     saved.delete(i18n.STORAGE_KEY);
     if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
@@ -218,24 +256,55 @@ test("every translation key used by authored markup exists and localization load
   for (const key of keys) assert.ok(Object.hasOwn(i18n.catalogs.en, key), `missing ${key}`);
   const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(scripts[0].startsWith("africa-languages.js"));
-  assert.ok(scripts[1].startsWith("locale-bootstrap.js"));
+  assert.ok(scripts[1].startsWith("locale-manifest.js"));
+  assert.ok(scripts[2].startsWith("locale-bootstrap.js"));
   const africaIndex = scripts.findIndex((source) => source.startsWith("africa-languages.js"));
+  const manifestIndex = scripts.findIndex((source) => source.startsWith("locale-manifest.js"));
+  const bootstrapIndex = scripts.findIndex((source) => source.startsWith("locale-bootstrap.js"));
   const i18nIndex = scripts.findIndex((source) => source.startsWith("i18n.js"));
   const localesIndex = scripts.findIndex((source) => source.startsWith("locales.js"));
   const appIndex = scripts.findIndex((source) => source.startsWith("app.js"));
-  assert.ok(africaIndex >= 0 && i18nIndex >= 0 && localesIndex >= 0 && appIndex >= 0);
+  assert.ok(
+    africaIndex >= 0
+      && manifestIndex >= 0
+      && bootstrapIndex >= 0
+      && i18nIndex >= 0
+      && localesIndex >= 0
+      && appIndex >= 0,
+  );
+  assert.ok(africaIndex < manifestIndex);
+  assert.ok(manifestIndex < bootstrapIndex);
   assert.ok(africaIndex < i18nIndex);
   assert.ok(i18nIndex < localesIndex);
   assert.ok(localesIndex < appIndex);
 });
 
-test("the pre-paint bootstrap honors saved and browser RTL preferences", () => {
+test("the pre-paint bootstrap uses only complete packs and honors saved RTL preferences", () => {
   const script = fs.readFileSync(path.join(__dirname, "..", "locale-bootstrap.js"), "utf8");
-  assert.match(script, /muta-ui-locale-v1/);
-  assert.match(script, /MutaAfricaLanguages\?\.languages/);
-  assert.match(script, /definitionsByTag\.get\(preference\)/);
-  assert.match(script, /navigator\?\.languages/);
-  assert.match(script, /document\.documentElement\.dir = locale\.direction/);
+  const run = ({ savedLocale, languages }) => {
+    const context = {
+      MutaInterfaceLocales: i18n.interfaceLocaleManifest,
+      document: { documentElement: { lang: "", dir: "" } },
+      localStorage: { getItem: () => savedLocale },
+      navigator: { languages },
+    };
+    context.globalThis = context;
+    vm.runInNewContext(script, context);
+    return context.document.documentElement;
+  };
+
+  assert.deepEqual(
+    { ...run({ savedLocale: "auto", languages: ["fr-FR"] }) },
+    { lang: "en", dir: "ltr" },
+  );
+  assert.deepEqual(
+    { ...run({ savedLocale: "auto", languages: ["ar-EG", "en"] }) },
+    { lang: "ar", dir: "rtl" },
+  );
+  assert.deepEqual(
+    { ...run({ savedLocale: "ar", languages: ["de-DE"] }) },
+    { lang: "ar", dir: "rtl" },
+  );
 });
 
 test("every literal runtime translation key exists", () => {

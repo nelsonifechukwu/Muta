@@ -1,15 +1,18 @@
-/* Offline UI localization for Muta. The active locale is also sent as the preferred response
- * language for each generation; it is never added to the user's message. A translated UI is
- * not evidence of teaching quality, so keep selectable packs complete and review pedagogy
- * separately. */
+/* Offline UI localization for Muta. The response preference is either an explicit locale or
+ * Auto; it is sent as generation metadata and never added to the user's message. Auto resolves
+ * the interface to the best supported browser locale while the model follows each latest user
+ * message. A translated UI is not evidence of teaching quality, so review pedagogy separately. */
 "use strict";
 
 (() => {
   const STORAGE_KEY = "muta-ui-locale-v1";
   const DEFAULT_LOCALE = "en";
+  const AUTO_LANGUAGE = "auto";
   const listeners = new Set();
   const africaRegistry = globalThis.MutaAfricaLanguages
     || (typeof require === "function" ? require("./africa-languages.js") : null);
+  const interfaceLocaleManifest = globalThis.MutaInterfaceLocales
+    || (typeof require === "function" ? require("./locale-manifest.js") : []);
   if (!africaRegistry) throw new Error("Africa-54 language registry must load before i18n.js");
   const reviewStatus = { ar: "community", en: "source", sw: "community", yo: "community" };
   const localeDefinitions = africaRegistry.languages.map((locale) => ({
@@ -41,8 +44,9 @@
       "settings.close": "Close settings",
       "settings.interface": "Interface",
       "settings.language": "Language",
-      "settings.languageHelp": "Changes Muta’s menus, controls, and tutor response language on this device.",
-      "settings.languageReview": "Every listed choice covers the full interface. Community language review is ongoing; inspect the Africa-54 queue below for planned packs.",
+      "settings.languageAuto": "Auto",
+      "settings.languageHelp": "Changes Muta’s interface and response language. Auto uses the best available browser language for the interface and the language of your latest message for each reply.",
+      "settings.languageReview": "Every explicit language choice covers the full interface. Community language review is ongoing; inspect the Africa-54 queue below for planned packs.",
       "settings.africaCoverage": "Draft Africa-54 translation queue: {languageCount} candidate written-language packs mapped across {countryCount} countries; {readyCount} packs are currently selectable.",
       "settings.coverageTitle": "Inspect Africa-54 country coverage",
       "settings.coverageReady": "selectable",
@@ -210,9 +214,12 @@
 
   function supportedDefinitions() {
     const required = Object.keys(catalogs[DEFAULT_LOCALE]);
+    const ready = new Set(interfaceLocaleManifest.map((locale) => locale.tag));
     return localeDefinitions.filter((locale) => {
       const catalog = catalogs[locale.tag];
-      return catalog && required.every((key) => Object.hasOwn(catalog, key));
+      return ready.has(locale.tag)
+        && catalog
+        && required.every((key) => Object.hasOwn(catalog, key));
     });
   }
 
@@ -225,9 +232,7 @@
       || null;
   }
 
-  function startupLocale() {
-    const saved = normalizeLocale(safeStorageGet(STORAGE_KEY));
-    if (saved) return saved;
+  function browserLocale() {
     const preferences = globalThis.navigator?.languages || [globalThis.navigator?.language];
     for (const preference of preferences) {
       const matched = normalizeLocale(preference);
@@ -236,7 +241,25 @@
     return DEFAULT_LOCALE;
   }
 
-  let currentLocale = startupLocale();
+  function normalizeLanguagePreference(candidate) {
+    if (typeof candidate === "string" && candidate.trim().toLowerCase() === AUTO_LANGUAGE) {
+      return AUTO_LANGUAGE;
+    }
+    return normalizeLocale(candidate);
+  }
+
+  function startupLanguagePreference() {
+    return normalizeLanguagePreference(safeStorageGet(STORAGE_KEY)) || AUTO_LANGUAGE;
+  }
+
+  function resolveInterfaceLocale(preference) {
+    return preference === AUTO_LANGUAGE
+      ? browserLocale()
+      : normalizeLocale(preference) || DEFAULT_LOCALE;
+  }
+
+  let currentLanguagePreference = startupLanguagePreference();
+  let currentLocale = resolveInterfaceLocale(currentLanguagePreference);
 
   function interpolate(value, variables = {}) {
     return String(value).replace(/\{([a-zA-Z][\w]*)\}/g, (match, name) =>
@@ -285,6 +308,10 @@
   function populateSelector(select, doc = globalThis.document) {
     if (!select || !doc) return;
     select.innerHTML = "";
+    const autoOption = doc.createElement("option");
+    autoOption.value = AUTO_LANGUAGE;
+    autoOption.textContent = t("settings.languageAuto");
+    select.appendChild(autoOption);
     const supported = new Set(supportedDefinitions().map((locale) => locale.tag));
     const autonymCounts = localeDefinitions.reduce((counts, locale) => {
       counts.set(locale.autonym, (counts.get(locale.autonym) || 0) + 1);
@@ -317,7 +344,7 @@
       }
       select.appendChild(group);
     }
-    select.value = currentLocale;
+    select.value = currentLanguagePreference;
   }
 
   function populateCoverage(container, doc = globalThis.document) {
@@ -377,14 +404,17 @@
   }
 
   function setLocale(locale, { persist = true, doc = globalThis.document } = {}) {
-    const normalized = normalizeLocale(locale);
-    if (!normalized) return false;
-    currentLocale = normalized;
-    if (persist) safeStorageSet(STORAGE_KEY, normalized);
+    const preference = normalizeLanguagePreference(locale);
+    if (!preference) return false;
+    currentLanguagePreference = preference;
+    currentLocale = resolveInterfaceLocale(preference);
+    if (persist) safeStorageSet(STORAGE_KEY, preference);
     refreshLanguageUI(doc);
-    for (const listener of listeners) listener(normalized);
+    for (const listener of listeners) listener(currentLocale, preference);
     if (doc?.dispatchEvent && typeof globalThis.CustomEvent === "function") {
-      doc.dispatchEvent(new CustomEvent("muta:localechange", { detail: { locale: normalized } }));
+      doc.dispatchEvent(new CustomEvent("muta:localechange", {
+        detail: { locale: currentLocale, languagePreference: preference },
+      }));
     }
     return true;
   }
@@ -404,7 +434,8 @@
   }
 
   function initialize(doc = globalThis.document) {
-    currentLocale = startupLocale();
+    currentLanguagePreference = startupLanguagePreference();
+    currentLocale = resolveInterfaceLocale(currentLanguagePreference);
     refreshLanguageUI(doc);
     return currentLocale;
   }
@@ -412,12 +443,19 @@
   const api = {
     STORAGE_KEY,
     DEFAULT_LOCALE,
+    AUTO_LANGUAGE,
     catalogs,
     localeDefinitions,
     africaRegistry,
+    interfaceLocaleManifest,
     get locale() { return currentLocale; },
+    get languagePreference() { return currentLanguagePreference; },
+    get responseLanguage() { return currentLanguagePreference; },
     t,
     normalizeLocale,
+    normalizeLanguagePreference,
+    browserLocale,
+    resolveInterfaceLocale,
     supportedDefinitions,
     applyToDocument,
     populateSelector,

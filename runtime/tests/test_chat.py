@@ -36,6 +36,11 @@ class FakeClient:
     def chat(self, messages, **params) -> str:
         return self.chat_with_timings(messages, **params).text
 
+    def stream_events(self, messages, **params):
+        self.seen.append(messages)
+        self.seen_params.append(params)
+        yield "content", f"reply-{len(self.seen)}"
+
 
 def _engine(store: ConversationStore, **kw) -> tuple[ChatEngine, FakeClient, ConversationStore]:
     client = FakeClient()
@@ -68,6 +73,83 @@ def test_second_turn_replays_prior_history(store):
     assert "turn one" in contents
     assert "reply-1" in contents
     assert second_call[-1]["content"] == "turn two"
+
+
+def test_language_change_replaces_only_the_next_system_prompt_and_keeps_history(tmp_path):
+    store = ConversationStore(f"sqlite:///{tmp_path / 'language-change.sqlite3'}")
+    try:
+        engine, client, store = _engine(store)
+        first = engine.chat(
+            "s1",
+            "Explain projectile motion.",
+            system_prompt="SYSTEM: respond in English",
+            language="en",
+        )
+        engine.chat(
+            "s1",
+            "Kannst du das einfacher erklären?",
+            conversation_id=first.conversation_id,
+            system_prompt="SYSTEM: AUTO follows the latest user message",
+            language="auto",
+        )
+
+        assert client.seen[1] == [
+            {"role": "system", "content": "SYSTEM: AUTO follows the latest user message"},
+            {"role": "user", "content": "Explain projectile motion."},
+            {"role": "assistant", "content": "reply-1"},
+            {"role": "user", "content": "Kannst du das einfacher erklären?"},
+        ]
+        assert [
+            (message["role"], message["content"])
+            for message in store.get_messages(first.conversation_id)
+        ] == [
+            ("user", "Explain projectile motion."),
+            ("assistant", "reply-1"),
+            ("user", "Kannst du das einfacher erklären?"),
+            ("assistant", "reply-2"),
+        ]
+    finally:
+        store.close()
+
+
+def test_stream_language_change_keeps_earlier_turns_byte_identical(tmp_path):
+    store = ConversationStore(f"sqlite:///{tmp_path / 'stream-language-change.sqlite3'}")
+    try:
+        engine, client, store = _engine(store)
+        conversation_id, _message_id, first_events = engine.stream_events_chat(
+            "s1",
+            "Explain projectile motion.",
+            system_prompt="SYSTEM: respond in English",
+            language="en",
+        )
+        assert list(first_events) == [("content", "reply-1")]
+
+        repeated_id, _message_id, second_events = engine.stream_events_chat(
+            "s1",
+            "Kannst du das einfacher erklären?",
+            conversation_id=conversation_id,
+            system_prompt="SYSTEM: AUTO follows the latest user message",
+            language="auto",
+        )
+        assert repeated_id == conversation_id
+        assert list(second_events) == [("content", "reply-2")]
+
+        assert client.seen[1] == [
+            {"role": "system", "content": "SYSTEM: AUTO follows the latest user message"},
+            {"role": "user", "content": "Explain projectile motion."},
+            {"role": "assistant", "content": "reply-1"},
+            {"role": "user", "content": "Kannst du das einfacher erklären?"},
+        ]
+        assert [
+            (message["role"], message["content"]) for message in store.get_messages(conversation_id)
+        ] == [
+            ("user", "Explain projectile motion."),
+            ("assistant", "reply-1"),
+            ("user", "Kannst du das einfacher erklären?"),
+            ("assistant", "reply-2"),
+        ]
+    finally:
+        store.close()
 
 
 def test_conversation_id_is_stable_across_turns(store):
@@ -307,7 +389,9 @@ def test_reply_is_readable_from_the_store_mid_stream(store):
     assert next(gen) == "alpha "
     assert [m["content"] for m in store.get_messages(cid) if m["role"] == "assistant"] == ["alpha "]
     assert next(gen) == "beta "
-    assert [m["content"] for m in store.get_messages(cid) if m["role"] == "assistant"] == ["alpha beta "]
+    assert [m["content"] for m in store.get_messages(cid) if m["role"] == "assistant"] == [
+        "alpha beta "
+    ]
 
 
 def test_write_through_keeps_one_row_that_grows_in_place(store):

@@ -22,6 +22,15 @@ def test_non_english_language_is_instructed():
     assert "LaTeX" in out
 
 
+def test_auto_follows_the_latest_message_not_older_history():
+    out = assemble_system_prompt(BASE, persona="friend", language="auto")
+    assert "response language preference is AUTO" in out
+    assert "primary natural language" in out
+    assert "latest message" in out
+    assert "older conversation history uses another language" in out
+    assert "too short or ambiguous" in out
+
+
 def test_language_directive_protects_literal_content_and_requests_natural_explanations():
     out = persona_language_directive("teacher", "de")
     assert "German (de)" in out

@@ -117,11 +117,12 @@ class ChatRequest(BaseModel):
         "en",
         min_length=2,
         max_length=16,
-        pattern=r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$",
+        pattern=r"^(?:auto|[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2})$",
         description=(
-            "Preferred response language as a BCP 47 tag (for example en, de, sw, ar, "
-            "pga-Latn). The gateway places this preference in the system prompt; it does "
-            "not modify the user's message."
+            "Preferred response language as 'auto' or a BCP 47 tag (for example en, de, "
+            "sw, ar, pga-Latn). Auto follows the primary language in the latest user "
+            "message. The gateway places this preference in the system prompt; it does not "
+            "modify the user's message."
         ),
     )
     stream: bool = Field(

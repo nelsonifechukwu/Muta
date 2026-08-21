@@ -22,6 +22,9 @@ reviewed model capability.
   accessible country-coverage disclosure; the selector contains only complete packs. Additional
   languages follow that baseline and can be added without changing application code.
 - Set both `document.documentElement.lang` and `dir`; Arabic is right-to-left.
+- Offer `Auto` before the explicit languages. Auto resolves the interface against the best
+  complete browser-language pack, but keeps `auto` as the response-language preference so the
+  model follows the primary natural language in each latest user message.
 
 ## Implementation
 
@@ -42,6 +45,11 @@ reviewed model capability.
    for another language for that task, preserves code/variables/commands/URLs/proper nouns, and
    asks for natural rather than literal explanations. Locale changes apply to the next turn in
    an existing conversation; persisted user-message content stays byte-for-byte unchanged.
+7. Keep `languagePreference` separate from the resolved interface `locale`. An explicit choice
+   uses the same value for both. `auto` follows the browser for interface chrome and is sent
+   unchanged to the gateway; the system instruction performs per-turn language selection without
+   a language-detection service. If the latest message is too short or ambiguous, continue the
+   most recently established response language, then fall back to English.
 
 ## Verification
 
@@ -51,6 +59,8 @@ reviewed model capability.
   attributes, and right-to-left switching.
 - Prompt and route tests prove that the locale lands in the system prompt while the user message
   reaches the inference engine unchanged; static client tests cover typed and voice transports.
+- A multi-turn engine test proves that changing an explicit language to Auto replaces only the
+  next system instruction while replaying the prior conversation history unchanged.
 - Existing UI and backend tests remain green.
 - A fresh-context reviewer probes missing dynamic strings, misleading language claims,
   persistence failures, accessibility regressions, and RTL layout hazards.

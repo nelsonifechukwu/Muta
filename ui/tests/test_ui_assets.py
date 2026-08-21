@@ -187,10 +187,10 @@ def test_selected_locale_is_generation_metadata_not_a_user_message_prefix():
     start = js.index('fetch("/v1/chat/generations"')
     request = js[start : js.index("if (!res.ok)", start)]
     assert "message," in request
-    assert "language: window.MutaI18n.locale" in request
+    assert "language: window.MutaI18n.responseLanguage" in request
     assert "composeOutgoingMessage" not in request
-    assert "language: window.MutaI18n.locale" in audio
-    assert '{ type: "language", language: window.MutaI18n.locale }' in audio
+    assert "language: window.MutaI18n.responseLanguage" in audio
+    assert '{ type: "language", language: window.MutaI18n.responseLanguage }' in audio
 
 
 def test_refresh_retries_recovery_and_keeps_same_chat_followups():

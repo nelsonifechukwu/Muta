@@ -3,10 +3,7 @@
 "use strict";
 
 (() => {
-  const definitions = [
-    ...(globalThis.MutaAfricaLanguages?.languages || []),
-    { tag: "de", direction: "ltr" },
-  ];
+  const definitions = globalThis.MutaInterfaceLocales || [];
   const definitionsByTag = new Map(
     definitions.map((locale) => [locale.tag.toLowerCase(), locale]),
   );
@@ -16,7 +13,12 @@
   } catch {
     /* Storage can be unavailable in a locked-down browser. */
   }
-  const preferences = [saved, ...(globalThis.navigator?.languages || [globalThis.navigator?.language])];
+  // Auto is a response preference, not a catalog. Its pre-paint UI locale follows the browser.
+  const savedInterfaceLocale = saved?.trim().toLowerCase() === "auto" ? null : saved;
+  const preferences = [
+    savedInterfaceLocale,
+    ...(globalThis.navigator?.languages || [globalThis.navigator?.language]),
+  ];
   const locale = preferences
     .filter((preference) => typeof preference === "string")
     .map((preference) => preference.trim().replaceAll("_", "-").toLowerCase())

@@ -185,7 +185,7 @@
           student_id: chat.studentId,
           conversation_id: chat.getConversationId(),
           mode: "socratic",
-          language: window.MutaI18n.locale,
+          language: window.MutaI18n.responseLanguage,
         })
       );
       active = true;
@@ -321,7 +321,7 @@
   window.MutaI18n.subscribe(() => {
     if (statusKey && active) setStatus(statusKey, statusVariables);
     if (active && ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "language", language: window.MutaI18n.locale }));
+      ws.send(JSON.stringify({ type: "language", language: window.MutaI18n.responseLanguage }));
     }
     syncMicAccessibility();
   });

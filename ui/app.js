@@ -1456,7 +1456,7 @@ async function dispatch(item, opts = {}) {
         regenerate,
         // Response-language preference is trusted request metadata. Never prefix or rewrite
         // `message`: the gateway puts this value in the system prompt instead.
-        language: window.MutaI18n.locale,
+        language: window.MutaI18n.responseLanguage,
       }),
     });
     if (!res.ok) {

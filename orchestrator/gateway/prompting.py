@@ -41,15 +41,30 @@ def persona_language_directive(persona: str, language: str, subject: str | None 
     """A compact per-student voice/language instruction for the trusted system context."""
     parts = [_PERSONA.get(persona, _PERSONA["teacher"])]
     lang = (language or "en").strip()
-    base_lang = lang.split("-", 1)[0].lower()
-    name = _LANGUAGE.get(base_lang, lang)
-    label = name if name.lower() == lang.lower() else f"{name} ({lang})"
+    if lang.lower() == "auto":
+        parts.append(
+            "The user's response language preference is AUTO. Respond in the primary natural "
+            "language used by the user in their latest message, even when older conversation "
+            "history uses another language. If the latest message is too short or ambiguous to "
+            "identify a language, continue the most recently established response language; if "
+            "none exists, use English. An explicit language request for this specific task "
+            "takes precedence."
+        )
+    else:
+        base_lang = lang.split("-", 1)[0].lower()
+        name = _LANGUAGE.get(base_lang, lang)
+        label = name if name.lower() == lang.lower() else f"{name} ({lang})"
+        parts.append(
+            f"The user's preferred response language is {label}. Always respond in that "
+            "language unless the user explicitly requests another language for this specific "
+            "task."
+        )
     parts.append(
-        f"The user's preferred response language is {label}. Always respond in that language "
-        "unless the user explicitly requests another language for this specific task. Do not "
-        "translate source code, variable names, commands, URLs, or proper nouns. Translate "
-        "explanations naturally rather than literally. Use culturally familiar examples where "
-        "natural, and always write mathematics in LaTeX regardless of the language."
+        "When identifying or writing the response language, treat source code, variable names, "
+        "commands, URLs, and proper nouns as literal content rather than language evidence, and "
+        "do not translate them. Translate explanations naturally rather than literally. Use "
+        "culturally familiar examples where natural, and always write mathematics in LaTeX "
+        "regardless of the language."
     )
     if subject and subject != "math":
         parts.append(f"The student is working on {subject}.")

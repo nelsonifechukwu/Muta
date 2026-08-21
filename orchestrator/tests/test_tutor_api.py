@@ -200,6 +200,21 @@ def test_response_language_is_system_context_and_user_message_is_unchanged(wired
     assert "preferred response language is German (de)" in call["system_prompt"]
     assert user_message not in call["system_prompt"]
 
+    follow_up = "Kannst du das einfacher erklären?"
+    response = client.post(
+        "/v1/chat",
+        json={
+            "student_id": "s1",
+            "conversation_id": "conv-1",
+            "message": follow_up,
+            "language": "auto",
+        },
+    )
+    assert response.status_code == 200
+    call = engine.calls[-1]
+    assert call["message"] == follow_up
+    assert "response language preference is AUTO" in call["system_prompt"]
+
 
 def test_transient_engine_pause_is_replayed_as_automatic_recovery(wired):
     engine, *_ = wired

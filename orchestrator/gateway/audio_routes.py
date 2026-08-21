@@ -207,6 +207,8 @@ def _split_sentences(buf: str) -> tuple[list[str], str]:
 def _preferred_language(value: object) -> str:
     """Accept the same compact BCP 47 subset as ChatRequest; malformed WS metadata is English."""
     candidate = str(value or "en").strip()
+    if candidate.lower() == "auto":
+        return "auto"
     return candidate if len(candidate) <= 16 and _LANGUAGE_TAG.fullmatch(candidate) else "en"
 
 
