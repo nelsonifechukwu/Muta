@@ -38,6 +38,7 @@ def test_ui_source_inventory_discovers_every_authored_browser_asset(tmp_path):
         "locale-manifest.js",
         "locale-bootstrap.js",
         "i18n.js",
+        "locale-fr.js",
         "locales.js",
     }.issubset(export.UI_SOURCE_FILES)
 

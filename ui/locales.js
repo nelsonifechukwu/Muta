@@ -548,7 +548,7 @@
     "queue.automatic": "في الطابور — توجد ردود أخرى قيد التشغيل. سيبدأ ردك تلقائيًا عند توفر فتحة.",
     "queue.fromImage": "(من صورتي)",
     "queue.dontSend": "عدم إرسال هذه الرسالة",
-    "queue.discardedOne": "تم حذف رسالة واحدة من الطابور.",
+    "queue.discardedOne": "تم حذف {count} رسالة من الطابور.",
     "queue.discardedMany": "تم حذف {count} رسائل من الطابور.",
     "thinking.label": "يفكّر",
     "thinking.answerNow": "أجب الآن",

@@ -15,6 +15,7 @@ global.localStorage = {
 require("../africa-languages.js");
 require("../locale-manifest.js");
 require("../i18n.js");
+require("../locale-fr.js");
 require("../locales.js");
 
 const i18n = globalThis.MutaI18n;
@@ -61,13 +62,25 @@ function fakeDocument(elementsBySelector = {}) {
 test("only complete packs localize the interface", () => {
   const required = Object.keys(i18n.catalogs.en).sort();
   const supported = i18n.supportedDefinitions();
-  assert.deepEqual(supported.map((locale) => locale.tag), ["ar", "sw", "yo", "en", "de"]);
+  assert.deepEqual(supported.map((locale) => locale.tag), ["ar", "sw", "yo", "en", "fr", "de"]);
   assert.deepEqual(
     supported.map((locale) => ({ tag: locale.tag, direction: locale.direction })),
     i18n.interfaceLocaleManifest,
   );
   for (const locale of supported) {
-    assert.deepEqual(Object.keys(i18n.catalogs[locale.tag]).sort(), required);
+    const catalog = i18n.catalogs[locale.tag];
+    assert.deepEqual(Object.keys(catalog).sort(), required);
+    assert.ok(Object.values(catalog).every((value) => typeof value === "string" && value.trim()));
+    for (const key of required) {
+      const placeholders = (value) => [...value.matchAll(/\{[a-zA-Z][\w]*\}/g)]
+        .map((match) => match[0])
+        .sort();
+      assert.deepEqual(
+        placeholders(catalog[key]),
+        placeholders(i18n.catalogs.en[key]),
+        `${locale.tag}:${key} placeholder parity`,
+      );
+    }
   }
 });
 
@@ -189,6 +202,14 @@ test("locale changes text, attributes, direction, interpolation, and persistence
   assert.equal(doc.documentElement.lang, "de");
   assert.equal(doc.documentElement.dir, "ltr");
   assert.equal(heading.textContent, "Einstellungen");
+
+  assert.equal(i18n.setLocale("fr-FR", { persist: false, doc }), true);
+  assert.equal(i18n.languagePreference, "fr");
+  assert.equal(doc.documentElement.lang, "fr");
+  assert.equal(doc.documentElement.dir, "ltr");
+  assert.equal(heading.textContent, "Paramètres");
+  assert.equal(close.getAttribute("aria-label"), "Fermer les paramètres");
+  assert.equal(i18n.t("model.loadingNamed", { model: "Qwen" }), "Chargement de Qwen…");
   assert.equal(i18n.setLocale("not-a-locale", { persist: false, doc }), false);
 });
 
@@ -289,18 +310,22 @@ test("every translation key used by authored markup exists and localization load
   const bootstrapIndex = scripts.findIndex((source) => source.startsWith("locale-bootstrap.js"));
   const i18nIndex = scripts.findIndex((source) => source.startsWith("i18n.js"));
   const localesIndex = scripts.findIndex((source) => source.startsWith("locales.js"));
+  const frenchIndex = scripts.findIndex((source) => source.startsWith("locale-fr.js"));
   const appIndex = scripts.findIndex((source) => source.startsWith("app.js"));
   assert.ok(
     africaIndex >= 0
       && manifestIndex >= 0
       && bootstrapIndex >= 0
       && i18nIndex >= 0
+      && frenchIndex >= 0
       && localesIndex >= 0
       && appIndex >= 0,
   );
   assert.ok(africaIndex < manifestIndex);
   assert.ok(manifestIndex < bootstrapIndex);
   assert.ok(africaIndex < i18nIndex);
+  assert.ok(i18nIndex < frenchIndex);
+  assert.ok(frenchIndex < localesIndex);
   assert.ok(i18nIndex < localesIndex);
   assert.ok(localesIndex < appIndex);
 });
@@ -322,7 +347,7 @@ test("the pre-paint bootstrap uses only complete packs and honors saved RTL pref
 
   assert.deepEqual(
     { ...run({ savedLocale: "auto", languages: ["fr-FR"] }) },
-    { lang: "en", dir: "ltr" },
+    { lang: "fr", dir: "ltr" },
   );
   assert.deepEqual(
     { ...run({ savedLocale: "auto", languages: ["ar-EG", "en"] }) },

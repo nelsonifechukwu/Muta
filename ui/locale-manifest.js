@@ -8,6 +8,7 @@
     Object.freeze({ tag: "sw", direction: "ltr" }),
     Object.freeze({ tag: "yo", direction: "ltr" }),
     Object.freeze({ tag: "en", direction: "ltr" }),
+    Object.freeze({ tag: "fr", direction: "ltr" }),
     Object.freeze({ tag: "de", direction: "ltr" }),
   ]);
   globalThis.MutaInterfaceLocales = locales;

@@ -18,7 +18,7 @@ reviewed model capability.
 - Every registered language is selectable as the tutor's response-language preference. A locale
   changes the browser interface only when it contains the complete required UI message set;
   otherwise the interface remains English while the selected response preference still applies.
-- Initial complete interface tranche: English, Deutsch, Arabic, Kiswahili, and Yoruba. The
+- Initial complete interface tranche: English, Deutsch, French, Arabic, Kiswahili, and Yoruba. The
   dropdown also includes the 85-language Africa-54 baseline and can accept additional languages
   without changing application code. Country-coverage planning stays in project documentation,
   not in the learner-facing Settings panel.
