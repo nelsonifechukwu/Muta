@@ -15,12 +15,13 @@ reviewed model capability.
 - Identify locales with BCP 47 tags and show every language by its autonym.
 - Do not assign a single national flag to languages that cross borders.
 - Group the initial African-language packs before other languages in the selector.
-- A selectable locale must contain the complete required UI message set. An incomplete locale
-  falls back per-message to English during development and must not be presented as complete.
-- Initial complete tranche: English, Deutsch, Arabic, Kiswahili, and Yoruba. The draft Africa-54
-  baseline maps 85 candidate written-language packs across all 54 countries in a separate,
-  accessible country-coverage disclosure; the selector contains only complete packs. Additional
-  languages follow that baseline and can be added without changing application code.
+- Every registered language is selectable as the tutor's response-language preference. A locale
+  changes the browser interface only when it contains the complete required UI message set;
+  otherwise the interface remains English while the selected response preference still applies.
+- Initial complete interface tranche: English, Deutsch, Arabic, Kiswahili, and Yoruba. The
+  dropdown also includes the 85-language Africa-54 baseline and can accept additional languages
+  without changing application code. Country-coverage planning stays in project documentation,
+  not in the learner-facing Settings panel.
 - Set both `document.documentElement.lang` and `dir`; Arabic is right-to-left.
 - Offer `Auto` before the explicit languages. Auto resolves the interface against the best
   complete browser-language pack, but keeps `auto` as the response-language preference so the
@@ -36,8 +37,9 @@ reviewed model capability.
 3. Route runtime-generated interface copy in `app.js` through the same translator, including
    model controls, reasoning controls, statuses, queues, attachment labels, notifications, and
    Send/Stop state. User/model message content and server-provided model names remain untouched.
-4. Persist the locale in browser storage under a versioned key. Resolve startup locale in this
-   order: saved selection, supported browser locale, English.
+4. Persist the language preference in browser storage under a versioned key. A saved explicit
+   preference controls the next response; its interface uses the matching complete pack or
+   English. With Auto, resolve the interface from the supported browser locales, then English.
 5. Use CSS logical properties where localization changes direction-sensitive layout; keep the
    present geometry stable in both directions.
 6. Send the active locale in `ChatRequest.language` for typed and voice turns. Assemble a
@@ -45,8 +47,9 @@ reviewed model capability.
    for another language for that task, preserves code/variables/commands/URLs/proper nouns, and
    asks for natural rather than literal explanations. Locale changes apply to the next turn in
    an existing conversation; persisted user-message content stays byte-for-byte unchanged.
-7. Keep `languagePreference` separate from the resolved interface `locale`. An explicit choice
-   uses the same value for both. `auto` follows the browser for interface chrome and is sent
+7. Keep `languagePreference` separate from the resolved interface `locale`. Every explicit choice
+   is sent unchanged to the gateway; choices with a complete interface catalog use it, while the
+   rest retain English chrome. `auto` follows the browser for interface chrome and is sent
    unchanged to the gateway; the system instruction performs per-turn language selection without
    a language-detection service. If the latest message is too short or ambiguous, continue the
    most recently established response language, then fall back to English.
@@ -57,8 +60,8 @@ reviewed model capability.
 
 ## Verification
 
-- Static tests assert that every marked key exists in every selectable locale and that the
-  language selector/runtime are wired before the main application.
+- Static tests assert that every complete interface pack has every marked key, every registered
+  response language is selectable, and the language selector/runtime load before the application.
 - JavaScript tests cover startup resolution, persistence, fallback, interpolation, DOM
   attributes, and right-to-left switching.
 - Prompt and route tests prove that the locale lands in the system prompt while the user message

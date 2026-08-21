@@ -4,27 +4,35 @@
 
 (() => {
   const definitions = globalThis.MutaInterfaceLocales || [];
-  const definitionsByTag = new Map(
-    definitions.map((locale) => [locale.tag.toLowerCase(), locale]),
-  );
+  const registered = [
+    ...(globalThis.MutaAfricaLanguages?.languages || []),
+    ...definitions,
+  ];
+  const normalize = (value) => typeof value === "string"
+    ? value.trim().replaceAll("_", "-").toLowerCase()
+    : "";
+  const match = (value, choices) => {
+    const normalized = normalize(value);
+    return choices.find((locale) => normalize(locale.tag) === normalized)
+      || choices.find((locale) => normalize(locale.tag).split("-")[0] === normalized.split("-")[0])
+      || null;
+  };
   let saved = null;
   try {
     saved = globalThis.localStorage?.getItem("muta-ui-locale-v1");
   } catch {
     /* Storage can be unavailable in a locked-down browser. */
   }
-  // Auto is a response preference, not a catalog. Its pre-paint UI locale follows the browser.
-  const savedInterfaceLocale = saved?.trim().toLowerCase() === "auto" ? null : saved;
-  const preferences = [
-    savedInterfaceLocale,
-    ...(globalThis.navigator?.languages || [globalThis.navigator?.language]),
-  ];
-  const locale = preferences
-    .filter((preference) => typeof preference === "string")
-    .map((preference) => preference.trim().replaceAll("_", "-").toLowerCase())
-    .map((preference) => definitionsByTag.get(preference)
-      || definitionsByTag.get(preference.split("-")[0]))
-    .find(Boolean) || definitionsByTag.get("en");
+  const defaultLocale = match("en", definitions);
+  const savedPreference = match(saved, registered);
+  const followsBrowser = !normalize(saved) || normalize(saved) === "auto" || !savedPreference;
+  const browserPreferences = globalThis.navigator?.languages || [globalThis.navigator?.language];
+  // A known response language without a complete interface pack pre-paints the English UI.
+  // Auto (and an invalid saved value) instead follows the first complete browser-language pack.
+  const locale = followsBrowser
+    ? browserPreferences.map((preference) => match(preference, definitions)).find(Boolean)
+      || defaultLocale
+    : match(savedPreference.tag, definitions) || defaultLocale;
   document.documentElement.lang = locale.tag;
   document.documentElement.dir = locale.direction;
 })();

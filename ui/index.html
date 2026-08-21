@@ -126,16 +126,10 @@
         <label class="settings-row language-row" for="setting-language">
           <span>
             <strong data-i18n="settings.language">Language</strong>
-            <small data-i18n="settings.languageHelp">Changes Muta’s interface and response language. Auto uses the best available browser language for the interface and the language of your latest message for each reply.</small>
+            <small data-i18n="settings.languageHelp">Sets Muta’s response language. Complete interface translations change the menus too. Auto follows your browser for the interface and your latest message for each reply.</small>
           </span>
-          <select id="setting-language" aria-describedby="language-review-note"></select>
+          <select id="setting-language"></select>
         </label>
-        <p id="language-review-note" class="language-review-note" data-i18n="settings.languageReview">Every explicit language choice covers the full interface. Community language review is ongoing; inspect the Africa-54 queue below for planned packs.</p>
-        <p id="africa-coverage-note" class="language-review-note" data-i18n="settings.africaCoverage">Draft Africa-54 translation queue: 85 candidate written-language packs mapped across 54 countries; 4 packs are currently selectable.</p>
-        <details class="language-coverage">
-          <summary data-i18n="settings.coverageTitle">Inspect Africa-54 country coverage</summary>
-          <div id="language-coverage-list"></div>
-        </details>
       </div>
       <div class="settings-section">
         <h3 data-i18n="settings.general">General</h3>

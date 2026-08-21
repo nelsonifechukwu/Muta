@@ -14,12 +14,10 @@
   const interfaceLocaleManifest = globalThis.MutaInterfaceLocales
     || (typeof require === "function" ? require("./locale-manifest.js") : []);
   if (!africaRegistry) throw new Error("Africa-54 language registry must load before i18n.js");
-  const reviewStatus = { ar: "community", en: "source", sw: "community", yo: "community" };
   const localeDefinitions = africaRegistry.languages.map((locale) => ({
     ...locale,
     baseline: "africa54",
     countries: africaRegistry.countriesByLanguage[locale.tag] || [],
-    review: reviewStatus[locale.tag] || "translation",
   }));
   localeDefinitions.push({
     tag: "de",
@@ -28,7 +26,6 @@
     group: "other",
     baseline: "additional",
     countries: [],
-    review: "community",
   });
 
   const catalogs = {
@@ -45,14 +42,7 @@
       "settings.interface": "Interface",
       "settings.language": "Language",
       "settings.languageAuto": "Auto",
-      "settings.languageHelp": "Changes Muta’s interface and response language. Auto uses the best available browser language for the interface and the language of your latest message for each reply.",
-      "settings.languageReview": "Every explicit language choice covers the full interface. Community language review is ongoing; inspect the Africa-54 queue below for planned packs.",
-      "settings.africaCoverage": "Draft Africa-54 translation queue: {languageCount} candidate written-language packs mapped across {countryCount} countries; {readyCount} packs are currently selectable.",
-      "settings.coverageTitle": "Inspect Africa-54 country coverage",
-      "settings.coverageReady": "selectable",
-      "settings.coveragePending": "translation pending",
-      "settings.inTranslation": "translation in progress",
-      "settings.reviewPending": "review pending",
+      "settings.languageHelp": "Sets Muta’s response language. Complete interface translations change the menus too. Auto follows your browser for the interface and your latest message for each reply.",
       "settings.general": "General",
       "settings.parallel": "Generate in multiple chats",
       "settings.parallelHelp": "Keep one reply running while you start another. Parallel replies share the local CPU and may each run more slowly.",
@@ -223,13 +213,21 @@
     });
   }
 
-  function normalizeLocale(candidate) {
+  function matchLocale(candidate, definitions) {
     if (!candidate || typeof candidate !== "string") return null;
     const normalized = candidate.trim().replace("_", "-").toLowerCase();
-    const available = supportedDefinitions().map((locale) => locale.tag);
+    const available = definitions.map((locale) => locale.tag);
     return available.find((tag) => normalized === tag.toLowerCase())
       || available.find((tag) => normalized.split("-")[0] === tag.split("-")[0])
       || null;
+  }
+
+  function normalizeLocale(candidate) {
+    return matchLocale(candidate, supportedDefinitions());
+  }
+
+  function normalizeKnownLocale(candidate) {
+    return matchLocale(candidate, localeDefinitions);
   }
 
   function browserLocale() {
@@ -245,7 +243,7 @@
     if (typeof candidate === "string" && candidate.trim().toLowerCase() === AUTO_LANGUAGE) {
       return AUTO_LANGUAGE;
     }
-    return normalizeLocale(candidate);
+    return normalizeKnownLocale(candidate);
   }
 
   function startupLanguagePreference() {
@@ -312,14 +310,13 @@
     autoOption.value = AUTO_LANGUAGE;
     autoOption.textContent = t("settings.languageAuto");
     select.appendChild(autoOption);
-    const supported = new Set(supportedDefinitions().map((locale) => locale.tag));
     const autonymCounts = localeDefinitions.reduce((counts, locale) => {
       counts.set(locale.autonym, (counts.get(locale.autonym) || 0) + 1);
       return counts;
     }, new Map());
     for (const groupName of ["african", "other"]) {
       const locales = localeDefinitions.filter(
-        (locale) => locale.group === groupName && supported.has(locale.tag),
+        (locale) => locale.group === groupName,
       );
       if (!locales.length) continue;
       const group = doc.createElement("optgroup");
@@ -337,9 +334,7 @@
           : autonymCounts.get(locale.autonym) > 1
             ? `${locale.autonym} · ${locale.tag}`
             : locale.autonym;
-        option.textContent = locale.review === "community"
-          ? `${autonym} — ${t("settings.reviewPending")}`
-          : autonym;
+        option.textContent = autonym;
         group.appendChild(option);
       }
       select.appendChild(group);
@@ -347,60 +342,9 @@
     select.value = currentLanguagePreference;
   }
 
-  function populateCoverage(container, doc = globalThis.document) {
-    if (!container || !doc) return;
-    container.innerHTML = "";
-    const definitions = new Map(localeDefinitions.map((locale) => [locale.tag, locale]));
-    const supported = new Set(supportedDefinitions().map((locale) => locale.tag));
-    let regionNames = null;
-    try {
-      regionNames = new Intl.DisplayNames([currentLocale], { type: "region" });
-    } catch {
-      /* The checked-in English country name remains available on older browsers. */
-    }
-    const list = doc.createElement("ul");
-    list.className = "coverage-countries";
-    for (const country of africaRegistry.countries) {
-      const row = doc.createElement("li");
-      const heading = doc.createElement("strong");
-      heading.dir = "auto";
-      heading.textContent = `${regionNames?.of(country.code) || country.name} (${country.code})`;
-      const packs = doc.createElement("span");
-      packs.className = "coverage-packs";
-      for (const tag of country.languages) {
-        const locale = definitions.get(tag);
-        if (!locale) continue;
-        const pack = doc.createElement("span");
-        pack.lang = locale.tag;
-        pack.dir = locale.direction;
-        pack.className = supported.has(tag) ? "coverage-ready" : "coverage-pending";
-        const qualifier = locale.qualifierKey ? ` · ${t(locale.qualifierKey)}` : "";
-        pack.textContent = `${locale.autonym}${qualifier} — ${t(
-          supported.has(tag) ? "settings.coverageReady" : "settings.coveragePending",
-        )}`;
-        packs.appendChild(pack);
-      }
-      row.appendChild(heading);
-      row.appendChild(packs);
-      list.appendChild(row);
-    }
-    container.appendChild(list);
-  }
-
   function refreshLanguageUI(doc = globalThis.document) {
     applyToDocument(doc);
-    const coverage = doc?.querySelector?.("#africa-coverage-note");
-    if (coverage) {
-      const variables = {
-        languageCount: africaRegistry.languages.length,
-        countryCount: africaRegistry.countries.length,
-        readyCount: supportedDefinitions().filter((locale) => locale.baseline === "africa54").length,
-      };
-      coverage.setAttribute("data-i18n-vars", JSON.stringify(variables));
-      coverage.textContent = t("settings.africaCoverage", variables);
-    }
     populateSelector(doc?.querySelector?.("#setting-language"), doc);
-    populateCoverage(doc?.querySelector?.("#language-coverage-list"), doc);
   }
 
   function setLocale(locale, { persist = true, doc = globalThis.document } = {}) {
@@ -453,13 +397,13 @@
     get responseLanguage() { return currentLanguagePreference; },
     t,
     normalizeLocale,
+    normalizeKnownLocale,
     normalizeLanguagePreference,
     browserLocale,
     resolveInterfaceLocale,
     supportedDefinitions,
     applyToDocument,
     populateSelector,
-    populateCoverage,
     refreshLanguageUI,
     setLocale,
     registerLocale,

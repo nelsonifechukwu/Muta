@@ -1,10 +1,10 @@
 # Africa-54 language coverage
 
-Muta's draft interface-language translation queue maps **85 candidate written-language packs
-across all 54 fully recognised African sovereign states**. The Settings selector contains only
-complete packs; a separate country-first disclosure shows every candidate by autonym. This is a
-coverage queue, not completed localization: unfinished packs are not selectable until every UI
-key exists and community review can be recorded.
+Muta's response-language catalog maps **85 candidate written languages across all 54 fully
+recognised African sovereign states**. Every mapped language appears by autonym in the Settings
+selector. Interface localization is a separate readiness boundary: a selection changes the menus
+only when its complete UI catalog exists; otherwise the menus remain in English while the chosen
+language still becomes the response preference for the next generation.
 
 ## Scope and method
 
@@ -92,10 +92,12 @@ Language tags are BCP 47 / ISO identifiers. Their autonyms and writing direction
 
 ## Readiness rule
 
-- **Mapped:** present in the draft registry and visible in the country-coverage disclosure.
-- **Selectable:** every required UI message is translated; partial English fallback is not
-  presented as complete.
-- **Reviewed:** translation/community-review metadata has been recorded for the pack.
+- **Mapped:** present in the draft registry and selectable as a response-language preference.
+- **Interface-ready:** every required UI message is translated, so the selection also localizes
+  the browser chrome. Until then, the interface remains English rather than presenting a partial
+  translation as complete.
+- **Reviewed:** translation/community-review metadata has been recorded internally for the pack;
+  review status is not shown in the learner-facing selector.
 - **Additional:** scheduled only after the Africa-54 baseline is mapped; it always appears
   after the baseline in the catalog.
 

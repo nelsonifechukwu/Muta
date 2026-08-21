@@ -58,7 +58,7 @@ function fakeDocument(elementsBySelector = {}) {
   };
 }
 
-test("only complete packs become selectable", () => {
+test("only complete packs localize the interface", () => {
   const required = Object.keys(i18n.catalogs.en).sort();
   const supported = i18n.supportedDefinitions();
   assert.deepEqual(supported.map((locale) => locale.tag), ["ar", "sw", "yo", "en", "de"]);
@@ -71,7 +71,7 @@ test("only complete packs become selectable", () => {
   }
 });
 
-test("the actionable selector puts Auto first, then complete African packs", () => {
+test("the selector puts Auto first and exposes every registered language", () => {
   const select = new FakeElement("select");
   const doc = fakeDocument({ "#setting-language": [select] });
   i18n.setLocale("en", { persist: false, doc });
@@ -81,25 +81,22 @@ test("the actionable selector puts Auto first, then complete African packs", () 
   assert.equal(select.children[0].textContent, "Auto");
   assert.equal(select.children[1].label, "African languages");
   const african = select.children[1].children;
-  assert.deepEqual(african.map((option) => option.value), ["ar", "sw", "yo"]);
-  assert.ok(african.every((option) => option.disabled === false));
-  assert.deepEqual(select.children[2].children.map((option) => option.value), ["en", "de"]);
-  assert.ok(african.every((option) => !option.textContent.includes("🇩🇪")));
-});
-
-test("the collapsed country coverage list exposes every candidate outside the selector", () => {
-  const coverage = new FakeElement("div");
-  const doc = fakeDocument({ "#language-coverage-list": [coverage] });
-  i18n.setLocale("en", { persist: false, doc });
-  i18n.populateCoverage(coverage, doc);
-  const countries = coverage.children[0];
-  assert.equal(countries.children.length, 54);
-  const angola = countries.children.find((row) => row.children[0].textContent.endsWith("(AO)"));
-  assert.ok(angola);
-  assert.equal(angola.children[1].children.length, 3);
-  assert.match(angola.children[1].children[0].textContent, /Português — translation pending/);
-  const nigeria = countries.children.find((row) => row.children[0].textContent.endsWith("(NG)"));
-  assert.ok(nigeria.children[1].children.some((pack) => /Naijíriá Píjin/.test(pack.textContent)));
+  const other = select.children[2].children;
+  const options = [...african, ...other];
+  assert.equal(options.length, i18n.localeDefinitions.length);
+  assert.deepEqual(
+    options.map((option) => option.value),
+    i18n.localeDefinitions
+      .filter((locale) => locale.group === "african")
+      .concat(i18n.localeDefinitions.filter((locale) => locale.group === "other"))
+      .map((locale) => locale.tag),
+  );
+  assert.ok(options.every((option) => option.disabled === false));
+  for (const tag of ["am", "ha", "ig", "pga-Latn", "zu", "de"]) {
+    assert.ok(options.some((option) => option.value === tag), `missing ${tag}`);
+  }
+  assert.ok(options.every((option) => !/pending|review/i.test(option.textContent)));
+  assert.ok(options.every((option) => !option.textContent.includes("🇩🇪")));
 });
 
 test("Africa-54 coverage is explicit, complete, and ordered before additions", () => {
@@ -195,6 +192,30 @@ test("locale changes text, attributes, direction, interpolation, and persistence
   assert.equal(i18n.setLocale("not-a-locale", { persist: false, doc }), false);
 });
 
+test("a language without an interface pack persists and controls the next response", () => {
+  const heading = new FakeElement();
+  heading.dataset.i18n = "settings.title";
+  const select = new FakeElement("select");
+  const doc = fakeDocument({
+    "[data-i18n]": [heading],
+    "#setting-language": [select],
+  });
+  try {
+    assert.equal(i18n.setLocale("ig-NG", { doc }), true);
+    assert.equal(i18n.languagePreference, "ig");
+    assert.equal(i18n.responseLanguage, "ig");
+    assert.equal(i18n.locale, "en");
+    assert.equal(doc.documentElement.lang, "en");
+    assert.equal(doc.documentElement.dir, "ltr");
+    assert.equal(heading.textContent, "Settings");
+    assert.equal(select.value, "ig");
+    assert.equal(saved.get(i18n.STORAGE_KEY), "ig");
+  } finally {
+    saved.delete(i18n.STORAGE_KEY);
+    i18n.setLocale("en", { persist: false, doc });
+  }
+});
+
 test("startup uses a saved explicit locale, otherwise Auto resolves browser then English", () => {
   const doc = fakeDocument();
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
@@ -203,6 +224,10 @@ test("startup uses a saved explicit locale, otherwise Auto resolves browser then
       configurable: true,
       value: { languages: ["de-DE", "en-GB"] },
     });
+    saved.set(i18n.STORAGE_KEY, "ig");
+    assert.equal(i18n.initialize(doc), "en");
+    assert.equal(i18n.languagePreference, "ig");
+
     saved.set(i18n.STORAGE_KEY, "sw");
     assert.equal(i18n.initialize(doc), "sw");
     assert.equal(i18n.languagePreference, "sw");
@@ -251,6 +276,7 @@ test("Auto persists as the response preference while the interface follows the b
 
 test("every translation key used by authored markup exists and localization loads first", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.doesNotMatch(html, /language-review-note|africa-coverage-note|language-coverage-list/);
   const keys = [...html.matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(keys.length > 30);
   for (const key of keys) assert.ok(Object.hasOwn(i18n.catalogs.en, key), `missing ${key}`);
@@ -283,6 +309,7 @@ test("the pre-paint bootstrap uses only complete packs and honors saved RTL pref
   const script = fs.readFileSync(path.join(__dirname, "..", "locale-bootstrap.js"), "utf8");
   const run = ({ savedLocale, languages }) => {
     const context = {
+      MutaAfricaLanguages: i18n.africaRegistry,
       MutaInterfaceLocales: i18n.interfaceLocaleManifest,
       document: { documentElement: { lang: "", dir: "" } },
       localStorage: { getItem: () => savedLocale },
@@ -304,6 +331,14 @@ test("the pre-paint bootstrap uses only complete packs and honors saved RTL pref
   assert.deepEqual(
     { ...run({ savedLocale: "ar", languages: ["de-DE"] }) },
     { lang: "ar", dir: "rtl" },
+  );
+  assert.deepEqual(
+    { ...run({ savedLocale: "ig", languages: ["de-DE"] }) },
+    { lang: "en", dir: "ltr" },
+  );
+  assert.deepEqual(
+    { ...run({ savedLocale: "not-a-locale", languages: ["de-DE"] }) },
+    { lang: "de", dir: "ltr" },
   );
 });
 

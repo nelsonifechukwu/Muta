@@ -664,20 +664,6 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
   color: var(--text); font: inherit; font-size: 0.86rem; cursor: pointer;
 }
 .settings-row select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.language-review-note {
-  margin: 4px 2px 0; color: var(--muted); font-size: 0.7rem; line-height: 1.45;
-}
-.language-coverage { margin: 10px 2px 0; font-size: 0.75rem; }
-.language-coverage > summary { color: var(--accent); cursor: pointer; font-weight: 600; }
-.language-coverage > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.coverage-countries {
-  max-height: 18rem; overflow-y: auto; margin: 10px 0 0; padding-inline-start: 20px;
-}
-.coverage-countries > li { margin-block: 8px; }
-.coverage-countries strong { display: block; color: var(--text); }
-.coverage-packs { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; }
-.coverage-packs > span { color: var(--muted); }
-.coverage-packs > .coverage-ready { color: var(--accent-strong); }
 .settings-footnote { margin: 16px 2px 0; color: var(--muted); font-size: 0.72rem; }
 
 @media (max-width: 720px) {
