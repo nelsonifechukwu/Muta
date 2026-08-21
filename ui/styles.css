@@ -2,18 +2,17 @@
 
 :root {
   --bg: #faf9f5;
-  --sidebar: #f0eee6;
-  --card: #ffffff;
-  --text: #3d3929;
-  /* Darkened from #83827d (~3.6:1 on --bg, below WCAG AA) to meet 4.5:1 for body text. */
-  --muted: #6b6a63;
-  --border: #e8e6dc;
-  --accent: #bd5d3a;
-  --accent-soft: rgba(218, 119, 86, 0.08);
-  --accent-strong: #da7756;
+  --sidebar: #f1ede3;
+  --card: #fffefb;
+  --text: #302d24;
+  --muted: #625f57;
+  --border: #dfddd4;
+  --accent: #ad4f31;
+  --accent-soft: rgba(173, 79, 49, 0.09);
+  --accent-strong: #ad4f31;
   --danger: #a8342a;
-  --serif: ui-serif, Georgia, "Times New Roman", serif;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --serif: Iowan Old Style, Baskerville, "Times New Roman", Times, serif;
+  --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -76,7 +75,16 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-.brand { font-family: var(--serif); font-size: 1.35rem; font-weight: 600; }
+.brand {
+  color: var(--text); font-family: var(--serif); font-size: 1.42rem; font-weight: 600;
+  letter-spacing: -0.035em; line-height: 1; text-decoration: none;
+}
+.brand:hover { color: var(--accent); }
+.brand:focus-visible,
+.product-home-link:focus-visible,
+.mobile-home-link:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px;
+}
 button.ghost {
   font: inherit; font-size: 0.85rem;
   color: var(--accent);
@@ -115,16 +123,24 @@ button.ghost:hover { background: var(--accent-soft); }
 .conv-del:focus-visible, .chip .x:focus-visible, .queued .x:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
 }
+.product-nav { padding: 7px 8px 0; border-top: 1px solid var(--border); }
+.product-home-link,
 .settings-open {
   display: flex; align-items: center; gap: 9px; width: calc(100% - 16px);
-  min-height: 40px; margin: 0 8px 6px; padding: 8px 10px;
+  min-height: 40px; padding: 8px 10px;
   border: 0; border-radius: 8px; background: transparent; color: var(--text);
   font: inherit; font-size: 0.84rem; cursor: pointer; text-align: start;
 }
+.product-home-link { width: 100%; margin: 0 0 2px; text-decoration: none; }
+.settings-open { margin: 0 8px 6px; }
+.product-home-link:hover,
 .settings-open:hover { background: rgba(0, 0, 0, 0.04); }
+.product-home-link:hover { color: var(--accent); }
+.product-home-link svg,
 .settings-open svg {
   flex: 0 0 16px; width: 16px; height: 16px; fill: currentColor; color: var(--muted);
 }
+.product-home-link:hover svg { color: currentColor; }
 .sidebar-foot {
   padding: 10px 14px; font-size: 0.72rem; color: var(--muted);
   border-top: 1px solid var(--border);
@@ -173,12 +189,20 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .chat-header {
   position: relative; z-index: 30; flex: none; height: 58px;
-  display: flex; align-items: center; padding: 8px 12px;
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
   background: var(--bg);
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(10px);
 }
-.model-selector { position: relative; }
+.model-selector { position: relative; min-width: 0; }
+.mobile-home-link {
+  display: none; margin-inline-start: auto; min-height: 36px; padding: 6px 9px;
+  align-items: center; justify-content: center; flex: none;
+  border: 1px solid var(--border); border-radius: 9px; color: var(--text);
+  background: var(--card); font-family: var(--serif); font-size: 1.05rem;
+  font-weight: 600; letter-spacing: -0.03em; line-height: 1; text-decoration: none;
+}
+.mobile-home-link:hover { color: var(--accent); border-color: #c9b4aa; }
 .model-trigger {
   display: inline-flex; align-items: center; gap: 5px; max-width: min(28rem, 52vw);
   min-height: 38px; padding: 6px 10px; border: 0; border-radius: 10px;
@@ -683,7 +707,9 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
      so the fixed, phone-width model menu uses the visual-viewport coordinates below exactly
      once instead of adding the header's offset a second time. The 92% opaque header remains. */
   .chat-header { padding-inline-start: 58px; backdrop-filter: none; }
-  .model-trigger { max-width: calc(100vw - 80px); }
+  .model-selector { flex: 1; }
+  .model-trigger { max-width: 100%; }
+  .mobile-home-link { display: inline-flex; }
   .model-menu {
     position: fixed; top: calc(var(--app-top, 0px) + 58px);
     left: 10px; right: 10px; width: auto; min-width: 0;
@@ -700,6 +726,7 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
    closes; queued turns and attachment chips stay present in their own small scroll regions. */
 .compact-height .chat-header { height: 42px; padding-block: 2px; }
 .compact-height .model-trigger { min-height: 36px; padding-block: 3px; }
+.compact-height .mobile-home-link { min-height: 32px; padding-block: 4px; }
 .compact-height #composer-wrap {
   /* The header itself is 42px; reserving the desktop header budget leaves a final 16px
      transcript sliver instead of allowing a full queue to reduce the chat pane to zero. */

@@ -1184,6 +1184,11 @@ window.addEventListener("blur", hideDropHint);
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (!settingsModal.hidden) return;
+    if (appEl?.classList.contains("sidebar-open")) {
+      setDrawer(false);
+      menuToggle?.focus();
+      return;
+    }
     hideDropHint();
     const modelMenuEl = $("#model-menu");
     if (modelMenuEl && !modelMenuEl.hidden) {
@@ -2002,11 +2007,17 @@ document.addEventListener("keydown", (event) => {
 // --- mobile sidebar drawer -------------------------------------------------------------
 const appEl = $("#app");
 const menuToggle = $("#menu-toggle");
+const sidebarEl = $("#sidebar");
+const mainEl = $("#main");
+const mobileSidebar = window.matchMedia("(max-width: 720px)");
 function setDrawer(open) {
-  appEl.classList.toggle("sidebar-open", open);
-  if (menuToggle) menuToggle.setAttribute("aria-expanded", String(open));
+  const drawerOpen = Boolean(open && mobileSidebar.matches);
+  appEl.classList.toggle("sidebar-open", drawerOpen);
+  if (menuToggle) menuToggle.setAttribute("aria-expanded", String(drawerOpen));
   const backdrop = $("#sidebar-backdrop");
-  if (backdrop) backdrop.hidden = !open;
+  if (backdrop) backdrop.hidden = !drawerOpen;
+  if (sidebarEl) sidebarEl.toggleAttribute("inert", mobileSidebar.matches && !drawerOpen);
+  if (mainEl) mainEl.toggleAttribute("inert", drawerOpen);
 }
 if (menuToggle) {
   menuToggle.addEventListener("click", () => setDrawer(!appEl.classList.contains("sidebar-open")));
@@ -2015,6 +2026,8 @@ if (menuToggle) {
   $("#conversation-list").addEventListener("click", () => setDrawer(false));
   $("#new-chat").addEventListener("click", () => setDrawer(false));
 }
+mobileSidebar.addEventListener?.("change", () => setDrawer(false));
+setDrawer(false);
 
 // Identity is a readiness barrier, not a best-effort enhancement. In unified-loopback and
 // signed deployments the temporary browser UUID is not the eventual owner; loading or sending

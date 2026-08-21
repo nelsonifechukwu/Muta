@@ -41,6 +41,30 @@ def test_the_html_actually_uses_the_hidden_attribute():
     assert _hidden_elements()
 
 
+def test_chat_shell_has_localized_routes_back_to_the_landing_page():
+    assert re.search(r'<a class="brand" href="/"[^>]*data-i18n-aria-label="nav\.home"', HTML)
+    assert re.search(r'<a class="product-home-link" href="/">', HTML)
+    assert re.search(r'<a class="mobile-home-link" href="/"', HTML)
+    assert 'data-i18n="nav.aboutMuta"' in HTML
+    assert '"nav.home": "Muta home"' in I18N
+    assert '"nav.aboutMuta": "About Muta"' in I18N
+    assert "Ask about any subject" in HTML
+    assert "maths or science question" not in HTML
+
+    for token in ("#faf9f5", "#f1ede3", "#302d24", "#dfddd4", "#ad4f31"):
+        assert token in CSS
+    assert ".mobile-home-link { display: inline-flex; }" in CSS
+
+
+def test_closed_mobile_drawer_does_not_expose_offscreen_navigation_to_the_keyboard():
+    js = (UI / "app.js").read_text()
+    assert 'window.matchMedia("(max-width: 720px)")' in js
+    assert 'sidebarEl.toggleAttribute("inert", mobileSidebar.matches && !drawerOpen)' in js
+    assert 'mainEl.toggleAttribute("inert", drawerOpen)' in js
+    assert 'appEl?.classList.contains("sidebar-open")' in js
+    assert 'mobileSidebar.addEventListener?.("change", () => setDrawer(false))' in js
+
+
 def test_hidden_elements_are_not_re_shown_by_an_author_display_rule():
     """`[hidden] { display: none }` lives in the UA stylesheet, and ANY author `display:`
     declaration outranks it (author origin beats UA, specificity never enters into it).
