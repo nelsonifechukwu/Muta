@@ -8,9 +8,11 @@ Math *and* Scientific Reasoning), so downstream consumers never have to retrofit
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
+
+ResourceId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{32}$")]
 
 
 class TutoringMode(str, Enum):
@@ -151,11 +153,34 @@ class ChatRequest(BaseModel):
             "are returned. Ignored (silently) offline or unconfigured."
         ),
     )
+    use_rag: bool = Field(
+        False,
+        description=(
+            "Opt-in retrieval over learner-owned resources. When enabled, resource_ids must "
+            "identify the ready files selected with the chat @ picker."
+        ),
+    )
+    resource_ids: list[ResourceId] = Field(
+        default_factory=list,
+        max_length=8,
+        description=(
+            "Opaque ids of learner-owned resources selected for this turn. Display names are "
+            "never used for authorization or retrieval scope."
+        ),
+    )
     attachment_ids: list[int] = Field(
         default_factory=list,
         max_length=32,
         description="Previously-uploaded attachments to link to this message.",
     )
+
+
+class ResourceCitation(BaseModel):
+    resource_id: ResourceId
+    title: str
+    page: int = Field(ge=1, description="One-based physical PDF page number.")
+    chunk_index: int = Field(ge=0)
+    excerpt: str = Field(max_length=500)
 
 
 class ChatResponse(BaseModel):
@@ -174,6 +199,10 @@ class ChatResponse(BaseModel):
         False, description="Whether math in the reply was checked by the `math` service."
     )
     citations: list[str] = Field(default_factory=list, description="RAG source references.")
+    resource_citations: list[ResourceCitation] = Field(
+        default_factory=list,
+        description="Structured, server-owned citations into uploaded learner resources.",
+    )
 
 
 class GenerationStarted(BaseModel):
@@ -434,6 +463,26 @@ class SystemStatus(BaseModel):
 # --- conversations & attachments (web UI surface; additive) ----------------------------
 
 
+class LearningResource(BaseModel):
+    id: ResourceId
+    name: str
+    mime: Literal["application/pdf"] = "application/pdf"
+    status: Literal["processing", "ready", "failed"]
+    page_count: int | None = Field(None, ge=1)
+    error: str | None = None
+    created_at: str
+    updated_at: str
+
+
+class ResourceList(BaseModel):
+    resources: list[LearningResource] = Field(default_factory=list)
+
+
+class ResourceDeleted(BaseModel):
+    id: ResourceId
+    deleted: bool = True
+
+
 class AttachmentRef(BaseModel):
     id: int
     kind: Literal["image", "audio"]
@@ -451,6 +500,7 @@ class MessageOut(BaseModel):
     )
     created_at: str
     attachments: list[AttachmentRef] = Field(default_factory=list)
+    resource_citations: list[ResourceCitation] = Field(default_factory=list)
 
 
 class ConversationOut(BaseModel):
@@ -499,6 +549,7 @@ class StudentErased(BaseModel):
     student_id: str
     conversations: int = 0
     orphan_attachments: int = 0
+    resources: int = 0
     settings: int = 0
 
 

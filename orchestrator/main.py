@@ -146,7 +146,7 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         PIDFILE.parent.mkdir(parents=True, exist_ok=True)
         PIDFILE.write_text(f"{os.getpid()}\n")
 
-    get_hub().start()  # 1 Hz RSS/temp sampling for /v1/conversations/{id}/telemetry
+    get_hub().start()  # 1 Hz while generating; lower-frequency idle RSS/temp sampling
 
     from orchestrator.gateway.connectivity import get_connectivity
 
@@ -159,6 +159,12 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         from orchestrator.gateway.deps import get_preamble_writer
 
         get_preamble_writer()
+
+    # Requeue PDFs whose durable state says preparation was interrupted by a restart.
+    with contextlib.suppress(Exception):
+        from orchestrator.gateway.deps import get_resource_service
+
+        get_resource_service()
 
     cfg = RuntimeConfig()
     engine_server: ModelManager | None = None
@@ -192,6 +198,11 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
             # A FastAPI app can run more than one lifespan in an in-process test/embedding.
             # Never hand the next lifespan a registry that correctly refuses post-shutdown work.
             get_generation_manager.cache_clear()
+        with contextlib.suppress(Exception):
+            from orchestrator.gateway.deps import get_resource_service
+
+            get_resource_service().shutdown()
+            get_resource_service.cache_clear()
         with contextlib.suppress(Exception):
             get_connectivity().stop()
         if engine_stop is not None:

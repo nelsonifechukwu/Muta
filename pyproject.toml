@@ -27,6 +27,7 @@ dependencies = [
     "numpy>=1.26",  # renderer + flat index
     "matplotlib>=3.8",  # diagram rendering (Agg only, no display)
     "pillow>=10.0",  # image guard: downscale, EXIF strip (TDD §4.2)
+    "pypdf>=5.0",  # learner-resource PDF extraction with physical page preservation
 ]
 
 [project.optional-dependencies]

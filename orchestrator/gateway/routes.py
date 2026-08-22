@@ -48,6 +48,7 @@ from contracts.models import (
     GenerationStatus,
     GenerationStopped,
     HealthResponse,
+    LearningResource,
     MasteryResponse,
     MessageList,
     MessageOut,
@@ -58,6 +59,8 @@ from contracts.models import (
     ReadyResponse,
     RenderRequest,
     RenderResponse,
+    ResourceDeleted,
+    ResourceList,
     SessionActionResponse,
     StudentErased,
     Subject,
@@ -75,6 +78,7 @@ from orchestrator.gateway.auth import (
     caller_from_token,
     mint_token,
     operator_student_id,
+    optional_caller,
     require_caller,
 )
 from orchestrator.gateway.deps import (
@@ -85,6 +89,7 @@ from orchestrator.gateway.deps import (
     get_power_governor,
     get_preamble_writer,
     get_renderer,
+    get_resource_service,
     get_sessions,
     get_slot_client,
     get_twin_store,
@@ -113,6 +118,13 @@ from orchestrator.gateway.visualizations import (
     wants_live_visual,
 )
 from orchestrator.gateway.websearch import fetch_snippets
+from orchestrator.retrieval.resources import (
+    ResourceNotFound,
+    ResourceSelectionRequired,
+    ResourceService,
+    ResourceUnavailable,
+    safe_resource_name,
+)
 from orchestrator.telemetry import get_hub
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
@@ -147,6 +159,55 @@ _SAFE_ATTACHMENT_MIME = {
     "audio/wav",
     "audio/x-wav",
 }
+
+_MAX_RESOURCE_BYTES = 32 * 1024 * 1024
+_PDF_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Content-Disposition": "inline",
+    "Cache-Control": "private, no-store",
+    "Referrer-Policy": "no-referrer",
+}
+
+
+def _resource_model(row: dict) -> LearningResource:
+    return LearningResource(
+        id=row["id"],
+        name=row["name"],
+        mime=row["mime"],
+        status=row["status"],
+        page_count=row.get("page_count"),
+        error=row.get("error"),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def _resource_grounding(
+    req: ChatRequest, *, owner_id: str, service: ResourceService
+) -> tuple[str, list[dict]]:
+    if not req.use_rag:
+        return "", []
+    try:
+        selected = service.preflight(owner_id, req.resource_ids)
+        hits = service.search(owner_id, req.resource_ids, req.message)
+    except ResourceSelectionRequired as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ResourceUnavailable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ResourceNotFound as exc:
+        raise HTTPException(status_code=404, detail="unknown resource") from exc
+    citations = [
+        {
+            "kind": "resource",
+            "resource_id": hit["resource_id"],
+            "title": hit["title"],
+            "page": hit["page"],
+            "chunk_index": hit["chunk_index"],
+            "excerpt": hit["excerpt"],
+        }
+        for hit in hits
+    ]
+    return service.render_context(hits, selected), citations
 
 
 def _close_events(events) -> None:
@@ -456,14 +517,112 @@ def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: 
             continue
 
 
+@router.get("/resources", response_model=ResourceList, tags=["resources"])
+def resources(
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> ResourceList:
+    return ResourceList(
+        resources=[_resource_model(row) for row in engine.store.list_resources(caller)]
+    )
+
+
+@router.post(
+    "/resources",
+    response_model=LearningResource,
+    status_code=202,
+    tags=["resources"],
+)
+async def resource_upload(
+    file: UploadFile = File(...),
+    engine: ChatEngine = Depends(get_engine),
+    service: ResourceService = Depends(get_resource_service),
+    caller: str = Depends(require_caller),
+) -> LearningResource:
+    """Durably accept one PDF, then prepare it outside the request thread."""
+    if file.content_type not in {"application/pdf", "application/octet-stream"}:
+        raise HTTPException(status_code=415, detail="only PDF resources are supported")
+    payload = bytearray()
+    while True:
+        block = await file.read(1024 * 1024)
+        if not block:
+            break
+        payload.extend(block)
+        if len(payload) > _MAX_RESOURCE_BYTES:
+            raise HTTPException(status_code=413, detail="PDFs must be 32 MB or smaller")
+    if not bytes(payload[:5]).startswith(b"%PDF-"):
+        raise HTTPException(status_code=422, detail="this file is not a valid PDF")
+    resource_id = engine.store.create_resource(
+        caller,
+        safe_resource_name(file.filename),
+        "application/pdf",
+        bytes(payload),
+    )
+    service.submit(resource_id, caller)
+    row = engine.store.get_resource(resource_id, owner_id=caller)
+    return _resource_model(row)
+
+
+@router.post("/resources/{resource_id}/retry", response_model=LearningResource, tags=["resources"])
+def resource_retry(
+    resource_id: str,
+    engine: ChatEngine = Depends(get_engine),
+    service: ResourceService = Depends(get_resource_service),
+    caller: str = Depends(require_caller),
+) -> LearningResource:
+    if not service.retry(resource_id, caller):
+        raise HTTPException(status_code=404, detail="unknown resource")
+    row = engine.store.get_resource(resource_id, owner_id=caller)
+    return _resource_model(row)
+
+
+@router.delete("/resources/{resource_id}", response_model=ResourceDeleted, tags=["resources"])
+def resource_delete(
+    resource_id: str,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> ResourceDeleted:
+    if not engine.store.delete_resource(resource_id, owner_id=caller):
+        raise HTTPException(status_code=404, detail="unknown resource")
+    return ResourceDeleted(id=resource_id)
+
+
+@router.get(
+    "/resources/{resource_id}/content",
+    response_class=Response,
+    tags=["resources"],
+    responses={200: {"content": {"application/pdf": {}}, "description": "Inline PDF"}},
+)
+def resource_content(
+    resource_id: str,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(caller_from_token),
+) -> Response:
+    row = engine.store.get_resource(resource_id, owner_id=caller, include_data=True)
+    if row is None:
+        raise HTTPException(status_code=404, detail="unknown resource")
+    return Response(content=bytes(row["data"]), media_type="application/pdf", headers=_PDF_HEADERS)
+
+
 @router.post("/chat", response_model=ChatResponse, tags=["tutor"])
 def chat(
     req: ChatRequest,
     engine: ChatEngine = Depends(get_engine),
     power: PowerGovernor = Depends(get_power_governor),
+    caller: str | None = Depends(optional_caller),
 ) -> ChatResponse:
     """Multi-turn tutoring turn. Memory is keyed by `conversation_id`; omit it to start a
     new thread. The mode selects the system prompt (ROADMAP 18 Jul, stable-prefix design)."""
+    resource_block = ""
+    resource_sources: list[dict] = []
+    if req.use_rag:
+        if caller is None:
+            raise HTTPException(status_code=401, detail="sign in to use private resources")
+        if caller != req.student_id:
+            raise HTTPException(status_code=403, detail="you can only use your own resources")
+        resource_block, resource_sources = _resource_grounding(
+            req, owner_id=caller, service=get_resource_service()
+        )
     visual_requested = wants_live_visual(req.message)
     system_prompt = assemble_system_prompt(
         load_prompt(req.mode.value),
@@ -471,6 +630,7 @@ def chat(
         language=req.language,
         subject=req.subject.value,
         twin_summary=_twin_summary(req.student_id),
+        rag_block=resource_block,
     )
     try:
         result = engine.chat(
@@ -511,6 +671,8 @@ def chat(
         _link_attachments(
             engine, req.attachment_ids, result.conversation_id, result.user_message_id
         )
+    if resource_sources and result.assistant_message_id is not None:
+        engine.store.add_message_sources(result.assistant_message_id, resource_sources)
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
     if result.generation is not None:
         bench_metrics.record(result.generation)
@@ -525,6 +687,7 @@ def chat(
         mode=req.mode,
         reply=reply,
         verified=bool(verified),
+        resource_citations=resource_sources,
     )
 
 
@@ -550,6 +713,15 @@ def _start_chat_generation(
         conversation = engine.store.get_conversation(req.conversation_id)
         if conversation is None or conversation.get("student_id") != req.student_id:
             raise HTTPException(status_code=404, detail="unknown conversation")
+
+    # Private-resource readiness/ownership is checked before reserving capacity or writing a
+    # turn. A preparing book therefore cannot consume a classroom slot or create a ghost row.
+    if req.use_rag:
+        resource_block, resource_sources = _resource_grounding(
+            req, owner_id=req.student_id, service=get_resource_service()
+        )
+    else:
+        resource_block, resource_sources = "", []
     try:
         reservation_id = generations.reserve(
             req.student_id,
@@ -568,7 +740,7 @@ def _start_chat_generation(
 
     # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
     # the ungrounded request must stay byte-identical to what the tutor already serves.
-    sources: list[dict] = []
+    sources: list[dict] = list(resource_sources)
     web_lines = ""
     search_url = os.environ.get("MUTA_SEARCH_URL")
     if req.use_web and search_url:
@@ -580,11 +752,7 @@ def _start_chat_generation(
                 web_lines = "\n".join(
                     f"[{i}] {s.title} — {s.snippet}" for i, s in enumerate(snippets, start=1)
                 )
-                sources = [{"title": s.title, "url": s.url} for s in snippets]
-
-    # Retrieval grounding (RAG): syllabus corpus chunks, when an index is staged. Degrades
-    # silently to model-alone when there is no index (the offline-first default).
-    rag_block = _rag_block(req.message)
+                sources.extend({"title": snippet.title, "url": snippet.url} for snippet in snippets)
 
     visual_requested = wants_live_visual(req.message)
     system_prompt = assemble_system_prompt(
@@ -594,7 +762,7 @@ def _start_chat_generation(
         subject=req.subject.value,
         twin_summary=_twin_summary(req.student_id),
         web_lines=web_lines,
-        rag_block=rag_block,
+        rag_block=resource_block,
     )
     cancel_event = threading.Event()
     sampling_params = _sampling_for_request(
@@ -721,9 +889,21 @@ def _start_chat_generation(
             # `events` while that thread is in it raises "generator already executing" —
             # which, from this finally, would skip the `sessions.release()` below and leak
             # an admission slot on every disconnect during the prefill window.
-            _close_events(streamed)
-            _close_events(events)
-            sessions.release(admission_id)  # free exactly this generation's admission lease
+            try:
+                try:
+                    _close_events(streamed)
+                finally:
+                    _close_events(events)
+                if resource_sources:
+                    # The stream writer owns an exact assistant row. Never rediscover it by
+                    # ordering: another generation can persist into this conversation while
+                    # this one is decoding.
+                    assistant_message_id = getattr(events, "assistant_message_id", None)
+                    if assistant_message_id is not None:
+                        engine.store.add_message_sources(assistant_message_id, resource_sources)
+            finally:
+                # Cleanup failures must never strand the one physical inference admission.
+                sessions.release(admission_id)
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
         # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
         # reads close to the engine's own generation rate rather than being dragged down by a
@@ -1046,6 +1226,7 @@ def conversation_messages(
                 content=m["content"],
                 created_at=m["created_at"],
                 attachments=[AttachmentRef(**a) for a in m["attachments"]],
+                resource_citations=m.get("resource_citations", []),
             )
             for m in rows
         ],
