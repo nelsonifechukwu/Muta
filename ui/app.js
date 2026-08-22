@@ -102,6 +102,7 @@ let csrfToken = null;
 let identityReady = false;
 let shareAuthWake = null;
 let revocationReloading = false;
+const localOperatorPage = Boolean(window.MutaAccess?.localOperator);
 const authHeaders = () => ({
   ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
   ...(csrfToken ? { "X-Muta-CSRF": csrfToken } : {}),
@@ -119,7 +120,10 @@ function activateIdentity({ userId, role, username = null, token = "", csrf = nu
   identityReady = true;
   localStorage.setItem("muta-student", studentId);
   document.querySelector("#share-auth").hidden = true;
-  document.querySelector("#app").hidden = false;
+  const app = document.querySelector("#app");
+  app.hidden = false;
+  app.removeAttribute("inert");
+  app.setAttribute("aria-busy", "false");
   const account = document.querySelector("#share-account");
   account.hidden = false;
   document.querySelector("#share-account-name").textContent = username || "Muta host";
@@ -134,6 +138,14 @@ function activateIdentity({ userId, role, username = null, token = "", csrf = nu
 }
 
 function showShareAuth(status = {}) {
+  // A loopback page is the operator's own Muta, never a shared-client login surface. Keep the
+  // local shell visible while the backend finishes starting and let bootChat retry the private
+  // session bootstrap. Backend Host/Origin/peer checks still decide whether authority is issued.
+  if (localOperatorPage) {
+    document.querySelector("#share-auth").hidden = true;
+    document.querySelector("#app").hidden = false;
+    return;
+  }
   document.querySelector("#app").hidden = true;
   document.querySelector("#share-auth").hidden = false;
   document.querySelector("#share-auth-loading").hidden = true;
@@ -3217,6 +3229,12 @@ setDrawer(false);
 // signed deployments the temporary browser UUID is not the eventual owner; loading or sending
 // under it can make a selected chat look missing and strand a reply under the wrong identity.
 async function bootChat() {
+  if (localOperatorPage) {
+    // access-bootstrap.js already made this the first paint; remove `hidden` from the DOM state
+    // as well. The shell remains inert and aria-busy until activateIdentity proves the host.
+    document.querySelector("#share-auth").hidden = true;
+    document.querySelector("#app").hidden = false;
+  }
   sendBtn.disabled = true;
   while (!(await ensureAuth())) {
     await new Promise((resolve) => {

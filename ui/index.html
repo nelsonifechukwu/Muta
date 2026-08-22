@@ -7,11 +7,14 @@
   <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
   <title>Muta</title>
+  <!-- Blocking and tiny by design: decide local-host vs shared-client first paint before the
+       body can flash the wrong access surface. Backend authorization remains authoritative. -->
+  <script src="access-bootstrap.js?v=20260822-local-host-1"></script>
   <script src="africa-languages.js?v=20260821-ui-locales-2"></script>
   <script src="locale-manifest.js?v=20260821-ui-locales-2"></script>
   <script src="locale-bootstrap.js?v=20260821-ui-locales-2"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260822-citation-rail-1">
+  <link rel="stylesheet" href="styles.css?v=20260822-local-host-1">
 </head>
 <body>
   <main id="share-auth" class="share-auth" aria-labelledby="share-auth-title">
@@ -56,7 +59,7 @@
     </section>
   </main>
 
-  <div id="app" hidden>
+  <div id="app" hidden inert aria-busy="true">
     <button id="menu-toggle" class="menu-toggle" aria-label="Show conversations" data-i18n-aria-label="nav.showConversations" aria-expanded="false" aria-controls="sidebar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
     </button>
@@ -292,10 +295,10 @@
   <script src="locale-fr.js?v=20260821-ui-locales-2"></script>
   <script src="locale-generated.js?v=20260821-ui-locales-2"></script>
   <script src="locales.js?v=20260821-ui-locales-2"></script>
-  <script src="math.js?v=20260822-citation-rail-1"></script>
+  <script src="math.js?v=20260822-local-host-1"></script>
   <script src="visualizations.js?v=20260822-citation-rail-1"></script>
   <script src="citations.js?v=20260822-citation-rail-1"></script>
-  <script src="app.js?v=20260822-citation-rail-1"></script>
-  <script src="audio.js?v=20260822-citation-rail-1"></script>
+  <script src="app.js?v=20260822-local-host-1"></script>
+  <script src="audio.js?v=20260822-local-host-1"></script>
 </body>
 </html>

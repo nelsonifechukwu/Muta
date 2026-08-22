@@ -15,6 +15,7 @@ HTML = (UI / "index.html").read_text()
 CSS = (UI / "styles.css").read_text()
 I18N = (UI / "i18n.js").read_text()
 NGINX = (UI.parent / "docker" / "nginx.conf.template").read_text()
+ACCESS_BOOTSTRAP = (UI / "access-bootstrap.js").read_text()
 
 
 def _hidden_elements() -> list[tuple[str, str]]:
@@ -54,6 +55,31 @@ def test_chat_shell_has_localized_routes_back_to_the_landing_page():
     for token in ("#faf9f5", "#f1ede3", "#302d24", "#dfddd4", "#ad4f31"):
         assert token in CSS
     assert ".mobile-home-link { display: inline-flex; }" in CSS
+
+
+def test_loopback_host_opens_the_local_shell_without_the_shared_connection_gate():
+    """The laptop running Muta is the operator, not a client joining its own share.
+
+    Detection happens in the blocking head so the wrong full-screen gate cannot flash before
+    app.js starts. This is only first-paint routing; backend authorization remains mandatory.
+    """
+    bootstrap_tag = '<script src="access-bootstrap.js?v=20260822-local-host-1"></script>'
+    assert bootstrap_tag in HTML
+    assert HTML.index(bootstrap_tag) < HTML.index('<link rel="stylesheet"')
+    assert 'hostname === "localhost"' in ACCESS_BOOTSTRAP
+    assert 'hostname === "::1"' in ACCESS_BOOTSTRAP
+    assert 'hostname.startsWith("127.")' in ACCESS_BOOTSTRAP
+    assert 'localOperator ? "operator" : "shared"' in ACCESS_BOOTSTRAP
+    assert 'window.MutaAccess = Object.freeze({ localOperator })' in ACCESS_BOOTSTRAP
+    assert 'html[data-muta-access="operator"] #share-auth { display: none; }' in CSS
+    assert 'html[data-muta-access="operator"] #app[hidden] { display: flex; }' in CSS
+
+    js = (UI / "app.js").read_text()
+    assert "const localOperatorPage = Boolean(window.MutaAccess?.localOperator)" in js
+    assert 'app.removeAttribute("inert")' in js
+    assert 'app.setAttribute("aria-busy", "false")' in js
+    assert "if (localOperatorPage)" in js
+    assert "A loopback page is the operator's own Muta" in js
 
 
 def test_closed_mobile_drawer_does_not_expose_offscreen_navigation_to_the_keyboard():

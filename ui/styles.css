@@ -38,6 +38,13 @@ body {
 }
 #app[hidden] { display: none; }
 
+/* The primary loopback URL belongs to the laptop operator. access-bootstrap.js marks it in
+   the blocking head, so the ordinary Muta shell is the first paint while its local session is
+   established. Only LAN clients ever see the share-account gate. The backend remains the
+   authority; this selector changes presentation, never permissions. */
+html[data-muta-access="operator"] #share-auth { display: none; }
+html[data-muta-access="operator"] #app[hidden] { display: flex; }
+
 /* Visually hidden but available to assistive tech (screen-reader live region). */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
