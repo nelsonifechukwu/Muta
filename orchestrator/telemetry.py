@@ -6,7 +6,8 @@ Design constraints:
   samples unboundedly and is deliberately NOT reused here);
 - unmeasurable metrics are None, never an exception (Docker on macOS has no sensors);
 - readable from async handlers without blocking: one daemon thread refreshes shared
-  attributes at 1 Hz, handlers only take a lock for a dict copy.
+  attributes at 1 Hz during generation and 0.1 Hz while idle; handlers only take a lock for
+  a dict copy.
 """
 
 from __future__ import annotations
@@ -20,7 +21,8 @@ from functools import lru_cache
 from bench.sampler import family_rss_bytes, read_temp_c
 
 _GB = 1024**3
-SAMPLE_INTERVAL_S = 1.0
+ACTIVE_SAMPLE_INTERVAL_S = 1.0
+IDLE_SAMPLE_INTERVAL_S = 10.0
 RATE_WINDOW_S = 2.0
 # The scoring rule's cliff (score.py applies the same 85 °C line to bench runs).
 THROTTLE_TEMP_C = 85.0
@@ -47,6 +49,7 @@ class TelemetryHub:
         self._generating: set[str] = set()
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
+        self._wake = threading.Event()
 
     # --- sampling ---------------------------------------------------------------------
 
@@ -59,11 +62,15 @@ class TelemetryHub:
 
     def stop(self) -> None:
         self._stop.set()
+        self._wake.set()
 
     def _run(self) -> None:
         while not self._stop.is_set():
+            self._wake.clear()
             self.sample_once()
-            self._stop.wait(SAMPLE_INTERVAL_S)
+            with self._lock:
+                active = bool(self._generating)
+            self._wake.wait(ACTIVE_SAMPLE_INTERVAL_S if active else IDLE_SAMPLE_INTERVAL_S)
 
     def sample_once(self, now: float | None = None) -> None:
         now = time.monotonic() if now is None else now
@@ -100,6 +107,8 @@ class TelemetryHub:
         with self._lock:
             self._generating.add(conversation_id)
             self._ticks.setdefault(conversation_id, deque(maxlen=4096))
+        # Wake an idle 10-second wait so active telemetry starts promptly.
+        self._wake.set()
 
     def end(self, conversation_id: str) -> None:
         with self._lock:

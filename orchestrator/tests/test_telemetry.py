@@ -69,8 +69,10 @@ def test_peak_rss_is_monotonic(monkeypatch):
 
 def test_generating_flag_follows_begin_end():
     hub = TelemetryHub()
+    hub._wake.clear()
     hub.begin("c1")
     assert hub.snapshot("c1")["generating"] is True
+    assert hub._wake.is_set()  # an idle 10-second wait is interrupted immediately
     hub.end("c1")
     assert hub.snapshot("c1")["generating"] is False
 

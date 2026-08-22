@@ -209,6 +209,36 @@ class UserSettings(BaseModel):
             "across separate conversations. This never changes the server's slot/RAM ceiling."
         ),
     )
+    power_optimization_enabled: bool = Field(
+        True,
+        description=(
+            "Use battery-aware response limits for this learner when the host is discharging. "
+            "Memory, thermal and critical host safeguards cannot be disabled."
+        ),
+    )
+
+
+class PowerStatus(BaseModel):
+    """Battery state of the laptop serving Muta, plus the effective learner policy."""
+
+    optimization_enabled: bool = True
+    available: bool = False
+    mode: Literal["normal", "eco", "critical"] = Field(
+        "normal", description="Effective response policy for this learner."
+    )
+    host_mode: Literal["normal", "eco", "critical"] = Field(
+        "normal", description="Shared serving laptop state before the learner preference."
+    )
+    on_battery: bool | None = None
+    external_power_connected: bool | None = None
+    charging: bool | None = None
+    percentage: float | None = Field(None, ge=0, le=100)
+    energy_wh: float | None = Field(None, ge=0)
+    energy_full_wh: float | None = Field(None, ge=0)
+    energy_rate_w: float | None = Field(None, ge=0)
+    time_to_empty_s: int | None = Field(None, ge=0)
+    source: str = "unavailable"
+    actions: list[str] = Field(default_factory=list)
 
 
 # --- /diagnose -------------------------------------------------------------------------

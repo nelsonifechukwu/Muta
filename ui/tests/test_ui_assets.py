@@ -305,13 +305,21 @@ def test_switching_conversations_detaches_rendering_without_stopping_the_job():
     assert "stopGeneration" not in body
 
 
-def test_settings_exposes_a_persisted_parallel_chat_switch():
+def test_settings_exposes_persisted_parallel_chat_and_power_switches():
     js = (UI / "app.js").read_text()
     assert 'id="settings-modal"' in HTML
     assert 'id="setting-parallel-chats"' in HTML
+    assert 'id="setting-power-optimization"' in HTML
+    assert 'id="power-status"' in HTML
+    assert 'id="power-badge"' in HTML
     assert 'role="switch"' in HTML
     assert 'fetch("/v1/settings"' in js
+    assert 'fetch("/v1/power/status"' in js
     assert "allow_parallel_chats: enabled" in js
+    assert "power_optimization_enabled: enabled" in js
+    assert 'setAttribute("aria-label", badgeLabel)' in js
+    assert "Battery sensor temporarily unavailable; Critical reserve remains active." in js
+    assert 'hostMode === "critical"' in js
     assert "!allowParallelChats && generationJobs.size" in js
 
 

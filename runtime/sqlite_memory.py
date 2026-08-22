@@ -321,6 +321,23 @@ class SQLiteConversationStore:
                 (student_id, payload, _now()),
             )
 
+    def patch_settings(self, student_id: str, changes: dict) -> dict:
+        """Atomically merge independent preference controls and return the stored object."""
+        with self._lock, self._conn:
+            row = self._conn.execute(
+                "SELECT settings FROM user_settings WHERE student_id = ?", (student_id,)
+            ).fetchone()
+            values = json.loads(row["settings"]) if row else {}
+            values.update(changes)
+            payload = json.dumps(values, separators=(",", ":"), sort_keys=True)
+            self._conn.execute(
+                "INSERT INTO user_settings (student_id, settings, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT (student_id) DO UPDATE SET "
+                "settings = excluded.settings, updated_at = excluded.updated_at",
+                (student_id, payload, _now()),
+            )
+        return values
+
     def delete_student(self, student_id: str) -> dict[str, int]:
         with self._lock, self._conn:
             orphans = self._conn.execute(

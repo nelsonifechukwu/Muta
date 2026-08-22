@@ -2,7 +2,7 @@
 `WS /v1/audio/voice` (TDD §7.2's designed-but-unbuilt `WS /v1/audio/stream`, realised).
 
 Voice protocol (client ↔ server over one socket):
-- client → text `{"type":"start","student_id","conversation_id":null|id,"mode":"socratic","language":"en"}`
+- client → text start frame with student, conversation, tutoring mode, and language fields
 - client → binary frames: 16 kHz mono int16 PCM (~320 ms each)
 - client → text `{"type":"language","language":"de"}` updates the next turn;
   `{"type":"stop"}` forces the endpoint; `{"type":"barge"}` cancels the reply
@@ -35,8 +35,9 @@ from orchestrator.audio.config import AudioConfig
 from orchestrator.audio.engines import AsrEngine, SileroVad, TtsEngine, load_engines
 from orchestrator.audio.mathspeech import to_speech
 from orchestrator.audio.vad import Endpointer
-from orchestrator.gateway.deps import get_engine, load_prompt
+from orchestrator.gateway.deps import get_engine, get_power_governor, load_prompt
 from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
+from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.telemetry import get_hub
 from runtime.chat import ChatEngine
 
@@ -159,7 +160,9 @@ async def audio_transcribe(
     if len(raw) > MAX_AUDIO_UPLOAD_BYTES:
         raise HTTPException(
             status_code=413,
-            detail=f"that recording is too large — keep it under {MAX_AUDIO_UPLOAD_BYTES // 2**20} MB",
+            detail=(
+                f"that recording is too large — keep it under {MAX_AUDIO_UPLOAD_BYTES // 2**20} MB"
+            ),
         )
     pcm = await run_in_threadpool(_ffmpeg_to_pcm16k, raw)
     if pcm is None:
@@ -242,6 +245,7 @@ async def audio_voice(ws: WebSocket) -> None:
     state = {
         "conversation_id": start.get("conversation_id"),
         "language": _preferred_language(start.get("language")),
+        "power_optimization_enabled": True,
     }
 
     vad = await run_in_threadpool(SileroVad, stack.config)
@@ -257,7 +261,7 @@ async def audio_voice(ws: WebSocket) -> None:
     respond_task: asyncio.Task | None = None
 
     async def speak(sentence: str) -> None:
-        if not stack.tts.available or cancel.is_set():
+        if not stack.tts.available or cancel.is_set() or not get_power_governor().tts_allowed():
             return
         # to_speech returns SpokenSentence objects ("x^2" → "x squared"); the synthesizer
         # wants plain text.
@@ -302,6 +306,17 @@ async def audio_voice(ws: WebSocket) -> None:
         # stream_events_chat does several store round-trips before returning — threadpool
         # both so one cold voice request can't freeze every other client.
         engine = await run_in_threadpool(get_engine)
+        try:
+            learner_settings = await run_in_threadpool(engine.store.get_settings, student_id)
+            state["power_optimization_enabled"] = learner_settings.get(
+                "power_optimization_enabled", True
+            )
+        except Exception:  # noqa: BLE001 - an optional preference cannot break voice tutoring
+            state["power_optimization_enabled"] = True
+        sampling_params = get_power_governor().adjust_sampling(
+            params_for_mode(mode),
+            enabled=bool(state["power_optimization_enabled"]),
+        )
         cid, _mid, events = await run_in_threadpool(
             lambda: engine.stream_events_chat(
                 student_id=student_id,
@@ -312,6 +327,7 @@ async def audio_voice(ws: WebSocket) -> None:
                 mode=mode,
                 language=state["language"],
                 title=text[:80],
+                **sampling_params,
             )
         )
         state["conversation_id"] = cid

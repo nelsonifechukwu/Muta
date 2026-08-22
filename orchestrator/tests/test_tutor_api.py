@@ -20,13 +20,23 @@ from orchestrator import bench_metrics
 from orchestrator.gateway import deps, routes
 from orchestrator.gateway.generations import GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
+from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.main import app
 from runtime.chat import ChatResult
 from runtime.client import InferenceStreamError
+from runtime.power import PowerSnapshot
 from runtime.vision import VisionManager
 
 client = TestClient(app)
+
+
+class FixedPowerProvider:
+    def __init__(self, value: PowerSnapshot) -> None:
+        self.value = value
+
+    def snapshot(self) -> PowerSnapshot:
+        return self.value
 
 
 class FakeEngine:
@@ -64,6 +74,11 @@ class FakeSettingsStore:
     def put_settings(self, student_id: str, settings: dict) -> None:
         self.values[student_id] = dict(settings)
 
+    def patch_settings(self, student_id: str, changes: dict) -> dict:
+        values = self.values.setdefault(student_id, {})
+        values.update(changes)
+        return dict(values)
+
 
 @pytest.fixture
 def wired():
@@ -75,12 +90,17 @@ def wired():
     )
     vision = VisionManager(admit=lambda: ladder.evaluate().vision_allowed)
     generations = GenerationManager(max_active=2)
+    power = PowerGovernor(
+        FixedPowerProvider(PowerSnapshot(available=True, on_battery=False, percentage=100)),
+        poll_interval_s=1,
+    )
 
     app.dependency_overrides[deps.get_engine] = lambda: engine
     app.dependency_overrides[deps.get_ladder] = lambda: ladder
     app.dependency_overrides[deps.get_sessions] = lambda: sessions
     app.dependency_overrides[deps.get_vision] = lambda: vision
     app.dependency_overrides[deps.get_generation_manager] = lambda: generations
+    app.dependency_overrides[deps.get_power_governor] = lambda: power
     yield engine, ladder, sessions, vision
     app.dependency_overrides.clear()
 
@@ -105,6 +125,77 @@ def test_the_mode_selects_the_sampling_profile(wired):
     client.post("/v1/tutor/chat", json=turn(session_id="s2", mode="solution"))
     assert engine.calls[0]["temperature"] == 0.7  # tutor-dialogue
     assert engine.calls[1]["temperature"] == 0.3  # worked-solution
+
+
+def test_critical_battery_shapes_ordinary_chat_but_respects_the_default_on_toggle(wired):
+    engine, *_ = wired
+    critical = PowerGovernor(
+        FixedPowerProvider(
+            PowerSnapshot(available=True, on_battery=True, percentage=8, time_to_empty_s=900)
+        ),
+        poll_interval_s=1,
+    )
+    app.dependency_overrides[deps.get_power_governor] = lambda: critical
+
+    client.post(
+        "/v1/chat",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Explain factors", "thinking": "auto"},
+    )
+    assert engine.calls[-1]["max_tokens"] == 512
+    assert engine.calls[-1]["enable_thinking"] is False
+
+    engine.store.put_settings("s1", {"power_optimization_enabled": False})
+    client.post(
+        "/v1/chat",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Explain multiples", "thinking": "auto"},
+    )
+    assert engine.calls[-1]["max_tokens"] == 1200
+    assert engine.calls[-1]["enable_thinking"] is True
+
+
+def test_eco_chat_does_not_override_an_unset_server_thinking_default(wired):
+    engine, *_ = wired
+    eco = PowerGovernor(
+        FixedPowerProvider(PowerSnapshot(available=True, on_battery=True, percentage=60)),
+        poll_interval_s=1,
+    )
+    app.dependency_overrides[deps.get_power_governor] = lambda: eco
+
+    response = client.post(
+        "/v1/chat",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Explain factors"},
+    )
+
+    assert response.status_code == 200
+    assert engine.calls[-1]["max_tokens"] == 800
+    assert engine.calls[-1]["reasoning_budget_tokens"] == 256
+    assert "enable_thinking" not in engine.calls[-1]
+
+
+def test_legacy_tutor_routes_respect_the_persisted_power_toggle(wired):
+    engine, *_ = wired
+    critical = PowerGovernor(
+        FixedPowerProvider(PowerSnapshot(available=True, on_battery=True, percentage=8)),
+        poll_interval_s=1,
+    )
+    app.dependency_overrides[deps.get_power_governor] = lambda: critical
+    engine.store.put_settings("legacy-off", {"power_optimization_enabled": False})
+
+    response = client.post("/v1/tutor/chat", json=turn("legacy-off"))
+    assert response.status_code == 200
+    assert engine.calls[-1]["max_tokens"] == 1200
+
+    response = client.post("/v1/tutor/chat/stream", json=turn("legacy-off"))
+    assert response.status_code == 200
+    assert engine.calls[-1]["max_tokens"] == 1200
+
+    response = client.post("/v1/tutor/chat", json=turn("legacy-on"))
+    assert response.status_code == 200
+    assert engine.calls[-1]["max_tokens"] == 512
+    assert engine.calls[-1]["enable_thinking"] is False
 
 
 def test_tutor_chat_lang_is_trusted_system_context_not_user_text(wired):
@@ -704,17 +795,33 @@ def test_stop_after_leading_conversation_frame_still_releases_the_lane(wired):
     assert sum(slot.busy for slot in sessions.slots) == 0
 
 
-def test_parallel_chat_setting_defaults_on_and_round_trips_privately(wired):
+def test_settings_default_on_and_round_trip_privately(wired):
     ada = {"Authorization": "Bearer ada"}
-    assert client.get("/v1/settings", headers=ada).json() == {"allow_parallel_chats": True}
+    defaults = {
+        "allow_parallel_chats": True,
+        "power_optimization_enabled": True,
+    }
+    assert client.get("/v1/settings", headers=ada).json() == defaults
 
     updated = client.put("/v1/settings", headers=ada, json={"allow_parallel_chats": False})
     assert updated.status_code == 200
-    assert updated.json() == {"allow_parallel_chats": False}
-    assert client.get("/v1/settings", headers=ada).json() == {"allow_parallel_chats": False}
-    assert client.get("/v1/settings", headers={"Authorization": "Bearer bimpe"}).json() == {
-        "allow_parallel_chats": True
+    assert updated.json() == {**defaults, "allow_parallel_chats": False}
+    power_off = client.put("/v1/settings", headers=ada, json={"power_optimization_enabled": False})
+    assert power_off.json() == {
+        "allow_parallel_chats": False,
+        "power_optimization_enabled": False,
     }
+    assert client.get("/v1/settings", headers={"Authorization": "Bearer bimpe"}).json() == defaults
+
+
+def test_power_status_is_private_and_reports_the_serving_host(wired):
+    assert client.get("/v1/power/status").status_code == 401
+
+    body = client.get("/v1/power/status", headers={"Authorization": "Bearer ada"}).json()
+    assert body["available"] is True
+    assert body["on_battery"] is False
+    assert body["mode"] == "normal" and body["host_mode"] == "normal"
+    assert body["optimization_enabled"] is True
 
 
 # --- vision -------------------------------------------------------------------------------

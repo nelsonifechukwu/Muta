@@ -17,9 +17,11 @@ from contracts.models import (
     HealthResponse,
     MasteryResponse,
     Persona,
+    PowerStatus,
     ReadyResponse,
     Subject,
     TutoringMode,
+    UserSettings,
     VerifyRequest,
     VerifyResponse,
 )
@@ -35,9 +37,11 @@ __all__ = [
     "HealthResponse",
     "MasteryResponse",
     "Persona",
+    "PowerStatus",
     "ReadyResponse",
     "Subject",
     "TutoringMode",
+    "UserSettings",
     "VerifyRequest",
     "VerifyResponse",
 ]
