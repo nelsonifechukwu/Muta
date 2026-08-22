@@ -64,7 +64,6 @@ class FakeSettingsStore:
     def __init__(self) -> None:
         self.values: dict[str, dict] = {}
         self.conversations: dict[str, dict] = {}
-        self.updated_messages: list[tuple[int, str]] = []
 
     def get_conversation(self, conversation_id: str) -> dict | None:
         return self.conversations.get(conversation_id)
@@ -79,9 +78,6 @@ class FakeSettingsStore:
         values = self.values.setdefault(student_id, {})
         values.update(changes)
         return dict(values)
-
-    def update_message(self, message_id: int, content: str) -> None:
-        self.updated_messages.append((message_id, content))
 
 
 @pytest.fixture
@@ -416,80 +412,6 @@ def test_streaming_turn_emits_reasoning_then_deltas_then_done(wired):
     assert '"reasoning"' in events[0]
     assert '"delta"' in events[1]
     assert '"done": true' in events[-1] and '"ttft_s"' in events[-1]
-
-
-def test_visual_json_chat_appends_and_updates_its_exact_assistant_row(wired, monkeypatch):
-    engine, *_ = wired
-    engine.chat = lambda **_kwargs: ChatResult(
-        conversation_id="conv-viz",
-        reply="The bars make the comparison visible.",
-        assistant_message_id=17,
-    )
-    spec = {
-        "version": 1,
-        "library": "d3",
-        "kind": "bar",
-        "title": "Fruit count",
-        "aria_label": "A bar chart comparing apples and bananas.",
-        "height": 300,
-        "data": [{"label": "apples", "value": 3}, {"label": "bananas", "value": 7}],
-    }
-    monkeypatch.setattr(routes, "generate_visualization", lambda *_args, **_kwargs: spec)
-
-    response = client.post(
-        "/v1/chat",
-        json={"student_id": "s1", "message": "Draw a bar chart for apples and bananas."},
-    )
-
-    assert response.status_code == 200
-    reply = response.json()["reply"]
-    assert "```muta-viz" in reply and '"kind":"bar"' in reply
-    assert engine.store.updated_messages == [(17, reply)]
-
-
-def test_visual_stream_persists_owned_row_and_emits_suffix_before_done(wired, monkeypatch):
-    engine, *_ = wired
-
-    class OwnedEvents:
-        assistant_message_id = 41
-
-        def __init__(self):
-            self._events = iter([("content", "A visual comparison.")])
-
-        def __iter__(self):
-            return self
-
-        def __next__(self):
-            return next(self._events)
-
-        def close(self):
-            return None
-
-    engine.stream_events_chat = lambda **_kwargs: ("conv-viz", 1, OwnedEvents())
-    spec = {
-        "version": 1,
-        "library": "d3",
-        "kind": "bar",
-        "title": "Fruit count",
-        "aria_label": "A bar chart comparing apples and bananas.",
-        "height": 300,
-        "data": [{"label": "apples", "value": 3}, {"label": "bananas", "value": 7}],
-    }
-    monkeypatch.setattr(routes, "generate_visualization", lambda *_args, **_kwargs: spec)
-
-    response = client.post(
-        "/v1/tutor/chat/stream",
-        json=turn(text="Draw a bar chart for apples and bananas."),
-    )
-    frames = [
-        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
-    ]
-
-    assert frames[-1]["done"] is True
-    assert "```muta-viz" in frames[-2]["delta"]
-    persisted_id, persisted_reply = engine.store.updated_messages[-1]
-    assert persisted_id == 41
-    assert persisted_reply == "A visual comparison." + frames[-2]["delta"]
 
 
 def test_tutor_stream_lang_is_trusted_system_context_not_user_text(wired):

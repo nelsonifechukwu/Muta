@@ -26,17 +26,6 @@ def test_checked_in_ui_is_mounted_without_nginx():
         assert response.headers["cache-control"] == "no-store, max-age=0"
         assert response.headers["x-muta-ui-revision"]
 
-    frame = client.get("/chat/viz-frame.html")
-    assert frame.status_code == 200
-    assert frame.headers["x-frame-options"] == "SAMEORIGIN"
-    csp = frame.headers["content-security-policy"]
-    assert "default-src 'none'" in csp
-    assert "script-src 'self'" in csp
-    assert "style-src 'self'" in csp
-    assert "connect-src 'none'" in csp
-    assert "frame-ancestors 'self'" in csp
-    assert "ws:" not in csp and "blob:" not in csp
-
 
 def test_removed_ui_paths_and_missing_chat_assets_return_404():
     client = TestClient(app)

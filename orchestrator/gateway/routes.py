@@ -48,7 +48,6 @@ from contracts.models import (
     GenerationStatus,
     GenerationStopped,
     HealthResponse,
-    LearningResource,
     MasteryResponse,
     MessageList,
     MessageOut,
@@ -59,8 +58,6 @@ from contracts.models import (
     ReadyResponse,
     RenderRequest,
     RenderResponse,
-    ResourceDeleted,
-    ResourceList,
     SessionActionResponse,
     StudentErased,
     Subject,
@@ -78,7 +75,6 @@ from orchestrator.gateway.auth import (
     caller_from_token,
     mint_token,
     operator_student_id,
-    optional_caller,
     require_caller,
 )
 from orchestrator.gateway.deps import (
@@ -89,7 +85,6 @@ from orchestrator.gateway.deps import (
     get_power_governor,
     get_preamble_writer,
     get_renderer,
-    get_resource_service,
     get_sessions,
     get_slot_client,
     get_twin_store,
@@ -111,24 +106,11 @@ from orchestrator.gateway.prompting import assemble_system_prompt, response_lang
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.selfcheck import scan_claims, self_check
 from orchestrator.gateway.sessions import Admission, SessionManager
-from orchestrator.gateway.visualizations import (
-    append_visualization,
-    generate_visualization,
-    turn_instruction,
-    wants_live_visual,
-)
 from orchestrator.gateway.websearch import fetch_snippets
-from orchestrator.retrieval.resources import (
-    ResourceNotFound,
-    ResourceSelectionRequired,
-    ResourceService,
-    ResourceUnavailable,
-    safe_resource_name,
-)
 from orchestrator.telemetry import get_hub
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
-from runtime.chat import ChatEngine, strip_visualization_protocol
+from runtime.chat import ChatEngine
 from runtime.client import Generation, InferenceStreamError
 from runtime.config import RuntimeConfig
 from runtime.model_catalog import ModelSwitchError
@@ -159,55 +141,6 @@ _SAFE_ATTACHMENT_MIME = {
     "audio/wav",
     "audio/x-wav",
 }
-
-_MAX_RESOURCE_BYTES = 32 * 1024 * 1024
-_PDF_HEADERS = {
-    "X-Content-Type-Options": "nosniff",
-    "Content-Disposition": "inline",
-    "Cache-Control": "private, no-store",
-    "Referrer-Policy": "no-referrer",
-}
-
-
-def _resource_model(row: dict) -> LearningResource:
-    return LearningResource(
-        id=row["id"],
-        name=row["name"],
-        mime=row["mime"],
-        status=row["status"],
-        page_count=row.get("page_count"),
-        error=row.get("error"),
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
-
-
-def _resource_grounding(
-    req: ChatRequest, *, owner_id: str, service: ResourceService
-) -> tuple[str, list[dict]]:
-    if not req.use_rag:
-        return "", []
-    try:
-        selected = service.preflight(owner_id, req.resource_ids)
-        hits = service.search(owner_id, req.resource_ids, req.message)
-    except ResourceSelectionRequired as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except ResourceUnavailable as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except ResourceNotFound as exc:
-        raise HTTPException(status_code=404, detail="unknown resource") from exc
-    citations = [
-        {
-            "kind": "resource",
-            "resource_id": hit["resource_id"],
-            "title": hit["title"],
-            "page": hit["page"],
-            "chunk_index": hit["chunk_index"],
-            "excerpt": hit["excerpt"],
-        }
-        for hit in hits
-    ]
-    return service.render_context(hits, selected), citations
 
 
 def _close_events(events) -> None:
@@ -448,21 +381,13 @@ def _sampling_for_request(
     *,
     power: PowerGovernor,
     power_enabled: bool,
-    visualizations: bool = False,
 ) -> dict:
     params = _apply_thinking(params_for_mode(mode), thinking)
-    # On the 2,048-token decode lane, Qwen3-0.6B can spend the whole fitted completion budget on
-    # hidden reasoning before it reaches the required JSON. Visual turns use a concrete example
-    # and reserve that budget for the visible prose + declarative payload instead.
-    adjusted = power.adjust_sampling(
+    return power.adjust_sampling(
         params,
         enabled=power_enabled,
         requested_thinking=thinking,
     )
-    if visualizations:
-        adjusted["enable_thinking"] = False
-        adjusted.pop("reasoning_budget_tokens", None)
-    return adjusted
 
 
 def _rag_block(query: str, *, k: int = 4) -> str:
@@ -517,120 +442,20 @@ def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: 
             continue
 
 
-@router.get("/resources", response_model=ResourceList, tags=["resources"])
-def resources(
-    engine: ChatEngine = Depends(get_engine),
-    caller: str = Depends(require_caller),
-) -> ResourceList:
-    return ResourceList(
-        resources=[_resource_model(row) for row in engine.store.list_resources(caller)]
-    )
-
-
-@router.post(
-    "/resources",
-    response_model=LearningResource,
-    status_code=202,
-    tags=["resources"],
-)
-async def resource_upload(
-    file: UploadFile = File(...),
-    engine: ChatEngine = Depends(get_engine),
-    service: ResourceService = Depends(get_resource_service),
-    caller: str = Depends(require_caller),
-) -> LearningResource:
-    """Durably accept one PDF, then prepare it outside the request thread."""
-    if file.content_type not in {"application/pdf", "application/octet-stream"}:
-        raise HTTPException(status_code=415, detail="only PDF resources are supported")
-    payload = bytearray()
-    while True:
-        block = await file.read(1024 * 1024)
-        if not block:
-            break
-        payload.extend(block)
-        if len(payload) > _MAX_RESOURCE_BYTES:
-            raise HTTPException(status_code=413, detail="PDFs must be 32 MB or smaller")
-    if not bytes(payload[:5]).startswith(b"%PDF-"):
-        raise HTTPException(status_code=422, detail="this file is not a valid PDF")
-    resource_id = engine.store.create_resource(
-        caller,
-        safe_resource_name(file.filename),
-        "application/pdf",
-        bytes(payload),
-    )
-    service.submit(resource_id, caller)
-    row = engine.store.get_resource(resource_id, owner_id=caller)
-    return _resource_model(row)
-
-
-@router.post("/resources/{resource_id}/retry", response_model=LearningResource, tags=["resources"])
-def resource_retry(
-    resource_id: str,
-    engine: ChatEngine = Depends(get_engine),
-    service: ResourceService = Depends(get_resource_service),
-    caller: str = Depends(require_caller),
-) -> LearningResource:
-    if not service.retry(resource_id, caller):
-        raise HTTPException(status_code=404, detail="unknown resource")
-    row = engine.store.get_resource(resource_id, owner_id=caller)
-    return _resource_model(row)
-
-
-@router.delete("/resources/{resource_id}", response_model=ResourceDeleted, tags=["resources"])
-def resource_delete(
-    resource_id: str,
-    engine: ChatEngine = Depends(get_engine),
-    caller: str = Depends(require_caller),
-) -> ResourceDeleted:
-    if not engine.store.delete_resource(resource_id, owner_id=caller):
-        raise HTTPException(status_code=404, detail="unknown resource")
-    return ResourceDeleted(id=resource_id)
-
-
-@router.get(
-    "/resources/{resource_id}/content",
-    response_class=Response,
-    tags=["resources"],
-    responses={200: {"content": {"application/pdf": {}}, "description": "Inline PDF"}},
-)
-def resource_content(
-    resource_id: str,
-    engine: ChatEngine = Depends(get_engine),
-    caller: str = Depends(caller_from_token),
-) -> Response:
-    row = engine.store.get_resource(resource_id, owner_id=caller, include_data=True)
-    if row is None:
-        raise HTTPException(status_code=404, detail="unknown resource")
-    return Response(content=bytes(row["data"]), media_type="application/pdf", headers=_PDF_HEADERS)
-
-
 @router.post("/chat", response_model=ChatResponse, tags=["tutor"])
 def chat(
     req: ChatRequest,
     engine: ChatEngine = Depends(get_engine),
     power: PowerGovernor = Depends(get_power_governor),
-    caller: str | None = Depends(optional_caller),
 ) -> ChatResponse:
     """Multi-turn tutoring turn. Memory is keyed by `conversation_id`; omit it to start a
     new thread. The mode selects the system prompt (ROADMAP 18 Jul, stable-prefix design)."""
-    resource_block = ""
-    resource_sources: list[dict] = []
-    if req.use_rag:
-        if caller is None:
-            raise HTTPException(status_code=401, detail="sign in to use private resources")
-        if caller != req.student_id:
-            raise HTTPException(status_code=403, detail="you can only use your own resources")
-        resource_block, resource_sources = _resource_grounding(
-            req, owner_id=caller, service=get_resource_service()
-        )
-    visual_requested = wants_live_visual(req.message)
     system_prompt = assemble_system_prompt(
         load_prompt(req.mode.value),
         persona=req.persona.value,
         language=req.language,
         subject=req.subject.value,
         twin_summary=_twin_summary(req.student_id),
-        rag_block=resource_block,
     )
     try:
         result = engine.chat(
@@ -638,9 +463,7 @@ def chat(
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
-            turn_instruction=turn_instruction(
-                req.message, response_language_instruction(req.language)
-            ),
+            turn_instruction=response_language_instruction(req.language),
             mode=req.mode.value,
             persona=req.persona.value,
             subject=req.subject.value,
@@ -652,33 +475,22 @@ def chat(
                 req.thinking,
                 power=power,
                 power_enabled=_power_enabled(engine, req.student_id),
-                visualizations=visual_requested,
             ),
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/chat") from e
-    if visual_requested:
-        spec = generate_visualization(
-            engine, req.message, result.reply, on_generation=bench_metrics.record
-        )
-        if spec is not None:
-            result.reply = append_visualization(result.reply, spec)
-            if result.assistant_message_id is not None:
-                engine.store.update_message(result.assistant_message_id, result.reply)
     if req.attachment_ids:
         _link_attachments(
             engine, req.attachment_ids, result.conversation_id, result.user_message_id
         )
-    if resource_sources and result.assistant_message_id is not None:
-        engine.store.add_message_sources(result.assistant_message_id, resource_sources)
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
     if result.generation is not None:
         bench_metrics.record(result.generation)
     # Verified-tool-calls thesis: self-check the model's explicit arithmetic/algebra, append an
     # honest caution when a step contradicts itself, and record the turn on the learning twin.
-    verified, note = _run_self_check(strip_visualization_protocol(result.reply))
+    verified, note = _run_self_check(result.reply)
     reply = result.reply if not note else f"{result.reply}\n\n{note}"
     _touch_twin(req.student_id, req.subject.value, req.message)
     return ChatResponse(
@@ -687,7 +499,6 @@ def chat(
         mode=req.mode,
         reply=reply,
         verified=bool(verified),
-        resource_citations=resource_sources,
     )
 
 
@@ -713,15 +524,6 @@ def _start_chat_generation(
         conversation = engine.store.get_conversation(req.conversation_id)
         if conversation is None or conversation.get("student_id") != req.student_id:
             raise HTTPException(status_code=404, detail="unknown conversation")
-
-    # Private-resource readiness/ownership is checked before reserving capacity or writing a
-    # turn. A preparing book therefore cannot consume a classroom slot or create a ghost row.
-    if req.use_rag:
-        resource_block, resource_sources = _resource_grounding(
-            req, owner_id=req.student_id, service=get_resource_service()
-        )
-    else:
-        resource_block, resource_sources = "", []
     try:
         reservation_id = generations.reserve(
             req.student_id,
@@ -740,7 +542,7 @@ def _start_chat_generation(
 
     # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
     # the ungrounded request must stay byte-identical to what the tutor already serves.
-    sources: list[dict] = list(resource_sources)
+    sources: list[dict] = []
     web_lines = ""
     search_url = os.environ.get("MUTA_SEARCH_URL")
     if req.use_web and search_url:
@@ -752,9 +554,12 @@ def _start_chat_generation(
                 web_lines = "\n".join(
                     f"[{i}] {s.title} — {s.snippet}" for i, s in enumerate(snippets, start=1)
                 )
-                sources.extend({"title": snippet.title, "url": snippet.url} for snippet in snippets)
+                sources = [{"title": s.title, "url": s.url} for s in snippets]
 
-    visual_requested = wants_live_visual(req.message)
+    # Retrieval grounding (RAG): syllabus corpus chunks, when an index is staged. Degrades
+    # silently to model-alone when there is no index (the offline-first default).
+    rag_block = _rag_block(req.message)
+
     system_prompt = assemble_system_prompt(
         load_prompt(req.mode.value),
         persona=req.persona.value,
@@ -762,7 +567,7 @@ def _start_chat_generation(
         subject=req.subject.value,
         twin_summary=_twin_summary(req.student_id),
         web_lines=web_lines,
-        rag_block=resource_block,
+        rag_block=rag_block,
     )
     cancel_event = threading.Event()
     sampling_params = _sampling_for_request(
@@ -770,7 +575,6 @@ def _start_chat_generation(
         req.thinking,
         power=power,
         power_enabled=power_enabled,
-        visualizations=visual_requested,
     )
     structured_response = "response_format" in sampling_params
 
@@ -780,9 +584,7 @@ def _start_chat_generation(
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
-            turn_instruction=turn_instruction(
-                req.message, response_language_instruction(req.language)
-            ),
+            turn_instruction=response_language_instruction(req.language),
             mode=req.mode.value,
             persona=req.persona.value,
             subject=req.subject.value,
@@ -856,22 +658,6 @@ def _start_chat_generation(
                 if kind != "reasoning":
                     reply_parts.append(text)
                 yield f"data: {json.dumps({key: text})}\n\n"
-            if visual_requested and reply_parts and not cancel_event.is_set():
-                prose_reply = "".join(reply_parts)
-                spec = generate_visualization(
-                    engine,
-                    req.message,
-                    prose_reply,
-                    cancel_event=cancel_event,
-                    on_generation=bench_metrics.record,
-                )
-                if spec is not None:
-                    complete_reply = append_visualization(prose_reply, spec)
-                    suffix = complete_reply[len(prose_reply) :]
-                    assistant_message_id = getattr(events, "assistant_message_id", None)
-                    if assistant_message_id is not None:
-                        engine.store.update_message(assistant_message_id, complete_reply)
-                    yield f"data: {json.dumps({'delta': suffix})}\n\n"
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /chat/stream: %r", e)
             error = {"error": _incomplete_stream_message(partial_saved=bool(reply_parts))}
@@ -889,21 +675,9 @@ def _start_chat_generation(
             # `events` while that thread is in it raises "generator already executing" —
             # which, from this finally, would skip the `sessions.release()` below and leak
             # an admission slot on every disconnect during the prefill window.
-            try:
-                try:
-                    _close_events(streamed)
-                finally:
-                    _close_events(events)
-                if resource_sources:
-                    # The stream writer owns an exact assistant row. Never rediscover it by
-                    # ordering: another generation can persist into this conversation while
-                    # this one is decoding.
-                    assistant_message_id = getattr(events, "assistant_message_id", None)
-                    if assistant_message_id is not None:
-                        engine.store.add_message_sources(assistant_message_id, resource_sources)
-            finally:
-                # Cleanup failures must never strand the one physical inference admission.
-                sessions.release(admission_id)
+            _close_events(streamed)
+            _close_events(events)
+            sessions.release(admission_id)  # free exactly this generation's admission lease
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
         # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
         # reads close to the engine's own generation rate rather than being dragged down by a
@@ -1226,7 +1000,6 @@ def conversation_messages(
                 content=m["content"],
                 created_at=m["created_at"],
                 attachments=[AttachmentRef(**a) for a in m["attachments"]],
-                resource_citations=m.get("resource_citations", []),
             )
             for m in rows
         ],
@@ -1450,13 +1223,10 @@ def tutor_chat(
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
     student_id = turn.student_id or turn.session_id
-    visual_requested = wants_live_visual(turn.text)
     sampling_params = power.adjust_sampling(
         params_for_mode(turn.mode.value),
         enabled=_power_enabled(engine, student_id),
     )
-    if visual_requested:
-        sampling_params["enable_thinking"] = False
     try:
         result = engine.chat(
             student_id=student_id,
@@ -1466,19 +1236,11 @@ def tutor_chat(
                 load_prompt(_prompt_for(turn.mode)),
                 language=turn.lang,
             ),
-            turn_instruction=turn_instruction(turn.text, response_language_instruction(turn.lang)),
+            turn_instruction=response_language_instruction(turn.lang),
             mode=turn.mode.value,
             language=turn.lang,
             **sampling_params,
         )
-        if visual_requested:
-            spec = generate_visualization(
-                engine, turn.text, result.reply, on_generation=bench_metrics.record
-            )
-            if spec is not None:
-                result.reply = append_visualization(result.reply, spec)
-                if result.assistant_message_id is not None:
-                    engine.store.update_message(result.assistant_message_id, result.reply)
     except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/tutor/chat") from e
     finally:
@@ -1529,26 +1291,22 @@ def tutor_chat_stream(
     if decision.admission is Admission.REFUSED:
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
-    student_id = turn.student_id or turn.session_id
-    visual_requested = wants_live_visual(turn.text)
     sampling_params = power.adjust_sampling(
         params_for_mode(turn.mode.value),
-        enabled=_power_enabled(engine, student_id),
+        enabled=_power_enabled(engine, turn.student_id or turn.session_id),
     )
-    if visual_requested:
-        sampling_params["enable_thinking"] = False
     structured_response = "response_format" in sampling_params
 
     try:
         cid, _user_message_id, events = engine.stream_events_chat(
-            student_id=student_id,
+            student_id=turn.student_id or turn.session_id,
             message=turn.text,
             conversation_id=turn.session_id,
             system_prompt=assemble_system_prompt(
                 load_prompt(_prompt_for(turn.mode)),
                 language=turn.lang,
             ),
-            turn_instruction=turn_instruction(turn.text, response_language_instruction(turn.lang)),
+            turn_instruction=response_language_instruction(turn.lang),
             mode=turn.mode.value,
             language=turn.lang,
             **sampling_params,
@@ -1567,7 +1325,6 @@ def tutor_chat_stream(
         preamble_at = 0.0
         count = 0
         content_count = 0
-        reply_parts: list[str] = []
         try:
             for kind, text in streamed:
                 if kind == "source":
@@ -1588,20 +1345,7 @@ def tutor_chat_stream(
                 key = "reasoning" if kind == "reasoning" else "delta"
                 if kind != "reasoning":
                     content_count += 1
-                    reply_parts.append(text)
                 yield f"data: {json.dumps({key: text})}\n\n"
-            if visual_requested and reply_parts:
-                prose_reply = "".join(reply_parts)
-                spec = generate_visualization(
-                    engine, turn.text, prose_reply, on_generation=bench_metrics.record
-                )
-                if spec is not None:
-                    complete_reply = append_visualization(prose_reply, spec)
-                    suffix = complete_reply[len(prose_reply) :]
-                    assistant_message_id = getattr(events, "assistant_message_id", None)
-                    if assistant_message_id is not None:
-                        engine.store.update_message(assistant_message_id, complete_reply)
-                    yield f"data: {json.dumps({'delta': suffix})}\n\n"
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /tutor/chat/stream: %r", e)
             error = {"error": _incomplete_stream_message(partial_saved=content_count > 0)}

@@ -8,8 +8,6 @@ and carries no pedagogy of its own.
 
 from __future__ import annotations
 
-import json
-import re
 import threading
 import time
 from collections.abc import Iterator
@@ -34,56 +32,6 @@ _RESUME_PROMPT = (
 )
 _MAX_RESUME_OVERLAP = 512
 _MIN_RESUME_OVERLAP = 8
-_VIZ_KINDS = {
-    "d3": {"line", "scatter", "bar", "force"},
-    "three": {"scene3d"},
-    "gsap": {"animation"},
-    "anime": {"animation"},
-    "motion": {"animation"},
-}
-_VIZ_FENCE = re.compile(
-    r"(^|\n)( {0,3})```muta-viz[\t ]*\r?\n([\s\S]*?)\r?\n\2```[\t ]*(?=\r?\n|$)"
-)
-_VIZ_MARKED_JSON_FENCE = re.compile(
-    r"(^|\n)( {0,3})\$\$muta-viz\$\$[\t ]*\r?\n\2```json[\t ]*\r?\n"
-    r"([\s\S]*?)\r?\n\2```[\t ]*(?=\r?\n|$)"
-)
-
-
-def strip_visualization_protocol(text: str) -> str:
-    """Remove only recognized, minimally valid visual blocks from a prompt/evaluation copy.
-
-    The persisted/public reply stays byte-identical for browser replay. Old declarative payloads
-    do not need to consume the next 2,048-token inference lane or contaminate quality grading.
-    """
-
-    def replace(match: re.Match[str]) -> str:
-        try:
-            candidate = json.loads(match.group(3))
-        except (json.JSONDecodeError, TypeError):
-            return match.group(0)
-        if not isinstance(candidate, dict) or candidate.get("version") != 1:
-            return match.group(0)
-        library = candidate.get("library")
-        if library not in _VIZ_KINDS or candidate.get("kind") not in _VIZ_KINDS[library]:
-            return match.group(0)
-        if not isinstance(candidate.get("title"), str) or not isinstance(
-            candidate.get("aria_label"), str
-        ):
-            return match.group(0)
-        height = candidate.get("height")
-        if not isinstance(height, int) or isinstance(height, bool) or not 240 <= height <= 600:
-            return match.group(0)
-        return match.group(1)
-
-    cleaned = _VIZ_FENCE.sub(replace, str(text or ""))
-    cleaned = _VIZ_MARKED_JSON_FENCE.sub(replace, cleaned)
-    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
-
-
-def _prompt_content(message: dict) -> str:
-    content = str(message.get("content", ""))
-    return strip_visualization_protocol(content) if message.get("role") == "assistant" else content
 
 
 def _estimate_tokens(text: str) -> int:
@@ -189,8 +137,6 @@ class ChatResult:
     generation: Generation | None = None
     # Row id of the persisted user turn — attachment linking keys on it.
     user_message_id: int | None = None
-    # Exact assistant row for durable citations and other turn-owned metadata.
-    assistant_message_id: int | None = None
 
 
 class _ReplyWriter:
@@ -244,33 +190,6 @@ class _ReplyWriter:
         else:
             self.store.update_message(self.message_id, text)
         self._flushed_len = len(text)
-
-
-class _ReplyEventStream(Iterator[tuple[str, str]]):
-    """Iterator facade that exposes the exact assistant row owned by this generation.
-
-    Parallel jobs may share a conversation, so callers appending metadata must never rediscover
-    their row with `last_message_id()`: another job can finish between generation and append.
-    """
-
-    def __init__(self, iterator: Iterator[tuple[str, str]], writer: _ReplyWriter) -> None:
-        self._iterator = iterator
-        self._writer = writer
-
-    @property
-    def assistant_message_id(self) -> int | None:
-        return self._writer.message_id
-
-    def __iter__(self) -> _ReplyEventStream:
-        return self
-
-    def __next__(self) -> tuple[str, str]:
-        return next(self._iterator)
-
-    def close(self) -> None:
-        close = getattr(self._iterator, "close", None)
-        if callable(close):
-            close()
 
 
 class _ResumeDeduplicator:
@@ -378,7 +297,7 @@ class ChatEngine:
         start = len(history)
         for index in range(len(history) - 1, -1, -1):
             row = history[index]
-            cost = _estimate_tokens(_prompt_content(row)) + _MESSAGE_OVERHEAD_TOKENS
+            cost = _estimate_tokens(row["content"]) + _MESSAGE_OVERHEAD_TOKENS
             # Keep the latest row even when it alone exceeds the replay budget. The request
             # fitter can safely truncate that prompt copy; dropping it here makes a student's
             # ordinary "continue" lose the response they are asking the tutor to continue.
@@ -410,13 +329,7 @@ class ChatEngine:
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
-        messages += [
-            {
-                "role": m["role"],
-                "content": _prompt_content(m),
-            }
-            for m in history
-        ]
+        messages += [{"role": m["role"], "content": m["content"]} for m in history]
         prompt_copy = message
         if turn_instruction:
             # Qwen3.5 permits a system role only at messages[0]. Keep this trusted gateway
@@ -441,13 +354,7 @@ class ChatEngine:
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
-        messages += [
-            {
-                "role": m["role"],
-                "content": _prompt_content(m),
-            }
-            for m in history
-        ]
+        messages += [{"role": m["role"], "content": m["content"]} for m in history]
         if turn_instruction:
             # Regeneration reuses the stored final user turn, so only its ephemeral request
             # copy receives the envelope. The database row remains byte-identical.
@@ -788,13 +695,12 @@ class ChatEngine:
             if exc.partial_text:
                 self.store.add_message(cid, "assistant", exc.partial_text)
             raise
-        assistant_message_id = self.store.add_message(cid, "assistant", generation.text)
+        self.store.add_message(cid, "assistant", generation.text)
         return ChatResult(
             conversation_id=cid,
             reply=generation.text,
             generation=generation,
             user_message_id=user_message_id,
-            assistant_message_id=assistant_message_id,
         )
 
     def stream_chat(
@@ -892,9 +798,8 @@ class ChatEngine:
             protected_tail_messages=min(3, max(1, len(messages) - 1)),
         )
 
-        writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
-
         def _gen() -> Iterator[tuple[str, str]]:
+            writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
                 for kind, text in self._events_with_recovery(
                     messages, request_params, writer, cancel_event
@@ -907,4 +812,4 @@ class ChatEngine:
                 # turn abandoned during the thinking phase still stores nothing.
                 writer.flush()
 
-        return cid, user_message_id, _ReplyEventStream(_gen(), writer)
+        return cid, user_message_id, _gen()

@@ -31,16 +31,10 @@ EXPECTED_COMMIT = "602f828"
 BINARIES = ("llama-server", "llama-bench")
 UI_SOURCE_EXTENSIONS = frozenset({".css", ".html", ".js"})
 UI_VENDOR_REQUIRED = (
-    "VISUALIZATION-LICENSES.txt",
     "vendor/marked.min.js",
     "vendor/purify.min.js",
     "vendor/katex/katex.min.js",
     "vendor/katex/katex.min.css",
-    "vendor/viz/d3.v7.9.0.min.js",
-    "vendor/viz/three.r160.min.js",
-    "vendor/viz/gsap.v3.13.0.min.js",
-    "vendor/viz/anime.v3.2.2.min.js",
-    "vendor/viz/motion.v11.11.13.js",
 )
 FORBIDDEN_AVX512 = re.compile(rb"\s(vpxord|vpternlogd|kmovw|vpbroadcastmw2d)\s")
 

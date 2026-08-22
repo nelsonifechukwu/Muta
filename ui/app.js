@@ -1,30 +1,7 @@
 /* Muta chat client. Same-origin /v1 (nginx proxies to the backend). No framework. */
 "use strict";
 
-// Resource-RAG ships while the larger interface catalog is being regenerated independently.
-// Keep its English fallback local so this branch does not invalidate complete locale packs.
-const RESOURCE_RAG_COPY = Object.freeze({
-  "resources.empty": "No learning resources yet.",
-  "resources.processing": "Preparing…",
-  "resources.ready": "Ready",
-  "resources.failed": "Failed",
-  "resources.pages": "{count} PDF pages",
-  "resources.retry": "Retry",
-  "resources.delete": "Delete",
-  "resources.uploading": "Uploading {name}…",
-  "resources.uploaded": "{name} is being prepared. You can keep chatting.",
-  "resources.uploadFailed": "Couldn’t upload that PDF.",
-  "resources.deleteFailed": "Couldn’t delete that file.",
-  "rag.on": "Resource RAG on — type @ to choose a ready file.",
-  "rag.off": "Resource RAG off.",
-  "rag.noFiles": "No PDFs yet. Add one in Settings → Files.",
-  "rag.chooseFile": "RAG is on — type @ and choose a ready file.",
-  "rag.remove": "Remove {name}",
-  "rag.sourcePage": "{title}, PDF page {page}",
-  "rag.openPage": "Open {title} at PDF page {page}",
-});
-// Power ships independently of the bulk locale-generation pass, as resource RAG does above.
-// Dynamic copy falls back to English without marking the existing complete locale packs partial.
+// Power copy is intentionally English-only until it joins the complete locale catalog.
 const POWER_COPY = Object.freeze({
   checking: "Checking host power…",
   checkingHelp: "Reading the battery of the laptop serving Muta.",
@@ -53,12 +30,6 @@ const powerText = (key, variables = {}) => (POWER_COPY[key] || key).replace(
   (match, name) => Object.hasOwn(variables, name) ? String(variables[name]) : match,
 );
 const t = (key, variables) => window.MutaI18n.t(key, variables);
-const featureT = (key, variables = {}) => {
-  const value = RESOURCE_RAG_COPY[key] || key;
-  return value.replace(/\{([a-zA-Z][\w]*)\}/g, (match, name) =>
-    Object.hasOwn(variables, name) ? String(variables[name]) : match
-  );
-};
 
 // ---------------------------------------------------------------------------
 // State
@@ -92,8 +63,6 @@ let authToken = studentId;
 let identityReady = false;
 const authHeaders = () => ({ Authorization: `Bearer ${authToken}` });
 const attachmentUrl = (id) => `/v1/attachments/${id}?token=${encodeURIComponent(authToken)}`;
-const resourcePageUrl = (id, page) =>
-  `/v1/resources/${encodeURIComponent(id)}/content?token=${encodeURIComponent(authToken)}#page=${Math.max(1, Number(page) || 1)}`;
 
 async function ensureAuth() {
   try {
@@ -137,15 +106,9 @@ let allowParallelChats = true;
 let powerOptimizationEnabled = true;
 let latestPowerStatus = null;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
-let useRag = false;
-let learningResources = [];
-let selectedRagResources = []; // stable {id, name}; request authority is always the id
-let resourcePollTimer = null;
-let mentionMatches = [];
-let mentionActiveIndex = 0;
 // Follow-ups typed while a reply is running are view state, but they still have to survive a
 // reload. Each item is scoped to its conversation so navigating elsewhere never discards it.
-let messageQueue = []; // {typed, attachments, ragResources, useRag, cid}
+let messageQueue = []; // {typed, attachments, cid} — sent one by one when that chat is free
 let telemetrySource = null;
 let telemetryCloseTimer = null;
 // Reasoning effort for new turns: "off" (direct answer) | "auto" (think first) | "extended".
@@ -381,17 +344,6 @@ inputEl.addEventListener("input", autoGrow);
 
 function renderMarkdown(el, text) {
   MutaMath.render(el, text);
-}
-
-/** A complete assistant turn may contain one declarative visualization fence. Streaming keeps
- * using ordinary Markdown so an incomplete fence is harmless; only this completion path removes
- * a valid spec from the prose and mounts its sandboxed frame. */
-function renderCompletedReply(wrap, prose, text) {
-  const extracted = window.MutaViz
-    ? window.MutaViz.extract(text)
-    : { markdown: text, visualizations: [] };
-  renderMarkdown(prose, extracted.markdown);
-  window.MutaViz?.renderAll(wrap, extracted.visualizations);
 }
 
 function clearCursor(root) {
@@ -694,7 +646,7 @@ function beginAssistantMessage(onAnswerNow) {
       clearPreamble(); // a turn that ended before the engine spoke leaves nothing behind
       settleThinking(); // a reply stopped mid-think still gets its label settled
       cancelRender();
-      if (full.trim()) renderCompletedReply(wrap, prose, full);
+      if (full.trim()) renderMarkdown(prose, full);
       clearCursor(prose);
       scrollToBottom();
     },
@@ -735,36 +687,6 @@ function beginAssistantMessage(onAnswerNow) {
   };
 }
 
-function renderResourceSources(container, sources) {
-  const records = (Array.isArray(sources) ? sources : []).filter(
-    (source) => source && source.resource_id && Number(source.page) >= 1,
-  );
-  if (!records.length || container.querySelector(".resource-sources")) return;
-  const box = document.createElement("div");
-  box.className = "resource-sources";
-  records.forEach((source, index) => {
-    const variables = { title: source.title, page: source.page };
-    const link = document.createElement("a");
-    link.className = "resource-source";
-    link.href = resourcePageUrl(source.resource_id, source.page);
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.setAttribute("aria-label", featureT("rag.openPage", variables));
-    const number = document.createElement("span");
-    number.className = "source-number";
-    number.textContent = `R${index + 1}`;
-    const title = document.createElement("strong");
-    title.dir = "auto";
-    title.textContent = featureT("rag.sourcePage", variables);
-    const excerpt = document.createElement("small");
-    excerpt.dir = "auto";
-    excerpt.textContent = source.excerpt || "";
-    link.append(number, title, excerpt);
-    box.appendChild(link);
-  });
-  container.appendChild(box);
-}
-
 function renderHistoryMessage(m) {
   if (m.role === "user") {
     addUserMessage(m.content, m.attachments || []);
@@ -775,9 +697,8 @@ function renderHistoryMessage(m) {
     const prose = document.createElement("div");
     prose.className = "prose";
     prose.dir = "auto";
+    renderMarkdown(prose, m.content);
     wrap.appendChild(prose);
-    renderCompletedReply(wrap, prose, m.content);
-    renderResourceSources(wrap, m.resource_citations);
     messagesEl.appendChild(wrap);
   }
 }
@@ -988,8 +909,7 @@ async function loadConversation(
   conversationRetryTarget = null;
   currentViewId = newViewId();
   setConversationLocation(cid, { mode: historyMode });
-  window.MutaViz?.cleanup(messagesEl);
-  messagesEl.replaceChildren();
+  messagesEl.innerHTML = "";
   const restoring = targetJobBeforeLoad || jobForConversation(cid);
   let messages = body.messages;
   // The server writes a streaming reply through to its row as it arrives, so the in-flight
@@ -1054,8 +974,7 @@ function newChat({ historyMode = "push" } = {}) {
   setConversationLocation(null, { mode: historyMode });
   pendingAttachments = [];
   renderChips();
-  window.MutaViz?.cleanup(messagesEl);
-  messagesEl.replaceChildren();
+  messagesEl.innerHTML = "";
   emptyStateEl.style.display = "";
   renderQueue();
   scrollToBottom({ force: true });
@@ -1318,9 +1237,6 @@ window.addEventListener("drop", (e) => {
   for (const file of e.dataTransfer.files) {
     if (file.type.startsWith("image/")) addImage(file);
     else if (file.type.startsWith("audio/")) addAudio(file);
-    else if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-      void uploadResource(file);
-    }
     else toast(t("attachment.unknownFile", { file: file.name }));
   }
 });
@@ -1371,17 +1287,9 @@ function restoreMessageQueue() {
       const attachments = Array.isArray(item.attachments)
         ? item.attachments.filter((a) => a && typeof a === "object").slice(0, 8)
         : [];
-      const ragResources = Array.isArray(item.ragResources)
-        ? item.ragResources
-            .filter((resource) => resource && typeof resource.id === "string" && typeof resource.name === "string")
-            .slice(0, 8)
-        : [];
       return [{
         typed: item.typed.slice(0, 4096),
         attachments,
-        useRag: item.useRag === true,
-        ragResources,
-        useWeb: item.useWeb === true,
         cid: item.cid,
         conflictRetries: Math.min(2, Math.max(0, Number(item.conflictRetries) || 0)),
       }];
@@ -1473,15 +1381,7 @@ function drainQueue(cid = conversationId) {
 function restoreDraft(item) {
   inputEl.value = item.typed;
   pendingAttachments = item.attachments;
-  useRag = item.useRag === true;
-  selectedRagResources = item.ragResources || [];
-  useWeb = item.useWeb === true;
-  ragButton.classList.toggle("active", useRag);
-  ragButton.setAttribute("aria-pressed", String(useRag));
-  $("#btn-web").classList.toggle("active", useWeb);
-  $("#btn-web").setAttribute("aria-pressed", String(useWeb));
   renderChips();
-  renderRagChips();
   autoGrow();
 }
 
@@ -1498,19 +1398,9 @@ function send(steer = false) {
     return toast(t("reply.previousStarting"));
   }
 
-  const ragResources = useRag ? resourcesFromTypedMentions(typed) : [];
-  if (useRag && !ragResources.length) return toast(featureT("rag.chooseFile"), 4000);
-  const item = {
-    typed,
-    attachments: pendingAttachments.slice(),
-    useRag,
-    ragResources,
-    useWeb,
-  };
+  const item = { typed, attachments: pendingAttachments.slice() };
   pendingAttachments = [];
-  selectedRagResources = [];
   renderChips();
-  renderRagChips();
   inputEl.value = "";
   autoGrow();
 
@@ -1596,9 +1486,7 @@ async function dispatch(item, opts = {}) {
         conversation_id: startedIn,
         client_request_id: clientRequestId,
         attachment_ids: regenerate ? [] : attachmentIds,
-        use_web: item.useWeb === true,
-        use_rag: item.useRag === true,
-        resource_ids: (item.ragResources || []).map((resource) => resource.id),
+        use_web: useWeb,
         thinking,
         regenerate,
         // Response-language preference is trusted request metadata. Never prefix or rewrite
@@ -1653,12 +1541,8 @@ async function dispatch(item, opts = {}) {
         return;
       }
       if (assistant) {
-        if (typeof detail === "string" && (res.status === 404 || res.status === 409)) {
-          assistant.fail(detail);
-        } else {
-          const variables = { status: res.status };
-          assistant.fail(t("reply.httpAnswerFailed", variables), "reply.httpAnswerFailed", variables);
-        }
+        const variables = { status: res.status };
+        assistant.fail(t("reply.httpAnswerFailed", variables), "reply.httpAnswerFailed", variables);
       }
       return;
     }
@@ -1837,18 +1721,14 @@ async function pumpSse(res, job) {
 function decorateCompletedReply(job, ev) {
   const last = job.handle?.element;
   if (!last) return;
-  const allSources = Array.isArray(ev.sources) ? ev.sources : [];
-  const resourceSources = allSources.filter((source) => source?.resource_id);
-  const webSources = allSources.filter((source) => source?.url && !source?.resource_id);
-  renderResourceSources(last, resourceSources);
-  if (webSources.length && !last.querySelector(".sources")) {
+  if (Array.isArray(ev.sources) && ev.sources.length && !last.querySelector(".sources")) {
     const box = document.createElement("div");
     box.className = "sources";
     const heading = document.createElement("span");
     heading.dataset.i18n = "badge.sources";
     heading.textContent = t("badge.sources");
     box.append(heading);
-    webSources.forEach((source, i) => {
+    ev.sources.forEach((source, i) => {
       const safe = safeHttpUrl(source.url);
       const link = document.createElement(safe ? "a" : "span");
       link.dir = "auto";
@@ -1859,7 +1739,7 @@ function decorateCompletedReply(job, ev) {
       }
       link.textContent = `[${i + 1}] ${source.title}`;
       box.appendChild(link);
-      if (i < webSources.length - 1) box.append(" · ");
+      if (i < ev.sources.length - 1) box.append(" · ");
     });
     last.appendChild(box);
   }
@@ -2029,31 +1909,6 @@ sendBtn.addEventListener("click", () => {
   else send();
 });
 inputEl.addEventListener("keydown", (e) => {
-  if (!mentionMenu.hidden) {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      const direction = e.key === "ArrowDown" ? 1 : -1;
-      let next = mentionActiveIndex;
-      for (let count = 0; count < mentionMatches.length; count += 1) {
-        next = (next + direction + mentionMatches.length) % mentionMatches.length;
-        if (mentionMatches[next]?.status === "ready") break;
-      }
-      mentionActiveIndex = next;
-      renderMentionMenu();
-      mentionMenu.querySelector(".resource-option.active")?.scrollIntoView({ block: "nearest" });
-      return;
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeMentionMenu();
-      return;
-    }
-    if (e.key === "Enter" && mentionMatches[mentionActiveIndex]?.status === "ready") {
-      e.preventDefault();
-      selectMention(mentionMatches[mentionActiveIndex]);
-      return;
-    }
-  }
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     // Cmd+Enter is the macOS spelling of Ctrl+Enter; both steer.
@@ -2088,284 +1943,6 @@ window.MutaChat = {
   },
 };
 
-// --- learner PDF resources + @ picker -------------------------------------------------
-const ragButton = $("#btn-rag");
-const ragChips = $("#rag-resource-chips");
-const mentionMenu = $("#resource-mention-menu");
-const resourceList = $("#resource-list");
-
-function resourceStatusLabel(resource) {
-  return featureT(`resources.${resource.status || "processing"}`);
-}
-
-function renderRagChips() {
-  ragChips.innerHTML = "";
-  ragChips.hidden = !useRag || selectedRagResources.length === 0;
-  selectedRagResources.forEach((resource) => {
-    const chip = document.createElement("span");
-    chip.className = "rag-chip";
-    const label = document.createElement("span");
-    label.dir = "auto";
-    label.textContent = `📖 ${resource.name}`;
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.textContent = "✕";
-    remove.setAttribute("aria-label", featureT("rag.remove", { name: resource.name }));
-    remove.addEventListener("click", () => {
-      selectedRagResources = selectedRagResources.filter((item) => item.id !== resource.id);
-      renderRagChips();
-    });
-    chip.append(label, remove);
-    ragChips.appendChild(chip);
-  });
-}
-
-function closeMentionMenu() {
-  mentionMenu.hidden = true;
-  mentionMatches = [];
-  mentionActiveIndex = 0;
-  inputEl.removeAttribute("aria-activedescendant");
-}
-
-function mentionTrigger() {
-  if (!useRag) return null;
-  const caret = inputEl.selectionStart;
-  const before = inputEl.value.slice(0, caret);
-  const at = before.lastIndexOf("@");
-  if (at < 0 || /[}\n]/.test(before.slice(at + 1))) return null;
-  const prefix = before.slice(at + 1).replace(/^\{/, "");
-  // Do not turn an email-like token into a resource picker.
-  if (at > 0 && /[\w.-]/.test(before[at - 1])) return null;
-  return { at, caret, query: prefix.trim().toLowerCase() };
-}
-
-function selectMention(resource) {
-  const trigger = mentionTrigger();
-  if (!trigger || resource.status !== "ready") return;
-  const token = `@{${resource.name}}`;
-  inputEl.value =
-    inputEl.value.slice(0, trigger.at) + token + inputEl.value.slice(trigger.caret);
-  const caret = trigger.at + token.length;
-  inputEl.setSelectionRange(caret, caret);
-  if (!selectedRagResources.some((item) => item.id === resource.id)) {
-    selectedRagResources.push({ id: resource.id, name: resource.name });
-  }
-  renderRagChips();
-  closeMentionMenu();
-  autoGrow();
-  inputEl.focus();
-}
-
-function positionMentionMenu() {
-  if (mentionMenu.hidden) return;
-  const composer = $("#composer").getBoundingClientRect();
-  const width = Math.min(composer.width - 24, 520);
-  mentionMenu.style.width = `${Math.max(240, width)}px`;
-  mentionMenu.style.left = `${Math.max(8, composer.left + 12)}px`;
-  const height = mentionMenu.getBoundingClientRect().height;
-  mentionMenu.style.top = `${Math.max(8, composer.top - height - 8)}px`;
-}
-
-function renderMentionMenu() {
-  const trigger = mentionTrigger();
-  if (!trigger) return closeMentionMenu();
-  mentionMenu.innerHTML = "";
-  mentionMatches = learningResources.filter(
-    (resource) => !trigger.query || resource.name.toLowerCase().includes(trigger.query),
-  );
-  if (!mentionMatches.length) {
-    const empty = document.createElement("div");
-    empty.className = "resource-empty";
-    empty.textContent = featureT(learningResources.length ? "resources.empty" : "rag.noFiles");
-    mentionMenu.appendChild(empty);
-  } else {
-    mentionActiveIndex = Math.min(mentionActiveIndex, mentionMatches.length - 1);
-    mentionMatches.forEach((resource, index) => {
-      const option = document.createElement("button");
-      option.type = "button";
-      option.id = `resource-option-${index}`;
-      option.className = `resource-option${index === mentionActiveIndex ? " active" : ""}`;
-      option.setAttribute("role", "option");
-      option.setAttribute("aria-selected", String(index === mentionActiveIndex));
-      option.disabled = resource.status !== "ready";
-      const name = document.createElement("strong");
-      name.dir = "auto";
-      name.textContent = resource.name;
-      const detail = document.createElement("small");
-      detail.textContent = resource.page_count
-        ? featureT("resources.pages", { count: resource.page_count })
-        : resource.error || resourceStatusLabel(resource);
-      const status = document.createElement("span");
-      status.className = `resource-status ${resource.status}`;
-      status.textContent = resourceStatusLabel(resource);
-      option.append(name, detail, status);
-      option.addEventListener("mousedown", (event) => event.preventDefault());
-      option.addEventListener("click", () => selectMention(resource));
-      mentionMenu.appendChild(option);
-    });
-    inputEl.setAttribute("aria-activedescendant", `resource-option-${mentionActiveIndex}`);
-  }
-  mentionMenu.hidden = false;
-  requestAnimationFrame(positionMentionMenu);
-}
-
-function resourcesFromTypedMentions(text) {
-  const selected = [...selectedRagResources];
-  const names = [...text.matchAll(/@\{([^}\n]+)\}/g)].map((match) => match[1].trim());
-  names.forEach((name) => {
-    const matches = learningResources.filter((resource) => resource.name === name);
-    if (matches.length === 1 && !selected.some((resource) => resource.id === matches[0].id)) {
-      selected.push({ id: matches[0].id, name: matches[0].name });
-    }
-  });
-  return selected;
-}
-
-function renderResourceList() {
-  resourceList.innerHTML = "";
-  if (!learningResources.length) {
-    const empty = document.createElement("div");
-    empty.className = "resource-list-empty";
-    empty.textContent = featureT("resources.empty");
-    resourceList.appendChild(empty);
-    return;
-  }
-  learningResources.forEach((resource) => {
-    const row = document.createElement("div");
-    row.className = "resource-row";
-    const name = document.createElement("strong");
-    name.dir = "auto";
-    name.textContent = resource.name;
-    const detail = document.createElement("small");
-    detail.textContent = resource.page_count
-      ? `${resourceStatusLabel(resource)} · ${featureT("resources.pages", { count: resource.page_count })}`
-      : resource.error || resourceStatusLabel(resource);
-    const actions = document.createElement("div");
-    actions.className = "resource-actions";
-    if (resource.status === "failed") {
-      const retry = document.createElement("button");
-      retry.type = "button";
-      retry.className = "resource-action";
-      retry.textContent = featureT("resources.retry");
-      retry.addEventListener("click", () => retryResource(resource.id));
-      actions.appendChild(retry);
-    }
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "resource-action delete";
-    remove.textContent = featureT("resources.delete");
-    remove.addEventListener("click", () => deleteResource(resource.id));
-    actions.appendChild(remove);
-    row.append(name, detail, actions);
-    resourceList.appendChild(row);
-  });
-}
-
-function scheduleResourcePoll() {
-  clearTimeout(resourcePollTimer);
-  resourcePollTimer = null;
-  if (learningResources.some((resource) => resource.status === "processing")) {
-    resourcePollTimer = setTimeout(() => loadResources({ quiet: true }), 1500);
-  }
-}
-
-async function loadResources({ quiet = false } = {}) {
-  try {
-    const response = await fetch("/v1/resources", { headers: authHeaders() });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const body = await response.json();
-    learningResources = Array.isArray(body.resources) ? body.resources : [];
-    const ids = new Set(learningResources.map((resource) => resource.id));
-    selectedRagResources = selectedRagResources.filter((resource) => ids.has(resource.id));
-    renderRagChips();
-    renderResourceList();
-    if (!mentionMenu.hidden) renderMentionMenu();
-  } catch {
-    if (!quiet) resourceList.textContent = featureT("resources.uploadFailed");
-  } finally {
-    scheduleResourcePoll();
-  }
-}
-
-async function uploadResource(file) {
-  if (!file) return;
-  toast(featureT("resources.uploading", { name: file.name }), 3000);
-  const form = new FormData();
-  form.append("file", file);
-  try {
-    const response = await fetch("/v1/resources", {
-      method: "POST",
-      headers: authHeaders(),
-      body: form,
-    });
-    if (!response.ok) {
-      const detail = (await response.json().catch(() => ({}))).detail;
-      throw new Error(typeof detail === "string" ? detail : "");
-    }
-    const resource = await response.json();
-    learningResources = [resource, ...learningResources.filter((item) => item.id !== resource.id)];
-    renderResourceList();
-    scheduleResourcePoll();
-    toast(featureT("resources.uploaded", { name: resource.name }), 5000);
-  } catch (error) {
-    toast(error.message || featureT("resources.uploadFailed"), 5000);
-  }
-}
-
-async function retryResource(resourceId) {
-  const response = await fetch(`/v1/resources/${encodeURIComponent(resourceId)}/retry`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
-  if (!response.ok) return toast(featureT("resources.uploadFailed"));
-  await loadResources({ quiet: true });
-}
-
-async function deleteResource(resourceId) {
-  const response = await fetch(`/v1/resources/${encodeURIComponent(resourceId)}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-  if (!response.ok) return toast(featureT("resources.deleteFailed"));
-  learningResources = learningResources.filter((resource) => resource.id !== resourceId);
-  selectedRagResources = selectedRagResources.filter((resource) => resource.id !== resourceId);
-  renderResourceList();
-  renderRagChips();
-}
-
-ragButton.addEventListener("click", () => {
-  useRag = !useRag;
-  ragButton.classList.toggle("active", useRag);
-  ragButton.setAttribute("aria-pressed", String(useRag));
-  if (!useRag) {
-    selectedRagResources = [];
-    closeMentionMenu();
-    renderRagChips();
-  } else {
-    void loadResources({ quiet: true });
-  }
-  toast(featureT(useRag ? "rag.on" : "rag.off"), 3000);
-  inputEl.focus();
-});
-
-inputEl.addEventListener("input", () => {
-  selectedRagResources = selectedRagResources.filter((resource) =>
-    inputEl.value.includes(`@{${resource.name}}`),
-  );
-  renderRagChips();
-  renderMentionMenu();
-});
-inputEl.addEventListener("click", renderMentionMenu);
-inputEl.addEventListener("blur", () => setTimeout(closeMentionMenu, 100));
-window.addEventListener("resize", positionMentionMenu);
-
-$("#resource-upload").addEventListener("click", () => $("#file-resource").click());
-$("#file-resource").addEventListener("change", (event) => {
-  const file = event.target.files[0];
-  event.target.value = "";
-  if (file) void uploadResource(file);
-});
-
 // --- settings --------------------------------------------------------------------------
 const settingsModal = $("#settings-modal");
 const parallelChatsToggle = $("#setting-parallel-chats");
@@ -2376,7 +1953,6 @@ function setSettingsOpen(open) {
   settingsModal.hidden = !open;
   $("#app").inert = open;
   if (open) {
-    void loadResources({ quiet: true });
     void refreshPowerStatus();
     languageSelect.focus();
   } else {
@@ -2640,7 +2216,6 @@ async function bootChat() {
   window.setInterval(() => {
     if (!document.hidden) void refreshPowerStatus();
   }, 60_000);
-  await loadResources({ quiet: true });
   await recoverGenerations();
   const selected = conversationFromLocation();
   const pending = pendingRequestFromLocation();
