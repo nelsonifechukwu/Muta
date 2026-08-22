@@ -383,6 +383,31 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .prose .katex-display > .katex { min-width: min-content; }
 
+/* Live visual explanations are separate from Markdown and run in an opaque-origin iframe.
+   The parent owns only the frame and its accessible caption; every drawing stays inside. */
+.muta-visualization {
+  width: 100%; margin: 14px 0 4px; border: 1px solid var(--border); border-radius: 14px;
+  overflow: hidden; background: var(--card);
+}
+.muta-visualization figcaption {
+  min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 11px; border-bottom: 1px solid var(--border); color: var(--text);
+  font: 0.82rem/1.35 var(--sans);
+}
+.muta-visualization figcaption strong { font-weight: 650; }
+.muta-visualization figcaption span {
+  flex: none; color: var(--muted); font: 0.66rem/1 var(--mono); text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.muta-visualization-frame {
+  display: block; width: 100%; min-height: 240px; border: 0; background: var(--card);
+}
+
+@media (max-width: 520px) {
+  .muta-visualization { width: calc(100% + 12px); margin-inline: -6px; border-radius: 11px; }
+  .muta-visualization-frame { min-height: 260px; }
+}
+
 details.thinking {
   border: 1px solid var(--border); border-radius: 12px;
   padding: 7px 12px; margin-bottom: 10px;

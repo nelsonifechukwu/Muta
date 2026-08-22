@@ -15,6 +15,20 @@ map $uri $muta_cache_control {
     ~^/v1/ "";
 }
 
+# The generated visualization document is the sole page allowed to be embedded, and only by
+# this same-origin chat UI. All other pages remain unavailable to frames. The iframe also has an
+# opaque sandbox in the browser (`allow-scripts` without `allow-same-origin`), so this exception
+# does not grant the visualization access to the parent DOM, cookies, or storage.
+map $uri $muta_x_frame_options {
+    default "DENY";
+    /chat/viz-frame.html "SAMEORIGIN";
+}
+
+map $uri $muta_content_security_policy {
+    default "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ws: wss:; media-src 'self' blob:; frame-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+    /chat/viz-frame.html "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; child-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
+}
+
 # Security headers, applied to every response (static, proxied, and errors) via `always`.
 # Kept in one place and pulled into the server with `include` so they cannot drift between
 # locations.
@@ -32,10 +46,10 @@ server {
     root /usr/share/nginx/html;
 
     add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
+    add_header X-Frame-Options $muta_x_frame_options always;
     add_header Referrer-Policy "no-referrer" always;
     add_header Permissions-Policy "geolocation=(), camera=(), microphone=(self)" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ws: wss:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header Content-Security-Policy $muta_content_security_policy always;
     add_header Cache-Control $muta_cache_control always;
 
     location /v1/ {

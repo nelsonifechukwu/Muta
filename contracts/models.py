@@ -164,7 +164,12 @@ class ChatResponse(BaseModel):
         description="Pass back in the next request to continue the thread."
     )
     mode: TutoringMode
-    reply: str
+    reply: str = Field(
+        description=(
+            "Assistant Markdown. A visual text turn may end with one fenced `muta-viz` JSON "
+            "object; clients may validate/render it as documented in docs/api/EXAMPLES.md."
+        )
+    )
     verified: bool = Field(
         False, description="Whether math in the reply was checked by the `math` service."
     )
@@ -350,7 +355,9 @@ class ChatTurn(BaseModel):
 
 class TutorReply(BaseModel):
     session_id: str
-    reply: str
+    reply: str = Field(
+        description="Assistant Markdown, optionally ending in one fenced `muta-viz` JSON object."
+    )
     mode: TutorMode
     verified: bool = False
     citations: list[str] = Field(default_factory=list)
@@ -436,7 +443,12 @@ class AttachmentRef(BaseModel):
 class MessageOut(BaseModel):
     id: int
     role: str
-    content: str
+    content: str = Field(
+        description=(
+            "Persisted message text. Assistant messages may include the fenced `muta-viz` "
+            "protocol described in docs/api/EXAMPLES.md."
+        )
+    )
     created_at: str
     attachments: list[AttachmentRef] = Field(default_factory=list)
 
