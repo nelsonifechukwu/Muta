@@ -42,6 +42,9 @@ UI_VENDOR_REQUIRED = (
     "vendor/viz/anime.v3.2.2.min.js",
     "vendor/viz/motion.v11.11.13.js",
 )
+UI_REPOSITORY_ASSETS = tuple(
+    relative for relative in UI_VENDOR_REQUIRED if (ROOT / "ui" / relative).is_file()
+)
 FORBIDDEN_AVX512 = re.compile(rb"\s(vpxord|vpternlogd|kmovw|vpbroadcastmw2d)\s")
 
 
@@ -376,7 +379,7 @@ def verify_manifest(output: Path, *, allow_source_overlay: bool = False) -> Path
     files = ui.get("files")
     if not isinstance(files, dict) or not files:
         raise ExportError("native manifest has no UI file metadata")
-    overlay_files = set(UI_SOURCE_FILES) if allow_source_overlay else set()
+    overlay_files = {*UI_SOURCE_FILES, *UI_REPOSITORY_ASSETS} if allow_source_overlay else set()
     required_metadata = set(UI_REQUIRED) - overlay_files
     missing_metadata = sorted(required_metadata - set(files))
     if missing_metadata:
@@ -410,11 +413,13 @@ def sync_source_ui(output: Path) -> Path:
     ui = manifest["ui"]
     ui_path = _manifest_ui_path(ui)
     source_path = ROOT / "ui"
-    for relative in UI_SOURCE_FILES:
+    source_overlay_files = (*UI_SOURCE_FILES, *UI_REPOSITORY_ASSETS)
+    for relative in source_overlay_files:
         source = source_path / relative
         if not source.is_file():
             raise ExportError(f"native UI source is missing: {relative}")
         destination = ui_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
         pending = destination.with_name(f".{destination.name}.pending")
         # Give the installed asset a fresh mtime. Starlette's conditional response handling
         # considers Last-Modified as well as ETag; preserving an older checkout timestamp can
@@ -428,7 +433,7 @@ def sync_source_ui(output: Path) -> Path:
         **verified,
         "source_overlay": {
             "checkout_git_sha": _git_sha(),
-            "files": list(UI_SOURCE_FILES),
+            "files": list(source_overlay_files),
         },
     }
     pending_manifest = manifest_path.with_suffix(".json.tmp")

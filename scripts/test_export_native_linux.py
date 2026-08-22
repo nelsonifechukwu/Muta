@@ -160,8 +160,10 @@ def test_sync_source_ui_overlays_authored_assets_and_reseals_manifest(tmp_path, 
         asset.parent.mkdir(parents=True, exist_ok=True)
         asset.write_text(f"exported {relative}")
         ui_files[relative] = {"sha256": export._sha256(asset)}
-    for relative in export.UI_SOURCE_FILES:
+    source_overlay_files = (*export.UI_SOURCE_FILES, *export.UI_REPOSITORY_ASSETS)
+    for relative in source_overlay_files:
         source = ui_source / relative
+        source.parent.mkdir(parents=True, exist_ok=True)
         source.write_text(f"checkout {relative}")
         os.utime(source, (1, 1))
 
@@ -178,11 +180,11 @@ def test_sync_source_ui_overlays_authored_assets_and_reseals_manifest(tmp_path, 
     )
 
     assert export.sync_source_ui(output) == manifest_path
-    for relative in export.UI_SOURCE_FILES:
+    for relative in source_overlay_files:
         assert (ui_dist / relative).read_text() == f"checkout {relative}"
         assert (ui_dist / relative).stat().st_mtime > 1
     resealed = __import__("json").loads(manifest_path.read_text())
-    assert resealed["ui"]["source_overlay"]["files"] == list(export.UI_SOURCE_FILES)
+    assert resealed["ui"]["source_overlay"]["files"] == list(source_overlay_files)
     assert export.verify_manifest(output) == manifest_path
 
 
@@ -206,9 +208,11 @@ def test_sync_source_ui_upgrades_a_legacy_export_without_new_authored_assets(tmp
         "styles.css",
         "worklet.js",
     }
-    new_authored_assets = set(export.UI_SOURCE_FILES) - legacy_authored_assets
-    assert new_authored_assets
-    legacy_required = [item for item in export.UI_REQUIRED if item not in new_authored_assets]
+    new_overlay_assets = (set(export.UI_SOURCE_FILES) - legacy_authored_assets) | set(
+        export.UI_REPOSITORY_ASSETS
+    )
+    assert new_overlay_assets
+    legacy_required = [item for item in export.UI_REQUIRED if item not in new_overlay_assets]
     legacy_required.append("vendor/katex/contrib/auto-render.min.js")
     ui_files = {}
     for relative in legacy_required:
@@ -216,8 +220,9 @@ def test_sync_source_ui_upgrades_a_legacy_export_without_new_authored_assets(tmp
         asset.parent.mkdir(parents=True, exist_ok=True)
         asset.write_text(f"legacy {relative}")
         ui_files[relative] = {"sha256": export._sha256(asset)}
-    for relative in export.UI_SOURCE_FILES:
+    for relative in (*export.UI_SOURCE_FILES, *export.UI_REPOSITORY_ASSETS):
         source = ui_source / relative
+        source.parent.mkdir(parents=True, exist_ok=True)
         source.write_text(f"current {relative}")
 
     manifest_path = output / "native-linux-manifest.json"
@@ -232,9 +237,9 @@ def test_sync_source_ui_upgrades_a_legacy_export_without_new_authored_assets(tmp
         )
     )
 
-    assert all(not (ui_dist / item).exists() for item in new_authored_assets)
+    assert all(not (ui_dist / item).exists() for item in new_overlay_assets)
     assert export.sync_source_ui(output) == manifest_path
-    assert all((ui_dist / item).read_text() == f"current {item}" for item in new_authored_assets)
+    assert all((ui_dist / item).read_text() == f"current {item}" for item in new_overlay_assets)
     assert export.verify_manifest(output) == manifest_path
 
 
