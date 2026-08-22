@@ -193,6 +193,12 @@ def visualization_schema(library: str, kind: str, request: str = "") -> dict[str
     properties = _common_properties(library, kind)
     required = ["version", "library", "kind", "title", "aria_label", "height"]
     if library == "d3" and kind in {"line", "scatter"}:
+        # Keep the grammar comfortably below the constrained pass's token ceiling. The browser
+        # accepts larger hand-authored specs, but a tiny model tends to fill permissive arrays
+        # to their maximum and can otherwise spend the entire decode budget listing points.
+        series_limit = (
+            2 if re.search(r"\b(?:compare|versus|vs\.?|both|two)\b", request, re.IGNORECASE) else 1
+        )
         properties.update(
             {
                 "x_label": {"type": "string", "maxLength": 80},
@@ -200,7 +206,7 @@ def visualization_schema(library: str, kind: str, request: str = "") -> dict[str
                 "series": {
                     "type": "array",
                     "minItems": 1,
-                    "maxItems": 6,
+                    "maxItems": series_limit,
                     "items": {
                         "type": "object",
                         "properties": {
@@ -208,7 +214,7 @@ def visualization_schema(library: str, kind: str, request: str = "") -> dict[str
                             "points": {
                                 "type": "array",
                                 "minItems": 2,
-                                "maxItems": 200,
+                                "maxItems": 24,
                                 "items": _point_schema(),
                             },
                         },
