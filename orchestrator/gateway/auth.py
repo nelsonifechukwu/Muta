@@ -124,6 +124,11 @@ def require_caller(authorization: str | None = Header(default=None)) -> str:
     return student_id
 
 
+def optional_caller(authorization: str | None = Header(default=None)) -> str | None:
+    """Resolve an optional bearer token for legacy-public endpoints with private extensions."""
+    return verify_token(_token_from_header(authorization))
+
+
 def caller_from_token(
     authorization: str | None = Header(default=None),
     token: str | None = Query(default=None),

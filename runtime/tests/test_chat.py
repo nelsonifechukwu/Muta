@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from runtime.chat import ChatEngine, _message_tokens
+from runtime.chat import ChatEngine, _message_tokens, strip_visualization_protocol
 from runtime.client import Generation, InferenceStreamError
 from runtime.memory import ConversationStore
 
@@ -73,6 +73,23 @@ def test_second_turn_replays_prior_history(store):
     assert "turn one" in contents
     assert "reply-1" in contents
     assert second_call[-1]["content"] == "turn two"
+
+
+def test_visualization_payload_is_persisted_but_not_replayed_to_model(store):
+    engine, client, store = _engine(store)
+    first = engine.chat("s1", "Draw a curve")
+    visual_reply = (
+        "The curve is U-shaped.\n\n```muta-viz\n"
+        '{"version":1,"library":"d3","kind":"line","title":"Curve",'
+        '"aria_label":"A curve.","height":300,"series":[{"label":"y",'
+        '"points":[[0,0],[1,1]]}]}\n```'
+    )
+    store.update_message(first.assistant_message_id, visual_reply)
+    engine.chat("s1", "Why?", conversation_id=first.conversation_id)
+
+    assert client.seen[1][2]["content"] == "The curve is U-shaped."
+    assert store.get_messages(first.conversation_id)[1]["content"] == visual_reply
+    assert strip_visualization_protocol("```muta-viz\n{bad}\n```").startswith("```muta-viz")
 
 
 def test_language_change_replaces_only_the_next_system_prompt_and_keeps_history(tmp_path):
@@ -206,6 +223,26 @@ def test_history_token_budget_drops_oldest_turns_without_mutating_storage(store)
     assert [message["content"] for message in store.get_messages(first.conversation_id)][
         : len(before)
     ] == before
+
+
+def test_history_budget_counts_visual_reply_without_its_protocol_payload(store):
+    engine, client, store = _engine(store, history_token_budget=120)
+    first = engine.chat("s1", "older useful question")
+    second = engine.chat("s1", "draw it", conversation_id=first.conversation_id)
+    points = ",".join(f"[{value},{value * value}]" for value in range(200))
+    visual_reply = (
+        "Useful visual explanation.\n\n```muta-viz\n"
+        '{"version":1,"library":"d3","kind":"line","title":"Large",'
+        '"aria_label":"A large graph.","height":300,"series":[{"label":"y",'
+        f'"points":[{points}]}}]}}\n```'
+    )
+    store.update_message(second.assistant_message_id, visual_reply)
+
+    engine.chat("s1", "continue", conversation_id=first.conversation_id)
+    contents = [message["content"] for message in client.seen[-1]]
+    assert "older useful question" in contents
+    assert "Useful visual explanation." in contents
+    assert not any("muta-viz" in content for content in contents)
 
 
 def test_request_fitting_reserves_output_inside_the_active_context(store):

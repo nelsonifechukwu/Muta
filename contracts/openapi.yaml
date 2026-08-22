@@ -74,6 +74,176 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/resources:
+    get:
+      tags:
+      - resources
+      summary: Resources
+      operationId: resources_v1_resources_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceList'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - resources
+      summary: Resource Upload
+      description: Durably accept one PDF, then prepare it outside the request thread.
+      operationId: resource_upload_v1_resources_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_resource_upload_v1_resources_post'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningResource'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/resources/{resource_id}/retry:
+    post:
+      tags:
+      - resources
+      summary: Resource Retry
+      operationId: resource_retry_v1_resources__resource_id__retry_post
+      parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Resource Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningResource'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/resources/{resource_id}:
+    delete:
+      tags:
+      - resources
+      summary: Resource Delete
+      operationId: resource_delete_v1_resources__resource_id__delete
+      parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Resource Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceDeleted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/resources/{resource_id}/content:
+    get:
+      tags:
+      - resources
+      summary: Resource Content
+      operationId: resource_content_v1_resources__resource_id__content_get
+      parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Resource Id
+      - name: token
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Token
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Inline PDF
+          content:
+            application/pdf: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/chat:
     post:
       tags:
@@ -83,12 +253,21 @@ paths:
 
         new thread. The mode selects the system prompt (ROADMAP 18 Jul, stable-prefix design).'
       operationId: chat_v1_chat_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ChatRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -1211,6 +1390,16 @@ components:
       required:
       - audio
       title: Body_audio_transcribe_v1_audio_transcribe_post
+    Body_resource_upload_v1_resources_post:
+      properties:
+        file:
+          type: string
+          contentMediaType: application/octet-stream
+          title: File
+      type: object
+      required:
+      - file
+      title: Body_resource_upload_v1_resources_post
     Body_tutor_vision_v1_tutor_vision_post:
       properties:
         session_id:
@@ -1304,6 +1493,21 @@ components:
             the answer is grounded with fresh snippets and their sources are returned. Ignored (silently)
             offline or unconfigured.'
           default: false
+        use_rag:
+          type: boolean
+          title: Use Rag
+          description: Opt-in retrieval over learner-owned resources. When enabled, resource_ids must
+            identify the ready files selected with the chat @ picker.
+          default: false
+        resource_ids:
+          items:
+            type: string
+            pattern: ^[0-9a-f]{32}$
+          type: array
+          maxItems: 8
+          title: Resource Ids
+          description: Opaque ids of learner-owned resources selected for this turn. Display names are
+            never used for authorization or retrieval scope.
         attachment_ids:
           items:
             type: integer
@@ -1330,6 +1534,8 @@ components:
         reply:
           type: string
           title: Reply
+          description: Assistant Markdown. A visual text turn may end with one fenced `muta-viz` JSON
+            object; clients may validate/render it as documented in docs/api/EXAMPLES.md.
         verified:
           type: boolean
           title: Verified
@@ -1341,6 +1547,12 @@ components:
           type: array
           title: Citations
           description: RAG source references.
+        resource_citations:
+          items:
+            $ref: '#/components/schemas/ResourceCitation'
+          type: array
+          title: Resource Citations
+          description: Structured, server-owned citations into uploaded learner resources.
       type: object
       required:
       - student_id
@@ -1720,6 +1932,52 @@ components:
       required:
       - service
       title: HealthResponse
+    LearningResource:
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        name:
+          type: string
+          title: Name
+        mime:
+          type: string
+          const: application/pdf
+          title: Mime
+          default: application/pdf
+        status:
+          type: string
+          enum:
+          - processing
+          - ready
+          - failed
+          title: Status
+        page_count:
+          anyOf:
+          - type: integer
+            minimum: 1.0
+          - type: 'null'
+          title: Page Count
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - id
+      - name
+      - status
+      - created_at
+      - updated_at
+      title: LearningResource
     MasteryResponse:
       properties:
         student_id:
@@ -1769,6 +2027,8 @@ components:
         content:
           type: string
           title: Content
+          description: Persisted message text. Assistant messages may include the fenced `muta-viz` protocol
+            described in docs/api/EXAMPLES.md.
         created_at:
           type: string
           title: Created At
@@ -1777,6 +2037,11 @@ components:
             $ref: '#/components/schemas/AttachmentRef'
           type: array
           title: Attachments
+        resource_citations:
+          items:
+            $ref: '#/components/schemas/ResourceCitation'
+          type: array
+          title: Resource Citations
       type: object
       required:
       - id
@@ -2049,6 +2314,59 @@ components:
           default: ''
       type: object
       title: RenderResponse
+    ResourceCitation:
+      properties:
+        resource_id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Resource Id
+        title:
+          type: string
+          title: Title
+        page:
+          type: integer
+          minimum: 1.0
+          title: Page
+          description: One-based physical PDF page number.
+        chunk_index:
+          type: integer
+          minimum: 0.0
+          title: Chunk Index
+        excerpt:
+          type: string
+          maxLength: 500
+          title: Excerpt
+      type: object
+      required:
+      - resource_id
+      - title
+      - page
+      - chunk_index
+      - excerpt
+      title: ResourceCitation
+    ResourceDeleted:
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        deleted:
+          type: boolean
+          title: Deleted
+          default: true
+      type: object
+      required:
+      - id
+      title: ResourceDeleted
+    ResourceList:
+      properties:
+        resources:
+          items:
+            $ref: '#/components/schemas/LearningResource'
+          type: array
+          title: Resources
+      type: object
+      title: ResourceList
     SessionActionResponse:
       properties:
         session_id:
@@ -2085,6 +2403,10 @@ components:
         orphan_attachments:
           type: integer
           title: Orphan Attachments
+          default: 0
+        resources:
+          type: integer
+          title: Resources
           default: 0
         settings:
           type: integer
@@ -2200,6 +2522,7 @@ components:
         reply:
           type: string
           title: Reply
+          description: Assistant Markdown, optionally ending in one fenced `muta-viz` JSON object.
         mode:
           $ref: '#/components/schemas/TutorMode'
         verified:
