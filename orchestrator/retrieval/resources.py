@@ -25,6 +25,8 @@ log = logging.getLogger("muta.retrieval.resources")
 _SPACE = re.compile(r"[ \t\f\v]+")
 _BLANKS = re.compile(r"\n{3,}")
 _WORD = re.compile(r"[a-z0-9]+")
+_BIDI_CONTROLS = re.compile(r"[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
+_SPACE_BEFORE_PUNCTUATION = re.compile(r"\s+([.,;:!?\])])")
 _MAX_NAME = 160
 _STOPWORDS = {
     "a",
@@ -83,8 +85,11 @@ class ResourceNotFound(LookupError):
 def safe_resource_name(filename: str | None) -> str:
     """A display name only: never a path, header value, or retrieval authority."""
     name = Path(filename or "resource.pdf").name
+    name = name.replace("\r", " ").replace("\n", " ")
     name = "".join(ch for ch in name if ch >= " " and ch not in "\x7f\r\n")
+    name = _BIDI_CONTROLS.sub("", name).replace("{", " ").replace("}", " ")
     name = _SPACE.sub(" ", name).strip(" .")[:_MAX_NAME]
+    name = _SPACE_BEFORE_PUNCTUATION.sub(r"\1", name)
     return name or "resource.pdf"
 
 

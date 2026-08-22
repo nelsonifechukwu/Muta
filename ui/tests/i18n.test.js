@@ -365,9 +365,10 @@ test("every translation key used by authored markup exists and localization load
   assert.ok(keys.length > 30);
   for (const key of keys) assert.ok(Object.hasOwn(i18n.catalogs.en, key), `missing ${key}`);
   const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((match) => match[1]);
-  assert.ok(scripts[0].startsWith("africa-languages.js"));
-  assert.ok(scripts[1].startsWith("locale-manifest.js"));
-  assert.ok(scripts[2].startsWith("locale-bootstrap.js"));
+  assert.ok(scripts[0].startsWith("access-bootstrap.js"));
+  assert.ok(scripts[1].startsWith("africa-languages.js"));
+  assert.ok(scripts[2].startsWith("locale-manifest.js"));
+  assert.ok(scripts[3].startsWith("locale-bootstrap.js"));
   const africaIndex = scripts.findIndex((source) => source.startsWith("africa-languages.js"));
   const manifestIndex = scripts.findIndex((source) => source.startsWith("locale-manifest.js"));
   const bootstrapIndex = scripts.findIndex((source) => source.startsWith("locale-bootstrap.js"));

@@ -14,7 +14,7 @@
   <script src="locale-manifest.js?v=20260821-ui-locales-2"></script>
   <script src="locale-bootstrap.js?v=20260821-ui-locales-2"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260822-local-host-1">
+  <link rel="stylesheet" href="styles.css?v=20260822-resource-mention-1">
 </head>
 <body>
   <main id="share-auth" class="share-auth" aria-labelledby="share-auth-title">
@@ -145,7 +145,11 @@
           <div id="attachment-chips"></div>
           <div id="rag-resource-chips" aria-label="Selected RAG resources" hidden></div>
           <div id="resource-mention-menu" class="resource-mention-menu" role="listbox" aria-label="Learning resources" hidden></div>
-          <textarea id="input" rows="1" dir="auto" data-i18n-placeholder="composer.placeholder"
+          <div id="resource-mention-status" class="sr-only" role="status" aria-live="polite"></div>
+          <textarea id="input" rows="1" dir="auto" aria-autocomplete="list"
+            aria-controls="resource-mention-menu" aria-haspopup="listbox"
+            aria-label="Ask anything" data-i18n-aria-label="composer.placeholder"
+            data-i18n-placeholder="composer.placeholder"
             placeholder="Ask anything — Enter to send (queues while replying), Ctrl+Enter to interrupt &amp; send"></textarea>
           <div id="composer-buttons">
             <div class="left">
@@ -295,10 +299,11 @@
   <script src="locale-fr.js?v=20260821-ui-locales-2"></script>
   <script src="locale-generated.js?v=20260821-ui-locales-2"></script>
   <script src="locales.js?v=20260821-ui-locales-2"></script>
-  <script src="math.js?v=20260822-local-host-1"></script>
+  <script src="math.js?v=20260822-resource-mention-1"></script>
   <script src="visualizations.js?v=20260822-citation-rail-1"></script>
   <script src="citations.js?v=20260822-citation-rail-1"></script>
-  <script src="app.js?v=20260822-local-host-1"></script>
-  <script src="audio.js?v=20260822-local-host-1"></script>
+  <script src="resource-mentions.js?v=20260822-resource-mention-1"></script>
+  <script src="app.js?v=20260822-resource-mention-1"></script>
+  <script src="audio.js?v=20260822-resource-mention-1"></script>
 </body>
 </html>

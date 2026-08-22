@@ -20,6 +20,12 @@ const RESOURCE_RAG_COPY = Object.freeze({
   "rag.noFiles": "No PDFs yet. Add one in Settings → Files.",
   "rag.chooseFile": "RAG is on — type @ and choose a ready file.",
   "rag.remove": "Remove {name}",
+  "rag.document": "Document: {name}",
+  "rag.openDocument": "Open document {name}",
+  "rag.maxFiles": "You can use up to {count} documents in one message.",
+  "rag.pickerResults": "{count} ready documents available. Use Up and Down arrows, then Enter.",
+  "rag.pickerEmpty": "No ready documents match.",
+  "rag.pickerClosed": "Document picker closed.",
   "rag.sourcePage": "{title}, PDF page {page}",
   "rag.openPage": "Open {title} at PDF page {page}",
   "rag.sources": "Sources",
@@ -252,6 +258,7 @@ let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, sta
 let useRag = false;
 let learningResources = [];
 let selectedRagResources = []; // stable {id, name}; request authority is always the id
+const MAX_SELECTED_RAG_RESOURCES = 8; // ChatRequest.resource_ids contract maximum
 let resourcePollTimer = null;
 let mentionMatches = [];
 let mentionActiveIndex = 0;
@@ -699,7 +706,69 @@ function hideEmptyState() {
   emptyStateEl.style.display = "none";
 }
 
-function addUserMessage(text, attachments = []) {
+function resourceDocumentIcon(className = "") {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  if (className) svg.classList.add(className);
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  const page = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  page.setAttribute("d", "M7 2.75h6.8L19 8v13.25H7V2.75Z");
+  page.setAttribute("fill", "none");
+  page.setAttribute("stroke", "currentColor");
+  page.setAttribute("stroke-width", "1.7");
+  page.setAttribute("stroke-linejoin", "round");
+  const fold = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  fold.setAttribute("d", "M13.5 3v5.5H19M9.5 12h7M9.5 15h7M9.5 18h4.5");
+  fold.setAttribute("fill", "none");
+  fold.setAttribute("stroke", "currentColor");
+  fold.setAttribute("stroke-width", "1.45");
+  fold.setAttribute("stroke-linecap", "round");
+  fold.setAttribute("stroke-linejoin", "round");
+  svg.append(page, fold);
+  return svg;
+}
+
+function renderUserBubbleContent(bubble, text, resources = []) {
+  const records = new Map();
+  for (const resource of Array.isArray(resources) ? resources : []) {
+    const name = window.MutaResourceMentions?.nameFor(resource) || resource.name;
+    // The transport syntax contains a name, not an id. Never guess which file a pill should
+    // open when the live selection itself contains duplicate names.
+    records.set(name, records.has(name) ? null : resource);
+  }
+  const parts = window.MutaResourceMentions?.segment(text) || [
+    { type: "text", value: String(text || "") },
+  ];
+  for (const part of parts) {
+    if (part.type === "text") {
+      bubble.appendChild(document.createTextNode(part.value));
+      continue;
+    }
+    const resource = records.get(part.name);
+    const displayName = resource
+      ? window.MutaResourceMentions.nameFor(resource)
+      : part.name;
+    const mention = document.createElement(resource?.id ? "a" : "span");
+    mention.className = "user-resource-mention";
+    mention.dir = "auto";
+    mention.title = displayName;
+    mention.setAttribute(
+      "aria-label",
+      featureT(resource?.id ? "rag.openDocument" : "rag.document", { name: displayName }),
+    );
+    if (resource?.id) {
+      mention.href = resourcePageUrl(resource.id, 1);
+      mention.target = "_blank";
+      mention.rel = "noopener noreferrer";
+    }
+    const label = document.createElement("span");
+    label.textContent = displayName;
+    mention.append(resourceDocumentIcon("user-resource-mention-icon"), label);
+    bubble.appendChild(mention);
+  }
+}
+
+function addUserMessage(text, attachments = [], resources = []) {
   hideEmptyState();
   const wrap = document.createElement("div");
   wrap.className = "msg user";
@@ -733,7 +802,7 @@ function addUserMessage(text, attachments = []) {
   const bubble = document.createElement("div");
   bubble.className = "bubble";
   bubble.dir = "auto";
-  bubble.textContent = text;
+  renderUserBubbleContent(bubble, text, resources);
   inner.appendChild(bubble);
   wrap.appendChild(inner);
   messagesEl.appendChild(wrap);
@@ -1188,6 +1257,8 @@ resourceCitationRail.addEventListener?.("change", ({ matches }) => {
 
 function renderHistoryMessage(m) {
   if (m.role === "user") {
+    // Historical MessageOut rows do not yet carry their selected resource ids. Render the
+    // mention treatment, but keep it inert instead of linking a re-uploaded same-name PDF.
     addUserMessage(m.content, m.attachments || []);
   } else if (m.role === "assistant") {
     hideEmptyState();
@@ -1795,6 +1866,10 @@ function restoreMessageQueue() {
       const ragResources = Array.isArray(item.ragResources)
         ? item.ragResources
             .filter((resource) => resource && typeof resource.id === "string" && typeof resource.name === "string")
+            .map((resource) => ({
+              id: resource.id,
+              name: window.MutaResourceMentions.nameFor(resource),
+            }))
             .slice(0, 8)
         : [];
       return [{
@@ -1848,8 +1923,13 @@ function renderQueue() {
     const label = document.createElement("span");
     label.className = "queued-text";
     const imgs = item.attachments.filter((a) => a.kind === "image").length;
-    label.textContent =
-      (imgs ? `🖼 ` : "") + (item.typed || t("queue.fromImage"));
+    const resourceNames = (item.ragResources || [])
+      .map((resource) => window.MutaResourceMentions.nameFor(resource))
+      .join(", ");
+    const queuedText = item.typed || (resourceNames
+      ? featureT("rag.document", { name: resourceNames })
+      : t("queue.fromImage"));
+    label.textContent = (imgs ? `🖼 ` : "") + queuedText;
     const x = document.createElement("button");
     x.type = "button";
     x.className = "x";
@@ -1895,7 +1975,7 @@ function restoreDraft(item) {
   inputEl.value = item.typed;
   pendingAttachments = item.attachments;
   useRag = item.useRag === true;
-  selectedRagResources = item.ragResources || [];
+  selectedRagResources = (item.ragResources || []).slice(0, MAX_SELECTED_RAG_RESOURCES);
   useWeb = item.useWeb === true;
   ragButton.classList.toggle("active", useRag);
   ragButton.setAttribute("aria-pressed", String(useRag));
@@ -1914,12 +1994,19 @@ function send(steer = false) {
   }
   const typed = inputEl.value.trim();
   if (readingAnImage()) return toast(t("reply.imageReading"));
-  if (!typed && !pendingAttachments.some((a) => a.transcription)) return;
+  if (
+    !typed &&
+    !pendingAttachments.some((a) => a.transcription) &&
+    !(useRag && selectedRagResources.length)
+  ) return;
   if (startingConversations.has(startKeyFor(conversationId))) {
     return toast(t("reply.previousStarting"));
   }
 
   const ragResources = useRag ? resourcesFromTypedMentions(typed) : [];
+  if (ragResources.length > MAX_SELECTED_RAG_RESOURCES) {
+    return toast(featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES }), 4000);
+  }
   if (useRag && !ragResources.length) return toast(featureT("rag.chooseFile"), 4000);
   const item = {
     typed,
@@ -1969,7 +2056,9 @@ async function dispatch(item, opts = {}) {
     viewOverride = currentViewId,
     clientRequestId = newStudentId(),
   } = opts;
-  const message = composeOutgoingMessage(item.typed, item.attachments);
+  const mentionedText = window.MutaResourceMentions?.append(item.typed, item.ragResources) ||
+    item.typed;
+  const message = composeOutgoingMessage(mentionedText, item.attachments);
   const attachmentIds = item.attachments.map((a) => a.id).filter((id) => id != null);
   const startedIn = conversationOverride;
   const startedView = viewOverride;
@@ -1979,7 +2068,9 @@ async function dispatch(item, opts = {}) {
   // A regenerate ("answer now") re-answers the turn already on screen, so it neither adds a
   // new user bubble nor re-links attachments — the backend re-runs the last user turn.
   const renderingHere = currentViewId === startedView;
-  if (!regenerate && renderingHere) addUserMessage(item.typed || t("queue.fromImage"), item.attachments);
+  if (!regenerate && renderingHere) {
+    addUserMessage(mentionedText || t("queue.fromImage"), item.attachments, item.ragResources);
+  }
   // "Answer now" is offered while the tutor is thinking: it cancels this stream and asks for
   // a direct answer to the same question. Not offered on a regenerate (it is already the
   // direct answer — thinking is off — so it can't loop).
@@ -2019,7 +2110,9 @@ async function dispatch(item, opts = {}) {
         attachment_ids: regenerate ? [] : attachmentIds,
         use_web: item.useWeb === true,
         use_rag: item.useRag === true,
-        resource_ids: (item.ragResources || []).map((resource) => resource.id),
+        resource_ids: (item.ragResources || [])
+          .slice(0, MAX_SELECTED_RAG_RESOURCES)
+          .map((resource) => resource.id),
         thinking,
         regenerate,
         // Response-language preference is trusted request metadata. Never prefix or rewrite
@@ -2469,9 +2562,11 @@ inputEl.addEventListener("keydown", (e) => {
       closeMentionMenu();
       return;
     }
-    if (e.key === "Enter" && mentionMatches[mentionActiveIndex]?.status === "ready") {
+    if (e.key === "Enter") {
       e.preventDefault();
-      selectMention(mentionMatches[mentionActiveIndex]);
+      if (mentionMatches[mentionActiveIndex]?.status === "ready") {
+        selectMention(mentionMatches[mentionActiveIndex]);
+      }
       return;
     }
   }
@@ -2513,6 +2608,7 @@ window.MutaChat = {
 const ragButton = $("#btn-rag");
 const ragChips = $("#rag-resource-chips");
 const mentionMenu = $("#resource-mention-menu");
+const mentionStatus = $("#resource-mention-status");
 const resourceList = $("#resource-list");
 
 function resourceStatusLabel(resource) {
@@ -2523,29 +2619,45 @@ function renderRagChips() {
   ragChips.innerHTML = "";
   ragChips.hidden = !useRag || selectedRagResources.length === 0;
   selectedRagResources.forEach((resource) => {
+    const displayName = window.MutaResourceMentions.nameFor(resource);
     const chip = document.createElement("span");
     chip.className = "rag-chip";
+    chip.title = displayName;
+    chip.setAttribute("aria-label", featureT("rag.document", { name: displayName }));
     const label = document.createElement("span");
+    label.className = "rag-chip-label";
     label.dir = "auto";
-    label.textContent = `📖 ${resource.name}`;
+    label.textContent = displayName;
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.textContent = "✕";
-    remove.setAttribute("aria-label", featureT("rag.remove", { name: resource.name }));
+    remove.setAttribute("aria-label", featureT("rag.remove", { name: displayName }));
+    const removeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    removeIcon.setAttribute("viewBox", "0 0 24 24");
+    removeIcon.setAttribute("aria-hidden", "true");
+    const removePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    removePath.setAttribute("d", "m7 7 10 10M17 7 7 17");
+    removePath.setAttribute("fill", "none");
+    removePath.setAttribute("stroke", "currentColor");
+    removePath.setAttribute("stroke-width", "1.8");
+    removePath.setAttribute("stroke-linecap", "round");
+    removeIcon.appendChild(removePath);
+    remove.appendChild(removeIcon);
     remove.addEventListener("click", () => {
       selectedRagResources = selectedRagResources.filter((item) => item.id !== resource.id);
       renderRagChips();
     });
-    chip.append(label, remove);
+    chip.append(resourceDocumentIcon("rag-chip-icon"), label, remove);
     ragChips.appendChild(chip);
   });
 }
 
 function closeMentionMenu() {
+  const wasOpen = !mentionMenu.hidden;
   mentionMenu.hidden = true;
   mentionMatches = [];
   mentionActiveIndex = 0;
   inputEl.removeAttribute("aria-activedescendant");
+  if (wasOpen) mentionStatus.textContent = featureT("rag.pickerClosed");
 }
 
 function mentionTrigger() {
@@ -2556,20 +2668,32 @@ function mentionTrigger() {
   if (at < 0 || /[}\n]/.test(before.slice(at + 1))) return null;
   const prefix = before.slice(at + 1).replace(/^\{/, "");
   // Do not turn an email-like token into a resource picker.
-  if (at > 0 && /[\w.-]/.test(before[at - 1])) return null;
+  if (!window.MutaResourceMentions.hasTriggerBoundary(inputEl.value, at)) return null;
   return { at, caret, query: prefix.trim().toLowerCase() };
 }
 
 function selectMention(resource) {
   const trigger = mentionTrigger();
   if (!trigger || resource.status !== "ready") return;
-  const token = `@{${resource.name}}`;
-  inputEl.value =
-    inputEl.value.slice(0, trigger.at) + token + inputEl.value.slice(trigger.caret);
-  const caret = trigger.at + token.length;
-  inputEl.setSelectionRange(caret, caret);
-  if (!selectedRagResources.some((item) => item.id === resource.id)) {
-    selectedRagResources.push({ id: resource.id, name: resource.name });
+  const alreadySelected = selectedRagResources.some((item) => item.id === resource.id);
+  if (!alreadySelected && selectedRagResources.length >= MAX_SELECTED_RAG_RESOURCES) {
+    closeMentionMenu();
+    toast(featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES }), 4000);
+    inputEl.focus();
+    return;
+  }
+  const next = window.MutaResourceMentions.removeTrigger(
+    inputEl.value,
+    trigger.at,
+    trigger.caret,
+  );
+  inputEl.value = next.text;
+  inputEl.setSelectionRange(next.caret, next.caret);
+  if (!alreadySelected) {
+    selectedRagResources.push({
+      id: resource.id,
+      name: window.MutaResourceMentions.nameFor(resource),
+    });
   }
   renderRagChips();
   closeMentionMenu();
@@ -2592,7 +2716,10 @@ function renderMentionMenu() {
   if (!trigger) return closeMentionMenu();
   mentionMenu.innerHTML = "";
   mentionMatches = learningResources.filter(
-    (resource) => !trigger.query || resource.name.toLowerCase().includes(trigger.query),
+    (resource) => !trigger.query || window.MutaResourceMentions
+      .nameFor(resource)
+      .toLowerCase()
+      .includes(trigger.query),
   );
   if (!mentionMatches.length) {
     const empty = document.createElement("div");
@@ -2601,6 +2728,10 @@ function renderMentionMenu() {
     mentionMenu.appendChild(empty);
   } else {
     mentionActiveIndex = Math.min(mentionActiveIndex, mentionMatches.length - 1);
+    if (mentionMatches[mentionActiveIndex]?.status !== "ready") {
+      const firstReady = mentionMatches.findIndex((resource) => resource.status === "ready");
+      mentionActiveIndex = firstReady >= 0 ? firstReady : 0;
+    }
     mentionMatches.forEach((resource, index) => {
       const option = document.createElement("button");
       option.type = "button";
@@ -2611,7 +2742,7 @@ function renderMentionMenu() {
       option.disabled = resource.status !== "ready";
       const name = document.createElement("strong");
       name.dir = "auto";
-      name.textContent = resource.name;
+      name.textContent = window.MutaResourceMentions.nameFor(resource);
       const detail = document.createElement("small");
       detail.textContent = resource.page_count
         ? featureT("resources.pages", { count: resource.page_count })
@@ -2627,16 +2758,24 @@ function renderMentionMenu() {
     inputEl.setAttribute("aria-activedescendant", `resource-option-${mentionActiveIndex}`);
   }
   mentionMenu.hidden = false;
+  const readyCount = mentionMatches.filter((resource) => resource.status === "ready").length;
+  mentionStatus.textContent = readyCount
+    ? featureT("rag.pickerResults", { count: readyCount })
+    : featureT("rag.pickerEmpty");
   requestAnimationFrame(positionMentionMenu);
 }
 
 function resourcesFromTypedMentions(text) {
   const selected = [...selectedRagResources];
-  const names = [...text.matchAll(/@\{([^}\n]+)\}/g)].map((match) => match[1].trim());
+  const names = window.MutaResourceMentions.segment(text)
+    .filter((part) => part.type === "resource")
+    .map((part) => part.name);
   names.forEach((name) => {
-    const matches = learningResources.filter((resource) => resource.name === name);
+    const matches = learningResources.filter(
+      (resource) => window.MutaResourceMentions.nameFor(resource) === name,
+    );
     if (matches.length === 1 && !selected.some((resource) => resource.id === matches[0].id)) {
-      selected.push({ id: matches[0].id, name: matches[0].name });
+      selected.push({ id: matches[0].id, name });
     }
   });
   return selected;
@@ -2656,7 +2795,7 @@ function renderResourceList() {
     row.className = "resource-row";
     const name = document.createElement("strong");
     name.dir = "auto";
-    name.textContent = resource.name;
+    name.textContent = window.MutaResourceMentions.nameFor(resource);
     const detail = document.createElement("small");
     detail.textContent = resource.page_count
       ? `${resourceStatusLabel(resource)} · ${featureT("resources.pages", { count: resource.page_count })}`
@@ -2710,7 +2849,8 @@ async function loadResources({ quiet = false } = {}) {
 
 async function uploadResource(file) {
   if (!file) return;
-  toast(featureT("resources.uploading", { name: file.name }), 3000);
+  const displayName = window.MutaResourceMentions.nameFor({ name: file.name });
+  toast(featureT("resources.uploading", { name: displayName }), 3000);
   const form = new FormData();
   form.append("file", file);
   try {
@@ -2727,7 +2867,9 @@ async function uploadResource(file) {
     learningResources = [resource, ...learningResources.filter((item) => item.id !== resource.id)];
     renderResourceList();
     scheduleResourcePoll();
-    toast(featureT("resources.uploaded", { name: resource.name }), 5000);
+    toast(featureT("resources.uploaded", {
+      name: window.MutaResourceMentions.nameFor(resource),
+    }), 5000);
   } catch (error) {
     toast(error.message || featureT("resources.uploadFailed"), 5000);
   }
@@ -2770,10 +2912,6 @@ ragButton.addEventListener("click", () => {
 });
 
 inputEl.addEventListener("input", () => {
-  selectedRagResources = selectedRagResources.filter((resource) =>
-    inputEl.value.includes(`@{${resource.name}}`),
-  );
-  renderRagChips();
   renderMentionMenu();
 });
 inputEl.addEventListener("click", renderMentionMenu);

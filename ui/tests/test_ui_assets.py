@@ -265,6 +265,53 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert ".resource-citation-preview" in clipped_preview_guard and "display: none" in clipped_preview_guard
 
 
+def test_resource_mentions_hide_transport_syntax_and_render_as_document_chips():
+    js = (UI / "app.js").read_text()
+    mentions = (UI / "resource-mentions.js").read_text()
+
+    assert 'src="resource-mentions.js?v=' in HTML
+    assert HTML.index('src="resource-mentions.js?v=') < HTML.index('src="app.js?v=')
+    select = js[js.index("function selectMention(") : js.index("function positionMentionMenu(")]
+    assert "MutaResourceMentions.removeTrigger(" in select
+    assert "@{" not in select, "the transport token must never be pasted into the textarea"
+    assert "MutaResourceMentions?.append(item.typed, item.ragResources)" in js
+    assert "addUserMessage(mentionedText ||" in js
+    assert "addUserMessage(m.content, m.attachments || [])" in js
+    assert "records.set(name, records.has(name) ? null : resource)" in js
+    assert 'const resourceNames = (item.ragResources || [])' in js
+    assert 'featureT("rag.document", { name: resourceNames })' in js
+    assert 'if (e.key === "Enter")' in js
+    assert 'mentionMatches.findIndex((resource) => resource.status === "ready")' in js
+    assert 'role="combobox"' not in HTML
+    assert 'aria-autocomplete="list"' in HTML
+    assert 'aria-controls="resource-mention-menu" aria-haspopup="listbox"' in HTML
+    assert 'id="resource-mention-status" class="sr-only" role="status"' in HTML
+    assert 'featureT("rag.pickerResults", { count: readyCount })' in js
+    assert 'featureT("rag.pickerClosed")' in js
+    assert "const MAX_SELECTED_RAG_RESOURCES = 8" in js
+    assert '.slice(0, MAX_SELECTED_RAG_RESOURCES)' in js
+    assert 'featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES })' in js
+    assert "window.MutaResourceMentions.segment(text)" in js
+    send = js[js.index("function send(") : js.index("async function dispatch(")]
+    assert send.index("ragResources.length > MAX_SELECTED_RAG_RESOURCES") < send.index(
+        "pendingAttachments = []"
+    )
+
+    # Names cross the DOM only through textContent; resource IDs remain the only authority used
+    # to open a document or select retrieval context.
+    assert "label.textContent = displayName" in js
+    assert "mention.href = resourcePageUrl(resource.id, 1)" in js
+    assert "const MENTION = /@\\{([^{}\\n]+)\\}" in mentions
+    assert "(?![\\p{L}\\p{N}\\p{M}_]|\\.[\\p{L}\\p{N}])/gu" in mentions
+    assert "result += `${result ? \" \" : \"\"}${token}`" in mentions
+
+    composer_chip = "".join(_blocks(".rag-chip"))
+    sent_chip = "".join(_blocks(".user-resource-mention"))
+    assert "min-width: 0" in composer_chip and "max-width: min(22rem, 100%)" in composer_chip
+    assert "inline-flex" in sent_chip and "max-width: min(20rem, 100%)" in sent_chip
+    assert ".rag-chip-icon" in CSS and ".user-resource-mention-icon" in CSS
+
+
 def test_selected_locale_is_generation_metadata_not_a_user_message_prefix():
     js = (UI / "app.js").read_text()
     audio = (UI / "audio.js").read_text()

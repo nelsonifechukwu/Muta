@@ -6,7 +6,12 @@ from fastapi.testclient import TestClient
 
 from orchestrator.gateway import deps, routes
 from orchestrator.main import app
-from orchestrator.retrieval.resources import ResourceService, ResourceUnavailable, chunk_pages
+from orchestrator.retrieval.resources import (
+    ResourceService,
+    ResourceUnavailable,
+    chunk_pages,
+    safe_resource_name,
+)
 from runtime.chat import ChatResult
 from runtime.memory import ConversationStore
 
@@ -16,6 +21,12 @@ def test_chunks_never_cross_physical_pages():
     assert {chunk["page"] for chunk in chunks} == {1, 2}
     assert all("kinetic energy" not in chunk["text"] for chunk in chunks if chunk["page"] == 1)
     assert any("kinetic energy" in chunk["text"] for chunk in chunks if chunk["page"] == 2)
+
+
+def test_resource_names_remain_visible_and_safe_for_inline_mentions():
+    assert safe_resource_name("{}") == "resource.pdf"
+    assert safe_resource_name("\u202e\u2067") == "resource.pdf"
+    assert safe_resource_name("notes{chapter}.pdf") == "notes chapter.pdf"
 
 
 def test_private_resources_search_and_citations_are_owner_scoped(tmp_path):
