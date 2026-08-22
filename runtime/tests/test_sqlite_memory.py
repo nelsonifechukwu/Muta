@@ -114,6 +114,12 @@ test_get_attachment_owner_scoping = contract.test_get_attachment_owner_scoping
 test_get_attachment_owner_via_linked_conversation = (
     contract.test_get_attachment_owner_via_linked_conversation
 )
+test_link_attachment_cannot_claim_another_students_upload = (
+    contract.test_link_attachment_cannot_claim_another_students_upload
+)
+test_student_deletion_removes_historical_cross_linked_uploads = (
+    contract.test_student_deletion_removes_historical_cross_linked_uploads
+)
 test_delete_conversation_owner_scoped = contract.test_delete_conversation_owner_scoped
 test_delete_student_erases_all_owned_data = contract.test_delete_student_erases_all_owned_data
 test_reap_orphan_attachments_only_unlinked = contract.test_reap_orphan_attachments_only_unlinked

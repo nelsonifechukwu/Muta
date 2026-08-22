@@ -26,6 +26,16 @@
       "recommended": false
     },
     {
+      "id": "qwen3.5-0.8b-q4_k_m",
+      "label": "Qwen3.5 0.8B · competition-safe",
+      "kind": "local",
+      "path": "models/draft/Qwen3.5-0.8B-Q4_K_M.gguf",
+      "sha256": "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
+      "size_bytes": 532517120,
+      "description": "Pinned local fallback used when the larger tutor cannot share RAM safely under the ADTC RSS cap.",
+      "recommended": false
+    },
+    {
       "id": "qwen3-0.6b-math-expert-q4_k_m",
       "label": "Math-Expert · Qwen3 0.6B",
       "kind": "local",

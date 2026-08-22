@@ -127,7 +127,10 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - [OpenClaw](https://openclaw.ai) — self-hosted, connects WhatsApp/Telegram to an agent, supports local models via Ollama. Proof that "talk to your tutor via chat app" works with zero cloud dependency.
 
 ## 7. Collaboration & Distribution
-- **Shared-laptop classroom server:** one laptop runs the model, ~30 students connect via phone over local network.
+- **Shared-laptop classroom server:** Settings → Host mode creates an HTTPS LAN URL/QR; learners
+  sign up, wait for host approval, then use private persistent accounts. RAM-aware model slots
+  run a fair bounded queue in ADTC mode or expand to the detected system budget in product mode
+  ([operator guide](docs/muta-share.md)).
 - Peer-learning mode with real peers, network packets optimized for spotty local links; syncs models/lessons/progress when internet appears.
 - Teacher dashboard: class progress, assignment generation, flag struggling students.
 - Deployment: one click, single flash drive, phone-to-laptop, multi-OS (Linux/Windows/macOS).

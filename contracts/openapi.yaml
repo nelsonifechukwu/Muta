@@ -55,12 +55,21 @@ paths:
       - runtime
       summary: Select Model
       operationId: select_model_v1_models_select_post
+      parameters:
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ModelSelectRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -89,6 +98,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -117,6 +134,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
         required: true
         content:
@@ -157,6 +182,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -191,6 +224,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -233,6 +274,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Inline PDF
@@ -262,6 +311,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
         required: true
         content:
@@ -297,6 +354,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
         required: true
         content:
@@ -332,6 +397,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
         required: true
         content:
@@ -374,6 +447,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -416,6 +497,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: SSE token stream
@@ -451,6 +540,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -480,6 +577,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -508,6 +613,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
         required: true
         content:
@@ -543,6 +656,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -580,6 +701,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -617,6 +746,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -644,6 +781,22 @@ paths:
         schema:
           type: string
           title: Conversation Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -673,6 +826,22 @@ paths:
         schema:
           type: string
           title: Conversation Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: 1 Hz SSE telemetry
@@ -711,6 +880,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -758,6 +935,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Raw bytes
@@ -828,6 +1013,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -862,6 +1055,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
         required: true
         content:
@@ -937,6 +1138,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       responses:
         '200':
           description: Successful Response
@@ -973,6 +1182,14 @@ paths:
           - type: string
           - type: 'null'
           title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
         required: true
         content:
@@ -1035,12 +1252,29 @@ paths:
 
         `/tutor/chat/stream`, which speaks SSE. Both take the same body.'
       operationId: tutor_chat_v1_tutor_chat_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ChatTurn'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -1068,12 +1302,29 @@ paths:
 
         < 2.5 s), so the stream starts before the answer is finished, not after.'
       operationId: tutor_chat_stream_v1_tutor_chat_stream_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ChatTurn'
-        required: true
       responses:
         '200':
           description: SSE token stream
@@ -1101,12 +1352,29 @@ paths:
 
         problem instead, and the tutor keeps working.'
       operationId: tutor_vision_v1_tutor_vision_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
+        required: true
         content:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/Body_tutor_vision_v1_tutor_vision_post'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -1193,6 +1461,14 @@ paths:
         schema:
           type: string
           title: Session Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
       responses:
         '200':
           description: Successful Response
@@ -1220,6 +1496,14 @@ paths:
         schema:
           type: string
           title: Session Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
       responses:
         '200':
           description: Successful Response
@@ -1256,12 +1540,29 @@ paths:
 
         type instead), 422 when ffmpeg can''t decode the file, 413 when the upload is too large.'
       operationId: audio_transcribe_v1_audio_transcribe_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
       requestBody:
+        required: true
         content:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/Body_audio_transcribe_v1_audio_transcribe_post'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -1269,6 +1570,449 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TranscribeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/status:
+    get:
+      tags:
+      - sharing
+      summary: Share Status
+      operationId: share_status_v1_share_status_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareStatus'
+  /v1/share/signup:
+    post:
+      tags:
+      - sharing
+      summary: Share Signup
+      operationId: share_signup_v1_share_signup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareCredentials'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareSignupResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/enrollments/{enrollment_id}:
+    post:
+      tags:
+      - sharing
+      summary: Share Enrollment
+      operationId: share_enrollment_v1_share_enrollments__enrollment_id__post
+      parameters:
+      - name: enrollment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Enrollment Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareEnrollmentExchange'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareEnrollmentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/login:
+    post:
+      tags:
+      - sharing
+      summary: Share Login
+      operationId: share_login_v1_share_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareCredentials'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareSessionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/logout:
+    post:
+      tags:
+      - sharing
+      summary: Share Logout
+      operationId: share_logout_v1_share_logout_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareLogoutResponse'
+  /v1/share/me:
+    get:
+      tags:
+      - sharing
+      summary: Share Me
+      operationId: share_me_v1_share_me_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareSessionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host:
+    get:
+      tags:
+      - sharing
+      summary: Share Host Status
+      operationId: share_host_status_v1_share_host_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareHostStatus'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - sharing
+      summary: Update Share Host
+      operationId: update_share_host_v1_share_host_put
+      parameters:
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareHostUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareHostStatus'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/users/{user_id}/approve:
+    post:
+      tags:
+      - sharing
+      summary: Approve Share User
+      operationId: approve_share_user_v1_share_host_users__user_id__approve_post
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareUserAction'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/users/{user_id}/reject:
+    post:
+      tags:
+      - sharing
+      summary: Reject Share User
+      operationId: reject_share_user_v1_share_host_users__user_id__reject_post
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareUserAction'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/users/{user_id}:
+    delete:
+      tags:
+      - sharing
+      summary: Remove Share User
+      operationId: remove_share_user_v1_share_host_users__user_id__delete
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareUserAction'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/qr.png:
+    get:
+      tags:
+      - sharing
+      summary: Share Qr
+      operationId: share_qr_v1_share_host_qr_png_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/ca.pem:
+    get:
+      tags:
+      - sharing
+      summary: Share Ca
+      operationId: share_ca_v1_share_host_ca_pem_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
         '422':
           description: Validation Error
           content:
@@ -1365,6 +2109,19 @@ components:
           title: Token
           description: 'Bearer token for the /v1 data endpoints. Send as `Authorization: Bearer <token>`
             (or `?token=` on attachment URLs). Opaque; treat as a per-device secret.'
+        role:
+          type: string
+          enum:
+          - host
+          - member
+          - legacy
+          title: Role
+          default: legacy
+        csrf_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Csrf Token
       type: object
       required:
       - student_id
@@ -2391,6 +3148,292 @@ components:
       - action
       - ok
       title: SessionActionResponse
+    ShareCredentials:
+      properties:
+        username:
+          type: string
+          maxLength: 32
+          minLength: 3
+          title: Username
+        password:
+          type: string
+          maxLength: 256
+          minLength: 8
+          title: Password
+      type: object
+      required:
+      - username
+      - password
+      title: ShareCredentials
+    ShareEnrollmentExchange:
+      properties:
+        secret:
+          type: string
+          maxLength: 128
+          minLength: 32
+          title: Secret
+      type: object
+      required:
+      - secret
+      title: ShareEnrollmentExchange
+    ShareEnrollmentResponse:
+      properties:
+        status:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+          - removed
+          - expired
+          title: Status
+        username:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Username
+        authenticated:
+          type: boolean
+          title: Authenticated
+          default: false
+        user_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+        can_login:
+          type: boolean
+          title: Can Login
+          default: false
+      type: object
+      required:
+      - status
+      title: ShareEnrollmentResponse
+    ShareHostStatus:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+        memory_mode:
+          type: string
+          enum:
+          - competition
+          - system
+          title: Memory Mode
+        listener_running:
+          type: boolean
+          title: Listener Running
+          default: false
+        join_urls:
+          items:
+            type: string
+          type: array
+          title: Join Urls
+        certificate_fingerprint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Certificate Fingerprint
+        users:
+          items:
+            $ref: '#/components/schemas/ShareUser'
+          type: array
+          title: Users
+        capacity:
+          additionalProperties: true
+          type: object
+          title: Capacity
+        updated_at:
+          type: string
+          title: Updated At
+        warning:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Warning
+      type: object
+      required:
+      - enabled
+      - memory_mode
+      - updated_at
+      title: ShareHostStatus
+    ShareHostUpdate:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+        memory_mode:
+          type: string
+          enum:
+          - competition
+          - system
+          title: Memory Mode
+          default: competition
+      type: object
+      required:
+      - enabled
+      title: ShareHostUpdate
+    ShareLogoutResponse:
+      properties:
+        logged_out:
+          type: boolean
+          title: Logged Out
+          default: true
+      type: object
+      title: ShareLogoutResponse
+    ShareSessionResponse:
+      properties:
+        authenticated:
+          type: boolean
+          title: Authenticated
+          default: true
+        user_id:
+          type: string
+          title: User Id
+        username:
+          type: string
+          title: Username
+        role:
+          type: string
+          const: member
+          title: Role
+          default: member
+        expires_at:
+          type: string
+          title: Expires At
+      type: object
+      required:
+      - user_id
+      - username
+      - expires_at
+      title: ShareSessionResponse
+    ShareSignupResponse:
+      properties:
+        enrollment_id:
+          type: string
+          title: Enrollment Id
+        enrollment_secret:
+          type: string
+          title: Enrollment Secret
+          description: One-time secret used only to poll/exchange this approval request.
+        status:
+          type: string
+          const: pending
+          title: Status
+          default: pending
+        username:
+          type: string
+          title: Username
+        expires_at:
+          type: string
+          title: Expires At
+      type: object
+      required:
+      - enrollment_id
+      - enrollment_secret
+      - username
+      - expires_at
+      title: ShareSignupResponse
+    ShareStatus:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: false
+        secure:
+          type: boolean
+          title: Secure
+          default: false
+        authenticated:
+          type: boolean
+          title: Authenticated
+          default: false
+        role:
+          anyOf:
+          - type: string
+            enum:
+            - host
+            - member
+          - type: 'null'
+          title: Role
+        user_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+        username:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Username
+        join_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Join Url
+        message:
+          type: string
+          title: Message
+          default: ''
+      type: object
+      title: ShareStatus
+    ShareUser:
+      properties:
+        id:
+          type: string
+          title: Id
+        username:
+          type: string
+          title: Username
+        status:
+          type: string
+          enum:
+          - pending
+          - approved
+          - deleting
+          title: Status
+        created_at:
+          type: string
+          title: Created At
+        approved_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Approved At
+        last_login_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Login At
+      type: object
+      required:
+      - id
+      - username
+      - status
+      - created_at
+      title: ShareUser
+    ShareUserAction:
+      properties:
+        id:
+          type: string
+          title: Id
+        status:
+          type: string
+          enum:
+          - approved
+          - rejected
+          - removed
+          title: Status
+        erased:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Erased
+      type: object
+      required:
+      - id
+      - status
+      title: ShareUserAction
     StudentErased:
       properties:
         student_id:

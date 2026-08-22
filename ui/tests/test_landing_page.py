@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 LANDING = ROOT / "landing"
 
@@ -59,7 +58,8 @@ def test_every_open_muta_action_targets_the_canonical_chat_route() -> None:
     assert 'href="/ui/"' not in html
     assert 'href: "/ui/"' not in script
     assert script.count('href: "/chat/"') == 2
-    assert chat_html.count('href="/"') == 3
+    # The account gate carries the same canonical home link as the authenticated shell.
+    assert chat_html.count('href="/"') == 4
     assert 'class="brand" href="/"' in chat_html
     assert 'class="product-home-link" href="/"' in chat_html
     assert 'class="mobile-home-link" href="/"' in chat_html
@@ -83,7 +83,7 @@ def test_learning_examples_cover_all_tracks_and_pause_during_interaction() -> No
     assert "Business (Commercial)" in html
     assert "perspective-choices" in html
     assert "price-slider" in html and "units-slider" in html
-    assert html.index('class="lesson-intro"') < html.index('data-carousel-track')
+    assert html.index('class="lesson-intro"') < html.index("data-carousel-track")
     assert html.count('class="lesson-intro"') == 1
     assert "lesson-copy" not in html
     assert ".lesson-viewport { overflow: hidden; overflow: clip;" in css
@@ -98,7 +98,7 @@ def test_learning_examples_cover_all_tracks_and_pause_during_interaction() -> No
     assert "humanitiesPrompt" not in script and "businessPrompt" not in script
     assert ".track-tabs button:focus-visible" in css
     assert "keyboardMode" in script
-    assert 'prefers-reduced-motion: reduce' in script
+    assert "prefers-reduced-motion: reduce" in script
     assert "IntersectionObserver" in script
     assert "cancelAnimationFrame" in script
     assert "scrollIntoView" not in script

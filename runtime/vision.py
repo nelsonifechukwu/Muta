@@ -24,8 +24,8 @@ import shutil
 import subprocess
 import threading
 import time
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
-from typing import Callable, Iterator
 
 import httpx
 
@@ -53,6 +53,7 @@ def _startup_timeout_from_env() -> float:
         return float(os.environ.get("MUTA_RT_VISION_STARTUP_S", STARTUP_TIMEOUT_SECONDS))
     except ValueError:
         return STARTUP_TIMEOUT_SECONDS
+
 
 #: §5.1 — the vision instance's marginal cap. Enforced by systemd where available so a
 #: runaway vision job is bounded by the kernel rather than by our own good intentions.
@@ -93,6 +94,11 @@ class VisionManager:
     #: spawn (up to minutes), and a finishing request must never wait on someone else's
     #: model load just to decrement a counter.
     _active_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    # CORE-VISION is a single-slot auxiliary engine. Serialisation prevents overlapping image
+    # contexts from escaping the Host-mode memory plan when several learners upload at once.
+    _use_slot: threading.Semaphore = field(
+        default_factory=lambda: threading.Semaphore(1), init=False, repr=False
+    )
     #: Serialises spawn decisions. Two uploads in flight at once would otherwise both see
     #: `running == False` and race two servers onto port 8082; the loser exits with EADDRINUSE
     #: and both students are told the reader is broken. The second caller waits and then
@@ -176,7 +182,9 @@ class VisionManager:
                 if elapsed > SPAWN_BUDGET_SECONDS:
                     # Not fatal, but the student is staring at "reading your work…" for that
                     # long — worth seeing in the logs when the demo feels slow.
-                    log.warning("vision spawn took %.1fs (budget %.0fs)", elapsed, SPAWN_BUDGET_SECONDS)
+                    log.warning(
+                        "vision spawn took %.1fs (budget %.0fs)", elapsed, SPAWN_BUDGET_SECONDS
+                    )
                 log.info("CORE-VISION ready in %.1fs", elapsed)
                 return
             time.sleep(0.25)
@@ -196,14 +204,37 @@ class VisionManager:
     def in_use(self) -> Iterator[None]:
         """Marks a request in flight so the TTL reaper leaves the server alone. The idle
         clock restarts when the request finishes — TTL measures idleness, not wall time."""
-        with self._active_lock:
-            self._active += 1
-        try:
-            yield
-        finally:
+        with self._use_slot:
             with self._active_lock:
-                self._active -= 1
-                self.touch()
+                self._active += 1
+            try:
+                yield
+            finally:
+                with self._active_lock:
+                    self._active -= 1
+                    self.touch()
+
+    def stop_for_reconfigure(self) -> bool:
+        """Stop an idle auxiliary engine before the text profile is replaced.
+
+        Both locks are non-blocking: a host capacity change must report that an image is
+        still being read instead of killing it mid-request or waiting invisibly for minutes.
+        `in_use()` owns `_use_slot` across spawn and transcription, while `_lock` excludes a
+        concurrent spawn decision.
+        """
+        if not self._use_slot.acquire(blocking=False):
+            return False
+        if not self._lock.acquire(blocking=False):
+            self._use_slot.release()
+            return False
+        try:
+            if self._active > 0 or self.starting:
+                return False
+            self.stop()
+            return True
+        finally:
+            self._lock.release()
+            self._use_slot.release()
 
     def reap_if_idle(self) -> bool:
         """TTL reaper tick. Returns True when it killed the instance.
@@ -268,16 +299,23 @@ def _wrap_with_scope(invocation: Invocation) -> list[str]:
         "systemd-run",
         "--scope",
         "--quiet",
-        "--unit", "tutor-core-vision",
-        "-p", f"MemoryMax={MEMORY_MAX}",
-        "-p", f"MemoryHigh={int(int(MEMORY_MAX.rstrip('M')) * 0.9)}M",
-        "-p", f"CPUWeight={CPU_WEIGHT}",
-        "-p", "Slice=tutor.slice",
+        "--unit",
+        "tutor-core-vision",
+        "-p",
+        f"MemoryMax={MEMORY_MAX}",
+        "-p",
+        f"MemoryHigh={int(int(MEMORY_MAX.rstrip('M')) * 0.9)}M",
+        "-p",
+        f"CPUWeight={CPU_WEIGHT}",
+        "-p",
+        "Slice=tutor.slice",
         *invocation.argv,
     ]
 
 
-def ffmpeg_frames_command(source: str, out_pattern: str, *, fps: int = 1, frames: int = 8) -> list[str]:
+def ffmpeg_frames_command(
+    source: str, out_pattern: str, *, fps: int = 1, frames: int = 8
+) -> list[str]:
     """Video → at most 8 frames at 1 fps, longest side ≤ 1280 (TDD §6.3, S4).
 
     The cap is a context budget, not a quality choice: image tokens scale with resolution and
@@ -285,9 +323,12 @@ def ffmpeg_frames_command(source: str, out_pattern: str, *, fps: int = 1, frames
     """
     return [
         "ffmpeg",
-        "-i", source,
-        "-vf", f"fps={fps},scale='min(1280,iw)':-2",
-        "-frames:v", str(frames),
+        "-i",
+        source,
+        "-vf",
+        f"fps={fps},scale='min(1280,iw)':-2",
+        "-frames:v",
+        str(frames),
         "-y",
         out_pattern,
     ]

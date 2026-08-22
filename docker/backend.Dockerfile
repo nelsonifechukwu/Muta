@@ -56,11 +56,12 @@ RUN set -eux; \
 FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-# curl: compose healthcheck. ffmpeg: /v1/audio/transcribe decodes browser uploads
+# curl: compose healthcheck. openssl: Host mode's offline LAN CA and certificate.
+# ffmpeg: /v1/audio/transcribe decodes browser uploads
 # (webm/opus/m4a) to 16 kHz PCM. lm-sensors: thermal telemetry on Linux hosts.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3.10 python3-pip \
-        curl ffmpeg lm-sensors ca-certificates libgomp1 \
+        curl ffmpeg openssl lm-sensors ca-certificates libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -100,5 +101,5 @@ ARG MUTA_GIT_SHA=unknown
 ENV MUTA_VERSION=${MUTA_VERSION} \
     MUTA_GIT_SHA=${MUTA_GIT_SHA}
 
-EXPOSE 8000
+EXPOSE 8000 8443
 CMD ["python3.10", "-m", "uvicorn", "orchestrator.main:app", "--host", "0.0.0.0", "--port", "8000"]

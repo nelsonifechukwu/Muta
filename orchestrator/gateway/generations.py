@@ -15,7 +15,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 log = logging.getLogger("muta.gateway.generations")
@@ -44,12 +44,14 @@ class GenerationSnapshot:
     queue_position: int = 0
 
 
-@dataclass(frozen=True)
+@dataclass
 class _Reservation:
     student_id: str
     conversation_id: str | None
     client_request_id: str | None
     created_at: float
+    cancelled: bool = False
+    done: threading.Event = field(default_factory=threading.Event)
 
 
 class GenerationJob:
@@ -87,6 +89,7 @@ class GenerationJob:
         self._events: list[str] = []
         self._stop_requested = False
         self._queue_position = 0
+        self.initial_queue_position = 0
         self.was_queued = False
         self._thread = threading.Thread(
             target=self._run,
@@ -140,6 +143,8 @@ class GenerationJob:
             if self.state != "queued" or self._queue_position == position:
                 return
             self._queue_position = position
+            if not self.initial_queue_position:
+                self.initial_queue_position = position
             self.was_queued = True
             self._events.append(
                 _sse(
@@ -152,6 +157,17 @@ class GenerationJob:
                 )
             )
             self._condition.notify_all()
+
+    def wait(self, timeout_s: float | None = None) -> str:
+        """Block until the worker reaches a terminal state and return that state."""
+        deadline = None if timeout_s is None else time.monotonic() + max(0.0, timeout_s)
+        with self._condition:
+            while self.state not in _TERMINAL_STATES:
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
+                    raise TimeoutError("generation did not finish before the wait timeout")
+                self._condition.wait(timeout=remaining)
+            return self.state
 
     def reject_queued(self, message: str) -> bool:
         """Terminalize a job whose physical admission was refused after HTTP 202.
@@ -356,15 +372,20 @@ class GenerationManager:
         reservation_ttl_s: float = 300.0,
         max_active: int | None = None,
         max_queued: int = 32,
+        max_active_per_student: int = 2,
+        max_live_per_student: int = 4,
     ) -> None:
         self.completed_ttl_s = completed_ttl_s
         self.reservation_ttl_s = reservation_ttl_s
         self.max_active = max_active
         self.max_queued = max(0, max_queued)
+        self.max_active_per_student = max(1, max_active_per_student)
+        self.max_live_per_student = max(self.max_active_per_student, max_live_per_student)
         self._lock = threading.RLock()
         self._jobs: dict[str, GenerationJob] = {}
         self._reservations: dict[str, _Reservation] = {}
         self._queue: list[str] = []
+        self._blocked_students: set[str] = set()
         self._shutting_down = False
         self._promotion_retry_pending = False
 
@@ -381,12 +402,11 @@ class GenerationManager:
             self._prune_locked()
             if self._shutting_down:
                 raise GenerationCapacityError("generation service is shutting down")
+            if student_id in self._blocked_students:
+                raise GenerationCapacityError("this learner's access was removed")
             live = sum(job.state in {"queued", "running"} for job in self._jobs.values())
             occupied = live + len(self._reservations)
-            if (
-                self.max_active is not None
-                and occupied >= self.max_active + self.max_queued
-            ):
+            if self.max_active is not None and occupied >= self.max_active + self.max_queued:
                 raise GenerationCapacityError(
                     "the local reply queue is full — please try again shortly"
                 )
@@ -394,6 +414,14 @@ class GenerationManager:
                 job.student_id == student_id and job.state in {"queued", "running"}
                 for job in self._jobs.values()
             ) or any(row.student_id == student_id for row in self._reservations.values())
+            student_live = sum(
+                job.student_id == student_id and job.state in {"queued", "running"}
+                for job in self._jobs.values()
+            ) + sum(row.student_id == student_id for row in self._reservations.values())
+            if student_live >= self.max_live_per_student:
+                raise GenerationCapacityError(
+                    "this learner already has the maximum number of active or queued replies"
+                )
             if same_student and not allow_parallel:
                 raise GenerationCapacityError("a reply is already running for this learner")
             if conversation_id and (
@@ -411,13 +439,11 @@ class GenerationManager:
                 raise GenerationCapacityError("a reply is already running in this conversation")
             if client_request_id and (
                 any(
-                    job.student_id == student_id
-                    and job.client_request_id == client_request_id
+                    job.student_id == student_id and job.client_request_id == client_request_id
                     for job in self._jobs.values()
                 )
                 or any(
-                    row.student_id == student_id
-                    and row.client_request_id == client_request_id
+                    row.student_id == student_id and row.client_request_id == client_request_id
                     for row in self._reservations.values()
                 )
             ):
@@ -433,7 +459,9 @@ class GenerationManager:
 
     def cancel_reservation(self, reservation_id: str) -> None:
         with self._lock:
-            self._reservations.pop(reservation_id, None)
+            reservation = self._reservations.pop(reservation_id, None)
+            if reservation is not None:
+                reservation.done.set()
 
     def start(
         self,
@@ -471,6 +499,10 @@ class GenerationManager:
             reserved = self._reservations.get(reservation_id)
             if reserved is None or reserved.student_id != student_id:
                 raise GenerationCapacityError("generation reservation expired")
+            if reserved.cancelled:
+                self._reservations.pop(reservation_id, None)
+                reserved.done.set()
+                raise GenerationCapacityError("this learner's access was removed")
             if reserved.client_request_id != client_request_id:
                 raise GenerationCapacityError("generation reservation does not match this request")
             if any(
@@ -482,6 +514,7 @@ class GenerationManager:
                 raise GenerationCapacityError("a reply is already running in this conversation")
             self._reservations.pop(reservation_id, None)
             self._jobs[job.id] = job
+            reserved.done.set()
             self._queue.append(job.id)
             try:
                 self._promote_locked(propagate_for=job.id)
@@ -490,6 +523,63 @@ class GenerationManager:
                 self._jobs.pop(job.id, None)
                 raise
         return job
+
+    def execute(
+        self,
+        *,
+        student_id: str,
+        operation: Callable[[], object],
+        allow_parallel: bool = True,
+        conversation_id: str | None = None,
+        client_request_id: str | None = None,
+        queued_cleanup: Callable[[], None] | None = None,
+        before_start: Callable[[], bool] | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> tuple[object, bool, int]:
+        """Run a blocking inference call through the same fair classroom queue.
+
+        The primary browser path is replayable SSE, but the frozen contract also exposes
+        blocking JSON endpoints. Running their engine call directly would let an API client
+        bypass Host mode's RAM-derived lane limit. This adapter represents the call as an
+        ordinary generation job, waits for its worker, then returns the captured value.
+        """
+        reservation_id = self.reserve(
+            student_id,
+            allow_parallel=allow_parallel,
+            conversation_id=conversation_id,
+            client_request_id=client_request_id,
+        )
+        result: dict[str, object] = {}
+
+        def _producer() -> Iterator[str]:
+            try:
+                result["value"] = operation()
+            except Exception as exc:
+                result["error"] = exc
+                raise
+            yield _sse({"done": True})
+
+        try:
+            job = self.start(
+                student_id=student_id,
+                conversation_id=conversation_id or f"blocking:{reservation_id}",
+                producer=_producer(),
+                reservation_id=reservation_id,
+                client_request_id=client_request_id,
+                queued_cleanup=queued_cleanup,
+                before_start=before_start,
+                cancel_event=cancel_event,
+            )
+        except Exception:
+            self.cancel_reservation(reservation_id)
+            raise
+        job.wait()
+        error = result.get("error")
+        if isinstance(error, BaseException):
+            raise error
+        if "value" not in result:
+            raise GenerationCapacityError("generation stopped before it produced a reply")
+        return result["value"], job.was_queued, job.initial_queue_position
 
     def get(self, job_id: str, *, student_id: str | None = None) -> GenerationJob | None:
         with self._lock:
@@ -525,13 +615,66 @@ class GenerationManager:
             self._prune_locked()
             return sum(job.state == "running" for job in self._jobs.values())
 
+    def status(self) -> dict[str, int | None]:
+        with self._lock:
+            self._prune_locked()
+            return {
+                "max_active": self.max_active,
+                "max_queued": self.max_queued,
+                "running": sum(job.state == "running" for job in self._jobs.values()),
+                "queued": sum(job.state == "queued" for job in self._jobs.values()),
+                "reservations": len(self._reservations),
+            }
+
+    def set_max_active(self, value: int, *, max_active_per_student: int | None = None) -> None:
+        if value < 1:
+            raise ValueError("max_active must be positive")
+        with self._lock:
+            self.max_active = value
+            if max_active_per_student is not None:
+                self.max_active_per_student = max(1, max_active_per_student)
+            self._promote_locked()
+
+    def stop_student(self, student_id: str, *, timeout_s: float = 5.0) -> int:
+        """Cancel and join every queued/running job owned by one learner.
+
+        Removal revokes authentication before calling this method, so no new reservation for
+        the learner can arrive through the HTTP firewall while the workers drain.
+        """
+        with self._lock:
+            self._blocked_students.add(student_id)
+            jobs = [
+                job
+                for job in self._jobs.values()
+                if job.student_id == student_id and job.state in {"queued", "running"}
+            ]
+            reservations = [
+                row for row in self._reservations.values() if row.student_id == student_id
+            ]
+            for reservation in reservations:
+                reservation.cancelled = True
+        for job in jobs:
+            job.request_stop()
+        deadline = time.monotonic() + max(0.0, timeout_s)
+        for job in jobs:
+            if job._thread.is_alive():
+                job._thread.join(timeout=max(0.0, deadline - time.monotonic()))
+        for reservation in reservations:
+            reservation.done.wait(timeout=max(0.0, deadline - time.monotonic()))
+        if any(job._thread.is_alive() for job in jobs) or any(
+            not reservation.done.is_set() for reservation in reservations
+        ):
+            raise GenerationCapacityError("learner work did not drain before the erase deadline")
+        return len(jobs) + len(reservations)
+
     def run_when_idle(self, operation: Callable[[], object]) -> object:
         """Run a model lifecycle transition atomically against generation admission."""
         with self._lock:
             self._prune_locked()
-            if any(
-                job.state in {"queued", "running"} for job in self._jobs.values()
-            ) or self._reservations:
+            if (
+                any(job.state in {"queued", "running"} for job in self._jobs.values())
+                or self._reservations
+            ):
                 raise GenerationCapacityError("wait for active replies before changing models")
             return operation()
 
@@ -541,7 +684,11 @@ class GenerationManager:
             self._shutting_down = True
             jobs = [job for job in self._jobs.values() if job.state == "running"]
             queued = [job for job in self._jobs.values() if job.state == "queued"]
+            reservations = list(self._reservations.values())
             self._reservations.clear()
+            for reservation in reservations:
+                reservation.cancelled = True
+                reservation.done.set()
         for job in queued:
             job.request_stop()
         for job in jobs:
@@ -558,11 +705,25 @@ class GenerationManager:
 
     def _promote_locked(self, *, propagate_for: str | None = None) -> None:
         limit = self.max_active
+        blocked_students = 0
         while self._queue and (limit is None or self.running_count() < limit):
             job_id = self._queue.pop(0)
             job = self._jobs.get(job_id)
             if job is None or job.state != "queued":
                 continue
+            running_for_student = sum(
+                existing.student_id == job.student_id and existing.state == "running"
+                for existing in self._jobs.values()
+            )
+            if running_for_student >= self.max_active_per_student:
+                # Do not let one learner consume every physical lane. Move their job behind the
+                # first other learner while preserving FIFO within each learner.
+                self._queue.append(job_id)
+                blocked_students += 1
+                if blocked_students >= len(self._queue):
+                    break
+                continue
+            blocked_students = 0
             try:
                 started = job.start()
             except Exception as exc:
@@ -608,11 +769,15 @@ class GenerationManager:
 
     def _prune_locked(self) -> None:
         now = time.monotonic()
-        self._reservations = {
-            reservation_id: reservation
+        expired_reservations = [
+            reservation_id
             for reservation_id, reservation in self._reservations.items()
-            if now - reservation.created_at < self.reservation_ttl_s
-        }
+            if now - reservation.created_at >= self.reservation_ttl_s
+        ]
+        for reservation_id in expired_reservations:
+            reservation = self._reservations.pop(reservation_id)
+            reservation.cancelled = True
+            reservation.done.set()
         expired = [
             job_id
             for job_id, job in self._jobs.items()

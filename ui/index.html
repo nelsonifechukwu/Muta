@@ -11,10 +11,52 @@
   <script src="locale-manifest.js?v=20260821-ui-locales-2"></script>
   <script src="locale-bootstrap.js?v=20260821-ui-locales-2"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260821-muta-power-viz-1">
+  <link rel="stylesheet" href="styles.css?v=20260822-muta-share-1">
 </head>
 <body>
-  <div id="app">
+  <main id="share-auth" class="share-auth" aria-labelledby="share-auth-title">
+    <section class="share-auth-card">
+      <a class="share-auth-brand" href="/">Muta.</a>
+      <div id="share-auth-loading" class="share-auth-loading" role="status">
+        <span class="share-spinner" aria-hidden="true"></span>
+        <p>Connecting to this Muta…</p>
+      </div>
+      <div id="share-auth-panel" hidden>
+        <p class="share-eyebrow">Shared from a nearby laptop</p>
+        <h1 id="share-auth-title">Welcome to Muta</h1>
+        <p id="share-auth-message" class="share-auth-message">Sign in to open your private tutor.</p>
+        <a id="share-secure-link" class="share-primary-link" href="#" hidden>Open secure Muta</a>
+        <div id="share-auth-tabs" class="share-auth-tabs" role="tablist" aria-label="Account access">
+          <button id="share-login-tab" type="button" role="tab" tabindex="0" aria-selected="true" aria-controls="share-login-form">Log in</button>
+          <button id="share-signup-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="share-signup-form">Sign up</button>
+        </div>
+        <form id="share-login-form" class="share-auth-form" role="tabpanel" aria-labelledby="share-login-tab" autocomplete="on">
+          <label for="share-login-username">Username</label>
+          <input id="share-login-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" required>
+          <label for="share-login-password">Password</label>
+          <input id="share-login-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="256" required>
+          <button class="share-primary" type="submit">Log in</button>
+        </form>
+        <form id="share-signup-form" class="share-auth-form" role="tabpanel" aria-labelledby="share-signup-tab" autocomplete="on" hidden>
+          <label for="share-signup-username">Choose a username</label>
+          <input id="share-signup-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" pattern="[^._-].*[^._-]|[^._-]" required>
+          <small>3–32 letters or numbers; dots, dashes and underscores are allowed inside.</small>
+          <label for="share-signup-password">Choose a password</label>
+          <input id="share-signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="256" required>
+          <button class="share-primary" type="submit">Ask to join</button>
+        </form>
+        <div id="share-pending" class="share-pending" hidden>
+          <span class="share-pending-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <h2 id="share-pending-title" tabindex="-1">Request sent</h2>
+          <p>Ask the person hosting Muta to approve you. This page will open automatically.</p>
+          <button id="share-pending-cancel" type="button" class="share-link-button">Use another account</button>
+        </div>
+        <p id="share-auth-error" class="share-auth-error" role="alert" aria-live="assertive"></p>
+      </div>
+    </section>
+  </main>
+
+  <div id="app" hidden>
     <button id="menu-toggle" class="menu-toggle" aria-label="Show conversations" data-i18n-aria-label="nav.showConversations" aria-expanded="false" aria-controls="sidebar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
     </button>
@@ -37,6 +79,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.38 2.8a.49.49 0 0 0-.49-.4h-3.84a.49.49 0 0 0-.49.4L9.2 5.32c-.58.24-1.12.56-1.62.94L5.19 5.3a.48.48 0 0 0-.61.22L2.66 8.84a.49.49 0 0 0 .12.64l2.03 1.58c-.05.31-.09.64-.09.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.12.22.39.31.61.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.52c.05.24.25.4.49.4h3.84c.24 0 .44-.16.49-.4l.36-2.52c.58-.24 1.12-.56 1.62-.94l2.39.96c.22.08.49 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>
         <span data-i18n="settings.title">Settings</span>
       </button>
+      <div id="share-account" class="share-account" hidden>
+        <span><strong id="share-account-name">Muta host</strong><small id="share-account-role">Host</small></span>
+        <button id="share-logout" type="button">Log out</button>
+      </div>
       <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label" data-i18n="runtime.offlineLocal">offline · local CPU</span></div>
     </aside>
 
@@ -183,6 +229,39 @@
           <p id="power-status-actions" class="power-status-actions" hidden></p>
         </div>
       </div>
+      <div id="host-settings" class="settings-section host-settings" lang="en" hidden>
+        <div class="settings-section-heading">
+          <div>
+            <h3>Host mode</h3>
+            <p>Share this Muta privately with people on the same network.</p>
+          </div>
+          <label class="host-switch" for="setting-host-enabled">
+            <span class="sr-only">Enable Host mode</span>
+            <input id="setting-host-enabled" type="checkbox" role="switch">
+          </label>
+        </div>
+        <fieldset id="host-memory-options" class="host-memory-options">
+          <legend>Memory limit</legend>
+          <label><input type="radio" name="host-memory" value="competition" checked><span><strong>ADTC competition</strong><small>Stay inside the 7 GB competition budget. Extra chats wait in line.</small></span></label>
+          <label><input type="radio" name="host-memory" value="system"><span><strong>Use this system</strong><small>Detect usable RAM and CPU, then run as many safe chats as this laptop supports.</small></span></label>
+        </fieldset>
+        <p id="host-save-state" class="host-save-state" role="status" aria-live="polite"></p>
+        <div id="host-share-card" class="host-share-card" hidden>
+          <img id="host-qr" alt="QR code for the secure Muta join URL" width="168" height="168">
+          <div>
+            <strong>Share this address</strong>
+            <div class="host-url-row"><input id="host-join-url" type="url" readonly aria-label="Muta join URL"><button id="host-copy-url" type="button">Copy</button></div>
+            <p>Learners must be on this network. On first use, install Muta’s local certificate, then compare its fingerprint with the host.</p>
+            <a id="host-ca-download" href="/v1/share/host/ca.pem" download>Download trust certificate</a>
+            <code id="host-cert-fingerprint"></code>
+          </div>
+        </div>
+        <div id="host-capacity" class="host-capacity" hidden></div>
+        <div id="host-roster" class="host-roster" hidden>
+          <div class="host-roster-heading"><strong>People</strong><span id="host-roster-count"></span></div>
+          <div id="host-user-list" aria-live="polite"></div>
+        </div>
+      </div>
       <div class="settings-section resource-settings">
         <div class="settings-section-heading">
           <div>
@@ -213,9 +292,9 @@
   <script src="locale-fr.js?v=20260821-ui-locales-2"></script>
   <script src="locale-generated.js?v=20260821-ui-locales-2"></script>
   <script src="locales.js?v=20260821-ui-locales-2"></script>
-  <script src="math.js?v=20260821-muta-power-viz-1"></script>
-  <script src="visualizations.js?v=20260821-muta-power-viz-1"></script>
-  <script src="app.js?v=20260821-muta-power-viz-1"></script>
-  <script src="audio.js?v=20260821-muta-power-viz-1"></script>
+  <script src="math.js?v=20260822-muta-share-1"></script>
+  <script src="visualizations.js?v=20260822-muta-share-1"></script>
+  <script src="app.js?v=20260822-muta-share-1"></script>
+  <script src="audio.js?v=20260822-muta-share-1"></script>
 </body>
 </html>

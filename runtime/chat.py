@@ -556,7 +556,10 @@ class ChatEngine:
             buffered_content: list[str] = []
             attempt_content_progress = False
             try:
-                events = iter(stream(request_messages, **request_params))
+                stream_params = dict(request_params)
+                if cancel_event is not None:
+                    stream_params["_muta_cancel_event"] = cancel_event
+                events = iter(stream(request_messages, **stream_params))
                 while True:
                     if cancel_event is not None and cancel_event.is_set():
                         return
@@ -602,6 +605,8 @@ class ChatEngine:
                     yield from (("content", text) for text in buffered_content)
                 return
             except Exception as exc:
+                if cancel_event is not None and cancel_event.is_set():
+                    return
                 if deduplicator is not None:
                     tail = deduplicator.finish()
                     if tail:
@@ -759,6 +764,7 @@ class ChatEngine:
         turn_instruction: str | None = None,
         title: str | None = None,
         regenerate: bool = False,
+        cancel_event: threading.Event | None = None,
         **params,
     ) -> ChatResult:
         cid = self._open(
@@ -782,6 +788,28 @@ class ChatEngine:
             params,
             protected_tail_messages=min(3, max(1, len(messages) - 1)),
         )
+        if cancel_event is not None:
+            writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
+            try:
+                for kind, text in self._events_with_recovery(
+                    messages, request_params, writer, cancel_event
+                ):
+                    if kind == "content":
+                        writer.add(text)
+            finally:
+                writer.flush()
+            if cancel_event.is_set():
+                raise InferenceStreamError(
+                    "generation was cancelled",
+                    retryable=False,
+                    partial_text=writer.text,
+                )
+            return ChatResult(
+                conversation_id=cid,
+                reply=writer.text,
+                user_message_id=user_message_id,
+                assistant_message_id=writer.message_id,
+            )
         try:
             generation = self._chat_with_length_recovery(messages, request_params)
         except InferenceStreamError as exc:

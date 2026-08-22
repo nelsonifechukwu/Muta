@@ -134,6 +134,43 @@ def test_a_request_in_flight_blocks_the_reaper(manager):
     assert manager.reap_if_idle() is True
 
 
+def test_active_read_blocks_capacity_reconfiguration_then_idle_engine_stops(manager):
+    manager.ensure()
+    with manager.in_use():
+        assert manager.stop_for_reconfigure() is False
+        assert manager.running
+
+    assert manager.stop_for_reconfigure() is True
+    assert not manager.running
+    assert manager.fake_process.terminated
+
+
+def test_auxiliary_image_reads_are_serialized(manager):
+    first_entered = threading.Event()
+    release_first = threading.Event()
+    second_entered = threading.Event()
+
+    def first() -> None:
+        with manager.in_use():
+            first_entered.set()
+            assert release_first.wait(timeout=2)
+
+    def second() -> None:
+        with manager.in_use():
+            second_entered.set()
+
+    one = threading.Thread(target=first)
+    two = threading.Thread(target=second)
+    one.start()
+    assert first_entered.wait(timeout=2)
+    two.start()
+    assert not second_entered.wait(timeout=0.1)
+    release_first.set()
+    one.join(timeout=2)
+    two.join(timeout=2)
+    assert second_entered.is_set()
+
+
 def test_use_resets_the_idle_clock(manager):
     manager.ensure()
     manager.ticks["now"] = IDLE_TTL_SECONDS - 1

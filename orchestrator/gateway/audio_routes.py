@@ -24,9 +24,10 @@ import logging
 import re
 import subprocess
 import threading
+import time
 from dataclasses import dataclass
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, WebSocket
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, WebSocket
 from fastapi.concurrency import iterate_in_threadpool, run_in_threadpool
 from starlette.websockets import WebSocketDisconnect
 
@@ -35,9 +36,33 @@ from orchestrator.audio.config import AudioConfig
 from orchestrator.audio.engines import AsrEngine, SileroVad, TtsEngine, load_engines
 from orchestrator.audio.mathspeech import to_speech
 from orchestrator.audio.vad import Endpointer
-from orchestrator.gateway.deps import get_engine, get_power_governor, load_prompt
+from orchestrator.gateway.auth import (
+    is_operator_request,
+    member_write_lease,
+    optional_caller,
+    principal_from_request,
+    resolve_principal,
+)
+from orchestrator.gateway.auxiliary import (
+    AuxiliaryQueueFull,
+    OwnerWorkRejected,
+    auxiliary_slot,
+    get_owner_work_manager,
+)
+from orchestrator.gateway.deps import (
+    get_engine,
+    get_generation_manager,
+    get_ladder,
+    get_power_governor,
+    get_sessions,
+    load_prompt,
+)
+from orchestrator.gateway.generations import GenerationCapacityError, GenerationJob
 from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
 from orchestrator.gateway.sampling import params_for_mode
+from orchestrator.gateway.sessions import Admission
+from orchestrator.gateway.share_routes import strict_share_security
+from orchestrator.gateway.sharing import SESSION_COOKIE, AuthenticationError
 from orchestrator.telemetry import get_hub
 from runtime.chat import ChatEngine
 
@@ -86,6 +111,15 @@ class AudioStack:
 
 _audio_stack: AudioStack | None = None
 _audio_lock = threading.Lock()
+_asr_slots = threading.BoundedSemaphore(2)
+
+
+def _transcribe_pcm(stack: AudioStack, pcm: bytes) -> str:
+    return stack.asr.transcribe_pcm(pcm)
+
+
+def _transcribe_samples(stack: AudioStack, samples) -> str:
+    return stack.asr.transcribe_samples(samples)
 
 
 def get_audio() -> AudioStack:
@@ -143,43 +177,72 @@ def _ffmpeg_to_pcm16k(data: bytes) -> bytes | None:
 
 @router.post("/audio/transcribe", response_model=TranscribeResponse, tags=["audio"])
 async def audio_transcribe(
+    request: Request,
     audio: UploadFile = File(...),
     conversation_id: str | None = Form(None),
     student_id: str | None = Form(None),
     engine: ChatEngine = Depends(get_engine),
+    caller: str | None = Depends(optional_caller),
 ) -> TranscribeResponse:
     """Uploaded audio → text. 503 when ASR is unavailable (the UI tells the student to
     type instead), 422 when ffmpeg can't decode the file, 413 when the upload is too large."""
-    stack = await run_in_threadpool(get_audio)  # first call loads ONNX models
-    if not stack.asr.available:
+    if strict_share_security() and caller is None:
+        raise HTTPException(status_code=401, detail="sign in to continue")
+    write_principal = principal_from_request(request)
+    if student_id is not None and student_id != caller:
+        raise HTTPException(status_code=403, detail="you can only store your own recordings")
+    student_id = caller or student_id
+    if conversation_id:
+        conversation = engine.store.get_conversation(conversation_id)
+        if conversation is None or conversation.get("student_id") != student_id:
+            raise HTTPException(status_code=404, detail="unknown conversation")
+    try:
+        if write_principal is not None and write_principal.role == "member":
+            tracked = get_owner_work_manager().track(write_principal.subject)
+        else:
+            tracked = contextlib.nullcontext(None)
+        with tracked:
+            stack = await run_in_threadpool(get_audio)  # first call loads ONNX models
+            if not stack.asr.available:
+                raise HTTPException(
+                    status_code=503,
+                    detail="speech recognition isn't available — type the question instead",
+                )
+            raw = await audio.read(MAX_AUDIO_UPLOAD_BYTES + 1)
+            if len(raw) > MAX_AUDIO_UPLOAD_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail=(
+                        "that recording is too large — keep it under "
+                        f"{MAX_AUDIO_UPLOAD_BYTES // 2**20} MB"
+                    ),
+                )
+            pcm = await run_in_threadpool(_ffmpeg_to_pcm16k, raw)
+            if pcm is None:
+                raise HTTPException(status_code=422, detail="couldn't decode that audio file")
+            async with auxiliary_slot(_asr_slots):
+                text = await run_in_threadpool(_transcribe_pcm, stack, pcm)
+    except AuxiliaryQueueFull as exc:
         raise HTTPException(
-            status_code=503,
-            detail="speech recognition isn't available — type the question instead",
-        )
-    raw = await audio.read()
-    if len(raw) > MAX_AUDIO_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=(
-                f"that recording is too large — keep it under {MAX_AUDIO_UPLOAD_BYTES // 2**20} MB"
-            ),
-        )
-    pcm = await run_in_threadpool(_ffmpeg_to_pcm16k, raw)
-    if pcm is None:
-        raise HTTPException(status_code=422, detail="couldn't decode that audio file")
-    text = await run_in_threadpool(stack.asr.transcribe_pcm, pcm)
+            status_code=503, detail="speech recognition is busy — try again shortly"
+        ) from exc
+    except OwnerWorkRejected as exc:
+        raise HTTPException(status_code=403, detail="this account is being removed") from exc
 
     attachment_id: int | None = None
     try:
-        attachment_id = await run_in_threadpool(
-            engine.store.add_attachment,
-            "audio",
-            _safe_audio_mime(audio.content_type),
-            raw,
-            conversation_id=conversation_id,
-            owner_id=student_id,
-        )
-    except Exception:  # noqa: BLE001 — persistence is best-effort; the transcript is the point
+        with member_write_lease(write_principal):
+            attachment_id = await run_in_threadpool(
+                engine.store.add_attachment,
+                "audio",
+                _safe_audio_mime(audio.content_type),
+                raw,
+                conversation_id=conversation_id,
+                owner_id=student_id,
+            )
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=403, detail="this account is being removed") from exc
+    except Exception:
         log.warning("failed to persist audio attachment", exc_info=True)
         attachment_id = None
     return TranscribeResponse(text=text, attachment_id=attachment_id)
@@ -222,6 +285,24 @@ def _voice_system_prompt(mode: str, language: str) -> str:
 @router.websocket("/audio/voice")
 async def audio_voice(ws: WebSocket) -> None:
     await ws.accept()
+    session_token = ws.cookies.get(SESSION_COOKIE) or (
+        ws.headers.get("authorization", "")[7:].strip()
+        if ws.headers.get("authorization", "").lower().startswith("bearer ")
+        else None
+    )
+    principal = resolve_principal(session_token)
+    if strict_share_security() and (principal is None or principal.role not in {"host", "member"}):
+        await ws.send_json({"type": "error", "reason": "sign-in-required"})
+        await ws.close(code=4401)
+        return
+    if strict_share_security() and principal.role == "host" and not is_operator_request(ws):
+        await ws.send_json({"type": "error", "reason": "host-local-only"})
+        await ws.close(code=4403)
+        return
+    if strict_share_security() and ws.url.scheme != "wss" and principal.role != "host":
+        await ws.send_json({"type": "error", "reason": "secure-connection-required"})
+        await ws.close(code=4403)
+        return
     # First-connection engine loads (ONNX models) must not stall the event loop.
     stack = await run_in_threadpool(get_audio)
     if not stack.asr.available:
@@ -236,11 +317,13 @@ async def audio_voice(ws: WebSocket) -> None:
         start = json.loads(await ws.receive_text())
     except WebSocketDisconnect:
         return
-    except Exception:  # noqa: BLE001 — includes binary-first KeyError and bad JSON
+    except Exception:
         with contextlib.suppress(Exception):
             await ws.close()
         return
-    student_id = start.get("student_id") or "voice-user"
+    student_id = (
+        principal.subject if principal is not None else start.get("student_id") or "voice-user"
+    )
     mode = start.get("mode") or "socratic"
     state = {
         "conversation_id": start.get("conversation_id"),
@@ -259,6 +342,22 @@ async def audio_voice(ws: WebSocket) -> None:
     max_buffer_bytes = int(stack.config.asr.vad.max_utterance_seconds * SAMPLE_RATE * 2)
     cancel = asyncio.Event()
     respond_task: asyncio.Task | None = None
+    active_job: GenerationJob | None = None
+
+    def voice_session_valid() -> bool:
+        if not strict_share_security():
+            return True
+        current = resolve_principal(session_token)
+        return bool(current is not None and current.subject == student_id)
+
+    async def close_revoked_voice() -> None:
+        cancel.set()
+        if active_job is not None:
+            active_job.request_stop()
+        with contextlib.suppress(Exception):
+            await ws.send_json({"type": "error", "reason": "session-revoked"})
+        with contextlib.suppress(Exception):
+            await ws.close(code=4401)
 
     async def speak(sentence: str) -> None:
         if not stack.tts.available or cancel.is_set() or not get_power_governor().tts_allowed():
@@ -279,10 +378,34 @@ async def audio_voice(ws: WebSocket) -> None:
     async def respond(utterance) -> None:
         """utterance: float32 samples (VAD segment) or int16 PCM bytes (fallback path)."""
         try:
-            await _respond_inner(utterance)
+            if principal is not None and principal.role == "member":
+                tracked = get_owner_work_manager().track(principal.subject)
+            else:
+                tracked = contextlib.nullcontext(None)
+            with tracked as owner_cancel:
+                mirror_task: asyncio.Task | None = None
+                if owner_cancel is not None:
+
+                    async def mirror_owner_cancel() -> None:
+                        while not owner_cancel.is_set():
+                            await asyncio.sleep(0.05)
+                        cancel.set()
+                        if active_job is not None:
+                            active_job.request_stop()
+
+                    mirror_task = asyncio.create_task(mirror_owner_cancel())
+                try:
+                    await _respond_inner(utterance)
+                finally:
+                    if mirror_task is not None:
+                        mirror_task.cancel()
+                        with contextlib.suppress(asyncio.CancelledError):
+                            await mirror_task
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001 — a failed turn must be visible, not silent
+        except OwnerWorkRejected:
+            await close_revoked_voice()
+        except Exception:
             log.exception("voice turn failed")
             with contextlib.suppress(Exception):
                 await ws.send_json(
@@ -294,12 +417,26 @@ async def audio_voice(ws: WebSocket) -> None:
                 )
 
     async def _respond_inner(utterance) -> None:
-        if isinstance(utterance, (bytes, bytearray)):
-            text = await run_in_threadpool(stack.asr.transcribe_pcm, bytes(utterance))
-        else:
-            text = await run_in_threadpool(stack.asr.transcribe_samples, utterance)
+        nonlocal active_job
+        # Check before ASR: a revoked learner cannot keep spending CPU with an already-open
+        # microphone socket, even if no model reply has started yet.
+        if not voice_session_valid():
+            await close_revoked_voice()
+            return
+        try:
+            async with auxiliary_slot(_asr_slots):
+                if isinstance(utterance, (bytes, bytearray)):
+                    text = await run_in_threadpool(_transcribe_pcm, stack, bytes(utterance))
+                else:
+                    text = await run_in_threadpool(_transcribe_samples, stack, utterance)
+        except AuxiliaryQueueFull:
+            await ws.send_json({"type": "error", "reason": "speech-queue-full"})
+            return
         if not text.strip():
             await ws.send_json({"type": "done", "heard": False})
+            return
+        if not voice_session_valid():
+            await close_revoked_voice()
             return
 
         # get_engine's first call constructs the Postgres store (can wait on the pool) and
@@ -311,35 +448,125 @@ async def audio_voice(ws: WebSocket) -> None:
             state["power_optimization_enabled"] = learner_settings.get(
                 "power_optimization_enabled", True
             )
-        except Exception:  # noqa: BLE001 - an optional preference cannot break voice tutoring
+        except Exception:
             state["power_optimization_enabled"] = True
         sampling_params = get_power_governor().adjust_sampling(
             params_for_mode(mode),
             enabled=bool(state["power_optimization_enabled"]),
         )
-        cid, _mid, events = await run_in_threadpool(
-            lambda: engine.stream_events_chat(
-                student_id=student_id,
-                message=text,
+        generations = get_generation_manager()
+        sessions = get_sessions()
+        ladder = get_ladder()
+        try:
+            reservation_id = generations.reserve(
+                student_id,
+                allow_parallel=True,
                 conversation_id=state["conversation_id"],
-                system_prompt=_voice_system_prompt(mode, state["language"]),
-                turn_instruction=response_language_instruction(state["language"]),
-                mode=mode,
-                language=state["language"],
-                title=text[:80],
-                **sampling_params,
             )
-        )
+        except GenerationCapacityError:
+            await ws.send_json({"type": "error", "reason": "reply-queue-full"})
+            return
+        admission_id = f"generation:voice:{reservation_id}"
+        turn_cancel = threading.Event()
+        try:
+            cid, _mid, events = await run_in_threadpool(
+                lambda: engine.stream_events_chat(
+                    student_id=student_id,
+                    message=text,
+                    conversation_id=state["conversation_id"],
+                    system_prompt=_voice_system_prompt(mode, state["language"]),
+                    turn_instruction=response_language_instruction(state["language"]),
+                    mode=mode,
+                    language=state["language"],
+                    title=text[:80],
+                    cancel_event=turn_cancel,
+                    **sampling_params,
+                )
+            )
+        except Exception:
+            generations.cancel_reservation(reservation_id)
+            raise
         state["conversation_id"] = cid
         await ws.send_json({"type": "transcript", "text": text, "conversation_id": cid})
+
+        def _claim_session() -> bool:
+            admission = sessions.acquire(admission_id)
+            if admission.admission is Admission.REFUSED:
+                raise RuntimeError(admission.message or ladder.busy_message())
+            return admission.admitted
+
+        def _voice_events():
+            try:
+                for kind, chunk in events:
+                    yield ("data: " + json.dumps({"voice_kind": kind, "text": chunk}) + "\n\n")
+                yield 'data: {"done": true}\n\n'
+            finally:
+                try:
+                    _close_gen(events)
+                finally:
+                    sessions.release(admission_id)
+
+        def _queued_cleanup() -> None:
+            try:
+                _close_gen(events)
+            finally:
+                sessions.release(admission_id)
+
+        try:
+            job = generations.start(
+                student_id=student_id,
+                conversation_id=cid,
+                producer=_voice_events(),
+                reservation_id=reservation_id,
+                queued_cleanup=_queued_cleanup,
+                before_start=_claim_session,
+                cancel_event=turn_cancel,
+            )
+        except Exception:
+            _queued_cleanup()
+            raise
+        active_job = job
 
         hub = get_hub()
         hub.begin(cid)
         sentence_buf = ""
+        last_auth_check = 0.0
         try:
-            async for kind, chunk in iterate_in_threadpool(events):
+            async for frame in iterate_in_threadpool(job.subscribe()):
                 if cancel.is_set():
-                    break  # closes the generator → the partial reply is persisted
+                    job.request_stop()
+                    break
+                if not frame.startswith("data: "):
+                    continue
+                payload = json.loads(frame[6:])
+                if payload.get("queued"):
+                    await ws.send_json(
+                        {
+                            "type": "queued",
+                            "queue_position": payload.get("queue_position", 0),
+                        }
+                    )
+                    continue
+                if payload.get("started"):
+                    await ws.send_json({"type": "started"})
+                    continue
+                if payload.get("error"):
+                    await ws.send_json({"type": "error", "reason": "voice-turn-failed"})
+                    continue
+                kind = payload.get("voice_kind")
+                chunk = payload.get("text", "")
+                if not kind:
+                    continue
+                if strict_share_security() and time.monotonic() - last_auth_check >= 1.0:
+                    last_auth_check = time.monotonic()
+                    current = resolve_principal(session_token)
+                    if current is None or current.subject != student_id:
+                        cancel.set()
+                        await ws.send_json({"type": "error", "reason": "session-revoked"})
+                        with contextlib.suppress(Exception):
+                            await ws.close(code=4401)
+                        job.request_stop()
+                        break
                 if kind in {"source", "recovering"}:
                     continue
                 hub.tick(cid)
@@ -355,11 +582,14 @@ async def audio_voice(ws: WebSocket) -> None:
                 await speak(sentence_buf)
         finally:
             hub.end(cid)
-            # A barge/disconnect breaks the loop above; close the source generator now, off
-            # the event loop, so its partial-reply persist runs deterministically instead of
-            # waiting for GC (which would block a random later stream and pin an engine slot).
-            await run_in_threadpool(_close_gen, events)
-        await ws.send_json({"type": "done"})
+            if job.snapshot().state not in {"completed", "failed", "stopped"}:
+                job.request_stop()
+                with contextlib.suppress(TimeoutError):
+                    await run_in_threadpool(job.wait, 2.0)
+            if active_job is job:
+                active_job = None
+        if not cancel.is_set() and job.snapshot().state == "completed":
+            await ws.send_json({"type": "done"})
 
     async def _endpoint(utterance) -> None:
         nonlocal respond_task
@@ -372,7 +602,13 @@ async def audio_voice(ws: WebSocket) -> None:
 
     try:
         while True:
-            msg = await ws.receive()
+            try:
+                msg = await asyncio.wait_for(ws.receive(), timeout=1.0)
+            except TimeoutError:
+                if not voice_session_valid():
+                    await close_revoked_voice()
+                    break
+                continue
             if msg["type"] == "websocket.disconnect":
                 break
             # After a barge the old task may still be winding down — treat as not busy so
@@ -416,6 +652,8 @@ async def audio_voice(ws: WebSocket) -> None:
                         await _endpoint(utt)
                 elif kind == "barge":
                     cancel.set()
+                    if active_job is not None:
+                        active_job.request_stop()
                 elif kind == "language":
                     # A settings change affects the next utterance, never a turn already running.
                     state["language"] = _preferred_language(data.get("language"))
@@ -429,5 +667,5 @@ async def audio_voice(ws: WebSocket) -> None:
                 await respond_task
             except asyncio.CancelledError:
                 pass
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.exception("voice respond task failed during teardown")

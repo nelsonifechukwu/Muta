@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
 from orchestrator import main as main_mod
 from orchestrator.main import app
+from runtime.config import RuntimeConfig
 
 client = TestClient(app)
 
@@ -58,6 +60,44 @@ def test_lifespan_autostart_on_starts_engine_and_creates_dirs(monkeypatch, tmp_p
     assert (tmp_path / "data" / "logs").is_dir()
     assert (tmp_path / "data" / "kv-slots").is_dir()
     assert stopped == [True]
+
+
+def test_persisted_competition_host_selects_safe_model_before_engine_start(monkeypatch, tmp_path):
+    large = RuntimeConfig(
+        model_dir=tmp_path,
+        model_file="large.gguf",
+        autostart=True,
+        auto_download=False,
+        _env_file=None,
+    )
+    small = large.model_copy(update={"model_file": "small.gguf"})
+
+    class Planner:
+        def plan(self, mode, cfg):
+            assert mode == "competition"
+            fits = cfg.model_file == "small.gguf"
+            return SimpleNamespace(fits=fits, n_parallel=2, n_ctx=2048)
+
+    class Manager:
+        def __init__(self, cfg, **_kwargs):
+            assert cfg.model_file == "large.gguf"
+
+        def candidate_config(self, model_id):
+            assert model_id == "qwen3.5-0.8b-q4_k_m"
+            return small
+
+    monkeypatch.setattr(main_mod, "CapacityPlanner", Planner)
+    monkeypatch.setattr(main_mod, "ModelManager", Manager)
+
+    cfg, profile = main_mod._persisted_share_runtime(
+        large,
+        {"enabled": True, "memory_mode": "competition"},
+        root=tmp_path,
+        log_file=tmp_path / "engine.log",
+    )
+
+    assert profile.fits is True
+    assert cfg.model_file == "small.gguf"
 
 
 def test_ready_reports_db_check_and_stays_200_when_down(monkeypatch):

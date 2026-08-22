@@ -316,7 +316,15 @@ def test_resource_service_shutdown_waits_for_running_preparation():
     stopped = threading.Event()
 
     class _SlowResourceService(ResourceService):
-        def _prepare(self, resource_id, owner_id, *, owns_running_slot=True):
+        def _prepare(
+            self,
+            resource_id,
+            owner_id,
+            *,
+            owns_running_slot=True,
+            cancel_event=None,
+        ):
+            _ = cancel_event
             started.set()
             release.wait(timeout=2)
             if owns_running_slot:
@@ -335,6 +343,27 @@ def test_resource_service_shutdown_waits_for_running_preparation():
 
     assert stopped.is_set()
     assert not service.submit("another-book", "a")
+
+
+def test_immediate_resource_completion_clears_all_submission_bookkeeping():
+    class EmptyStore:
+        def get_resource(self, *_args, **_kwargs):
+            return None
+
+    service = ResourceService(EmptyStore(), workers=1, resume_pending=False)
+    assert service.submit("already-gone", "a")
+    for _ in range(100):
+        with service._lock:
+            if "already-gone" not in service._running:
+                break
+        threading.Event().wait(0.005)
+
+    with service._lock:
+        assert "already-gone" not in service._running
+        assert "already-gone" not in service._owners
+        assert "already-gone" not in service._cancellations
+        assert "already-gone" not in service._futures
+    service.shutdown()
 
 
 def test_retry_during_worker_cleanup_does_not_orphan_processing_status(tmp_path):

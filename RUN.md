@@ -14,6 +14,13 @@ dependency order, waits for health, and prints the UI URL:
 - **Muta app:** http://localhost:3000/chat/
 - **API:** http://localhost:8000/v1 (interactive docs at http://localhost:8000/docs)
 
+To share this laptop, open **Muta → Settings → Host mode** after startup. Muta shows a secure
+LAN URL and QR code, waits for the host to approve each new account, and keeps each learner's
+history private. The default **ADTC competition** policy queues beyond the competition-safe
+reply limit; **Use this system** detects available RAM/CPU and raises simultaneous capacity when
+safe. See [docs/muta-share.md](docs/muta-share.md) for the complete host, learner, certificate,
+persistence, and removal workflow.
+
 ```bash
 ./run.sh            # bring the stack up                                [default]
 ./run.sh down       # stop it (conversations survive — see Persistence)
@@ -45,11 +52,12 @@ set `MUTA_RT_SPEC_TYPE=none` first for such cores.
 
 ## Native dev mode (Apple silicon)
 
-`./run.sh --native` skips the amd64 emulation tax for day-to-day dev: db and frontend
-stay in docker, the gateway + llama-server run on the host (arm64). The pinned
+`./run.sh --native` skips the amd64 emulation tax for day-to-day dev: only the db stays in
+Docker; the gateway, bundled UI and llama-server run on host loopback (arm64). Open
+`http://localhost:8000/chat/`. The pinned
 llama.cpp `b10035` macos-arm64 release is fetched into `runtime/build/bin` on first
 use, so engine parity with the container is kept. Requires `make install` (importable
-venv). Ctrl-C stops the backend; `./run.sh down` stops the containers. Audio degrades
+venv). Ctrl-C stops the app; `./run.sh down` stops the db container. Audio degrades
 to text-only unless sherpa-onnx is installed on the host — expected in native mode.
 
 Docker (`./run.sh`, no flag) remains the reproducible Linux/amd64 control and the build
@@ -227,7 +235,7 @@ The roster (all under `./models`, volume-mounted into the backend, never baked):
 | VAD | `models/asr/silero_vad.onnx` |
 | TTS | `models/tts/piper/en_US-joe-medium.onnx` (CC0) |
 | RAG embeddings | `models/embed/bge-small-en-v1.5-q8_0.gguf` |
-| Speculation draft (optional) | `models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` |
+| Competition-safe core / speculation draft | `models/draft/Qwen3.5-0.8B-Q4_K_M.gguf` |
 
 `make verify-models` re-checks hashes, licences and load smoke.
 

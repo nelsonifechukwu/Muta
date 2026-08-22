@@ -13,7 +13,7 @@ import math
 import re
 import threading
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -169,6 +169,10 @@ class ResourceService:
         self._pool = ThreadPoolExecutor(max_workers=max(1, workers), thread_name_prefix="pdf-rag")
         self._lock = threading.Lock()
         self._running: set[str] = set()
+        self._owners: dict[str, str] = {}
+        self._cancellations: dict[str, threading.Event] = {}
+        self._futures: dict[str, Future] = {}
+        self._blocked_owners: set[str] = set()
         self._closed = False
         if resume_pending:
             for row in self.store.list_processing_resources():
@@ -184,13 +188,19 @@ class ResourceService:
 
     def submit(self, resource_id: str, owner_id: str) -> bool:
         with self._lock:
-            if self._closed or resource_id in self._running:
+            if self._closed or owner_id in self._blocked_owners or resource_id in self._running:
                 return False
             self._running.add(resource_id)
             try:
                 # Keep submission inside the lifecycle lock so shutdown cannot close the pool
                 # between reservation and submit.
-                self._pool.submit(self._prepare, resource_id, owner_id)
+                cancelled = threading.Event()
+                future = self._pool.submit(
+                    self._prepare, resource_id, owner_id, cancel_event=cancelled
+                )
+                self._owners[resource_id] = owner_id
+                self._cancellations[resource_id] = cancelled
+                self._futures[resource_id] = future
             except RuntimeError:
                 self._running.discard(resource_id)
                 return False
@@ -204,13 +214,19 @@ class ResourceService:
         # retry during the old worker's final cleanup must stay failed, not become an orphaned
         # ``processing`` row that only a process restart can recover.
         with self._lock:
-            if self._closed or resource_id in self._running:
+            if self._closed or owner_id in self._blocked_owners or resource_id in self._running:
                 return False
             if not self.store.mark_resource_processing(resource_id, owner_id=owner_id):
                 return False
             self._running.add(resource_id)
             try:
-                self._pool.submit(self._prepare, resource_id, owner_id)
+                cancelled = threading.Event()
+                future = self._pool.submit(
+                    self._prepare, resource_id, owner_id, cancel_event=cancelled
+                )
+                self._owners[resource_id] = owner_id
+                self._cancellations[resource_id] = cancelled
+                self._futures[resource_id] = future
             except RuntimeError:
                 self._running.discard(resource_id)
                 self.store.mark_resource_failed(
@@ -225,24 +241,40 @@ class ResourceService:
         """Synchronous hook for deterministic tests and manual smoke checks."""
         self._prepare(resource_id, owner_id, owns_running_slot=False)
 
-    def _prepare(self, resource_id: str, owner_id: str, *, owns_running_slot: bool = True) -> None:
+    def _prepare(
+        self,
+        resource_id: str,
+        owner_id: str,
+        *,
+        owns_running_slot: bool = True,
+        cancel_event: threading.Event | None = None,
+    ) -> None:
+        cancelled = cancel_event or threading.Event()
         try:
+            if cancelled.is_set():
+                return
             row = self.store.get_resource(resource_id, owner_id=owner_id, include_data=True)
             if row is None:
                 return
             pages = extract_pdf_pages(bytes(row["data"]))
+            if cancelled.is_set():
+                return
             chunks = chunk_pages(pages)
             if not chunks:
                 raise ValueError(
                     "no readable text was found; scanned PDFs need OCR, which is not enabled yet"
                 )
             vectors = self.embedder.embed([chunk["text"] for chunk in chunks])
+            if cancelled.is_set():
+                return
             if len(vectors) != len(chunks):
                 raise ValueError("the embedding service returned an incomplete result")
             indexed = [
                 {**chunk, "embedding": vector}
                 for chunk, vector in zip(chunks, vectors, strict=True)
             ]
+            if cancelled.is_set():
+                return
             self.store.replace_resource_chunks(
                 resource_id,
                 owner_id=owner_id,
@@ -254,6 +286,8 @@ class ResourceService:
                 "prepared resource %s: %d pages, %d chunks", resource_id, len(pages), len(chunks)
             )
         except Exception as exc:
+            if cancelled.is_set():
+                return
             log.warning("resource preparation failed for %s", resource_id, exc_info=True)
             self.store.mark_resource_failed(
                 resource_id,
@@ -264,6 +298,34 @@ class ResourceService:
             if owns_running_slot:
                 with self._lock:
                     self._running.discard(resource_id)
+                    self._owners.pop(resource_id, None)
+                    self._cancellations.pop(resource_id, None)
+                    self._futures.pop(resource_id, None)
+
+    def stop_owner(self, owner_id: str, *, timeout: float = 5.0) -> bool:
+        """Cancel queued preparation and drain running work before account erasure."""
+        with self._lock:
+            self._blocked_owners.add(owner_id)
+            resource_ids = [
+                resource_id
+                for resource_id, candidate_owner in self._owners.items()
+                if candidate_owner == owner_id
+            ]
+            futures = []
+            for resource_id in resource_ids:
+                self._cancellations[resource_id].set()
+                future = self._futures[resource_id]
+                if future.cancel():
+                    self._running.discard(resource_id)
+                    self._owners.pop(resource_id, None)
+                    self._cancellations.pop(resource_id, None)
+                    self._futures.pop(resource_id, None)
+                else:
+                    futures.append(future)
+        if not futures:
+            return True
+        _done, pending = wait(futures, timeout=timeout)
+        return not pending
 
     def preflight(self, owner_id: str, resource_ids: Sequence[str]) -> list[dict]:
         unique = list(dict.fromkeys(resource_ids))

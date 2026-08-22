@@ -7,6 +7,7 @@ process — the boundary the architecture already draws (ROADMAP A.2).
 from __future__ import annotations
 
 import json
+import threading
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -198,6 +199,7 @@ class InferenceClient:
         `content` sees nothing during the think phase and appears to hang — so this surfaces
         both, tagged, and the caller decides how to render each.
         """
+        cancel_event = params.pop("_muta_cancel_event", None)
         url = f"{self.base_url}/v1/chat/completions"
         with httpx.stream(
             "POST",
@@ -207,54 +209,79 @@ class InferenceClient:
             headers=self._headers,
         ) as r:
             r.raise_for_status()
+            stream_done = threading.Event()
+            if isinstance(cancel_event, threading.Event):
+                # httpx's synchronous iterator can block inside a socket read for the full
+                # request timeout. Closing its response from this tiny watcher interrupts that
+                # read, so host removal is bounded even when llama-server goes silent.
+                def close_on_cancel() -> None:
+                    while not stream_done.is_set():
+                        if cancel_event.wait(0.1):
+                            close = getattr(r, "close", None)
+                            if callable(close):
+                                close()
+                            return
+
+                threading.Thread(
+                    target=close_on_cancel,
+                    name="muta-inference-cancel",
+                    daemon=True,
+                ).start()
             terminal = False
             finish_reason: str | None = None
-            for line in r.iter_lines():
-                if not line or not line.startswith("data: "):
-                    continue
-                data = line[len("data: ") :]
-                if data.strip() == "[DONE]":
-                    terminal = True
-                    break
-                try:
-                    body = json.loads(data)
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
-                error = body.get("error") if isinstance(body, dict) else None
-                if error:
-                    if isinstance(error, dict):
-                        message = str(
-                            error.get("message") or error.get("type") or "inference failed"
+            try:
+                for line in r.iter_lines():
+                    if cancel_event is not None and cancel_event.is_set():
+                        return
+                    if not line or not line.startswith("data: "):
+                        continue
+                    data = line[len("data: ") :]
+                    if data.strip() == "[DONE]":
+                        terminal = True
+                        break
+                    try:
+                        body = json.loads(data)
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
+                    error = body.get("error") if isinstance(body, dict) else None
+                    if error:
+                        if isinstance(error, dict):
+                            message = str(
+                                error.get("message") or error.get("type") or "inference failed"
+                            )
+                            code = error.get("code")
+                        else:
+                            message, code = str(error), None
+                        lower = message.lower()
+                        retryable = (
+                            "context size" not in lower
+                            and "context window" not in lower
+                            and (
+                                str(code) in {"408", "425", "429", "500", "502", "503", "504"}
+                                or "temporar" in lower
+                                or "unavailable" in lower
+                            )
                         )
-                        code = error.get("code")
-                    else:
-                        message, code = str(error), None
-                    lower = message.lower()
-                    retryable = (
-                        "context size" not in lower
-                        and "context window" not in lower
-                        and (
-                            str(code) in {"408", "425", "429", "500", "502", "503", "504"}
-                            or "temporar" in lower
-                            or "unavailable" in lower
-                        )
-                    )
-                    raise InferenceStreamError(message, retryable=retryable)
-                try:
-                    choice = body["choices"][0]
-                    delta = choice["delta"]
-                except (KeyError, IndexError, TypeError):
-                    continue
-                reason = choice.get("finish_reason")
-                if reason is not None:
-                    terminal = True
-                    finish_reason = str(reason)
-                reasoning = delta.get("reasoning_content")
-                if reasoning:
-                    yield "reasoning", reasoning
-                content = delta.get("content")
-                if content:
-                    yield "content", content
+                        raise InferenceStreamError(message, retryable=retryable)
+                    try:
+                        choice = body["choices"][0]
+                        delta = choice["delta"]
+                    except (KeyError, IndexError, TypeError):
+                        continue
+                    reason = choice.get("finish_reason")
+                    if reason is not None:
+                        terminal = True
+                        finish_reason = str(reason)
+                    reasoning = delta.get("reasoning_content")
+                    if reasoning:
+                        yield "reasoning", reasoning
+                    content = delta.get("content")
+                    if content:
+                        yield "content", content
+            finally:
+                stream_done.set()
+            if cancel_event is not None and cancel_event.is_set():
+                return
             if not terminal:
                 # A proxy/socket can end a chunked body cleanly without raising httpx. Unless
                 # llama-server sent its terminal frame, that EOF is a truncated answer and

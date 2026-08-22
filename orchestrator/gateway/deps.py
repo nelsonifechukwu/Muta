@@ -13,10 +13,14 @@ import logging
 import os
 import re
 import tempfile
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from orchestrator.gateway.generations import GenerationManager
+from orchestrator.gateway.capacity import CapacityPlanner, CapacityProfile
+from orchestrator.gateway.generations import GenerationCapacityError, GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
@@ -29,7 +33,7 @@ from runtime.chat import ChatEngine
 from runtime.client import InferenceClient
 from runtime.config import RuntimeConfig
 from runtime.memory import ConversationStore
-from runtime.model_catalog import ModelManager
+from runtime.model_catalog import ModelManager, ModelSwitchError
 from runtime.profiles import BundlePaths
 from runtime.slots import SlotClient, SnapshotReaper
 from runtime.ttft import PreambleWriter
@@ -40,6 +44,14 @@ log = logging.getLogger("muta.gateway.deps")
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _model_manager: ModelManager | None = None
+_runtime_lifecycle_lock = threading.RLock()
+
+
+@contextmanager
+def runtime_lifecycle() -> Iterator[None]:
+    """Serialize Host memory policy, model replacement, and persisted settings."""
+    with _runtime_lifecycle_lock:
+        yield
 
 
 def set_model_manager(manager: ModelManager | None) -> None:
@@ -51,15 +63,179 @@ def get_model_manager() -> ModelManager | None:
     return _model_manager
 
 
-def refresh_engine_dependencies() -> None:
+def active_runtime_config() -> RuntimeConfig:
+    """The live engine profile, including Host-mode capacity changes."""
+    manager = get_model_manager()
+    cfg = getattr(manager, "cfg", None) if manager is not None else None
+    return cfg if isinstance(cfg, RuntimeConfig) else RuntimeConfig()
+
+
+def refresh_engine_dependencies(profile: CapacityProfile | None = None) -> None:
     """Drop every cache whose state belongs to the replaced llama-server process."""
     # ChatEngine stays: it owns the durable DB pool and addresses the same loopback URL plus
     # stable launch alias retained by ModelManager. Rebuilding it on every switch would
     # leak/interrupt persistence for no model-specific benefit.
     get_sessions.cache_clear()
+    cfg = active_runtime_config()
+    per_student = None
+    if profile is not None:
+        per_student = (
+            1 if profile.memory_mode == "competition" else min(2, max(1, profile.n_parallel - 1))
+        )
+    get_generation_manager().set_max_active(cfg.n_parallel, max_active_per_student=per_student)
+    # ChatEngine owns the durable store and loopback client, so keep it alive but update the
+    # prompt budget that depends on the physical lane count.
+    if get_engine.cache_info().currsize:
+        engine = get_engine()
+        engine.context_window_tokens = cfg.n_ctx // max(1, cfg.n_parallel)
+    if profile is not None:
+        # The ladder probe measures llama-server RSS, while the planner's ceiling prices the
+        # whole process tree. Reserve the gateway/ASR/TTS allowance before comparing core RSS
+        # or the backend could cross 7 GiB while the engine-only signal still looked healthy.
+        get_ladder().core_cap_bytes = max(
+            1,
+            profile.memory_ceiling_bytes
+            - profile.gateway_reserve_bytes
+            - profile.auxiliary_reserve_bytes,
+        )
     removed = get_reaper().clear()
     if removed:
         log.info("removed %d model-specific KV snapshots after engine switch", len(removed))
+
+
+class RuntimeCapacityController:
+    """One authority for the slot/context/admission/ladder profile."""
+
+    def __init__(self, planner: CapacityPlanner | None = None) -> None:
+        self.planner = planner or CapacityPlanner()
+        self._last_profile: CapacityProfile | None = None
+
+    def plan(self, mode: str) -> CapacityProfile:
+        return self.planner.plan(mode, active_runtime_config())
+
+    def plan_config(
+        self,
+        mode: str,
+        cfg: RuntimeConfig,
+        *,
+        current_cfg: RuntimeConfig | None = None,
+    ) -> CapacityProfile:
+        return self.planner.plan(mode, cfg, current_cfg=current_cfg)
+
+    def status(self, mode: str) -> dict:
+        planned = self.plan(mode)
+        cfg = active_runtime_config()
+        generations = get_generation_manager().status()
+        payload = planned.as_dict()
+        payload.update(
+            {
+                "active_parallel": cfg.n_parallel,
+                "active_context": cfg.n_ctx,
+                "restart_supported": get_model_manager() is not None,
+                "running": generations["running"],
+                "queued": generations["queued"],
+                "reservations": generations["reservations"],
+            }
+        )
+        return payload
+
+    def snapshot(self) -> tuple[RuntimeConfig, str | None] | None:
+        manager = get_model_manager()
+        return manager.runtime_snapshot() if manager is not None else None
+
+    def restore(self, snapshot: tuple[RuntimeConfig, str | None] | None, mode: str) -> dict:
+        """Compensate a Host-settings saga with the exact prior model and capacity."""
+        if snapshot is None:
+            return self.apply(mode)
+        with runtime_lifecycle():
+            manager = get_model_manager()
+            if manager is None:
+                raise GenerationCapacityError("the supervised engine is no longer available")
+
+            def restore_profile() -> None:
+                if not get_vision().stop_for_reconfigure():
+                    raise GenerationCapacityError(
+                        "wait for the active image reading before restoring Host memory"
+                    )
+                manager.restore_runtime(snapshot)
+                profile = self.plan_config(mode, snapshot[0])
+                self._last_profile = profile
+                refresh_engine_dependencies(profile)
+
+            try:
+                get_generation_manager().run_when_idle(restore_profile)
+            except ModelSwitchError as exc:
+                raise GenerationCapacityError(str(exc)) from exc
+        return self.status(mode)
+
+    def apply(self, mode: str) -> dict:
+        with runtime_lifecycle():
+            return self._apply_locked(mode)
+
+    def _apply_locked(self, mode: str) -> dict:
+        manager = get_model_manager()
+        applied: dict[str, CapacityProfile] = {}
+
+        def replace_profile() -> None:
+            vision = get_vision()
+            if not vision.stop_for_reconfigure():
+                raise GenerationCapacityError(
+                    "wait for the active image reading before changing Host memory"
+                )
+            # Plan after the auxiliary process is gone so its measured RSS is neither
+            # double-counted nor allowed to overlap the replacement text engine.
+            current_cfg = active_runtime_config()
+            profile = self.plan_config(mode, current_cfg)
+            target_model_id: str | None = None
+            if mode == "competition" and not profile.fits and manager is not None:
+                target_model_id = os.environ.get(
+                    "MUTA_SHARE_COMPETITION_MODEL_ID", "qwen3.5-0.8b-q4_k_m"
+                )
+                candidate = manager.candidate_config(target_model_id)
+                profile = self.plan_config(mode, candidate, current_cfg=current_cfg)
+            if not profile.fits:
+                raise GenerationCapacityError(
+                    "Muta cannot fit one competition-safe chat in the RAM currently available; "
+                    "close other applications or choose a smaller installed model"
+                )
+            applied["profile"] = profile
+            cfg = active_runtime_config()
+            if manager is None:
+                if profile.n_parallel != cfg.n_parallel or profile.n_ctx != cfg.n_ctx:
+                    raise GenerationCapacityError(
+                        "this engine is externally managed; restart Muta with the requested capacity"
+                    )
+                refresh_engine_dependencies(profile)
+                return
+            if target_model_id is not None:
+                manager.switch(
+                    target_model_id,
+                    n_parallel=profile.n_parallel,
+                    n_ctx=profile.n_ctx,
+                )
+                refresh_engine_dependencies(profile)
+                return
+            if manager.cfg.n_parallel == profile.n_parallel and manager.cfg.n_ctx == profile.n_ctx:
+                refresh_engine_dependencies(profile)
+                return
+            manager.reconfigure_capacity(
+                n_parallel=profile.n_parallel,
+                n_ctx=profile.n_ctx,
+            )
+            refresh_engine_dependencies(profile)
+
+        try:
+            get_generation_manager().run_when_idle(replace_profile)
+        except ModelSwitchError as exc:
+            raise GenerationCapacityError(str(exc)) from exc
+        profile = applied["profile"]
+        self._last_profile = profile
+        return self.status(mode)
+
+
+@lru_cache(maxsize=1)
+def get_capacity_controller() -> RuntimeCapacityController:
+    return RuntimeCapacityController()
 
 
 @lru_cache(maxsize=8)
@@ -74,7 +250,7 @@ def load_prompt(mode: str) -> str:
 
 @lru_cache(maxsize=1)
 def get_engine() -> ChatEngine:
-    cfg = RuntimeConfig()
+    cfg = active_runtime_config()
     client = InferenceClient(
         cfg.base_url,
         model=cfg.model_alias,
@@ -126,7 +302,18 @@ def get_resource_service() -> ResourceService:
 @lru_cache(maxsize=1)
 def get_generation_manager() -> GenerationManager:
     """Live replay buffers outlive browser requests but not the gateway process."""
-    return GenerationManager(max_active=RuntimeConfig().n_parallel)
+    cfg = active_runtime_config()
+    try:
+        from orchestrator.gateway.sharing import get_sharing_service
+
+        mode = get_sharing_service().settings()["memory_mode"]
+    except Exception:
+        mode = "competition"
+    per_student = 1 if mode == "competition" else min(2, max(1, cfg.n_parallel - 1))
+    return GenerationManager(
+        max_active=cfg.n_parallel,
+        max_active_per_student=per_student,
+    )
 
 
 @lru_cache(maxsize=1)
@@ -167,7 +354,7 @@ def core_rss_bytes() -> int:
         try:
             if "llama-server" in (process.info.get("name") or "").lower():
                 total += process.memory_info().rss
-        except Exception:  # noqa: BLE001,S112 — psutil process may vanish during iteration
+        except Exception:
             continue
     return total
 
@@ -178,7 +365,7 @@ def get_slot_client() -> SlotClient:
     # one authority for its address — this used to point at a dead TUTOR_CORE_PORT (8081) while
     # the engine actually listens on RuntimeConfig.server_port (8080), so /v1/metrics.engine and
     # session suspend/resume always hit nothing (audit: config-split).
-    cfg = RuntimeConfig()
+    cfg = active_runtime_config()
     key_file = BundlePaths.from_env().api_key_file
     api_key = key_file.read_text().strip() if key_file.is_file() else None
     return SlotClient(base_url=cfg.base_url, api_key=api_key)
@@ -197,7 +384,7 @@ def get_sessions() -> SessionManager:
     with — so admission admits exactly as many concurrent sessions as the engine has slots.
     It previously sized from the classroom profile (6) against a 2-slot engine, so a third
     student queued invisibly inside llama-server instead of getting the designed message."""
-    n_parallel = RuntimeConfig().n_parallel
+    n_parallel = active_runtime_config().n_parallel
     ladder = get_ladder()
     slots = get_slot_client()
     reaper = get_reaper()

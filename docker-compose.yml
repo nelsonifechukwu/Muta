@@ -61,17 +61,29 @@ services:
       # The frontend container still reaches it as `backend:8000` over the compose network,
       # which needs no host publishing at all — this line is for host-side curl/debug.
       - "127.0.0.1:8000:8000"
+      # Dedicated TLS-only Host-mode listener. It serves the same app and is activated from
+      # Settings; unlike :8000, this is intentionally reachable by the classroom LAN.
+      - "8443:8443"
     volumes:
       - ./models:/app/models
+      # Share accounts, generated LAN CA material, and cleanup state must survive rebuilds.
+      - ./data:/app/data
     # Hard ceiling near the 7GB competition budget: if the engine tree exceeds it Docker
     # OOM-kills THIS container (which the supervisor then respawns) instead of the host
     # OOM-killer picking a random victim. Tune per target box.
-    mem_limit: 7g
+    mem_limit: ${MUTA_BACKEND_MEMORY_LIMIT:-7g}
     logging:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
     environment:
       MUTA_RT_AUTOSTART: "1"
+      MUTA_SHARE_STRICT: "1"
+      MUTA_TRUST_PRIMARY_LISTENER: "1"
+      MUTA_ALLOW_MODEL_SWITCH: "1"
+      MUTA_SHARE_HOST: "${MUTA_SHARE_HOST:-}"
+      MUTA_CONTAINERIZED: "1"
+      MUTA_PRIMARY_PORT: "8000"
+      MUTA_SHARE_PORT: "8443"
       MUTA_RT_DB_URL: postgresql://muta:${MUTA_DB_PASSWORD:-muta}@db:5432/muta
       # Core model is hot-swappable via `./run.sh --model <path>` (which exports the
       # MUTA_MODEL_* interpolations); bare `docker compose up` serves the default.
@@ -153,7 +165,8 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "3000:80"
+      # Operator-only bootstrap surface. Learners use the backend's TLS :8443 join URL.
+      - "127.0.0.1:3000:80"
       # For LAN TLS (the mic/voice loop needs a secure context off-host), also publish 443
       # and mount certs — see docs/tls-lan.md:
       # - "3443:443"

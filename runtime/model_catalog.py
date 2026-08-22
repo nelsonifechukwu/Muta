@@ -141,10 +141,159 @@ class ModelManager:
             return {
                 "active_id": self._active_id,
                 "switching": self._switching,
+                "n_parallel": self.cfg.n_parallel,
+                "n_ctx": self.cfg.n_ctx,
                 "models": [self._status_for(spec) for spec in self.specs],
             }
 
-    def switch(self, model_id: str) -> dict[str, Any]:
+    def runtime_snapshot(self) -> tuple[RuntimeConfig, str | None]:
+        """Capture the exact trusted model/profile needed to compensate a later saga step."""
+        with self._lock:
+            return self.cfg, self._active_id
+
+    def restore_runtime(self, snapshot: tuple[RuntimeConfig, str | None]) -> RuntimeConfig:
+        """Restore an internally captured model and capacity in one rollback-safe restart."""
+        target_cfg, target_id = snapshot
+        if not self._switch_lock.acquire(blocking=False):
+            raise ModelSwitchError("another engine change is already in progress")
+        marked_switching = False
+        try:
+            with self._lock:
+                if self.cfg == target_cfg and self._active_id == target_id and self._server.is_up():
+                    return self.cfg
+                current_server = self._server
+                current_cfg = self.cfg
+                current_id = self._active_id
+                self._switching = True
+                self._switch_done.clear()
+                marked_switching = True
+                process = current_server.process
+                if process is not None:
+                    self._planned_exits.add(id(process))
+            current_server.stop()
+            restored = self._server_factory(target_cfg)
+            try:
+                restored.start(log_file=self.log_file)
+            except Exception as exc:
+                restored.stop()
+                rollback = self._server_factory(current_cfg)
+                try:
+                    rollback.start(log_file=self.log_file)
+                except Exception as rollback_exc:
+                    rollback.stop()
+                    with self._lock:
+                        self._server = rollback
+                        self.cfg = current_cfg
+                        self._active_id = current_id
+                    raise ModelSwitchError(
+                        "runtime restore failed and the replacement could not be recovered"
+                    ) from rollback_exc
+                with self._lock:
+                    self._server = rollback
+                    self.cfg = current_cfg
+                    self._active_id = current_id
+                raise ModelSwitchError("runtime restore failed; replacement kept running") from exc
+            with self._lock:
+                self._server = restored
+                self.cfg = target_cfg
+                self._active_id = target_id
+            return target_cfg
+        finally:
+            if marked_switching:
+                with self._lock:
+                    self._switching = False
+                    self._switch_done.set()
+            self._switch_lock.release()
+
+    def reconfigure_capacity(self, *, n_parallel: int, n_ctx: int) -> RuntimeConfig:
+        """Restart the current engine with one complete slot/context profile.
+
+        The caller must have closed admission and drained queued/running work. Replacement is
+        rollback-safe for the same reason as model switching: a bad high-capacity profile must
+        restore the known-good tutor rather than leave the classroom without an engine.
+        """
+        if n_parallel < 1 or n_ctx < n_parallel:
+            raise ModelSwitchError("invalid capacity profile")
+        if not self._switch_lock.acquire(blocking=False):
+            raise ModelSwitchError("another engine change is already in progress")
+        marked_switching = False
+        try:
+            with self._lock:
+                if self.cfg.n_parallel == n_parallel and self.cfg.n_ctx == n_ctx:
+                    return self.cfg
+                old_server = self._server
+                old_cfg = self.cfg
+                old_id = self._active_id
+                new_cfg = old_cfg.model_copy(update={"n_parallel": n_parallel, "n_ctx": n_ctx})
+                self._switching = True
+                self._switch_done.clear()
+                marked_switching = True
+                old_proc = old_server.process
+                if old_proc is not None:
+                    self._planned_exits.add(id(old_proc))
+            old_server.stop()
+            replacement = self._server_factory(new_cfg)
+            try:
+                replacement.start(log_file=self.log_file)
+            except Exception as exc:
+                replacement.stop()
+                log.exception(
+                    "capacity profile %s slots/%s ctx failed; restoring %s/%s",
+                    n_parallel,
+                    n_ctx,
+                    old_cfg.n_parallel,
+                    old_cfg.n_ctx,
+                )
+                rollback = self._server_factory(old_cfg)
+                try:
+                    rollback.start(log_file=self.log_file)
+                except Exception as rollback_exc:
+                    rollback.stop()
+                    with self._lock:
+                        self._server = rollback
+                        self.cfg = old_cfg
+                        self._active_id = old_id
+                    raise ModelSwitchError(
+                        "capacity change failed and the previous engine could not be restored"
+                    ) from rollback_exc
+                with self._lock:
+                    self._server = rollback
+                    self.cfg = old_cfg
+                    self._active_id = old_id
+                raise ModelSwitchError(
+                    "capacity change failed; previous serving profile restored"
+                ) from exc
+            with self._lock:
+                self._server = replacement
+                self.cfg = new_cfg
+                self._active_id = old_id
+            log.info("capacity profile switched to %s slots / %s total context", n_parallel, n_ctx)
+            return new_cfg
+        finally:
+            if marked_switching:
+                with self._lock:
+                    self._switching = False
+                    self._switch_done.set()
+            self._switch_lock.release()
+
+    def candidate_config(self, model_id: str) -> RuntimeConfig:
+        """Return the verified target-model config without changing the running engine."""
+        with self._lock:
+            spec = self._by_id.get(model_id)
+            if spec is None:
+                raise ModelSwitchError("unknown model id")
+            if spec.kind != "local":
+                raise ModelSwitchError("cloud models are unavailable in offline mode")
+            base = self.cfg
+        return self._config_for(base, self._verified_path(spec))
+
+    def switch(
+        self,
+        model_id: str,
+        *,
+        n_parallel: int | None = None,
+        n_ctx: int | None = None,
+    ) -> dict[str, Any]:
         if not self._switch_lock.acquire(blocking=False):
             raise ModelSwitchError("another model switch is already in progress")
         marked_switching = False
@@ -155,7 +304,16 @@ class ModelManager:
                     raise ModelSwitchError("unknown model id")
                 if spec.kind != "local":
                     raise ModelSwitchError("cloud models are unavailable in offline mode")
-                if model_id == self._active_id and self._server.is_up():
+                target_parallel = n_parallel if n_parallel is not None else self.cfg.n_parallel
+                target_ctx = n_ctx if n_ctx is not None else self.cfg.n_ctx
+                if target_parallel < 1 or target_ctx < target_parallel:
+                    raise ModelSwitchError("invalid capacity profile")
+                if (
+                    model_id == self._active_id
+                    and self._server.is_up()
+                    and target_parallel == self.cfg.n_parallel
+                    and target_ctx == self.cfg.n_ctx
+                ):
                     return self.status()
                 old_server = self._server
                 old_cfg = self.cfg
@@ -171,7 +329,9 @@ class ModelManager:
                     self._planned_exits.add(id(old_proc))
             old_server.stop()
 
-            new_cfg = self._config_for(old_cfg, model_path)
+            new_cfg = self._config_for(old_cfg, model_path).model_copy(
+                update={"n_parallel": target_parallel, "n_ctx": target_ctx}
+            )
             new_server = self._server_factory(new_cfg)
             try:
                 new_server.start(log_file=self.log_file)
@@ -194,7 +354,9 @@ class ModelManager:
                     self._server = rollback
                     self.cfg = old_cfg
                     self._active_id = old_id
-                raise ModelSwitchError(f"{model_id} failed to start; previous model restored") from exc
+                raise ModelSwitchError(
+                    f"{model_id} failed to start; previous model restored"
+                ) from exc
 
             with self._lock:
                 self._server = new_server

@@ -27,6 +27,7 @@ class _Server:
     block_model: ClassVar[str | None] = None
     start_entered: ClassVar[threading.Event] = threading.Event()
     release_start: ClassVar[threading.Event] = threading.Event()
+    reject_parallel: ClassVar[int | None] = None
 
     def __init__(self, cfg: RuntimeConfig) -> None:
         self.cfg = cfg
@@ -39,6 +40,8 @@ class _Server:
 
     def start(self, log_file=None):
         _ = log_file
+        if self.cfg.n_parallel == self.reject_parallel:
+            raise RuntimeError("synthetic capacity failure")
         if self.cfg.model_file == "broken.gguf":
             raise RuntimeError("synthetic loader failure")
         if self.cfg.model_file == self.block_model:
@@ -70,6 +73,7 @@ def _manager(tmp_path: Path, *, corrupt_two: bool = False, start: bool = True) -
     _Server.block_model = None
     _Server.start_entered = threading.Event()
     _Server.release_start = threading.Event()
+    _Server.reject_parallel = None
     one = tmp_path / "one.gguf"
     two = tmp_path / "two.gguf"
     broken = tmp_path / "broken.gguf"
@@ -145,9 +149,50 @@ def test_switches_one_local_engine_and_reports_tradeoffs(tmp_path):
     assert result["active_id"] == "two"
     assert result["switching"] is False
     assert sum(server.is_up() for server in _Server.instances) == 1
-    assert next(model for model in result["models"] if model["id"] == "cloud")[
-        "disabled_reason"
-    ] == "Unavailable offline"
+    assert (
+        next(model for model in result["models"] if model["id"] == "cloud")["disabled_reason"]
+        == "Unavailable offline"
+    )
+
+
+def test_model_switch_applies_target_capacity_in_the_same_restart(tmp_path):
+    manager = _manager(tmp_path)
+
+    result = manager.switch("two", n_parallel=4, n_ctx=8192)
+
+    assert result["active_id"] == "two"
+    assert manager.cfg.n_parallel == 4
+    assert manager.cfg.n_ctx == 8192
+    assert _Server.instances[-1].cfg.model_file == "two.gguf"
+    assert _Server.instances[-1].cfg.n_parallel == 4
+
+
+def test_runtime_snapshot_restores_arbitrary_previous_model_and_capacity(tmp_path):
+    manager = _manager(tmp_path)
+    snapshot = manager.runtime_snapshot()
+    manager.switch("two", n_parallel=4, n_ctx=8192)
+
+    restored = manager.restore_runtime(snapshot)
+
+    assert restored == snapshot[0]
+    assert manager.status()["active_id"] == "one"
+    assert manager.cfg.n_parallel == snapshot[0].n_parallel
+    assert manager.cfg.n_ctx == snapshot[0].n_ctx
+    assert sum(server.is_up() for server in _Server.instances) == 1
+
+
+def test_failed_model_and_capacity_switch_restores_both(tmp_path):
+    manager = _manager(tmp_path)
+    original = manager.cfg
+    _Server.reject_parallel = 4
+
+    with pytest.raises(ModelSwitchError, match="previous model restored"):
+        manager.switch("two", n_parallel=4, n_ctx=8192)
+
+    assert manager.status()["active_id"] == "one"
+    assert manager.cfg.n_parallel == original.n_parallel
+    assert manager.cfg.n_ctx == original.n_ctx
+    assert sum(server.is_up() for server in _Server.instances) == 1
 
 
 def test_corrupt_hash_is_disabled_without_stopping_current_engine(tmp_path):
@@ -215,3 +260,29 @@ def test_status_stays_readable_and_second_switch_is_rejected_while_loading(tmp_p
     assert not thread.is_alive()
     assert failure == []
     assert manager.status()["active_id"] == "two"
+
+
+def test_capacity_reconfiguration_restarts_with_complete_profile(tmp_path):
+    manager = _manager(tmp_path)
+
+    cfg = manager.reconfigure_capacity(n_parallel=4, n_ctx=8192)
+
+    assert cfg.n_parallel == 4
+    assert cfg.n_ctx == 8192
+    assert manager.status()["n_parallel"] == 4
+    assert manager.status()["n_ctx"] == 8192
+    assert manager.status()["active_id"] == "one"
+    assert sum(server.is_up() for server in _Server.instances) == 1
+
+
+def test_failed_capacity_reconfiguration_restores_previous_profile(tmp_path):
+    manager = _manager(tmp_path)
+    original = manager.cfg
+    _Server.reject_parallel = 4
+
+    with pytest.raises(ModelSwitchError, match="previous serving profile restored"):
+        manager.reconfigure_capacity(n_parallel=4, n_ctx=8192)
+
+    assert manager.cfg.n_parallel == original.n_parallel
+    assert manager.cfg.n_ctx == original.n_ctx
+    assert sum(server.is_up() for server in _Server.instances) == 1

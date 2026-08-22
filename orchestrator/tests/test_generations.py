@@ -140,6 +140,53 @@ def test_model_transition_and_generation_admission_share_one_lock():
     assert manager.run_when_idle(lambda: "switched") == "switched"
 
 
+def test_blocking_contract_call_uses_the_same_fifo_as_streaming_jobs():
+    gate = threading.Event()
+    call_started = threading.Event()
+    result: dict[str, object] = {}
+
+    def blocked_stream():
+        yield 'data: {"delta": "busy"}\n\n'
+        assert gate.wait(1.0)
+        yield 'data: {"done": true}\n\n'
+
+    manager = GenerationManager(max_active=1, max_queued=2)
+    running = manager.start(student_id="ada", conversation_id="stream", producer=blocked_stream())
+
+    def call() -> None:
+        result["outcome"] = manager.execute(
+            student_id="bimpe",
+            conversation_id="blocking",
+            operation=lambda: call_started.set() or "reply",
+        )
+
+    waiter = threading.Thread(target=call, daemon=True)
+    waiter.start()
+    deadline = time.monotonic() + 1.0
+    while manager.status()["queued"] != 1 and time.monotonic() < deadline:
+        time.sleep(0.005)
+    assert manager.status()["queued"] == 1
+    assert not call_started.is_set()
+
+    gate.set()
+    waiter.join(timeout=1.0)
+    _wait_finished(running)
+    assert not waiter.is_alive()
+    assert result["outcome"] == ("reply", True, 1)
+
+
+def test_blocking_contract_call_releases_its_lane_when_operation_fails():
+    manager = GenerationManager(max_active=1)
+
+    def fail():
+        raise ValueError("bad turn")
+
+    with pytest.raises(ValueError, match="bad turn"):
+        manager.execute(student_id="ada", operation=fail)
+    assert manager.status()["running"] == 0
+    assert manager.run_when_idle(lambda: "ready") == "ready"
+
+
 def test_client_request_id_finds_a_completed_replay_after_refresh():
     manager = GenerationManager()
     job = manager.start(
@@ -315,3 +362,77 @@ def test_shutdown_rejects_new_reservations_and_starts():
     manager.shutdown()
     with pytest.raises(GenerationCapacityError, match="shutting down"):
         manager.reserve("ada", allow_parallel=True, conversation_id="one")
+
+
+def test_fair_queue_does_not_let_one_learner_take_every_lane():
+    gates = {name: threading.Event() for name in ("ada-one", "ada-two", "bimpe")}
+
+    def blocked(name):
+        yield f'data: {{"delta": "{name}"}}\n\n'
+        assert gates[name].wait(1.0)
+        yield 'data: {"done": true}\n\n'
+
+    manager = GenerationManager(max_active=2, max_queued=3, max_active_per_student=1)
+    ada_one = manager.start(
+        student_id="ada", conversation_id="ada-one", producer=blocked("ada-one")
+    )
+    ada_two = manager.start(
+        student_id="ada", conversation_id="ada-two", producer=blocked("ada-two")
+    )
+    bimpe = manager.start(student_id="bimpe", conversation_id="bimpe", producer=blocked("bimpe"))
+
+    assert ada_one.snapshot().state == "running"
+    assert ada_two.snapshot().state == "queued"
+    assert bimpe.snapshot().state == "running"
+
+    gates["ada-one"].set()
+    _wait_finished(ada_one)
+    deadline = time.monotonic() + 1.0
+    while ada_two.snapshot().state == "queued" and time.monotonic() < deadline:
+        time.sleep(0.005)
+    assert ada_two.snapshot().state == "running"
+    gates["ada-two"].set()
+    gates["bimpe"].set()
+    _wait_finished(ada_two)
+    _wait_finished(bimpe)
+
+
+def test_account_removal_cancels_queued_and_running_work():
+    gate = threading.Event()
+
+    def blocked():
+        yield 'data: {"delta": "private"}\n\n'
+        assert gate.wait(1.0)
+
+    manager = GenerationManager(max_active=1, max_queued=2)
+    running = manager.start(student_id="ada", conversation_id="one", producer=blocked())
+    queued = manager.start(
+        student_id="ada",
+        conversation_id="two",
+        producer=iter(['data: {"done": true}\n\n']),
+    )
+    gate.set()
+
+    assert manager.stop_student("ada") == 2
+    assert queued.snapshot().state == "stopped"
+    _wait_finished(running)
+    assert manager.active("ada") == []
+
+
+def test_account_removal_drains_and_permanently_blocks_pre_job_reservations():
+    manager = GenerationManager(max_active=1)
+    reservation_id = manager.reserve("ada", allow_parallel=True, conversation_id="one")
+    result: list[int] = []
+
+    remover = threading.Thread(target=lambda: result.append(manager.stop_student("ada")))
+    remover.start()
+    deadline = time.monotonic() + 1
+    while not manager._reservations[reservation_id].cancelled and time.monotonic() < deadline:
+        time.sleep(0.005)
+    assert manager._reservations[reservation_id].cancelled is True
+    manager.cancel_reservation(reservation_id)
+    remover.join(timeout=1)
+
+    assert result == [1]
+    with pytest.raises(GenerationCapacityError, match="access was removed"):
+        manager.reserve("ada", allow_parallel=True, conversation_id="after-removal")
