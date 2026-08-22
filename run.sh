@@ -215,7 +215,7 @@ update_stack() {
 }
 
 native_up() {
-    "${PY:-python3}" -c "import orchestrator, uvicorn" >/dev/null 2>&1 \
+    "${PY:-python3}" -c "import orchestrator.main, uvicorn" >/dev/null 2>&1 \
         || die "project not importable by ${PY:-python3} — activate your venv and run 'make install'"
     fetch_native_engine
     info "starting db (docker)"
@@ -291,7 +291,7 @@ native_linux_env() {
     require_native_port_free "${MUTA_RT_SERVER_PORT:-8080}" "engine"
     "$NATIVE_PY" scripts/export_native_linux.py --sync-ui \
         || die "native engine verification failed — rebuild the control and run './run.sh export-linux'"
-    "$NATIVE_PY" -c "import orchestrator, uvicorn" >/dev/null 2>&1 \
+    "$NATIVE_PY" -c "import orchestrator.main, uvicorn" >/dev/null 2>&1 \
         || die "project not importable by $NATIVE_PY — create a venv and run 'make install'"
     [ -f "$MODEL" ] || die "model not found: $MODEL — provision it before offline/native use"
 

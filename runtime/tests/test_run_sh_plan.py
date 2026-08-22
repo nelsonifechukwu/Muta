@@ -30,7 +30,7 @@ def run_plan(tmp_path, uname_s: str, uname_m: str, *args: str, nvidia: bool = Fa
     env = {**os.environ, "PATH": f"{shim}:{os.environ['PATH']}"}
     out = subprocess.run(
         ["bash", str(REPO / "run.sh"), "plan", *args],
-        capture_output=True, text=True, env=env, cwd=REPO, timeout=30,
+        capture_output=True, text=True, env=env, cwd=REPO, timeout=30, check=False,
     )
     assert out.returncode == 0, out.stderr
     return out.stdout
@@ -87,3 +87,9 @@ def test_native_launchers_reserve_a_12288_token_context():
     assert "export MUTA_RT_N_CTX=12288" in source
     assert 'export MUTA_RT_N_CTX="${MUTA_RT_N_CTX:-12288}"' in source
     assert "MUTA_RT_N_CTX=2048" not in source
+
+
+def test_native_preflight_imports_the_assembled_gateway():
+    source = (REPO / "run.sh").read_text()
+    assert source.count('import orchestrator.main, uvicorn') == 2
+    assert 'import orchestrator, uvicorn' not in source
