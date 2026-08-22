@@ -48,6 +48,8 @@ from pathlib import Path
 
 import httpx
 
+from runtime.chat import strip_visualization_protocol
+
 _HERE = Path(__file__).resolve().parent
 DEFAULT_ITEMS = _HERE / "eval_items.json"
 DEFAULT_ARTIFACT_DIR = _HERE / ".artifacts"
@@ -388,7 +390,7 @@ def score_subgoal(reply: str, item: EvalItem, checker: Checker) -> SubgoalScore:
     wrong answer.
     """
     extractor = get_extractor()
-    candidate = extractor(reply)
+    candidate = extractor(strip_visualization_protocol(reply))
     if candidate is None:
         return SubgoalScore(None, False, False, None, "", "no final answer extracted")
     out = checker.correct(candidate, item.expected_answer, item.acceptable, item.tolerance)
@@ -424,7 +426,7 @@ def score_socratic(reply: str, item: EvalItem, checker: Checker) -> SocraticScor
     a human or LLM judge. See `run_judge` / `--judge`. Do not read `rubric_pass` as a quality
     score; read it as "structurally behaves like a Socratic turn".
     """
-    text = (reply or "").strip()
+    text = strip_visualization_protocol(reply)
     asks = "?" in text
     substantive = len(text) >= _MIN_SOCRATIC_CHARS
 

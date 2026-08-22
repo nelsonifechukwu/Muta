@@ -146,7 +146,7 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         PIDFILE.parent.mkdir(parents=True, exist_ok=True)
         PIDFILE.write_text(f"{os.getpid()}\n")
 
-    get_hub().start()  # 1 Hz RSS/temp sampling for /v1/conversations/{id}/telemetry
+    get_hub().start()  # 1 Hz while generating; lower-frequency idle RSS/temp sampling
 
     from orchestrator.gateway.connectivity import get_connectivity
 
@@ -159,6 +159,12 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         from orchestrator.gateway.deps import get_preamble_writer
 
         get_preamble_writer()
+
+    # Requeue PDFs whose durable state says preparation was interrupted by a restart.
+    with contextlib.suppress(Exception):
+        from orchestrator.gateway.deps import get_resource_service
+
+        get_resource_service()
 
     cfg = RuntimeConfig()
     engine_server: ModelManager | None = None
@@ -193,6 +199,11 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
             # Never hand the next lifespan a registry that correctly refuses post-shutdown work.
             get_generation_manager.cache_clear()
         with contextlib.suppress(Exception):
+            from orchestrator.gateway.deps import get_resource_service
+
+            get_resource_service().shutdown()
+            get_resource_service.cache_clear()
+        with contextlib.suppress(Exception):
             get_connectivity().stop()
         if engine_stop is not None:
             engine_stop.set()  # tell the supervisor to stop respawning before we kill the child
@@ -222,6 +233,7 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
+
 @app.middleware("http")
 async def _request_id(request, call_next):
     """Accept an inbound X-Request-ID (from nginx / a client) or mint one, expose it to every
@@ -243,6 +255,12 @@ async def _request_id(request, call_next):
     if request.url.path == "/chat" or request.url.path.startswith("/chat/"):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["X-Muta-UI-Revision"] = git_sha()
+    if request.url.path == "/chat/viz-frame.html":
+        # The renderer may execute only Muta's same-origin, pinned adapters. Its opaque iframe
+        # sandbox blocks parent authority; this response policy separately blocks all network,
+        # worker, nested-frame, form, media, and plugin capabilities in native deployments.
+        response.headers["Content-Security-Policy"] = _VIZ_FRAME_CSP
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
     return response
 
 
@@ -258,14 +276,18 @@ app.mount("/internal/exam", exam_app)
 app.mount("/internal/bench", bench_app)
 
 
-
-
 # Static browser surfaces, mounted only when their checked-in bundles are present. The app
 # stays the first client of /v1, not a privileged one. Mount the public landing page last so
 # its root catch-all cannot shadow the API, docs, internal services, or the app at /chat.
 _ui_root = Path(__file__).resolve().parent.parent / "ui"
 _ui_dist = _ui_root / "dist"
 _ui_assets = _ui_dist if _ui_dist.is_dir() else _ui_root
+_VIZ_FRAME_CSP = (
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; "
+    "connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; "
+    "child-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; "
+    "form-action 'none'; frame-ancestors 'self'"
+)
 
 
 def _redirect_with_query(request: Request, target: str) -> RedirectResponse:
