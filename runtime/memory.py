@@ -571,13 +571,33 @@ class ConversationStore:
         return dict(row)
 
     def link_attachment(
-        self, attachment_id: int, conversation_id: str, message_id: int | None = None
+        self,
+        attachment_id: int,
+        conversation_id: str,
+        message_id: int | None = None,
+        *,
+        owner_id: str | None = None,
     ) -> None:
         with self._pool.connection() as conn:
-            conn.execute(
-                "UPDATE attachments SET conversation_id = %s, message_id = %s WHERE id = %s",
-                (conversation_id, message_id, attachment_id),
-            )
+            if owner_id is None:
+                conn.execute(
+                    "UPDATE attachments SET conversation_id = %s, message_id = %s WHERE id = %s",
+                    (conversation_id, message_id, attachment_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE attachments SET conversation_id = %s, message_id = %s "
+                    "WHERE id = %s AND owner_id = %s AND EXISTS ("
+                    "SELECT 1 FROM conversations WHERE id = %s AND student_id = %s)",
+                    (
+                        conversation_id,
+                        message_id,
+                        attachment_id,
+                        owner_id,
+                        conversation_id,
+                        owner_id,
+                    ),
+                )
 
     # --- user settings ----------------------------------------------------------------
 
@@ -615,12 +635,12 @@ class ConversationStore:
 
     def delete_student(self, student_id: str) -> dict[str, int]:
         """Erase everything owned by one student: their conversations (messages + linked
-        attachments cascade), any attachments they uploaded that never linked to a
-        conversation, and their settings. Returns per-table deleted counts. This is the
+        attachments cascade), any attachments they uploaded (including a historical bad
+        cross-link), and their settings. Returns per-table deleted counts. This is the
         primitive a parent/guardian-facing 'delete my child's data' request is built on."""
         with self._pool.connection() as conn, conn.transaction():
-            orphans = conn.execute(
-                "DELETE FROM attachments WHERE owner_id = %s AND conversation_id IS NULL",
+            owned_attachments = conn.execute(
+                "DELETE FROM attachments WHERE owner_id = %s",
                 (student_id,),
             ).rowcount
             convos = conn.execute(
@@ -634,7 +654,8 @@ class ConversationStore:
             ).rowcount
         return {
             "conversations": convos,
-            "orphan_attachments": orphans,
+            # Retain the frozen response-field name; the count is now the safer superset.
+            "orphan_attachments": owned_attachments,
             "resources": resources,
             "settings": settings,
         }

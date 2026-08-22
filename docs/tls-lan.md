@@ -1,8 +1,9 @@
 # LAN TLS for classroom deployment
 
-**Status:** 2026-08-08. Operator guide. Companion script: `scripts/gen_local_tls.sh`.
-The nginx side is scaffolded in `docker/nginx.conf.template` (the commented `listen 443
-ssl` block).
+**Status:** updated 2026-08-22. Host mode now performs certificate generation and starts a
+dedicated HTTPS listener automatically. Use **Settings → Host mode** and the URL/QR shown there;
+certificates live under `data/share-certs/` and the default join port is `8443`. The manual nginx
+instructions below remain useful only for deployments that deliberately terminate TLS in nginx.
 
 ## Why this is not optional: the voice loop is dead on plain HTTP over the LAN
 

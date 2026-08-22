@@ -30,8 +30,24 @@ from orchestrator.bench_metrics import PIDFILE
 from orchestrator.bench_metrics import app as bench_app
 from orchestrator.exam.app import app as exam_app
 from orchestrator.gateway.audio_routes import router as audio_router
-from orchestrator.gateway.deps import get_generation_manager, get_vision, set_model_manager
+from orchestrator.gateway.body_limit import RequestBodyLimitMiddleware
+from orchestrator.gateway.capacity import CapacityPlanner, CapacityProfile
+from orchestrator.gateway.deps import (
+    get_generation_manager,
+    get_vision,
+    refresh_engine_dependencies,
+    set_model_manager,
+)
+from orchestrator.gateway.firewall import enforce_share_firewall
 from orchestrator.gateway.routes import router as gateway_router
+from orchestrator.gateway.share_routes import (
+    reconcile_share_deletions,
+    strict_share_security,
+)
+from orchestrator.gateway.share_routes import (
+    router as share_router,
+)
+from orchestrator.gateway.sharing import get_sharing_service
 from orchestrator.logging_config import configure_logging
 from orchestrator.math.app import app as math_app
 from orchestrator.pedagogy.app import app as pedagogy_app
@@ -83,7 +99,7 @@ def _start_engine_thread(
         while not stop.is_set():
             try:
                 _, managed = server.ensure(log_file=log_file)
-            except Exception:  # noqa: BLE001 — a start failure is degraded, not fatal
+            except Exception:
                 log.exception("llama-server failed to start; retrying in %.0fs", backoff)
                 if stop.wait(backoff):
                     break
@@ -101,7 +117,7 @@ def _start_engine_thread(
             while not stop.is_set():
                 try:
                     code = proc.wait(timeout=ENGINE_POLL_INTERVAL_S)
-                except Exception:  # noqa: BLE001 — TimeoutExpired and friends
+                except Exception:
                     continue
                 _engine_state["last_exit_code"] = code
                 if stop.is_set():
@@ -132,8 +148,39 @@ async def _vision_reaper() -> None:
             get_vision().reap_if_idle()
 
 
+def _persisted_share_runtime(
+    cfg: RuntimeConfig,
+    settings: dict,
+    *,
+    root: Path,
+    log_file: Path,
+) -> tuple[RuntimeConfig, CapacityProfile]:
+    """Resolve the persisted Host policy, including its verified competition-safe model."""
+    planner = CapacityPlanner()
+    mode = settings["memory_mode"]
+    profile = planner.plan(mode, cfg)
+    if mode == "competition" and not profile.fits and cfg.autostart:
+        probe = ModelManager(cfg, root=root, log_file=log_file, server_factory=LlamaServer)
+        candidate = probe.candidate_config(
+            os.environ.get("MUTA_SHARE_COMPETITION_MODEL_ID", "qwen3.5-0.8b-q4_k_m")
+        )
+        profile = planner.plan(mode, candidate)
+        cfg = candidate
+    if not profile.fits:
+        raise RuntimeError(
+            "Muta cannot fit one Host-mode chat in the RAM currently available; "
+            "close other applications or install a smaller model"
+        )
+    if not cfg.autostart and (profile.n_parallel != cfg.n_parallel or profile.n_ctx != cfg.n_ctx):
+        raise RuntimeError("the persisted Host memory profile needs a supervised local engine")
+    return (
+        cfg.model_copy(update={"n_parallel": profile.n_parallel, "n_ctx": profile.n_ctx}),
+        profile,
+    )
+
+
 @contextlib.asynccontextmanager
-async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     """Pidfile for bench/monitor.py, plus (when MUTA_RT_AUTOSTART=1, i.e. in the backend
     container) engine supervision and the vision idle reaper.
 
@@ -152,6 +199,15 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     get_connectivity().start()  # ~1/min online/offline verdict for /v1/ready and the UI
 
+    share_settings = get_sharing_service().settings() if strict_share_security() else None
+    share_listener_requested = bool(share_settings and share_settings["enabled"])
+
+    # A crash during account removal leaves the user revoked and marked ``deleting``. Resume
+    # the idempotent cross-store cleanup before accepting new work.
+    if strict_share_security():
+        with contextlib.suppress(Exception):
+            await asyncio.to_thread(reconcile_share_deletions)
+
     # Load + warm the TTFT preamble model at boot (no-op unless MUTA_RT_TTFT_PREAMBLE=1).
     # Doing it lazily would put its ~50 ms load and 32 ms cold generation on the first
     # student's first turn — the exact request the preamble exists to make feel instant.
@@ -167,11 +223,27 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         get_resource_service()
 
     cfg = RuntimeConfig()
+    root = Path(os.environ.get("TUTOR_ROOT", "/opt/tutor"))
+    engine_log = root / "data" / "logs" / "llama-server.log"
+    startup_profile: CapacityProfile | None = None
+    if share_listener_requested and share_settings is not None:
+        try:
+            cfg, startup_profile = _persisted_share_runtime(
+                cfg,
+                share_settings,
+                root=root,
+                log_file=engine_log,
+            )
+        except Exception as exc:  # fail closed: do not advertise an unapplied RAM profile
+            share_listener_requested = False
+            log.exception("persisted Host memory profile could not be applied")
+            from orchestrator.gateway.lan import get_lan_manager
+
+            get_lan_manager().last_error = str(exc)
     engine_server: ModelManager | None = None
     engine_stop: threading.Event | None = None
     reaper_task: asyncio.Task | None = None
     if cfg.autostart:
-        root = Path(os.environ.get("TUTOR_ROOT", "/opt/tutor"))
         for sub in ("data/logs", "data/kv-slots"):
             # CORE-VISION's --log-file dies at startup if data/logs is missing.
             with contextlib.suppress(OSError):
@@ -179,18 +251,33 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         engine_server = ModelManager(
             cfg,
             root=root,
-            log_file=root / "data" / "logs" / "llama-server.log",
+            log_file=engine_log,
             server_factory=LlamaServer,
         )
         set_model_manager(engine_server)
-        _, engine_stop = _start_engine_thread(
-            engine_server, root / "data" / "logs" / "llama-server.log"
-        )
+        _, engine_stop = _start_engine_thread(engine_server, engine_log)
         reaper_task = asyncio.create_task(_vision_reaper())
+
+    if startup_profile is not None and share_listener_requested:
+        refresh_engine_dependencies(startup_profile)
+
+    # Host mode survives a restart, but the TLS listener opens only after the persisted
+    # serving profile is installed in the manager and every capacity-dependent cache agrees.
+    if share_listener_requested:
+        try:
+            from orchestrator.gateway.lan import get_lan_manager
+
+            await asyncio.to_thread(get_lan_manager().start, app_instance)
+        except Exception:
+            log.exception("persisted Host listener could not be restored")
 
     try:
         yield
     finally:
+        with contextlib.suppress(Exception):
+            from orchestrator.gateway.lan import get_lan_manager
+
+            await asyncio.to_thread(get_lan_manager().stop)
         try:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(get_generation_manager().shutdown)
@@ -232,6 +319,13 @@ app = FastAPI(
     ),
     lifespan=_lifespan,
 )
+app.add_middleware(RequestBodyLimitMiddleware)
+
+
+@app.middleware("http")
+async def _sharing_firewall(request: Request, call_next):
+    """One fail-closed identity gate for the complete public JSON/SSE/media surface."""
+    return await enforce_share_firewall(request, call_next, api_prefix=API_PREFIX)
 
 
 @app.middleware("http")
@@ -249,6 +343,13 @@ async def _request_id(request, call_next):
     finally:
         request_id_var.reset(token)
     response.headers["X-Request-ID"] = rid
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(self)"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = _APP_CSP
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
     # `/chat` is a small, local bundle. Do not retain it: conditional Last-Modified handling can
     # otherwise accept a stale authored asset after a same-second export or a rollback, combining
     # a new index.html with an old app.js/stylesheet (the unauthenticated-client + huge-SVG bug).
@@ -267,6 +368,7 @@ async def _request_id(request, call_next):
 # Public contract: the ONLY surface clients address.
 app.include_router(gateway_router, prefix=API_PREFIX)
 app.include_router(audio_router, prefix=API_PREFIX)  # /v1/audio/transcribe + WS /v1/audio/voice
+app.include_router(share_router, prefix=API_PREFIX)
 
 # Logical services, collapsed into this process. Internal — not part of the /v1 contract.
 app.mount("/internal/math", math_app)
@@ -282,6 +384,12 @@ app.mount("/internal/bench", bench_app)
 _ui_root = Path(__file__).resolve().parent.parent / "ui"
 _ui_dist = _ui_root / "dist"
 _ui_assets = _ui_dist if _ui_dist.is_dir() else _ui_root
+_APP_CSP = (
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ws: wss:; "
+    "media-src 'self' blob:; frame-src 'self'; object-src 'none'; "
+    "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+)
 _VIZ_FRAME_CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; "
     "connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; "

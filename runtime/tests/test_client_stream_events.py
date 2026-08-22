@@ -8,6 +8,8 @@ that don't want the reasoning.
 
 from __future__ import annotations
 
+import threading
+
 import httpx
 import pytest
 
@@ -115,3 +117,43 @@ def test_stop_finish_remains_a_successful_terminal_frame(monkeypatch):
     assert list(InferenceClient().stream_events([{"role": "user", "content": "hi"}])) == [
         ("content", "Complete.")
     ]
+
+
+def test_cancel_closes_a_transport_blocked_inside_the_next_socket_read(monkeypatch):
+    class BlockedStream(_FakeStream):
+        def __init__(self):
+            super().__init__([])
+            self.closed = threading.Event()
+
+        def iter_lines(self):
+            assert self.closed.wait(timeout=2), "cancel did not close the blocked response"
+            return
+            yield  # pragma: no cover - preserve generator shape
+
+        def close(self):
+            self.closed.set()
+
+    blocked = BlockedStream()
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: blocked)
+    cancel = threading.Event()
+    failure: list[BaseException] = []
+
+    def consume() -> None:
+        try:
+            list(
+                InferenceClient(timeout=600).stream_events(
+                    [{"role": "user", "content": "hi"}],
+                    _muta_cancel_event=cancel,
+                )
+            )
+        except BaseException as exc:  # pragma: no cover - asserted below
+            failure.append(exc)
+
+    worker = threading.Thread(target=consume)
+    worker.start()
+    cancel.set()
+    worker.join(timeout=1)
+
+    assert blocked.closed.is_set()
+    assert not worker.is_alive()
+    assert failure == []

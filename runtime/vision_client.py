@@ -9,7 +9,9 @@ stays string-only, so nothing on the resident-server path has to reason about im
 from __future__ import annotations
 
 import base64
+import contextlib
 import json
+import threading
 
 import httpx
 
@@ -45,7 +47,12 @@ class VisionClient:
         self.timeout = timeout
 
     def transcribe(
-        self, image_bytes: bytes, image_format: str, *, prompt: str = DEFAULT_TRANSCRIBE_PROMPT
+        self,
+        image_bytes: bytes,
+        image_format: str,
+        *,
+        prompt: str = DEFAULT_TRANSCRIBE_PROMPT,
+        cancel_event: threading.Event | None = None,
     ) -> str:
         """Send image + prompt to CORE-VISION; return the transcription text.
 
@@ -72,10 +79,35 @@ class VisionClient:
             # Qwen3 weights, and here it would only add latency (and cost) to an OCR call.
             "chat_template_kwargs": {"enable_thinking": False},
         }
-        r = httpx.post(
-            f"{self.base_url}/v1/chat/completions", json=payload, timeout=self.timeout
-        )
-        r.raise_for_status()
+        url = f"{self.base_url}/v1/chat/completions"
+        if cancel_event is None:
+            r = httpx.post(url, json=payload, timeout=self.timeout)
+            r.raise_for_status()
+        else:
+            with httpx.Client(timeout=self.timeout) as client:
+                request = client.build_request("POST", url, json=payload)
+                r = client.send(request, stream=True)
+                watcher_stop = threading.Event()
+
+                def close_when_cancelled() -> None:
+                    while not watcher_stop.wait(0.05):
+                        if cancel_event.is_set():
+                            with contextlib.suppress(Exception):
+                                r.close()
+                            return
+
+                watcher = threading.Thread(
+                    target=close_when_cancelled,
+                    name="muta-vision-cancel",
+                    daemon=True,
+                )
+                watcher.start()
+                try:
+                    r.raise_for_status()
+                    r.read()
+                finally:
+                    watcher_stop.set()
+                    r.close()
         try:
             content = r.json()["choices"][0]["message"]["content"]
         except (json.JSONDecodeError, KeyError, IndexError, TypeError) as e:

@@ -252,6 +252,91 @@ class UserSettings(BaseModel):
     )
 
 
+# --- Muta Share (offline LAN accounts + host control) ---------------------------------
+
+
+class ShareStatus(BaseModel):
+    enabled: bool = False
+    secure: bool = False
+    authenticated: bool = False
+    role: Literal["host", "member"] | None = None
+    user_id: str | None = None
+    username: str | None = None
+    join_url: str | None = None
+    message: str = ""
+
+
+class ShareCredentials(BaseModel):
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=8, max_length=256)
+
+
+class ShareSignupResponse(BaseModel):
+    enrollment_id: str
+    enrollment_secret: str = Field(
+        description="One-time secret used only to poll/exchange this approval request."
+    )
+    status: Literal["pending"] = "pending"
+    username: str
+    expires_at: str
+
+
+class ShareEnrollmentExchange(BaseModel):
+    secret: str = Field(min_length=32, max_length=128)
+
+
+class ShareEnrollmentResponse(BaseModel):
+    status: Literal["pending", "approved", "rejected", "removed", "expired"]
+    username: str | None = None
+    authenticated: bool = False
+    user_id: str | None = None
+    can_login: bool = False
+
+
+class ShareSessionResponse(BaseModel):
+    authenticated: bool = True
+    user_id: str
+    username: str
+    role: Literal["member"] = "member"
+    expires_at: str
+
+
+class ShareLogoutResponse(BaseModel):
+    logged_out: bool = True
+
+
+class ShareUser(BaseModel):
+    id: str
+    username: str
+    status: Literal["pending", "approved", "deleting"]
+    created_at: str
+    approved_at: str | None = None
+    last_login_at: str | None = None
+
+
+class ShareHostUpdate(BaseModel):
+    enabled: bool
+    memory_mode: Literal["competition", "system"] = "competition"
+
+
+class ShareHostStatus(BaseModel):
+    enabled: bool
+    memory_mode: Literal["competition", "system"]
+    listener_running: bool = False
+    join_urls: list[str] = Field(default_factory=list)
+    certificate_fingerprint: str | None = None
+    users: list[ShareUser] = Field(default_factory=list)
+    capacity: dict = Field(default_factory=dict)
+    updated_at: str
+    warning: str | None = None
+
+
+class ShareUserAction(BaseModel):
+    id: str
+    status: Literal["approved", "rejected", "removed"]
+    erased: dict[str, int] = Field(default_factory=dict)
+
+
 class PowerStatus(BaseModel):
     """Battery state of the laptop serving Muta, plus the effective learner policy."""
 
@@ -541,6 +626,8 @@ class AuthTokenResponse(BaseModel):
             "(or `?token=` on attachment URLs). Opaque; treat as a per-device secret."
         )
     )
+    role: Literal["host", "member", "legacy"] = "legacy"
+    csrf_token: str | None = None
 
 
 class StudentErased(BaseModel):

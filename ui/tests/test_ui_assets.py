@@ -428,6 +428,45 @@ def test_authored_entry_assets_share_one_cache_busting_revision():
     assert len(set(versions)) == 1
 
 
+def test_muta_share_gate_is_labeled_persistent_and_role_scoped():
+    js = (UI / "app.js").read_text()
+    for fragment in (
+        'autocomplete="username"',
+        'autocomplete="current-password"',
+        'autocomplete="new-password"',
+        'role="alert" aria-live="assertive"',
+        'id="host-settings"',
+        'id="host-qr"',
+    ):
+        assert fragment in HTML
+    assert 'const SHARE_ENROLLMENT_KEY = "muta-share-enrollment"' in js
+    assert 'document.querySelector("#host-settings").hidden = role !== "host"' in js
+    assert 'document.querySelector(".model-selector").hidden = role === "member"' in js
+    assert 'method: "POST"' in js and "/v1/share/enrollments/" in js
+    assert "window.confirm(" in js and "conversations, files and learning profile" in js
+    assert "?token=" not in js
+
+
+def test_muta_share_tabs_and_revocation_flow_are_keyboard_and_session_safe():
+    js = (UI / "app.js").read_text()
+    assert 'role="tabpanel" aria-labelledby="share-login-tab"' in HTML
+    assert 'id="share-signup-tab" type="button" role="tab" tabindex="-1"' in HTML
+    assert 'event.key === "ArrowRight"' in js
+    assert 'event.key === "Home"' in js
+    assert 'shareTab(index === 0 ? "login" : "signup", { focus: "tab" })' in js
+    assert '$("#share-pending-title").focus()' in js
+    assert "function revalidateShareIdentity()" in js
+    assert 'sessionStorage.setItem(\n    "muta-share-reauth"' in js
+
+
+def test_checked_in_dist_entry_assets_are_byte_identical_to_authored_sources():
+    dist = UI / "dist"
+    if not dist.is_dir():
+        return
+    for name in ("index.html", "app.js", "styles.css"):
+        assert (UI / name).read_bytes() == (dist / name).read_bytes(), name
+
+
 def test_frontend_nginx_does_not_cache_static_ui_revisions():
     assert 'default "no-store, max-age=0";' in NGINX
     assert '~^/v1/ "";' in NGINX

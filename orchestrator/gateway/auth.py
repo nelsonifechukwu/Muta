@@ -26,17 +26,37 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import ipaddress
 import os
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
+from urllib.parse import urlsplit
 
-from fastapi import Header, HTTPException, Query
+from fastapi import Cookie, Header, HTTPException, Query, Request
+from starlette.requests import HTTPConnection
+
+from orchestrator.gateway.sharing import SESSION_COOKIE, SESSION_PREFIX, get_sharing_service
 
 _SECRET_ENV = "MUTA_AUTH_SECRET"
 # Bound the token so a signed value cannot be a prompt-bomb in its own right, and reject
 # absurd student ids early.
 MAX_STUDENT_ID = 128
 _OPERATOR_ID_FILE_ENV = "MUTA_OPERATOR_ID_FILE"
+
+
+@dataclass(frozen=True)
+class AuthPrincipal:
+    """The single server-resolved identity used across JSON, SSE, media and WebSocket paths."""
+
+    subject: str
+    role: Literal["host", "member", "legacy"]
+    session_id: str | None = None
+    username: str | None = None
+    auth_kind: Literal["share", "legacy"] = "legacy"
 
 
 def _secret() -> bytes | None:
@@ -96,6 +116,9 @@ def verify_token(token: str | None) -> str | None:
     if not token:
         return None
     token = token.strip()
+    if token.startswith(SESSION_PREFIX):
+        principal = get_sharing_service().resolve_session(token)
+        return principal.subject if principal is not None else None
     secret = _secret()
     if secret is None:
         return token if 0 < len(token) <= MAX_STUDENT_ID else None
@@ -115,28 +138,160 @@ def _token_from_header(authorization: str | None) -> str | None:
     return None
 
 
-def require_caller(authorization: str | None = Header(default=None)) -> str:
+def request_token(
+    authorization: str | None,
+    session_cookie: str | None,
+    query_token: str | None = None,
+) -> str | None:
+    """Prefer the HttpOnly share cookie; retain header/query compatibility for local tools."""
+    return session_cookie or _token_from_header(authorization) or query_token
+
+
+def resolve_principal(token: str | None) -> AuthPrincipal | None:
+    if not token:
+        return None
+    if token.startswith(SESSION_PREFIX):
+        principal = get_sharing_service().resolve_session(token)
+        if principal is None:
+            return None
+        return AuthPrincipal(
+            subject=principal.subject,
+            role=principal.role,
+            session_id=principal.session_id,
+            username=principal.username,
+            auth_kind="share",
+        )
+    student_id = verify_token(token)
+    if student_id is None:
+        return None
+    return AuthPrincipal(subject=student_id, role="legacy", auth_kind="legacy")
+
+
+def principal_from_request(request: Request) -> AuthPrincipal | None:
+    return resolve_principal(
+        request_token(
+            request.headers.get("authorization"),
+            request.cookies.get(SESSION_COOKIE),
+            request.query_params.get("token"),
+        )
+    )
+
+
+@contextmanager
+def member_write_lease(principal: AuthPrincipal | None) -> Iterator[None]:
+    """Serialize a member's durable write with host account removal.
+
+    Host and legacy-local identities do not live in the Host-mode roster and therefore do
+    not need this lease. Strict-mode member identities do.
+    """
+    if principal is not None and principal.role == "member":
+        with get_sharing_service().member_write(principal.subject):
+            yield
+        return
+    yield
+
+
+def _is_ip_loopback(value: str) -> bool:
+    try:
+        return ipaddress.ip_address(value).is_loopback
+    except ValueError:
+        return False
+
+
+def _operator_host_allowed(request: HTTPConnection) -> bool:
+    allowed = {"localhost", "127.0.0.1", "::1"}
+    allowed.update(
+        item.strip().lower().rstrip(".")
+        for item in os.environ.get("MUTA_OPERATOR_HOSTS", "").split(",")
+        if item.strip()
+    )
+    raw_host = request.headers.get("host", "")
+    try:
+        host = urlsplit(f"//{raw_host}").hostname or ""
+    except ValueError:
+        return False
+    if host.lower().rstrip(".") not in allowed:
+        return False
+    # Browsers attach Origin to state-changing fetches. Reject a DNS-rebinding origin while
+    # allowing local CLI clients that intentionally send no Origin header.
+    origin = request.headers.get("origin")
+    if origin:
+        try:
+            origin_host = urlsplit(origin).hostname or ""
+        except ValueError:
+            return False
+        if origin_host.lower().rstrip(".") not in allowed:
+            return False
+    return True
+
+
+def is_loopback_request(request: HTTPConnection) -> bool:
+    """Only the direct primary listener can bootstrap host authority.
+
+    Forwarded headers deliberately do not count. The operator URL is the loopback-only backend
+    listener; the separate TLS LAN listener preserves the actual peer and can never mint a host.
+    """
+    peer = request.client.host if request.client else ""
+    return _is_ip_loopback(peer)
+
+
+def is_operator_request(request: HTTPConnection) -> bool:
+    """Trust the loopback listener, including its container-only port after host NAT.
+
+    Compose publishes container port 8000 on host 127.0.0.1 only. The application therefore
+    sees the bridge peer rather than 127.0.0.1, but can distinguish that private primary
+    listener from Host mode's dedicated 8443 listener by the ASGI server port.
+    """
+    if not _operator_host_allowed(request):
+        return False
+    if is_loopback_request(request):
+        return True
+    if os.environ.get("MUTA_TRUST_PRIMARY_LISTENER") != "1":
+        return False
+    server = request.scope.get("server")
+    return bool(server and int(server[1]) == int(os.environ.get("MUTA_PRIMARY_PORT", "8000")))
+
+
+def require_principal(
+    authorization: str | None = Header(default=None),
+    session_cookie: str | None = Cookie(default=None, alias=SESSION_COOKIE),
+) -> AuthPrincipal:
+    principal = resolve_principal(request_token(authorization, session_cookie))
+    if principal is None:
+        raise HTTPException(status_code=401, detail="sign in to continue")
+    return principal
+
+
+def require_caller(
+    authorization: str | None = Header(default=None),
+    session_cookie: str | None = Cookie(default=None, alias=SESSION_COOKIE),
+) -> str:
     """FastAPI dependency: the authenticated student id, or 401. For endpoints a fetch()
     client reaches (it can set the Authorization header)."""
-    student_id = verify_token(_token_from_header(authorization))
-    if student_id is None:
+    principal = resolve_principal(request_token(authorization, session_cookie))
+    if principal is None:
         raise HTTPException(status_code=401, detail="sign in to continue")
-    return student_id
+    return principal.subject
 
 
-def optional_caller(authorization: str | None = Header(default=None)) -> str | None:
+def optional_caller(
+    authorization: str | None = Header(default=None),
+    session_cookie: str | None = Cookie(default=None, alias=SESSION_COOKIE),
+) -> str | None:
     """Resolve an optional bearer token for legacy-public endpoints with private extensions."""
-    return verify_token(_token_from_header(authorization))
+    principal = resolve_principal(request_token(authorization, session_cookie))
+    return principal.subject if principal is not None else None
 
 
 def caller_from_token(
     authorization: str | None = Header(default=None),
+    session_cookie: str | None = Cookie(default=None, alias=SESSION_COOKIE),
     token: str | None = Query(default=None),
 ) -> str:
     """FastAPI dependency for URLs a browser loads directly (an <img>/download link cannot
     set headers): accept the token from the Authorization header *or* a `?token=` query param.
     401 when neither resolves."""
-    student_id = verify_token(_token_from_header(authorization) or token)
-    if student_id is None:
+    principal = resolve_principal(request_token(authorization, session_cookie, token))
+    if principal is None:
         raise HTTPException(status_code=401, detail="sign in to continue")
-    return student_id
+    return principal.subject

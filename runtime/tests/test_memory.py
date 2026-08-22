@@ -144,6 +144,40 @@ def test_get_attachment_owner_via_linked_conversation(store: ConversationStore):
     assert store.get_attachment(aid, owner_id="mallory") is None
 
 
+def test_link_attachment_cannot_claim_another_students_upload(store: ConversationStore):
+    alice_conversation = store.create_conversation("alice")
+    alice_message = store.add_message(alice_conversation, "user", "look")
+    bob_attachment = store.add_attachment("image", "image/png", b"bob-private", owner_id="bob")
+
+    store.link_attachment(
+        bob_attachment,
+        alice_conversation,
+        alice_message,
+        owner_id="alice",
+    )
+
+    row = store.get_attachment(bob_attachment, owner_id="bob")
+    assert row is not None and row["conversation_id"] is None
+    assert store.get_attachment(bob_attachment, owner_id="alice") is None
+
+
+def test_student_deletion_removes_historical_cross_linked_uploads(store: ConversationStore):
+    victim_conversation = store.create_conversation("victim")
+    attachment = store.add_attachment(
+        "audio",
+        "audio/webm",
+        b"attacker-owned",
+        conversation_id=victim_conversation,
+        owner_id="attacker",
+    )
+
+    counts = store.delete_student("attacker")
+
+    assert counts["orphan_attachments"] == 1
+    assert store.get_attachment(attachment) is None
+    assert store.get_conversation(victim_conversation) is not None
+
+
 def test_delete_conversation_owner_scoped(store: ConversationStore):
     cid = store.create_conversation("alice")
     # A non-owner's delete removes nothing and reports it.
@@ -169,11 +203,13 @@ def test_delete_student_erases_all_owned_data(store: ConversationStore):
 
     counts = store.delete_student("alice")
     assert counts["conversations"] == 1
-    assert counts["orphan_attachments"] == 1
+    # Frozen field name; deletion now counts every directly-owned attachment so even a
+    # historical cross-link into someone else's conversation cannot survive account removal.
+    assert counts["orphan_attachments"] == 2
     assert counts["settings"] == 1
     assert store.get_conversation(cid) is None
-    assert store.get_attachment(linked) is None  # cascaded with the conversation
-    assert store.get_attachment(orphan) is None  # removed as an owned orphan
+    assert store.get_attachment(linked) is None
+    assert store.get_attachment(orphan) is None
     assert store.get_settings("alice") == {}
     assert store.get_conversation(bob_cid) is not None
 

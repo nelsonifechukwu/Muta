@@ -42,7 +42,14 @@ map $uri $muta_content_security_policy {
 # so this is the real backstop behind DOMPurify, not a rubber stamp.
 
 server {
+    listen 80 default_server;
+    server_name "";
+    return 444;
+}
+
+server {
     listen 80;
+    server_name localhost 127.0.0.1;
     root /usr/share/nginx/html;
 
     add_header X-Content-Type-Options "nosniff" always;

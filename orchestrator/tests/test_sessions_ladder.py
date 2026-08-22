@@ -321,6 +321,13 @@ def test_l3_refuses_new_sessions_with_a_human_message(manager):
     assert "capacity" in decision.message and "try again" in decision.message
 
 
+def test_l3_refuses_a_new_session_even_when_a_physical_slot_is_free():
+    manager = SessionManager(slots_count=1, accepts_new_sessions=lambda: False)
+    decision = manager.acquire("brand-new")
+    assert decision.admission is Admission.REFUSED
+    assert manager.slots[0].free
+
+
 def test_l4_narrows_the_usable_slot_pool():
     mgr = SessionManager(slots_count=6, effective_slots=lambda: 4)
     for name in ("a", "b", "c", "d"):

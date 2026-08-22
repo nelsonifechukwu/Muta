@@ -63,19 +63,47 @@ def mem_available_bytes() -> int:
     reclaim, and treating it as used would report the box as full the moment the model
     loaded.
     """
+    available = 0
     try:
         with open("/proc/meminfo") as fh:
             for line in fh:
                 if line.startswith("MemAvailable:"):
-                    return int(line.split()[1]) * 1024
+                    available = int(line.split()[1]) * 1024
+                    break
     except OSError:
         pass
-    try:
-        import psutil
+    if not available:
+        try:
+            import psutil
 
-        return int(psutil.virtual_memory().available)
-    except Exception:  # noqa: BLE001
-        return 8 * GiB  # unknown: assume healthy rather than degrade a working system
+            available = int(psutil.virtual_memory().available)
+        except Exception:  # noqa: BLE001
+            available = 8 * GiB  # unknown: assume healthy rather than degrade a working system
+    # MemAvailable can describe the host instead of the container. memory.current includes
+    # the complete backend tree, catching gateway/ASR/vision growth an engine RSS probe misses.
+    for root in ("/sys/fs/cgroup", "/sys/fs/cgroup/memory"):
+        try:
+            with open(f"{root}/memory.max") as limit_file:
+                limit_raw = limit_file.read().strip()
+            with open(f"{root}/memory.current") as current_file:
+                current_raw = current_file.read().strip()
+        except OSError:
+            try:
+                with open(f"{root}/memory.limit_in_bytes") as limit_file:
+                    limit_raw = limit_file.read().strip()
+                with open(f"{root}/memory.usage_in_bytes") as current_file:
+                    current_raw = current_file.read().strip()
+            except OSError:
+                continue
+        try:
+            if limit_raw != "max":
+                limit = int(limit_raw)
+                if 0 < limit < (1 << 60):
+                    available = min(available, max(0, limit - int(current_raw)))
+        except ValueError:
+            pass
+        break
+    return available
 
 
 @dataclass
@@ -136,6 +164,7 @@ class DegradationLadder:
     free_probe: Callable[[], int] = mem_available_bytes
     core_rss_probe: Callable[[], int] = lambda: 0
     reserve_bytes: int = RESERVE_BYTES
+    core_cap_bytes: int = CORE_CAP_BYTES
     poll_seconds: float = POLL_SECONDS
     clock: Callable[[], float] = time.monotonic
 
@@ -170,7 +199,7 @@ class DegradationLadder:
         return self.state
 
     def _classify(self, free: int, core_rss: int) -> tuple[Level, str]:
-        if core_rss and core_rss > CORE_CAP_BYTES - L4_MARGIN_BYTES:
+        if core_rss and core_rss > self.core_cap_bytes - L4_MARGIN_BYTES:
             return Level.L4, f"core RSS {core_rss / GiB:.2f} GiB is within 100 MiB of its cap"
         # Hysteresis applies only when recovering, so degradation is immediate and recovery
         # is deliberate — the expensive direction is the one to be slow about.

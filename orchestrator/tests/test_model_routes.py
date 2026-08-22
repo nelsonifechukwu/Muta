@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import uuid
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
 from orchestrator.gateway import deps, routes
 from orchestrator.gateway.deps import set_model_manager
 from orchestrator.main import app
+from runtime.config import RuntimeConfig
 
 
 class _Manager:
@@ -58,9 +60,10 @@ def test_model_catalog_and_select_are_public_contract_routes(monkeypatch):
     assert first.json()["active_id"] == "winner"
     assert changed.status_code == 200
     assert changed.json()["active_id"] == "accuracy"
-    assert next(model for model in changed.json()["models"] if model["id"] == "accuracy")[
-        "active"
-    ] is True
+    assert (
+        next(model for model in changed.json()["models"] if model["id"] == "accuracy")["active"]
+        is True
+    )
 
 
 def test_model_select_is_unavailable_without_a_supervised_engine():
@@ -101,6 +104,68 @@ def test_model_select_refuses_to_interrupt_an_active_generation(monkeypatch):
 
     assert response.status_code == 409
     assert manager.active == "winner"
+
+
+def test_strict_model_switch_prices_target_and_applies_capacity_atomically(monkeypatch):
+    class StrictManager(_Manager):
+        def __init__(self):
+            super().__init__()
+            self.applied = None
+
+        def candidate_config(self, model_id):
+            assert model_id == "accuracy"
+            return RuntimeConfig(auto_download=False, _env_file=None)
+
+        def switch(self, model_id, *, n_parallel=None, n_ctx=None):
+            self.applied = (model_id, n_parallel, n_ctx)
+            return super().switch(model_id)
+
+    class Generations:
+        def run_when_idle(self, operation):
+            return operation()
+
+    manager = StrictManager()
+    profile = SimpleNamespace(fits=True, n_parallel=3, n_ctx=6144)
+    service = SimpleNamespace(
+        settings=lambda: {"memory_mode": "system"},
+        verify_csrf=lambda session_id, csrf: (session_id, csrf) == ("host-session", "csrf"),
+    )
+    controller = SimpleNamespace(
+        planner=SimpleNamespace(
+            plan=lambda mode, candidate: (
+                profile if mode == "system" and isinstance(candidate, RuntimeConfig) else None
+            )
+        )
+    )
+    refreshed = []
+    monkeypatch.setattr(routes, "strict_share_security", lambda: True)
+    monkeypatch.setattr(routes, "_model_switch_allowed", lambda _: True)
+    monkeypatch.setattr(
+        routes,
+        "principal_from_request",
+        lambda _: SimpleNamespace(role="host", session_id="host-session"),
+    )
+    monkeypatch.setattr(routes, "get_sharing_service", lambda: service)
+    monkeypatch.setattr(routes, "get_capacity_controller", lambda: controller)
+    monkeypatch.setattr(
+        routes, "get_vision", lambda: SimpleNamespace(stop_for_reconfigure=lambda: True)
+    )
+    monkeypatch.setattr(routes, "refresh_engine_dependencies", refreshed.append)
+    app.dependency_overrides[deps.get_generation_manager] = lambda: Generations()
+    set_model_manager(manager)
+    try:
+        response = TestClient(app).post(
+            "/v1/models/select",
+            json={"model_id": "accuracy"},
+            headers={"X-Muta-CSRF": "csrf"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+        set_model_manager(None)
+
+    assert response.status_code == 200
+    assert manager.applied == ("accuracy", 3, 6144)
+    assert refreshed == [profile]
 
 
 def test_auth_session_unifies_only_loopback_operator_identity(monkeypatch, tmp_path):

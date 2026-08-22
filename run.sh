@@ -137,6 +137,54 @@ probe_net() {
     fi
 }
 
+configure_backend_memory_limit() {
+    [ -n "${MUTA_BACKEND_MEMORY_LIMIT:-}" ] && return
+    total_mib=""
+    if [ "$(uname -s)" = Darwin ]; then
+        total_bytes=$(sysctl -n hw.memsize 2>/dev/null || true)
+        [ -n "$total_bytes" ] && total_mib=$((total_bytes / 1024 / 1024))
+    elif [ -r /proc/meminfo ]; then
+        total_kib=$(awk '/^MemTotal:/ {print $2; exit}' /proc/meminfo)
+        [ -n "$total_kib" ] && total_mib=$((total_kib / 1024))
+    fi
+    # Leave the host OS room while allowing product mode to use more than the ADTC 7 GiB.
+    # The in-container planner applies the tighter physical/cgroup ceiling and competition
+    # mode still self-limits to 6.6 GiB.
+    if [ -n "$total_mib" ]; then
+        export MUTA_BACKEND_MEMORY_LIMIT="$((total_mib * 85 / 100))m"
+    else
+        export MUTA_BACKEND_MEMORY_LIMIT=7g
+    fi
+}
+
+configure_share_host() {
+    [ -n "${MUTA_SHARE_HOST:-}" ] && return
+    share_host=$("${PY:-python3}" - <<'PY'
+import ipaddress
+import socket
+
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.connect(("192.0.2.1", 9))
+    value = sock.getsockname()[0]
+finally:
+    try:
+        sock.close()
+    except NameError:
+        pass
+
+address = ipaddress.ip_address(value)
+if address.version == 4 and not (address.is_loopback or address.is_link_local):
+    print(address)
+PY
+    ) || true
+    if [ -n "$share_host" ]; then
+        export MUTA_SHARE_HOST="$share_host"
+    else
+        warn "could not detect this laptop's LAN address; set MUTA_SHARE_HOST before enabling Host mode"
+    fi
+}
+
 print_plan() {
     echo "host=$(uname -s)/$(uname -m)"
     echo "mode=$MODE"
@@ -148,6 +196,8 @@ update_stack() {
     if [ "$(probe_net)" != online ]; then
         die "update needs the network — try again when online"
     fi
+    configure_backend_memory_limit
+    configure_share_host
     info "pulling code"
     git pull --ff-only || die "git pull failed — resolve manually and rerun"
     info "refreshing models (hash-verified files are skipped)"
@@ -171,16 +221,19 @@ native_up() {
     info "starting db (docker)"
     # A docker-mode backend still publishing :8000 would crash uvicorn below with a bare
     # "address already in use" — stop it (no-op when nothing is running).
-    docker compose stop backend >/dev/null 2>&1 || true
+    docker compose stop backend frontend >/dev/null 2>&1 || true
     docker compose up -d --wait db || die "db failed to start"
-    info "starting frontend (docker, proxying /v1 to this host)"
-    BACKEND_UPSTREAM="host.docker.internal:8000" docker compose up -d --no-deps frontend \
-        || die "frontend failed to start"
-    bold "Native dev mode — backend runs in THIS terminal. Ctrl-C stops it; './run.sh down' stops the containers."
-    info "landing:   http://localhost:3000"
-    info "Muta app:  http://localhost:3000/chat/   (proxies 502 until the model finishes loading — seconds natively)"
+    bold "Native dev mode — the backend and bundled UI run in THIS terminal. Ctrl-C stops them; './run.sh down' stops the database."
+    info "landing:   http://localhost:8000"
+    info "Muta app:  http://localhost:8000/chat/"
     info "API:       http://localhost:8000/v1  (docs at http://localhost:8000/docs)"
     export MUTA_RT_AUTOSTART=1
+    export MUTA_SHARE_STRICT=1
+    # The only non-loopback peer on :8000 is the loopback-published frontend container.
+    # Trust that primary listener for host bootstrap while the dedicated :8443 listener
+    # remains the sole LAN surface.
+    export MUTA_TRUST_PRIMARY_LISTENER=1
+    export MUTA_ALLOW_MODEL_SWITCH="${MUTA_ALLOW_MODEL_SWITCH:-1}"
     export MUTA_RT_MODEL_DIR="$MODEL_DIR"
     export MUTA_RT_MODEL_FILE="$MODEL_FILE"
     export MUTA_RT_MODEL_ALIAS="$MODEL_ALIAS"
@@ -206,7 +259,7 @@ native_up() {
     # No MUTA_RT_N_THREADS here — but not because the engine default wins: RuntimeConfig
     # now derives P-core-pinned threads on Apple silicon itself (runtime/config.py,
     # measured +26% and stable vs the engine's all-cores default).
-    exec "${PY:-python3}" -m uvicorn orchestrator.main:app --host 0.0.0.0 --port 8000
+    exec "${PY:-python3}" -m uvicorn orchestrator.main:app --host 127.0.0.1 --port 8000
 }
 
 native_python() {
@@ -277,6 +330,7 @@ native_linux_up() {
     # Model replacement is a machine-wide operator action. The API also verifies that the
     # socket peer is loopback, so LAN classroom clients cannot restart the shared engine.
     export MUTA_ALLOW_MODEL_SWITCH="${MUTA_ALLOW_MODEL_SWITCH:-1}"
+    export MUTA_SHARE_STRICT=1
     bold "Native Linux mode — no Docker, PostgreSQL, nginx, or network required."
     info "landing:   http://127.0.0.1:8000/"
     info "Muta app:  http://127.0.0.1:8000/chat/"
@@ -394,6 +448,8 @@ fi
 command -v docker >/dev/null 2>&1 || die "docker not found — install Docker Desktop / Engine."
 docker info >/dev/null 2>&1 || die "docker daemon isn't running — start it."
 docker compose version >/dev/null 2>&1 || die "docker compose v2 not found — update Docker."
+configure_backend_memory_limit
+configure_share_host
 
 # A commit SHA alone lies for dirty pre-commit deployments. Stamp the content identity used by
 # native health/bench artifacts; export-linux refuses images built with the `unknown` fallback.
@@ -456,13 +512,13 @@ fi
 # ---------------------------------------------------------------------------
 required_models=(
     "$MODEL"
+    "models/draft/Qwen3.5-0.8B-Q4_K_M.gguf"
     "models/core/mmproj-F16.gguf"
     "models/asr/moonshine-tiny-en-int8/tokens.txt"
     "models/asr/silero_vad.onnx"
     "models/tts/piper/en_US-joe-medium.onnx"
     "models/embed/bge-small-en-v1.5-q8_0.gguf"
 )
-DRAFT="models/draft/Qwen3.5-0.8B-Q4_K_M.gguf"
 missing=0
 for f in "${required_models[@]}"; do
     [ -e "$f" ] || { missing=1; break; }
@@ -484,15 +540,6 @@ elif [ "$missing" = 1 ]; then
         docker compose run --rm --no-deps backend \
             python3.10 scripts/fetch_models.py --with-draft --mmproj-precision f16 \
             || die "model provisioning failed — rerun ./run.sh (downloads resume where they stopped)"
-    fi
-elif [ ! -e "$DRAFT" ]; then
-    # The draft only speeds decoding up — the stack runs without it, so its absence must
-    # never block a boot. _speculation_flags skips --spec-draft-model when the file is missing.
-    warn "speculation draft absent ($DRAFT) — running without it. Fetch it with:"
-    if [ "$MODE" = native ]; then
-        warn "  ${PY:-python3} scripts/fetch_models.py --with-draft --only draft"
-    else
-        warn "  docker compose run --rm --no-deps backend python3.10 scripts/fetch_models.py --with-draft --only draft"
     fi
 else
     info "models already provisioned"

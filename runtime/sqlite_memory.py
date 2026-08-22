@@ -534,13 +534,33 @@ class SQLiteConversationStore:
         return result
 
     def link_attachment(
-        self, attachment_id: int, conversation_id: str, message_id: int | None = None
+        self,
+        attachment_id: int,
+        conversation_id: str,
+        message_id: int | None = None,
+        *,
+        owner_id: str | None = None,
     ) -> None:
         with self._lock, self._conn:
-            self._conn.execute(
-                "UPDATE attachments SET conversation_id = ?, message_id = ? WHERE id = ?",
-                (conversation_id, message_id, attachment_id),
-            )
+            if owner_id is None:
+                self._conn.execute(
+                    "UPDATE attachments SET conversation_id = ?, message_id = ? WHERE id = ?",
+                    (conversation_id, message_id, attachment_id),
+                )
+            else:
+                self._conn.execute(
+                    "UPDATE attachments SET conversation_id = ?, message_id = ? "
+                    "WHERE id = ? AND owner_id = ? AND EXISTS ("
+                    "SELECT 1 FROM conversations WHERE id = ? AND student_id = ?)",
+                    (
+                        conversation_id,
+                        message_id,
+                        attachment_id,
+                        owner_id,
+                        conversation_id,
+                        owner_id,
+                    ),
+                )
 
     def get_settings(self, student_id: str) -> dict:
         with self._lock:
@@ -578,8 +598,8 @@ class SQLiteConversationStore:
 
     def delete_student(self, student_id: str) -> dict[str, int]:
         with self._lock, self._conn:
-            orphans = self._conn.execute(
-                "DELETE FROM attachments WHERE owner_id = ? AND conversation_id IS NULL",
+            owned_attachments = self._conn.execute(
+                "DELETE FROM attachments WHERE owner_id = ?",
                 (student_id,),
             ).rowcount
             conversations = self._conn.execute(
@@ -593,7 +613,7 @@ class SQLiteConversationStore:
             ).rowcount
         return {
             "conversations": conversations,
-            "orphan_attachments": orphans,
+            "orphan_attachments": owned_attachments,
             "resources": resources,
             "settings": settings,
         }

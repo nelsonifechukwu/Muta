@@ -84,16 +84,67 @@ let studentId = (() => {
   return id;
 })();
 
-// Bearer token for the data endpoints (conversations, attachments). In the default (no
-// server secret) deployment the token IS the student id, so this works immediately; when the
-// server sets MUTA_AUTH_SECRET, ensureAuth() upgrades it to a signed token. Attachment <img>
-// URLs can't carry a header, so they take ?token= instead.
-let authToken = studentId;
+// Share sessions primarily use an HttpOnly same-origin cookie. The host bootstrap also returns
+// a short-lived bearer for CLI compatibility, but media URLs intentionally rely on the cookie
+// so credentials never appear in browser history, referrers or proxy logs.
+let authToken = "";
+let authRole = null;
+let authUsername = null;
+let csrfToken = null;
 let identityReady = false;
-const authHeaders = () => ({ Authorization: `Bearer ${authToken}` });
-const attachmentUrl = (id) => `/v1/attachments/${id}?token=${encodeURIComponent(authToken)}`;
+let shareAuthWake = null;
+let revocationReloading = false;
+const authHeaders = () => ({
+  ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+  ...(csrfToken ? { "X-Muta-CSRF": csrfToken } : {}),
+});
+const attachmentUrl = (id) => `/v1/attachments/${id}`;
 const resourcePageUrl = (id, page) =>
-  `/v1/resources/${encodeURIComponent(id)}/content?token=${encodeURIComponent(authToken)}#page=${Math.max(1, Number(page) || 1)}`;
+  `/v1/resources/${encodeURIComponent(id)}/content#page=${Math.max(1, Number(page) || 1)}`;
+
+function activateIdentity({ userId, role, username = null, token = "", csrf = null }) {
+  studentId = userId;
+  authRole = role;
+  authUsername = username;
+  authToken = token;
+  csrfToken = csrf;
+  identityReady = true;
+  localStorage.setItem("muta-student", studentId);
+  document.querySelector("#share-auth").hidden = true;
+  document.querySelector("#app").hidden = false;
+  const account = document.querySelector("#share-account");
+  account.hidden = false;
+  document.querySelector("#share-account-name").textContent = username || "Muta host";
+  document.querySelector("#share-account-role").textContent = role === "host" ? "Host" : "Member";
+  document.querySelector("#share-logout").hidden = role === "host";
+  document.querySelector("#host-settings").hidden = role !== "host";
+  document.querySelector(".model-selector").hidden = role === "member";
+  if (shareAuthWake) {
+    shareAuthWake();
+    shareAuthWake = null;
+  }
+}
+
+function showShareAuth(status = {}) {
+  document.querySelector("#app").hidden = true;
+  document.querySelector("#share-auth").hidden = false;
+  document.querySelector("#share-auth-loading").hidden = true;
+  document.querySelector("#share-auth-panel").hidden = false;
+  const reauthMessage = sessionStorage.getItem("muta-share-reauth");
+  if (reauthMessage) sessionStorage.removeItem("muta-share-reauth");
+  document.querySelector("#share-auth-message").textContent = reauthMessage || status.message ||
+    (status.enabled ? "Sign in to open your private tutor." : "This laptop is not sharing Muta right now.");
+  const secureLink = document.querySelector("#share-secure-link");
+  secureLink.hidden = !status.join_url || status.secure !== false;
+  if (!secureLink.hidden) secureLink.href = status.join_url;
+  const available = status.enabled && status.secure !== false;
+  const pendingActive = !document.querySelector("#share-pending").hidden;
+  document.querySelector("#share-auth-tabs").hidden = !available || pendingActive;
+  if (!available) {
+    document.querySelector("#share-login-form").hidden = true;
+    document.querySelector("#share-signup-form").hidden = true;
+  }
+}
 
 async function ensureAuth() {
   try {
@@ -107,15 +158,56 @@ async function ensureAuth() {
       // Native loopback mode returns one persistent operator id. Unlike localStorage, this is
       // independent of the SSH tunnel's local port, so every operator URL sees the same chats.
       studentId = session.student_id || studentId;
-      authToken = session.token || studentId;
-      localStorage.setItem("muta-student", studentId);
-      identityReady = true;
+      activateIdentity({
+        userId: session.student_id || studentId,
+        role: session.role || "host",
+        token: session.token || "",
+        csrf: session.csrf_token || null,
+      });
       return true;
     }
   } catch {
-    /* The selected URL stays intact; boot retries once the same-origin gateway returns. */
+    /* Remote members cannot mint a host session; status below selects their login state. */
+  }
+  try {
+    const response = await fetch("/v1/share/status", { cache: "no-store" });
+    const status = await response.json();
+    if (response.ok && status.authenticated && status.role === "member") {
+      activateIdentity({ userId: status.user_id, role: "member", username: status.username });
+      return true;
+    }
+    showShareAuth(status);
+  } catch {
+    showShareAuth({ message: "Could not reach this Muta. Check the network and try again." });
   }
   return false;
+}
+
+function reloadForShareReauthentication() {
+  if (revocationReloading || authRole !== "member") return;
+  revocationReloading = true;
+  identityReady = false;
+  for (const job of generationJobs.values()) job.source?.close();
+  generationJobs.clear();
+  closeTelemetry();
+  sessionStorage.setItem(
+    "muta-share-reauth",
+    "Your access changed on the host laptop. Sign in again to continue.",
+  );
+  window.location.reload();
+}
+
+async function revalidateShareIdentity() {
+  if (authRole !== "member" || revocationReloading) return;
+  try {
+    const response = await fetch("/v1/share/status", { cache: "no-store" });
+    const status = await response.json().catch(() => ({}));
+    if (!response.ok || !status.authenticated || status.role !== "member") {
+      reloadForShareReauthentication();
+    }
+  } catch {
+    // A network interruption is not revocation. Normal connectivity UI handles it.
+  }
 }
 
 let conversationId = null;
@@ -166,6 +258,162 @@ const inputEl = $("#input");
 const sendBtn = $("#btn-send");
 const emptyStateEl = $("#empty-state");
 const chatScroller = $("#chat-scroll");
+
+// --- Muta Share account gate ----------------------------------------------------------
+const SHARE_ENROLLMENT_KEY = "muta-share-enrollment";
+let shareEnrollmentTimer = null;
+
+function shareError(message = "") {
+  $("#share-auth-error").textContent = message;
+}
+
+function shareTab(tab, { focus = "field" } = {}) {
+  const login = tab === "login";
+  const loginTab = $("#share-login-tab");
+  const signupTab = $("#share-signup-tab");
+  loginTab.setAttribute("aria-selected", String(login));
+  signupTab.setAttribute("aria-selected", String(!login));
+  loginTab.tabIndex = login ? 0 : -1;
+  signupTab.tabIndex = login ? -1 : 0;
+  $("#share-login-form").hidden = !login;
+  $("#share-signup-form").hidden = login;
+  $("#share-pending").hidden = true;
+  shareError();
+  if (focus === "tab") (login ? loginTab : signupTab).focus();
+  else $(login ? "#share-login-username" : "#share-signup-username").focus();
+}
+
+function shareDetail(payload, fallback) {
+  if (typeof payload?.detail === "string") return payload.detail;
+  return fallback;
+}
+
+async function submitShareCredentials(kind, form) {
+  if (!form.reportValidity()) return;
+  shareError();
+  const button = form.querySelector("button[type=submit]");
+  button.disabled = true;
+  const body = {
+    username: form.elements.username.value.trim(),
+    password: form.elements.password.value,
+  };
+  try {
+    const response = await fetch(`/v1/share/${kind}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    form.elements.password.value = "";
+    if (!response.ok) throw new Error(shareDetail(payload, `Could not ${kind}.`));
+    if (kind === "login") {
+      activateIdentity({ userId: payload.user_id, role: "member", username: payload.username });
+      return;
+    }
+    const enrollment = {
+      id: payload.enrollment_id,
+      secret: payload.enrollment_secret,
+      username: payload.username,
+      expiresAt: payload.expires_at,
+    };
+    localStorage.setItem(SHARE_ENROLLMENT_KEY, JSON.stringify(enrollment));
+    showPendingEnrollment(enrollment);
+  } catch (error) {
+    shareError(error.message || "Something went wrong. Try again.");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function clearPendingEnrollment() {
+  localStorage.removeItem(SHARE_ENROLLMENT_KEY);
+  if (shareEnrollmentTimer) window.clearTimeout(shareEnrollmentTimer);
+  shareEnrollmentTimer = null;
+}
+
+async function pollEnrollment(enrollment) {
+  try {
+    const response = await fetch(`/v1/share/enrollments/${encodeURIComponent(enrollment.id)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ secret: enrollment.secret }),
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, "Could not check the request."));
+    if (payload.authenticated) {
+      clearPendingEnrollment();
+      activateIdentity({ userId: payload.user_id, role: "member", username: payload.username });
+      return;
+    }
+    if (["rejected", "removed", "expired"].includes(payload.status)) {
+      clearPendingEnrollment();
+      shareTab(payload.can_login ? "login" : "signup");
+      shareError(payload.can_login
+        ? "Your approval link expired, but your account is ready. Sign in with your password."
+        : payload.status === "rejected"
+          ? "The host did not approve that request. You can ask to join again."
+          : "That request is no longer active. Ask to join again.");
+      return;
+    }
+  } catch (error) {
+    shareError(error.message || "Connection lost. Retrying…");
+  }
+  shareEnrollmentTimer = window.setTimeout(() => void pollEnrollment(enrollment), 2000);
+}
+
+function showPendingEnrollment(enrollment) {
+  $("#share-auth-tabs").hidden = true;
+  $("#share-login-form").hidden = true;
+  $("#share-signup-form").hidden = true;
+  $("#share-pending").hidden = false;
+  shareError();
+  $("#share-pending-title").focus();
+  void pollEnrollment(enrollment);
+}
+
+$("#share-login-tab").addEventListener("click", () => shareTab("login"));
+$("#share-signup-tab").addEventListener("click", () => shareTab("signup"));
+$("#share-auth-tabs").addEventListener("keydown", (event) => {
+  const tabs = [$("#share-login-tab"), $("#share-signup-tab")];
+  const current = tabs.indexOf(document.activeElement);
+  let index = null;
+  if (event.key === "ArrowRight") index = (current + 1) % tabs.length;
+  if (event.key === "ArrowLeft") index = (current - 1 + tabs.length) % tabs.length;
+  if (event.key === "Home") index = 0;
+  if (event.key === "End") index = tabs.length - 1;
+  if (index == null) return;
+  event.preventDefault();
+  shareTab(index === 0 ? "login" : "signup", { focus: "tab" });
+});
+$("#share-login-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  void submitShareCredentials("login", event.currentTarget);
+});
+$("#share-signup-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  void submitShareCredentials("signup", event.currentTarget);
+});
+$("#share-pending-cancel").addEventListener("click", () => {
+  clearPendingEnrollment();
+  $("#share-auth-tabs").hidden = false;
+  shareTab("login");
+});
+$("#share-logout").addEventListener("click", async () => {
+  await fetch("/v1/share/logout", { method: "POST", headers: authHeaders() }).catch(() => null);
+  identityReady = false;
+  authRole = null;
+  authToken = "";
+  csrfToken = null;
+  window.location.reload();
+});
+
+try {
+  const pending = JSON.parse(localStorage.getItem(SHARE_ENROLLMENT_KEY) || "null");
+  if (pending?.id && pending?.secret) showPendingEnrollment(pending);
+} catch {
+  clearPendingEnrollment();
+}
 
 // Streaming should follow only while the student is already reading the tail. Keeping this
 // as explicit state (instead of checking after every DOM append) matters: appending a large
@@ -2371,6 +2619,10 @@ const settingsModal = $("#settings-modal");
 const parallelChatsToggle = $("#setting-parallel-chats");
 const powerOptimizationToggle = $("#setting-power-optimization");
 const languageSelect = $("#setting-language");
+const hostEnabledToggle = $("#setting-host-enabled");
+let hostStatus = null;
+let hostPollTimer = null;
+let hostRosterSignature = "";
 
 function setSettingsOpen(open) {
   settingsModal.hidden = !open;
@@ -2378,11 +2630,181 @@ function setSettingsOpen(open) {
   if (open) {
     void loadResources({ quiet: true });
     void refreshPowerStatus();
+    if (authRole === "host") void loadHostStatus();
     languageSelect.focus();
   } else {
+    if (hostPollTimer) window.clearTimeout(hostPollTimer);
+    hostPollTimer = null;
     $("#settings-open").focus();
   }
 }
+
+function formatHostRam(bytes) {
+  if (!Number.isFinite(Number(bytes))) return "—";
+  return `${(Number(bytes) / 2 ** 30).toFixed(1)} GB`;
+}
+
+function hostUserRow(user) {
+  const row = document.createElement("div");
+  row.className = "host-user-row";
+  const identity = document.createElement("span");
+  const name = document.createElement("strong");
+  name.textContent = user.username;
+  const detail = document.createElement("small");
+  detail.textContent = user.status === "pending" ? "Waiting for approval" :
+    user.status === "deleting" ? "Removing data…" :
+    user.last_login_at ? "Approved · has signed in" : "Approved";
+  identity.append(name, detail);
+  const actions = document.createElement("div");
+  actions.className = "host-user-actions";
+  if (user.status === "pending") {
+    for (const [label, action, danger] of [["Accept", "approve", false], ["Decline", "reject", true]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      if (danger) button.className = "danger";
+      button.addEventListener("click", () => void hostUserAction(user, action, button));
+      actions.append(button);
+    }
+  } else if (user.status === "approved") {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "danger";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => void hostUserAction(user, "remove", remove));
+    actions.append(remove);
+  }
+  row.append(identity, actions);
+  return row;
+}
+
+function renderHostStatus(status) {
+  hostStatus = status;
+  hostEnabledToggle.checked = Boolean(status.enabled);
+  for (const input of document.querySelectorAll('input[name="host-memory"]')) {
+    input.checked = input.value === status.memory_mode;
+  }
+  const shareCard = $("#host-share-card");
+  const primaryUrl = status.join_urls?.[0] || "";
+  shareCard.hidden = !status.enabled || !primaryUrl;
+  if (!shareCard.hidden) {
+    $("#host-join-url").value = primaryUrl;
+    $("#host-qr").src = `/v1/share/host/qr.png?v=${encodeURIComponent(status.updated_at)}`;
+    $("#host-cert-fingerprint").textContent = status.certificate_fingerprint || "Certificate fingerprint unavailable";
+  }
+  const capacity = status.capacity || {};
+  const capacityEl = $("#host-capacity");
+  capacityEl.hidden = !Object.keys(capacity).length;
+  capacityEl.replaceChildren();
+  for (const [value, label] of [
+    [capacity.n_parallel ?? "—", "simultaneous chats"],
+    [capacity.context_per_chat ?? "—", "tokens per chat"],
+    [formatHostRam(capacity.memory_ceiling_bytes), "RAM ceiling"],
+  ]) {
+    const card = document.createElement("div");
+    const strong = document.createElement("strong");
+    const small = document.createElement("small");
+    strong.textContent = String(value);
+    small.textContent = label;
+    card.append(strong, small);
+    capacityEl.append(card);
+  }
+  const users = status.users || [];
+  $("#host-roster").hidden = !status.enabled && users.length === 0;
+  $("#host-roster-count").textContent = `${users.length} account${users.length === 1 ? "" : "s"}`;
+  const rosterSignature = JSON.stringify(users);
+  if (rosterSignature !== hostRosterSignature) {
+    hostRosterSignature = rosterSignature;
+    const list = $("#host-user-list");
+    list.replaceChildren();
+    if (!users.length) {
+      const empty = document.createElement("p");
+      empty.className = "host-roster-empty";
+      empty.textContent = "No one has asked to join yet.";
+      list.append(empty);
+    } else {
+      users.forEach((user) => list.append(hostUserRow(user)));
+    }
+  }
+  $("#host-save-state").textContent = status.warning ||
+    (status.enabled ? "Host mode is on. New replies are queued when all slots are busy." : "Host mode is off.");
+}
+
+async function loadHostStatus({ poll = true } = {}) {
+  if (authRole !== "host") return;
+  try {
+    const response = await fetch("/v1/share/host", { headers: authHeaders(), cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    renderHostStatus(await response.json());
+  } catch {
+    $("#host-save-state").textContent = "Could not read Host mode settings.";
+  }
+  if (poll && !settingsModal.hidden) {
+    if (hostPollTimer) window.clearTimeout(hostPollTimer);
+    hostPollTimer = window.setTimeout(() => void loadHostStatus(), 3000);
+  }
+}
+
+async function saveHostSettings() {
+  const previous = hostStatus;
+  const memory = document.querySelector('input[name="host-memory"]:checked')?.value || "competition";
+  hostEnabledToggle.disabled = true;
+  document.querySelectorAll('input[name="host-memory"]').forEach((input) => { input.disabled = true; });
+  $("#host-save-state").textContent = "Applying the safe chat capacity…";
+  try {
+    const response = await fetch("/v1/share/host", {
+      method: "PUT",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ enabled: hostEnabledToggle.checked, memory_mode: memory }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, "Could not update Host mode."));
+    renderHostStatus(payload);
+  } catch (error) {
+    if (previous) renderHostStatus(previous);
+    $("#host-save-state").textContent = error.message || "Could not update Host mode.";
+  } finally {
+    hostEnabledToggle.disabled = false;
+    document.querySelectorAll('input[name="host-memory"]').forEach((input) => { input.disabled = false; });
+  }
+}
+
+async function hostUserAction(user, action, button) {
+  if (action === "remove" && !window.confirm(
+    `Remove ${user.username}? Their account, conversations, files and learning profile will be deleted.`
+  )) return;
+  button.disabled = true;
+  const method = action === "remove" ? "DELETE" : "POST";
+  const suffix = action === "remove" ? "" : `/${action}`;
+  try {
+    const response = await fetch(`/v1/share/host/users/${encodeURIComponent(user.id)}${suffix}`, {
+      method,
+      headers: authHeaders(),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, `Could not ${action} that account.`));
+    await loadHostStatus({ poll: false });
+  } catch (error) {
+    $("#host-save-state").textContent = error.message || "Could not update that account.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+hostEnabledToggle.addEventListener("change", () => void saveHostSettings());
+document.querySelectorAll('input[name="host-memory"]').forEach((input) => {
+  input.addEventListener("change", () => void saveHostSettings());
+});
+$("#host-copy-url").addEventListener("click", async () => {
+  const value = $("#host-join-url").value;
+  try {
+    await navigator.clipboard.writeText(value);
+    $("#host-save-state").textContent = "Join address copied.";
+  } catch {
+    $("#host-join-url").select();
+    $("#host-save-state").textContent = "Address selected — copy it from the field.";
+  }
+});
 
 async function loadSettings() {
   // localStorage is a compatibility fallback for an older gateway; the authenticated store
@@ -2532,6 +2954,10 @@ function updatePowerStatus(status) {
 async function refreshPowerStatus() {
   try {
     const response = await fetch("/v1/power/status", { headers: authHeaders() });
+    if (response.status === 401 || response.status === 403) {
+      void revalidateShareIdentity();
+      return;
+    }
     if (!response.ok) return;
     updatePowerStatus(await response.json());
   } catch {
@@ -2632,14 +3058,20 @@ setDrawer(false);
 async function bootChat() {
   sendBtn.disabled = true;
   while (!(await ensureAuth())) {
-    await new Promise((resolve) => setTimeout(resolve, 750));
+    await new Promise((resolve) => {
+      shareAuthWake = resolve;
+      window.setTimeout(resolve, 2500);
+    });
   }
   syncComposerState();
   restoreMessageQueue();
   await loadSettings();
   window.setInterval(() => {
-    if (!document.hidden) void refreshPowerStatus();
-  }, 60_000);
+    if (!document.hidden) {
+      void refreshPowerStatus();
+      void revalidateShareIdentity();
+    }
+  }, 15_000);
   await loadResources({ quiet: true });
   await recoverGenerations();
   const selected = conversationFromLocation();
@@ -2902,7 +3334,7 @@ async function selectModel(target) {
   try {
     const response = await fetch("/v1/models/select", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...authHeaders() },
       body: JSON.stringify({ model_id: target }),
     });
     const body = await response.json().catch(() => ({}));

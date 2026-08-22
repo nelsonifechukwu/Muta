@@ -21,9 +21,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable
 
 log = logging.getLogger("muta.gateway.sessions")
 
@@ -121,11 +121,23 @@ class SessionManager:
             self._count("reused")
             return Decision(Admission.BOUND, slot=held)
 
+        # L3 is a fail-closed admission wall for any session that does not already own a
+        # usable lane. Check before binding a currently-free slot or stealing an idle one;
+        # otherwise the first new learner after an emergency would slip straight through.
+        if not self.accepts_new_sessions():
+            self._count("refused")
+            return Decision(
+                Admission.REFUSED,
+                message="I'm at capacity for a moment — keep your question ready and try again shortly.",
+            )
+
         free = next((s for s in usable if s.free), None)
         if free is not None:
             return self._bind(free, session_id, now)
 
-        stealable = [s for s in usable if not s.busy and s.idle_seconds(now) > self.idle_steal_seconds]
+        stealable = [
+            s for s in usable if not s.busy and s.idle_seconds(now) > self.idle_steal_seconds
+        ]
         if stealable:
             victim = max(stealable, key=lambda s: s.idle_seconds(now))  # the longest-idle one
             evicted = victim.session_id
@@ -133,14 +145,6 @@ class SessionManager:
             decision = self._bind(victim, session_id, now)
             decision.suspended_session = evicted
             return decision
-
-        if not self.accepts_new_sessions() and held is None:
-            # Ladder L3. A refusal with a reason, never an error page (C-7).
-            self._count("refused")
-            return Decision(
-                Admission.REFUSED,
-                message="I'm at capacity for a moment — keep your question ready and try again shortly.",
-            )
 
         if session_id not in self.queue:
             self.queue.append(session_id)
@@ -164,7 +168,9 @@ class SessionManager:
             try:
                 restored = bool(self.resume_hook(slot.index, session_id))
             except Exception as e:  # noqa: BLE001 — a restore miss is a re-prefill, not an error
-                log.warning("resume failed for %s (%s) — falling back to summary re-prefill", session_id, e)
+                log.warning(
+                    "resume failed for %s (%s) — falling back to summary re-prefill", session_id, e
+                )
             self.suspended.discard(session_id)
             if restored:
                 self._count("resumed")

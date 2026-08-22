@@ -11,6 +11,7 @@ their own stubs, but nothing on the public `/v1` surface returns 501.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ipaddress
 import json
 import logging
@@ -18,10 +19,11 @@ import os
 import re
 import threading
 import time
+import uuid
 from functools import lru_cache
 
 import httpx
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response, StreamingResponse
 
@@ -76,12 +78,24 @@ from contracts.models import (
 from orchestrator import bench_metrics
 from orchestrator.gateway.auth import (
     caller_from_token,
+    is_operator_request,
+    member_write_lease,
     mint_token,
     operator_student_id,
     optional_caller,
+    principal_from_request,
+    request_token,
     require_caller,
+    resolve_principal,
+)
+from orchestrator.gateway.auxiliary import (
+    AuxiliaryQueueFull,
+    OwnerWorkRejected,
+    auxiliary_slot,
+    get_owner_work_manager,
 )
 from orchestrator.gateway.deps import (
+    get_capacity_controller,
     get_engine,
     get_generation_manager,
     get_ladder,
@@ -97,12 +111,14 @@ from orchestrator.gateway.deps import (
     get_vision,
     load_prompt,
     refresh_engine_dependencies,
+    runtime_lifecycle,
 )
 from orchestrator.gateway.generations import (
     GenerationCapacityError,
     GenerationJob,
     GenerationManager,
 )
+from orchestrator.gateway.images import MAX_UPLOAD_BYTES as MAX_IMAGE_UPLOAD_BYTES
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.power import PowerGovernor
@@ -111,6 +127,8 @@ from orchestrator.gateway.prompting import assemble_system_prompt, response_lang
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.selfcheck import scan_claims, self_check
 from orchestrator.gateway.sessions import Admission, SessionManager
+from orchestrator.gateway.share_routes import strict_share_security, verify_host_csrf
+from orchestrator.gateway.sharing import SESSION_COOKIE, AuthenticationError, get_sharing_service
 from orchestrator.gateway.visualizations import (
     append_visualization,
     generate_visualization,
@@ -289,8 +307,12 @@ def _is_loopback_peer(peer_host: str) -> bool:
         return False
 
 
-def _model_switch_allowed(peer_host: str) -> bool:
-    return os.environ.get("MUTA_ALLOW_MODEL_SWITCH") == "1" and _is_loopback_peer(peer_host)
+def _model_switch_allowed(source: Request | str) -> bool:
+    if os.environ.get("MUTA_ALLOW_MODEL_SWITCH") != "1":
+        return False
+    if isinstance(source, str):
+        return _is_loopback_peer(source)
+    return is_operator_request(source)
 
 
 def _unified_loopback_identity(peer_host: str) -> bool:
@@ -303,8 +325,11 @@ def models(request: Request) -> ModelCatalogResponse:
     if manager is None:
         return ModelCatalogResponse()
     status = manager.status()
-    peer = request.client.host if request.client else ""
-    status["selection_enabled"] = _model_switch_allowed(peer)
+    principal = principal_from_request(request)
+    status["selection_enabled"] = bool(
+        _model_switch_allowed(request)
+        and (not strict_share_security() or (principal and principal.role == "host"))
+    )
     return ModelCatalogResponse.model_validate(status)
 
 
@@ -312,24 +337,61 @@ def models(request: Request) -> ModelCatalogResponse:
 def select_model(
     request: Request,
     req: ModelSelectRequest,
+    csrf: str | None = Header(default=None, alias="X-Muta-CSRF"),
     generations: GenerationManager = Depends(get_generation_manager),
 ) -> ModelSelectResponse:
     manager = get_model_manager()
     if manager is None:
         raise HTTPException(status_code=409, detail="model switching is unavailable in this mode")
-    peer = request.client.host if request.client else ""
-    if not _model_switch_allowed(peer):
+    if not _model_switch_allowed(request):
         raise HTTPException(
             status_code=403,
             detail="only the laptop operator can change the shared tutor model",
         )
+    if strict_share_security():
+        principal = principal_from_request(request)
+        if (
+            principal is None
+            or principal.role != "host"
+            or not principal.session_id
+            or not get_sharing_service().verify_csrf(principal.session_id, csrf)
+        ):
+            raise HTTPException(status_code=403, detail="invalid host request token")
     try:
-        status = generations.run_when_idle(lambda: manager.switch(req.model_id))
+        profile = None
+
+        def replace_model():
+            nonlocal profile
+            if not get_vision().stop_for_reconfigure():
+                raise GenerationCapacityError(
+                    "wait for the active image reading before changing models"
+                )
+            if strict_share_security() and hasattr(manager, "candidate_config"):
+                # Read the persisted mode and hash/price the target only after idle admission
+                # is locked. A concurrent Host setting change cannot install a stale profile.
+                mode = get_sharing_service().settings()["memory_mode"]
+                candidate = manager.candidate_config(req.model_id)
+                profile = get_capacity_controller().planner.plan(mode, candidate)
+                if not profile.fits:
+                    raise GenerationCapacityError(
+                        "that model cannot fit safely under the active Host memory policy"
+                    )
+                status = manager.switch(
+                    req.model_id,
+                    n_parallel=profile.n_parallel,
+                    n_ctx=profile.n_ctx,
+                )
+            else:
+                status = manager.switch(req.model_id)
+            refresh_engine_dependencies(profile)
+            return status
+
+        with runtime_lifecycle():
+            status = generations.run_when_idle(replace_model)
     except GenerationCapacityError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ModelSwitchError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    refresh_engine_dependencies()
     status["selection_enabled"] = True
     return ModelSelectResponse.model_validate(status)
 
@@ -351,7 +413,7 @@ def _db_up(dsn: str) -> bool:
                 return store.ping()
             finally:
                 store.close()
-        except Exception:  # noqa: BLE001 — malformed/unwritable DB means not ready
+        except Exception:
             return False
     try:
         import psycopg
@@ -359,7 +421,7 @@ def _db_up(dsn: str) -> bool:
         with psycopg.connect(dsn, connect_timeout=2) as conn:
             conn.execute("SELECT 1")
         return True
-    except Exception:  # noqa: BLE001 — any failure means "not ready", never a crash
+    except Exception:
         return False
 
 
@@ -367,7 +429,7 @@ def _twin_summary(student_id: str) -> str:
     """The learning-twin session summary for this student, best-effort (never fails a turn)."""
     try:
         return get_twin_store().load(student_id).prompt_summary()
-    except Exception:  # noqa: BLE001 — personalisation is a nicety, not a dependency
+    except Exception:
         log.warning("twin load failed for %s", student_id, exc_info=True)
         return ""
 
@@ -384,7 +446,7 @@ def _touch_twin(student_id: str, subject: str, message: str) -> None:
         if snippet:
             twin.add_summary(f"asked about {subject}: {snippet}")
         store.save(twin)
-    except Exception:  # noqa: BLE001
+    except Exception:
         log.warning("twin update failed for %s", student_id, exc_info=True)
 
 
@@ -438,7 +500,7 @@ def _power_enabled(engine: ChatEngine, student_id: str) -> bool:
     """Private per-learner preference; an unreadable store keeps the safe default on."""
     try:
         return engine.store.get_settings(student_id).get("power_optimization_enabled", True)
-    except Exception:  # noqa: BLE001 - a preference read cannot fail a tutoring turn
+    except Exception:
         return True
 
 
@@ -486,7 +548,7 @@ def _rag_block(query: str, *, k: int = 4) -> str:
         ]
         log.info("rag: grounded on %d chunks", len(chunks))
         return render_chunks(chunks)
-    except Exception:  # noqa: BLE001 — any retrieval failure = answer from the model alone
+    except Exception:
         return ""
 
 
@@ -501,18 +563,25 @@ def _run_self_check(reply: str) -> tuple[bool | None, str]:
         if not result.checked:
             return None, ""
         return result.verified, result.note
-    except Exception:  # noqa: BLE001 — a self-check failure must never break the reply
+    except Exception:
         log.warning("self-check failed", exc_info=True)
         return None, ""
 
 
-def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: int | None) -> None:
+def _link_attachments(
+    engine: ChatEngine,
+    ids: list[int],
+    cid: str,
+    message_id: int | None,
+    *,
+    owner_id: str,
+) -> None:
     """Bind previously-uploaded attachments to the persisted user turn. Unknown ids are a
     no-op UPDATE, not an error — the message must never fail over a stale attachment ref."""
     for aid in ids:
         try:
-            engine.store.link_attachment(aid, cid, message_id)
-        except Exception:  # noqa: BLE001 — linking is best-effort metadata
+            engine.store.link_attachment(aid, cid, message_id, owner_id=owner_id)
+        except Exception:
             log.warning("failed to link attachment %s to conversation %s", aid, cid, exc_info=True)
             continue
 
@@ -534,12 +603,14 @@ def resources(
     tags=["resources"],
 )
 async def resource_upload(
+    request: Request,
     file: UploadFile = File(...),
     engine: ChatEngine = Depends(get_engine),
     service: ResourceService = Depends(get_resource_service),
     caller: str = Depends(require_caller),
 ) -> LearningResource:
     """Durably accept one PDF, then prepare it outside the request thread."""
+    write_principal = principal_from_request(request)
     if file.content_type not in {"application/pdf", "application/octet-stream"}:
         raise HTTPException(status_code=415, detail="only PDF resources are supported")
     payload = bytearray()
@@ -552,12 +623,16 @@ async def resource_upload(
             raise HTTPException(status_code=413, detail="PDFs must be 32 MB or smaller")
     if not bytes(payload[:5]).startswith(b"%PDF-"):
         raise HTTPException(status_code=422, detail="this file is not a valid PDF")
-    resource_id = engine.store.create_resource(
-        caller,
-        safe_resource_name(file.filename),
-        "application/pdf",
-        bytes(payload),
-    )
+    try:
+        with member_write_lease(write_principal):
+            resource_id = engine.store.create_resource(
+                caller,
+                safe_resource_name(file.filename),
+                "application/pdf",
+                bytes(payload),
+            )
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=403, detail="this account is being removed") from exc
     service.submit(resource_id, caller)
     row = engine.store.get_resource(resource_id, owner_id=caller)
     return _resource_model(row)
@@ -607,12 +682,23 @@ def resource_content(
 @router.post("/chat", response_model=ChatResponse, tags=["tutor"])
 def chat(
     req: ChatRequest,
+    request: Request,
     engine: ChatEngine = Depends(get_engine),
     power: PowerGovernor = Depends(get_power_governor),
+    generations: GenerationManager = Depends(get_generation_manager),
+    sessions: SessionManager = Depends(get_sessions),
+    ladder: DegradationLadder = Depends(get_ladder),
     caller: str | None = Depends(optional_caller),
 ) -> ChatResponse:
     """Multi-turn tutoring turn. Memory is keyed by `conversation_id`; omit it to start a
     new thread. The mode selects the system prompt (ROADMAP 18 Jul, stable-prefix design)."""
+    strict = strict_share_security()
+    turn_cancel = threading.Event() if strict else None
+    write_principal = principal_from_request(request)
+    if strict and caller is None:
+        raise HTTPException(status_code=401, detail="sign in to continue")
+    if caller is not None and caller != req.student_id:
+        raise HTTPException(status_code=403, detail="you can only chat as yourself")
     resource_block = ""
     resource_sources: list[dict] = []
     if req.use_rag:
@@ -632,8 +718,9 @@ def chat(
         twin_summary=_twin_summary(req.student_id),
         rag_block=resource_block,
     )
-    try:
-        result = engine.chat(
+
+    def _run_chat():
+        chat_result = engine.chat(
             student_id=req.student_id,
             message=req.message,
             conversation_id=req.conversation_id,
@@ -647,6 +734,7 @@ def chat(
             language=req.language,
             title=req.message[:80],
             regenerate=req.regenerate,
+            cancel_event=turn_cancel,
             **_sampling_for_request(
                 req.mode.value,
                 req.thinking,
@@ -655,24 +743,70 @@ def chat(
                 visualizations=visual_requested,
             ),
         )
+        if visual_requested:
+            spec = generate_visualization(
+                engine,
+                req.message,
+                chat_result.reply,
+                on_generation=bench_metrics.record,
+            )
+            if spec is not None:
+                chat_result.reply = append_visualization(chat_result.reply, spec)
+                if chat_result.assistant_message_id is not None:
+                    engine.store.update_message(chat_result.assistant_message_id, chat_result.reply)
+        # Keep all durable post-processing inside the GenerationManager job. Host removal
+        # drains this operation before deleting the account, so nothing can recreate data
+        # after the erase barrier.
+        with member_write_lease(write_principal):
+            if req.attachment_ids:
+                _link_attachments(
+                    engine,
+                    req.attachment_ids,
+                    chat_result.conversation_id,
+                    chat_result.user_message_id,
+                    owner_id=req.student_id,
+                )
+            if resource_sources and chat_result.assistant_message_id is not None:
+                engine.store.add_message_sources(chat_result.assistant_message_id, resource_sources)
+            _touch_twin(req.student_id, req.subject.value, req.message)
+        return chat_result
+
+    try:
+        if strict:
+            admission_id = f"generation:blocking:{uuid.uuid4().hex}"
+
+            def _claim_session() -> bool:
+                decision = sessions.acquire(admission_id)
+                if decision.admission is Admission.REFUSED:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=decision.message or ladder.busy_message(),
+                    )
+                return decision.admitted
+
+            def _run_admitted_chat():
+                try:
+                    return _run_chat()
+                finally:
+                    sessions.release(admission_id)
+
+            result, _was_queued, _queue_position = generations.execute(
+                student_id=req.student_id,
+                operation=_run_admitted_chat,
+                conversation_id=req.conversation_id,
+                client_request_id=req.client_request_id,
+                queued_cleanup=lambda: sessions.release(admission_id),
+                before_start=_claim_session,
+                cancel_event=turn_cancel,
+            )
+        else:
+            result = _run_chat()
+    except GenerationCapacityError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/chat") from e
-    if visual_requested:
-        spec = generate_visualization(
-            engine, req.message, result.reply, on_generation=bench_metrics.record
-        )
-        if spec is not None:
-            result.reply = append_visualization(result.reply, spec)
-            if result.assistant_message_id is not None:
-                engine.store.update_message(result.assistant_message_id, result.reply)
-    if req.attachment_ids:
-        _link_attachments(
-            engine, req.attachment_ids, result.conversation_id, result.user_message_id
-        )
-    if resource_sources and result.assistant_message_id is not None:
-        engine.store.add_message_sources(result.assistant_message_id, resource_sources)
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
     if result.generation is not None:
         bench_metrics.record(result.generation)
@@ -680,7 +814,6 @@ def chat(
     # honest caution when a step contradicts itself, and record the turn on the learning twin.
     verified, note = _run_self_check(strip_visualization_protocol(result.reply))
     reply = result.reply if not note else f"{result.reply}\n\n{note}"
-    _touch_twin(req.student_id, req.subject.value, req.message)
     return ChatResponse(
         student_id=req.student_id,
         conversation_id=result.conversation_id,
@@ -804,7 +937,13 @@ def _start_chat_generation(
         generations.cancel_reservation(reservation_id)
         raise
     if req.attachment_ids:
-        _link_attachments(engine, req.attachment_ids, cid, user_message_id)
+        _link_attachments(
+            engine,
+            req.attachment_ids,
+            cid,
+            user_message_id,
+            owner_id=req.student_id,
+        )
 
     # TTFT preamble (docs/ttft-preamble.md): fills the prefill window with a distinct,
     # non-answer `preamble` event. A no-op when disabled or unprovisioned.
@@ -1154,6 +1293,7 @@ def user_settings(
 
 @router.put("/settings", response_model=UserSettings, tags=["conversations"])
 def user_settings_update(
+    request: Request,
     requested: UserSettings,
     engine: ChatEngine = Depends(get_engine),
     caller: str = Depends(require_caller),
@@ -1161,7 +1301,12 @@ def user_settings_update(
     """Atomically update supplied settings while preserving sibling and future keys."""
     # The browser saves switches independently. One SQL transaction/statement prevents two
     # tabs toggling different controls from losing each other's updates.
-    values = engine.store.patch_settings(caller, requested.model_dump(exclude_unset=True))
+    write_principal = principal_from_request(request)
+    try:
+        with member_write_lease(write_principal):
+            values = engine.store.patch_settings(caller, requested.model_dump(exclude_unset=True))
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=403, detail="this account is being removed") from exc
     return UserSettings(**values)
 
 
@@ -1238,8 +1383,14 @@ def conversation_messages(
     response_model=TelemetrySnapshot,
     tags=["ops"],
 )
-def conversation_telemetry(conversation_id: str) -> TelemetrySnapshot:
+def conversation_telemetry(
+    conversation_id: str, caller: str | None = Depends(optional_caller)
+) -> TelemetrySnapshot:
     """One-shot telemetry snapshot (curl-able twin of the SSE stream below)."""
+    if strict_share_security():
+        conversation = get_engine().store.get_conversation(conversation_id)
+        if caller is None or conversation is None or conversation.get("student_id") != caller:
+            raise HTTPException(status_code=404, detail="unknown conversation")
     return TelemetrySnapshot(**get_hub().snapshot(conversation_id))
 
 
@@ -1248,12 +1399,30 @@ def conversation_telemetry(conversation_id: str) -> TelemetrySnapshot:
     tags=["ops"],
     responses={200: {"content": {"text/event-stream": {}}, "description": "1 Hz SSE telemetry"}},
 )
-async def conversation_telemetry_stream(conversation_id: str) -> StreamingResponse:
+async def conversation_telemetry_stream(
+    request: Request,
+    conversation_id: str,
+    caller: str | None = Depends(optional_caller),
+) -> StreamingResponse:
     """1 Hz telemetry SSE. Async generator on purpose: a sync generator would pin a
     threadpool thread per open strip. GET, so the browser's native EventSource works."""
 
+    if strict_share_security():
+        conversation = get_engine().store.get_conversation(conversation_id)
+        if caller is None or conversation is None or conversation.get("student_id") != caller:
+            raise HTTPException(status_code=404, detail="unknown conversation")
+    token = request_token(
+        request.headers.get("authorization"),
+        request.cookies.get(SESSION_COOKIE),
+        request.query_params.get("token"),
+    )
+
     async def _gen():
         while True:
+            if strict_share_security():
+                current = resolve_principal(token)
+                if current is None or current.subject != caller:
+                    return
             yield f"data: {json.dumps(get_hub().snapshot(conversation_id))}\n\n"
             await asyncio.sleep(1.0)
 
@@ -1297,11 +1466,31 @@ def attachment(
 
 
 @router.post("/auth/session", response_model=AuthTokenResponse, tags=["ops"])
-def auth_session(request: Request, req: AuthTokenRequest) -> AuthTokenResponse:
+def auth_session(request: Request, response: Response, req: AuthTokenRequest) -> AuthTokenResponse:
     """Mint a bearer token for a per-device learner id. With MUTA_AUTH_SECRET set the token is
     HMAC-signed (unforgeable); without it the token is the id itself (opaque per-device
     secret). Native loopback mode replaces port-scoped browser ids with one persistent operator
     id. The client sends the token as `Authorization: Bearer <token>` on data endpoints."""
+    if strict_share_security():
+        if not is_operator_request(request):
+            raise HTTPException(status_code=403, detail="host access is local only")
+        student_id = operator_student_id()
+        issued = get_sharing_service().issue_host_session(student_id)
+        response.set_cookie(
+            SESSION_COOKIE,
+            issued.token,
+            max_age=30 * 24 * 60 * 60,
+            httponly=True,
+            secure=False,
+            samesite="strict",
+            path="/",
+        )
+        return AuthTokenResponse(
+            student_id=student_id,
+            token=issued.token,
+            role="host",
+            csrf_token=issued.csrf_token,
+        )
     peer = request.client.host if request.client else ""
     student_id = operator_student_id() if _unified_loopback_identity(peer) else req.student_id
     try:
@@ -1375,6 +1564,7 @@ def mastery(
 
 @router.post("/exam/answer", response_model=AnswerCheckResponse, tags=["exam"])
 def exam_answer(
+    request: Request,
     req: ExamAnswerRequest,
     verifier: AnswerVerifier = Depends(get_verifier),
     caller: str = Depends(require_caller),
@@ -1385,16 +1575,20 @@ def exam_answer(
     leaves the record untouched rather than punishing the student for the tool's limits."""
     if req.student_id != caller:
         raise HTTPException(status_code=403, detail="you can only submit your own answers")
+    write_principal = principal_from_request(request)
     outcome = verifier.check_text(req.candidate, req.expected, tolerance=req.tolerance)
     if outcome.checked:
         try:
-            store = get_twin_store()
-            twin = store.load(req.student_id)
-            twin.record_mastery(req.topic, 1.0 if outcome.verified else 0.0)
-            if not outcome.verified:
-                twin.record_error(req.topic)
-            store.save(twin)
-        except Exception:  # noqa: BLE001 — a twin write must not fail the student's submission
+            with member_write_lease(write_principal):
+                store = get_twin_store()
+                twin = store.load(req.student_id)
+                twin.record_mastery(req.topic, 1.0 if outcome.verified else 0.0)
+                if not outcome.verified:
+                    twin.record_error(req.topic)
+                store.save(twin)
+        except AuthenticationError as exc:
+            raise HTTPException(status_code=403, detail="this account is being removed") from exc
+        except Exception:
             log.warning("mastery update failed for %s", req.student_id, exc_info=True)
     return AnswerCheckResponse(
         verified=outcome.verified,
@@ -1435,21 +1629,28 @@ def tutor_chat(
     turn: ChatTurn,
     engine: ChatEngine = Depends(get_engine),
     sessions: SessionManager = Depends(get_sessions),
+    generations: GenerationManager = Depends(get_generation_manager),
     ladder: DegradationLadder = Depends(get_ladder),
     power: PowerGovernor = Depends(get_power_governor),
+    caller: str | None = Depends(optional_caller),
 ) -> TutorReply:
     """One tutoring turn, admission-controlled (§8.2) and ladder-aware (§5.3).
 
     Set `stream: false` for this JSON shape; `stream: true` (the default) is served by
     `/tutor/chat/stream`, which speaks SSE. Both take the same body.
     """
+    if strict_share_security() and caller is None:
+        raise HTTPException(status_code=401, detail="sign in to continue")
+    if caller is not None and turn.student_id not in {None, caller}:
+        raise HTTPException(status_code=403, detail="you can only chat as yourself")
+    student_id = caller or turn.student_id or turn.session_id
     state = ladder.evaluate()
-    decision = sessions.acquire(turn.session_id)
-    if decision.admission is Admission.REFUSED:
+    strict = strict_share_security()
+    turn_cancel = threading.Event() if strict else None
+    decision = None if strict else sessions.acquire(turn.session_id)
+    if decision is not None and decision.admission is Admission.REFUSED:
         # 503 with a human message, not an error page: judges are non-technical (C-7).
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
-
-    student_id = turn.student_id or turn.session_id
     visual_requested = wants_live_visual(turn.text)
     sampling_params = power.adjust_sampling(
         params_for_mode(turn.mode.value),
@@ -1457,8 +1658,9 @@ def tutor_chat(
     )
     if visual_requested:
         sampling_params["enable_thinking"] = False
-    try:
-        result = engine.chat(
+
+    def _run_tutor_turn():
+        chat_result = engine.chat(
             student_id=student_id,
             message=turn.text,
             conversation_id=turn.session_id,
@@ -1469,20 +1671,61 @@ def tutor_chat(
             turn_instruction=turn_instruction(turn.text, response_language_instruction(turn.lang)),
             mode=turn.mode.value,
             language=turn.lang,
+            cancel_event=turn_cancel,
             **sampling_params,
         )
         if visual_requested:
             spec = generate_visualization(
-                engine, turn.text, result.reply, on_generation=bench_metrics.record
+                engine,
+                turn.text,
+                chat_result.reply,
+                on_generation=bench_metrics.record,
             )
             if spec is not None:
-                result.reply = append_visualization(result.reply, spec)
-                if result.assistant_message_id is not None:
-                    engine.store.update_message(result.assistant_message_id, result.reply)
+                chat_result.reply = append_visualization(chat_result.reply, spec)
+                if chat_result.assistant_message_id is not None:
+                    engine.store.update_message(chat_result.assistant_message_id, chat_result.reply)
+        return chat_result
+
+    try:
+        if strict:
+            admission_id = f"generation:blocking-tutor:{uuid.uuid4().hex}"
+
+            def _claim_session() -> bool:
+                admission = sessions.acquire(admission_id)
+                if admission.admission is Admission.REFUSED:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=admission.message or ladder.busy_message(),
+                    )
+                return admission.admitted
+
+            def _run_admitted_turn():
+                try:
+                    return _run_tutor_turn()
+                finally:
+                    sessions.release(admission_id)
+
+            result, was_queued, queue_position = generations.execute(
+                student_id=student_id,
+                operation=_run_admitted_turn,
+                conversation_id=turn.session_id,
+                queued_cleanup=lambda: sessions.release(admission_id),
+                before_start=_claim_session,
+                cancel_event=turn_cancel,
+            )
+        else:
+            result = _run_tutor_turn()
+            was_queued = decision.admission is Admission.QUEUED
+            queue_position = decision.queue_position
+    except GenerationCapacityError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/tutor/chat") from e
     finally:
-        sessions.release(turn.session_id)
+        if not strict:
+            assert decision is not None
+            sessions.release(turn.session_id)
 
     if result.generation is not None:
         bench_metrics.record(result.generation)
@@ -1490,8 +1733,8 @@ def tutor_chat(
         session_id=turn.session_id,
         reply=result.reply,
         mode=turn.mode,
-        queued=decision.admission is Admission.QUEUED,
-        queue_position=decision.queue_position,
+        queued=was_queued,
+        queue_position=queue_position,
         degradation_level=f"L{int(state.level)}",
     )
 
@@ -1514,9 +1757,11 @@ def tutor_chat_stream(
     turn: ChatTurn,
     engine: ChatEngine = Depends(get_engine),
     sessions: SessionManager = Depends(get_sessions),
+    generations: GenerationManager = Depends(get_generation_manager),
     ladder: DegradationLadder = Depends(get_ladder),
     preamble: PreambleWriter | None = Depends(get_preamble_writer),
     power: PowerGovernor = Depends(get_power_governor),
+    caller: str | None = Depends(optional_caller),
 ) -> StreamingResponse:
     """Token-streaming twin of `/tutor/chat` (§7.2: the tutoring turn is SSE).
 
@@ -1524,15 +1769,34 @@ def tutor_chat_stream(
     a final `{"done": true, …}`. Time-to-first-token is the number a student feels (SC-3:
     < 2.5 s), so the stream starts before the answer is finished, not after.
     """
+    if strict_share_security() and caller is None:
+        raise HTTPException(status_code=401, detail="sign in to continue")
+    if caller is not None and turn.student_id not in {None, caller}:
+        raise HTTPException(status_code=403, detail="you can only chat as yourself")
+    student_id = caller or turn.student_id or turn.session_id
     state = ladder.evaluate()
-    decision = sessions.acquire(turn.session_id)
-    if decision.admission is Admission.REFUSED:
-        raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
-
+    strict = strict_share_security()
+    turn_cancel = threading.Event() if strict else None
+    reservation_id: str | None = None
+    if strict:
+        try:
+            reservation_id = generations.reserve(
+                student_id,
+                allow_parallel=True,
+                conversation_id=turn.session_id,
+            )
+        except GenerationCapacityError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        admission_id = f"generation:blocking-tutor-stream:{reservation_id}"
+    else:
+        decision = sessions.acquire(turn.session_id)
+        if decision.admission is Admission.REFUSED:
+            raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
+        admission_id = turn.session_id
     visual_requested = wants_live_visual(turn.text)
     sampling_params = power.adjust_sampling(
         params_for_mode(turn.mode.value),
-        enabled=_power_enabled(engine, turn.student_id or turn.session_id),
+        enabled=_power_enabled(engine, student_id),
     )
     if visual_requested:
         sampling_params["enable_thinking"] = False
@@ -1540,7 +1804,7 @@ def tutor_chat_stream(
 
     try:
         cid, _user_message_id, events = engine.stream_events_chat(
-            student_id=turn.student_id or turn.session_id,
+            student_id=student_id,
             message=turn.text,
             conversation_id=turn.session_id,
             system_prompt=assemble_system_prompt(
@@ -1550,12 +1814,15 @@ def tutor_chat_stream(
             turn_instruction=turn_instruction(turn.text, response_language_instruction(turn.lang)),
             mode=turn.mode.value,
             language=turn.lang,
+            cancel_event=turn_cancel,
             **sampling_params,
         )
     except Exception:
         # The generator's finally releases the slot only once streaming starts; a failure
         # before that (store down, bad prompt) must not consume a decode lane forever.
-        sessions.release(turn.session_id)
+        if reservation_id is not None:
+            generations.cancel_reservation(reservation_id)
+        sessions.release(admission_id)
         raise
 
     streamed = with_preamble(events, preamble, **_preamble_opts())
@@ -1607,7 +1874,7 @@ def tutor_chat_stream(
             yield f"data: {json.dumps(error)}\n\n"
             return
         finally:
-            sessions.release(turn.session_id)
+            sessions.release(admission_id)
             # Preamble wrapper first, then the engine's generator — same load-bearing order
             # as /chat/stream: its helper thread may still be inside `next(events)`.
             _close_events(streamed)
@@ -1633,19 +1900,57 @@ def tutor_chat_stream(
             + "\n\n"
         )
 
+    if strict:
+        assert reservation_id is not None
+
+        def _claim_session() -> bool:
+            admission = sessions.acquire(admission_id)
+            if admission.admission is Admission.REFUSED:
+                raise HTTPException(
+                    status_code=503,
+                    detail=admission.message or ladder.busy_message(),
+                )
+            return admission.admitted
+
+        def _queued_cleanup() -> None:
+            try:
+                _close_events(streamed)
+            finally:
+                _close_events(events)
+                sessions.release(admission_id)
+
+        try:
+            job = generations.start(
+                student_id=student_id,
+                conversation_id=cid,
+                producer=_sse(),
+                reservation_id=reservation_id,
+                queued_cleanup=_queued_cleanup,
+                before_start=_claim_session,
+                cancel_event=turn_cancel,
+            )
+        except Exception:
+            _queued_cleanup()
+            raise
+        return StreamingResponse(
+            job.subscribe(), media_type="text/event-stream", headers=_SSE_HEADERS
+        )
     return StreamingResponse(_sse(), media_type="text/event-stream", headers=_SSE_HEADERS)
 
 
 _IMAGE_MIME = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
+_VISION_SLOTS = threading.BoundedSemaphore(1)
 
 
 @router.post("/tutor/vision", response_model=VisionReply, tags=["tutor"])
 async def tutor_vision(
+    request: Request,
     session_id: str = Form(...),
     image: UploadFile = File(...),
     conversation_id: str | None = Form(None),
     vision: VisionManager = Depends(get_vision),
     engine: ChatEngine = Depends(get_engine),
+    caller: str | None = Depends(optional_caller),
 ) -> VisionReply:
     """Photo of handwritten work → transcription (S2).
 
@@ -1653,7 +1958,15 @@ async def tutor_vision(
     (no memory for a vision instance). Neither is an error — the student is told to type the
     problem instead, and the tutor keeps working.
     """
-    raw = await image.read()
+    if strict_share_security() and caller is None:
+        raise HTTPException(status_code=401, detail="sign in to continue")
+    write_principal = principal_from_request(request)
+    if caller is not None and conversation_id:
+        conversation = engine.store.get_conversation(conversation_id)
+        if conversation is not None and conversation.get("student_id") != caller:
+            raise HTTPException(status_code=403, detail="you can only use your own conversation")
+    owner_id = caller or session_id
+    raw = await image.read(MAX_IMAGE_UPLOAD_BYTES + 1)
     try:
         prepared = prepare_image(raw)
     except ImageRejected as e:
@@ -1663,15 +1976,18 @@ async def tutor_vision(
     # failure must not block tutoring — the transcription path continues without an id.
     attachment_id: int | None = None
     try:
-        attachment_id = await run_in_threadpool(
-            engine.store.add_attachment,
-            "image",
-            _IMAGE_MIME.get(prepared.format, "application/octet-stream"),
-            prepared.data,
-            conversation_id=conversation_id,
-            owner_id=session_id,
-        )
-    except Exception:  # noqa: BLE001 — best-effort persistence
+        with member_write_lease(write_principal):
+            attachment_id = await run_in_threadpool(
+                engine.store.add_attachment,
+                "image",
+                _IMAGE_MIME.get(prepared.format, "application/octet-stream"),
+                prepared.data,
+                conversation_id=conversation_id,
+                owner_id=owner_id,
+            )
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=403, detail="this account is being removed") from exc
+    except Exception:
         log.warning("failed to persist vision attachment for session %s", session_id, exc_info=True)
         attachment_id = None
 
@@ -1679,13 +1995,6 @@ async def tutor_vision(
     # `transcribe()` (a blocking httpx.post, up to request_timeout_s) are synchronous. This
     # handler is async, so run them in the threadpool — otherwise one vision request freezes
     # the single event loop and stalls every other phone in the classroom mid-stream.
-    try:
-        base_url = await run_in_threadpool(vision.ensure)  # spawns CORE-VISION if needed
-    except VisionDenied as e:
-        return VisionReply(
-            session_id=session_id, accepted=False, detail=str(e), attachment_id=attachment_id
-        )
-
     # The vision instance is stateless and TTL-killable by design: it returns a transcription,
     # and the *text* session carries the conversation (§6.3, S2). A transport failure OR a
     # malformed-but-200 reply is S2's honest fallback, never a 500 in a non-technical judge's face.
@@ -1693,13 +2002,35 @@ async def tutor_vision(
     # 1024-image-token floor needs minutes of prefill on a slow box, and the client's 120 s
     # default silently cut every one of them off mid-read. `in_use()` keeps the TTL reaper
     # off a server that is mid-transcription for exactly as long.
-    def _read() -> str:
+    def _read(cancel_event: threading.Event | None = None) -> str:
         with vision.in_use():
+            base_url = vision.ensure()  # spawns CORE-VISION if needed
             client = VisionClient(base_url, timeout=RuntimeConfig().request_timeout_s)
-            return client.transcribe(prepared.data, prepared.format)
+            if cancel_event is None:
+                return client.transcribe(prepared.data, prepared.format)
+            return client.transcribe(prepared.data, prepared.format, cancel_event=cancel_event)
 
     try:
-        transcription = await run_in_threadpool(_read)
+        if write_principal is not None and write_principal.role == "member":
+            tracked = get_owner_work_manager().track(write_principal.subject)
+        else:
+            tracked = contextlib.nullcontext(None)
+        with tracked as cancel_event:
+            async with auxiliary_slot(_VISION_SLOTS):
+                transcription = await run_in_threadpool(_read, cancel_event)
+    except OwnerWorkRejected:
+        raise HTTPException(status_code=403, detail="this account is being removed") from None
+    except AuxiliaryQueueFull:
+        return VisionReply(
+            session_id=session_id,
+            accepted=False,
+            detail="the image reader is busy — type the problem or try again shortly",
+            attachment_id=attachment_id,
+        )
+    except VisionDenied as e:
+        return VisionReply(
+            session_id=session_id, accepted=False, detail=str(e), attachment_id=attachment_id
+        )
     except (httpx.HTTPError, VisionResponseError):
         return VisionReply(
             session_id=session_id,
@@ -1751,9 +2082,17 @@ def tutor_render(
 
 @router.post("/session/{session_id}/suspend", response_model=SessionActionResponse, tags=["ops"])
 def session_suspend(
-    session_id: str, sessions: SessionManager = Depends(get_sessions)
+    request: Request,
+    session_id: str,
+    sessions: SessionManager = Depends(get_sessions),
+    csrf: str | None = Header(default=None, alias="X-Muta-CSRF"),
 ) -> SessionActionResponse:
     """Persist a session's KV and free its slot (§8.3)."""
+    if strict_share_security():
+        principal = principal_from_request(request)
+        if principal is None or principal.role != "host" or not is_operator_request(request):
+            raise HTTPException(status_code=403, detail="session controls are host-only")
+        verify_host_csrf(principal, csrf)
     ok = sessions.evict(session_id)
     return SessionActionResponse(
         session_id=session_id,
@@ -1765,9 +2104,17 @@ def session_suspend(
 
 @router.post("/session/{session_id}/resume", response_model=SessionActionResponse, tags=["ops"])
 def session_resume(
-    session_id: str, sessions: SessionManager = Depends(get_sessions)
+    request: Request,
+    session_id: str,
+    sessions: SessionManager = Depends(get_sessions),
+    csrf: str | None = Header(default=None, alias="X-Muta-CSRF"),
 ) -> SessionActionResponse:
     """Bind a slot for a session, restoring its snapshot when one survives."""
+    if strict_share_security():
+        principal = principal_from_request(request)
+        if principal is None or principal.role != "host" or not is_operator_request(request):
+            raise HTTPException(status_code=403, detail="session controls are host-only")
+        verify_host_csrf(principal, csrf)
     decision = sessions.acquire(session_id)
     if decision.admission is Admission.REFUSED:
         raise HTTPException(status_code=503, detail=decision.message)
@@ -1781,11 +2128,16 @@ def session_resume(
 
 @router.get("/metrics", response_model=SystemStatus, tags=["ops"])
 def metrics(
+    request: Request,
     ladder: DegradationLadder = Depends(get_ladder),
     sessions: SessionManager = Depends(get_sessions),
     vision: VisionManager = Depends(get_vision),
 ) -> SystemStatus:
     """Local health panel data (§12). All local: no exporter, no network, no dashboards."""
+    if strict_share_security():
+        principal = principal_from_request(request)
+        if principal is None or principal.role != "host" or not is_operator_request(request):
+            raise HTTPException(status_code=403, detail="host access is local only")
     engine: dict = {}
     try:
         engine = {"slots": get_slot_client().slots()}

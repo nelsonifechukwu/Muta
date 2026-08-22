@@ -28,6 +28,7 @@ dependencies = [
     "matplotlib>=3.8",  # diagram rendering (Agg only, no display)
     "pillow>=10.0",  # image guard: downscale, EXIF strip (TDD §4.2)
     "pypdf>=5.0",  # learner-resource PDF extraction with physical page preservation
+    "qrcode>=8.0",  # offline Host-mode LAN join QR (Pillow is already bundled above)
 ]
 
 [project.optional-dependencies]
