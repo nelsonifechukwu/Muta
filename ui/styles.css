@@ -156,11 +156,30 @@ button.ghost:hover { background: var(--accent-soft); }
   display: block; margin-top: 4px; font-size: 0.68rem; color: var(--muted);
   font-style: italic;
 }
-#btn-web.active { color: var(--accent); background: var(--accent-soft, rgba(193, 95, 60, 0.12)); }
+#btn-web.active,
+#btn-rag.active { color: var(--accent); background: var(--accent-soft, rgba(193, 95, 60, 0.12)); }
 .sources {
   display: block; margin-top: 6px; font-size: 0.72rem; color: var(--muted);
 }
 .sources a { color: inherit; text-decoration: underline; margin-inline-end: 2px; }
+.resource-sources {
+  display: grid; gap: 6px; margin-top: 10px; max-width: 44rem;
+}
+.resource-source {
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; align-items: start;
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card); color: inherit; text-align: start; cursor: pointer;
+}
+.resource-source:hover { border-color: #c9b4aa; background: var(--accent-soft); }
+.resource-source .source-number {
+  grid-row: 1 / span 2; display: grid; place-items: center; min-width: 22px; height: 22px;
+  border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-weight: 700;
+}
+.resource-source strong { font-size: 0.76rem; }
+.resource-source small {
+  color: var(--muted); font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* Self-check outcomes: a quiet green "steps checked" badge, or a warm caution when a step
    didn't hold / the reply was cut off. */
 .verified-badge {
@@ -546,6 +565,38 @@ details.thinking .think-label.shimmer {
   overflow-y: auto; overscroll-behavior-y: contain;
 }
 #attachment-chips:empty { display: none; }
+#rag-resource-chips {
+  flex: 0 1 auto; display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;
+  max-height: 5rem; overflow-y: auto;
+}
+#rag-resource-chips[hidden] { display: none; }
+.rag-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 18rem;
+  padding: 4px 7px; border: 1px solid #d5b7a8; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.76rem;
+}
+.rag-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rag-chip button { border: 0; background: none; color: inherit; cursor: pointer; padding: 0 2px; }
+.resource-mention-menu {
+  position: fixed; z-index: 65; max-height: min(18rem, 42vh); overflow-y: auto;
+  padding: 6px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card); box-shadow: 0 14px 40px rgba(45, 43, 38, 0.18);
+}
+.resource-mention-menu[hidden] { display: none; }
+.resource-option {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px;
+  width: 100%; padding: 9px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text); text-align: start; cursor: pointer;
+}
+.resource-option:hover,
+.resource-option.active { background: var(--accent-soft); }
+.resource-option:disabled { cursor: not-allowed; opacity: 0.65; }
+.resource-option strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resource-option small { grid-column: 1; color: var(--muted); }
+.resource-status { font-size: 0.68rem; font-weight: 700; color: var(--muted); }
+.resource-status.ready { color: #2f7d51; }
+.resource-status.failed { color: var(--danger); }
+.resource-empty { padding: 14px; color: var(--muted); font-size: 0.8rem; }
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
   border: 1px solid var(--border); border-radius: 10px;
@@ -583,6 +634,8 @@ button.icon {
 }
 button.icon:hover { background: var(--accent-soft); color: var(--accent); }
 button.icon svg { width: 18px; height: 18px; fill: currentColor; }
+.rag-toggle { display: inline-flex; align-items: center; gap: 4px; }
+.rag-toggle span { font-size: 0.65rem; font-weight: 700; line-height: 1; }
 button.icon.recording { color: #fff; background: var(--danger); animation: pulse 1.6s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(168, 52, 42, 0.15); } }
 button.send {
@@ -712,6 +765,29 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
 .power-status.normal .power-status-dot { background: #5c9b70; }
 .power-status p { margin: 6px 0 0 16px; color: var(--muted); font-size: 0.75rem; line-height: 1.45; }
 .power-status .power-status-actions { color: var(--text); }
+.settings-section-heading {
+  display: flex; justify-content: space-between; gap: 16px; align-items: flex-start;
+  border-bottom: 1px solid var(--border); padding-bottom: 10px;
+}
+.settings-section-heading h3 { margin-bottom: 3px; }
+.settings-section-heading p { margin: 0; color: var(--muted); font-size: 0.76rem; }
+.resource-upload,
+.resource-action {
+  flex: none; border: 1px solid var(--border); border-radius: 8px; background: var(--card);
+  color: var(--text); padding: 7px 10px; font: inherit; font-size: 0.76rem; cursor: pointer;
+}
+.resource-upload:hover,
+.resource-action:hover { border-color: #c9b4aa; background: var(--accent-soft); }
+.resource-list { display: grid; }
+.resource-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px;
+  align-items: center; padding: 11px 2px; border-bottom: 1px solid var(--border);
+}
+.resource-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.86rem; }
+.resource-row small { color: var(--muted); font-size: 0.7rem; }
+.resource-actions { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 5px; }
+.resource-action.delete:hover { color: var(--danger); }
+.resource-list-empty { padding: 14px 2px; color: var(--muted); font-size: 0.78rem; }
 
 @media (max-width: 720px) {
   /* The sidebar becomes an off-canvas drawer instead of vanishing — history and "+ New chat"

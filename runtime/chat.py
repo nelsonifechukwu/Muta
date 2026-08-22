@@ -137,6 +137,8 @@ class ChatResult:
     generation: Generation | None = None
     # Row id of the persisted user turn — attachment linking keys on it.
     user_message_id: int | None = None
+    # Exact assistant row for durable citations and other turn-owned metadata.
+    assistant_message_id: int | None = None
 
 
 class _ReplyWriter:
@@ -190,6 +192,33 @@ class _ReplyWriter:
         else:
             self.store.update_message(self.message_id, text)
         self._flushed_len = len(text)
+
+
+class _ReplyEventStream(Iterator[tuple[str, str]]):
+    """Iterator facade exposing the exact assistant row owned by this generation.
+
+    Parallel jobs may share a conversation, so callers appending citations must never
+    rediscover their row by ordering: another job can finish between generation and append.
+    """
+
+    def __init__(self, iterator: Iterator[tuple[str, str]], writer: _ReplyWriter) -> None:
+        self._iterator = iterator
+        self._writer = writer
+
+    @property
+    def assistant_message_id(self) -> int | None:
+        return self._writer.message_id
+
+    def __iter__(self) -> _ReplyEventStream:
+        return self
+
+    def __next__(self) -> tuple[str, str]:
+        return next(self._iterator)
+
+    def close(self) -> None:
+        close = getattr(self._iterator, "close", None)
+        if callable(close):
+            close()
 
 
 class _ResumeDeduplicator:
@@ -695,12 +724,13 @@ class ChatEngine:
             if exc.partial_text:
                 self.store.add_message(cid, "assistant", exc.partial_text)
             raise
-        self.store.add_message(cid, "assistant", generation.text)
+        assistant_message_id = self.store.add_message(cid, "assistant", generation.text)
         return ChatResult(
             conversation_id=cid,
             reply=generation.text,
             generation=generation,
             user_message_id=user_message_id,
+            assistant_message_id=assistant_message_id,
         )
 
     def stream_chat(
@@ -798,8 +828,9 @@ class ChatEngine:
             protected_tail_messages=min(3, max(1, len(messages) - 1)),
         )
 
+        writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
+
         def _gen() -> Iterator[tuple[str, str]]:
-            writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
                 for kind, text in self._events_with_recovery(
                     messages, request_params, writer, cancel_event
@@ -812,4 +843,4 @@ class ChatEngine:
                 # turn abandoned during the thinking phase still stores nothing.
                 writer.flush()
 
-        return cid, user_message_id, _gen()
+        return cid, user_message_id, _ReplyEventStream(_gen(), writer)

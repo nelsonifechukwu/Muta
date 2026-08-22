@@ -21,6 +21,7 @@ from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.pedagogy.twin import TwinStore
+from orchestrator.retrieval.resources import ResourceService
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.sandbox import ToolPools
 from orchestrator.tools.verifier import AnswerVerifier
@@ -67,7 +68,8 @@ def load_prompt(mode: str) -> str:
     path = _PROMPTS_DIR / f"{mode}.md"
     if not path.exists():
         path = _PROMPTS_DIR / "socratic.md"
-    return _COMMENT.sub("", path.read_text()).strip()
+    prompt = _COMMENT.sub("", path.read_text()).strip()
+    return prompt
 
 
 @lru_cache(maxsize=1)
@@ -116,6 +118,12 @@ def get_engine() -> ChatEngine:
 
 
 @lru_cache(maxsize=1)
+def get_resource_service() -> ResourceService:
+    """One bounded worker/search service over the engine's durable private resource store."""
+    return ResourceService(get_engine().store)
+
+
+@lru_cache(maxsize=1)
 def get_generation_manager() -> GenerationManager:
     """Live replay buffers outlive browser requests but not the gateway process."""
     return GenerationManager(max_active=RuntimeConfig().n_parallel)
@@ -159,7 +167,7 @@ def core_rss_bytes() -> int:
         try:
             if "llama-server" in (process.info.get("name") or "").lower():
                 total += process.memory_info().rss
-        except Exception:  # noqa: BLE001 — psutil raises several process-vanished flavours
+        except Exception:  # noqa: BLE001,S112 — psutil process may vanish during iteration
             continue
     return total
 
