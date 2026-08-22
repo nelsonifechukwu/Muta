@@ -88,6 +88,17 @@ def test_animation_schema_constrains_the_requested_action() -> None:
         assert track["properties"]["duration"]["enum"] == [2]
 
 
+def test_line_schema_cannot_exhaust_the_visual_decode_budget_with_points() -> None:
+    single = visualization_schema("d3", "line", "Plot y = x squared.")["schema"]
+    compared = visualization_schema("d3", "line", "Compare both curves.")["schema"]
+    single_series = single["properties"]["series"]
+    compared_series = compared["properties"]["series"]
+
+    assert single_series["maxItems"] == 1
+    assert compared_series["maxItems"] == 2
+    assert single_series["items"]["properties"]["points"]["maxItems"] == 24
+
+
 def test_visual_turn_reserves_completion_budget_instead_of_hidden_reasoning() -> None:
     class EcoPower:
         def adjust_sampling(self, params, **_kwargs):
