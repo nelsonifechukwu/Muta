@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from pathlib import Path
 
 import pytest
@@ -66,10 +67,34 @@ def test_migrates_original_sqlite_database_in_place(tmp_path):
         store.close()
 
 
+def test_parallel_settings_patches_do_not_lose_sibling_controls(store):
+    barrier = threading.Barrier(3)
+
+    def patch(changes):
+        barrier.wait()
+        store.patch_settings("student", changes)
+
+    first = threading.Thread(target=patch, args=({"allow_parallel_chats": False},))
+    second = threading.Thread(target=patch, args=({"power_optimization_enabled": False},))
+    first.start()
+    second.start()
+    barrier.wait()
+    first.join(timeout=2)
+    second.join(timeout=2)
+
+    assert not first.is_alive() and not second.is_alive()
+    assert store.get_settings("student") == {
+        "allow_parallel_chats": False,
+        "power_optimization_enabled": False,
+    }
+
+
 # Re-run the exact behavioral tests used by Postgres against SQLite. Keeping aliases rather
 # than a second hand-written suite makes future store-contract additions fail here by default.
 test_messages_round_trip_in_order = contract.test_messages_round_trip_in_order
-test_recent_limit_returns_last_n_chronologically = contract.test_recent_limit_returns_last_n_chronologically
+test_recent_limit_returns_last_n_chronologically = (
+    contract.test_recent_limit_returns_last_n_chronologically
+)
 test_conversations_scoped_to_student = contract.test_conversations_scoped_to_student
 test_persists_across_reconnect = contract.test_persists_across_reconnect
 test_add_message_returns_monotonic_ids_and_bumps_updated_at = (
@@ -82,6 +107,9 @@ test_list_messages_includes_ids_and_attachment_refs = (
 )
 test_set_title_only_when_unset = contract.test_set_title_only_when_unset
 test_settings_round_trip = contract.test_settings_round_trip
+test_settings_patch_preserves_independent_controls = (
+    contract.test_settings_patch_preserves_independent_controls
+)
 test_get_attachment_owner_scoping = contract.test_get_attachment_owner_scoping
 test_get_attachment_owner_via_linked_conversation = (
     contract.test_get_attachment_owner_via_linked_conversation

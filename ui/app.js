@@ -1,6 +1,34 @@
 /* Muta chat client. Same-origin /v1 (nginx proxies to the backend). No framework. */
 "use strict";
 
+// Power copy is intentionally English-only until it joins the complete locale catalog.
+const POWER_COPY = Object.freeze({
+  checking: "Checking host power…",
+  checkingHelp: "Reading the battery of the laptop serving Muta.",
+  unavailable: "Power information unavailable",
+  unavailableHelp: "This device does not expose a battery sensor. Muta still keeps its fixed memory and thermal safeguards.",
+  sensorGrace: "Battery sensor temporarily unavailable; Critical reserve remains active.",
+  off: "Power optimization off",
+  normal: "Balanced",
+  eco: "Eco mode",
+  critical: "Critical battery mode",
+  plugged: "Plugged in",
+  connectedDraining: "Power connected; battery still draining",
+  battery: "Host battery {percentage}%",
+  remaining: "about {time} remaining",
+  rate: "{watts} W",
+  actions: "Active: {actions}",
+  action_limit_auto_reasoning: "bounded automatic reasoning",
+  action_limit_response_length: "shorter replies",
+  action_direct_responses: "direct responses",
+  action_pause_vision: "new image reading paused",
+  action_pause_tts: "speech playback paused",
+  openSettings: "Open power settings",
+});
+const powerText = (key, variables = {}) => (POWER_COPY[key] || key).replace(
+  /\{([a-zA-Z][\w]*)\}/g,
+  (match, name) => Object.hasOwn(variables, name) ? String(variables[name]) : match,
+);
 const t = (key, variables) => window.MutaI18n.t(key, variables);
 
 // ---------------------------------------------------------------------------
@@ -75,6 +103,8 @@ let voiceModeActive = false;
 // Kept false until the Settings UI lands; the per-conversation machinery itself is already
 // capable of parallel jobs, while this gate preserves today's one-chat product behaviour.
 let allowParallelChats = true;
+let powerOptimizationEnabled = true;
+let latestPowerStatus = null;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
 // Follow-ups typed while a reply is running are view state, but they still have to survive a
 // reload. Each item is scoped to its conversation so navigating elsewhere never discards it.
@@ -1916,12 +1946,14 @@ window.MutaChat = {
 // --- settings --------------------------------------------------------------------------
 const settingsModal = $("#settings-modal");
 const parallelChatsToggle = $("#setting-parallel-chats");
+const powerOptimizationToggle = $("#setting-power-optimization");
 const languageSelect = $("#setting-language");
 
 function setSettingsOpen(open) {
   settingsModal.hidden = !open;
   $("#app").inert = open;
   if (open) {
+    void refreshPowerStatus();
     languageSelect.focus();
   } else {
     $("#settings-open").focus();
@@ -1933,17 +1965,24 @@ async function loadSettings() {
   // is authoritative and makes the preference follow the unified loopback learner identity.
   const cached = localStorage.getItem("muta-parallel-chats");
   if (cached != null) allowParallelChats = cached === "true";
+  const cachedPower = localStorage.getItem("muta-power-optimization");
+  if (cachedPower != null) powerOptimizationEnabled = cachedPower === "true";
   parallelChatsToggle.checked = allowParallelChats;
+  powerOptimizationToggle.checked = powerOptimizationEnabled;
   try {
     const response = await fetch("/v1/settings", { headers: authHeaders() });
     if (!response.ok) return;
     const settings = await response.json();
     allowParallelChats = settings.allow_parallel_chats !== false;
+    powerOptimizationEnabled = settings.power_optimization_enabled !== false;
     parallelChatsToggle.checked = allowParallelChats;
+    powerOptimizationToggle.checked = powerOptimizationEnabled;
     localStorage.setItem("muta-parallel-chats", String(allowParallelChats));
+    localStorage.setItem("muta-power-optimization", String(powerOptimizationEnabled));
   } catch {
     /* keep the local fallback */
   }
+  await refreshPowerStatus();
 }
 
 async function saveParallelChats(enabled) {
@@ -1966,6 +2005,136 @@ async function saveParallelChats(enabled) {
   } finally {
     parallelChatsToggle.disabled = false;
     syncComposerState();
+  }
+}
+
+function powerDuration(seconds) {
+  if (seconds == null || seconds < 0) return null;
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (!hours) return `${minutes}m`;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+}
+
+function updatePowerStatus(status) {
+  latestPowerStatus = status;
+  const card = $("#power-status");
+  const modeEl = $("#power-status-mode");
+  const detailEl = $("#power-status-detail");
+  const actionsEl = $("#power-status-actions");
+  const badge = $("#power-badge");
+  card.classList.remove("normal", "eco", "critical");
+  const hostMode = status.host_mode || status.mode || "normal";
+  card.classList.add(hostMode === "critical" ? "critical" : (status.mode || "normal"));
+
+  if (!status.available) {
+    if (hostMode === "critical") {
+      modeEl.textContent = powerText("critical");
+      detailEl.textContent = powerText("sensorGrace");
+      const graceActions = (status.actions || []).map((action) =>
+        powerText(`action_${action}`),
+      );
+      actionsEl.hidden = graceActions.length === 0;
+      actionsEl.textContent = graceActions.length
+        ? powerText("actions", { actions: graceActions.join(", ") })
+        : "";
+      badge.hidden = false;
+      badge.classList.add("critical");
+      $("#power-badge-mode").textContent = powerText("critical");
+      $("#power-badge-level").textContent = "sensor";
+      badge.setAttribute(
+        "aria-label",
+        `${powerText("critical")}. ${powerText("sensorGrace")} ${powerText("openSettings")}`,
+      );
+      return;
+    }
+    modeEl.textContent = powerText("unavailable");
+    detailEl.textContent = powerText("unavailableHelp");
+    actionsEl.hidden = true;
+    badge.hidden = true;
+    return;
+  }
+
+  const modeKey = status.optimization_enabled ? status.mode : "off";
+  modeEl.textContent = powerText(modeKey || "normal");
+  const details = [];
+  if (status.on_battery === true && status.external_power_connected === true) {
+    details.push(powerText("connectedDraining"));
+  } else if (status.on_battery === false) {
+    details.push(powerText("plugged"));
+  }
+  if (status.percentage != null) {
+    details.push(powerText("battery", { percentage: Math.round(status.percentage) }));
+  }
+  const remaining = powerDuration(status.time_to_empty_s);
+  if (status.on_battery === true && remaining) {
+    details.push(powerText("remaining", { time: remaining }));
+  }
+  if (status.energy_rate_w != null) {
+    details.push(powerText("rate", { watts: Number(status.energy_rate_w).toFixed(1) }));
+  }
+  detailEl.textContent = details.join(" · ") || powerText("checkingHelp");
+
+  const actions = (status.actions || []).map((action) =>
+    powerText(`action_${action}`),
+  );
+  actionsEl.hidden = actions.length === 0;
+  actionsEl.textContent = actions.length
+    ? powerText("actions", { actions: actions.join(", ") })
+    : "";
+
+  const active = (
+    status.optimization_enabled && ["eco", "critical"].includes(status.mode)
+  ) || hostMode === "critical";
+  badge.hidden = !active;
+  badge.classList.toggle("critical", hostMode === "critical");
+  $("#power-badge-mode").textContent = powerText(
+    hostMode === "critical" ? "critical" : status.mode,
+  );
+  $("#power-badge-level").textContent = status.percentage == null
+    ? "battery"
+    : `${Math.round(status.percentage)}%`;
+  const badgeLabel = [
+    powerText(hostMode === "critical" ? "critical" : status.mode),
+    status.percentage == null
+      ? null
+      : powerText("battery", { percentage: Math.round(status.percentage) }),
+    powerText("openSettings"),
+  ].filter(Boolean).join(". ");
+  badge.setAttribute("aria-label", badgeLabel);
+}
+
+async function refreshPowerStatus() {
+  try {
+    const response = await fetch("/v1/power/status", { headers: authHeaders() });
+    if (!response.ok) return;
+    updatePowerStatus(await response.json());
+  } catch {
+    /* Keep the last trustworthy sample; power telemetry never blocks tutoring. */
+  }
+}
+
+async function savePowerOptimization(enabled) {
+  const previous = powerOptimizationEnabled;
+  powerOptimizationEnabled = enabled;
+  localStorage.setItem("muta-power-optimization", String(enabled));
+  powerOptimizationToggle.disabled = true;
+  try {
+    const response = await fetch("/v1/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ power_optimization_enabled: enabled }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    await refreshPowerStatus();
+  } catch {
+    powerOptimizationEnabled = previous;
+    powerOptimizationToggle.checked = previous;
+    localStorage.setItem("muta-power-optimization", String(previous));
+    toast(t("settings.saveFailed"));
+  } finally {
+    powerOptimizationToggle.disabled = false;
   }
 }
 
@@ -1993,6 +2162,10 @@ settingsModal.addEventListener("keydown", (event) => {
 parallelChatsToggle.addEventListener("change", () => {
   void saveParallelChats(parallelChatsToggle.checked);
 });
+powerOptimizationToggle.addEventListener("change", () => {
+  void savePowerOptimization(powerOptimizationToggle.checked);
+});
+$("#power-badge").addEventListener("click", () => setSettingsOpen(true));
 languageSelect.addEventListener("change", () => {
   window.MutaI18n.setLocale(languageSelect.value);
 });
@@ -2040,6 +2213,9 @@ async function bootChat() {
   syncComposerState();
   restoreMessageQueue();
   await loadSettings();
+  window.setInterval(() => {
+    if (!document.hidden) void refreshPowerStatus();
+  }, 60_000);
   await recoverGenerations();
   const selected = conversationFromLocation();
   const pending = pendingRequestFromLocation();
@@ -2400,6 +2576,7 @@ window.MutaI18n.subscribe(() => {
   refreshSidebar();
   syncComposerState();
   if (latestTelemetry) updateTelemetry(latestTelemetry);
+  if (latestPowerStatus) updatePowerStatus(latestPowerStatus);
   localizeModelCatalog();
   void refreshNetDot();
 });

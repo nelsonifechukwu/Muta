@@ -116,6 +116,30 @@ are the class defaults; the `Qwen3-0.6B` smoke-fixture defaults are what ship in
 | `MUTA_RT_DRAFT_MIN` | `1` | `--spec-draft-n-min` | `config.py:143`, `server.py:105` |
 | `MUTA_RT_AUTOSTART` | `false` *(compose: `1`)* | gateway lifespan starts/supervises `llama-server` | `config.py:145`, `main.py:97`, compose `:47` |
 
+### Muta Power policy
+
+These controls affect Muta-owned optional work only. They do not change the operating
+system's CPU governor or suspend the computer. The learner-facing switch is on by default;
+operators can disable the policy globally with `MUTA_RT_POWER_OPTIMIZATION=0`.
+
+| Variable | Default | What it does | Where read |
+|---|---|---|---|
+| `MUTA_RT_POWER_OPTIMIZATION` | `true` | master switch for battery-aware request shaping and critical-reserve protection | `config.py`, `deps.py` |
+| `MUTA_RT_POWER_POLL_INTERVAL_S` | `15` | minimum seconds between host battery reads | `config.py`, `power.py` |
+| `MUTA_RT_POWER_SENSOR_GRACE_S` | `120` | keep an already-active Critical reserve through a brief total sensor/provider failure | `config.py`, `power.py` |
+| `MUTA_RT_POWER_CRITICAL_PERCENTAGE` | `12` | enter Critical mode at or below this battery percentage | `config.py`, `power.py` |
+| `MUTA_RT_POWER_CRITICAL_TIME_S` | `1800` | enter Critical mode at or below this estimated time remaining | `config.py`, `power.py` |
+| `MUTA_RT_POWER_HYSTERESIS_PERCENTAGE` | `3` | extra percentage required before leaving Critical mode | `config.py`, `power.py` |
+| `MUTA_RT_POWER_HYSTERESIS_TIME_S` | `900` | extra estimated seconds required before leaving Critical mode | `config.py`, `power.py` |
+| `MUTA_RT_POWER_ECO_REASONING_BUDGET` | `256` | Auto-mode thinking-token cap while discharging | `config.py`, `power.py` |
+| `MUTA_RT_POWER_ECO_MAX_TOKENS` | `800` | ordinary response cap while discharging | `config.py`, `power.py` |
+| `MUTA_RT_POWER_CRITICAL_MAX_TOKENS` | `512` | ordinary response cap in Critical mode; thinking is also disabled | `config.py`, `power.py` |
+
+Critical reserve always blocks starting vision and TTS work so the shared laptop retains
+capacity for text tutoring. Turning the learner switch off restores their ordinary response
+budgets, but does not bypass that host-wide safeguard. Explicit Extended reasoning and
+schema-constrained assessment responses retain their requested budgets in every mode.
+
 ### Persistent memory
 
 | Variable | Default | What it does | Where read |

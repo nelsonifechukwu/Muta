@@ -89,7 +89,9 @@ def _apply_migrations(conn) -> None:
         "CREATE TABLE IF NOT EXISTS schema_migrations "
         "(version INT PRIMARY KEY, applied_at TEXT NOT NULL)"
     )
-    applied = {r["version"] for r in conn.execute("SELECT version FROM schema_migrations").fetchall()}
+    applied = {
+        r["version"] for r in conn.execute("SELECT version FROM schema_migrations").fetchall()
+    }
     for version, sql in _MIGRATIONS:
         if version in applied:
             continue
@@ -330,7 +332,10 @@ class ConversationStore:
             ).fetchone()
         if row is None:
             return None
-        if owner_id is not None and owner_id not in (row.get("owner_id"), row.get("conversation_owner")):
+        if owner_id is not None and owner_id not in (
+            row.get("owner_id"),
+            row.get("conversation_owner"),
+        ):
             return None
         return dict(row)
 
@@ -361,6 +366,19 @@ class ConversationStore:
                 "SET settings = EXCLUDED.settings, updated_at = EXCLUDED.updated_at",
                 (student_id, Jsonb(settings), _now()),
             )
+
+    def patch_settings(self, student_id: str, changes: dict) -> dict:
+        """Atomically merge independent preference controls and return the stored object."""
+        with self._pool.connection() as conn:
+            row = conn.execute(
+                "INSERT INTO user_settings (student_id, settings, updated_at) "
+                "VALUES (%s, %s, %s) "
+                "ON CONFLICT (student_id) DO UPDATE SET "
+                "settings = user_settings.settings || EXCLUDED.settings, "
+                "updated_at = EXCLUDED.updated_at RETURNING settings",
+                (student_id, Jsonb(changes), _now()),
+            ).fetchone()
+        return dict(row["settings"])
 
     # --- retention & erasure ----------------------------------------------------------
 

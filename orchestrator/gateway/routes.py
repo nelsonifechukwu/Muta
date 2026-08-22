@@ -54,6 +54,7 @@ from contracts.models import (
     ModelCatalogResponse,
     ModelSelectRequest,
     ModelSelectResponse,
+    PowerStatus,
     ReadyResponse,
     RenderRequest,
     RenderResponse,
@@ -81,6 +82,7 @@ from orchestrator.gateway.deps import (
     get_generation_manager,
     get_ladder,
     get_model_manager,
+    get_power_governor,
     get_preamble_writer,
     get_renderer,
     get_sessions,
@@ -98,6 +100,7 @@ from orchestrator.gateway.generations import (
 )
 from orchestrator.gateway.images import ImageRejected, prepare_image
 from orchestrator.gateway.ladder import DegradationLadder
+from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.preamble import with_preamble
 from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
 from orchestrator.gateway.sampling import params_for_mode
@@ -364,6 +367,29 @@ def _apply_thinking(
     return params
 
 
+def _power_enabled(engine: ChatEngine, student_id: str) -> bool:
+    """Private per-learner preference; an unreadable store keeps the safe default on."""
+    try:
+        return engine.store.get_settings(student_id).get("power_optimization_enabled", True)
+    except Exception:  # noqa: BLE001 - a preference read cannot fail a tutoring turn
+        return True
+
+
+def _sampling_for_request(
+    mode: str,
+    thinking: str | None,
+    *,
+    power: PowerGovernor,
+    power_enabled: bool,
+) -> dict:
+    params = _apply_thinking(params_for_mode(mode), thinking)
+    return power.adjust_sampling(
+        params,
+        enabled=power_enabled,
+        requested_thinking=thinking,
+    )
+
+
 def _rag_block(query: str, *, k: int = 4) -> str:
     """Retrieved syllabus chunks for a query, rendered as a delimited reference block — or ""
     when RAG is not available (no index staged, embed server down). Degradation is the design:
@@ -417,7 +443,11 @@ def _link_attachments(engine: ChatEngine, ids: list[int], cid: str, message_id: 
 
 
 @router.post("/chat", response_model=ChatResponse, tags=["tutor"])
-def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResponse:
+def chat(
+    req: ChatRequest,
+    engine: ChatEngine = Depends(get_engine),
+    power: PowerGovernor = Depends(get_power_governor),
+) -> ChatResponse:
     """Multi-turn tutoring turn. Memory is keyed by `conversation_id`; omit it to start a
     new thread. The mode selects the system prompt (ROADMAP 18 Jul, stable-prefix design)."""
     system_prompt = assemble_system_prompt(
@@ -440,7 +470,12 @@ def chat(req: ChatRequest, engine: ChatEngine = Depends(get_engine)) -> ChatResp
             language=req.language,
             title=req.message[:80],
             regenerate=req.regenerate,
-            **_apply_thinking(params_for_mode(req.mode.value), req.thinking),
+            **_sampling_for_request(
+                req.mode.value,
+                req.thinking,
+                power=power,
+                power_enabled=_power_enabled(engine, req.student_id),
+            ),
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
@@ -476,6 +511,8 @@ def _start_chat_generation(
     preamble: PreambleWriter | None,
     generations: GenerationManager,
     allow_parallel: bool,
+    power: PowerGovernor,
+    power_enabled: bool,
 ) -> GenerationJob:
     """Prepare one turn and hand its iterator to the process-owned generation registry.
 
@@ -533,7 +570,12 @@ def _start_chat_generation(
         rag_block=rag_block,
     )
     cancel_event = threading.Event()
-    sampling_params = _apply_thinking(params_for_mode(req.mode.value), req.thinking)
+    sampling_params = _sampling_for_request(
+        req.mode.value,
+        req.thinking,
+        power=power,
+        power_enabled=power_enabled,
+    )
     structured_response = "response_format" in sampling_params
 
     try:
@@ -755,6 +797,7 @@ def chat_stream(
     ladder: DegradationLadder = Depends(get_ladder),
     preamble: PreambleWriter | None = Depends(get_preamble_writer),
     generations: GenerationManager = Depends(get_generation_manager),
+    power: PowerGovernor = Depends(get_power_governor),
     caller: str = Depends(require_caller),
 ) -> StreamingResponse:
     """Backwards-compatible streaming start; disconnecting no longer cancels inference."""
@@ -768,6 +811,8 @@ def chat_stream(
         preamble=preamble,
         generations=generations,
         allow_parallel=False,
+        power=power,
+        power_enabled=_power_enabled(engine, caller),
     )
     return _job_stream(job)
 
@@ -785,6 +830,7 @@ def generation_start(
     ladder: DegradationLadder = Depends(get_ladder),
     preamble: PreambleWriter | None = Depends(get_preamble_writer),
     generations: GenerationManager = Depends(get_generation_manager),
+    power: PowerGovernor = Depends(get_power_governor),
     caller: str = Depends(require_caller),
 ) -> GenerationStarted:
     """Start a durable browser turn and return its ids before subscribing to tokens."""
@@ -798,6 +844,8 @@ def generation_start(
         preamble=preamble,
         generations=generations,
         allow_parallel=engine.store.get_settings(caller).get("allow_parallel_chats", True),
+        power=power,
+        power_enabled=_power_enabled(engine, caller),
     )
     snapshot = job.snapshot()
     return GenerationStarted(
@@ -884,11 +932,21 @@ def user_settings_update(
     engine: ChatEngine = Depends(get_engine),
     caller: str = Depends(require_caller),
 ) -> UserSettings:
-    """Replace the current documented settings while preserving future unknown keys."""
-    values = engine.store.get_settings(caller)
-    values.update(requested.model_dump())
-    engine.store.put_settings(caller, values)
+    """Atomically update supplied settings while preserving sibling and future keys."""
+    # The browser saves switches independently. One SQL transaction/statement prevents two
+    # tabs toggling different controls from losing each other's updates.
+    values = engine.store.patch_settings(caller, requested.model_dump(exclude_unset=True))
     return UserSettings(**values)
+
+
+@router.get("/power/status", response_model=PowerStatus, tags=["runtime"])
+def power_status(
+    engine: ChatEngine = Depends(get_engine),
+    power: PowerGovernor = Depends(get_power_governor),
+    caller: str = Depends(require_caller),
+) -> PowerStatus:
+    """Power state of the serving laptop, not the browser/phone making this request."""
+    return PowerStatus.model_validate(power.status(enabled=_power_enabled(engine, caller)))
 
 
 @router.get("/conversations", response_model=ConversationList, tags=["conversations"])
@@ -1151,6 +1209,7 @@ def tutor_chat(
     engine: ChatEngine = Depends(get_engine),
     sessions: SessionManager = Depends(get_sessions),
     ladder: DegradationLadder = Depends(get_ladder),
+    power: PowerGovernor = Depends(get_power_governor),
 ) -> TutorReply:
     """One tutoring turn, admission-controlled (§8.2) and ladder-aware (§5.3).
 
@@ -1164,7 +1223,10 @@ def tutor_chat(
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
     student_id = turn.student_id or turn.session_id
-    sampling_params = params_for_mode(turn.mode.value)
+    sampling_params = power.adjust_sampling(
+        params_for_mode(turn.mode.value),
+        enabled=_power_enabled(engine, student_id),
+    )
     try:
         result = engine.chat(
             student_id=student_id,
@@ -1216,6 +1278,7 @@ def tutor_chat_stream(
     sessions: SessionManager = Depends(get_sessions),
     ladder: DegradationLadder = Depends(get_ladder),
     preamble: PreambleWriter | None = Depends(get_preamble_writer),
+    power: PowerGovernor = Depends(get_power_governor),
 ) -> StreamingResponse:
     """Token-streaming twin of `/tutor/chat` (§7.2: the tutoring turn is SSE).
 
@@ -1228,7 +1291,10 @@ def tutor_chat_stream(
     if decision.admission is Admission.REFUSED:
         raise HTTPException(status_code=503, detail=decision.message or ladder.busy_message())
 
-    sampling_params = params_for_mode(turn.mode.value)
+    sampling_params = power.adjust_sampling(
+        params_for_mode(turn.mode.value),
+        enabled=_power_enabled(engine, turn.student_id or turn.session_id),
+    )
     structured_response = "response_format" in sampling_params
 
     try:

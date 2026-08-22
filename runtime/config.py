@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -153,6 +153,21 @@ class RuntimeConfig(BaseSettings):
     # Container mode: the gateway lifespan starts/supervises llama-server itself.
     autostart: bool = False
 
+    # --- Battery-aware product policy ------------------------------------------------
+    # These shape Muta-owned optional work only. They never alter the machine-wide CPU
+    # governor or request system suspend. A learner can turn the request-level concessions
+    # off in Settings; host memory/thermal safety remains mandatory.
+    power_optimization: bool = True
+    power_poll_interval_s: float = Field(15.0, ge=1.0)
+    power_sensor_grace_s: float = Field(120.0, ge=1.0)
+    power_critical_percentage: float = Field(12.0, ge=0.0, le=100.0)
+    power_critical_time_s: int = Field(30 * 60, ge=0)
+    power_hysteresis_percentage: float = Field(3.0, ge=0.0, le=100.0)
+    power_hysteresis_time_s: int = Field(15 * 60, ge=0)
+    power_eco_reasoning_budget: int = Field(256, ge=0)
+    power_eco_max_tokens: int = Field(800, ge=1)
+    power_critical_max_tokens: int = Field(512, ge=1)
+
     # --- TTFT preamble ----------------------------------------------------------------
     # The in-process NumPy GPT-Neo (runtime/ttft.py) that writes while the 4B prefills.
     # Measured on the M2 dev host: 1.5 ms to first chunk, ~600 tok/s, 15 MB resident —
@@ -198,6 +213,12 @@ class RuntimeConfig(BaseSettings):
         if v is None or (isinstance(v, str) and v.strip() == ""):
             return None
         return v
+
+    @model_validator(mode="after")
+    def validate_power_recovery_threshold(self) -> RuntimeConfig:
+        if self.power_critical_percentage + self.power_hysteresis_percentage >= 100:
+            raise ValueError("power critical percentage plus hysteresis must stay below 100")
+        return self
 
     @property
     def model_path(self) -> Path:

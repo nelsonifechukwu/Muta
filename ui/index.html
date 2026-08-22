@@ -11,7 +11,7 @@
   <script src="locale-manifest.js?v=20260821-ui-locales-2"></script>
   <script src="locale-bootstrap.js?v=20260821-ui-locales-2"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260821-product-shell-2">
+  <link rel="stylesheet" href="styles.css?v=20260821-muta-power-1">
 </head>
 <body>
   <div id="app">
@@ -59,6 +59,12 @@
             <p id="model-note" role="status" data-i18n="model.defaultRecommended">The recommended model is selected by default.</p>
           </div>
         </div>
+        <button id="power-badge" class="power-badge" type="button" lang="en" hidden
+          aria-label="Open power settings">
+          <span id="power-badge-mode">Eco</span>
+          <span class="power-badge-dot">·</span>
+          <span id="power-badge-level">—</span>
+        </button>
         <a class="mobile-home-link" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home">Muta.</a>
       </header>
       <div id="chat-scroll">
@@ -153,6 +159,24 @@
           <input id="setting-parallel-chats" type="checkbox" role="switch" checked>
         </label>
       </div>
+      <div class="settings-section power-settings" lang="en">
+        <h3>Power</h3>
+        <label class="settings-row" for="setting-power-optimization">
+          <span>
+            <strong>Muta power optimization</strong>
+            <small>On battery, Muta uses bounded automatic reasoning and shorter replies. Explicit Extended reasoning and assessed work keep their full budget.</small>
+          </span>
+          <input id="setting-power-optimization" type="checkbox" role="switch" checked>
+        </label>
+        <div id="power-status" class="power-status" aria-live="polite">
+          <div class="power-status-heading">
+            <span id="power-status-dot" class="power-status-dot"></span>
+            <strong id="power-status-mode">Checking host power…</strong>
+          </div>
+          <p id="power-status-detail">Reading the battery of the laptop serving Muta.</p>
+          <p id="power-status-actions" class="power-status-actions" hidden></p>
+        </div>
+      </div>
       <p class="settings-footnote" data-i18n="settings.limits">Muta stays within the operator’s fixed inference-slot and memory limits.</p>
     </section>
   </div>
@@ -172,8 +196,8 @@
   <script src="locale-fr.js?v=20260821-ui-locales-2"></script>
   <script src="locale-generated.js?v=20260821-ui-locales-2"></script>
   <script src="locales.js?v=20260821-ui-locales-2"></script>
-  <script src="math.js?v=20260821-product-shell-2"></script>
-  <script src="app.js?v=20260821-product-shell-2"></script>
-  <script src="audio.js?v=20260821-product-shell-2"></script>
+  <script src="math.js?v=20260821-muta-power-1"></script>
+  <script src="app.js?v=20260821-muta-power-1"></script>
+  <script src="audio.js?v=20260821-muta-power-1"></script>
 </body>
 </html>

@@ -318,7 +318,7 @@ paths:
       tags:
       - conversations
       summary: User Settings Update
-      description: Replace the current documented settings while preserving future unknown keys.
+      description: Atomically update supplied settings while preserving sibling and future keys.
       operationId: user_settings_update_v1_settings_put
       parameters:
       - name: authorization
@@ -342,6 +342,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserSettings'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/power/status:
+    get:
+      tags:
+      - runtime
+      summary: Power Status
+      description: Power state of the serving laptop, not the browser/phone making this request.
+      operationId: power_status_v1_power_status_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PowerStatus'
         '422':
           description: Validation Error
           content:
@@ -1875,6 +1904,92 @@ components:
       - professor
       - exam
       title: Persona
+    PowerStatus:
+      properties:
+        optimization_enabled:
+          type: boolean
+          title: Optimization Enabled
+          default: true
+        available:
+          type: boolean
+          title: Available
+          default: false
+        mode:
+          type: string
+          enum:
+          - normal
+          - eco
+          - critical
+          title: Mode
+          description: Effective response policy for this learner.
+          default: normal
+        host_mode:
+          type: string
+          enum:
+          - normal
+          - eco
+          - critical
+          title: Host Mode
+          description: Shared serving laptop state before the learner preference.
+          default: normal
+        on_battery:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: On Battery
+        external_power_connected:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: External Power Connected
+        charging:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Charging
+        percentage:
+          anyOf:
+          - type: number
+            maximum: 100.0
+            minimum: 0.0
+          - type: 'null'
+          title: Percentage
+        energy_wh:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: 'null'
+          title: Energy Wh
+        energy_full_wh:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: 'null'
+          title: Energy Full Wh
+        energy_rate_w:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: 'null'
+          title: Energy Rate W
+        time_to_empty_s:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Time To Empty S
+        source:
+          type: string
+          title: Source
+          default: unavailable
+        actions:
+          items:
+            type: string
+          type: array
+          title: Actions
+      type: object
+      title: PowerStatus
+      description: Battery state of the laptop serving Muta, plus the effective learner policy.
     ReadyResponse:
       properties:
         ready:
@@ -2130,6 +2245,12 @@ components:
           title: Allow Parallel Chats
           description: Allow a learner to use more than one of the operator-budgeted inference slots across
             separate conversations. This never changes the server's slot/RAM ceiling.
+          default: true
+        power_optimization_enabled:
+          type: boolean
+          title: Power Optimization Enabled
+          description: Use battery-aware response limits for this learner when the host is discharging.
+            Memory, thermal and critical host safeguards cannot be disabled.
           default: true
       type: object
       title: UserSettings

@@ -112,6 +112,16 @@ def test_settings_round_trip(store: ConversationStore):
     assert store.get_settings("s1") == {"theme": "dark"}
 
 
+def test_settings_patch_preserves_independent_controls(store: ConversationStore):
+    assert store.patch_settings("s1", {"allow_parallel_chats": False}) == {
+        "allow_parallel_chats": False
+    }
+    assert store.patch_settings("s1", {"power_optimization_enabled": False}) == {
+        "allow_parallel_chats": False,
+        "power_optimization_enabled": False,
+    }
+
+
 # --- ownership & erasure (production-hardening) -----------------------------------------
 
 
@@ -127,7 +137,9 @@ def test_get_attachment_owner_via_linked_conversation(store: ConversationStore):
     # An attachment with no owner_id is still reachable by the owner of its conversation.
     cid = store.create_conversation("alice")
     mid = store.add_message(cid, "user", "see this")
-    aid = store.add_attachment("image", "image/png", b"\x89PNG", conversation_id=cid, message_id=mid)
+    aid = store.add_attachment(
+        "image", "image/png", b"\x89PNG", conversation_id=cid, message_id=mid
+    )
     assert store.get_attachment(aid, owner_id="alice") is not None
     assert store.get_attachment(aid, owner_id="mallory") is None
 
@@ -147,7 +159,9 @@ def test_delete_conversation_owner_scoped(store: ConversationStore):
 def test_delete_student_erases_all_owned_data(store: ConversationStore):
     cid = store.create_conversation("alice")
     store.add_message(cid, "user", "hi")
-    linked = store.add_attachment("image", "image/png", b"\x89PNG", conversation_id=cid, owner_id="alice")
+    linked = store.add_attachment(
+        "image", "image/png", b"\x89PNG", conversation_id=cid, owner_id="alice"
+    )
     orphan = store.add_attachment("audio", "audio/webm", b"\x1a\x45", owner_id="alice")
     store.put_settings("alice", {"theme": "dark"})
     # bob's data is untouched.

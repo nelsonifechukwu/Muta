@@ -18,6 +18,7 @@ from pathlib import Path
 
 from orchestrator.gateway.generations import GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder
+from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.pedagogy.twin import TwinStore
 from orchestrator.tools.renderer import DiagramRenderer
@@ -128,6 +129,24 @@ def get_ladder() -> DegradationLadder:
     return DegradationLadder(core_rss_probe=core_rss_bytes)
 
 
+@lru_cache(maxsize=1)
+def get_power_governor() -> PowerGovernor:
+    """Host battery policy. Construction reads nothing; the first status/request samples it."""
+    cfg = RuntimeConfig()
+    return PowerGovernor(
+        globally_enabled=cfg.power_optimization,
+        poll_interval_s=cfg.power_poll_interval_s,
+        sensor_grace_s=cfg.power_sensor_grace_s,
+        critical_percentage=cfg.power_critical_percentage,
+        critical_time_s=cfg.power_critical_time_s,
+        hysteresis_percentage=cfg.power_hysteresis_percentage,
+        hysteresis_time_s=cfg.power_hysteresis_time_s,
+        eco_reasoning_budget=cfg.power_eco_reasoning_budget,
+        eco_max_tokens=cfg.power_eco_max_tokens,
+        critical_max_tokens=cfg.power_critical_max_tokens,
+    )
+
+
 def core_rss_bytes() -> int:
     """RSS of the llama-server process tree. RSS, not PSS: it is the unit the competition
     profiler scores (docs/rules-digest.md), so it is the unit the ladder reacts to."""
@@ -201,7 +220,9 @@ def get_sessions() -> SessionManager:
 
 @lru_cache(maxsize=1)
 def get_vision() -> VisionManager:
-    return VisionManager(admit=lambda: get_ladder().may_spawn_vision())
+    return VisionManager(
+        admit=lambda: get_ladder().may_spawn_vision() and get_power_governor().vision_allowed()
+    )
 
 
 @lru_cache(maxsize=1)
