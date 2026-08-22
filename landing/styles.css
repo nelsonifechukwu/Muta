@@ -509,8 +509,15 @@ h3 { letter-spacing: -.018em; }
   align-items: center;
 }
 
-.lesson-intro { max-width: 31rem; }
-.lesson-intro h2 { max-width: 11ch; margin: .9rem 0 1.15rem; font-size: clamp(3rem, 5.2vw, 5.1rem); line-height: .95; }
+.lesson-intro { min-width: 0; max-width: 31rem; container-type: inline-size; }
+.lesson-intro h2 {
+  max-width: 100%;
+  margin: .9rem 0 1.15rem;
+  font-size: clamp(2.85rem, 4.2vw, 3.9rem);
+  font-size: clamp(2.85rem, 12.5cqi, 3.9rem);
+  line-height: .97;
+  text-wrap: balance;
+}
 .lesson-intro > p:not(.eyebrow, .lesson-track-list) { max-width: 29rem; margin: 0; color: var(--night-muted); font-size: 1rem; line-height: 1.72; }
 .lesson-rhythm { margin: 2rem 0 1.1rem; padding: .9rem 0 .9rem 1rem; border-left: 2px solid var(--sun); }
 .lesson-rhythm span, .lesson-rhythm strong { display: block; }
@@ -777,6 +784,12 @@ h3 { letter-spacing: -.018em; }
   .mobile-nav { display: none; }
 }
 
+@media (max-width: 960px) {
+  .lesson-layout { grid-template-columns: 1fr; gap: 2.8rem; align-items: start; }
+  .lesson-intro { max-width: 39rem; }
+  .lesson-intro > p:not(.eyebrow, .lesson-track-list) { max-width: 36rem; }
+}
+
 @media (max-width: 780px) {
   .nav-launch { display: none; }
   .hero { padding-top: 3.6rem; }
@@ -790,10 +803,6 @@ h3 { letter-spacing: -.018em; }
   .proof-grid div:nth-child(3), .proof-grid div:nth-child(4) { border-bottom: 0; }
   .proof-grid div:nth-child(3) { padding-left: 0; }
 
-  .lesson-layout { grid-template-columns: 1fr; gap: 2.8rem; align-items: start; }
-  .lesson-intro { max-width: 39rem; }
-  .lesson-intro h2 { max-width: 12ch; }
-  .lesson-intro > p:not(.eyebrow, .lesson-track-list) { max-width: 36rem; }
   .track-tabs small { display: none; }
   .track-tabs button { grid-template-columns: auto 1fr; padding-inline: .7rem; border-right: 1px solid var(--night-line); }
 

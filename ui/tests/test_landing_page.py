@@ -73,6 +73,7 @@ def test_landing_has_no_dead_public_repository_links() -> None:
 def test_learning_examples_cover_all_tracks_and_pause_during_interaction() -> None:
     html = (LANDING / "index.html").read_text()
     script = (LANDING / "script.js").read_text()
+    css = (LANDING / "styles.css").read_text()
 
     assert html.count("data-learning-slide") == 3
     for category in ("sciences", "humanities", "business"):
@@ -85,13 +86,17 @@ def test_learning_examples_cover_all_tracks_and_pause_during_interaction() -> No
     assert html.index('class="lesson-intro"') < html.index('data-carousel-track')
     assert html.count('class="lesson-intro"') == 1
     assert "lesson-copy" not in html
-    assert ".lesson-viewport { overflow: hidden; overflow: clip;" in (LANDING / "styles.css").read_text()
+    assert ".lesson-viewport { overflow: hidden; overflow: clip;" in css
+    assert "container-type: inline-size" in css
+    assert "12.5cqi" in css
+    assert "text-wrap: balance" in css
+    assert "@media (max-width: 960px)" in css
     assert "AUTO_ADVANCE_MS" in script
     assert 'carouselInteraction?.matches(":hover")' in script
     assert 'carouselInteraction?.addEventListener("pointerleave"' in script
     assert 'learningCarousel.addEventListener("pointerleave"' not in script
     assert "humanitiesPrompt" not in script and "businessPrompt" not in script
-    assert ".track-tabs button:focus-visible" in (LANDING / "styles.css").read_text()
+    assert ".track-tabs button:focus-visible" in css
     assert "keyboardMode" in script
     assert 'prefers-reduced-motion: reduce' in script
     assert "IntersectionObserver" in script
