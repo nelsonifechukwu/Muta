@@ -346,6 +346,17 @@ function renderMarkdown(el, text) {
   MutaMath.render(el, text);
 }
 
+/** A complete assistant turn may contain one declarative visualization fence. Streaming keeps
+ * using ordinary Markdown so an incomplete fence is harmless; only this completion path removes
+ * a valid spec from the prose and mounts its sandboxed frame. */
+function renderCompletedReply(wrap, prose, text) {
+  const extracted = window.MutaViz
+    ? window.MutaViz.extract(text)
+    : { markdown: text, visualizations: [] };
+  renderMarkdown(prose, extracted.markdown);
+  window.MutaViz?.renderAll(wrap, extracted.visualizations);
+}
+
 function clearCursor(root) {
   root.classList.remove("cursor");
   for (const el of root.querySelectorAll(".cursor")) el.classList.remove("cursor");
@@ -646,7 +657,7 @@ function beginAssistantMessage(onAnswerNow) {
       clearPreamble(); // a turn that ended before the engine spoke leaves nothing behind
       settleThinking(); // a reply stopped mid-think still gets its label settled
       cancelRender();
-      if (full.trim()) renderMarkdown(prose, full);
+      if (full.trim()) renderCompletedReply(wrap, prose, full);
       clearCursor(prose);
       scrollToBottom();
     },
@@ -697,8 +708,8 @@ function renderHistoryMessage(m) {
     const prose = document.createElement("div");
     prose.className = "prose";
     prose.dir = "auto";
-    renderMarkdown(prose, m.content);
     wrap.appendChild(prose);
+    renderCompletedReply(wrap, prose, m.content);
     messagesEl.appendChild(wrap);
   }
 }
@@ -909,7 +920,8 @@ async function loadConversation(
   conversationRetryTarget = null;
   currentViewId = newViewId();
   setConversationLocation(cid, { mode: historyMode });
-  messagesEl.innerHTML = "";
+  window.MutaViz?.cleanup(messagesEl);
+  messagesEl.replaceChildren();
   const restoring = targetJobBeforeLoad || jobForConversation(cid);
   let messages = body.messages;
   // The server writes a streaming reply through to its row as it arrives, so the in-flight
@@ -974,7 +986,8 @@ function newChat({ historyMode = "push" } = {}) {
   setConversationLocation(null, { mode: historyMode });
   pendingAttachments = [];
   renderChips();
-  messagesEl.innerHTML = "";
+  window.MutaViz?.cleanup(messagesEl);
+  messagesEl.replaceChildren();
   emptyStateEl.style.display = "";
   renderQueue();
   scrollToBottom({ force: true });

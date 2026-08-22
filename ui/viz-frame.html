@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; child-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Muta visualization</title>
+  <link rel="stylesheet" href="viz-frame.css?v=20260821-live-viz-1">
+</head>
+<body>
+  <main id="viz-shell">
+    <div id="viz-stage" role="group"></div>
+    <button id="viz-replay" type="button" hidden>Replay</button>
+    <p id="viz-error" role="status" hidden>This visualization could not be drawn.</p>
+  </main>
+  <script src="visualizations.js?v=20260821-live-viz-1"></script>
+  <script src="viz-frame.js?v=20260821-live-viz-1"></script>
+</body>
+</html>
