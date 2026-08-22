@@ -286,6 +286,195 @@ const sendBtn = $("#btn-send");
 const emptyStateEl = $("#empty-state");
 const chatScroller = $("#chat-scroll");
 
+// The composer is a real multiline textbox, but a native <textarea> cannot place a PDF
+// reference inside a sentence. Keep one plain-text model (placement markers count as one
+// character) behind this controlled contenteditable surface so queues, refresh recovery and the
+// API remain ordinary strings while the student sees the document exactly where they selected it.
+function composerMarker(node) {
+  if (!(node instanceof Element) || !node.classList.contains("composer-resource-mention")) {
+    return "";
+  }
+  const code = Number(node.dataset.markerCode);
+  const marker = Number.isInteger(code) ? String.fromCharCode(code) : "";
+  return window.MutaResourceMentions.isPlacementMarker(marker) ? marker : "";
+}
+
+function serializeComposerNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) return node.data;
+  if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
+    return "";
+  }
+  const marker = composerMarker(node);
+  if (marker) return marker;
+  if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "BR") return "\n";
+  return [...node.childNodes].map(serializeComposerNode).join("");
+}
+
+function composerValue() {
+  return serializeComposerNode(inputEl);
+}
+
+function composerOffsetAt(container, offset) {
+  if (!inputEl.contains(container) && container !== inputEl) return composerValue().length;
+  const range = document.createRange();
+  range.selectNodeContents(inputEl);
+  try {
+    range.setEnd(container, offset);
+  } catch {
+    return composerValue().length;
+  }
+  return serializeComposerNode(range.cloneContents()).length;
+}
+
+function composerSelection() {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount) {
+    const end = composerValue().length;
+    return { start: end, end };
+  }
+  const range = selection.getRangeAt(0);
+  if (
+    (!inputEl.contains(range.startContainer) && range.startContainer !== inputEl) ||
+    (!inputEl.contains(range.endContainer) && range.endContainer !== inputEl)
+  ) {
+    const end = composerValue().length;
+    return { start: end, end };
+  }
+  const start = composerOffsetAt(range.startContainer, range.startOffset);
+  const end = composerOffsetAt(range.endContainer, range.endOffset);
+  return { start: Math.min(start, end), end: Math.max(start, end) };
+}
+
+function composerPointAt(offset) {
+  let remaining = Math.max(0, Math.min(composerValue().length, Number(offset) || 0));
+  const visit = (parent) => {
+    for (let index = 0; index < parent.childNodes.length; index += 1) {
+      const child = parent.childNodes[index];
+      const marker = composerMarker(child);
+      if (marker) {
+        if (remaining === 0) return { node: parent, offset: index };
+        remaining -= 1;
+        if (remaining === 0) return { node: parent, offset: index + 1 };
+        continue;
+      }
+      if (child.nodeType === Node.TEXT_NODE) {
+        if (remaining <= child.data.length) return { node: child, offset: remaining };
+        remaining -= child.data.length;
+        continue;
+      }
+      if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "BR") {
+        if (remaining === 0) return { node: parent, offset: index };
+        remaining -= 1;
+        if (remaining === 0) return { node: parent, offset: index + 1 };
+        continue;
+      }
+      const nested = visit(child);
+      if (nested) return nested;
+    }
+    return null;
+  };
+  return visit(inputEl) || { node: inputEl, offset: inputEl.childNodes.length };
+}
+
+function setComposerSelection(start, end = start) {
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  const startPoint = composerPointAt(start);
+  const endPoint = composerPointAt(end);
+  range.setStart(startPoint.node, startPoint.offset);
+  range.setEnd(endPoint.node, endPoint.offset);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function composerResourceNode(resource) {
+  const displayName = window.MutaResourceMentions.nameFor(resource);
+  const mention = document.createElement("span");
+  mention.className = "composer-resource-mention";
+  mention.contentEditable = "false";
+  mention.dir = "auto";
+  mention.title = displayName;
+  mention.dataset.markerCode = String(resource.marker.charCodeAt(0));
+  mention.setAttribute("aria-label", featureT("rag.document", { name: displayName }));
+  const label = document.createElement("span");
+  label.textContent = displayName;
+  mention.append(resourcePdfIcon("composer-resource-mention-icon"), label);
+  return mention;
+}
+
+function renderComposerValue(value, { start = null, end = start } = {}) {
+  const source = String(value || "");
+  const wasFocused = document.activeElement === inputEl;
+  const previous = start == null && wasFocused ? composerSelection() : null;
+  const resources = new Map(selectedRagResources
+    .filter((resource) => window.MutaResourceMentions.isPlacementMarker(resource.marker))
+    .map((resource) => [resource.marker, resource]));
+  const fragment = document.createDocumentFragment();
+  let text = "";
+  const flush = () => {
+    if (!text) return;
+    fragment.appendChild(document.createTextNode(text));
+    text = "";
+  };
+  for (let offset = 0; offset < source.length; offset += 1) {
+    const resource = resources.get(source[offset]);
+    if (!resource) {
+      text += source[offset];
+      continue;
+    }
+    flush();
+    fragment.appendChild(composerResourceNode(resource));
+  }
+  flush();
+  inputEl.replaceChildren(fragment);
+  inputEl.dataset.empty = String(source.length === 0);
+  if (wasFocused || start != null) {
+    const selection = previous || { start, end: end ?? start };
+    setComposerSelection(selection.start, selection.end);
+  }
+}
+
+function setComposerValue(value, { start = null, end = start } = {}) {
+  const source = String(value || "");
+  renderComposerValue(source, {
+    start: start == null ? source.length : start,
+    end: end == null ? (start == null ? source.length : start) : end,
+  });
+}
+
+function replaceComposerRange(text, start, end = start) {
+  const source = composerValue();
+  const inserted = String(text || "").replace(/\r\n?/g, "\n");
+  const next = source.slice(0, start) + inserted + source.slice(end);
+  setComposerValue(next, { start: start + inserted.length });
+  inputEl.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+}
+
+function deleteComposerReferenceForKey(key) {
+  const source = composerValue();
+  const selection = composerSelection();
+  let start = selection.start;
+  let end = selection.end;
+  if (start === end && key === "Backspace" && start > 0) start -= 1;
+  if (start === end && key === "Delete" && end < source.length) end += 1;
+  const removed = source.slice(start, end);
+  if (![...removed].some((char) => window.MutaResourceMentions.isPlacementMarker(char))) {
+    return false;
+  }
+  const next = source.slice(0, start) + source.slice(end);
+  selectedRagResources = selectedRagResources.filter(
+    (resource) => !resource.marker || next.includes(resource.marker),
+  );
+  setComposerValue(next, { start });
+  inputEl.dispatchEvent(new InputEvent("input", {
+    bubbles: true,
+    inputType: key === "Backspace" ? "deleteContentBackward" : "deleteContentForward",
+  }));
+  autoGrow();
+  return true;
+}
+
 // --- Muta Share account gate ----------------------------------------------------------
 const SHARE_ENROLLMENT_KEY = "muta-share-enrollment";
 let shareEnrollmentTimer = null;
@@ -1758,7 +1947,7 @@ async function addAudio(file) {
     renderChips();
   }
   if (body.text) {
-    inputEl.value = body.text;
+    setComposerValue(body.text);
     autoGrow();
     send(); // spoken/uploaded question goes straight to the tutor
   } else {
@@ -1996,10 +2185,10 @@ function drainQueue(cid = conversationId) {
 }
 
 function restoreDraft(item) {
-  inputEl.value = item.typed;
   pendingAttachments = item.attachments;
   useRag = item.useRag === true;
   selectedRagResources = (item.ragResources || []).slice(0, MAX_SELECTED_RAG_RESOURCES);
+  setComposerValue(item.typed);
   useWeb = item.useWeb === true;
   ragButton.classList.toggle("active", useRag);
   ragButton.setAttribute("aria-pressed", String(useRag));
@@ -2016,7 +2205,7 @@ function send(steer = false) {
   if ($("#model-trigger")?.dataset.switching === "true") {
     return toast(t("reply.modelLoading"));
   }
-  const typed = inputEl.value.trim();
+  const typed = composerValue().trim();
   if (readingAnImage()) return toast(t("reply.imageReading"));
   if (
     !typed &&
@@ -2043,7 +2232,7 @@ function send(steer = false) {
   selectedRagResources = [];
   renderChips();
   renderRagChips();
-  inputEl.value = "";
+  setComposerValue("");
   autoGrow();
 
   const currentJob = viewingLiveStream();
@@ -2567,6 +2756,9 @@ sendBtn.addEventListener("click", () => {
   else send();
 });
 inputEl.addEventListener("keydown", (e) => {
+  // Enter confirms many CJK/Korean IME candidates. It must reach the input method instead of
+  // selecting a PDF, inserting a line break, or sending an unfinished composition.
+  if (e.isComposing || e.keyCode === 229) return;
   if (!mentionMenu.hidden) {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -2594,11 +2786,64 @@ inputEl.addEventListener("keydown", (e) => {
       return;
     }
   }
+  if ((e.key === "Backspace" || e.key === "Delete") && deleteComposerReferenceForKey(e.key)) {
+    e.preventDefault();
+    return;
+  }
+  if (e.key === "Enter" && e.shiftKey) {
+    e.preventDefault();
+    const selection = composerSelection();
+    replaceComposerRange("\n", selection.start, selection.end);
+    autoGrow();
+    return;
+  }
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     // Cmd+Enter is the macOS spelling of Ctrl+Enter; both steer.
     send(e.ctrlKey || e.metaKey);
   }
+});
+inputEl.addEventListener("beforeinput", (event) => {
+  if (event.isComposing) return;
+  // Virtual keyboards may emit beforeinput without a useful keydown. Preserve the same contract:
+  // Enter sends, while an explicit line-break input inserts one plain-text newline.
+  if (event.inputType === "insertParagraph") {
+    event.preventDefault();
+    if (!mentionMenu.hidden) {
+      if (mentionMatches[mentionActiveIndex]?.status === "ready") {
+        selectMention(mentionMatches[mentionActiveIndex]);
+      }
+    } else {
+      send();
+    }
+  } else if (event.inputType === "insertLineBreak") {
+    event.preventDefault();
+    const selection = composerSelection();
+    replaceComposerRange("\n", selection.start, selection.end);
+    autoGrow();
+  }
+});
+inputEl.addEventListener("paste", (event) => {
+  event.preventDefault();
+  const selection = composerSelection();
+  replaceComposerRange(event.clipboardData?.getData("text/plain") || "", selection.start, selection.end);
+  autoGrow();
+});
+inputEl.addEventListener("pointerdown", (event) => {
+  const mention = event.target.closest?.(".composer-resource-mention");
+  if (!mention || !inputEl.contains(mention)) return;
+  event.preventDefault();
+  inputEl.focus();
+  const siblingIndex = [...mention.parentNode.childNodes].indexOf(mention);
+  // Native text editing does not rerender the PDF node, so derive its current logical offset
+  // from the live DOM instead of caching a position that becomes stale as the student types.
+  const offset = composerOffsetAt(mention.parentNode, Math.max(0, siblingIndex));
+  const bounds = mention.getBoundingClientRect();
+  const rtl = getComputedStyle(mention).direction === "rtl";
+  const visualAfter = event.clientX >= bounds.left + bounds.width / 2;
+  const logicalAfter = rtl ? !visualAfter : visualAfter;
+  setComposerSelection(offset + (logicalAfter ? 1 : 0));
+  closeMentionMenu();
 });
 
 // Exposed for audio.js (the voice loop reuses the transcript rendering).
@@ -2630,7 +2875,6 @@ window.MutaChat = {
 
 // --- learner PDF resources + @ picker -------------------------------------------------
 const ragButton = $("#btn-rag");
-const ragChips = $("#rag-resource-chips");
 const mentionMenu = $("#resource-mention-menu");
 const mentionStatus = $("#resource-mention-status");
 const resourceList = $("#resource-list");
@@ -2641,12 +2885,20 @@ function resourceStatusLabel(resource) {
 
 function stripResourcePlacement(resource) {
   if (!window.MutaResourceMentions.isPlacementMarker(resource?.marker)) return;
-  const caret = inputEl.selectionStart;
-  const beforeCaret = inputEl.value.slice(0, caret);
-  const shortenedBefore = window.MutaResourceMentions.removeMarker(beforeCaret, resource.marker);
-  inputEl.value = window.MutaResourceMentions.removeMarker(inputEl.value, resource.marker);
-  const nextCaret = Math.max(0, caret - (beforeCaret.length - shortenedBefore.length));
-  inputEl.setSelectionRange(nextCaret, nextCaret);
+  const marker = resource.marker;
+  const selection = composerSelection();
+  const source = composerValue();
+  const beforeStart = source.slice(0, selection.start);
+  const beforeEnd = source.slice(0, selection.end);
+  const next = window.MutaResourceMentions.removeMarker(source, marker);
+  const start = selection.start - (
+    beforeStart.length - window.MutaResourceMentions.removeMarker(beforeStart, marker).length
+  );
+  const end = selection.end - (
+    beforeEnd.length - window.MutaResourceMentions.removeMarker(beforeEnd, marker).length
+  );
+  resource.marker = undefined;
+  setComposerValue(next, { start: Math.max(0, start), end: Math.max(0, end) });
 }
 
 function deselectRagResource(resource, { focus = false } = {}) {
@@ -2665,36 +2917,7 @@ function clearSelectedRagResources() {
 }
 
 function renderRagChips() {
-  ragChips.innerHTML = "";
-  ragChips.hidden = !useRag || selectedRagResources.length === 0;
-  selectedRagResources.forEach((resource) => {
-    const displayName = window.MutaResourceMentions.nameFor(resource);
-    const chip = document.createElement("span");
-    chip.className = "rag-chip";
-    chip.title = displayName;
-    chip.setAttribute("aria-label", featureT("rag.document", { name: displayName }));
-    const label = document.createElement("span");
-    label.className = "rag-chip-label";
-    label.dir = "auto";
-    label.textContent = displayName;
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.setAttribute("aria-label", featureT("rag.remove", { name: displayName }));
-    const removeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    removeIcon.setAttribute("viewBox", "0 0 24 24");
-    removeIcon.setAttribute("aria-hidden", "true");
-    const removePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    removePath.setAttribute("d", "m7 7 10 10M17 7 7 17");
-    removePath.setAttribute("fill", "none");
-    removePath.setAttribute("stroke", "currentColor");
-    removePath.setAttribute("stroke-width", "1.8");
-    removePath.setAttribute("stroke-linecap", "round");
-    removeIcon.appendChild(removePath);
-    remove.appendChild(removeIcon);
-    remove.addEventListener("click", () => deselectRagResource(resource, { focus: true }));
-    chip.append(resourceDocumentIcon("rag-chip-icon"), label, remove);
-    ragChips.appendChild(chip);
-  });
+  renderComposerValue(composerValue());
 }
 
 function closeMentionMenu() {
@@ -2708,13 +2931,14 @@ function closeMentionMenu() {
 
 function mentionTrigger() {
   if (!useRag) return null;
-  const caret = inputEl.selectionStart;
-  const before = inputEl.value.slice(0, caret);
+  const caret = composerSelection().start;
+  const source = composerValue();
+  const before = source.slice(0, caret);
   const at = before.lastIndexOf("@");
   if (at < 0 || /[}\n]/.test(before.slice(at + 1))) return null;
   const prefix = before.slice(at + 1).replace(/^\{/, "");
   // Do not turn an email-like token into a resource picker.
-  if (!window.MutaResourceMentions.hasTriggerBoundary(inputEl.value, at)) return null;
+  if (!window.MutaResourceMentions.hasTriggerBoundary(source, at)) return null;
   return { at, caret, query: prefix.trim().toLowerCase() };
 }
 
@@ -2729,15 +2953,15 @@ function selectMention(resource) {
     return;
   }
   const existing = selectedRagResources.find((item) => item.id === resource.id);
+  const source = composerValue();
   const next = existing?.marker
     ? {
-        text: inputEl.value.slice(0, trigger.at) + existing.marker +
-          inputEl.value.slice(trigger.caret),
+        text: source.slice(0, trigger.at) + existing.marker + source.slice(trigger.caret),
         caret: trigger.at + existing.marker.length,
         marker: existing.marker,
       }
     : window.MutaResourceMentions.place(
-        inputEl.value,
+        source,
         trigger.at,
         trigger.caret,
         selectedRagResources,
@@ -2746,8 +2970,6 @@ function selectMention(resource) {
     closeMentionMenu();
     return toast(featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES }), 4000);
   }
-  inputEl.value = next.text;
-  inputEl.setSelectionRange(next.caret, next.caret);
   if (!alreadySelected) {
     selectedRagResources.push({
       id: resource.id,
@@ -2757,7 +2979,7 @@ function selectMention(resource) {
   } else if (!existing.marker) {
     existing.marker = next.marker;
   }
-  renderRagChips();
+  setComposerValue(next.text, { start: next.caret });
   closeMentionMenu();
   autoGrow();
   inputEl.focus();
@@ -2976,12 +3198,14 @@ ragButton.addEventListener("click", () => {
 });
 
 inputEl.addEventListener("input", () => {
-  const draft = inputEl.value;
+  const draft = composerValue();
   const before = selectedRagResources.length;
   selectedRagResources = selectedRagResources.filter(
     (resource) => !resource.marker || draft.includes(resource.marker),
   );
   if (selectedRagResources.length !== before) renderRagChips();
+  if (!draft && inputEl.childNodes.length) renderComposerValue("", { start: 0 });
+  else inputEl.dataset.empty = String(draft.length === 0);
   renderMentionMenu();
 });
 inputEl.addEventListener("click", renderMentionMenu);

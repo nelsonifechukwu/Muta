@@ -10,9 +10,11 @@ make both states especially noisy.
 ## Desired interaction
 
 1. Typing `@` still opens the keyboard-accessible ready-resource picker.
-2. Choosing a resource removes the typed query from the visible textarea and leaves one compact
-   document chip in the composer. An invisible, single-character placement marker remains at the
-   selected `@` position, and the resource remains selected by its server-owned ID.
+2. Choosing a resource replaces the typed query with one inline document reference at that exact
+   point in the editable sentence. The composer is a controlled, multiline rich-text textbox:
+   ordinary text remains editable text, while the PDF icon and filename are one atomic,
+   non-editable inline object backed by an invisible single-character placement marker. There is
+   no duplicate attachment row above the query.
 3. At send time, Muta replaces that placement marker with the canonical mention token in place.
    This keeps current retrieval and durable history compatible without showing implementation
    syntax while the student writes or moving the document reference to the end of the sentence.
@@ -22,7 +24,8 @@ make both states especially noisy.
    technology. A live turn links only an unambiguous server-owned ID; historical name-only
    mentions stay inert rather than guessing after a deletion or same-name re-upload.
 5. Old conversations containing raw mention tokens immediately receive the same presentation.
-6. Removing a composer chip removes the selected resource; typed legacy tokens remain supported.
+6. Removing an inline composer reference removes the selected resource; typed legacy tokens remain
+   supported.
 
 ## Safety and compatibility
 
@@ -33,13 +36,13 @@ make both states especially noisy.
   remain text.
 - The request still sends `resource_ids`; the canonical token is added once and never duplicated.
 - Placement markers are chosen from a fixed allow-list, persisted with queued/draft resource
-  records, and removed with their composer chip. Deleting a marker directly also deselects the
-  corresponding resource.
+  records, and removed with their inline composer reference. Backspace/Delete treats a reference
+  as one character, and deleting its marker also deselects the corresponding resource.
 - Queueing, draft restoration, history rendering, attachments, and RAG preflight share the same
   message/resource state.
-- Composer chips wrap as a collection, keep each label on one line, and retain a non-shrinking
-  remove target. Sent mentions are prose-level inline references and wrap with the surrounding
-  sentence instead of truncating the document name.
+- Composer and sent mentions are both prose-level inline references that wrap with the surrounding
+  sentence instead of truncating the document name. The composer retains native textbox keyboard,
+  selection, paste-as-plain-text, IME, queue, refresh, and screen-reader semantics.
 
 ## Verification
 

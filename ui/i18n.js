@@ -275,7 +275,7 @@
     return interpolate(value, variables);
   }
 
-  const translatableAttributes = ["title", "aria-label", "placeholder"];
+  const translatableAttributes = ["title", "aria-label", "placeholder", "data-placeholder"];
 
   function variablesFor(element, suffix = "") {
     const raw = element.getAttribute(`data-i18n${suffix}-vars`);

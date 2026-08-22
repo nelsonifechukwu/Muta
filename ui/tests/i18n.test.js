@@ -243,9 +243,12 @@ test("locale changes text, attributes, direction, interpolation, and persistence
   heading.dataset.i18n = "settings.title";
   const close = new FakeElement("button");
   close.setAttribute("data-i18n-aria-label", "settings.close");
+  const composer = new FakeElement("div");
+  composer.setAttribute("data-i18n-data-placeholder", "composer.placeholder");
   const doc = fakeDocument({
     "[data-i18n]": [heading],
     "[data-i18n-aria-label]": [close],
+    "[data-i18n-data-placeholder]": [composer],
   });
 
   assert.equal(i18n.setLocale("ar-EG", { doc }), true);
@@ -255,6 +258,7 @@ test("locale changes text, attributes, direction, interpolation, and persistence
   assert.equal(doc.documentElement.dir, "rtl");
   assert.equal(heading.textContent, "الإعدادات");
   assert.equal(close.getAttribute("aria-label"), "إغلاق الإعدادات");
+  assert.equal(composer.getAttribute("data-placeholder"), i18n.catalogs.ar["composer.placeholder"]);
   assert.equal(i18n.t("model.loadingNamed", { model: "Qwen" }), "جارٍ تحميل Qwen…");
   assert.equal(saved.get(i18n.STORAGE_KEY), "ar");
 

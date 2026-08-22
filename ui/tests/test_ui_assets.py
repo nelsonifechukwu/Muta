@@ -309,13 +309,25 @@ def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
     assert "(?![\\p{L}\\p{N}\\p{M}_]|\\.[\\p{L}\\p{N}])/gu" in mentions
     assert "result = result.split(marker).join(token)" in mentions
 
-    composer_chip = "".join(_blocks(".rag-chip"))
+    composer_mention = "".join(_blocks(".composer-resource-mention"))
     sent_mention = "".join(_blocks(".user-resource-mention"))
-    assert "min-width: 0" in composer_chip and "max-width: min(22rem, 100%)" in composer_chip
+    assert 'contenteditable="true" role="textbox"' in HTML
+    assert 'aria-multiline="true"' in HTML
+    assert 'id="rag-resource-chips"' not in HTML
+    assert "display: inline" in composer_mention and "overflow-wrap: anywhere" in composer_mention
     assert "display: inline" in sent_mention and "overflow-wrap: anywhere" in sent_mention
+    assert "border:" not in composer_mention and "background:" not in composer_mention
     assert "border:" not in sent_mention and "background:" not in sent_mention
+    assert 'mention.className = "composer-resource-mention"' in js
+    assert 'mention.contentEditable = "false"' in js
+    assert "serializeComposerNode" in js and "composerMarker" in js
+    assert "deleteComposerReferenceForKey" in js
+    assert "e.isComposing || e.keyCode === 229" in js
+    assert "if (event.isComposing) return" in js
+    assert "composerOffsetAt(mention.parentNode" in js
+    assert "dataset.composerOffset" not in js
     assert "resourcePdfIcon(\"user-resource-mention-icon\")" in js
-    assert ".rag-chip-icon" in CSS and ".user-resource-mention-icon" in CSS
+    assert ".composer-resource-mention-icon" in CSS and ".user-resource-mention-icon" in CSS
 
 
 def test_selected_locale_is_generation_metadata_not_a_user_message_prefix():
@@ -347,7 +359,7 @@ def test_refresh_retries_recovery_and_keeps_same_chat_followups():
     assert 't("reply.previousStarting")' in js
     assert "Starting your previous message — this draft is still here." in I18N
     assert js.index("startingConversations.has(startKeyFor(conversationId))") < js.index(
-        'inputEl.value = ""', js.index("function send(")
+        'setComposerValue("")', js.index("function send(")
     )
     assert "expectedViewStillVisible" in js and "returnedToConversation" in js
     assert 't("reply.earlierFinishing")' in js
@@ -530,7 +542,8 @@ def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
         'link.dir = "auto"',
     ):
         assert assignment in js
-    assert '<textarea id="input" rows="1" dir="auto"' in html
+    assert '<div id="input" class="composer-input" contenteditable="true" role="textbox"' in html
+    assert 'aria-multiline="true" dir="auto"' in html
 
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
@@ -539,6 +552,7 @@ def test_authored_entry_assets_share_one_cache_busting_revision():
     )
     assert len(versions) == 5
     assert len(set(versions)) == 1
+    assert re.search(r'src="i18n\.js\?v=([^"]+)"', HTML).group(1) == versions[0]
 
 
 def test_muta_share_gate_is_labeled_persistent_and_role_scoped():
