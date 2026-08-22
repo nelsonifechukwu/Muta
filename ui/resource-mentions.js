@@ -4,11 +4,21 @@
 ((global) => {
   const MENTION = /@\{([^{}\n]+)\}(?![\p{L}\p{N}\p{M}_]|\.[\p{L}\p{N}])/gu;
   const BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+  const C0_CONTROLS = /[\x00-\x1f\x7f]/g;
+  const NON_TEXT_C0_CONTROLS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g;
+  const RESOURCE_ID = /^[0-9a-f]{32}$/;
   const FALLBACK_NAME = "resource.pdf";
+  // Invisible, one-code-unit anchors preserve where a picker selection belongs without exposing
+  // transport syntax in the textarea. C0 separators are internal-only, non-printing, removed
+  // from uploaded names, and cannot alter shaping in Persian, Mongolian, or joined emoji.
+  const PLACEMENT_MARKERS = Array.from({ length: 8 }, (_, index) =>
+    String.fromCharCode(0x18 + index)
+  );
 
   function cleanName(value) {
     return String(value || "")
       .replace(BIDI_CONTROLS, "")
+      .replace(C0_CONTROLS, " ")
       .replace(/[{}\n]/g, " ")
       .replace(/\s+/g, " ")
       .replace(/\s+([.,;:!?\])])/g, "$1")
@@ -30,6 +40,10 @@
     return cleanName(resource?.name) || FALLBACK_NAME;
   }
 
+  function isPlacementMarker(marker) {
+    return PLACEMENT_MARKERS.includes(marker);
+  }
+
   function removeTrigger(text, at, caret) {
     const source = String(text || "");
     const start = Math.max(0, Math.min(source.length, Number(at) || 0));
@@ -42,6 +56,59 @@
     const join = before && after && !punctuationFollows && !openingPunctuationPrecedes &&
       !lineBoundary ? " " : "";
     return { text: before + join + after, caret: before.length + join.length };
+  }
+
+  function place(text, at, caret, resources = []) {
+    const source = String(text || "");
+    const start = Math.max(0, Math.min(source.length, Number(at) || 0));
+    const end = Math.max(start, Math.min(source.length, Number(caret) || start));
+    const claimed = new Set((Array.isArray(resources) ? resources : [])
+      .map((resource) => resource?.marker)
+      .filter(isPlacementMarker));
+    const marker = PLACEMENT_MARKERS.find((candidate) =>
+      !claimed.has(candidate) && !source.includes(candidate)
+    ) || "";
+    if (!marker) return null;
+    return {
+      text: source.slice(0, start) + marker + source.slice(end),
+      caret: start + marker.length,
+      marker,
+    };
+  }
+
+  function removeMarker(text, marker) {
+    const source = String(text || "");
+    return isPlacementMarker(marker) ? source.split(marker).join("") : source;
+  }
+
+  function sanitizeDraft(text, resources, limit = 8) {
+    const candidates = (Array.isArray(resources) ? resources : []).filter((resource) =>
+      resource &&
+      typeof resource.id === "string" &&
+      RESOURCE_ID.test(resource.id) &&
+      typeof resource.name === "string"
+    );
+    const markerCounts = new Map();
+    for (const resource of candidates) {
+      if (!isPlacementMarker(resource.marker)) continue;
+      markerCounts.set(resource.marker, (markerCounts.get(resource.marker) || 0) + 1);
+    }
+    const cleanResources = [];
+    const ids = new Set();
+    for (const resource of candidates) {
+      if (ids.has(resource.id)) continue;
+      ids.add(resource.id);
+      const marker = isPlacementMarker(resource.marker) && markerCounts.get(resource.marker) === 1
+        ? resource.marker
+        : undefined;
+      cleanResources.push({ id: resource.id, name: nameFor(resource), marker });
+      if (cleanResources.length >= Math.max(0, Number(limit) || 0)) break;
+    }
+    const ownedMarkers = new Set(cleanResources.map((resource) => resource.marker).filter(Boolean));
+    const cleanText = String(text || "").replace(NON_TEXT_C0_CONTROLS, (control) =>
+      ownedMarkers.has(control) ? control : ""
+    );
+    return { text: cleanText, resources: cleanResources };
   }
 
   function segment(text) {
@@ -66,6 +133,12 @@
     for (const resource of Array.isArray(resources) ? resources : []) {
       const name = nameFor(resource);
       const token = tokenFor(resource);
+      const marker = isPlacementMarker(resource?.marker) ? resource.marker : "";
+      if (marker && result.includes(marker)) {
+        result = result.split(marker).join(token);
+        present.add(name);
+        continue;
+      }
       if (!name || !token || present.has(name)) continue;
       result += `${result ? " " : ""}${token}`;
       present.add(name);
@@ -73,7 +146,18 @@
     return result;
   }
 
-  const api = { append, hasTriggerBoundary, nameFor, removeTrigger, segment, tokenFor };
+  const api = {
+    append,
+    hasTriggerBoundary,
+    isPlacementMarker,
+    nameFor,
+    place,
+    removeMarker,
+    removeTrigger,
+    sanitizeDraft,
+    segment,
+    tokenFor,
+  };
   global.MutaResourceMentions = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : window);

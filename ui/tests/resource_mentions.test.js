@@ -6,8 +6,12 @@ const test = require("node:test");
 const {
   append,
   hasTriggerBoundary,
+  isPlacementMarker,
   nameFor,
+  place,
+  removeMarker,
   removeTrigger,
+  sanitizeDraft,
   segment,
   tokenFor,
 } = require("../resource-mentions.js");
@@ -49,6 +53,69 @@ test("appends selected resources once while preserving typed legacy mentions", (
     ]),
     "Compare @{Algebra.pdf} @{Physics.pdf}",
   );
+});
+
+test("preserves the picker position when composing the durable mention token", () => {
+  const source = "For this implementation, our test file is @res. if there is more";
+  const at = source.indexOf("@res");
+  const placed = place(source, at, at + "@res".length, []);
+  assert.ok(placed);
+  const resource = { id: "a", name: "resource.pdf", marker: placed.marker };
+  assert.equal(
+    append(placed.text, [resource]),
+    "For this implementation, our test file is @{resource.pdf}. if there is more",
+  );
+  assert.equal(removeMarker(placed.text, placed.marker),
+    "For this implementation, our test file is . if there is more");
+  assert.equal(isPlacementMarker(placed.marker), true);
+});
+
+test("uses distinct placement markers and replaces repeated references in place", () => {
+  const first = place("Compare @one with @two", 8, 12, []);
+  assert.ok(first);
+  const firstResource = { id: "a", name: "One.pdf", marker: first.marker };
+  const secondAt = first.text.indexOf("@two");
+  const second = place(first.text, secondAt, secondAt + 4, [firstResource]);
+  assert.ok(second);
+  const secondResource = { id: "b", name: "Two.pdf", marker: second.marker };
+  assert.notEqual(first.marker, second.marker);
+  assert.equal(append(second.text, [firstResource, secondResource]),
+    "Compare @{One.pdf} with @{Two.pdf}");
+  assert.equal(append(`A${first.marker}B`, []), `A${first.marker}B`);
+  const unicode = "می‌خواهم 👨‍👩‍👧‍👦᠎";
+  assert.equal(append(unicode, []), unicode);
+});
+
+test("reconciles queued text with duplicate ids and marker ownership", () => {
+  const a = "a".repeat(32);
+  const b = "b".repeat(32);
+  const first = place("@one", 0, 4, []);
+  const second = place("@two", 0, 4, [{ marker: first.marker }]);
+  assert.ok(first && second);
+
+  const duplicateId = sanitizeDraft(`first${first.marker} second${second.marker}`, [
+    { id: a, name: "One.pdf", marker: first.marker },
+    { id: a, name: "Duplicate id.pdf", marker: second.marker },
+  ]);
+  assert.deepEqual(duplicateId.resources, [
+    { id: a, name: "One.pdf", marker: first.marker },
+  ]);
+  assert.equal(duplicateId.text, `first${first.marker} second`);
+
+  const sharedMarker = sanitizeDraft(`first${first.marker} second${first.marker}`, [
+    { id: a, name: "One.pdf", marker: first.marker },
+    { id: b, name: "Two.pdf", marker: first.marker },
+  ]);
+  assert.equal(sharedMarker.text, "first second");
+  assert.deepEqual(sharedMarker.resources, [
+    { id: a, name: "One.pdf", marker: undefined },
+    { id: b, name: "Two.pdf", marker: undefined },
+  ]);
+
+  const invalid = sanitizeDraft(`valid\ntext${second.marker}\x17`, [
+    { id: "not-a-resource-id", name: "Invalid.pdf", marker: second.marker },
+  ]);
+  assert.deepEqual(invalid, { text: "valid\ntext", resources: [] });
 });
 
 test("normalizes unsafe token delimiters in document names", () => {

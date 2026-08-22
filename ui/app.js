@@ -728,6 +728,34 @@ function resourceDocumentIcon(className = "") {
   return svg;
 }
 
+function resourcePdfIcon(className = "") {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  if (className) svg.classList.add(className);
+  svg.setAttribute("viewBox", "0 0 20 20");
+  svg.setAttribute("aria-hidden", "true");
+  const page = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  page.setAttribute("d", "M4.25 1.75h7.1l4.4 4.45v12.05H4.25V1.75Z");
+  page.setAttribute("fill", "currentColor");
+  page.setAttribute("rx", "2");
+  const fold = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  fold.setAttribute("d", "M11.1 1.95V6.5h4.45");
+  fold.setAttribute("fill", "none");
+  fold.setAttribute("stroke", "rgba(255,255,255,.78)");
+  fold.setAttribute("stroke-width", "1.1");
+  fold.setAttribute("stroke-linejoin", "round");
+  const pdf = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  pdf.setAttribute("x", "10");
+  pdf.setAttribute("y", "13.7");
+  pdf.setAttribute("fill", "white");
+  pdf.setAttribute("font-size", "4.2");
+  pdf.setAttribute("font-family", "Arial, sans-serif");
+  pdf.setAttribute("font-weight", "700");
+  pdf.setAttribute("text-anchor", "middle");
+  pdf.textContent = "PDF";
+  svg.append(page, fold, pdf);
+  return svg;
+}
+
 function renderUserBubbleContent(bubble, text, resources = []) {
   const records = new Map();
   for (const resource of Array.isArray(resources) ? resources : []) {
@@ -763,7 +791,7 @@ function renderUserBubbleContent(bubble, text, resources = []) {
     }
     const label = document.createElement("span");
     label.textContent = displayName;
-    mention.append(resourceDocumentIcon("user-resource-mention-icon"), label);
+    mention.append(resourcePdfIcon("user-resource-mention-icon"), label);
     bubble.appendChild(mention);
   }
 }
@@ -1863,20 +1891,16 @@ function restoreMessageQueue() {
       const attachments = Array.isArray(item.attachments)
         ? item.attachments.filter((a) => a && typeof a === "object").slice(0, 8)
         : [];
-      const ragResources = Array.isArray(item.ragResources)
-        ? item.ragResources
-            .filter((resource) => resource && typeof resource.id === "string" && typeof resource.name === "string")
-            .map((resource) => ({
-              id: resource.id,
-              name: window.MutaResourceMentions.nameFor(resource),
-            }))
-            .slice(0, 8)
-        : [];
+      const restoredRag = window.MutaResourceMentions.sanitizeDraft(
+        item.typed,
+        item.ragResources,
+        8,
+      );
       return [{
-        typed: item.typed.slice(0, 4096),
+        typed: restoredRag.text.slice(0, 4096),
         attachments,
         useRag: item.useRag === true,
-        ragResources,
+        ragResources: restoredRag.resources,
         useWeb: item.useWeb === true,
         cid: item.cid,
         conflictRetries: Math.min(2, Math.max(0, Number(item.conflictRetries) || 0)),
@@ -2615,6 +2639,31 @@ function resourceStatusLabel(resource) {
   return featureT(`resources.${resource.status || "processing"}`);
 }
 
+function stripResourcePlacement(resource) {
+  if (!window.MutaResourceMentions.isPlacementMarker(resource?.marker)) return;
+  const caret = inputEl.selectionStart;
+  const beforeCaret = inputEl.value.slice(0, caret);
+  const shortenedBefore = window.MutaResourceMentions.removeMarker(beforeCaret, resource.marker);
+  inputEl.value = window.MutaResourceMentions.removeMarker(inputEl.value, resource.marker);
+  const nextCaret = Math.max(0, caret - (beforeCaret.length - shortenedBefore.length));
+  inputEl.setSelectionRange(nextCaret, nextCaret);
+}
+
+function deselectRagResource(resource, { focus = false } = {}) {
+  stripResourcePlacement(resource);
+  selectedRagResources = selectedRagResources.filter((item) => item.id !== resource.id);
+  renderRagChips();
+  autoGrow();
+  if (focus) inputEl.focus();
+}
+
+function clearSelectedRagResources() {
+  selectedRagResources.forEach(stripResourcePlacement);
+  selectedRagResources = [];
+  renderRagChips();
+  autoGrow();
+}
+
 function renderRagChips() {
   ragChips.innerHTML = "";
   ragChips.hidden = !useRag || selectedRagResources.length === 0;
@@ -2642,10 +2691,7 @@ function renderRagChips() {
     removePath.setAttribute("stroke-linecap", "round");
     removeIcon.appendChild(removePath);
     remove.appendChild(removeIcon);
-    remove.addEventListener("click", () => {
-      selectedRagResources = selectedRagResources.filter((item) => item.id !== resource.id);
-      renderRagChips();
-    });
+    remove.addEventListener("click", () => deselectRagResource(resource, { focus: true }));
     chip.append(resourceDocumentIcon("rag-chip-icon"), label, remove);
     ragChips.appendChild(chip);
   });
@@ -2682,18 +2728,34 @@ function selectMention(resource) {
     inputEl.focus();
     return;
   }
-  const next = window.MutaResourceMentions.removeTrigger(
-    inputEl.value,
-    trigger.at,
-    trigger.caret,
-  );
+  const existing = selectedRagResources.find((item) => item.id === resource.id);
+  const next = existing?.marker
+    ? {
+        text: inputEl.value.slice(0, trigger.at) + existing.marker +
+          inputEl.value.slice(trigger.caret),
+        caret: trigger.at + existing.marker.length,
+        marker: existing.marker,
+      }
+    : window.MutaResourceMentions.place(
+        inputEl.value,
+        trigger.at,
+        trigger.caret,
+        selectedRagResources,
+      );
+  if (!next) {
+    closeMentionMenu();
+    return toast(featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES }), 4000);
+  }
   inputEl.value = next.text;
   inputEl.setSelectionRange(next.caret, next.caret);
   if (!alreadySelected) {
     selectedRagResources.push({
       id: resource.id,
       name: window.MutaResourceMentions.nameFor(resource),
+      marker: next.marker,
     });
+  } else if (!existing.marker) {
+    existing.marker = next.marker;
   }
   renderRagChips();
   closeMentionMenu();
@@ -2836,6 +2898,9 @@ async function loadResources({ quiet = false } = {}) {
     const body = await response.json();
     learningResources = Array.isArray(body.resources) ? body.resources : [];
     const ids = new Set(learningResources.map((resource) => resource.id));
+    selectedRagResources
+      .filter((resource) => !ids.has(resource.id))
+      .forEach(stripResourcePlacement);
     selectedRagResources = selectedRagResources.filter((resource) => ids.has(resource.id));
     renderRagChips();
     renderResourceList();
@@ -2891,9 +2956,9 @@ async function deleteResource(resourceId) {
   });
   if (!response.ok) return toast(featureT("resources.deleteFailed"));
   learningResources = learningResources.filter((resource) => resource.id !== resourceId);
-  selectedRagResources = selectedRagResources.filter((resource) => resource.id !== resourceId);
+  const selected = selectedRagResources.find((resource) => resource.id === resourceId);
+  if (selected) deselectRagResource(selected);
   renderResourceList();
-  renderRagChips();
 }
 
 ragButton.addEventListener("click", () => {
@@ -2901,9 +2966,8 @@ ragButton.addEventListener("click", () => {
   ragButton.classList.toggle("active", useRag);
   ragButton.setAttribute("aria-pressed", String(useRag));
   if (!useRag) {
-    selectedRagResources = [];
+    clearSelectedRagResources();
     closeMentionMenu();
-    renderRagChips();
   } else {
     void loadResources({ quiet: true });
   }
@@ -2912,6 +2976,12 @@ ragButton.addEventListener("click", () => {
 });
 
 inputEl.addEventListener("input", () => {
+  const draft = inputEl.value;
+  const before = selectedRagResources.length;
+  selectedRagResources = selectedRagResources.filter(
+    (resource) => !resource.marker || draft.includes(resource.marker),
+  );
+  if (selectedRagResources.length !== before) renderRagChips();
   renderMentionMenu();
 });
 inputEl.addEventListener("click", renderMentionMenu);

@@ -11,14 +11,16 @@ make both states especially noisy.
 
 1. Typing `@` still opens the keyboard-accessible ready-resource picker.
 2. Choosing a resource removes the typed query from the visible textarea and leaves one compact
-   document chip in the composer. The resource remains selected by its server-owned ID.
-3. At send time, Muta appends its canonical mention token only to the backend message. This keeps
-   current retrieval and durable history compatible without showing implementation syntax while
-   the student writes.
-4. User bubbles parse canonical tokens into inline document mentions with an SVG document icon,
-   a bounded one-line name, and the complete name exposed to assistive technology. A live turn
-   links only an unambiguous server-owned ID; historical name-only mentions stay inert rather
-   than guessing after a deletion or same-name re-upload.
+   document chip in the composer. An invisible, single-character placement marker remains at the
+   selected `@` position, and the resource remains selected by its server-owned ID.
+3. At send time, Muta replaces that placement marker with the canonical mention token in place.
+   This keeps current retrieval and durable history compatible without showing implementation
+   syntax while the student writes or moving the document reference to the end of the sentence.
+4. User bubbles parse canonical tokens into an inline PDF reference that continues the sentence:
+   a small PDF badge followed by a naturally wrapping filename, without a chip border, card
+   background, or separate attachment row. The complete name remains exposed to assistive
+   technology. A live turn links only an unambiguous server-owned ID; historical name-only
+   mentions stay inert rather than guessing after a deletion or same-name re-upload.
 5. Old conversations containing raw mention tokens immediately receive the same presentation.
 6. Removing a composer chip removes the selected resource; typed legacy tokens remain supported.
 
@@ -30,9 +32,14 @@ make both states especially noisy.
 - Only the exact canonical `@{...}` form becomes a mention. Ordinary `@` text and email addresses
   remain text.
 - The request still sends `resource_ids`; the canonical token is added once and never duplicated.
+- Placement markers are chosen from a fixed allow-list, persisted with queued/draft resource
+  records, and removed with their composer chip. Deleting a marker directly also deselects the
+  corresponding resource.
 - Queueing, draft restoration, history rendering, attachments, and RAG preflight share the same
   message/resource state.
-- Chips wrap as a collection, keep each label on one line, and retain a non-shrinking remove target.
+- Composer chips wrap as a collection, keep each label on one line, and retain a non-shrinking
+  remove target. Sent mentions are prose-level inline references and wrap with the surrounding
+  sentence instead of truncating the document name.
 
 ## Verification
 

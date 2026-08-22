@@ -265,14 +265,14 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert ".resource-citation-preview" in clipped_preview_guard and "display: none" in clipped_preview_guard
 
 
-def test_resource_mentions_hide_transport_syntax_and_render_as_document_chips():
+def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
     js = (UI / "app.js").read_text()
     mentions = (UI / "resource-mentions.js").read_text()
 
     assert 'src="resource-mentions.js?v=' in HTML
     assert HTML.index('src="resource-mentions.js?v=') < HTML.index('src="app.js?v=')
     select = js[js.index("function selectMention(") : js.index("function positionMentionMenu(")]
-    assert "MutaResourceMentions.removeTrigger(" in select
+    assert "MutaResourceMentions.place(" in select
     assert "@{" not in select, "the transport token must never be pasted into the textarea"
     assert "MutaResourceMentions?.append(item.typed, item.ragResources)" in js
     assert "addUserMessage(mentionedText ||" in js
@@ -292,6 +292,10 @@ def test_resource_mentions_hide_transport_syntax_and_render_as_document_chips():
     assert '.slice(0, MAX_SELECTED_RAG_RESOURCES)' in js
     assert 'featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES })' in js
     assert "window.MutaResourceMentions.segment(text)" in js
+    assert "window.MutaResourceMentions.place(" in js
+    assert "window.MutaResourceMentions.removeMarker(" in js
+    assert "window.MutaResourceMentions.sanitizeDraft(" in js
+    assert "typed: restoredRag.text.slice(0, 4096)" in js
     send = js[js.index("function send(") : js.index("async function dispatch(")]
     assert send.index("ragResources.length > MAX_SELECTED_RAG_RESOURCES") < send.index(
         "pendingAttachments = []"
@@ -303,12 +307,14 @@ def test_resource_mentions_hide_transport_syntax_and_render_as_document_chips():
     assert "mention.href = resourcePageUrl(resource.id, 1)" in js
     assert "const MENTION = /@\\{([^{}\\n]+)\\}" in mentions
     assert "(?![\\p{L}\\p{N}\\p{M}_]|\\.[\\p{L}\\p{N}])/gu" in mentions
-    assert "result += `${result ? \" \" : \"\"}${token}`" in mentions
+    assert "result = result.split(marker).join(token)" in mentions
 
     composer_chip = "".join(_blocks(".rag-chip"))
-    sent_chip = "".join(_blocks(".user-resource-mention"))
+    sent_mention = "".join(_blocks(".user-resource-mention"))
     assert "min-width: 0" in composer_chip and "max-width: min(22rem, 100%)" in composer_chip
-    assert "inline-flex" in sent_chip and "max-width: min(20rem, 100%)" in sent_chip
+    assert "display: inline" in sent_mention and "overflow-wrap: anywhere" in sent_mention
+    assert "border:" not in sent_mention and "background:" not in sent_mention
+    assert "resourcePdfIcon(\"user-resource-mention-icon\")" in js
     assert ".rag-chip-icon" in CSS and ".user-resource-mention-icon" in CSS
 
 
@@ -529,9 +535,9 @@ def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
     versions = re.findall(
-        r'(?:href|src)="(?:styles\.css|math\.js|app\.js|audio\.js)\?v=([^"]+)"', HTML
+        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|app\.js|audio\.js)\?v=([^"]+)"', HTML
     )
-    assert len(versions) == 4
+    assert len(versions) == 5
     assert len(set(versions)) == 1
 
 
