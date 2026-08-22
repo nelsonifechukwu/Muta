@@ -164,22 +164,114 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .sources a { color: inherit; text-decoration: underline; margin-inline-end: 2px; }
 .resource-sources {
-  display: grid; gap: 6px; margin-top: 10px; max-width: 44rem;
+  --citation-anchor-y: 0px;
+  margin-top: 12px; max-width: 44rem; color: var(--text); font-family: var(--sans);
 }
+.resource-sources-trigger {
+  display: grid; grid-template-columns: 18px auto 1fr 18px; align-items: center; gap: 7px;
+  width: 100%; min-height: 44px; padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: 11px; background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--text); font: inherit; text-align: start; cursor: pointer;
+}
+.resource-sources-trigger:hover { background: var(--accent-soft); border-color: #c9b4aa; }
+.resource-sources-trigger:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.resource-sources-trigger > svg:first-child { width: 18px; height: 18px; fill: currentColor; }
+.resource-sources-heading { font-size: 0.8rem; font-weight: 650; }
+.resource-sources-count { color: var(--muted); font-size: 0.72rem; }
+.resource-sources-chevron { width: 18px; height: 18px; transition: transform 0.16s ease; }
+.resource-sources-trigger[aria-expanded="true"] .resource-sources-chevron { transform: rotate(180deg); }
+.resource-sources-list {
+  display: grid; gap: 0; margin: 5px 0 0; padding: 0; list-style: none;
+  border-top: 1px solid var(--border);
+}
+.resource-sources-list[hidden] { display: none; }
+.resource-source-item { min-width: 0; border-bottom: 1px solid var(--border); }
 .resource-source {
-  display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; align-items: start;
-  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--card); color: inherit; text-align: start; cursor: pointer;
+  display: grid; grid-template-columns: 25px minmax(0, 1fr) 18px; gap: 2px 9px;
+  align-items: start; min-height: 44px; width: 100%; padding: 10px 7px;
+  border-radius: 8px; color: inherit; text-decoration: none; text-align: start;
 }
-.resource-source:hover { border-color: #c9b4aa; background: var(--accent-soft); }
-.resource-source .source-number {
-  grid-row: 1 / span 2; display: grid; place-items: center; min-width: 22px; height: 22px;
-  border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-weight: 700;
+.resource-source:hover, .resource-source:focus-visible, .resource-source-item.is-active .resource-source {
+  background: var(--accent-soft); outline: none;
 }
-.resource-source strong { font-size: 0.76rem; }
-.resource-source small {
-  color: var(--muted); font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap;
+.resource-source:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.resource-source-index {
+  display: grid; place-items: center; width: 23px; height: 23px; margin-top: 1px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border)); border-radius: 999px;
+  color: var(--accent); font-size: 0.68rem; font-weight: 750; line-height: 1;
+}
+.resource-source-copy { display: grid; min-width: 0; gap: 2px; }
+.resource-source-copy strong {
+  display: -webkit-box; overflow: hidden; color: var(--text); font-size: 0.77rem;
+  font-weight: 620; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+.resource-source-meta { color: var(--accent); font: 600 0.66rem/1.35 var(--sans); }
+.resource-source-excerpt {
+  display: -webkit-box; overflow: hidden; color: var(--muted); font-size: 0.7rem;
+  line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+.resource-source-arrow { width: 16px; height: 16px; margin-top: 3px; color: var(--muted); }
+
+.resource-citation-marker {
+  position: relative; display: inline-grid; place-items: center; min-width: 1.55em; height: 1.55em;
+  margin-inline: 0.12em; padding-inline: 0.34em; border: 1px solid
+  color-mix(in srgb, var(--accent) 40%, var(--border)); border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent) !important; vertical-align: 0.36em;
+  font: 700 0.58em/1 var(--sans); text-decoration: none !important;
+}
+.resource-citation-marker:hover, .resource-citation-marker:focus-visible,
+.resource-citation-marker.is-active {
+  border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 72%, var(--card));
+}
+.resource-citation-marker:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.resource-citation-preview {
+  position: absolute; z-index: 35; inset-inline-start: 50%; bottom: calc(100% + 9px);
+  display: grid; gap: 4px; width: min(20rem, calc(100vw - 32px)); padding: 10px 11px;
+  border: 1px solid var(--border); border-radius: 11px; background: var(--card); color: var(--text);
+  box-shadow: 0 12px 34px rgba(45, 43, 38, 0.16); opacity: 0; visibility: hidden;
+  transform: translate(-50%, 4px); transition: opacity 0.14s ease, transform 0.14s ease;
+  pointer-events: none; text-align: start; font: 0.74rem/1.4 var(--sans);
+}
+.resource-citation-preview-label {
+  color: var(--accent); font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.resource-citation-preview strong { font-size: 0.76rem; line-height: 1.35; }
+.resource-citation-preview > span:not(.resource-citation-preview-label) { color: var(--muted); }
+.resource-citation-preview-excerpt {
+  display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+}
+.resource-citation-marker:hover .resource-citation-preview,
+.resource-citation-marker:focus-visible .resource-citation-preview {
+  opacity: 1; visibility: visible; transform: translate(-50%, 0);
+}
+
+@media (min-width: 1580px) {
+  .msg.assistant.has-resource-sources { position: relative; }
+  .msg.assistant.has-resource-sources > .resource-sources {
+    position: absolute; top: var(--citation-anchor-y); inset-inline-start: calc(100% + 22px);
+    width: 15rem; margin-top: 0;
+  }
+  .resource-sources-trigger {
+    grid-template-columns: 18px auto 1fr 18px; padding-inline: 7px; border-color: transparent;
+    background: transparent;
+  }
+  .resource-sources-list { margin-top: 0; }
+}
+
+@media (max-width: 1319px) {
+  .resource-citation-preview { display: none; }
+}
+
+@media (max-width: 720px) {
+  .resource-sources { max-width: 100%; }
+  .resource-source { padding-inline: 5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resource-sources-chevron, .resource-citation-preview { transition: none; }
 }
 /* Self-check outcomes: a quiet green "steps checked" badge, or a warm caution when a step
    didn't hold / the reply was cut off. */

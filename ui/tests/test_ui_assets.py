@@ -205,6 +205,40 @@ def test_chat_generation_is_server_owned_and_recovered_after_reload():
     assert 'fetch("/v1/chat/stream"' not in js, "a page-owned POST stream stops on refresh"
 
 
+def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail():
+    js = (UI / "app.js").read_text()
+    citations = (UI / "citations.js").read_text()
+
+    assert 'src="citations.js?v=' in HTML
+    assert HTML.index('src="citations.js?v=') < HTML.index('src="app.js?v=')
+    assert 'window.MutaCitations?.decorate(container.querySelector(".prose")' in js
+    assert js.count("renderResourceSources(") == 3, "history and live replies must share citations"
+    assert 'window.matchMedia("(min-width: 1580px)")' in js
+    assert 'trigger.setAttribute("aria-expanded", String(expanded))' in js
+    assert 'list.hidden = !expanded' in js
+    assert 'container.style.minHeight = `${Math.ceil(railBottom)}px`' in js
+    assert "syncResourceSourcesLayout(box);\n      continue;" in js
+    assert "container.style.minHeight" in js and "scrollToBottom();" in js
+    assert 'link.href = resourcePageUrl(source.resource_id, source.page)' in js
+
+    # Model text is never trusted to invent destinations: decoration is post-sanitize and the
+    # parser only promotes a reference that maps to a server-owned record.
+    assert 'const REFERENCE = /\\[R([1-9]\\d*)\\]/gi' in citations
+    assert 'if (number <= limit)' in citations
+    assert 'node.parentElement?.closest(EXCLUDED)' in citations
+    assert '"a", "button", "code", "pre", "kbd", "samp", "textarea"' in citations
+    assert '".katex", ".katex-display", ".math-source", ".resource-sources"' in citations
+
+    rail = "".join(_blocks(".msg.assistant.has-resource-sources > .resource-sources"))
+    trigger = "".join(_blocks(".resource-sources-trigger"))
+    hidden_list = "".join(_blocks(".resource-sources-list[hidden]"))
+    clipped_preview_guard = "".join(_blocks("@media (max-width: 1319px)"))
+    assert "position: absolute" in rail and "inset-inline-start" in rail
+    assert re.search(r"min-height\s*:\s*44px", trigger)
+    assert re.search(r"display\s*:\s*none", hidden_list)
+    assert ".resource-citation-preview" in clipped_preview_guard and "display: none" in clipped_preview_guard
+
+
 def test_selected_locale_is_generation_metadata_not_a_user_message_prefix():
     js = (UI / "app.js").read_text()
     audio = (UI / "audio.js").read_text()

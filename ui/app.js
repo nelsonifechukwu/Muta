@@ -22,6 +22,14 @@ const RESOURCE_RAG_COPY = Object.freeze({
   "rag.remove": "Remove {name}",
   "rag.sourcePage": "{title}, PDF page {page}",
   "rag.openPage": "Open {title} at PDF page {page}",
+  "rag.sources": "Sources",
+  "rag.sourceCount": "{count} sources",
+  "rag.sourceCountOne": "1 source",
+  "rag.sourceMeta": "PDF · page {page}",
+  "rag.citation": "Citation {number}: {title}, PDF page {page}",
+  "rag.previewLabel": "Citation {number}",
+  "rag.showSources": "Show {count} sources",
+  "rag.hideSources": "Hide {count} sources",
 });
 // Power ships independently of the bulk locale-generation pass, as resource RAG does above.
 // Dynamic copy falls back to English without marking the existing complete locale packs partial.
@@ -983,15 +991,92 @@ function beginAssistantMessage(onAnswerNow) {
   };
 }
 
+function syncResourceSourcesLayout(box) {
+  const container = box.closest(".msg.assistant");
+  const list = box.querySelector(".resource-sources-list");
+  if (!container || !list) return;
+  container.style.minHeight = "";
+  if (!resourceCitationRail.matches || list.hidden) {
+    if (box.isConnected) scrollToBottom();
+    return;
+  }
+  requestAnimationFrame(() => {
+    if (!box.isConnected || !resourceCitationRail.matches || list.hidden) return;
+    const railBottom = box.offsetTop + box.offsetHeight;
+    if (railBottom > container.offsetHeight) {
+      container.style.minHeight = `${Math.ceil(railBottom)}px`;
+    }
+    scrollToBottom();
+  });
+}
+
+function setResourceSourcesExpanded(box, expanded) {
+  const trigger = box.querySelector(".resource-sources-trigger");
+  const list = box.querySelector(".resource-sources-list");
+  const count = Number(box.dataset.sourceCount) || 0;
+  list.hidden = !expanded;
+  box.classList.toggle("is-expanded", expanded);
+  trigger.setAttribute("aria-expanded", String(expanded));
+  trigger.setAttribute(
+    "aria-label",
+    featureT(expanded ? "rag.hideSources" : "rag.showSources", { count }),
+  );
+  syncResourceSourcesLayout(box);
+}
+
 function renderResourceSources(container, sources) {
   const records = (Array.isArray(sources) ? sources : []).filter(
     (source) => source && source.resource_id && Number(source.page) >= 1,
   );
   if (!records.length || container.querySelector(".resource-sources")) return;
-  const box = document.createElement("div");
+  const box = document.createElement("aside");
   box.className = "resource-sources";
+  box.dataset.sourceCount = String(records.length);
+  box.setAttribute("aria-label", featureT("rag.sources"));
+  container.classList.add("has-resource-sources");
+
+  const trigger = document.createElement("button");
+  trigger.className = "resource-sources-trigger";
+  trigger.type = "button";
+  const listId = `resource-sources-${++renderResourceSources.sequence}`;
+  trigger.setAttribute("aria-controls", listId);
+
+  const book = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  book.setAttribute("viewBox", "0 0 24 24");
+  book.setAttribute("aria-hidden", "true");
+  const bookPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  bookPath.setAttribute("d", "M4 4.5h6.2A2.8 2.8 0 0 1 13 7.3V20a3.3 3.3 0 0 0-2.8-1.5H4v-14Zm16 0h-4.2A2.8 2.8 0 0 0 13 7.3V20a3.3 3.3 0 0 1 2.8-1.5H20v-14Z");
+  book.appendChild(bookPath);
+  const heading = document.createElement("span");
+  heading.className = "resource-sources-heading";
+  heading.textContent = featureT("rag.sources");
+  const count = document.createElement("span");
+  count.className = "resource-sources-count";
+  count.textContent = featureT(records.length === 1 ? "rag.sourceCountOne" : "rag.sourceCount", {
+    count: records.length,
+  });
+  const chevron = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  chevron.classList.add("resource-sources-chevron");
+  chevron.setAttribute("viewBox", "0 0 24 24");
+  chevron.setAttribute("aria-hidden", "true");
+  const chevronPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  chevronPath.setAttribute("d", "m7 9.5 5 5 5-5");
+  chevronPath.setAttribute("fill", "none");
+  chevronPath.setAttribute("stroke", "currentColor");
+  chevronPath.setAttribute("stroke-width", "1.8");
+  chevronPath.setAttribute("stroke-linecap", "round");
+  chevronPath.setAttribute("stroke-linejoin", "round");
+  chevron.appendChild(chevronPath);
+  trigger.append(book, heading, count, chevron);
+
+  const list = document.createElement("ol");
+  list.id = listId;
+  list.className = "resource-sources-list";
   records.forEach((source, index) => {
     const variables = { title: source.title, page: source.page };
+    const item = document.createElement("li");
+    item.className = "resource-source-item";
+    item.dataset.resourceCitation = String(index + 1);
     const link = document.createElement("a");
     link.className = "resource-source";
     link.href = resourcePageUrl(source.resource_id, source.page);
@@ -999,19 +1084,95 @@ function renderResourceSources(container, sources) {
     link.rel = "noopener noreferrer";
     link.setAttribute("aria-label", featureT("rag.openPage", variables));
     const number = document.createElement("span");
-    number.className = "source-number";
-    number.textContent = `R${index + 1}`;
+    number.className = "resource-source-index";
+    number.setAttribute("aria-hidden", "true");
+    number.textContent = String(index + 1);
+    const copy = document.createElement("span");
+    copy.className = "resource-source-copy";
     const title = document.createElement("strong");
     title.dir = "auto";
-    title.textContent = featureT("rag.sourcePage", variables);
-    const excerpt = document.createElement("small");
-    excerpt.dir = "auto";
-    excerpt.textContent = source.excerpt || "";
-    link.append(number, title, excerpt);
-    box.appendChild(link);
+    title.textContent = source.title;
+    const meta = document.createElement("span");
+    meta.className = "resource-source-meta";
+    meta.textContent = featureT("rag.sourceMeta", { page: source.page });
+    copy.append(title, meta);
+    if (source.excerpt) {
+      const excerpt = document.createElement("span");
+      excerpt.className = "resource-source-excerpt";
+      excerpt.dir = "auto";
+      excerpt.textContent = source.excerpt;
+      copy.appendChild(excerpt);
+    }
+    const arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    arrow.classList.add("resource-source-arrow");
+    arrow.setAttribute("viewBox", "0 0 24 24");
+    arrow.setAttribute("aria-hidden", "true");
+    const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    arrowPath.setAttribute("d", "M9 7h8v8M17 7 7 17");
+    arrowPath.setAttribute("fill", "none");
+    arrowPath.setAttribute("stroke", "currentColor");
+    arrowPath.setAttribute("stroke-width", "1.7");
+    arrowPath.setAttribute("stroke-linecap", "round");
+    arrowPath.setAttribute("stroke-linejoin", "round");
+    arrow.appendChild(arrowPath);
+    link.append(number, copy, arrow);
+    item.appendChild(link);
+    list.appendChild(item);
   });
+
+  const setActive = (number, active) => {
+    for (const element of container.querySelectorAll(`[data-resource-citation="${number}"]`)) {
+      element.classList.toggle("is-active", active);
+    }
+  };
+  for (const item of list.children) {
+    const number = Number(item.dataset.resourceCitation);
+    const link = item.querySelector("a");
+    link.addEventListener("mouseenter", () => setActive(number, true));
+    link.addEventListener("mouseleave", () => setActive(number, false));
+    link.addEventListener("focus", () => setActive(number, true));
+    link.addEventListener("blur", () => setActive(number, false));
+  }
+
+  trigger.addEventListener("click", () => {
+    box.dataset.userToggled = "true";
+    setResourceSourcesExpanded(box, trigger.getAttribute("aria-expanded") !== "true");
+  });
+
+  box.append(trigger, list);
   container.appendChild(box);
+  setResourceSourcesExpanded(box, resourceCitationRail.matches);
+  const markers = window.MutaCitations?.decorate(container.querySelector(".prose"), records, {
+    hrefFor: (source) => resourcePageUrl(source.resource_id, source.page),
+    labelFor: (source, number) => featureT("rag.citation", {
+      number,
+      title: source.title,
+      page: source.page,
+    }),
+    copy: {
+      previewLabel: (number) => featureT("rag.previewLabel", { number }),
+      meta: (page) => featureT("rag.sourceMeta", { page }),
+    },
+    onActive: setActive,
+  }) || [];
+  const firstMarker = markers[0];
+  if (firstMarker) {
+    box.style.setProperty("--citation-anchor-y", `${Math.max(0, firstMarker.offsetTop - 8)}px`);
+  }
+  syncResourceSourcesLayout(box);
 }
+renderResourceSources.sequence = 0;
+
+const resourceCitationRail = window.matchMedia("(min-width: 1580px)");
+resourceCitationRail.addEventListener?.("change", ({ matches }) => {
+  for (const box of document.querySelectorAll(".resource-sources")) {
+    if (box.dataset.userToggled === "true") {
+      syncResourceSourcesLayout(box);
+      continue;
+    }
+    setResourceSourcesExpanded(box, matches);
+  }
+});
 
 function renderHistoryMessage(m) {
   if (m.role === "user") {
