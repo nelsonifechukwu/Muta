@@ -8,6 +8,7 @@ and carries no pedagogy of its own.
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import threading
@@ -22,6 +23,7 @@ from runtime.memory import ConversationStore
 
 _MESSAGE_OVERHEAD_TOKENS = 8
 _MIN_REPLY_TOKENS = 64
+_DEFAULT_IMAGE_TOKENS = 2048
 _PER_STUDENT_CONTEXT = "--- per-student context (variable — keep last) ---".encode()
 _LIVE_CONTEXT = b"\n[MUTA-LIVE]\n"
 _TURN_INSTRUCTION = "\n\n[MUTA RUNTIME INSTRUCTION — not part of the learner's message]\n"
@@ -86,6 +88,68 @@ def _prompt_content(message: dict) -> str:
     return strip_visualization_protocol(content) if message.get("role") == "assistant" else content
 
 
+@dataclass(frozen=True)
+class ImageInput:
+    """One guarded learner image carried only in the live inference request."""
+
+    mime: str
+    data: bytes
+
+
+class AttachmentPersistenceError(RuntimeError):
+    """A validated attachment could not be durably bound to its user turn."""
+
+
+def _content_text(content: object) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            str(part.get("text", ""))
+            for part in content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+    return str(content or "")
+
+
+def _image_part_count(content: object) -> int:
+    if not isinstance(content, list):
+        return 0
+    return sum(1 for part in content if isinstance(part, dict) and part.get("type") == "image_url")
+
+
+def _content_with_images(text: str, images: list[ImageInput] | None) -> str | list[dict]:
+    if not images:
+        return text
+    # llama.cpp's multimodal chat examples, and Qwen's own message convention, place the
+    # visual placeholder before the question it grounds.  Keeping that order matters on the
+    # 0.8B target: putting a dense infographic after the question made spatial references such
+    # as "top-left" substantially less reliable even though the same pixels reached the model.
+    parts: list[dict] = []
+    for image in images:
+        encoded = base64.b64encode(image.data).decode("ascii")
+        parts.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{image.mime};base64,{encoded}"},
+            }
+        )
+    parts.append({"type": "text", "text": text})
+    return parts
+
+
+def _append_content_text(content: object, suffix: str) -> str | list[dict]:
+    if not isinstance(content, list):
+        return _content_text(content) + suffix
+    parts = [dict(part) if isinstance(part, dict) else part for part in content]
+    for part in parts:
+        if isinstance(part, dict) and part.get("type") == "text":
+            part["text"] = str(part.get("text", "")) + suffix
+            return parts
+    parts.insert(0, {"type": "text", "text": suffix})
+    return parts
+
+
 def _estimate_tokens(text: str) -> int:
     """Tokenizer-free planning estimate: UTF-8 bytes/3, rounded up.
 
@@ -95,12 +159,13 @@ def _estimate_tokens(text: str) -> int:
     return max(1, (len(text.encode("utf-8")) + 2) // 3)
 
 
-def _message_tokens(message: Message) -> int:
+def _message_tokens(message: Message, image_tokens: int = _DEFAULT_IMAGE_TOKENS) -> int:
     content = message.get("content", "")
     # Byte-fallback BPE can approach one token per UTF-8 byte. This includes role=system:
     # the gateway appends live web/RAG/twin context to that message, so its contents are not
     # wholly static or trusted. bytes/3 remains a history-quality heuristic only.
-    return _MESSAGE_OVERHEAD_TOKENS + max(1, len(content.encode("utf-8")))
+    text_bytes = len(_content_text(content).encode("utf-8"))
+    return _MESSAGE_OVERHEAD_TOKENS + max(1, text_bytes) + _image_part_count(content) * image_tokens
 
 
 def _retryable_stream_error(exc: Exception) -> bool:
@@ -111,10 +176,37 @@ def _retryable_stream_error(exc: Exception) -> bool:
     return isinstance(exc, (httpx.TransportError, ConnectionError, TimeoutError))
 
 
-def _truncate_message(message: Message, token_budget: int) -> Message:
+def _truncate_message(
+    message: Message,
+    token_budget: int,
+    image_tokens: int = _DEFAULT_IMAGE_TOKENS,
+) -> Message:
     """Return a prompt-only truncation; the persisted message is never modified."""
+    content = message.get("content", "")
+    if isinstance(content, list):
+        # Projector tokens are irreducible here; clip only the learner's text and preserve
+        # every media part byte-identically. The gateway already caps a turn to one image.
+        image_cost = _image_part_count(content) * image_tokens
+        text_budget = max(1, token_budget - _MESSAGE_OVERHEAD_TOKENS - image_cost)
+        clipped = _truncate_message(
+            {"role": message.get("role", "user"), "content": _content_text(content)},
+            text_budget + _MESSAGE_OVERHEAD_TOKENS,
+            image_tokens,
+        )["content"]
+        rebuilt: list[dict] = []
+        inserted_text = False
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                if not inserted_text:
+                    rebuilt.append({**part, "text": clipped})
+                    inserted_text = True
+                continue
+            rebuilt.append(dict(part) if isinstance(part, dict) else part)
+        if not inserted_text:
+            rebuilt.insert(0, {"type": "text", "text": clipped})
+        return {**message, "content": rebuilt}
     content_budget = max(1, token_budget - _MESSAGE_OVERHEAD_TOKENS)
-    raw = message.get("content", "").encode("utf-8")
+    raw = _content_text(content).encode("utf-8")
     max_bytes = content_budget
     if len(raw) <= max_bytes:
         return dict(message)
@@ -330,6 +422,7 @@ class ChatEngine:
         history_token_budget: int = 0,
         context_window_tokens: int = 0,
         context_safety_tokens: int = 192,
+        image_token_budget: int = _DEFAULT_IMAGE_TOKENS,
         stream_retry_attempts: int = 0,
         stream_retry_backoff_s: float = 0.5,
         default_system_prompt: str = DEFAULT_SYSTEM_PROMPT,
@@ -345,6 +438,7 @@ class ChatEngine:
         self.history_token_budget = max(0, history_token_budget)
         self.context_window_tokens = max(0, context_window_tokens)
         self.context_safety_tokens = max(0, context_safety_tokens)
+        self.image_token_budget = max(1, image_token_budget)
         self.stream_retry_attempts = max(0, stream_retry_attempts)
         self.stream_retry_backoff_s = max(0.0, stream_retry_backoff_s)
         self.default_system_prompt = default_system_prompt
@@ -371,14 +465,25 @@ class ChatEngine:
         return self.store.create_conversation(student_id, **meta)
 
     def _history(self, conversation_id: str) -> list[dict]:
-        history = self.store.get_messages(conversation_id, limit=self.max_history_messages)
+        list_messages = getattr(self.store, "list_messages", None)
+        if callable(list_messages):
+            history = list_messages(conversation_id)
+            if self.max_history_messages > 0:
+                history = history[-self.max_history_messages :]
+        else:
+            history = self.store.get_messages(conversation_id, limit=self.max_history_messages)
         if self.history_token_budget <= 0:
             return history
         spent = 0
         start = len(history)
         for index in range(len(history) - 1, -1, -1):
             row = history[index]
-            cost = _estimate_tokens(_prompt_content(row)) + _MESSAGE_OVERHEAD_TOKENS
+            image_refs = sum(1 for ref in row.get("attachments", []) if ref.get("kind") == "image")
+            cost = (
+                _estimate_tokens(_prompt_content(row))
+                + _MESSAGE_OVERHEAD_TOKENS
+                + image_refs * self.image_token_budget
+            )
             # Keep the latest row even when it alone exceeds the replay budget. The request
             # fitter can safely truncate that prompt copy; dropping it here makes a student's
             # ordinary "continue" lose the response they are asking the tutor to continue.
@@ -399,12 +504,63 @@ class ChatEngine:
                 break
         return history[start:]
 
+    def _persist_user_message(
+        self,
+        conversation_id: str,
+        student_id: str,
+        message: str,
+        attachment_ids: list[int] | None,
+    ) -> int:
+        if not attachment_ids:
+            return self.store.add_message(conversation_id, "user", message)
+        persist = getattr(self.store, "add_user_message_with_attachments", None)
+        if not callable(persist):
+            raise AttachmentPersistenceError("attachment persistence is unavailable")
+        try:
+            return int(
+                persist(
+                    conversation_id,
+                    message,
+                    attachment_ids,
+                    owner_id=student_id,
+                )
+            )
+        except Exception as exc:
+            raise AttachmentPersistenceError(
+                "the image could not be linked to this question"
+            ) from exc
+
+    def _history_content(self, row: dict, student_id: str) -> str | list[dict]:
+        return _content_with_images(_prompt_content(row), self._history_images(row, student_id))
+
+    def _history_images(self, row: dict, student_id: str) -> list[ImageInput]:
+        images: list[ImageInput] = []
+        get_attachment = getattr(self.store, "get_attachment", None)
+        if callable(get_attachment):
+            for ref in row.get("attachments", []):
+                if ref.get("kind") != "image":
+                    continue
+                attachment = get_attachment(int(ref["id"]), owner_id=student_id)
+                if attachment is None:
+                    continue
+                mime = str(attachment.get("mime") or "")
+                if mime not in {"image/jpeg", "image/png", "image/webp"}:
+                    continue
+                images.append(ImageInput(mime=mime, data=bytes(attachment["data"])))
+        return images
+
+    def history_has_images(self, conversation_id: str, student_id: str) -> bool:
+        """Whether replayable history will place an owned image in the next model request."""
+        return any(self._history_images(row, student_id) for row in self._history(conversation_id))
+
     def _assemble(
         self,
         conversation_id: str,
+        student_id: str,
         system_prompt: str | None,
         message: str,
         turn_instruction: str | None = None,
+        images: list[ImageInput] | None = None,
     ) -> list[Message]:
         history = self._history(conversation_id)
         messages: list[Message] = [
@@ -413,7 +569,7 @@ class ChatEngine:
         messages += [
             {
                 "role": m["role"],
-                "content": _prompt_content(m),
+                "content": self._history_content(m, student_id),
             }
             for m in history
         ]
@@ -423,14 +579,16 @@ class ChatEngine:
             # instruction in a request-only envelope at the tail of the current user prompt:
             # it gets strong recency without changing the persisted learner message.
             prompt_copy += _TURN_INSTRUCTION + turn_instruction
-        messages.append({"role": "user", "content": prompt_copy})
+        messages.append({"role": "user", "content": _content_with_images(prompt_copy, images)})
         return messages
 
     def _assemble_history(
         self,
         conversation_id: str,
+        student_id: str,
         system_prompt: str | None,
         turn_instruction: str | None = None,
+        images: list[ImageInput] | None = None,
     ) -> list[Message]:
         """Prompt for regeneration: system + existing history, with NO new user turn appended.
         The last stored message is already the user's turn, so this re-answers it — used by
@@ -444,7 +602,7 @@ class ChatEngine:
         messages += [
             {
                 "role": m["role"],
-                "content": _prompt_content(m),
+                "content": self._history_content(m, student_id),
             }
             for m in history
         ]
@@ -453,7 +611,14 @@ class ChatEngine:
             # copy receives the envelope. The database row remains byte-identical.
             messages[-1] = {
                 **messages[-1],
-                "content": messages[-1]["content"] + _TURN_INSTRUCTION + turn_instruction,
+                "content": _append_content_text(
+                    messages[-1]["content"], _TURN_INSTRUCTION + turn_instruction
+                ),
+            }
+        if images and not _image_part_count(messages[-1]["content"]):
+            messages[-1] = {
+                **messages[-1],
+                "content": _content_with_images(_content_text(messages[-1]["content"]), images),
             }
         return messages
 
@@ -488,11 +653,21 @@ class ChatEngine:
                     counted = exact_counter(fitted, **fitted_params)
                     if not isinstance(counted, int) or counted <= 0:
                         raise ValueError("invalid prompt token count")
+                    # llama-server's apply-template/tokenize endpoints count the rendered
+                    # text placeholder, not the projector embeddings injected at inference.
+                    # Add the configured visual ceiling here or exact text counting would make
+                    # multimodal requests less safe than the tokenizer-free fallback.
+                    counted += sum(
+                        _image_part_count(message.get("content")) * self.image_token_budget
+                        for message in fitted
+                    )
                     cached_prompt_tokens = counted
                     return counted
                 except Exception:  # noqa: BLE001 — optional engine probe; hard fallback is safe
                     exact_counter = None
-            cached_prompt_tokens = sum(_message_tokens(message) for message in fitted)
+            cached_prompt_tokens = sum(
+                _message_tokens(message, self.image_token_budget) for message in fitted
+            )
             return cached_prompt_tokens
 
         def invalidate_prompt_count() -> None:
@@ -506,12 +681,48 @@ class ChatEngine:
                 fitted.pop(1)
             invalidate_prompt_count()
 
+        # A new image supersedes older visual turns when their irreducible projector tokens
+        # cannot coexist in one lane. Keep one historical image for ordinary text follow-ups,
+        # but never let two maximum-size images crowd the current image out of one lane.
+        while (
+            prompt_tokens() > prompt_limit
+            and sum(_image_part_count(message.get("content")) for message in fitted) > 1
+        ):
+            old_image_index = next(
+                (
+                    index
+                    for index, message in enumerate(fitted[1:-1], start=1)
+                    if _image_part_count(message.get("content"))
+                ),
+                None,
+            )
+            if old_image_index is None:
+                break
+            fitted.pop(old_image_index)
+            if (
+                old_image_index < len(fitted) - 1
+                and fitted[old_image_index].get("role") == "assistant"
+            ):
+                fitted.pop(old_image_index)
+            invalidate_prompt_count()
+
         # An enormous current turn or optional grounding block can exceed the window alone.
         # Shrink only the request copy, largest reducible message first, until a useful reply
         # still fits. Stored history and the user's original text remain byte-identical.
         minimums = [96] + [48] * (len(fitted) - 1)
-        while prompt_tokens() > prompt_limit:
-            costs = [_message_tokens(message) for message in fitted]
+        minimums = [
+            max(
+                minimum,
+                _MESSAGE_OVERHEAD_TOKENS
+                + _image_part_count(message.get("content")) * self.image_token_budget
+                + 1,
+            )
+            for minimum, message in zip(minimums, fitted, strict=True)
+        ]
+        remaining_fit_steps = max(16, len(fitted) * 8)
+        while prompt_tokens() > prompt_limit and remaining_fit_steps:
+            measured_prompt = prompt_tokens()
+            costs = [_message_tokens(message, self.image_token_budget) for message in fitted]
             candidates = [
                 (cost - minimums[index], index)
                 for index, cost in enumerate(costs)
@@ -520,10 +731,41 @@ class ChatEngine:
             if not candidates:
                 break
             reducible, index = max(candidates)
-            overflow = prompt_tokens() - prompt_limit
-            target = costs[index] - min(reducible, overflow)
-            fitted[index] = _truncate_message(fitted[index], target)
+            overflow = measured_prompt - prompt_limit
+            # `_message_tokens` is a byte-safe upper bound while an exact model count is often
+            # closer to one token per four English bytes. Convert the measured-token overflow
+            # into this heuristic's units; subtracting it as raw bytes under-clips and can need
+            # dozens of tokenizer round trips before crossing the limit.
+            heuristic_total = sum(costs)
+            heuristic_overflow = (
+                overflow * heuristic_total + measured_prompt - 1
+            ) // measured_prompt
+            target = costs[index] - min(reducible, heuristic_overflow)
+            clipped = _truncate_message(fitted[index], target, self.image_token_budget)
+            # Exact BPE counts can stay flat for one byte-level clipping step. Progress is the
+            # prompt copy changing, not the immediate token delta; a fixed iteration bound and
+            # equality check still make an irreducible image/text floor terminate safely.
+            if clipped == fitted[index]:
+                break
+            fitted[index] = clipped
+            remaining_fit_steps -= 1
             invalidate_prompt_count()
+
+        # The 64-token target is a quality reserve, not a hard validity boundary. Very small
+        # legacy/test profiles may have an irreducible coherent prompt that still fits with a
+        # shorter answer; admit that case. Images still fail closed when even one reply token
+        # cannot coexist with their configured projector ceiling.
+        hard_prompt_limit = max(
+            1,
+            self.context_window_tokens - self.context_safety_tokens - 1,
+        )
+        if prompt_tokens() > hard_prompt_limit and any(
+            _image_part_count(message.get("content")) for message in fitted
+        ):
+            raise ValueError(
+                "the selected serving profile has too little context for image input — "
+                "increase context per chat or reduce simultaneous chat lanes"
+            )
 
         available = max(
             1,
@@ -765,6 +1007,8 @@ class ChatEngine:
         title: str | None = None,
         regenerate: bool = False,
         cancel_event: threading.Event | None = None,
+        images: list[ImageInput] | None = None,
+        attachment_ids: list[int] | None = None,
         **params,
     ) -> ChatResult:
         cid = self._open(
@@ -778,16 +1022,22 @@ class ChatEngine:
             title=title,
         )
         if regenerate:
-            messages = self._assemble_history(cid, system_prompt, turn_instruction)
+            messages = self._assemble_history(
+                cid, student_id, system_prompt, turn_instruction, images
+            )
             user_message_id = None
         else:
-            messages = self._assemble(cid, system_prompt, message, turn_instruction)
-            user_message_id = self.store.add_message(cid, "user", message)
+            messages = self._assemble(
+                cid, student_id, system_prompt, message, turn_instruction, images
+            )
+            user_message_id = None
         messages, request_params = self._fit_request(
             messages,
             params,
             protected_tail_messages=min(3, max(1, len(messages) - 1)),
         )
+        if not regenerate:
+            user_message_id = self._persist_user_message(cid, student_id, message, attachment_ids)
         if cancel_event is not None:
             writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
@@ -838,6 +1088,8 @@ class ChatEngine:
         language: str | None = None,
         turn_instruction: str | None = None,
         title: str | None = None,
+        images: list[ImageInput] | None = None,
+        attachment_ids: list[int] | None = None,
         **params,
     ) -> tuple[str, int, Iterator[str]]:
         """Returns (conversation_id, user_message_id, token iterator). The reply is persisted
@@ -851,13 +1103,13 @@ class ChatEngine:
             language=language,
             title=title,
         )
-        messages = self._assemble(cid, system_prompt, message, turn_instruction)
-        user_message_id = self.store.add_message(cid, "user", message)
+        messages = self._assemble(cid, student_id, system_prompt, message, turn_instruction, images)
         messages, request_params = self._fit_request(
             messages,
             params,
             protected_tail_messages=min(3, max(1, len(messages) - 1)),
         )
+        user_message_id = self._persist_user_message(cid, student_id, message, attachment_ids)
 
         def _gen() -> Iterator[str]:
             writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
@@ -890,6 +1142,8 @@ class ChatEngine:
         title: str | None = None,
         regenerate: bool = False,
         cancel_event: threading.Event | None = None,
+        images: list[ImageInput] | None = None,
+        attachment_ids: list[int] | None = None,
         **params,
     ) -> tuple[str, int | None, Iterator[tuple[str, str]]]:
         """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
@@ -909,16 +1163,22 @@ class ChatEngine:
             title=title,
         )
         if regenerate:
-            messages = self._assemble_history(cid, system_prompt, turn_instruction)
+            messages = self._assemble_history(
+                cid, student_id, system_prompt, turn_instruction, images
+            )
             user_message_id = None
         else:
-            messages = self._assemble(cid, system_prompt, message, turn_instruction)
-            user_message_id = self.store.add_message(cid, "user", message)
+            messages = self._assemble(
+                cid, student_id, system_prompt, message, turn_instruction, images
+            )
+            user_message_id = None
         messages, request_params = self._fit_request(
             messages,
             params,
             protected_tail_messages=min(3, max(1, len(messages) - 1)),
         )
+        if not regenerate:
+            user_message_id = self._persist_user_message(cid, student_id, message, attachment_ids)
 
         writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
 

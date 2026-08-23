@@ -35,8 +35,9 @@ without editing anything — the D1 bake-off seam. The file must already exist
 (`scripts/fetch_models.py --quant-variants` fetches the pinned candidates;
 `--with-draft` the 0.8B) and, in docker mode, live under `./models` (the only directory
 mounted into the container). The `/v1/models` alias follows the filename (default keeps
-`qwen3.5-4b`). Two pairings to know: vision's `mmproj-F16.gguf` belongs to the
-Qwen3.5-4B family, so non-4B cores degrade vision; and the docker default keeps draft
+`qwen3.5-4b`). Image input is available only when the selected model has its exact verified
+projector; a custom or text-only core remains usable for text and is labelled accordingly.
+The docker default keeps draft
 speculation active, so a core outside the Qwen3.5 vocab (248,320) fails the engine boot —
 set `MUTA_RT_SPEC_TYPE=none` first for such cores.
 
@@ -46,8 +47,8 @@ set `MUTA_RT_SPEC_TYPE=none` first for such cores.
 
 > **Apple silicon:** everything runs under x86 emulation. In Docker Desktop settings,
 > enable **"Use Rosetta for x86_64/amd64 emulation"** and give Docker **≥ 12 GB memory** —
-> the core model tree is ~3.3 GB and an image question spawns a second ~3.3 GB vision
-> instance (weights pages are shared, its KV is not). Token speed under emulation is not
+> the core model tree is ~3.3 GB and its 4B projector adds about 641 MiB to the same selected
+> engine. Image selection itself starts no inference process. Token speed under emulation is not
 > meaningful; correctness is.
 
 ## Native dev mode (Apple silicon)
@@ -270,9 +271,16 @@ curl -N -s localhost:8000/v1/chat/stream -H 'content-type: application/json' -d 
 # data: {"delta": "..."}       ← answer tokens
 # data: {"done": true, "conversation_id": "...", "tokens_per_second": ...}
 
-# Photo of handwritten work (multipart):
+# Photo of handwritten work: upload only (no model runs yet):
 curl -s localhost:8000/v1/tutor/vision -F session_id=ada -F image=@work.jpg
-# {"session_id":"ada","transcription":"∫ x² dx = ...","accepted":true,"attachment_id":3,...}
+# {"session_id":"ada","transcription":"","accepted":true,"attachment_id":3,...}
+
+# Send the stored image and exact question to the selected image-capable model:
+curl -s localhost:8000/v1/chat -H 'content-type: application/json' -d '{
+  "student_id": "ada",
+  "message": "Where did my integration go wrong?",
+  "attachment_ids": [3]
+}'
 
 # Uploaded audio → text (503 with a friendly message if ASR is unavailable):
 curl -s localhost:8000/v1/audio/transcribe -F audio=@question.m4a
@@ -322,7 +330,8 @@ Backend env (set in `docker-compose.yml`; all `MUTA_RT_*` overridable):
 | `MUTA_RT_STARTUP_TIMEOUT_S` | `900` | model-load allowance (emulation is slow) |
 | `MUTA_RT_REQUEST_TIMEOUT_S` | `600` | per-request client timeout |
 | `TUTOR_ROOT` | `/app` | root for vision/audio model paths |
-| `MUTA_RT_N_CTX` | native: `12288` total (`6144` per lane); Compose: `2048` | active shared context; hard request fitting reserves per-lane reply headroom |
+| `MUTA_RT_IMAGE_MIN_TOKENS` / `_MAX_TOKENS` | `1024` / `2048` | bounded visual-token range; chat admission reserves the upper bound |
+| `MUTA_RT_N_CTX` | native: `12288` total (`6144` per lane); Compose: `8192` (`4096` per lane) | active shared context; hard request fitting reserves per-lane image/prompt/reply headroom |
 | `MUTA_RT_ENABLE_THINKING` | `1` | Qwen thinking mode (minutes-long on emulated CPU) |
 | `MUTA_CORE_CAP_MIB` | `5400` | ladder's core-RSS cap; default 4300 is main's 7 GB budget |
 | `MUTA_RT_N_PARALLEL` | `2` | server slots (each costs ~50 MiB f32 state on the hybrid 4B) |

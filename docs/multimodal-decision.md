@@ -1,7 +1,7 @@
 # Multimodal decisions — the open gates and what closes them
 
 Generated from TDD §14 (the companion doc the TDD asks for) plus what the implementation
-now pins down. Status as of **23 Jul 2026**.
+now pins down. Status as of **23 Aug 2026**.
 
 Rule this document exists to enforce: *a gate is closed by a measurement, not by a
 preference.* Every row below says what would flip it and who measures. Where the code has to
@@ -16,11 +16,11 @@ config switch — never a rewrite.
 |---|---|---|---|---|---|
 | **D1** | Core quant variant | own-imatrix Q4_K_M | stock / UD-Q4_K_XL | `score.py` argmax over the bake-off matrix | `deploy/versions.lock` (`CORE_MODEL_*`, unpinned on purpose); `BundlePaths.core_model` resolves whatever GGUF is staged rather than a hardcoded name |
 | **D2** | Speculation | **c** — none | a (MTP, variant B) / b (draft model) | b needs ≥ 1.43 tok/s per GiB spent, counting the draft's dual use as hint-mode | `TUTOR_SPECULATION` in `deploy/etc/profile.env`; `runtime/profiles._speculation_flags` |
-| **D3** | Vision topology | two instances (text + ephemeral vision) | one always-vision instance | upstream #21133 confirmed fixed at the pin **and** ≥ 1.1 GiB steady headroom | `runtime/vision.py`; `core_vision_command` omits the three flags mmproj disables |
+| **D3** | Image-input topology | one selected model with its exact projector | separate eager transcription server | direct image smoke fails at the pinned engine | `RuntimeConfig.mmproj_path`; `ModelManager`; `/v1/attachments/images` + `/v1/chat` |
 | **D4** | Demo engine binary | A (mainline, pinned) | B (ik_llama) / C (OpenVINO) | on-target bench: B if ≥ 1.10× A; C only if Intel **and** it beats best-of(A,B) | `TUTOR_ENGINE_VARIANT`, `IK_LLAMA_REF=` / `OPENVINO_VERSION=` (both unpinned) |
 | **D5** | Premium TTS | Piper everywhere | + Kokoro in solo-demo | solo-demo RSS ≤ 6.5 GiB with Kokoro resident | `ServingProfile.tts_engine`; ladder L2 forces Piper regardless |
 | **D6** | KV cache type | q8_0 | q5_1 / q4_0 | ladder sweep shows no eval regression **and** slots gained | `TUTOR_KV_TYPE`; `runtime/kvmath.CACHE_TYPE_BYTES` prices each rung |
-| **D7** | Vision process mgmt | gateway subprocess manager | llama-swap / router mode | manager > 200 LoC or 3 bugs | `runtime/vision.py` — **~188 code LoC, 2 bugs spent** (both lifecycle races, [vision-lifecycle.md](vision-lifecycle.md)). One bug from the escape hatch. |
+| **D7** | Image attachment lifecycle | upload/guard/store, then selected-model inference on Send | eager inference during selection | only a measured selected-model incompatibility | `orchestrator/gateway/routes.py`; the older `runtime/vision.py` manager is not on the browser/API image path |
 | **D8** | Embedding model | bge-small-en-v1.5 Q8_0 | multilingual-e5-small | a multilingual RAG corpus lands | `EMBED_MODEL_*` in the lock; index records the embedder identity and refuses a mismatched query |
 | **D9** | mlock core weights | off (classroom) / on (solo-demo) | flip | soak shows major-fault jitter > 50 ms p95 | `TUTOR_MLOCK`; `--mlock` appears only when the profile says so, and the invocation announces it |
 
@@ -28,16 +28,30 @@ config switch — never a rewrite.
 
 ## What the implementation already settles
 
-**D3 is settled in shape even if #21133 is fixed.** `core_vision_command` deliberately omits
-`--cache-reuse`, `--slot-save-path` and `--context-shift`, and there is a test asserting their
-absence. Both instances point at the *same* weight file, so the page cache shares the
-read-only pages and the marginal cost is mmproj + this instance's KV. If the upstream issue
-is fixed at the pin, the two-instance topology stays — it is strictly more robust, and the
-TTL reaper is what returns 1.1 GiB to the degradation ladder.
+**D3 changed after testing the actual product interaction.** The earlier implementation started
+a separate 4B server as soon as a learner selected a picture, asked that server for a text
+transcription, and then sent only the transcription to the selected tutor. This consumed about
+3.8 GiB before overhead, made the preview wait on inference, and let an active read block an
+otherwise unrelated model switch.
 
-**D7's budget is explicit.** The manager does spawn, health-check, TTL-reap and deny. No
-queueing, no restart backoff, no warm pool — those are the features that would push it past
-the 200-LoC line the TDD set as the switch-to-llama-swap trigger.
+The browser now performs an upload only. When the learner presses Send, the gateway passes the
+guarded image and exact learner text in one OpenAI-compatible content array to the selected
+`llama-server`. A catalog model advertises image input only when its exact projector passes size
+and SHA-256 verification. The capacity planner prices that projector once as part of the selected
+engine and reserves no second CORE-VISION process.
+
+The selected engine is bounded to 1,024–2,048 visual tokens and the context fitter charges the
+2,048-token ceiling per image even when llama-server's exact text-token endpoint omits projector
+embeddings. One historical image is replayed for follow-up questions; when a learner sends a
+different image and both visual sequences cannot fit, the older visual exchange is removed from
+the request copy (never from stored history). An undersized serving profile fails with an
+actionable 409 instead of spinning or overfilling the context. Compose guarantees 4,096 tokens per
+lane so one maximum-size image still leaves 2,048 tokens for the real tutor prompt, safety reserve
+and a useful reply.
+
+**D7 no longer needs a vision-process lifecycle in the interactive path.** Upload state cannot
+occupy inference capacity or block replacement. The legacy `/v1/tutor/vision` endpoint remains an
+upload-only compatibility alias; it neither transcribes nor starts `runtime/vision.py`.
 
 **D9's asymmetry is in the code, not in a runbook.** `--mlock` is emitted only for the
 solo-demo profile, and the invocation carries a note that mlock is valid only after staging

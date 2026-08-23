@@ -385,6 +385,10 @@ button.ghost:hover { background: var(--accent-soft); }
   color: var(--accent); font-size: 0.61rem; font-weight: 650; text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+.model-capability {
+  flex: none; padding: 1px 6px; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--muted); font-size: 0.61rem; font-weight: 650;
+}
 .model-option-detail {
   grid-column: 1; color: var(--muted); font-size: 0.69rem; line-height: 1.4;
 }
@@ -744,19 +748,24 @@ details.thinking .think-label.shimmer {
   margin-bottom: 8px;
 }
 .chip img { height: 42px; border-radius: 6px; }
-.chip .x { cursor: pointer; color: var(--muted); border: none; background: none; }
+.chip .x {
+  display: inline-grid; place-items: center; min-width: 24px; min-height: 24px;
+  padding: 0; cursor: pointer; color: var(--muted); border: none; background: none;
+}
 .chip .x:hover { color: var(--danger); }
-/* Reading a photo takes 15-90 s here, and a failed read must stay visible long after any
-   toast has faded — the chip is what tells the student whether the tutor can see it. */
+/* Upload state stays beside the exact image. Inference starts only after Send. */
 .chip-status {
   max-width: min(28rem, 55vw); white-space: normal; overflow-wrap: anywhere;
   font-size: 0.75rem; color: var(--muted);
 }
-.chip.reading { opacity: 0.8; }
-.chip.reading .chip-status { animation: chip-pulse 1.4s ease-in-out infinite; }
+.chip.uploading { opacity: 0.8; }
+.chip.uploading .chip-status { animation: chip-pulse 1.4s ease-in-out infinite; }
 .chip.failed { border-color: var(--danger); }
 .chip.failed .chip-status { color: var(--danger); }
 @keyframes chip-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .chip.uploading .chip-status { animation: none; }
+}
 button.icon:disabled { opacity: 0.4; cursor: default; }
 
 #input {

@@ -239,6 +239,51 @@ class SQLiteConversationStore:
             )
         return int(cur.lastrowid)
 
+    def add_user_message_with_attachments(
+        self,
+        conversation_id: str,
+        content: str,
+        attachment_ids: list[int],
+        *,
+        owner_id: str,
+    ) -> int:
+        """Atomically persist a user turn and bind its already-validated attachments."""
+        ts = _now()
+        unique_ids = list(dict.fromkeys(attachment_ids))
+        with self._lock, self._conn:
+            owner = self._conn.execute(
+                "SELECT 1 FROM conversations WHERE id = ? AND student_id = ?",
+                (conversation_id, owner_id),
+            ).fetchone()
+            if owner is None:
+                raise PermissionError("conversation belongs to another learner")
+            cur = self._conn.execute(
+                "INSERT INTO messages (conversation_id, role, content, created_at) "
+                "VALUES (?, 'user', ?, ?)",
+                (conversation_id, content, ts),
+            )
+            message_id = int(cur.lastrowid)
+            for attachment_id in unique_ids:
+                linked = self._conn.execute(
+                    "UPDATE attachments SET conversation_id = ?, message_id = ? "
+                    "WHERE id = ? AND owner_id = ? AND message_id IS NULL "
+                    "AND (conversation_id IS NULL OR conversation_id = ?)",
+                    (
+                        conversation_id,
+                        message_id,
+                        attachment_id,
+                        owner_id,
+                        conversation_id,
+                    ),
+                )
+                if linked.rowcount != 1:
+                    raise RuntimeError("attachment link failed")
+            self._conn.execute(
+                "UPDATE conversations SET updated_at = ? WHERE id = ?",
+                (ts, conversation_id),
+            )
+        return message_id
+
     def update_message(self, message_id: int, content: str) -> None:
         ts = _now()
         with self._lock, self._conn:

@@ -9,12 +9,14 @@ local network. The model and all learner data remain on the host laptop.
 2. Open Muta on the laptop, open **Settings → Host mode**, and turn it on.
 3. Choose a memory policy:
    - **ADTC competition** keeps the serving plan inside the competition RAM ceiling and runs
-     at most two model replies at once. If the normal 4B model cannot coexist safely with the
-     image reader under the official process-tree RSS rule, Muta atomically switches to the
-     pinned local Qwen3.5 0.8B competition model before opening the LAN listener.
+     at most two model replies at once. If the normal 4B model plus its paired image projector
+     cannot fit safely under the official process-tree RSS rule, Muta atomically switches to
+     the pinned local Qwen3.5 0.8B competition model and its own projector before opening the
+     LAN listener.
    - **Use this system** measures physical, currently available and container/cgroup RAM,
      preserves useful context per chat, accounts for model weights and anonymous repacking,
-     KV/recurrent state, prompt cache, compute buffers, the gateway and auxiliary inference,
+     KV/recurrent state, prompt cache, compute buffers, the gateway and the selected model's
+     projector,
      then caps simultaneous replies by physical CPU cores. Remaining replies wait in a bounded,
      fair queue. If other applications leave too little headroom, Muta asks the host to close
      them instead of expanding into swap or global OOM.
@@ -36,7 +38,7 @@ declined username can sign up again and must be approved again.
 
 Member accounts cannot enable Host mode, select/restart the shared model, view the host roster,
 or use internal/diagnostic routes. They retain the learner features: text and voice chat,
-vision, personal files/RAG, conversation history, tutor modes and learning preferences.
+image input, personal files/RAG, conversation history, tutor modes and learning preferences.
 
 ## First-device HTTPS trust
 
@@ -63,9 +65,10 @@ reuses the CA across restarts and reissues the leaf certificate for current LAN 
 ## Capacity changes
 
 Changing the memory policy may require a llama-server restart because `--parallel` and total
-context are engine-start parameters. Muta refuses the change while a reply or image read is
-running, queued or reserved; finish or stop it and retry. Model and capacity replacement are one
-idle, rollback-safe transition. A failed restart restores the previous model and serving profile.
+context are engine-start parameters. Muta refuses the change while a reply is running, queued or
+reserved; finish or stop it and retry. Selecting/uploading an image runs no model and therefore
+does not block replacement. Model and capacity replacement are one idle, rollback-safe
+transition. A failed restart restores the previous model and serving profile.
 The product-mode container ceiling is derived at startup from 85% of host RAM; that cgroup is the
 single system reserve rather than applying 85% twice. Override it explicitly with
 `MUTA_BACKEND_MEMORY_LIMIT` when required.

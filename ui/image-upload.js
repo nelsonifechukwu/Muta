@@ -1,4 +1,4 @@
-/* Pure image-upload response handling, kept executable in both the browser and Node tests. */
+/* Pure attachment-upload response handling, executable in both browser and Node tests. */
 "use strict";
 
 ((global) => {
@@ -10,19 +10,22 @@
         ? { status: "failed", detail: body.detail }
         : uploadFailure();
     }
-    if (!body || typeof body !== "object" || typeof body.accepted !== "boolean") {
+    if (
+      !body
+      || typeof body !== "object"
+      || !Number.isInteger(body.attachment_id)
+      || typeof body.mime !== "string"
+      || !body.mime.startsWith("image/")
+    ) {
       return uploadFailure();
     }
-    const attachmentId = body.attachment_id ?? null;
-    if (body.accepted && typeof body.transcription === "string" && body.transcription) {
-      return { status: "ready", attachmentId, transcription: body.transcription };
-    }
-    if (body.accepted) {
-      return { status: "failed", attachmentId, detailKey: "attachment.photoEmpty" };
-    }
-    return typeof body.detail === "string" && body.detail
-      ? { status: "failed", attachmentId, detail: body.detail }
-      : { status: "failed", attachmentId, detailKey: "attachment.imageUnreadable" };
+    return {
+      status: "ready",
+      attachmentId: body.attachment_id,
+      mime: body.mime,
+      width: Number(body.width) || 0,
+      height: Number(body.height) || 0,
+    };
   }
 
   async function request(fetchImpl, url, options) {
@@ -41,6 +44,6 @@
   }
 
   const api = { interpret, request };
-  global.MutaVisionUpload = api;
+  global.MutaImageUpload = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : window);

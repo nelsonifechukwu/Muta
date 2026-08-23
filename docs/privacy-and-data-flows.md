@@ -65,8 +65,9 @@ exactly what leaves the device in each, when, and how to keep it disabled.
   `MUTA_RT_MAX_HISTORY_MESSAGES`, default **20** turns — `runtime/config.py:151`), and the
   current student message — is POSTed to a **third-party OpenAI-compatible API** at
   `MUTA_CLOUD_URL`, authenticated with `MUTA_CLOUD_API_KEY`. Because transcribed handwriting
-  and transcribed audio become ordinary messages, image/voice content can reach the cloud
-  in text form too.
+  is no longer used, an image turn carries the guarded image itself in the message content
+  array; transcribed audio becomes ordinary text. Image and voice content can therefore reach
+  the configured cloud API too.
 - **When:** only when **all three** of `MUTA_CLOUD_URL`, `MUTA_CLOUD_MODEL`,
   `MUTA_CLOUD_API_KEY` are set (`deps.py:58`) **and** the connectivity probe (flow c) says
   the box is online (`cloud.py:44`, `deps.py:70`). It is process-wide: once configured,

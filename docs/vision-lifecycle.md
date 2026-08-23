@@ -1,5 +1,11 @@
 # CORE-VISION lifecycle — the two races, and the invariants that close them
 
+> **Historical subsystem record — superseded 23 Aug 2026.** The browser no longer starts this
+> auxiliary server or asks it to transcribe a selected image. It uploads guarded bytes, then the
+> selected catalog model receives those bytes with the learner's exact text when Send is pressed.
+> `runtime/vision.py` remains only for legacy/non-browser callers. Current behavior and rationale:
+> [`multimodal-decision.md`](multimodal-decision.md).
+
 `runtime/vision.py` spawns an ephemeral llama-server on demand and TTL-kills it at 120 s idle
 (TDD §6.3, D7). Two concurrency bugs lived in that ~150-line manager and made image upload
 fail *permanently* after the first use. Both are fixed; this is the record of why the

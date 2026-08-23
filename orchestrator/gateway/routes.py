@@ -11,7 +11,6 @@ their own stubs, but nothing on the public `/v1` surface returns 501.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import ipaddress
 import json
 import logging
@@ -51,6 +50,7 @@ from contracts.models import (
     GenerationStatus,
     GenerationStopped,
     HealthResponse,
+    ImageUploadReply,
     LearningResource,
     MasteryResponse,
     MessageList,
@@ -88,12 +88,6 @@ from orchestrator.gateway.auth import (
     request_token,
     require_caller,
     resolve_principal,
-)
-from orchestrator.gateway.auxiliary import (
-    AuxiliaryQueueFull,
-    OwnerWorkRejected,
-    auxiliary_slot,
-    get_owner_work_manager,
 )
 from orchestrator.gateway.deps import (
     get_capacity_controller,
@@ -147,14 +141,18 @@ from orchestrator.retrieval.resources import (
 from orchestrator.telemetry import get_hub
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
-from runtime.chat import ChatEngine, strip_visualization_protocol
+from runtime.chat import (
+    AttachmentPersistenceError,
+    ChatEngine,
+    ImageInput,
+    strip_visualization_protocol,
+)
 from runtime.client import Generation, InferenceStreamError
 from runtime.config import RuntimeConfig
 from runtime.model_catalog import ModelSwitchError
 from runtime.slots import SlotError
 from runtime.ttft import PreambleWriter
-from runtime.vision import VisionDenied, VisionManager
-from runtime.vision_client import VisionClient, VisionResponseError
+from runtime.vision import VisionManager
 
 router = APIRouter()
 
@@ -259,6 +257,7 @@ def _listed_conversation_title(row: dict, store) -> str | None:
     if message is not None and _has_title_resource_mention(message.get("content", "")):
         return _conversation_title(message.get("content", ""))
     return title
+
 
 # Serve stored attachments as inert downloads: never let a browser MIME-sniff or render bytes
 # a student uploaded (an audio/HTML polyglot with a client-set text/html type was a stored-XSS
@@ -460,10 +459,6 @@ def select_model(
 
         def replace_model():
             nonlocal profile
-            if not get_vision().stop_for_reconfigure():
-                raise GenerationCapacityError(
-                    "wait for the active image reading before changing models"
-                )
             if strict_share_security() and hasattr(manager, "candidate_config"):
                 # Read the persisted mode and hash/price the target only after idle admission
                 # is locked. A concurrent Host setting change cannot install a stale profile.
@@ -666,22 +661,95 @@ def _run_self_check(reply: str) -> tuple[bool | None, str]:
         return None, ""
 
 
-def _link_attachments(
+_MAX_IMAGES_PER_TURN = 1
+_IMAGE_MIME = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
+
+
+def _active_image_model() -> tuple[bool, str, str]:
+    """Return (available, label, reason) for the engine that will receive this turn."""
+    manager = get_model_manager()
+    if manager is not None:
+        status = manager.status()
+        active_id = status.get("active_id")
+        active = next(
+            (model for model in status.get("models", []) if model.get("id") == active_id),
+            None,
+        )
+        if active is not None:
+            return (
+                bool(active.get("supports_images")),
+                str(active.get("label") or "The selected model"),
+                str(active.get("image_input_reason") or ""),
+            )
+        # A supervised engine whose configured GGUF is absent from the integrity catalog is
+        # not allowed to become image-capable merely because an arbitrary projector path
+        # exists. Shipped models belong in the catalog; custom models remain text-only until
+        # their exact model/projector pair is pinned there.
+        return (
+            False,
+            "The selected model",
+            "it is not registered with a verified image projector",
+        )
+    cfg = RuntimeConfig()
+    if cfg.supports_images:
+        return True, cfg.model_alias, ""
+    return (
+        False,
+        "The selected model",
+        "its verified image projector is not loaded",
+    )
+
+
+def _resolve_image_inputs(
     engine: ChatEngine,
-    ids: list[int],
-    cid: str,
-    message_id: int | None,
+    attachment_ids: list[int],
     *,
     owner_id: str,
-) -> None:
-    """Bind previously-uploaded attachments to the persisted user turn. Unknown ids are a
-    no-op UPDATE, not an error — the message must never fail over a stale attachment ref."""
-    for aid in ids:
-        try:
-            engine.store.link_attachment(aid, cid, message_id, owner_id=owner_id)
-        except Exception:
-            log.warning("failed to link attachment %s to conversation %s", aid, cid, exc_info=True)
+    conversation_id: str | None = None,
+) -> list[ImageInput]:
+    """Resolve only owned, guarded images for the live model request.
+
+    Audio ids remain ordinary history attachments. Image bytes cross this boundary only after
+    ownership, type and selected-model capability checks, and never enter persisted text.
+    """
+    images: list[ImageInput] = []
+    for attachment_id in dict.fromkeys(attachment_ids):
+        row = engine.store.get_attachment(attachment_id, owner_id=owner_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404,
+                detail="an attached file is no longer available — remove it and attach it again",
+            )
+        if row.get("kind") != "image":
             continue
+        mime = str(row.get("mime") or "")
+        if mime not in _IMAGE_MIME.values():
+            raise HTTPException(
+                status_code=409,
+                detail="that attachment is not a supported image — attach a JPEG, PNG or WebP",
+            )
+        images.append(ImageInput(mime=mime, data=bytes(row["data"])))
+    if len(images) > _MAX_IMAGES_PER_TURN:
+        raise HTTPException(
+            status_code=409,
+            detail="send one image per question on this laptop — remove the extra image and retry",
+        )
+    history_has_images = False
+    history_probe = getattr(engine, "history_has_images", None)
+    if conversation_id and callable(history_probe):
+        history_has_images = bool(history_probe(conversation_id, owner_id))
+    if images or history_has_images:
+        supported, label, reason = _active_image_model()
+        if not supported:
+            recovery = reason or "it accepts text only"
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"{label} cannot use this image because {recovery}. "
+                    "Choose a model marked ‘Image input’ or remove the image."
+                ),
+            )
+    return images
 
 
 @router.get("/resources", response_model=ResourceList, tags=["resources"])
@@ -797,6 +865,15 @@ def chat(
         raise HTTPException(status_code=401, detail="sign in to continue")
     if caller is not None and caller != req.student_id:
         raise HTTPException(status_code=403, detail="you can only chat as yourself")
+    # Fast refusal: an unsupported image turn should not wait behind valid generations or
+    # have a full queue mask the actionable model error. `_run_chat` repeats this check inside
+    # the lifecycle barrier to close the model-switch race.
+    _resolve_image_inputs(
+        engine,
+        req.attachment_ids,
+        owner_id=req.student_id,
+        conversation_id=req.conversation_id,
+    )
     resource_block = ""
     resource_sources: list[dict] = []
     if req.use_rag:
@@ -818,6 +895,16 @@ def chat(
     )
 
     def _run_chat():
+        # In strict mode GenerationManager has already installed a job barrier; in legacy
+        # mode the caller holds runtime_lifecycle below. Check capability inside that barrier
+        # so a concurrent model switch cannot replace a verified image model with text-only
+        # after validation but before inference.
+        image_inputs = _resolve_image_inputs(
+            engine,
+            req.attachment_ids,
+            owner_id=req.student_id,
+            conversation_id=req.conversation_id,
+        )
         chat_result = engine.chat(
             student_id=req.student_id,
             message=req.message,
@@ -833,6 +920,8 @@ def chat(
             title=_conversation_title(req.message),
             regenerate=req.regenerate,
             cancel_event=turn_cancel,
+            images=image_inputs,
+            attachment_ids=req.attachment_ids,
             **_sampling_for_request(
                 req.mode.value,
                 req.thinking,
@@ -856,14 +945,6 @@ def chat(
         # drains this operation before deleting the account, so nothing can recreate data
         # after the erase barrier.
         with member_write_lease(write_principal):
-            if req.attachment_ids:
-                _link_attachments(
-                    engine,
-                    req.attachment_ids,
-                    chat_result.conversation_id,
-                    chat_result.user_message_id,
-                    owner_id=req.student_id,
-                )
             if resource_sources and chat_result.assistant_message_id is not None:
                 engine.store.add_message_sources(chat_result.assistant_message_id, resource_sources)
             _touch_twin(req.student_id, req.subject.value, req.message)
@@ -898,11 +979,17 @@ def chat(
                 cancel_event=turn_cancel,
             )
         else:
-            result = _run_chat()
+            with runtime_lifecycle():
+                result = _run_chat()
     except GenerationCapacityError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
+    except AttachmentPersistenceError as e:
+        raise HTTPException(
+            status_code=503,
+            detail="the image could not be saved with this question — please send it again",
+        ) from e
     except (httpx.HTTPError, InferenceStreamError) as e:
         raise _handle_engine_error(e, where="/chat") from e
     # Telemetry for the external HUD (bench/monitor.py), which never sees a generation itself.
@@ -953,6 +1040,14 @@ def _start_chat_generation(
         )
     else:
         resource_block, resource_sources = "", []
+    # Preflight before reservation for an immediate ownership/capability error. The second
+    # resolution below is deliberate: only it runs behind the replacement barrier.
+    _resolve_image_inputs(
+        engine,
+        req.attachment_ids,
+        owner_id=req.student_id,
+        conversation_id=req.conversation_id,
+    )
     try:
         reservation_id = generations.reserve(
             req.student_id,
@@ -962,6 +1057,18 @@ def _start_chat_generation(
         )
     except GenerationCapacityError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    try:
+        # The reservation is the model-lifecycle barrier. Capability must be checked only
+        # after it exists; otherwise /models/select can win the gap and install text-only.
+        image_inputs = _resolve_image_inputs(
+            engine,
+            req.attachment_ids,
+            owner_id=req.student_id,
+            conversation_id=req.conversation_id,
+        )
+    except Exception:
+        generations.cancel_reservation(reservation_id)
+        raise
 
     # A learner may own several simultaneous chats, so admission is leased per generation,
     # not per student. Otherwise two replies reuse one busy SessionManager slot and the first
@@ -1006,7 +1113,7 @@ def _start_chat_generation(
     structured_response = "response_format" in sampling_params
 
     try:
-        cid, user_message_id, events = engine.stream_events_chat(
+        cid, _user_message_id, events = engine.stream_events_chat(
             student_id=req.student_id,
             message=req.message,
             conversation_id=req.conversation_id,
@@ -1021,6 +1128,8 @@ def _start_chat_generation(
             title=_conversation_title(req.message),
             regenerate=req.regenerate,  # 'answer now' re-runs this turn without a new user msg
             cancel_event=cancel_event,
+            images=image_inputs,
+            attachment_ids=req.attachment_ids,
             # §6.5 sampling profiles apply to the UI's primary path too — without them the
             # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
             # student holding a slot indefinitely, and with thinking on it filled the context).
@@ -1029,20 +1138,17 @@ def _start_chat_generation(
     except ValueError as exc:
         generations.cancel_reservation(reservation_id)
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except AttachmentPersistenceError as exc:
+        generations.cancel_reservation(reservation_id)
+        raise HTTPException(
+            status_code=503,
+            detail="the image could not be saved with this question — please send it again",
+        ) from exc
     except Exception:
         # Physical admission happens only at FIFO-head promotion, after preparation succeeds.
         # At this point only the bounded registry reservation needs to be released.
         generations.cancel_reservation(reservation_id)
         raise
-    if req.attachment_ids:
-        _link_attachments(
-            engine,
-            req.attachment_ids,
-            cid,
-            user_message_id,
-            owner_id=req.student_id,
-        )
-
     # TTFT preamble (docs/ttft-preamble.md): fills the prefill window with a distinct,
     # non-answer `preamble` event. A no-op when disabled or unprovisioned.
     streamed = with_preamble(events, preamble, **_preamble_opts())
@@ -2036,8 +2142,77 @@ def tutor_chat_stream(
     return StreamingResponse(_sse(), media_type="text/event-stream", headers=_SSE_HEADERS)
 
 
-_IMAGE_MIME = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
-_VISION_SLOTS = threading.BoundedSemaphore(1)
+async def _persist_image_upload(
+    request: Request,
+    image: UploadFile,
+    *,
+    owner_id: str,
+    conversation_id: str | None,
+    engine: ChatEngine,
+):
+    if conversation_id:
+        conversation = engine.store.get_conversation(conversation_id)
+        if conversation is not None and conversation.get("student_id") != owner_id:
+            raise HTTPException(status_code=403, detail="you can only use your own conversation")
+    raw = await image.read(MAX_IMAGE_UPLOAD_BYTES + 1)
+    try:
+        prepared = await run_in_threadpool(prepare_image, raw)
+    except ImageRejected as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    write_principal = principal_from_request(request)
+    try:
+        with member_write_lease(write_principal):
+            attachment_id = await run_in_threadpool(
+                engine.store.add_attachment,
+                "image",
+                _IMAGE_MIME[prepared.format],
+                prepared.data,
+                conversation_id=conversation_id,
+                owner_id=owner_id,
+            )
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=403, detail="this account is being removed") from exc
+    except Exception as exc:
+        log.warning("failed to persist image attachment for %s", owner_id, exc_info=True)
+        raise HTTPException(
+            status_code=503,
+            detail="the image could not be saved — try attaching it again",
+        ) from exc
+    return prepared, attachment_id
+
+
+@router.post(
+    "/attachments/images",
+    response_model=ImageUploadReply,
+    status_code=201,
+    tags=["attachments"],
+)
+async def image_upload(
+    request: Request,
+    image: UploadFile = File(...),
+    conversation_id: str | None = Form(None),
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> ImageUploadReply:
+    """Validate and store an image without running inference.
+
+    The selected model receives these bytes only when the learner sends a chat turn containing
+    the returned attachment id. Selection therefore remains instant and cannot block a model
+    switch while the learner is still composing.
+    """
+    prepared, attachment_id = await _persist_image_upload(
+        request,
+        image,
+        owner_id=caller,
+        conversation_id=conversation_id,
+        engine=engine,
+    )
+    return ImageUploadReply(
+        attachment_id=attachment_id,
+        mime=_IMAGE_MIME[prepared.format],
+        width=prepared.width,
+        height=prepared.height,
+    )
 
 
 @router.post("/tutor/vision", response_model=VisionReply, tags=["tutor"])
@@ -2046,106 +2221,29 @@ async def tutor_vision(
     session_id: str = Form(...),
     image: UploadFile = File(...),
     conversation_id: str | None = Form(None),
-    vision: VisionManager = Depends(get_vision),
     engine: ChatEngine = Depends(get_engine),
     caller: str | None = Depends(optional_caller),
 ) -> VisionReply:
-    """Photo of handwritten work → transcription (S2).
-
-    Two refusals, both friendly: the image guard (too big, wrong format) and the ladder
-    (no memory for a vision instance). Neither is an error — the student is told to type the
-    problem instead, and the tutor keeps working.
-    """
+    """Legacy upload alias; inference now happens with the selected model at chat send."""
     if strict_share_security() and caller is None:
         raise HTTPException(status_code=401, detail="sign in to continue")
-    write_principal = principal_from_request(request)
-    if caller is not None and conversation_id:
-        conversation = engine.store.get_conversation(conversation_id)
-        if conversation is not None and conversation.get("student_id") != caller:
-            raise HTTPException(status_code=403, detail="you can only use your own conversation")
     owner_id = caller or session_id
-    raw = await image.read(MAX_IMAGE_UPLOAD_BYTES + 1)
     try:
-        prepared = prepare_image(raw)
-    except ImageRejected as e:
-        return VisionReply(session_id=session_id, accepted=False, detail=str(e))
-
-    # Persist the (guard-normalised) image so the thread's history can re-render it. Storage
-    # failure must not block tutoring — the transcription path continues without an id.
-    attachment_id: int | None = None
-    try:
-        with member_write_lease(write_principal):
-            attachment_id = await run_in_threadpool(
-                engine.store.add_attachment,
-                "image",
-                _IMAGE_MIME.get(prepared.format, "application/octet-stream"),
-                prepared.data,
-                conversation_id=conversation_id,
-                owner_id=owner_id,
-            )
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=403, detail="this account is being removed") from exc
-    except Exception:
-        log.warning("failed to persist vision attachment for session %s", session_id, exc_info=True)
-        attachment_id = None
-
-    # Both `ensure()` (polls for up to MUTA_RT_VISION_STARTUP_S on a cold spawn) and
-    # `transcribe()` (a blocking httpx.post, up to request_timeout_s) are synchronous. This
-    # handler is async, so run them in the threadpool — otherwise one vision request freezes
-    # the single event loop and stalls every other phone in the classroom mid-stream.
-    # The vision instance is stateless and TTL-killable by design: it returns a transcription,
-    # and the *text* session carries the conversation (§6.3, S2). A transport failure OR a
-    # malformed-but-200 reply is S2's honest fallback, never a 500 in a non-technical judge's face.
-    # The same per-request budget the text engine gets: a real photo at the Qwen-VL
-    # 1024-image-token floor needs minutes of prefill on a slow box, and the client's 120 s
-    # default silently cut every one of them off mid-read. `in_use()` keeps the TTL reaper
-    # off a server that is mid-transcription for exactly as long.
-    def _read(cancel_event: threading.Event | None = None) -> str:
-        with vision.in_use():
-            base_url = vision.ensure()  # spawns CORE-VISION if needed
-            key_file = vision.paths.api_key_file
-            api_key = key_file.read_text().strip() if key_file.is_file() else None
-            client = VisionClient(
-                base_url,
-                timeout=RuntimeConfig().request_timeout_s,
-                api_key=api_key,
-            )
-            if cancel_event is None:
-                return client.transcribe(prepared.data, prepared.format)
-            return client.transcribe(prepared.data, prepared.format, cancel_event=cancel_event)
-
-    try:
-        if write_principal is not None and write_principal.role == "member":
-            tracked = get_owner_work_manager().track(write_principal.subject)
-        else:
-            tracked = contextlib.nullcontext(None)
-        with tracked as cancel_event:
-            async with auxiliary_slot(_VISION_SLOTS):
-                transcription = await run_in_threadpool(_read, cancel_event)
-    except OwnerWorkRejected:
-        raise HTTPException(status_code=403, detail="this account is being removed") from None
-    except AuxiliaryQueueFull:
-        return VisionReply(
-            session_id=session_id,
-            accepted=False,
-            detail="the image reader is busy — type the problem or try again shortly",
-            attachment_id=attachment_id,
+        _prepared, attachment_id = await _persist_image_upload(
+            request,
+            image,
+            owner_id=owner_id,
+            conversation_id=conversation_id,
+            engine=engine,
         )
-    except VisionDenied as e:
-        return VisionReply(
-            session_id=session_id, accepted=False, detail=str(e), attachment_id=attachment_id
-        )
-    except (httpx.HTTPError, VisionResponseError):
-        return VisionReply(
-            session_id=session_id,
-            accepted=False,
-            detail="the image reader didn't respond — type the problem and I'll work through it",
-            attachment_id=attachment_id,
-        )
+    except HTTPException as exc:
+        if exc.status_code == 422:
+            return VisionReply(session_id=session_id, accepted=False, detail=str(exc.detail))
+        raise
     return VisionReply(
         session_id=session_id,
-        transcription=transcription,
         accepted=True,
+        detail="Image attached. It will be sent with your next question.",
         attachment_id=attachment_id,
     )
 

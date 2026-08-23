@@ -16,7 +16,6 @@ from orchestrator.gateway.capacity import CapacityPlanner, GiB, MiB
 from orchestrator.gateway.deps import RuntimeCapacityController
 from orchestrator.gateway.ladder import DegradationLadder, Level
 from runtime.config import RuntimeConfig
-from runtime.profiles import VISION_FULL_RSS_RESERVE_MIB
 
 
 def _plan(total_gib: int, mode: str):
@@ -55,7 +54,7 @@ def test_competition_mode_never_uses_the_product_ram_or_slot_budget():
 
     assert profile.n_parallel <= 2
     assert profile.memory_ceiling_bytes <= int(6.6 * GiB)
-    assert profile.auxiliary_reserve_bytes >= int(3.3 * GiB)
+    assert profile.auxiliary_reserve_bytes == 0
     assert profile.memory_mode == "competition"
 
 
@@ -126,9 +125,11 @@ def test_measured_resident_floor_can_reject_a_file_size_only_fit(monkeypatch, tm
     assert "measured tree 7.50 GiB" in profile.calculation
 
 
-def test_auxiliary_reserve_remains_additive_when_measured_base_wins(monkeypatch, tmp_path):
-    monkeypatch.setenv("MUTA_SHARE_FALLBACK_WEIGHTS_MIB", "128")
-    monkeypatch.setenv("MUTA_SHARE_AUXILIARY_RESERVE_MIB", "1100")
+def test_direct_image_projector_is_priced_once_when_measured_base_wins(monkeypatch, tmp_path):
+    model = tmp_path / "model.gguf"
+    projector = tmp_path / "mmproj.gguf"
+    model.write_bytes(b"m" * 128)
+    projector.write_bytes(b"p" * 64)
     planner = CapacityPlanner(
         memory_probe=lambda: (16 * GiB, 16 * GiB, None),
         core_probe=lambda: 4,
@@ -136,7 +137,8 @@ def test_auxiliary_reserve_remains_additive_when_measured_base_wins(monkeypatch,
     )
     cfg = RuntimeConfig(
         model_dir=tmp_path,
-        model_file="missing.gguf",
+        model_file=model.name,
+        mmproj_path=projector,
         no_repack=True,
         auto_download=False,
         _env_file=None,
@@ -150,23 +152,16 @@ def test_auxiliary_reserve_remains_additive_when_measured_base_wins(monkeypatch,
         + profile.compute_buffer_bytes
     )
 
-    assert profile.resident_base_bytes >= (
-        profile.measured_resident_bytes - variable + profile.auxiliary_reserve_bytes
-    )
+    assert profile.weights_bytes == 192
+    assert profile.auxiliary_reserve_bytes == 0
+    assert profile.resident_base_bytes >= profile.measured_resident_bytes - variable
 
 
-def test_system_mode_reserves_full_vision_rss_when_text_uses_different_weights(
-    monkeypatch, tmp_path
-):
-    core_dir = tmp_path / "models" / "core"
-    draft_dir = tmp_path / "models" / "draft"
-    core_dir.mkdir(parents=True)
-    draft_dir.mkdir(parents=True)
-    (core_dir / "vision-core.gguf").write_bytes(b"core")
-    (core_dir / "mmproj-F16.gguf").write_bytes(b"projector")
-    active = draft_dir / "small.gguf"
+def test_system_mode_prices_the_selected_models_paired_projector(tmp_path):
+    active = tmp_path / "small.gguf"
+    projector = tmp_path / "small-mmproj.gguf"
     active.write_bytes(b"small")
-    monkeypatch.setenv("TUTOR_ROOT", str(tmp_path))
+    projector.write_bytes(b"projector")
     planner = CapacityPlanner(
         memory_probe=lambda: (16 * GiB, 16 * GiB, None),
         available_probe=lambda: 16 * GiB,
@@ -176,6 +171,7 @@ def test_system_mode_reserves_full_vision_rss_when_text_uses_different_weights(
     cfg = RuntimeConfig(
         model_dir=active.parent,
         model_file=active.name,
+        mmproj_path=projector,
         auto_download=False,
         no_repack=True,
         _env_file=None,
@@ -183,7 +179,9 @@ def test_system_mode_reserves_full_vision_rss_when_text_uses_different_weights(
 
     profile = planner.plan("system", cfg)
 
-    assert profile.auxiliary_reserve_bytes == VISION_FULL_RSS_RESERVE_MIB * MiB
+    assert profile.weights_bytes == active.stat().st_size + projector.stat().st_size
+    assert profile.auxiliary_reserve_bytes == 0
+    assert profile.context_per_chat >= cfg.image_max_tokens + 2048
 
 
 def test_core_guard_reserves_gateway_and_auxiliary_before_whole_ceiling():
@@ -204,9 +202,7 @@ def test_core_guard_reserves_gateway_and_auxiliary_before_whole_ceiling():
     assert ladder.evaluate().level is Level.L4
 
 
-def test_default_8gb_docker_profile_transitions_to_installed_competition_model(
-    monkeypatch, tmp_path
-):
+def test_default_8gb_docker_profile_no_longer_reserves_a_second_vision_model(monkeypatch, tmp_path):
     """The shipped 4B default must not make the Settings Host toggle unusable."""
     large = tmp_path / "Qwen3.5-4B-IQ4_XS.gguf"
     small = tmp_path / "Qwen3.5-0.8B-Q4_K_M.gguf"
@@ -263,8 +259,7 @@ def test_default_8gb_docker_profile_transitions_to_installed_competition_model(
 
     status = controller.apply("competition")
 
-    assert manager.switched is not None
-    assert manager.switched[0] == "qwen3.5-0.8b-q4_k_m"
+    assert manager.switched is None
     assert status["fits"] is True
     assert status["active_parallel"] == manager.cfg.n_parallel
 

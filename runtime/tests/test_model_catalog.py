@@ -11,7 +11,7 @@ from typing import ClassVar
 import pytest
 
 from runtime.config import RuntimeConfig
-from runtime.model_catalog import ModelManager, ModelSwitchError
+from runtime.model_catalog import ModelManager, ModelSwitchError, load_catalog
 
 
 class _Proc:
@@ -68,7 +68,13 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _manager(tmp_path: Path, *, corrupt_two: bool = False, start: bool = True) -> ModelManager:
+def _manager(
+    tmp_path: Path,
+    *,
+    corrupt_two: bool = False,
+    corrupt_projector: bool = False,
+    start: bool = True,
+) -> ModelManager:
     _Server.instances = []
     _Server.block_model = None
     _Server.start_entered = threading.Event()
@@ -77,9 +83,11 @@ def _manager(tmp_path: Path, *, corrupt_two: bool = False, start: bool = True) -
     one = tmp_path / "one.gguf"
     two = tmp_path / "two.gguf"
     broken = tmp_path / "broken.gguf"
+    projector = tmp_path / "one-mmproj.gguf"
     one.write_bytes(b"one")
     two.write_bytes(b"wrong" if corrupt_two else b"two")
     broken.write_bytes(b"broken")
+    projector.write_bytes(b"bad" if corrupt_projector else b"projector")
     catalog = tmp_path / "catalog.json"
     catalog.write_text(
         json.dumps(
@@ -94,6 +102,9 @@ def _manager(tmp_path: Path, *, corrupt_two: bool = False, start: bool = True) -
                         "sha256": _sha(b"one"),
                         "size_bytes": 3,
                         "description": "first",
+                        "mmproj_path": "one-mmproj.gguf",
+                        "mmproj_sha256": _sha(b"projector"),
+                        "mmproj_size_bytes": 3 if corrupt_projector else 9,
                     },
                     {
                         "id": "two",
@@ -153,6 +164,42 @@ def test_switches_one_local_engine_and_reports_tradeoffs(tmp_path):
         next(model for model in result["models"] if model["id"] == "cloud")["disabled_reason"]
         == "Unavailable offline"
     )
+    active = next(model for model in result["models"] if model["id"] == "two")
+    assert active["supports_images"] is False
+    assert "text only" in active["image_input_reason"]
+
+
+def test_verified_projector_is_loaded_for_the_matching_default(tmp_path):
+    manager = _manager(tmp_path)
+
+    active = next(model for model in manager.status()["models"] if model["id"] == "one")
+    assert active["supports_images"] is True
+    assert manager.cfg.mmproj_path == tmp_path / "one-mmproj.gguf"
+    assert _Server.instances[0].cfg.mmproj_path == tmp_path / "one-mmproj.gguf"
+
+
+def test_shipped_4b_front_door_has_its_exact_model_and_projector_pins():
+    root = Path(__file__).resolve().parents[2]
+    spec = next(item for item in load_catalog(root) if item.id == "qwen3.5-4b-iq4_xs")
+
+    assert spec.path == "models/core/Qwen3.5-4B-IQ4_XS.gguf"
+    assert spec.sha256 == "658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f"
+    assert spec.size_bytes == 2477053088
+    assert spec.mmproj_path == "models/core/mmproj-F16.gguf"
+    assert spec.mmproj_sha256 == (
+        "cd88edcf8d031894960bb0c9c5b9b7e1fea6ebee02b9f7ce925a00d12891f864"
+    )
+    assert spec.mmproj_size_bytes == 672423616
+
+
+def test_corrupt_optional_projector_keeps_text_model_available(tmp_path):
+    manager = _manager(tmp_path, corrupt_projector=True)
+
+    active = next(model for model in manager.status()["models"] if model["id"] == "one")
+    assert active["available"] is True
+    assert active["supports_images"] is False
+    assert "projector" in active["image_input_reason"]
+    assert manager.cfg.mmproj_path is None
 
 
 def test_model_switch_applies_target_capacity_in_the_same_restart(tmp_path):

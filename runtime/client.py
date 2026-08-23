@@ -11,10 +11,11 @@ import threading
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
-Message = dict[str, str]
+Message = dict[str, Any]
 
 
 class InferenceStreamError(RuntimeError):
