@@ -58,6 +58,29 @@
     return Object.freeze({ preference: normalized, theme: effective });
   }
 
+  function bindToggle(toggle) {
+    if (!toggle || !global.document) return () => {};
+    const sync = () => {
+      const action = global.document.documentElement.dataset.theme === "dark"
+        ? "Switch to light mode"
+        : "Switch to dark mode";
+      toggle.setAttribute("aria-label", action);
+      toggle.title = action;
+    };
+    const onClick = () => {
+      const current = global.document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+      applyPreference(current === "dark" ? "light" : "dark", { persist: true });
+      sync();
+    };
+    toggle.addEventListener("click", onClick);
+    global.document.addEventListener?.("muta:themechange", sync);
+    sync();
+    return () => {
+      toggle.removeEventListener?.("click", onClick);
+      global.document.removeEventListener?.("muta:themechange", sync);
+    };
+  }
+
   function start() {
     if (started || !global.document) return;
     started = true;
@@ -82,6 +105,7 @@
     STORAGE_KEY,
     THEME_COLORS,
     applyPreference,
+    bindToggle,
     normalizePreference,
     resolveTheme,
     safeStoredPreference,

@@ -17,7 +17,9 @@ network or backend state to an offline-first preference.
 3. `System` follows `prefers-color-scheme` changes live. Explicit light/dark choices do not.
    Storage changes from another tab update every open Muta surface.
 4. The settings control remains a native labelled select with keyboard and screen-reader support.
-   Theme changes do not require authentication or a page refresh.
+   The public landing page also exposes a labelled 44-pixel light/dark toggle in its persistent
+   header, so changing appearance never requires entering chat or authenticating. Theme changes
+   do not require a page refresh.
 5. Theme colors are semantic CSS tokens. Dark text/background pairs meet WCAG AA contrast;
    focus indicators remain at least 3:1 against their surrounding surface.
 6. The warm paper-and-terracotta Muta identity is preserved in both themes. Dark mode uses warm
@@ -37,6 +39,8 @@ network or backend state to an offline-first preference.
 3. Add Appearance to the Interface settings section and implement theme preference, OS listener,
    storage synchronization, and `muta:themechange` notification in `ui/app.js`.
 4. Make the shared landing theme bootstrap react to OS and cross-tab preference changes.
+   Add a compact sun/moon action to the landing header that switches the resolved theme and saves
+   the explicit light/dark preference through that same bootstrap.
 5. Propagate theme changes to sandboxed visualization frames and make their palette explicitly
    selectable instead of depending only on the iframe's operating-system preference.
 6. Add regression tests for pre-paint boot, persistence, invalid-value fallback, System behavior,

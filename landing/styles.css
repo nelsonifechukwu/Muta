@@ -243,7 +243,43 @@ h3 { letter-spacing: -.018em; }
 
 .desktop-nav a:hover { color: var(--ink); }
 
-.nav-actions { justify-self: end; display: flex; align-items: center; }
+.nav-actions { justify-self: end; display: flex; align-items: center; gap: .65rem; }
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: .72rem;
+  background: var(--card);
+  box-shadow: var(--soft-shadow);
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms var(--ease);
+}
+
+.theme-toggle:hover {
+  color: var(--terracotta);
+  border-color: color-mix(in srgb, var(--terracotta) 55%, var(--line));
+  transform: translateY(-1px);
+}
+
+.theme-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
+}
+
+.theme-icon-sun { display: none; }
+
+:root[data-theme="dark"] .theme-icon-sun { display: initial; }
+:root[data-theme="dark"] .theme-icon-moon { display: none; }
 
 .nav-toggle {
   display: none;

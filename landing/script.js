@@ -1,6 +1,9 @@
 (() => {
   "use strict";
 
+  const themeToggle = document.getElementById("theme-toggle");
+  window.MutaTheme?.bindToggle(themeToggle);
+
   const navToggle = document.getElementById("nav-toggle");
   const mobileNav = document.getElementById("mobile-nav");
 

@@ -57,6 +57,20 @@ def test_landing_applies_the_persistent_theme_before_css() -> None:
     assert 'media.addEventListener("change"' in theme
 
 
+def test_landing_header_can_switch_the_shared_theme_without_entering_chat() -> None:
+    html = (LANDING / "index.html").read_text()
+    css = (LANDING / "styles.css").read_text()
+    script = (LANDING / "script.js").read_text()
+
+    assert 'id="theme-toggle"' in html
+    assert 'type="button" aria-label="Switch to dark mode"' in html
+    assert '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' in html
+    assert html.index('id="theme-toggle"') < html.index('class="button button-small button-solid nav-launch"')
+    assert "width: 2.75rem;" in css and "height: 2.75rem;" in css
+    assert ':root[data-theme="dark"] .theme-icon-moon { display: none; }' in css
+    assert "window.MutaTheme?.bindToggle(themeToggle)" in script
+
+
 def test_landing_dark_palette_meets_text_contrast_baselines() -> None:
     tokens = _dark_tokens((LANDING / "styles.css").read_text())
 

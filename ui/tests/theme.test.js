@@ -15,10 +15,15 @@ function browserTheme({ stored = null, systemDark = false } = {}) {
     setAttribute(name, value) { if (name === "content") this.content = value; },
   };
   const documentEvents = [];
+  const documentListeners = new Map();
   const document = {
     documentElement: root,
     querySelector: (selector) => selector === 'meta[name="theme-color"]' ? meta : null,
-    dispatchEvent: (event) => { documentEvents.push(event); },
+    addEventListener: (name, listener) => documentListeners.set(name, listener),
+    dispatchEvent: (event) => {
+      documentEvents.push(event);
+      documentListeners.get(event.type)?.(event);
+    },
   };
   const mediaListeners = [];
   const media = {
@@ -42,6 +47,17 @@ function browserTheme({ stored = null, systemDark = false } = {}) {
   const context = vm.createContext({ window, document, CustomEvent: window.CustomEvent });
   vm.runInContext(source, context, { filename: "theme.js" });
   return { api: window.MutaTheme, documentEvents, media, mediaListeners, meta, root, storageListeners, storageValues };
+}
+
+function button() {
+  const listeners = new Map();
+  return {
+    attributes: {},
+    title: "",
+    addEventListener: (name, listener) => listeners.set(name, listener),
+    click: () => listeners.get("click")?.(),
+    setAttribute(name, value) { this.attributes[name] = value; },
+  };
 }
 
 test("resolves the saved theme before paint and updates browser chrome", () => {
@@ -86,6 +102,25 @@ test("System follows operating-system changes while explicit choices remain fixe
   state.media.matches = true;
   state.mediaListeners[0]();
   assert.equal(state.root.dataset.theme, "light");
+});
+
+test("homepage toggle executes the shared light-dark behavior and stays synchronized", () => {
+  const state = browserTheme({ stored: "system", systemDark: true });
+  const toggle = button();
+  state.api.bindToggle(toggle);
+  assert.equal(toggle.attributes["aria-label"], "Switch to light mode");
+  assert.equal(toggle.title, "Switch to light mode");
+
+  toggle.click();
+  assert.equal(state.root.dataset.theme, "light");
+  assert.equal(state.root.dataset.themePreference, "light");
+  assert.equal(state.storageValues.get("muta-theme"), "light");
+  assert.equal(toggle.attributes["aria-label"], "Switch to dark mode");
+
+  state.storageListeners[0]({ key: "muta-theme", newValue: "dark" });
+  assert.equal(state.root.dataset.theme, "dark");
+  assert.equal(toggle.attributes["aria-label"], "Switch to light mode");
+  assert.equal(toggle.title, "Switch to light mode");
 });
 
 test("landing and chat use the exact same preference implementation", () => {
