@@ -3473,10 +3473,21 @@ const settingsModal = $("#settings-modal");
 const parallelChatsToggle = $("#setting-parallel-chats");
 const powerOptimizationToggle = $("#setting-power-optimization");
 const languageSelect = $("#setting-language");
+const themeSelect = $("#setting-theme");
 const hostEnabledToggle = $("#setting-host-enabled");
 let hostStatus = null;
 let hostPollTimer = null;
 let hostRosterSignature = "";
+
+function syncThemeSetting() {
+  themeSelect.value = globalThis.MutaTheme?.preference || "system";
+}
+
+syncThemeSetting();
+document.addEventListener("muta:themechange", syncThemeSetting);
+themeSelect.addEventListener("change", () => {
+  globalThis.MutaTheme?.applyPreference(themeSelect.value, { persist: true });
+});
 
 function setSettingsOpen(open) {
   settingsModal.hidden = !open;

@@ -742,8 +742,60 @@ def test_checked_in_dist_entry_assets_are_byte_identical_to_authored_sources():
     dist = UI / "dist"
     if not dist.is_dir():
         return
-    for name in ("index.html", "app.js", "styles.css"):
+    authored = sorted(
+        path.name
+        for path in UI.iterdir()
+        if path.is_file()
+        and path.suffix.lower() in {".css", ".html", ".js"}
+        and not path.name.lower().endswith((".spec.js", ".test.js"))
+    )
+    for name in authored:
         assert (UI / name).read_bytes() == (dist / name).read_bytes(), name
+
+
+def _contrast(left: str, right: str) -> float:
+    def luminance(value: str) -> float:
+        channels = [int(value[index : index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4 for channel in channels]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    high, low = sorted((luminance(left), luminance(right)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
+
+
+def _dark_tokens(css: str) -> dict[str, str]:
+    match = re.search(r':root\[data-theme="dark"\]\s*\{(.*?)\n\}', css, re.DOTALL)
+    assert match
+    return dict(re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{6})", match.group(1)))
+
+
+def test_dark_mode_is_prepaint_persistent_complete_and_accessible():
+    js = (UI / "app.js").read_text()
+    theme = (UI / "theme.js").read_text()
+    landing_theme = (UI.parent / "landing" / "theme.js").read_bytes()
+
+    assert HTML.index('src="theme.js') < HTML.index('rel="stylesheet" href="styles.css')
+    assert 'id="setting-theme"' in HTML
+    assert all(f'<option value="{value}">' in HTML for value in ("system", "light", "dark"))
+    assert "MutaTheme?.applyPreference(themeSelect.value, { persist: true })" in js
+    assert 'document.addEventListener("muta:themechange", syncThemeSetting)' in js
+    assert 'global.addEventListener?.("storage"' in theme
+    assert 'media.addEventListener("change"' in theme
+    assert (UI / "theme.js").read_bytes() == landing_theme
+    assert ':root[data-theme="dark"]' in CSS
+
+    tokens = _dark_tokens(CSS)
+    for foreground, background, minimum in (
+        ("text", "bg", 4.5),
+        ("muted", "bg", 4.5),
+        ("text", "card", 4.5),
+        ("muted", "card", 4.5),
+        ("accent", "bg", 4.5),
+        ("danger", "bg", 4.5),
+        ("power-text", "power-bg", 4.5),
+    ):
+        assert _contrast(tokens[foreground], tokens[background]) >= minimum, (foreground, background)
+    assert _contrast("#ffffff", tokens["danger-fill"]) >= 3
 
 
 def test_frontend_nginx_does_not_cache_static_ui_revisions():

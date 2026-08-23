@@ -173,7 +173,8 @@ test("round-trips Unicode through a fragment-safe frame URL", () => {
   assert.doesNotMatch(encoded, /[+/=]/);
   assert.deepEqual(viz.decodeSpec(encoded), unicode);
   const url = viz.frameUrl(unicode);
-  assert.match(url, /^viz-frame\.html#[A-Za-z0-9_-]+$/);
+  assert.match(url, /^viz-frame\.html\?theme=light#[A-Za-z0-9_-]+$/);
+  assert.match(viz.frameUrl(unicode, "dark"), /^viz-frame\.html\?theme=dark#/);
   assert.doesNotMatch(url, /Parabola|\{|\}/);
   assert.throws(() => viz.decodeSpec("A".repeat(70_000)), /too large/);
 });

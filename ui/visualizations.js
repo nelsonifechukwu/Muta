@@ -291,8 +291,13 @@
     return JSON.parse(new TextDecoder().decode(bytes));
   }
 
-  function frameUrl(spec) {
-    return `viz-frame.html#${encodeSpec(spec)}`;
+  function resolvedTheme() {
+    return global.document?.documentElement?.dataset.theme === "dark" ? "dark" : "light";
+  }
+
+  function frameUrl(spec, theme = resolvedTheme()) {
+    const safeTheme = theme === "dark" ? "dark" : "light";
+    return `viz-frame.html?theme=${safeTheme}#${encodeSpec(spec)}`;
   }
 
   function cleanup(container) {
@@ -326,7 +331,14 @@
       frame.referrerPolicy = "no-referrer";
       frame.title = spec.aria_label;
       frame.style.height = `${spec.height}px`;
-      const source = frameUrl(spec);
+      let source = frameUrl(spec);
+      const refreshTheme = () => {
+        const nextSource = frameUrl(spec);
+        if (source === nextSource) return;
+        source = nextSource;
+        if (frame.hasAttribute("src")) frame.src = source;
+      };
+      document.addEventListener("muta:themechange", refreshTheme);
       if (typeof global.IntersectionObserver === "function") {
         let intersecting = false;
         let unloadTimer = 0;
@@ -355,9 +367,13 @@
           if (unloadTimer) global.clearTimeout(unloadTimer);
           observer.disconnect();
           document.removeEventListener("visibilitychange", onVisibility);
+          document.removeEventListener("muta:themechange", refreshTheme);
         };
       } else {
         frame.src = source;
+        frame._mutaVizCleanup = () => {
+          document.removeEventListener("muta:themechange", refreshTheme);
+        };
       }
       figure.append(heading, frame);
       container.appendChild(figure);

@@ -9,18 +9,63 @@ ROOT = Path(__file__).resolve().parents[2]
 LANDING = ROOT / "landing"
 
 
+def _contrast(foreground: str, background: str) -> float:
+    def luminance(value: str) -> float:
+        channels = [int(value[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [
+            channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+            for channel in channels
+        ]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    lighter, darker = sorted((luminance(foreground), luminance(background)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def _dark_tokens(css: str) -> dict[str, str]:
+    block = re.search(r':root\[data-theme="dark"\]\s*\{(?P<body>.*?)\}', css, re.DOTALL)
+    assert block
+    return dict(re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{6})\s*;", block.group("body")))
+
+
 def test_landing_bundle_is_self_contained() -> None:
     html = (LANDING / "index.html").read_text()
     css = (LANDING / "styles.css").read_text()
 
-    for asset in ("index.html", "styles.css", "script.js", "og.png"):
+    for asset in ("index.html", "styles.css", "script.js", "theme.js", "og.png"):
         assert (LANDING / asset).is_file()
 
     sources = re.findall(r'\b(?:src|href)="([^"]+)"', html)
     authored_assets = [value for value in sources if not value.startswith(("#", "/", "http"))]
-    assert set(authored_assets) == {"styles.css", "script.js"}
+    assert {value.split("?", 1)[0] for value in authored_assets} == {
+        "styles.css", "script.js", "theme.js"
+    }
     assert html.count('content="og.png"') == 2
     assert "url(http" not in css
+
+
+def test_landing_applies_the_persistent_theme_before_css() -> None:
+    html = (LANDING / "index.html").read_text()
+    css = (LANDING / "styles.css").read_text()
+    theme = (LANDING / "theme.js").read_text()
+
+    assert html.index('src="theme.js') < html.index('rel="stylesheet"')
+    assert 'meta name="theme-color"' in html
+    assert ':root[data-theme="dark"]' in css
+    assert 'const STORAGE_KEY = "muta-theme"' in theme
+    assert 'global.addEventListener?.("storage"' in theme
+    assert 'media.addEventListener("change"' in theme
+
+
+def test_landing_dark_palette_meets_text_contrast_baselines() -> None:
+    tokens = _dark_tokens((LANDING / "styles.css").read_text())
+
+    assert _contrast(tokens["ink"], tokens["paper"]) >= 4.5
+    assert _contrast(tokens["ink-soft"], tokens["paper"]) >= 4.5
+    assert _contrast(tokens["terracotta"], tokens["paper"]) >= 4.5
+    assert _contrast(tokens["ink"], tokens["card"]) >= 4.5
+    assert _contrast("#ffffff", tokens["accent-fill"]) >= 4.5
+    assert _contrast("#ffffff", tokens["green-fill"]) >= 4.5
 
 
 def test_landing_separates_current_product_from_roadmap() -> None:
