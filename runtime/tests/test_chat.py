@@ -5,7 +5,13 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from runtime.chat import ChatEngine, _message_tokens, strip_visualization_protocol
+from runtime.chat import (
+    AttachmentPersistenceError,
+    ChatEngine,
+    ImageInput,
+    _message_tokens,
+    strip_visualization_protocol,
+)
 from runtime.client import Generation, InferenceStreamError
 from runtime.memory import ConversationStore
 
@@ -60,6 +66,252 @@ def test_first_turn_creates_conversation_and_persists_both_sides(store):
     # System prompt is prepended; history before the first user turn is empty.
     assert client.seen[0][0]["role"] == "system"
     assert client.seen[0][-1] == {"role": "user", "content": "what is a derivative?"}
+
+
+def test_image_and_text_share_the_current_model_request_without_rewriting_history(store):
+    engine, client, store = _engine(store)
+
+    result = engine.chat(
+        "s1",
+        "Who has the highest net worth in this infographic?",
+        images=[ImageInput(mime="image/jpeg", data=b"guarded-image")],
+    )
+
+    content = client.seen[0][-1]["content"]
+    assert content[0]["type"] == "image_url"
+    assert content[0]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+    assert "guarded-image" not in content[0]["image_url"]["url"]
+    assert content[1] == {
+        "type": "text",
+        "text": "Who has the highest net worth in this infographic?",
+    }
+    assert store.get_messages(result.conversation_id)[0]["content"] == (
+        "Who has the highest net worth in this infographic?"
+    )
+
+
+def test_image_is_atomically_linked_to_its_user_turn_before_inference(store):
+    engine, _client, store = _engine(store)
+    attachment_id = store.add_attachment("image", "image/png", b"pixels", owner_id="s1")
+
+    result = engine.chat(
+        "s1",
+        "Describe this",
+        images=[ImageInput(mime="image/png", data=b"pixels")],
+        attachment_ids=[attachment_id],
+    )
+
+    first = store.list_messages(result.conversation_id)[0]
+    assert first["id"] == result.user_message_id
+    assert first["attachments"] == [{"id": attachment_id, "kind": "image", "mime": "image/png"}]
+
+
+def test_attachment_link_failure_rolls_back_user_turn_before_inference(store):
+    engine, client, store = _engine(store)
+    attachment_id = store.add_attachment("image", "image/png", b"pixels", owner_id="s1")
+    with pytest.raises(AttachmentPersistenceError, match="could not be linked"):
+        engine.chat(
+            "s1",
+            "Describe this",
+            images=[ImageInput(mime="image/png", data=b"pixels")],
+            attachment_ids=[attachment_id, 999_999],
+        )
+
+    conversation = store.list_conversations("s1")[0]
+    assert store.get_messages(conversation["id"]) == []
+    assert store.get_attachment(attachment_id, owner_id="s1")["message_id"] is None
+    assert client.seen == []
+
+
+def test_linked_image_cannot_be_moved_to_a_later_user_turn(store):
+    engine, client, store = _engine(store)
+    attachment_id = store.add_attachment("image", "image/png", b"pixels", owner_id="s1")
+    first = engine.chat(
+        "s1",
+        "First question",
+        images=[ImageInput(mime="image/png", data=b"pixels")],
+        attachment_ids=[attachment_id],
+    )
+
+    with pytest.raises(AttachmentPersistenceError, match="could not be linked"):
+        engine.chat(
+            "s1",
+            "Second question",
+            conversation_id=first.conversation_id,
+            images=[ImageInput(mime="image/png", data=b"pixels")],
+            attachment_ids=[attachment_id],
+        )
+
+    assert len(client.seen) == 1
+    assert [row["role"] for row in store.list_messages(first.conversation_id)] == [
+        "user",
+        "assistant",
+    ]
+
+
+def test_follow_up_replays_the_owned_image_on_its_original_user_turn(store):
+    engine, client, store = _engine(store)
+    first = engine.chat("s1", "Describe this image")
+    attachment_id = store.add_attachment(
+        "image",
+        "image/png",
+        b"remember-me",
+        owner_id="s1",
+    )
+    store.link_attachment(
+        attachment_id,
+        first.conversation_id,
+        first.user_message_id,
+        owner_id="s1",
+    )
+
+    engine.chat("s1", "What was the second item?", conversation_id=first.conversation_id)
+
+    replayed_user = client.seen[1][1]
+    assert replayed_user["role"] == "user"
+    assert replayed_user["content"][0]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert replayed_user["content"][1]["text"] == "Describe this image"
+    assert client.seen[1][-1]["content"] == "What was the second item?"
+
+
+def test_a_new_image_drops_an_older_visual_exchange_when_both_cannot_fit(store):
+    engine, client, store = _engine(
+        store,
+        context_window_tokens=3072,
+        context_safety_tokens=192,
+    )
+    first = engine.chat(
+        "s1",
+        "Describe the first image",
+        images=[ImageInput(mime="image/png", data=b"first")],
+        max_tokens=256,
+    )
+    old_attachment = store.add_attachment(
+        "image",
+        "image/png",
+        b"first",
+        owner_id="s1",
+    )
+    store.link_attachment(
+        old_attachment,
+        first.conversation_id,
+        first.user_message_id,
+        owner_id="s1",
+    )
+
+    engine.chat(
+        "s1",
+        "Now describe this different image",
+        conversation_id=first.conversation_id,
+        images=[ImageInput(mime="image/png", data=b"second")],
+        max_tokens=256,
+    )
+
+    sent = client.seen[-1]
+    assert (
+        sum(
+            1
+            for message in sent
+            for part in (message["content"] if isinstance(message["content"], list) else [])
+            if part.get("type") == "image_url"
+        )
+        == 1
+    )
+    assert sent[-1]["content"][0]["image_url"]["url"].endswith("c2Vjb25k")
+
+
+def test_exact_text_counter_still_reserves_visual_tokens_and_drops_old_image(store):
+    class TextOnlyExactCounter(FakeClient):
+        def count_prompt_tokens(self, messages, **params):
+            _ = messages, params
+            return 12
+
+    client = TextOnlyExactCounter()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=3072,
+        context_safety_tokens=192,
+        image_token_budget=2048,
+    )
+    first = engine.chat(
+        "s1",
+        "First image",
+        images=[ImageInput(mime="image/png", data=b"first")],
+        max_tokens=1200,
+    )
+    old_attachment = store.add_attachment("image", "image/png", b"first", owner_id="s1")
+    store.link_attachment(
+        old_attachment,
+        first.conversation_id,
+        first.user_message_id,
+        owner_id="s1",
+    )
+
+    engine.chat(
+        "s1",
+        "Second image",
+        conversation_id=first.conversation_id,
+        images=[ImageInput(mime="image/png", data=b"second")],
+        max_tokens=1200,
+    )
+
+    sent = client.seen[-1]
+    assert (
+        sum(
+            _message_tokens(message) >= 2048 and isinstance(message["content"], list)
+            for message in sent
+        )
+        == 1
+    )
+    assert client.seen_params[-1]["max_tokens"] <= 820
+
+
+def test_image_profile_preserves_a_useful_reply_budget_after_real_tutor_prompt(store):
+    class RepresentativeExactCounter(FakeClient):
+        def count_prompt_tokens(self, messages, **params):
+            _ = messages, params
+            # Measured with pinned b10035 over the assembled default Socratic English/science
+            # system plus a short force-diagram question (text/template only).
+            return 1085
+
+    client = RepresentativeExactCounter()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=4096,
+        context_safety_tokens=192,
+        image_token_budget=2048,
+    )
+
+    engine.chat(
+        "s1",
+        "Explain the force diagram in this image.",
+        images=[ImageInput(mime="image/png", data=b"diagram")],
+        max_tokens=1200,
+    )
+
+    assert client.seen_params[-1]["max_tokens"] == 771
+    assert client.seen_params[-1]["max_tokens"] >= 700
+
+
+def test_regeneration_resends_the_same_image_without_adding_a_user_row(store):
+    engine, client, store = _engine(store)
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "Describe this image")
+
+    result = engine.chat(
+        "s1",
+        "",
+        conversation_id=cid,
+        regenerate=True,
+        images=[ImageInput(mime="image/png", data=b"png")],
+    )
+
+    assert result.user_message_id is None
+    assert isinstance(client.seen[0][-1]["content"], list)
+    assert client.seen[0][-1]["content"][0]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert [message["role"] for message in store.get_messages(cid)] == ["user", "assistant"]
 
 
 def test_second_turn_replays_prior_history(store):
@@ -262,6 +514,26 @@ def test_request_fitting_reserves_output_inside_the_active_context(store):
     params = client.seen_params[-1]
     assert sum(_message_tokens(message) for message in sent) + params["max_tokens"] + 32 <= 320
     assert 1 <= params["max_tokens"] < 240
+
+
+def test_image_that_cannot_fit_fails_without_spinning_or_persisting_the_turn(store):
+    engine, _client, store = _engine(
+        store,
+        context_window_tokens=2048,
+        context_safety_tokens=192,
+    )
+
+    with pytest.raises(ValueError, match="too little context for image input"):
+        engine.chat(
+            "s1",
+            "What is shown?",
+            images=[ImageInput(mime="image/png", data=b"pixels")],
+            max_tokens=256,
+        )
+
+    conversations = store.list_conversations("s1")
+    assert len(conversations) == 1
+    assert store.get_messages(conversations[0]["id"]) == []
 
 
 def test_system_prompt_override_is_used(store):

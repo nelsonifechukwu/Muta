@@ -37,6 +37,9 @@ class ModelSpec:
     arc_easy: float | None = None
     audit_proxy_tps: float | None = None
     recommended: bool = False
+    mmproj_path: str | None = None
+    mmproj_sha256: str | None = None
+    mmproj_size_bytes: int | None = None
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> ModelSpec:
@@ -47,6 +50,17 @@ class ModelSpec:
             candidate = Path(spec.path)
             if candidate.is_absolute() or ".." in candidate.parts:
                 raise ValueError(f"model {spec.id!r} path must stay below TUTOR_ROOT")
+            projector_fields = (spec.mmproj_path, spec.mmproj_sha256, spec.mmproj_size_bytes)
+            if any(value is not None for value in projector_fields):
+                if not all(value is not None for value in projector_fields):
+                    raise ValueError(
+                        f"model {spec.id!r} projector needs path, sha256 and size_bytes"
+                    )
+                projector = Path(str(spec.mmproj_path))
+                if projector.is_absolute() or ".." in projector.parts:
+                    raise ValueError(f"model {spec.id!r} projector path must stay below TUTOR_ROOT")
+                if len(str(spec.mmproj_sha256)) != 64:
+                    raise ValueError(f"model {spec.id!r} projector needs a sha256")
         return spec
 
 
@@ -78,13 +92,11 @@ class ModelManager:
         catalog_path: Path | None = None,
         server_factory: Callable[[RuntimeConfig], LlamaServer] = LlamaServer,
     ) -> None:
-        self.cfg = cfg
         self.root = root.resolve()
         self.log_file = log_file
         self.specs = load_catalog(self.root, catalog_path)
         self._by_id = {spec.id: spec for spec in self.specs}
         self._server_factory = server_factory
-        self._server = server_factory(cfg)
         self._lock = threading.RLock()
         self._switch_lock = threading.Lock()
         self._switch_done = threading.Event()
@@ -94,6 +106,11 @@ class ModelManager:
         self._planned_exits: set[int] = set()
         self._hash_cache: dict[tuple[Path, int, int, int], str] = {}
         self._active_id = self._match_config(cfg)
+        # A native launcher supplies the active text GGUF through RuntimeConfig. Recover the
+        # projector from the catalog before the first server instance is constructed, so a
+        # capable default is actually launched as multimodal rather than merely labelled so.
+        self.cfg = self._with_verified_projector(cfg, self._active_id)
+        self._server = server_factory(self.cfg)
 
     @property
     def process(self):
@@ -116,7 +133,15 @@ class ModelManager:
                 # selection. Never launch a same-size but hash-wrong "winner" merely because
                 # its path matched the config.
                 if self._active_id is not None:
-                    self._verified_path(self._by_id[self._active_id])
+                    spec = self._by_id[self._active_id]
+                    self._verified_path(spec)
+                    launch_cfg = self._with_verified_projector(self.cfg, self._active_id)
+                    if launch_cfg != self.cfg:
+                        # Projector integrity may change while the engine is stopped. Rebuild
+                        # the not-yet-running supervisor so a corrupt optional file degrades
+                        # to text-only instead of being handed to llama-server.
+                        self.cfg = launch_cfg
+                        self._server = self._server_factory(launch_cfg)
                 _, managed = self._server.ensure(log_file=log_file or self.log_file)
                 return self, managed
 
@@ -285,7 +310,11 @@ class ModelManager:
             if spec.kind != "local":
                 raise ModelSwitchError("cloud models are unavailable in offline mode")
             base = self.cfg
-        return self._config_for(base, self._verified_path(spec))
+        return self._config_for(
+            base,
+            self._verified_path(spec),
+            self._verified_projector_or_none(spec),
+        )
 
     def switch(
         self,
@@ -329,9 +358,11 @@ class ModelManager:
                     self._planned_exits.add(id(old_proc))
             old_server.stop()
 
-            new_cfg = self._config_for(old_cfg, model_path).model_copy(
-                update={"n_parallel": target_parallel, "n_ctx": target_ctx}
-            )
+            new_cfg = self._config_for(
+                old_cfg,
+                model_path,
+                self._verified_projector_or_none(spec),
+            ).model_copy(update={"n_parallel": target_parallel, "n_ctx": target_ctx})
             new_server = self._server_factory(new_cfg)
             try:
                 new_server.start(log_file=self.log_file)
@@ -388,6 +419,59 @@ class ModelManager:
             raise ModelSwitchError("catalog model path escaped TUTOR_ROOT")
         return path
 
+    def _projector_path_for(self, spec: ModelSpec) -> Path:
+        if spec.mmproj_path is None:
+            raise ModelSwitchError(f"{spec.label} accepts text only")
+        path = (self.root / spec.mmproj_path).resolve()
+        if path != self.root and self.root not in path.parents:
+            raise ModelSwitchError("catalog projector path escaped TUTOR_ROOT")
+        return path
+
+    def _verified_projector(self, spec: ModelSpec) -> Path:
+        path = self._projector_path_for(spec)
+        assert spec.mmproj_sha256 is not None
+        try:
+            if not path.is_file():
+                raise ModelSwitchError(f"{spec.label} image projector is not installed")
+            stat = path.stat()
+            if spec.mmproj_size_bytes is not None and stat.st_size != spec.mmproj_size_bytes:
+                raise ModelSwitchError(f"{spec.label} image projector has the wrong byte size")
+            key = (path, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+            with self._hash_lock:
+                digest = self._hash_cache.get(key)
+                if digest is None:
+                    h = hashlib.sha256()
+                    with path.open("rb") as stream:
+                        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+                            h.update(chunk)
+                    digest = h.hexdigest()
+                    self._hash_cache[key] = digest
+        except OSError as exc:
+            raise ModelSwitchError(f"{spec.label} image projector cannot be read") from exc
+        if digest != spec.mmproj_sha256:
+            raise ModelSwitchError(f"{spec.label} image projector failed SHA-256 verification")
+        return path
+
+    def _verified_projector_or_none(self, spec: ModelSpec) -> Path | None:
+        if spec.mmproj_path is None:
+            return None
+        try:
+            return self._verified_projector(spec)
+        except ModelSwitchError:
+            # Missing/corrupt optional vision data must not make the text model unselectable.
+            # `_status_for` exposes the exact reason and image turns fail before admission.
+            return None
+
+    def _with_verified_projector(
+        self,
+        cfg: RuntimeConfig,
+        model_id: str | None,
+    ) -> RuntimeConfig:
+        if model_id is None:
+            return cfg
+        spec = self._by_id[model_id]
+        return cfg.model_copy(update={"mmproj_path": self._verified_projector_or_none(spec)})
+
     def _verified_path(self, spec: ModelSpec) -> Path:
         path = self._path_for(spec)
         try:
@@ -414,6 +498,8 @@ class ModelManager:
 
     def _status_for(self, spec: ModelSpec) -> dict[str, Any]:
         reason = None
+        image_reason = None
+        supports_images = False
         available = False
         if spec.kind == "cloud":
             reason = "Unavailable offline"
@@ -423,6 +509,14 @@ class ModelManager:
                 available = True
             except ModelSwitchError as exc:
                 reason = str(exc)
+            if spec.mmproj_path is not None:
+                try:
+                    self._verified_projector(spec)
+                    supports_images = True
+                except ModelSwitchError as exc:
+                    image_reason = str(exc)
+            else:
+                image_reason = f"{spec.label} accepts text only"
         return {
             "id": spec.id,
             "label": spec.label,
@@ -435,15 +529,22 @@ class ModelManager:
             "arc_easy": spec.arc_easy,
             "audit_proxy_tps": spec.audit_proxy_tps,
             "recommended": spec.recommended,
+            "supports_images": supports_images,
+            "image_input_reason": image_reason,
         }
 
     @staticmethod
-    def _config_for(cfg: RuntimeConfig, model_path: Path) -> RuntimeConfig:
+    def _config_for(
+        cfg: RuntimeConfig,
+        model_path: Path,
+        mmproj_path: Path | None = None,
+    ) -> RuntimeConfig:
         return cfg.model_copy(
             update={
                 "model_source": "local",
                 "model_dir": model_path.parent,
                 "model_file": model_path.name,
                 "auto_download": False,
+                "mmproj_path": mmproj_path,
             }
         )

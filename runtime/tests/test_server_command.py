@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from runtime.config import RuntimeConfig
 from runtime.server import LlamaServer
 
@@ -20,6 +22,29 @@ def test_build_command_baseline_flags(tmp_path):
     cmd = LlamaServer(cfg).build_command(model)
     assert cmd[cmd.index("--model") + 1] == str(model)
     assert "--jinja" in cmd
+
+
+def test_build_command_loads_the_selected_models_exact_projector(tmp_path):
+    projector = tmp_path / "mmproj-F16.gguf"
+    projector.touch()
+    cfg, model = _cfg(
+        tmp_path,
+        mmproj_path=projector,
+        image_min_tokens=1024,
+        image_max_tokens=2048,
+    )
+
+    cmd = LlamaServer(cfg).build_command(model)
+
+    assert cmd[cmd.index("--mmproj") + 1] == str(projector)
+    assert "--no-mmproj-offload" in cmd
+    assert cmd[cmd.index("--image-min-tokens") + 1] == "1024"
+    assert cmd[cmd.index("--image-max-tokens") + 1] == "2048"
+
+
+def test_image_token_range_rejects_an_upper_bound_below_the_floor(tmp_path):
+    with pytest.raises(ValueError, match="image max tokens"):
+        _cfg(tmp_path, image_min_tokens=2048, image_max_tokens=1024)
 
 
 def test_build_command_emits_draft_flags_when_draft_model_exists(tmp_path):

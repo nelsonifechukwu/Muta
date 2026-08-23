@@ -48,8 +48,9 @@ Implementation: docs/plans/2026-08-01-cactus-inspired-ram-toks-optimizations.md.
   RAM vs Apple); our --no-mmap probe was −28% decode +1 GiB. Settled.
 - Prompt-prefix reuse across turns: they re-prefill only the token suffix; our
   checkpoint restore already does this (29/33 reuse).
-- On-demand vision encoder: they load/run/unload per request; our TTL-reaped
-  vision server is the same idea with a 120 s grace.
+- On-demand vision encoder: they load/run/unload per request. Muta instead keeps the selected
+  model's exact projector in its sole chat engine; the former TTL-reaped auxiliary reader is
+  retired from the browser path (see `docs/multimodal-decision.md`).
 - Benchmark hygiene: warmup run discarded, mean of 3, peak RAM sampled inside the
   decode loop, Apple phys_footprint vs Linux RSS named per-platform — all already
   native_sweep practice.

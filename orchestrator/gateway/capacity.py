@@ -8,7 +8,6 @@ by physical CPU cores because RAM-rich but bandwidth-bound laptops do not gain f
 
 from __future__ import annotations
 
-import contextlib
 import os
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -20,12 +19,7 @@ import psutil
 from runtime.config import RuntimeConfig
 from runtime.gguf import GGUFError, read_metadata
 from runtime.kvmath import KVCost, RecurrentStateCost, compute_buffer_mib
-from runtime.profiles import (
-    BundlePaths,
-    ServingProfile,
-    physical_cores,
-    vision_full_rss_reserve_mib,
-)
+from runtime.profiles import ServingProfile, physical_cores
 
 MiB = 1024**2
 GiB = 1024**3
@@ -137,10 +131,13 @@ class CapacityPlanner:
         if not model_path.is_absolute():
             model_path = root / model_path
 
-        # Preserve the current guaranteed per-lane context, but never advertise a chat lane with
-        # less than 1024 tokens. Product mode grows total -c with --parallel accordingly.
+        # Preserve the current guaranteed per-lane context. An image-capable candidate also
+        # needs the projector ceiling plus 2048 tokens for the system/question/reply envelope;
+        # product mode grows total -c with --parallel accordingly.
+        media_context = cfg.image_max_tokens + 2048 if cfg.mmproj_path is not None else 1024
         min_context = max(
-            int(os.environ.get("MUTA_SHARE_MIN_CONTEXT", "1024")),
+            int(os.environ.get("MUTA_SHARE_MIN_CONTEXT", str(media_context))),
+            media_context,
             cfg.n_ctx // max(1, cfg.n_parallel),
         )
         product_bound = max(1, min(32, int(os.environ.get("MUTA_SHARE_MAX_CHATS", "32"))))
@@ -160,25 +157,20 @@ class CapacityPlanner:
             ceiling = effective if cgroup and cgroup < physical else int(effective * 0.85)
             candidate_slots = cpu_cap
 
-        weights = model_path.stat().st_size if model_path.is_file() else 0
-        gateway_reserve = int(os.environ.get("MUTA_SHARE_GATEWAY_RESERVE_MIB", "768")) * MiB
-        # Product/OOM accounting can use CORE-VISION's 1.1-GiB marginal cgroup charge because
-        # both llama-server processes share file-backed weight pages. The competition profiler
-        # instead sums each process's RSS, where those same pages count twice. Preserve that
-        # load-bearing distinction: ADTC mode reserves the full measured vision-process RSS.
-        vision_uses_different_weights = False
-        if mode == "system":
-            with contextlib.suppress(FileNotFoundError, RuntimeError, OSError):
-                vision_uses_different_weights = (
-                    BundlePaths.from_env().core_model.resolve() != model_path.resolve()
-                )
-        full_vision_rss = mode == "competition" or vision_uses_different_weights
-        auxiliary_reserve_mib = (
-            vision_full_rss_reserve_mib()
-            if full_vision_rss
-            else int(os.environ.get("MUTA_SHARE_AUXILIARY_RESERVE_MIB", "1100"))
+        model_weights = model_path.stat().st_size if model_path.is_file() else 0
+        projector_path = cfg.mmproj_path
+        if projector_path is not None and not projector_path.is_absolute():
+            projector_path = root / projector_path
+        projector_weights = (
+            projector_path.stat().st_size
+            if projector_path is not None and projector_path.is_file()
+            else 0
         )
-        auxiliary_reserve = auxiliary_reserve_mib * MiB
+        gateway_reserve = int(os.environ.get("MUTA_SHARE_GATEWAY_RESERVE_MIB", "768")) * MiB
+        # Image input is served by this selected llama-server. Price its exact paired projector
+        # as resident weights; there is no second CORE-VISION process to reserve 1.1–4.3 GiB
+        # for, and doing so made otherwise-safe model replacements fail their capacity gate.
+        auxiliary_reserve = 0
         prompt_cache = cfg.cache_ram_mib * MiB
         kv_per_token = 0.0
         recurrent_per_slot = 0
@@ -193,8 +185,9 @@ class CapacityPlanner:
                 metadata_note = f"GGUF metadata from {model_path.name}"
             except (OSError, ValueError, KeyError, GGUFError):
                 pass
-        if not weights:
-            weights = int(os.environ.get("MUTA_SHARE_FALLBACK_WEIGHTS_MIB", "3072")) * MiB
+        if not model_weights:
+            model_weights = int(os.environ.get("MUTA_SHARE_FALLBACK_WEIGHTS_MIB", "3072")) * MiB
+        weights = model_weights + projector_weights
         if not kv_per_token:
             kv_per_token = float(os.environ.get("MUTA_SHARE_FALLBACK_KV_BYTES_PER_TOKEN", "65536"))
         if not recurrent_per_slot:
@@ -206,7 +199,7 @@ class CapacityPlanner:
         if not cfg.no_repack:
             ratio = float(os.environ.get("MUTA_SHARE_REPACK_RATIO", "0.55"))
             minimum = int(os.environ.get("MUTA_SHARE_REPACK_MIN_MIB", "384")) * MiB
-            repack_reserve = max(minimum, int(weights * max(0.0, ratio)))
+            repack_reserve = max(minimum, int(model_weights * max(0.0, ratio)))
 
         measured_resident = max(0, int(self.resident_probe()))
         # Installed RAM is not free RAM. Do not expand Muta toward a static 85% ceiling
@@ -244,16 +237,25 @@ class CapacityPlanner:
             current_model = current_cfg.model_path
             if not current_model.is_absolute():
                 current_model = root / current_model
-            current_weights = current_model.stat().st_size if current_model.is_file() else 0
-            if not current_weights:
-                current_weights = (
+            current_model_weights = current_model.stat().st_size if current_model.is_file() else 0
+            if not current_model_weights:
+                current_model_weights = (
                     int(os.environ.get("MUTA_SHARE_FALLBACK_WEIGHTS_MIB", "3072")) * MiB
                 )
+            current_projector = current_cfg.mmproj_path
+            if current_projector is not None and not current_projector.is_absolute():
+                current_projector = root / current_projector
+            current_projector_weights = (
+                current_projector.stat().st_size
+                if current_projector is not None and current_projector.is_file()
+                else 0
+            )
+            current_weights = current_model_weights + current_projector_weights
             current_repack = 0
             if not current_cfg.no_repack:
                 ratio = float(os.environ.get("MUTA_SHARE_REPACK_RATIO", "0.55"))
                 minimum = int(os.environ.get("MUTA_SHARE_REPACK_MIN_MIB", "384")) * MiB
-                current_repack = max(minimum, int(current_weights * max(0.0, ratio)))
+                current_repack = max(minimum, int(current_model_weights * max(0.0, ratio)))
             # Replace the old model's priced resident contribution with the candidate's.
             # Any unexplained live RSS remains in the floor instead of disappearing.
             measured_base = max(

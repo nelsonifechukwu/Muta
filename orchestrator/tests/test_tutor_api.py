@@ -1,8 +1,8 @@
 """The §7.2 surface, end to end through the app (TDD §7.2, T6, T14).
 
-Engine and vision manager are faked; sessions, ladder, image guard, verifier and renderer are
-real. What is being checked is the wiring that decides whether a student gets an answer, a
-queue position, or an honest refusal — the paths a judge actually walks.
+Engine and auxiliary vision manager are faked; sessions, ladder, image guard, verifier and
+renderer are real. What is being checked is the wiring that decides whether a student gets an
+answer, a queue position, or an honest refusal — the paths a judge actually walks.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.main import app
-from runtime.chat import ChatResult
+from runtime.chat import AttachmentPersistenceError, ChatResult
 from runtime.client import InferenceStreamError
 from runtime.power import PowerSnapshot
 from runtime.vision import VisionManager
@@ -49,15 +49,49 @@ class FakeEngine:
     def chat(self, **kwargs) -> ChatResult:
         if self.raises:
             raise self.raises
+        cid = kwargs.get("conversation_id") or "conv-1"
+        user_message_id = None if kwargs.get("regenerate") else 1
+        if user_message_id is not None and kwargs.get("attachment_ids"):
+            self.store.conversations.setdefault(cid, {"student_id": kwargs["student_id"]})
+            user_message_id = self.store.add_user_message_with_attachments(
+                cid,
+                kwargs["message"],
+                kwargs["attachment_ids"],
+                owner_id=kwargs["student_id"],
+            )
         self.calls.append(kwargs)
         return ChatResult(
-            conversation_id=kwargs.get("conversation_id") or "conv-1", reply=self.reply
+            conversation_id=cid,
+            reply=self.reply,
+            user_message_id=user_message_id,
         )
 
     def stream_events_chat(self, **kwargs):
-        self.calls.append(kwargs)
         cid = kwargs.get("conversation_id") or "conv-1"
-        return cid, 1, iter([("reasoning", "hmm"), ("content", "x = "), ("content", "2")])
+        user_message_id = None if kwargs.get("regenerate") else 1
+        if user_message_id is not None and kwargs.get("attachment_ids"):
+            self.store.conversations.setdefault(cid, {"student_id": kwargs["student_id"]})
+            user_message_id = self.store.add_user_message_with_attachments(
+                cid,
+                kwargs["message"],
+                kwargs["attachment_ids"],
+                owner_id=kwargs["student_id"],
+            )
+        self.calls.append(kwargs)
+        return (
+            cid,
+            user_message_id,
+            iter([("reasoning", "hmm"), ("content", "x = "), ("content", "2")]),
+        )
+
+    def history_has_images(self, conversation_id: str, student_id: str) -> bool:
+        return any(
+            row.get("kind") == "image"
+            and row.get("conversation_id") == conversation_id
+            and row.get("message_id") is not None
+            and row.get("owner_id") == student_id
+            for row in self.store.attachments.values()
+        )
 
 
 class FakeSettingsStore:
@@ -65,6 +99,9 @@ class FakeSettingsStore:
         self.values: dict[str, dict] = {}
         self.conversations: dict[str, dict] = {}
         self.updated_messages: list[tuple[int, str]] = []
+        self.attachments: dict[int, dict] = {}
+        self.linked_attachments: list[tuple[int, str, int | None]] = []
+        self._next_attachment_id = 1
 
     def get_conversation(self, conversation_id: str) -> dict | None:
         return self.conversations.get(conversation_id)
@@ -82,6 +119,81 @@ class FakeSettingsStore:
 
     def update_message(self, message_id: int, content: str) -> None:
         self.updated_messages.append((message_id, content))
+
+    def add_attachment(
+        self,
+        kind: str,
+        mime: str,
+        data: bytes,
+        *,
+        conversation_id: str | None = None,
+        message_id: int | None = None,
+        owner_id: str | None = None,
+    ) -> int:
+        attachment_id = self._next_attachment_id
+        self._next_attachment_id += 1
+        self.attachments[attachment_id] = {
+            "id": attachment_id,
+            "kind": kind,
+            "mime": mime,
+            "data": bytes(data),
+            "conversation_id": conversation_id,
+            "message_id": message_id,
+            "owner_id": owner_id,
+        }
+        return attachment_id
+
+    def get_attachment(self, attachment_id: int, *, owner_id: str | None = None):
+        row = self.attachments.get(attachment_id)
+        if row is None or (owner_id is not None and row.get("owner_id") != owner_id):
+            return None
+        return dict(row)
+
+    def link_attachment(
+        self,
+        attachment_id: int,
+        conversation_id: str,
+        message_id: int | None = None,
+        *,
+        owner_id: str | None = None,
+    ) -> None:
+        row = self.get_attachment(attachment_id, owner_id=owner_id)
+        if row is None:
+            return
+        self.attachments[attachment_id].update(
+            {"conversation_id": conversation_id, "message_id": message_id}
+        )
+        self.linked_attachments.append((attachment_id, conversation_id, message_id))
+
+    def add_user_message_with_attachments(
+        self,
+        conversation_id: str,
+        content: str,
+        attachment_ids: list[int],
+        *,
+        owner_id: str,
+    ) -> int:
+        _ = content
+        conversation = self.conversations.get(conversation_id)
+        rows = [
+            self.get_attachment(attachment_id, owner_id=owner_id)
+            for attachment_id in attachment_ids
+        ]
+        if (
+            conversation is None
+            or conversation.get("student_id") != owner_id
+            or any(row is None for row in rows)
+        ):
+            raise RuntimeError("attachment link failed")
+        message_id = 1
+        for attachment_id in dict.fromkeys(attachment_ids):
+            self.link_attachment(
+                attachment_id,
+                conversation_id,
+                message_id,
+                owner_id=owner_id,
+            )
+        return message_id
 
 
 @pytest.fixture
@@ -902,7 +1014,7 @@ def test_power_status_is_private_and_reports_the_serving_host(wired):
     assert body["optimization_enabled"] is True
 
 
-# --- vision -------------------------------------------------------------------------------
+# --- image attachments --------------------------------------------------------------------
 
 
 def png_bytes(size=(60, 40)) -> bytes:
@@ -912,128 +1024,292 @@ def png_bytes(size=(60, 40)) -> bytes:
     return buffer.getvalue()
 
 
-def test_an_oversized_photo_is_declined_kindly_not_500(wired):
-    body = client.post(
-        "/v1/tutor/vision",
-        data={"session_id": "s1"},
+def test_an_oversized_photo_is_rejected_kindly_not_500(wired):
+    response = client.post(
+        "/v1/attachments/images",
+        headers={"Authorization": "Bearer s1"},
         files={"image": ("huge.jpg", b"\xff\xd8\xff" + b"0" * (9 * 1024 * 1024), "image/jpeg")},
-    ).json()
-    assert body["accepted"] is False and "MB" in body["detail"]
+    )
+    assert response.status_code == 422 and "MB" in response.json()["detail"]
 
 
-def test_a_non_image_is_declined(wired):
-    body = client.post(
-        "/v1/tutor/vision",
-        data={"session_id": "s1"},
+def test_a_non_image_is_rejected(wired):
+    response = client.post(
+        "/v1/attachments/images",
+        headers={"Authorization": "Bearer s1"},
         files={"image": ("notes.pdf", b"%PDF-1.7", "application/pdf")},
-    ).json()
-    assert body["accepted"] is False and "JPEG" in body["detail"]
+    )
+    assert response.status_code == 422 and "JPEG" in response.json()["detail"]
 
 
-def test_vision_denied_by_the_ladder_tells_the_student_to_type_it(wired):
-    """S2 fallback. The tutor keeps working; only the camera path is unavailable."""
-    _, ladder, _, vision = wired
-    ladder.free_probe = lambda: int(1.0 * GiB)  # L1: no new vision spawns
-    body = client.post(
-        "/v1/tutor/vision",
-        data={"session_id": "s1"},
-        files={"image": ("work.png", png_bytes(), "image/png")},
-    ).json()
-    assert body["accepted"] is False and "type the problem" in body["detail"]
-
-
-def test_a_valid_photo_is_transcribed(wired, monkeypatch):
-    _, _, _, vision = wired
-    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
-
-    captured = {}
-
-    def fake_transcribe(self, image_bytes, image_format, *, prompt=...):
-        captured["format"] = image_format
-        captured["bytes"] = len(image_bytes)
-        return "x^2 = 9"
-
-    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient.transcribe", fake_transcribe)
-    body = client.post(
-        "/v1/tutor/vision",
-        data={"session_id": "s1"},
+def test_a_valid_photo_is_guarded_and_stored_without_starting_a_reader(wired, monkeypatch):
+    engine, _, _, vision = wired
+    monkeypatch.setattr(
+        vision,
+        "ensure",
+        lambda: pytest.fail("selecting an image must not launch a second model"),
+    )
+    response = client.post(
+        "/v1/attachments/images",
+        headers={"Authorization": "Bearer s1"},
         files={"image": ("work.png", png_bytes((2000, 1500)), "image/png")},
-    ).json()
-    assert body["accepted"] is True
-    assert body["transcription"] == "x^2 = 9"
-    # The guard must have downscaled the 2000x1500 photo before it reached the model.
-    assert captured["format"] == "PNG" and captured["bytes"] > 0
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["kind"] == "image" and body["mime"] == "image/png"
+    assert max(body["width"], body["height"]) <= 1280
+    row = engine.store.get_attachment(body["attachment_id"], owner_id="s1")
+    assert row is not None and row["data"] != png_bytes((2000, 1500))
 
 
-def test_the_vision_call_honours_timeout_and_server_auth(wired, monkeypatch, tmp_path):
-    """A real photo needs minutes of prefill on a slow box; VisionClient's 120 s default cut
-    every one of them off mid-read ("the image reader didn't respond") while
-    MUTA_RT_REQUEST_TIMEOUT_S sat unused. The route must pass the configured timeout on."""
-    _, _, _, vision = wired
-    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
-    monkeypatch.setenv("MUTA_RT_REQUEST_TIMEOUT_S", "600")
-    key_file = tmp_path / "api.key"
-    key_file.write_text("vision-secret\n")
-    vision.paths = type("Paths", (), {"api_key_file": key_file})()
-
-    seen = {}
-
-    class FakeClient:
-        def __init__(self, base_url, *, timeout=120.0, api_key=None, **_kw):
-            seen["timeout"] = timeout
-            seen["api_key"] = api_key
-
-        def transcribe(self, image_bytes, image_format, *, prompt=None):
-            return "x^2 = 9"
-
-    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient", FakeClient)
+def test_legacy_vision_route_is_an_upload_alias_not_a_transcriber(wired, monkeypatch):
+    engine, _, _, vision = wired
+    monkeypatch.setattr(
+        vision,
+        "ensure",
+        lambda: pytest.fail("the legacy alias must not launch a second model"),
+    )
     body = client.post(
         "/v1/tutor/vision",
         data={"session_id": "s1"},
         files={"image": ("work.png", png_bytes(), "image/png")},
     ).json()
     assert body["accepted"] is True
-    assert seen["timeout"] == 600.0
-    assert seen["api_key"] == "vision-secret"
+    assert body["transcription"] == ""
+    assert body["attachment_id"] in engine.store.attachments
+    assert "next question" in body["detail"]
 
 
-def test_vision_server_unreachable_is_a_friendly_refusal_not_500(wired, monkeypatch):
-    _, _, _, vision = wired
-    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
-
-    def boom(self, image_bytes, image_format, *, prompt=...):
-        raise httpx.ConnectError("refused", request=httpx.Request("POST", "http://x"))
-
-    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient.transcribe", boom)
-    r = client.post(
-        "/v1/tutor/vision",
-        data={"session_id": "s1"},
-        files={"image": ("work.png", png_bytes(), "image/png")},
+def _upload_image(owner: str, *, size=(60, 40)) -> int:
+    response = client.post(
+        "/v1/attachments/images",
+        headers={"Authorization": f"Bearer {owner}"},
+        files={"image": ("work.png", png_bytes(size), "image/png")},
     )
-    assert r.status_code == 200
-    body = r.json()
-    assert body["accepted"] is False and "type the problem" in body["detail"]
+    assert response.status_code == 201
+    return response.json()["attachment_id"]
 
 
-def test_a_malformed_vision_reply_is_a_friendly_refusal_not_500(wired, monkeypatch):
-    """A 200 with a body we can't read must not become a 500 in a judge's face (S2)."""
-    from runtime.vision_client import VisionResponseError
-
-    _, _, _, vision = wired
-    monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
-
-    def bad(self, image_bytes, image_format, *, prompt=...):
-        raise VisionResponseError("unreadable vision response")
-
-    monkeypatch.setattr("orchestrator.gateway.routes.VisionClient.transcribe", bad)
-    r = client.post(
-        "/v1/tutor/vision",
-        data={"session_id": "s1"},
-        files={"image": ("work.png", png_bytes(), "image/png")},
+def test_selected_multimodal_model_receives_exact_image_and_text(wired, monkeypatch):
+    engine, *_ = wired
+    monkeypatch.setattr(routes, "_active_image_model", lambda: (True, "Vision model", ""))
+    attachment_id = _upload_image("s1")
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={
+            "student_id": "s1",
+            "message": "Who is the richest person in this image?",
+            "attachment_ids": [attachment_id],
+        },
     )
-    assert r.status_code == 200
-    body = r.json()
-    assert body["accepted"] is False and "type the problem" in body["detail"]
+    assert response.status_code == 202
+    assert engine.calls[-1]["message"] == "Who is the richest person in this image?"
+    image = engine.calls[-1]["images"][0]
+    stored = engine.store.attachments[attachment_id]
+    assert image.mime == "image/png" and image.data == stored["data"]
+    assert engine.store.linked_attachments == [(attachment_id, "conv-1", 1)]
+
+
+def test_image_link_failure_aborts_before_inference_with_safe_retry(wired, monkeypatch):
+    engine, *_ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    monkeypatch.setattr(routes, "_active_image_model", lambda: (True, "Vision model", ""))
+    attachment_id = _upload_image("s1")
+
+    def fail_persistence(*args, **kwargs):
+        _ = args, kwargs
+        raise AttachmentPersistenceError("raw database diagnostic")
+
+    monkeypatch.setattr(
+        engine.store,
+        "add_user_message_with_attachments",
+        fail_persistence,
+    )
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Explain this", "attachment_ids": [attachment_id]},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "the image could not be saved with this question — please send it again"
+    )
+    assert "database" not in response.json()["detail"]
+    assert engine.calls == []
+    assert generations.status()["reservations"] == 0
+
+
+def test_image_regeneration_preserves_its_original_message_link(wired, monkeypatch):
+    engine, *_ = wired
+    monkeypatch.setattr(routes, "_active_image_model", lambda: (True, "Vision model", ""))
+    attachment_id = _upload_image("s1")
+    engine.store.conversations["conv-1"] = {"student_id": "s1"}
+    engine.store.link_attachment(attachment_id, "conv-1", 17, owner_id="s1")
+
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={
+            "student_id": "s1",
+            "message": "",
+            "conversation_id": "conv-1",
+            "attachment_ids": [attachment_id],
+            "regenerate": True,
+        },
+    )
+
+    assert response.status_code == 202
+    assert engine.calls[-1]["images"][0].data == engine.store.attachments[attachment_id]["data"]
+    assert engine.store.attachments[attachment_id]["message_id"] == 17
+    assert engine.store.linked_attachments == [(attachment_id, "conv-1", 17)]
+
+
+def test_text_only_model_rejects_image_before_reserving_or_writing(wired, monkeypatch):
+    engine, *_ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    monkeypatch.setattr(
+        generations,
+        "reserve",
+        lambda *args, **kwargs: pytest.fail("unsupported image must fail before reservation"),
+    )
+    monkeypatch.setattr(
+        routes,
+        "_active_image_model",
+        lambda: (False, "Text Tutor", "it is a text-only model"),
+    )
+    attachment_id = _upload_image("s1")
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Explain this", "attachment_ids": [attachment_id]},
+    )
+    assert response.status_code == 409
+    assert "Text Tutor" in response.json()["detail"]
+    assert "Image input" in response.json()["detail"]
+    assert engine.calls == []
+    assert generations.status()["reservations"] == 0
+
+
+def test_text_only_model_rejects_an_image_replayed_from_history(wired, monkeypatch):
+    engine, *_ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    attachment_id = _upload_image("s1")
+    engine.store.conversations["conv-1"] = {"student_id": "s1"}
+    engine.store.link_attachment(attachment_id, "conv-1", 17, owner_id="s1")
+    monkeypatch.setattr(
+        routes,
+        "_active_image_model",
+        lambda: (False, "Text Tutor", "it is a text-only model"),
+    )
+
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={
+            "student_id": "s1",
+            "message": "What country was that person from?",
+            "conversation_id": "conv-1",
+        },
+    )
+
+    assert response.status_code == 409
+    assert "Text Tutor" in response.json()["detail"]
+    assert engine.calls == []
+    assert generations.status()["reservations"] == 0
+
+
+def test_image_capability_is_checked_after_the_model_switch_barrier(wired, monkeypatch):
+    engine, *_ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    attachment_id = _upload_image("s1")
+
+    def capability_after_reserve():
+        if generations.status()["reservations"] == 0:
+            return True, "Old image model", ""
+        return False, "New text model", "it is a text-only model"
+
+    monkeypatch.setattr(routes, "_active_image_model", capability_after_reserve)
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Explain this", "attachment_ids": [attachment_id]},
+    )
+
+    assert response.status_code == 409
+    assert "New text model" in response.json()["detail"]
+    assert engine.calls == []
+    assert generations.status()["reservations"] == 0
+
+
+def test_blocking_image_chat_rechecks_capability_inside_the_runtime_barrier(wired, monkeypatch):
+    engine, *_ = wired
+    attachment_id = _upload_image("s1")
+    inside_barrier = False
+
+    class Barrier:
+        def __enter__(self):
+            nonlocal inside_barrier
+            inside_barrier = True
+
+        def __exit__(self, *_args):
+            return False
+
+    monkeypatch.setattr(routes, "runtime_lifecycle", Barrier)
+    monkeypatch.setattr(
+        routes,
+        "_active_image_model",
+        lambda: (
+            (False, "New text model", "it is a text-only model")
+            if inside_barrier
+            else (True, "Old image model", "")
+        ),
+    )
+
+    response = client.post(
+        "/v1/chat",
+        headers={"Authorization": "Bearer s1"},
+        json={"student_id": "s1", "message": "Explain this", "attachment_ids": [attachment_id]},
+    )
+
+    assert response.status_code == 409
+    assert "New text model" in response.json()["detail"]
+    assert engine.calls == []
+
+
+def test_another_students_image_is_not_available_to_chat(wired, monkeypatch):
+    engine, *_ = wired
+    monkeypatch.setattr(routes, "_active_image_model", lambda: (True, "Vision model", ""))
+    attachment_id = _upload_image("s1")
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s2"},
+        json={
+            "student_id": "s2",
+            "message": "Tell me about this",
+            "attachment_ids": [attachment_id],
+        },
+    )
+    assert response.status_code == 404
+    assert engine.calls == []
+
+
+def test_one_image_per_turn_is_enforced_before_generation(wired, monkeypatch):
+    engine, *_ = wired
+    monkeypatch.setattr(routes, "_active_image_model", lambda: (True, "Vision model", ""))
+    attachment_ids = [_upload_image("s1"), _upload_image("s1")]
+    response = client.post(
+        "/v1/chat/generations",
+        headers={"Authorization": "Bearer s1"},
+        json={
+            "student_id": "s1",
+            "message": "Compare these",
+            "attachment_ids": attachment_ids,
+        },
+    )
+    assert response.status_code == 409 and "one image" in response.json()["detail"]
+    assert engine.calls == []
 
 
 # --- tools --------------------------------------------------------------------------------

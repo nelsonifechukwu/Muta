@@ -72,6 +72,14 @@ class ModelBackend(BaseModel):
     arc_easy: float | None = None
     audit_proxy_tps: float | None = None
     recommended: bool = False
+    supports_images: bool = Field(
+        False,
+        description="True only when this model's verified projector is installed.",
+    )
+    image_input_reason: str | None = Field(
+        None,
+        description="Why image input is unavailable while text inference can still work.",
+    )
 
 
 class ModelCatalogResponse(BaseModel):
@@ -482,13 +490,24 @@ class TutorReply(BaseModel):
 
 class VisionReply(BaseModel):
     session_id: str
-    transcription: str = Field("", description="What the model read from the image.")
+    transcription: str = Field(
+        "",
+        description="Deprecated; images are now sent directly with a chat turn.",
+    )
     analysis: str = ""
-    accepted: bool = Field(True, description="False when the image guard or the ladder refused.")
-    detail: str = Field("", description="Why it was refused, in words a student can act on.")
+    accepted: bool = Field(True, description="False when the image upload guard refused it.")
+    detail: str = Field("", description="Upload outcome in words a student can act on.")
     attachment_id: int | None = Field(
         None, description="Stored image attachment; pass in ChatRequest.attachment_ids."
     )
+
+
+class ImageUploadReply(BaseModel):
+    attachment_id: int
+    kind: Literal["image"] = "image"
+    mime: Literal["image/jpeg", "image/png", "image/webp"]
+    width: int = Field(ge=1)
+    height: int = Field(ge=1)
 
 
 class AnswerCheckRequest(BaseModel):

@@ -2,6 +2,19 @@
   "schema_version": 1,
   "models": [
     {
+      "id": "qwen3.5-4b-iq4_xs",
+      "label": "Qwen3.5 4B · IQ4_XS",
+      "kind": "local",
+      "path": "models/core/Qwen3.5-4B-IQ4_XS.gguf",
+      "sha256": "658a9e7e406deb06d0179755e3c14f6a82915a4be4962a2f92a64d948d2e572f",
+      "size_bytes": 2477053088,
+      "description": "Shipped full tutor model; paired with its verified image projector.",
+      "recommended": false,
+      "mmproj_path": "models/core/mmproj-F16.gguf",
+      "mmproj_sha256": "cd88edcf8d031894960bb0c9c5b9b7e1fea6ebee02b9f7ce925a00d12891f864",
+      "mmproj_size_bytes": 672423616
+    },
+    {
       "id": "muta-tutor-qwen3.5-0.8b-q4_0",
       "label": "Muta Tutor · Qwen3.5 0.8B",
       "kind": "local",
@@ -11,7 +24,10 @@
       "description": "Risk-adjusted submission: strongest larger matched accuracy among the overnight finalists.",
       "arc_easy": 0.64,
       "audit_proxy_tps": 12.63,
-      "recommended": true
+      "recommended": true,
+      "mmproj_path": "models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf",
+      "mmproj_sha256": "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453",
+      "mmproj_size_bytes": 204987232
     },
     {
       "id": "qwen2.5-1.5b-instruct-q4_k_m",
@@ -33,7 +49,10 @@
       "sha256": "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
       "size_bytes": 532517120,
       "description": "Pinned local fallback used when the larger tutor cannot share RAM safely under the ADTC RSS cap.",
-      "recommended": false
+      "recommended": false,
+      "mmproj_path": "models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf",
+      "mmproj_sha256": "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453",
+      "mmproj_size_bytes": 204987232
     },
     {
       "id": "qwen3-0.6b-math-expert-q4_k_m",

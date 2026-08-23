@@ -63,8 +63,17 @@ class RuntimeConfig(BaseSettings):
     server_host: str = "127.0.0.1"
     server_port: int = 8080
     model_alias: str = "qwen3-0.6b"
+    # A multimodal GGUF is not image-capable by itself: llama-server requires the exact
+    # projector produced for that model family/size. ModelManager fills this from the
+    # hash-verified catalog; leaving it null keeps text-only models text-only.
+    mmproj_path: Path | None = None
+    # Qwen3.5 warns that smaller visual token budgets confidently miss printed detail. The
+    # selected image is guarded/downscaled before inference, then encoded inside this bounded
+    # range. The upper bound is also the ChatEngine's conservative per-image prompt reserve.
+    image_min_tokens: int = Field(1024, ge=1, le=8192)
+    image_max_tokens: int = Field(2048, ge=1, le=8192)
     # Generic application default; native launchers deliberately override to 12288 after the
-    # target RSS check, while the memory-constrained 4B Compose control stays at 2048.
+    # target RSS check, while the two-lane 4B Compose control uses 8192 for direct images.
     n_ctx: int = 4096
     # None -> let llama.cpp choose. On LINUX x86 that default is already the right one:
     # cpu_get_num_math() counts physical cores only (SMT siblings skipped) and on hybrid
@@ -218,6 +227,8 @@ class RuntimeConfig(BaseSettings):
     def validate_power_recovery_threshold(self) -> RuntimeConfig:
         if self.power_critical_percentage + self.power_hysteresis_percentage >= 100:
             raise ValueError("power critical percentage plus hysteresis must stay below 100")
+        if self.image_max_tokens < self.image_min_tokens:
+            raise ValueError("image max tokens must be greater than or equal to image min tokens")
         return self
 
     @property
@@ -227,3 +238,7 @@ class RuntimeConfig(BaseSettings):
     @property
     def base_url(self) -> str:
         return f"http://{self.server_host}:{self.server_port}"
+
+    @property
+    def supports_images(self) -> bool:
+        return self.mmproj_path is not None and Path(self.mmproj_path).is_file()

@@ -11,6 +11,11 @@ SOURCE="$CANDIDATES/Qwen3.5-0.8B-Q4_0.gguf"
 SOURCE_SHA="444406ddd926550c724ec18d5120a9d40ded44908a063b0e66e9a7e5464c652c"
 SOURCE_REV="6ab461498e2023f6e3c1baea90a8f0fe38ab64d0"
 SOURCE_URL="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/$SOURCE_REV/Qwen3.5-0.8B-Q4_0.gguf"
+MMPROJ_DIR="$HERE/../models/mmproj"
+MMPROJ="$MMPROJ_DIR/Qwen3.5-0.8B-mmproj-F16.gguf"
+MMPROJ_SHA="56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453"
+MMPROJ_SIZE="204987232"
+MMPROJ_URL="${MMPROJ_URL:-https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/$SOURCE_REV/mmproj-F16.gguf}"
 LLAMA_DIR="$HERE/opt/llama.cpp"
 PYTHON="${PY:-$HERE/../.venv/bin/python}"
 
@@ -32,9 +37,21 @@ fetch() {
   mv "$2.partial" "$2"
 }
 
-mkdir -p "$MODEL_DIR" "$CANDIDATES"
+mkdir -p "$MODEL_DIR" "$CANDIDATES" "$MMPROJ_DIR"
+if [ -f "$MMPROJ" ]; then
+  [ "$(wc -c < "$MMPROJ" | tr -d ' ')" = "$MMPROJ_SIZE" ] \
+    && [ "$(sha "$MMPROJ")" = "$MMPROJ_SHA" ] \
+    || { echo "Qwen3.5-0.8B projector verification failed: $MMPROJ" >&2; exit 1; }
+else
+  echo "downloading pinned Qwen3.5-0.8B image projector…"
+  fetch "$MMPROJ_URL" "$MMPROJ"
+  [ "$(wc -c < "$MMPROJ" | tr -d ' ')" = "$MMPROJ_SIZE" ] \
+    && [ "$(sha "$MMPROJ")" = "$MMPROJ_SHA" ] \
+    || { echo "downloaded Qwen3.5-0.8B projector verification failed" >&2; exit 1; }
+fi
+
 if [ -f "$FINAL" ] && [ "$(sha "$FINAL")" = "$FINAL_SHA" ]; then
-  echo "Muta Tutor already present and verified: $FINAL"
+  echo "Muta Tutor and image projector already present and verified: $FINAL"
   exit 0
 fi
 

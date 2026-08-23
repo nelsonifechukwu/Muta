@@ -8,9 +8,15 @@ others wait.
 from __future__ import annotations
 
 import io
+import struct
+import threading
+import time
+import zlib
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+from orchestrator.gateway import images
 from orchestrator.gateway.images import (
     MAX_LONGEST_SIDE,
     MAX_UPLOAD_BYTES,
@@ -31,6 +37,21 @@ def make_image(width: int, height: int, fmt: str = "JPEG", **save_kw) -> bytes:
     return buffer.getvalue()
 
 
+def declared_png(width: int, height: int) -> bytes:
+    """Tiny file declaring a huge raster; intake must reject before Pillow decodes pixels."""
+
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        body = kind + payload
+        return struct.pack(">I", len(payload)) + body + struct.pack(">I", zlib.crc32(body))
+
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(b"\x00"))
+        + chunk(b"IEND", b"")
+    )
+
+
 def test_a_normal_photo_passes_through():
     prepared = prepare_image(make_image(800, 600))
     assert prepared.format == "JPEG" and not prepared.resized
@@ -42,6 +63,37 @@ def test_a_large_photo_is_downscaled_to_the_token_cap():
     assert prepared.resized
     assert max(prepared.width, prepared.height) == MAX_LONGEST_SIDE
     assert prepared.bytes < prepared.original_bytes
+
+
+def test_compressed_small_huge_dimensions_are_rejected_before_pixel_decode():
+    payload = declared_png(9000, 9000)
+    assert len(payload) < 1024
+    with pytest.raises(ImageRejected, match="too many pixels"):
+        prepare_image(payload)
+
+
+def test_full_raster_preparation_is_bounded_to_two_concurrent_uploads(monkeypatch):
+    lock = threading.Lock()
+    active = 0
+    peak = 0
+
+    def synthetic_prepare(data: bytes, *, max_side: int):
+        nonlocal active, peak
+        _ = max_side
+        with lock:
+            active += 1
+            peak = max(peak, active)
+        time.sleep(0.02)
+        with lock:
+            active -= 1
+        return data
+
+    monkeypatch.setattr(images, "_prepare_image", synthetic_prepare)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(images.prepare_image, [b"image"] * 8))
+
+    assert results == [b"image"] * 8
+    assert peak == 2
 
 
 def test_aspect_ratio_survives_the_downscale():

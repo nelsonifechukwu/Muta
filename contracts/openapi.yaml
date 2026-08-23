@@ -1338,19 +1338,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/attachments/images:
+    post:
+      tags:
+      - attachments
+      summary: Image Upload
+      description: 'Validate and store an image without running inference.
+
+
+        The selected model receives these bytes only when the learner sends a chat turn containing
+
+        the returned attachment id. Selection therefore remains instant and cannot block a model
+
+        switch while the learner is still composing.'
+      operationId: image_upload_v1_attachments_images_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_image_upload_v1_attachments_images_post'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageUploadReply'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/tutor/vision:
     post:
       tags:
       - tutor
       summary: Tutor Vision
-      description: 'Photo of handwritten work → transcription (S2).
-
-
-        Two refusals, both friendly: the image guard (too big, wrong format) and the ladder
-
-        (no memory for a vision instance). Neither is an error — the student is told to type the
-
-        problem instead, and the tutor keeps working.'
+      description: Legacy upload alias; inference now happens with the selected model at chat send.
       operationId: tutor_vision_v1_tutor_vision_post
       parameters:
       - name: authorization
@@ -2147,6 +2190,21 @@ components:
       required:
       - audio
       title: Body_audio_transcribe_v1_audio_transcribe_post
+    Body_image_upload_v1_attachments_images_post:
+      properties:
+        image:
+          type: string
+          contentMediaType: application/octet-stream
+          title: Image
+        conversation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Conversation Id
+      type: object
+      required:
+      - image
+      title: Body_image_upload_v1_attachments_images_post
     Body_resource_upload_v1_resources_post:
       properties:
         file:
@@ -2689,6 +2747,38 @@ components:
       required:
       - service
       title: HealthResponse
+    ImageUploadReply:
+      properties:
+        attachment_id:
+          type: integer
+          title: Attachment Id
+        kind:
+          type: string
+          const: image
+          title: Kind
+          default: image
+        mime:
+          type: string
+          enum:
+          - image/jpeg
+          - image/png
+          - image/webp
+          title: Mime
+        width:
+          type: integer
+          minimum: 1.0
+          title: Width
+        height:
+          type: integer
+          minimum: 1.0
+          title: Height
+      type: object
+      required:
+      - attachment_id
+      - mime
+      - width
+      - height
+      title: ImageUploadReply
     LearningResource:
       properties:
         id:
@@ -2853,6 +2943,17 @@ components:
           type: boolean
           title: Recommended
           default: false
+        supports_images:
+          type: boolean
+          title: Supports Images
+          description: True only when this model's verified projector is installed.
+          default: false
+        image_input_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Image Input Reason
+          description: Why image input is unavailable while text inference can still work.
       type: object
       required:
       - id
@@ -3692,7 +3793,7 @@ components:
         transcription:
           type: string
           title: Transcription
-          description: What the model read from the image.
+          description: Deprecated; images are now sent directly with a chat turn.
           default: ''
         analysis:
           type: string
@@ -3701,12 +3802,12 @@ components:
         accepted:
           type: boolean
           title: Accepted
-          description: False when the image guard or the ladder refused.
+          description: False when the image upload guard refused it.
           default: true
         detail:
           type: string
           title: Detail
-          description: Why it was refused, in words a student can act on.
+          description: Upload outcome in words a student can act on.
           default: ''
         attachment_id:
           anyOf:

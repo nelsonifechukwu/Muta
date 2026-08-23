@@ -72,6 +72,24 @@ def test_model_select_is_unavailable_without_a_supervised_engine():
     assert response.status_code == 409
 
 
+def test_uncatalogued_supervised_model_fails_closed_for_image_input():
+    class UnknownActive(_Manager):
+        def status(self):
+            payload = super().status()
+            payload["active_id"] = "uncatalogued-core"
+            return payload
+
+    set_model_manager(UnknownActive())
+    try:
+        supported, label, reason = routes._active_image_model()
+    finally:
+        set_model_manager(None)
+
+    assert supported is False
+    assert label == "The selected model"
+    assert "verified image projector" in reason
+
+
 def test_model_select_is_for_the_loopback_operator_only(monkeypatch):
     manager = _Manager()
     set_model_manager(manager)
@@ -148,7 +166,13 @@ def test_strict_model_switch_prices_target_and_applies_capacity_atomically(monke
     monkeypatch.setattr(routes, "get_sharing_service", lambda: service)
     monkeypatch.setattr(routes, "get_capacity_controller", lambda: controller)
     monkeypatch.setattr(
-        routes, "get_vision", lambda: SimpleNamespace(stop_for_reconfigure=lambda: True)
+        routes,
+        "get_vision",
+        lambda: SimpleNamespace(
+            stop_for_reconfigure=lambda: (_ for _ in ()).throw(
+                AssertionError("an attached image must not block model switching")
+            )
+        ),
     )
     monkeypatch.setattr(routes, "refresh_engine_dependencies", refreshed.append)
     app.dependency_overrides[deps.get_generation_manager] = lambda: Generations()

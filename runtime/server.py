@@ -60,28 +60,57 @@ class LlamaServer:
         cfg = self.cfg
         cmd = [
             find_binary(cfg),
-            "--model", str(model_path),
-            "--alias", cfg.model_alias,
-            "--host", cfg.server_host,
-            "--port", str(cfg.server_port),
-            "--ctx-size", str(cfg.n_ctx),
-            "--n-gpu-layers", str(cfg.n_gpu_layers),
+            "--model",
+            str(model_path),
+            "--alias",
+            cfg.model_alias,
+            "--host",
+            cfg.server_host,
+            "--port",
+            str(cfg.server_port),
+            "--ctx-size",
+            str(cfg.n_ctx),
+            "--n-gpu-layers",
+            str(cfg.n_gpu_layers),
             "--jinja",  # apply the model's embedded chat template (Qwen3 thinking control)
             # RAM ceilings — see the field comments in runtime/config.py.
-            "--parallel", str(cfg.n_parallel),
-            "--ctx-checkpoints", str(cfg.ctx_checkpoints),
-            "--cache-ram", str(cfg.cache_ram_mib),
+            "--parallel",
+            str(cfg.n_parallel),
+            "--ctx-checkpoints",
+            str(cfg.ctx_checkpoints),
+            "--cache-ram",
+            str(cfg.cache_ram_mib),
             # Explicit --parallel disables the engine's unified-KV default; restore it so
             # slots share the full -c window instead of splitting it (runtime/config.py).
             *(["--kv-unified"] if cfg.kv_unified else []),
-            "-b", str(cfg.n_batch),
-            "-ub", str(cfg.n_ubatch),
-            "--cache-type-k", cfg.cache_type_k,
-            "--reasoning-budget", str(cfg.reasoning_budget),
+            "-b",
+            str(cfg.n_batch),
+            "-ub",
+            str(cfg.n_ubatch),
+            "--cache-type-k",
+            cfg.cache_type_k,
+            "--reasoning-budget",
+            str(cfg.reasoning_budget),
             # Keep weights file-backed/evictable instead of repacking into anonymous RAM
             # (~2.5 GiB product-RAM swing on the 4B — runtime/config.py `no_repack`).
             *(["--no-repack"] if cfg.no_repack else []),
         ]
+        if cfg.mmproj_path is not None:
+            cmd += [
+                "--mmproj",
+                str(cfg.mmproj_path),
+                # CPU-only is the deploy baseline. llama.cpp otherwise offloads the
+                # projector when any backend is present, making a dev GPU silently test a
+                # different memory and latency path from the competition laptop.
+                "--no-mmproj-offload",
+                "--image-min-tokens",
+                str(cfg.image_min_tokens),
+                # Dynamic-resolution inputs may consume more than the minimum. Keep llama.cpp
+                # and ChatEngine on the same hard ceiling so prompt admission cannot underprice
+                # a valid image and overrun a lane after projector expansion.
+                "--image-max-tokens",
+                str(cfg.image_max_tokens),
+            ]
         if cfg.n_threads is not None:
             cmd += ["--threads", str(cfg.n_threads)]
         if cfg.n_threads_batch is not None:
@@ -97,22 +126,33 @@ class LlamaServer:
         if cfg.spec_type == "draft-simple":
             if not (cfg.draft_model and Path(cfg.draft_model).is_file()):
                 # Degradation, not error: the stack must boot without the draft.
-                log.info("spec_type=draft-simple but no draft model at %s — speculation off", cfg.draft_model)
+                log.info(
+                    "spec_type=draft-simple but no draft model at %s — speculation off",
+                    cfg.draft_model,
+                )
                 return []
             return [
-                "--spec-type", "draft-simple",
-                "--spec-draft-model", str(cfg.draft_model),
-                "--spec-draft-n-max", str(cfg.draft_max),
-                "--spec-draft-n-min", str(cfg.draft_min),
-                "--spec-draft-p-min", "0.75",
+                "--spec-type",
+                "draft-simple",
+                "--spec-draft-model",
+                str(cfg.draft_model),
+                "--spec-draft-n-max",
+                str(cfg.draft_max),
+                "--spec-draft-n-min",
+                str(cfg.draft_min),
+                "--spec-draft-p-min",
+                "0.75",
             ]
         if cfg.spec_type == "ngram-simple":
             # Engine defaults (N=12) never drafted on tutoring turns; N=4/M=12 measured
             # 12-22% token acceptance at zero RAM cost (docs/engine-flags.md).
             return [
-                "--spec-type", "ngram-simple",
-                "--spec-ngram-simple-size-n", "4",
-                "--spec-ngram-simple-size-m", "12",
+                "--spec-type",
+                "ngram-simple",
+                "--spec-ngram-simple-size-n",
+                "4",
+                "--spec-ngram-simple-size-m",
+                "12",
             ]
         return []
 

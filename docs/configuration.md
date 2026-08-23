@@ -84,7 +84,7 @@ are the class defaults; the `Qwen3-0.6B` smoke-fixture defaults are what ship in
 | `MUTA_RT_BASE_REPO` | `Qwen/Qwen3-0.6B` | provenance only (safetensors source) | `config.py:56` |
 | `MUTA_RT_AUTO_DOWNLOAD` | `true` *(compose: `0`)* | download from HF if the local file is missing | `config.py:59`, compose `:66` |
 
-### llama-server (the text engine)
+### llama-server (the selected text or multimodal engine)
 
 | Variable | Default | What it does | Where read |
 |---|---|---|---|
@@ -92,7 +92,10 @@ are the class defaults; the `Qwen3-0.6B` smoke-fixture defaults are what ship in
 | `MUTA_RT_SERVER_HOST` | `127.0.0.1` | engine bind host (loopback) | `config.py:63`, `server.py:64` |
 | `MUTA_RT_SERVER_PORT` | `8080` | **engine bind port — the one the gateway actually talks to** | `config.py:64`, `server.py:65` |
 | `MUTA_RT_MODEL_ALIAS` | `qwen3-0.6b` *(compose: `qwen3.5-4b`)* | `/v1/models` alias | `config.py:65`, compose `:53` |
-| `MUTA_RT_N_CTX` | `4096` *(native: `12288`; Compose: `2048`)* | total unified context; hard request fitting uses `n_ctx / n_parallel` as each concurrent lane's guaranteed share | `config.py:66`, `deps.py`, compose `:86`, `run.sh` |
+| `MUTA_RT_MMPROJ_PATH` | `None` *(Compose defaults to the paired 4B projector; `run.sh` supplies the verified 0.8B projector for the recommended model)* | exact projector loaded into the selected `llama-server`; absent means text-only. Catalog selection verifies its size and SHA-256 before advertising image input | `config.py`, `model_catalog.py`, `server.py`, compose, `run.sh` |
+| `MUTA_RT_IMAGE_MIN_TOKENS` | `1024` | minimum visual-token budget passed as `--image-min-tokens`; the guarded image is downscaled before this engine sees it | `config.py`, `server.py` |
+| `MUTA_RT_IMAGE_MAX_TOKENS` | `2048` | hard visual-token ceiling passed as `--image-max-tokens` and reserved by ChatEngine; must be ≥ the minimum | `config.py`, `server.py`, `chat.py`, `deps.py` |
+| `MUTA_RT_N_CTX` | `4096` *(native: `12288`; Compose: `8192`)* | total unified context; hard request fitting uses `n_ctx / n_parallel` as each concurrent lane's guaranteed share. Compose gives each of two lanes 4096 tokens: a 2048-token image ceiling plus 2048 for the real tutor prompt, safety reserve and a useful reply | `config.py`, `deps.py`, compose, `run.sh` |
 | `MUTA_RT_N_THREADS` | `None` → P-cores on Apple silicon, engine default elsewhere *(compose: `8`)* | decode threads | `config.py:73`, compose `:81` |
 | `MUTA_RT_N_GPU_LAYERS` | `0` | GPU offload layers (also read by the vision command) | `config.py:76`, `profiles.py:398` |
 | `MUTA_RT_N_PARALLEL` | `2` | **engine slots (the real slot count)** | `config.py:83`, `server.py:70` |
@@ -135,10 +138,11 @@ operators can disable the policy globally with `MUTA_RT_POWER_OPTIMIZATION=0`.
 | `MUTA_RT_POWER_ECO_MAX_TOKENS` | `800` | ordinary response cap while discharging | `config.py`, `power.py` |
 | `MUTA_RT_POWER_CRITICAL_MAX_TOKENS` | `512` | ordinary response cap in Critical mode; thinking is also disabled | `config.py`, `power.py` |
 
-Critical reserve always blocks starting vision and TTS work so the shared laptop retains
-capacity for text tutoring. Turning the learner switch off restores their ordinary response
-budgets, but does not bypass that host-wide safeguard. Explicit Extended reasoning and
-schema-constrained assessment responses retain their requested budgets in every mode.
+Critical reserve still blocks legacy auxiliary vision and TTS work so the shared laptop retains
+capacity for tutoring. Browser image questions now use the already-selected chat engine rather
+than that auxiliary process. Turning the learner switch off restores ordinary response budgets,
+but does not bypass the host-wide safeguard. Explicit Extended reasoning and schema-constrained
+assessment responses retain their requested budgets in every mode.
 
 ### Persistent memory
 
@@ -159,7 +163,7 @@ These carry the `MUTA_RT_` prefix but are read directly from `os.environ`, not t
 | Variable | Default | What it does | Where read |
 |---|---|---|---|
 | `MUTA_RT_VISION_STARTUP_S` | `60.0` *(compose: `300`)* | cold-spawn wait for the vision `llama-server` | `runtime/vision.py:53`, compose `:92` |
-| `MUTA_RT_VISION_MEMORY_MAX_MIB` | `4352` | full-process ceiling for the ephemeral vision server; also the Host planner reserve when vision and text use different GGUFs. Compose reads it from `.env`; native systemd reads it from `~/.config/muta/native.env` | `runtime/profiles.py`, `runtime/vision.py`, `orchestrator/gateway/capacity.py`, compose |
+| `MUTA_RT_VISION_MEMORY_MAX_MIB` | `4352` | legacy ceiling for the standalone auxiliary vision manager. The browser image/chat path does not start that process, and the Host planner no longer reserves it | `runtime/profiles.py`, `runtime/vision.py`, compose |
 | `MUTA_RT_LLAMA_CLI_BIN` | `None` | `llama-cli` path used by `verify_models` | `scripts/verify_models.py:53` |
 
 `MUTA_OFFLINE=1` is set automatically by the Linux-native launcher. It forces the cached

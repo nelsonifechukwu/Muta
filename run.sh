@@ -56,8 +56,9 @@ Usage: ./run.sh [--native|--native-linux|--native-engine] [--model PATH]
               non-default model must already exist (fetch/quantize it first — e.g.
               scripts/fetch_models.py --quant-variants for the D1 candidates) and, in
               docker mode, live under ./models (the only dir mounted into the
-              container). Vision (mmproj) pairs with the Qwen3.5-4B family, and the
-              docker default keeps draft speculation active — a vocab-incompatible
+              container). Image input is enabled only for an exact model/projector pair;
+              other custom cores remain text-only. The docker default keeps draft
+              speculation active — a vocab-incompatible
               core fails the engine boot (set MUTA_RT_SPEC_TYPE=none first).
   plan        print the hardware decisions (host, mode, gpu, net) and exit — no side effects
   update      pull code, refresh models (hash-skipped), rebuild images, restart (online only)
@@ -237,6 +238,11 @@ native_up() {
     export MUTA_RT_MODEL_DIR="$MODEL_DIR"
     export MUTA_RT_MODEL_FILE="$MODEL_FILE"
     export MUTA_RT_MODEL_ALIAS="$MODEL_ALIAS"
+    if [ -n "$MMPROJ_PATH" ]; then
+        export MUTA_RT_MMPROJ_PATH="$MMPROJ_PATH"
+    else
+        unset MUTA_RT_MMPROJ_PATH
+    fi
     export MUTA_RT_N_CTX=12288
     export MUTA_RT_ENABLE_THINKING=1
     export MUTA_RT_AUTO_DOWNLOAD=0
@@ -303,6 +309,15 @@ native_linux_env() {
     export MUTA_RT_MODEL_DIR="$native_model_dir"
     export MUTA_RT_MODEL_FILE="$MODEL_FILE"
     export MUTA_RT_MODEL_ALIAS="$MODEL_ALIAS"
+    if [ -n "$MMPROJ_PATH" ]; then
+        [ -f "$MMPROJ_PATH" ] || die "image projector not found: $MMPROJ_PATH — run ./muta-iq/download_model.sh while online, then retry"
+        case "$MMPROJ_PATH" in
+            /*) export MUTA_RT_MMPROJ_PATH="$MMPROJ_PATH" ;;
+            *) export MUTA_RT_MMPROJ_PATH="$PWD/$MMPROJ_PATH" ;;
+        esac
+    else
+        unset MUTA_RT_MMPROJ_PATH
+    fi
     export MUTA_RT_N_CTX="${MUTA_RT_N_CTX:-12288}"
     export MUTA_RT_N_GPU_LAYERS=0
     export MUTA_RT_ENABLE_THINKING="${MUTA_RT_ENABLE_THINKING:-1}"
@@ -420,7 +435,7 @@ if [ "$MODEL" != "$DEFAULT_MODEL" ]; then
             || die "docker mode mounts only ./models into the container — pass a repo-relative path under models/ (got: $MODEL)" ;;
     esac
     warn "custom core model: $MODEL"
-    warn "  vision (mmproj-F16) pairs with the Qwen3.5-4B family; other cores degrade vision"
+    warn "  image input is enabled only when this exact model has a verified paired projector"
 fi
 MODEL_DIR=$(dirname "$MODEL")
 MODEL_FILE=$(basename "$MODEL")
@@ -429,11 +444,25 @@ if [ "$MODEL" = "$DEFAULT_MODEL" ]; then
 else
     MODEL_ALIAS=$(basename "$MODEL" .gguf | tr '[:upper:]' '[:lower:]')
 fi
+# The projector is architecture-specific to the model family, not a generic "image reader".
+# Known Qwen3.5 families get their pinned partner; every other model starts text-only.
+case "$MODEL" in
+    models/core/*Qwen3.5-4B*.gguf|models/core/*qwen3.5-4b*.gguf)
+        MMPROJ_PATH="models/core/mmproj-F16.gguf" ;;
+    "$NATIVE_WINNER_MODEL"|models/draft/Qwen3.5-0.8B-Q4_K_M.gguf)
+        MMPROJ_PATH="models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf" ;;
+    *) MMPROJ_PATH="" ;;
+esac
 if [ "$MODE" = docker ]; then
     # docker-compose.yml interpolates these (host path → the ./models mount at /app).
     export MUTA_MODEL_DIR="/app/$MODEL_DIR"
     export MUTA_MODEL_FILE="$MODEL_FILE"
     export MUTA_MODEL_ALIAS="$MODEL_ALIAS"
+    if [ -n "$MMPROJ_PATH" ]; then
+        export MUTA_RT_MMPROJ_PATH="/app/$MMPROJ_PATH"
+    else
+        export MUTA_RT_MMPROJ_PATH=""
+    fi
 fi
 
 # Linux native starts are deliberately handled before any Docker or network probe. Once the
@@ -510,15 +539,22 @@ fi
 # ---------------------------------------------------------------------------
 # 2. Model provisioning (idempotent: sha256-verified files are skipped)
 # ---------------------------------------------------------------------------
+if [ "$MMPROJ_PATH" = "models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf" ] \
+    && [ ! -f "$MMPROJ_PATH" ] && [ "$NET" = online ]; then
+    ./muta-iq/download_model.sh \
+        || die "Qwen3.5-0.8B model/projector provisioning failed — rerun when online"
+fi
 required_models=(
     "$MODEL"
     "models/draft/Qwen3.5-0.8B-Q4_K_M.gguf"
-    "models/core/mmproj-F16.gguf"
     "models/asr/moonshine-tiny-en-int8/tokens.txt"
     "models/asr/silero_vad.onnx"
     "models/tts/piper/en_US-joe-medium.onnx"
     "models/embed/bge-small-en-v1.5-q8_0.gguf"
 )
+if [ -n "$MMPROJ_PATH" ]; then
+    required_models+=("$MMPROJ_PATH")
+fi
 missing=0
 for f in "${required_models[@]}"; do
     [ -e "$f" ] || { missing=1; break; }

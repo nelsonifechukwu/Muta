@@ -276,6 +276,51 @@ class ConversationStore:
             )
         return int(row["id"])
 
+    def add_user_message_with_attachments(
+        self,
+        conversation_id: str,
+        content: str,
+        attachment_ids: list[int],
+        *,
+        owner_id: str,
+    ) -> int:
+        """Atomically persist a user turn and bind its already-validated attachments."""
+        ts = _now()
+        unique_ids = list(dict.fromkeys(attachment_ids))
+        with self._pool.connection() as conn, conn.transaction():
+            owner = conn.execute(
+                "SELECT 1 FROM conversations WHERE id = %s AND student_id = %s",
+                (conversation_id, owner_id),
+            ).fetchone()
+            if owner is None:
+                raise PermissionError("conversation belongs to another learner")
+            row = conn.execute(
+                "INSERT INTO messages (conversation_id, role, content, created_at) "
+                "VALUES (%s, 'user', %s, %s) RETURNING id",
+                (conversation_id, content, ts),
+            ).fetchone()
+            message_id = int(row["id"])
+            for attachment_id in unique_ids:
+                linked = conn.execute(
+                    "UPDATE attachments SET conversation_id = %s, message_id = %s "
+                    "WHERE id = %s AND owner_id = %s AND message_id IS NULL "
+                    "AND (conversation_id IS NULL OR conversation_id = %s)",
+                    (
+                        conversation_id,
+                        message_id,
+                        attachment_id,
+                        owner_id,
+                        conversation_id,
+                    ),
+                )
+                if linked.rowcount != 1:
+                    raise RuntimeError("attachment link failed")
+            conn.execute(
+                "UPDATE conversations SET updated_at = %s WHERE id = %s",
+                (ts, conversation_id),
+            )
+        return message_id
+
     def update_message(self, message_id: int, content: str) -> None:
         """Rewrite a message's body in place, keeping its id (and therefore its position in
         the conversation's serial ordering).

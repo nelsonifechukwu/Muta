@@ -14,7 +14,7 @@ from orchestrator.gateway.prompting import (
     assemble_system_prompt,
     response_language_instruction,
 )
-from runtime.chat import ChatEngine, _message_tokens
+from runtime.chat import ChatEngine, ImageInput, _message_tokens
 from runtime.client import Generation, InferenceStreamError
 from runtime.sqlite_memory import SQLiteConversationStore
 
@@ -134,6 +134,34 @@ def test_exact_engine_count_keeps_the_full_reply_budget_for_normal_english(store
     assert sent[-1]["content"] == question
     assert params["max_tokens"] == 1200
     assert client.count_calls == 1
+
+
+def test_image_profile_preserves_a_useful_reply_budget_after_real_tutor_prompt(store):
+    class RepresentativeExactCounter(RecordingClient):
+        def count_prompt_tokens(self, messages, **params):
+            _ = messages, params
+            # Measured with pinned b10035 over the assembled default Socratic English/science
+            # system plus a short force-diagram question (text/template only).
+            return 1085
+
+    client = RepresentativeExactCounter()
+    engine = ChatEngine(
+        client,
+        store,
+        context_window_tokens=4096,
+        context_safety_tokens=192,
+        image_token_budget=2048,
+    )
+
+    engine.chat(
+        "s1",
+        "Explain the force diagram in this image.",
+        images=[ImageInput(mime="image/png", data=b"diagram")],
+        max_tokens=1200,
+    )
+
+    assert client.params[-1]["max_tokens"] == 771
+    assert client.params[-1]["max_tokens"] >= 700
 
 
 def test_failed_exact_counter_falls_back_to_the_byte_safe_fit(store):

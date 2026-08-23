@@ -88,6 +88,7 @@ def refresh_engine_dependencies(profile: CapacityProfile | None = None) -> None:
     if get_engine.cache_info().currsize:
         engine = get_engine()
         engine.context_window_tokens = cfg.n_ctx // max(1, cfg.n_parallel)
+        engine.image_token_budget = cfg.image_max_tokens
     if profile is not None:
         # The ladder probe measures llama-server RSS, while the planner's ceiling prices the
         # whole process tree. Reserve the gateway/ASR/TTS allowance before comparing core RSS
@@ -153,10 +154,6 @@ class RuntimeCapacityController:
                 raise GenerationCapacityError("the supervised engine is no longer available")
 
             def restore_profile() -> None:
-                if not get_vision().stop_for_reconfigure():
-                    raise GenerationCapacityError(
-                        "wait for the active image reading before restoring Host memory"
-                    )
                 manager.restore_runtime(snapshot)
                 profile = self.plan_config(mode, snapshot[0])
                 self._last_profile = profile
@@ -177,13 +174,8 @@ class RuntimeCapacityController:
         applied: dict[str, CapacityProfile] = {}
 
         def replace_profile() -> None:
-            vision = get_vision()
-            if not vision.stop_for_reconfigure():
-                raise GenerationCapacityError(
-                    "wait for the active image reading before changing Host memory"
-                )
-            # Plan after the auxiliary process is gone so its measured RSS is neither
-            # double-counted nor allowed to overlap the replacement text engine.
+            # Image selection stores guarded bytes only. There is no auxiliary inference
+            # process to drain; active chat generations are the sole replacement barrier.
             current_cfg = active_runtime_config()
             profile = self.plan_config(mode, current_cfg)
             target_model_id: str | None = None
@@ -288,6 +280,7 @@ def get_engine() -> ChatEngine:
         # so individually-valid prompts cannot overcommit the engine when both are active.
         context_window_tokens=cfg.n_ctx // max(1, cfg.n_parallel),
         context_safety_tokens=cfg.context_safety_tokens,
+        image_token_budget=cfg.image_max_tokens,
         stream_retry_attempts=cfg.stream_retry_attempts,
         stream_retry_backoff_s=cfg.stream_retry_backoff_s,
     )
