@@ -561,8 +561,9 @@ class ChatEngine:
         message: str,
         turn_instruction: str | None = None,
         images: list[ImageInput] | None = None,
+        include_history: bool = True,
     ) -> list[Message]:
-        history = self._history(conversation_id)
+        history = self._history(conversation_id) if include_history else []
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
@@ -589,6 +590,7 @@ class ChatEngine:
         system_prompt: str | None,
         turn_instruction: str | None = None,
         images: list[ImageInput] | None = None,
+        include_history: bool = True,
     ) -> list[Message]:
         """Prompt for regeneration: system + existing history, with NO new user turn appended.
         The last stored message is already the user's turn, so this re-answers it — used by
@@ -596,6 +598,11 @@ class ChatEngine:
         history = self._history(conversation_id)
         if not history or history[-1].get("role") != "user":
             raise ValueError("regenerate requires a conversation whose last message is the user")
+        if not include_history:
+            # A grounded resource turn must not inherit claims from an earlier document. Keep
+            # only the persisted question being regenerated; the resource evidence arrives in
+            # this request's system prompt.
+            history = [history[-1]]
         messages: list[Message] = [
             {"role": "system", "content": system_prompt or self.default_system_prompt}
         ]
@@ -1008,6 +1015,7 @@ class ChatEngine:
         cancel_event: threading.Event | None = None,
         images: list[ImageInput] | None = None,
         attachment_ids: list[int] | None = None,
+        include_history: bool = True,
         **params,
     ) -> ChatResult:
         cid = self._open(
@@ -1022,12 +1030,12 @@ class ChatEngine:
         )
         if regenerate:
             messages = self._assemble_history(
-                cid, student_id, system_prompt, turn_instruction, images
+                cid, student_id, system_prompt, turn_instruction, images, include_history
             )
             user_message_id = None
         else:
             messages = self._assemble(
-                cid, student_id, system_prompt, message, turn_instruction, images
+                cid, student_id, system_prompt, message, turn_instruction, images, include_history
             )
             user_message_id = None
         messages, request_params = self._fit_request(
@@ -1089,6 +1097,7 @@ class ChatEngine:
         title: str | None = None,
         images: list[ImageInput] | None = None,
         attachment_ids: list[int] | None = None,
+        include_history: bool = True,
         **params,
     ) -> tuple[str, int, Iterator[str]]:
         """Returns (conversation_id, user_message_id, token iterator). The reply is persisted
@@ -1102,7 +1111,15 @@ class ChatEngine:
             language=language,
             title=title,
         )
-        messages = self._assemble(cid, student_id, system_prompt, message, turn_instruction, images)
+        messages = self._assemble(
+            cid,
+            student_id,
+            system_prompt,
+            message,
+            turn_instruction,
+            images,
+            include_history,
+        )
         messages, request_params = self._fit_request(
             messages,
             params,
@@ -1143,6 +1160,7 @@ class ChatEngine:
         cancel_event: threading.Event | None = None,
         images: list[ImageInput] | None = None,
         attachment_ids: list[int] | None = None,
+        include_history: bool = True,
         **params,
     ) -> tuple[str, int | None, Iterator[tuple[str, str]]]:
         """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
@@ -1163,12 +1181,12 @@ class ChatEngine:
         )
         if regenerate:
             messages = self._assemble_history(
-                cid, student_id, system_prompt, turn_instruction, images
+                cid, student_id, system_prompt, turn_instruction, images, include_history
             )
             user_message_id = None
         else:
             messages = self._assemble(
-                cid, student_id, system_prompt, message, turn_instruction, images
+                cid, student_id, system_prompt, message, turn_instruction, images, include_history
             )
             user_message_id = None
         messages, request_params = self._fit_request(

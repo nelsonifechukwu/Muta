@@ -439,10 +439,11 @@ class ConversationStore:
             ).fetchone()
         return int(row["id"]) if row else None
 
-    def add_message_sources(self, message_id: int, sources: list[dict]) -> None:
+    def add_message_sources(self, message_id: int, sources: list[dict]) -> list[dict]:
+        persisted: list[dict] = []
         with self._pool.connection() as conn, conn.transaction():
             for source in sources:
-                conn.execute(
+                cursor = conn.execute(
                     "INSERT INTO message_sources "
                     "(message_id, resource_id, title, page_number, chunk_index, excerpt) "
                     "SELECT %s, r.id, %s, %s, %s, %s FROM learning_resources r "
@@ -456,6 +457,28 @@ class ConversationStore:
                         source["resource_id"],
                     ),
                 )
+                if cursor.rowcount:
+                    persisted.append(dict(source))
+        return persisted
+
+    def get_message_sources(self, message_id: int) -> list[dict]:
+        """Return the source rows that still exist for one persisted assistant message."""
+        with self._pool.connection() as conn:
+            rows = conn.execute(
+                "SELECT resource_id, title, page_number, chunk_index, excerpt "
+                "FROM message_sources WHERE message_id = %s ORDER BY id ASC",
+                (message_id,),
+            ).fetchall()
+        return [
+            {
+                "resource_id": row["resource_id"],
+                "title": row["title"],
+                "page": row["page_number"],
+                "chunk_index": row["chunk_index"],
+                "excerpt": row["excerpt"],
+            }
+            for row in rows
+        ]
 
     # --- learner resources -----------------------------------------------------------
 

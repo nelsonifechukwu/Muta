@@ -607,7 +607,10 @@ async def audio_voice(ws: WebSocket) -> None:
         while True:
             try:
                 msg = await asyncio.wait_for(ws.receive(), timeout=1.0)
-            except TimeoutError:
+            # Python 3.10's asyncio.TimeoutError is distinct from builtins.TimeoutError.
+            # Catch the asyncio type explicitly or the deployed receive heartbeat tears down
+            # every quiet socket one second into the tutor's response.
+            except asyncio.TimeoutError:
                 if not voice_session_valid():
                     await close_revoked_voice()
                     break

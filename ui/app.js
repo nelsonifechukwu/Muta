@@ -1276,6 +1276,20 @@ function beginAssistantMessage(onAnswerNow) {
       full += t;
       scheduleRender();
     },
+    replace(t) {
+      clearQueuedNotice();
+      clearRecovering();
+      clearPreamble();
+      settleThinking();
+      full = String(t || "");
+      renderedLen = full.length;
+      if (streamDone) renderCompletedReply(wrap, prose, full);
+      else {
+        renderMarkdown(prose, full);
+        placeCursor(prose);
+      }
+      scrollToBottom();
+    },
     finalize() {
       clearQueuedNotice();
       clearRecovering();
@@ -1612,8 +1626,15 @@ function renderHistoryMessage(m) {
     prose.className = "prose";
     prose.dir = "auto";
     wrap.appendChild(prose);
-    renderCompletedReply(wrap, prose, m.content);
-    renderResourceSources(wrap, m.resource_citations);
+    const grounded = m.resource_citations?.length && globalThis.MutaCitations?.normalizeReferences
+      ? globalThis.MutaCitations.normalizeReferences(
+          m.content,
+          m.resource_citations,
+          { legacyNumeric: true },
+        )
+      : { text: m.content, records: m.resource_citations };
+    renderCompletedReply(wrap, prose, grounded.text);
+    renderResourceSources(wrap, grounded.records);
     messagesEl.appendChild(wrap);
   }
 }
@@ -1860,12 +1881,14 @@ function reattachJob(job) {
   if (job.content) handle.pushDelta(job.content);
   if (job.recovering) handle.showRecovering();
   job.handle = handle;
-  if (job.source) decorateCompletedReply(job, { source: job.source });
   // Replay can finish while the history request is still in flight. In that ordering the
   // terminal event had no view handle to settle, so settle the freshly attached bubble now.
   if (job.terminal) {
     if (job.failed) handle.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
     else handle.finalize();
+    decorateCompletedReply(job, job.terminalEvent || { source: job.source });
+  } else if (job.source) {
+    decorateCompletedReply(job, { source: job.source });
   }
 }
 
@@ -2593,6 +2616,7 @@ async function dispatch(item, opts = {}) {
       telemetryOpened: false,
       recovering: null,
       source: null,
+      terminalEvent: null,
       clientRequestId: started.client_request_id || clientRequestId,
       state: started.state || "running",
       queuePosition: started.queue_position || 0,
@@ -2708,16 +2732,21 @@ async function pumpSse(res, job) {
           job.recovering = null;
           job.content += ev.delta;
           job.handle?.pushDelta(ev.delta);
+        } else if (Object.prototype.hasOwnProperty.call(ev, "replace")) {
+          job.recovering = null;
+          job.content = String(ev.replace || "");
+          job.handle?.replace(job.content);
         } else if (ev.error) {
           job.failed = true;
           job.error = true;
           job.handle?.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
         } else if (ev.done) {
           job.terminal = true;
+          job.terminalEvent = { ...ev, source: ev.source || job.source };
           if (ev.stopped && job.pendingRegen) job.handle?.remove();
           else if (ev.stopped) job.handle?.fail(t("reply.stopped"), "reply.stopped");
           else if (!job.failed) job.handle?.finalize();
-          decorateCompletedReply(job, { ...ev, source: ev.source || job.source });
+          decorateCompletedReply(job, job.terminalEvent);
           if (conversationId === job.cid) announce(t("reply.tutorReplied"));
         }
         if (!job.telemetryOpened && (ev.reasoning || ev.delta) && conversationId === job.cid) {
@@ -2740,8 +2769,16 @@ function decorateCompletedReply(job, ev) {
   const last = job.handle?.element;
   if (!last) return;
   const allSources = Array.isArray(ev.sources) ? ev.sources : [];
-  const resourceSources = allSources.filter((source) => source?.resource_id);
+  let resourceSources = allSources.filter((source) => source?.resource_id);
   const webSources = allSources.filter((source) => source?.url && !source?.resource_id);
+  if (resourceSources.length && globalThis.MutaCitations?.normalizeReferences) {
+    const grounded = globalThis.MutaCitations.normalizeReferences(job.content, resourceSources);
+    resourceSources = grounded.records;
+    if (grounded.text !== job.content) {
+      job.content = grounded.text;
+      job.handle?.replace(job.content);
+    }
+  }
   renderResourceSources(last, resourceSources);
   if (webSources.length && !last.querySelector(".sources")) {
     const box = document.createElement("div");
@@ -2823,6 +2860,7 @@ function recoveredJob(active, clientRequestId = active.client_request_id || null
     telemetryOpened: false,
     recovering: null,
     source: null,
+    terminalEvent: null,
     clientRequestId,
     state: active.state || "running",
     queuePosition: active.queue_position || 0,

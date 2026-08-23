@@ -119,6 +119,10 @@ from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.preamble import with_preamble
 from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
+from orchestrator.gateway.resource_citations import (
+    finalize_resource_reply,
+    retain_persisted_resource_sources,
+)
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.selfcheck import scan_claims, self_check
 from orchestrator.gateway.sessions import Admission, SessionManager
@@ -872,10 +876,11 @@ def chat(
         engine,
         req.attachment_ids,
         owner_id=req.student_id,
-        conversation_id=req.conversation_id,
+        conversation_id=None if req.use_rag else req.conversation_id,
     )
     resource_block = ""
     resource_sources: list[dict] = []
+    final_resource_sources: list[dict] = []
     if req.use_rag:
         if caller is None:
             raise HTTPException(status_code=401, detail="sign in to use private resources")
@@ -890,11 +895,12 @@ def chat(
         persona=req.persona.value,
         language=req.language,
         subject=req.subject.value,
-        twin_summary=_twin_summary(req.student_id),
+        twin_summary="" if req.use_rag else _twin_summary(req.student_id),
         rag_block=resource_block,
     )
 
     def _run_chat():
+        nonlocal final_resource_sources
         # In strict mode GenerationManager has already installed a job barrier; in legacy
         # mode the caller holds runtime_lifecycle below. Check capability inside that barrier
         # so a concurrent model switch cannot replace a verified image model with text-only
@@ -903,7 +909,7 @@ def chat(
             engine,
             req.attachment_ids,
             owner_id=req.student_id,
-            conversation_id=req.conversation_id,
+            conversation_id=None if req.use_rag else req.conversation_id,
         )
         chat_result = engine.chat(
             student_id=req.student_id,
@@ -922,6 +928,7 @@ def chat(
             cancel_event=turn_cancel,
             images=image_inputs,
             attachment_ids=req.attachment_ids,
+            include_history=not req.use_rag,
             **_sampling_for_request(
                 req.mode.value,
                 req.thinking,
@@ -930,6 +937,12 @@ def chat(
                 visualizations=visual_requested,
             ),
         )
+        if req.use_rag:
+            chat_result.reply, final_resource_sources = finalize_resource_reply(
+                chat_result.reply, resource_sources
+            )
+            if chat_result.assistant_message_id is not None:
+                engine.store.update_message(chat_result.assistant_message_id, chat_result.reply)
         if visual_requested:
             spec = generate_visualization(
                 engine,
@@ -946,8 +959,25 @@ def chat(
         # drains this operation before deleting the account, so nothing can recreate data
         # after the erase barrier.
         with member_write_lease(write_principal):
-            if resource_sources and chat_result.assistant_message_id is not None:
-                engine.store.add_message_sources(chat_result.assistant_message_id, resource_sources)
+            if final_resource_sources and chat_result.assistant_message_id is not None:
+                candidate_sources = final_resource_sources
+                persisted_sources = engine.store.add_message_sources(
+                    chat_result.assistant_message_id, final_resource_sources
+                )
+                # Re-read the durable rows after the insert. A resource deletion cascades
+                # its citations, so the response must never advertise a source that a
+                # refresh can no longer recover.
+                persisted_sources = engine.store.get_message_sources(
+                    chat_result.assistant_message_id
+                )
+                chat_result.reply, final_resource_sources = retain_persisted_resource_sources(
+                    chat_result.reply, candidate_sources, persisted_sources
+                )
+                engine.store.update_message(chat_result.assistant_message_id, chat_result.reply)
+            elif final_resource_sources:
+                chat_result.reply, final_resource_sources = retain_persisted_resource_sources(
+                    chat_result.reply, final_resource_sources, []
+                )
             _touch_twin(req.student_id, req.subject.value, req.message)
         return chat_result
 
@@ -1006,7 +1036,7 @@ def chat(
         mode=req.mode,
         reply=reply,
         verified=bool(verified),
-        resource_citations=resource_sources,
+        resource_citations=final_resource_sources,
     )
 
 
@@ -1047,7 +1077,7 @@ def _start_chat_generation(
         engine,
         req.attachment_ids,
         owner_id=req.student_id,
-        conversation_id=req.conversation_id,
+        conversation_id=None if req.use_rag else req.conversation_id,
     )
     try:
         reservation_id = generations.reserve(
@@ -1065,7 +1095,7 @@ def _start_chat_generation(
             engine,
             req.attachment_ids,
             owner_id=req.student_id,
-            conversation_id=req.conversation_id,
+            conversation_id=None if req.use_rag else req.conversation_id,
         )
     except Exception:
         generations.cancel_reservation(reservation_id)
@@ -1079,7 +1109,7 @@ def _start_chat_generation(
 
     # Web grounding (P4): RAG-style, opt-in, fail-silent. All three gates or nothing —
     # the ungrounded request must stay byte-identical to what the tutor already serves.
-    sources: list[dict] = list(resource_sources)
+    web_sources: list[dict] = []
     web_lines = ""
     search_url = os.environ.get("MUTA_SEARCH_URL")
     if req.use_web and search_url:
@@ -1091,7 +1121,9 @@ def _start_chat_generation(
                 web_lines = "\n".join(
                     f"[{i}] {s.title} — {s.snippet}" for i, s in enumerate(snippets, start=1)
                 )
-                sources.extend({"title": snippet.title, "url": snippet.url} for snippet in snippets)
+                web_sources.extend(
+                    {"title": snippet.title, "url": snippet.url} for snippet in snippets
+                )
 
     visual_requested = wants_live_visual(req.message)
     system_prompt = assemble_system_prompt(
@@ -1099,7 +1131,7 @@ def _start_chat_generation(
         persona=req.persona.value,
         language=req.language,
         subject=req.subject.value,
-        twin_summary=_twin_summary(req.student_id),
+        twin_summary="" if req.use_rag else _twin_summary(req.student_id),
         web_lines=web_lines,
         rag_block=resource_block,
     )
@@ -1131,6 +1163,7 @@ def _start_chat_generation(
             cancel_event=cancel_event,
             images=image_inputs,
             attachment_ids=req.attachment_ids,
+            include_history=not req.use_rag,
             # §6.5 sampling profiles apply to the UI's primary path too — without them the
             # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
             # student holding a slot indefinitely, and with thinking on it filled the context).
@@ -1159,6 +1192,7 @@ def _start_chat_generation(
         t_first = t_last = 0.0
         t_preamble = 0.0
         reply_parts: list[str] = []  # answer content only, for the post-stream self-check
+        final_resource_sources: list[dict] = []
         hub = get_hub()
         started = time.monotonic()
         reply_source = "local"
@@ -1200,6 +1234,34 @@ def _start_chat_generation(
                 if kind != "reasoning":
                     reply_parts.append(text)
                 yield f"data: {json.dumps({key: text})}\n\n"
+            if req.use_rag and reply_parts and not cancel_event.is_set():
+                raw_reply = "".join(reply_parts)
+                finalized_reply, final_resource_sources = finalize_resource_reply(
+                    raw_reply, resource_sources
+                )
+                candidate_sources = final_resource_sources
+                reply_parts[:] = [finalized_reply]
+                assistant_message_id = getattr(events, "assistant_message_id", None)
+                if assistant_message_id is not None:
+                    persisted_sources = engine.store.add_message_sources(
+                        assistant_message_id, candidate_sources
+                    )
+                    persisted_sources = engine.store.get_message_sources(assistant_message_id)
+                    finalized_reply, final_resource_sources = retain_persisted_resource_sources(
+                        finalized_reply, candidate_sources, persisted_sources
+                    )
+                    reply_parts[:] = [finalized_reply]
+                    engine.store.update_message(assistant_message_id, finalized_reply)
+                elif candidate_sources:
+                    finalized_reply, final_resource_sources = retain_persisted_resource_sources(
+                        finalized_reply, candidate_sources, []
+                    )
+                    reply_parts[:] = [finalized_reply]
+                if finalized_reply != raw_reply:
+                    # Streaming deltas are append-only until this authoritative final pass.
+                    # The browser replaces the provisional body so raw (R5)/R3 syntax and
+                    # printed citation audits never survive in the completed transcript.
+                    yield f"data: {json.dumps({'replace': finalized_reply})}\n\n"
             if visual_requested and reply_parts and not cancel_event.is_set():
                 prose_reply = "".join(reply_parts)
                 spec = generate_visualization(
@@ -1239,13 +1301,6 @@ def _start_chat_generation(
                     _close_events(streamed)
                 finally:
                     _close_events(events)
-                if resource_sources:
-                    # The stream writer owns an exact assistant row. Never rediscover it by
-                    # ordering: another generation can persist into this conversation while
-                    # this one is decoding.
-                    assistant_message_id = getattr(events, "assistant_message_id", None)
-                    if assistant_message_id is not None:
-                        engine.store.add_message_sources(assistant_message_id, resource_sources)
             finally:
                 # Cleanup failures must never strand the one physical inference admission.
                 sessions.release(admission_id)
@@ -1296,7 +1351,7 @@ def _start_chat_generation(
                     # badges any answer a cloud backend produced.
                     "source": reply_source,
                     # Grounding sources (P4): empty unless web context shaped this answer.
-                    "sources": sources,
+                    "sources": [*final_resource_sources, *web_sources],
                     # Verified-tool-calls (self-check): True/False when a step was checkable,
                     # null otherwise; check_note carries a friendly caution on a contradiction.
                     "verified": verified,

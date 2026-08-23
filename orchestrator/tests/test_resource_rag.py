@@ -37,7 +37,9 @@ def test_resource_prompt_requires_claim_level_citation_markers():
     )
     assert "immediately after every factual sentence or bullet" in context
     assert "Never collect citations in a detached list" in context
-    assert "every grounded factual claim has its adjacent citation marker" in context
+    assert "Use every evidence block that is relevant" in context
+    assert "Use exactly the square-bracket form [R1]" in context
+    assert "do not print a self-check" in context
     assert "[R1] Physics.pdf, PDF page 2" in context
 
 
@@ -154,18 +156,21 @@ def test_private_resources_search_and_citations_are_owner_scoped(tmp_path):
 
 
 class _Engine:
-    def __init__(self, store) -> None:
+    def __init__(self, store, reply: str = "grounded") -> None:
         self.store = store
         self.calls = 0
+        self.reply = reply
+        self.last_kwargs = None
 
     def chat(self, **kwargs) -> ChatResult:
         self.calls += 1
+        self.last_kwargs = kwargs
         cid = kwargs.get("conversation_id") or self.store.create_conversation(kwargs["student_id"])
         user_id = self.store.add_message(cid, "user", kwargs["message"])
-        assistant_id = self.store.add_message(cid, "assistant", "grounded")
+        assistant_id = self.store.add_message(cid, "assistant", self.reply)
         return ChatResult(
             conversation_id=cid,
-            reply="grounded",
+            reply=self.reply,
             user_message_id=user_id,
             assistant_message_id=assistant_id,
         )
@@ -181,8 +186,10 @@ class _ConcurrentStreamEngine:
         self.conversation_id = conversation_id
         self.unrelated_id = None
         self.owned_id = None
+        self.include_history = None
 
     def stream_events_chat(self, **kwargs):
+        self.include_history = kwargs.get("include_history")
         user_id = self.store.add_message(self.conversation_id, "user", kwargs["message"])
         owner = self
 
@@ -207,9 +214,9 @@ class _ConcurrentStreamEngine:
                     owner.conversation_id, "assistant", "unrelated concurrent answer"
                 )
                 owner.owned_id = owner.store.add_message(
-                    owner.conversation_id, "assistant", "grounded streamed answer"
+                    owner.conversation_id, "assistant", "grounded streamed answer (R1)"
                 )
-                return "content", "grounded streamed answer"
+                return "content", "grounded streamed answer (R1)"
 
             def close(self):
                 return None
@@ -272,6 +279,182 @@ def test_rag_off_never_resolves_uploaded_resources(tmp_path):
     assert engine.calls == 1
 
 
+def test_nonstream_resource_turn_is_isolated_and_returns_only_inline_cited_sources(
+    tmp_path, monkeypatch
+):
+    store = ConversationStore(f"sqlite:///{tmp_path / 'nonstream-grounding.sqlite3'}")
+    resource_id = store.create_resource("a", "scholarship.pdf", "application/pdf", b"%PDF")
+    service = ResourceService(store, workers=1, resume_pending=False)
+    evidence = "Applicants should demonstrate leadership experience."
+    store.replace_resource_chunks(
+        resource_id,
+        owner_id="a",
+        chunks=[
+            {
+                "chunk_index": 0,
+                "page": 3,
+                "text": evidence,
+                "embedding": service.embedder.embed([evidence])[0],
+            }
+        ],
+        page_count=3,
+        embedder_identity=service.embedder.identity,
+    )
+    engine = _Engine(store, "Leadership is required (R1). *(Self-check: based on R1? Yes.)*")
+    monkeypatch.setattr(
+        routes,
+        "_twin_summary",
+        lambda _student_id: "Last session: asked about embedded systems.",
+    )
+    app.dependency_overrides[deps.get_engine] = lambda: engine
+    original = routes.get_resource_service
+    routes.get_resource_service = lambda: service
+    try:
+        response = TestClient(app).post(
+            "/v1/chat",
+            headers={"Authorization": "Bearer a"},
+            json={
+                "student_id": "a",
+                "message": evidence,
+                "use_rag": True,
+                "resource_ids": [resource_id],
+            },
+        )
+        payload = response.json()
+        replay = store.list_messages(payload["conversation_id"])[-1]
+    finally:
+        routes.get_resource_service = original
+        app.dependency_overrides.clear()
+        service.shutdown()
+        store.close()
+
+    assert response.status_code == 200
+    assert engine.last_kwargs["include_history"] is False
+    assert "embedded systems" not in engine.last_kwargs["system_prompt"]
+    assert payload["reply"] == "Leadership is required [R1]."
+    assert [source["page"] for source in payload["resource_citations"]] == [3]
+    assert replay["content"] == payload["reply"]
+    assert replay["resource_citations"] == payload["resource_citations"]
+
+
+def test_resource_deleted_during_nonstream_reply_has_no_orphan_live_citation(
+    tmp_path, monkeypatch
+):
+    store = ConversationStore(f"sqlite:///{tmp_path / 'deleted-live-citation.sqlite3'}")
+    resource_id = store.create_resource("a", "book.pdf", "application/pdf", b"%PDF")
+    service = ResourceService(store, workers=1, resume_pending=False)
+    evidence = "Applicants should demonstrate leadership experience."
+    store.replace_resource_chunks(
+        resource_id,
+        owner_id="a",
+        chunks=[
+            {
+                "chunk_index": 0,
+                "page": 1,
+                "text": evidence,
+                "embedding": service.embedder.embed([evidence])[0],
+            }
+        ],
+        page_count=1,
+        embedder_identity=service.embedder.identity,
+    )
+    engine = _Engine(store, f"{evidence} [R1]")
+    original_add = store.add_message_sources
+
+    def delete_then_add(message_id, sources):
+        assert store.delete_resource(resource_id, owner_id="a")
+        return original_add(message_id, sources)
+
+    monkeypatch.setattr(store, "add_message_sources", delete_then_add)
+    app.dependency_overrides[deps.get_engine] = lambda: engine
+    original_service = routes.get_resource_service
+    routes.get_resource_service = lambda: service
+    try:
+        response = TestClient(app).post(
+            "/v1/chat",
+            headers={"Authorization": "Bearer a"},
+            json={
+                "student_id": "a",
+                "message": evidence,
+                "use_rag": True,
+                "resource_ids": [resource_id],
+            },
+        )
+        payload = response.json()
+        replay = store.list_messages(payload["conversation_id"])[-1]
+    finally:
+        routes.get_resource_service = original_service
+        app.dependency_overrides.clear()
+        service.shutdown()
+        store.close()
+
+    assert response.status_code == 200
+    assert payload["resource_citations"] == []
+    assert "[R1]" not in payload["reply"]
+    assert replay["content"] == payload["reply"]
+    assert replay["resource_citations"] == []
+
+
+def test_resource_deleted_after_source_insert_has_no_orphan_live_citation(
+    tmp_path, monkeypatch
+):
+    store = ConversationStore(f"sqlite:///{tmp_path / 'deleted-after-insert.sqlite3'}")
+    resource_id = store.create_resource("a", "book.pdf", "application/pdf", b"%PDF")
+    service = ResourceService(store, workers=1, resume_pending=False)
+    evidence = "Applicants should demonstrate leadership experience."
+    store.replace_resource_chunks(
+        resource_id,
+        owner_id="a",
+        chunks=[
+            {
+                "chunk_index": 0,
+                "page": 1,
+                "text": evidence,
+                "embedding": service.embedder.embed([evidence])[0],
+            }
+        ],
+        page_count=1,
+        embedder_identity=service.embedder.identity,
+    )
+    engine = _Engine(store, f"{evidence} [R1]")
+    original_add = store.add_message_sources
+
+    def add_then_delete(message_id, sources):
+        persisted = original_add(message_id, sources)
+        assert persisted
+        assert store.delete_resource(resource_id, owner_id="a")
+        return persisted
+
+    monkeypatch.setattr(store, "add_message_sources", add_then_delete)
+    app.dependency_overrides[deps.get_engine] = lambda: engine
+    original_service = routes.get_resource_service
+    routes.get_resource_service = lambda: service
+    try:
+        response = TestClient(app).post(
+            "/v1/chat",
+            headers={"Authorization": "Bearer a"},
+            json={
+                "student_id": "a",
+                "message": evidence,
+                "use_rag": True,
+                "resource_ids": [resource_id],
+            },
+        )
+        payload = response.json()
+        replay = store.list_messages(payload["conversation_id"])[-1]
+    finally:
+        routes.get_resource_service = original_service
+        app.dependency_overrides.clear()
+        service.shutdown()
+        store.close()
+
+    assert response.status_code == 200
+    assert payload["resource_citations"] == []
+    assert "[R1]" not in payload["reply"]
+    assert replay["content"] == payload["reply"]
+    assert replay["resource_citations"] == []
+
+
 def test_streamed_citations_bind_to_the_streams_exact_assistant_row(tmp_path):
     store = ConversationStore(f"sqlite:///{tmp_path / 'citation-race.sqlite3'}")
     resource_id = store.create_resource("a", "science.pdf", "application/pdf", b"%PDF-fake")
@@ -316,8 +499,10 @@ def test_streamed_citations_bind_to_the_streams_exact_assistant_row(tmp_path):
         store.close()
 
     assert response.status_code == 200
+    assert engine.include_history is False
     assert replay[engine.unrelated_id]["resource_citations"] == []
     assert replay[engine.owned_id]["resource_citations"][0]["page"] == 2
+    assert replay[engine.owned_id]["content"] == "grounded streamed answer [R1]"
 
 
 def test_resource_content_is_hidden_from_other_owners(tmp_path):

@@ -3,6 +3,42 @@
 
 ((global) => {
   const REFERENCE = /\[R([1-9]\d*)\]/gi;
+  const MODEL_REFERENCE = /\[\s*R([1-9]\d*)\s*\]|\(\s*R([1-9]\d*)\s*\)/giu;
+  const SELF_CHECK = /\s*(?:\*{0,2}[\[(]?\s*)?(?:citation check|self[- ]check)\s*\*{0,2}\s*:(?=[^.!?。！？؟۔।॥։።፧｡]*(?:\[\s*R[1-9]\d*\s*\]|\(\s*R[1-9]\d*\s*\)|\bR[1-9]\d*\b|based\s+on\s+R[1-9]\d*|citation\s+check)).*$/isu;
+  const TERMINAL_AUDIT = /\s*(?:\*{0,2}[\[(]?\s*)?(?:citation check|self[- ]check)\s*\*{0,2}\s*:\s*(?:all\s+(?:sources|citations|claims|references)\s+(?:(?:are|were)\s+)?(?:cited|present|covered|included|supported|used)|(?:the\s+)?(?:citation\s+check\s+)?(?:is\s+)?(?:complete|passed|done|ok(?:ay)?)|yes)\s*[.!?。！？؟۔।॥։።፧｡]*\s*[\])]*\*{0,2}\s*$/iu;
+  const PROTECTED_MARKDOWN = [
+    /^ {0,3}(?:`{3,}|~{3,})[^\n]*\n.*?^ {0,3}(?:`{3,}|~{3,})[ \t]*$/gmsu,
+    /^ {0,3}(?:`{3,}|~{3,})[^\n]*(?:\n.*)?$/gmsu,
+    /^(?:(?: {4}|\t).*?(?:\n|$))+/gmu,
+    /\[(?:[^\[\]\n]|\[[^\[\]\n]*\])*\]\[[^\]\n]+\]/gu,
+    /^[ \t]{0,3}(?:(?:>[ \t]{0,3}|[-+*][ \t]+|\d+[.)][ \t]+))*\[[^\]\n]+\]:[^\n]*$/gmu,
+    /\[(?:[^\[\]\n]|\[[^\[\]\n]*\])*\]\([^\n)]*\)/gu,
+    /\\(?:\[\s*R[1-9]\d*\s*\]|\(\s*R[1-9]\d*\s*\))/giu,
+    /\\begin\{(equation\*?|alignat\*?|align\*?|gather\*?|CD)\}.*?\\end\{\1\}/gsu,
+    /\\begin\{(?:equation\*?|alignat\*?|align\*?|gather\*?|CD)\}.*$/gsu,
+    /\$\$.*?\$\$|\$[^\n$]+\$|\\\(.*?\\\)|\\\[.*?\\\]/gsu,
+    /\$\$.*$|\\\[.*$|\\\(.*$/gsu,
+    /<(a|button|code|kbd|pre|samp|script|style|textarea)\b[^>]*>.*?<\/\1\s*>/gisu,
+    /<(?:a|button|code|kbd|pre|samp|script|style|textarea)\b[^>]*>.*$/gisu,
+    /<([a-z][\w:-]*)\b[^>]*class\s*=\s*(["'])[^"']*\b(?:katex(?:-display)?|math-source)\b[^"']*\2[^>]*>.*?<\/\1\s*>/gisu,
+    /<[a-z][\w:-]*\b[^>]*class\s*=\s*(["'])[^"']*\b(?:katex(?:-display)?|math-source)\b[^"']*\1[^>]*>.*$/gisu,
+    /<[^>\n]+>/gu,
+  ];
+  const MARKDOWN_LINE_PREFIX = /^[ \t]{0,3}(?:(?:#{1,6}|[-+*>]|\d+[.)])\s+)+/gmu;
+  const REFERENCE_DEFINITION = /^[ \t]{0,3}(?:(?:>[ \t]{0,3}|[-+*][ \t]+|\d+[.)][ \t]+))*\[([^\]\n]+)\]:[^\n]*$/gimu;
+  const TERMINAL_PUNCTUATION = '.!?。！？؟۔।॥։።፧｡"\'”’)]';
+  const TERMINAL_CLASS = TERMINAL_PUNCTUATION.replace(/[\\\]^-]/gu, "\\$&");
+  const TERMINAL_END = new RegExp(`[${TERMINAL_CLASS}]+$`, "u");
+  const BARE_TERMINAL_REFERENCE = new RegExp(
+    `\\s+\\bR([1-9]\\d*)\\b(?=\\s*[${TERMINAL_CLASS}]*\\s*$)`,
+    "iu",
+  );
+  const BASED_ON_SUFFIX = new RegExp(
+    `\\s*,?\\s*based\\s+on\\s+R([1-9]\\d*)\\b(?=\\s*[${TERMINAL_CLASS}]*\\s*$)`,
+    "iu",
+  );
+  const BASED_ON_PREFIX = /^(\s*)based\s+on\s+R([1-9]\d*)\s*,?\s*/iu;
+  const LEGACY_NUMERIC_REFERENCE = /\[\s*([1-9]\d*)\s*\]/gu;
   const EXCLUDED = [
     "a", "button", "code", "pre", "kbd", "samp", "textarea",
     ".katex", ".katex-display", ".math-source", ".resource-sources",
@@ -44,6 +80,246 @@
     }
     if (cursor < text.length) parts.push({ type: "text", value: text.slice(cursor) });
     return parts;
+  }
+
+  function protectInlineCode(text, protect) {
+    const pieces = [];
+    let cursor = 0;
+    let scan = 0;
+    while (scan < text.length) {
+      if (text[scan] !== "`") {
+        scan += 1;
+        continue;
+      }
+      let openerEnd = scan + 1;
+      while (openerEnd < text.length && text[openerEnd] === "`") openerEnd += 1;
+      const openerSize = openerEnd - scan;
+      let closer = openerEnd;
+      let matchedEnd = -1;
+      while (closer < text.length) {
+        closer = text.indexOf("`", closer);
+        if (closer < 0) break;
+        let closerEnd = closer + 1;
+        while (closerEnd < text.length && text[closerEnd] === "`") closerEnd += 1;
+        if (closerEnd - closer === openerSize) {
+          matchedEnd = closerEnd;
+          break;
+        }
+        closer = closerEnd;
+      }
+      if (matchedEnd < 0) {
+        scan = openerEnd;
+        continue;
+      }
+      pieces.push(text.slice(cursor, scan), protect(text.slice(scan, matchedEnd)));
+      cursor = matchedEnd;
+      scan = matchedEnd;
+    }
+    pieces.push(text.slice(cursor));
+    return pieces.join("");
+  }
+
+  function protectReferenceLinks(text, protect) {
+    const labels = new Set();
+    REFERENCE_DEFINITION.lastIndex = 0;
+    for (let match = REFERENCE_DEFINITION.exec(text); match;
+      match = REFERENCE_DEFINITION.exec(text)) {
+      labels.add(match[1].trim());
+    }
+    REFERENCE_DEFINITION.lastIndex = 0;
+    text = text.replace(REFERENCE_DEFINITION, (literal) => protect(literal));
+    const nestedLabel = String.raw`(?:[^\[\]\n]|\[[^\[\]\n]*\])*`;
+    for (const label of labels) {
+      const flexible = label.split(/\s+/u).filter(Boolean)
+        .map((part) => part.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
+        .join(String.raw`\s+`);
+      if (!flexible) continue;
+      for (const pattern of [
+        new RegExp(String.raw`\[${nestedLabel}\]\[\s*${flexible}\s*\]`, "giu"),
+        new RegExp(String.raw`\[\s*${flexible}\s*\]\[\]`, "giu"),
+        new RegExp(String.raw`\[\s*${flexible}\s*\]`, "giu"),
+      ]) {
+        text = text.replace(pattern, (literal) => protect(literal));
+      }
+    }
+    return text;
+  }
+
+  /** Canonicalize model-authored labels against the server-owned source array.
+   * Only records cited by the completed answer survive, in first-appearance order. */
+  function normalizeReferences(text, records, { legacyNumeric = false } = {}) {
+    const available = Array.isArray(records) ? records : [];
+    const oldToNew = new Map();
+    const cited = [];
+    let source = String(text || "");
+    const protectedLiterals = [];
+    let prefix = "\uFFF0MUTA_REFERENCE_LITERAL_";
+    while (source.includes(prefix)) prefix += "X";
+    const protect = (literal) => {
+      const token = `${prefix}${protectedLiterals.length}\uFFF1`;
+      protectedLiterals.push([token, literal]);
+      return token;
+    };
+    for (const pattern of PROTECTED_MARKDOWN.slice(0, 3)) {
+      source = source.replace(pattern, (literal) => protect(literal));
+    }
+    source = protectInlineCode(source, protect);
+    source = protectReferenceLinks(source, protect);
+    for (const pattern of PROTECTED_MARKDOWN.slice(3)) {
+      source = source.replace(pattern, (literal) => protect(literal));
+    }
+    source = source.replace(TERMINAL_AUDIT, " ").replace(SELF_CHECK, " ");
+    if (legacyNumeric) source = canonicalizeSupportedLegacyReferences(source, available);
+    source = canonicalizeSupportedBareReferences(source, available);
+    source = addExactMissingReferences(source, available);
+    let normalized = source.replace(
+      MODEL_REFERENCE,
+      (whole, square, round) => {
+        const oldNumber = Number(square || round);
+        if (oldNumber < 1 || oldNumber > available.length) {
+          return "";
+        }
+        if (!oldToNew.has(oldNumber)) {
+          oldToNew.set(oldNumber, cited.length + 1);
+          cited.push(available[oldNumber - 1]);
+        }
+        return `[R${oldToNew.get(oldNumber)}]`;
+      },
+    ).replace(/[ \t]{2,}/gu, " ")
+      .replace(/\s+([,.;:!?\])])/gu, "$1")
+      .replace(/\n{3,}/gu, "\n\n")
+      .trim();
+    for (const [token, literal] of [...protectedLiterals].reverse()) {
+      normalized = normalized.replaceAll(token, () => literal);
+    }
+    return { text: normalized, records: cited };
+  }
+
+  function exactEvidence(value) {
+    return normalizeEvidence(
+      String(value || "")
+        .replace(MODEL_REFERENCE, "")
+        .replace(MARKDOWN_LINE_PREFIX, "")
+        .replace(/[*_`~]/gu, ""),
+    ).toLowerCase().replace(TERMINAL_END, "").trim();
+  }
+
+  function enoughEvidenceUnits(value) {
+    const words = String(value || "").normalize("NFKC").toLowerCase().match(WORD) || [];
+    const meaningful = new Set(words.filter((word) => (
+      CLAIM_MODIFIERS.has(word) || (word.length > 2 && !STOP_WORDS.has(word))
+    )));
+    if (meaningful.size >= 3) return true;
+    return words.some((word) => [...word].length >= 5 && /[^\x00-\x7F]/u.test(word));
+  }
+
+  function canonicalizeSupportedBareReferences(text, records) {
+    const replacements = [];
+    for (const [start, end] of sentenceRanges(text)) {
+      const sentence = text.slice(start, end);
+      const phrase = BASED_ON_PREFIX.exec(sentence) || BASED_ON_SUFFIX.exec(sentence);
+      if (phrase) {
+        const number = Number(phrase[2] || phrase[1]);
+        let cleaned = sentence.slice(0, phrase.index)
+          + sentence.slice(phrase.index + phrase[0].length);
+        cleaned = normalizeEvidence(cleaned).replace(/^\s+/u, "");
+        const claim = exactEvidence(cleaned);
+        if (number >= 1 && number <= records.length
+          && sourceSupportsClaim(records[number - 1], claim)) {
+          cleaned = appendReferenceToSentence(cleaned, number);
+        }
+        replacements.push([start, end, cleaned]);
+        continue;
+      }
+      const match = BARE_TERMINAL_REFERENCE.exec(sentence);
+      if (!match) continue;
+      const number = Number(match[1]);
+      if (number < 1 || number > records.length) continue;
+      const claim = exactEvidence(sentence.slice(0, match.index)
+        + sentence.slice(match.index + match[0].length));
+      if (sourceSupportsClaim(records[number - 1], claim)) {
+        replacements.push([start + match.index, start + match.index + match[0].length, ` [R${number}]`]);
+      }
+    }
+    for (const [start, end, replacement] of replacements.reverse()) {
+      text = text.slice(0, start) + replacement + text.slice(end);
+    }
+    return text;
+  }
+
+  function sourceSupportsClaim(record, claim) {
+    if (!enoughEvidenceUnits(claim)) return false;
+    const excerpt = String(record?.excerpt || "");
+    return sentenceRanges(excerpt).some(([start, end]) => (
+      exactEvidence(excerpt.slice(start, end)) === claim
+    ));
+  }
+
+  function appendReferenceToSentence(sentence, number) {
+    let offset = sentence.length;
+    while (offset && TERMINAL_PUNCTUATION.includes(sentence[offset - 1])) offset -= 1;
+    return `${sentence.slice(0, offset).trimEnd()} [R${number}]${sentence.slice(offset)}`;
+  }
+
+  function canonicalizeSupportedLegacyReferences(text, records) {
+    const replacements = [];
+    for (const [start, end] of sentenceRanges(text)) {
+      const sentence = text.slice(start, end);
+      const claim = exactEvidence(sentence.replace(LEGACY_NUMERIC_REFERENCE, ""));
+      if (!enoughEvidenceUnits(claim)) continue;
+      LEGACY_NUMERIC_REFERENCE.lastIndex = 0;
+      for (let match = LEGACY_NUMERIC_REFERENCE.exec(sentence); match;
+        match = LEGACY_NUMERIC_REFERENCE.exec(sentence)) {
+        const number = Number(match[1]);
+        if (number < 1 || number > records.length) continue;
+        const excerpt = String(records[number - 1]?.excerpt || "");
+        const evidence = new Set(sentenceRanges(excerpt)
+          .map(([evidenceStart, evidenceEnd]) => (
+            exactEvidence(excerpt.slice(evidenceStart, evidenceEnd))
+          )));
+        if (evidence.has(claim)) {
+          replacements.push([start + match.index, start + match.index + match[0].length, `[R${number}]`]);
+        }
+      }
+    }
+    for (const [start, end, replacement] of replacements.reverse()) {
+      text = text.slice(0, start) + replacement + text.slice(end);
+    }
+    return text;
+  }
+
+  function addExactMissingReferences(text, records) {
+    const present = new Set();
+    MODEL_REFERENCE.lastIndex = 0;
+    for (let match = MODEL_REFERENCE.exec(text); match; match = MODEL_REFERENCE.exec(text)) {
+      present.add(Number(match[1] || match[2]));
+    }
+    const claims = sentenceRanges(text).map(([start, end]) => {
+      let citationOffset = end;
+      while (citationOffset > start
+        && TERMINAL_PUNCTUATION.includes(text[citationOffset - 1])) {
+        citationOffset -= 1;
+      }
+      return { citationOffset, normalized: exactEvidence(text.slice(start, end)) };
+    });
+    const insertions = new Map();
+    records.forEach((record, index) => {
+      const oldNumber = index + 1;
+      if (present.has(oldNumber)) return;
+      const excerpt = String(record?.excerpt || "");
+      const evidence = new Set(sentenceRanges(excerpt)
+        .map(([start, end]) => exactEvidence(excerpt.slice(start, end)))
+        .filter((sentence) => enoughEvidenceUnits(sentence)));
+      const claim = claims.find(({ normalized }) => evidence.has(normalized));
+      if (!claim) return;
+      if (!insertions.has(claim.citationOffset)) insertions.set(claim.citationOffset, []);
+      insertions.get(claim.citationOffset).push(oldNumber);
+    });
+    for (const [end, numbers] of [...insertions.entries()].sort((a, b) => b[0] - a[0])) {
+      const markers = numbers.map((number) => ` [R${number}]`).join("");
+      text = text.slice(0, end) + markers + text.slice(end);
+    }
+    return text;
   }
 
   function terms(value) {
@@ -317,6 +593,7 @@
   const api = {
     decorate,
     fallbackSentenceRanges,
+    normalizeReferences,
     planClaimCitations,
     segmentReferences,
     sentenceRanges,

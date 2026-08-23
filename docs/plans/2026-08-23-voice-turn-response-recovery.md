@@ -4,16 +4,18 @@
 
 The live microphone path transcribes and persists the student's utterance, but can leave the chat with no assistant response. Production evidence from 23 August shows the exact transcribed question persisted as a user message while no assistant message or active generation followed. The screenshot's audio chip identifies the WebSocket voice path rather than the audio-file upload path.
 
-Two failures combine into the silent result:
+The live GCP reproduction identified the primary deployment failure, plus two resilience gaps:
 
-1. A model stream that ends after reasoning but before answer content is treated as a successful turn, so only the user transcript is persisted. This is possible when a small thinking model reaches a clean stop without emitting its final-answer channel.
-2. The browser handles `voice-turn-failed` by finalizing an empty assistant message, which removes the only durable indication that the turn failed; the toast is transient.
+1. GCP runs Python 3.10, where `asyncio.TimeoutError` is distinct from the built-in `TimeoutError`. The microphone route catches only the built-in type around its one-second receive heartbeat, so a quiet socket raises out of the route and cancels the in-flight answer shortly after transcription.
+2. A model stream that ends after reasoning but before answer content is treated as a successful turn, so only the user transcript is persisted. This is possible when a small thinking model reaches a clean stop without emitting its final-answer channel.
+3. The browser handles `voice-turn-failed` by finalizing an empty assistant message, which removes the only durable indication that the turn failed; the toast is transient.
 
 This work follows the ROADMAP's Tuesday 4 August voice input flow and Sprint 5 audio-response requirements. It preserves the contract-first boundary and does not change ASR or TTS model selection.
 
 ## Scope
 
 - Reproduce the post-transcript failure in the WebSocket route with a focused regression test.
+- Catch the explicit asyncio timeout class used by the Python 3.10 deployment so the receive heartbeat cannot cancel an in-flight voice response.
 - Route a reasoning-only/empty stream through the existing bounded direct-answer recovery before the turn can complete.
 - Keep a durable in-chat failure state when recovery is exhausted instead of finalizing an empty response.
 - Treat an unexpected microphone WebSocket close as a durable failed reply; only an explicit student stop may finalize a partial response normally.

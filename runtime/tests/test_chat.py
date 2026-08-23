@@ -327,6 +327,52 @@ def test_second_turn_replays_prior_history(store):
     assert second_call[-1]["content"] == "turn two"
 
 
+def test_resource_turn_can_exclude_prior_conversation_history_without_losing_storage(store):
+    engine, client, store = _engine(store)
+    first = engine.chat("s1", "Explain the embedded-systems book")
+    result = engine.chat(
+        "s1",
+        "What does the newly selected scholarship PDF say?",
+        conversation_id=first.conversation_id,
+        system_prompt="SYSTEM: only the selected scholarship evidence",
+        include_history=False,
+    )
+
+    assert client.seen[1] == [
+        {"role": "system", "content": "SYSTEM: only the selected scholarship evidence"},
+        {"role": "user", "content": "What does the newly selected scholarship PDF say?"},
+    ]
+    assert [(row["role"], row["content"]) for row in store.get_messages(result.conversation_id)] == [
+        ("user", "Explain the embedded-systems book"),
+        ("assistant", "reply-1"),
+        ("user", "What does the newly selected scholarship PDF say?"),
+        ("assistant", "reply-2"),
+    ]
+
+
+def test_isolated_regeneration_replays_only_the_current_user_question(store):
+    engine, client, store = _engine(store)
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "Old document question")
+    store.add_message(cid, "assistant", "Old document answer")
+    store.add_message(cid, "user", "Current resource question")
+
+    result = engine.chat(
+        "s1",
+        "Current resource question",
+        conversation_id=cid,
+        system_prompt="SYSTEM: current resource only",
+        regenerate=True,
+        include_history=False,
+    )
+
+    assert result.user_message_id is None
+    assert client.seen[0] == [
+        {"role": "system", "content": "SYSTEM: current resource only"},
+        {"role": "user", "content": "Current resource question"},
+    ]
+
+
 def test_visualization_payload_is_persisted_but_not_replayed_to_model(store):
     engine, client, store = _engine(store)
     first = engine.chat("s1", "Draw a curve")
