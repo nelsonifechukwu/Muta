@@ -28,7 +28,8 @@ _EXPLICIT_VISUAL = re.compile(
     re.IGNORECASE,
 )
 _NO_VISUAL = re.compile(
-    r"(?:\b(?:do\s+not|don't|no|without)\b.{0,28}\b(?:visual|graph|plot|chart|diagram|"
+    r"(?:\b(?:do\s+not|don't|without)\b.{0,28}\b(?:visual|graph|plot|chart|diagram|"
+    r"animation)\b|\bno\s+(?:(?:live|interactive)\s+)?(?:visual|graph|plot|chart|diagram|"
     r"animation)\b|\btext\s+only\b)",
     re.IGNORECASE,
 )

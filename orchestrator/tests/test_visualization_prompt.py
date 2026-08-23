@@ -42,6 +42,8 @@ def test_visual_request_makes_the_primary_completion_prose_only() -> None:
     assert "```" not in instruction
     assert not wants_live_visual("Help me factor x squared minus four.")
     assert not wants_live_visual("Do not draw a graph; text only.")
+    assert not wants_live_visual("No animation, please; text only.")
+    assert wants_live_visual("No. I want to see an animation explaining it.")
 
 
 def test_visual_intent_and_renderer_selection_cover_common_requests() -> None:

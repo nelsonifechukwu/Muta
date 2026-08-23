@@ -48,3 +48,6 @@ Learners must not need a hidden command. Natural requests containing words such 
 - Direct Anime.js inspection found and fixed an adapter defect where untracked/static SVG elements
   remained at (0, 0). After the fix, A, B, the resultant, and all labels had their declared base
   transforms; Replay moved B from the origin to A's head before settling at the final position.
+- The deployed public-route follow-up exposed a negation ambiguity: “No. I want to see an
+  animation” was mistaken for “no animation.” Negation now requires “no” to directly modify the
+  visual noun, while conversational corrections continue into anaphoric topic resolution.
