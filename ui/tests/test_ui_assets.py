@@ -566,6 +566,24 @@ def test_localized_dynamic_controls_remain_keyboard_and_screen_reader_operable()
     assert 'micBtn.setAttribute("aria-label", t(active ? "voice.stop" : "voice.talk"))' in audio
 
 
+def test_image_reader_refusals_keep_the_backend_reason_and_recovery_path():
+    js = (UI / "app.js").read_text()
+    upload = (UI / "vision-upload.js").read_text()
+    add_image = js[js.index("async function addImage(") : js.index("async function addAudio(")]
+
+    assert "MutaVisionUpload.request" in add_image
+    assert "typeof body.accepted" in upload
+    assert "return uploadFailure()" in upload
+    assert 'entry.detail = detail' in add_image
+    assert 'toast(detail)' in add_image
+    assert 'aria-live=' not in re.search(r'<div id="attachment-chips"[^>]*>', HTML).group()
+    assert 'id="toast" dir="auto" role="status" aria-live="assertive"' in HTML
+    assert 'img.alt = ""' in js
+    assert "white-space: nowrap" not in re.search(
+        r"\.chip-status\s*\{([^}]*)\}", CSS, re.DOTALL
+    ).group(1)
+
+
 def test_conversation_titles_render_resource_mentions_without_transport_syntax():
     js = (UI / "app.js").read_text()
     mentions = (UI / "resource-mentions.js").read_text()
@@ -608,9 +626,9 @@ def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
     versions = re.findall(
-        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|app\.js|audio\.js)\?v=([^"]+)"', HTML
+        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|vision-upload\.js|app\.js|audio\.js)\?v=([^"]+)"', HTML
     )
-    assert len(versions) == 5
+    assert len(versions) == 6
     assert len(set(versions)) == 1
     assert re.search(r'src="i18n\.js\?v=([^"]+)"', HTML).group(1) == versions[0]
 

@@ -965,19 +965,23 @@ def test_a_valid_photo_is_transcribed(wired, monkeypatch):
     assert captured["format"] == "PNG" and captured["bytes"] > 0
 
 
-def test_the_vision_call_honours_the_configured_request_timeout(wired, monkeypatch):
+def test_the_vision_call_honours_timeout_and_server_auth(wired, monkeypatch, tmp_path):
     """A real photo needs minutes of prefill on a slow box; VisionClient's 120 s default cut
     every one of them off mid-read ("the image reader didn't respond") while
     MUTA_RT_REQUEST_TIMEOUT_S sat unused. The route must pass the configured timeout on."""
     _, _, _, vision = wired
     monkeypatch.setattr(vision, "ensure", lambda: "http://127.0.0.1:8082")
     monkeypatch.setenv("MUTA_RT_REQUEST_TIMEOUT_S", "600")
+    key_file = tmp_path / "api.key"
+    key_file.write_text("vision-secret\n")
+    vision.paths = type("Paths", (), {"api_key_file": key_file})()
 
     seen = {}
 
     class FakeClient:
-        def __init__(self, base_url, *, timeout=120.0, **_kw):
+        def __init__(self, base_url, *, timeout=120.0, api_key=None, **_kw):
             seen["timeout"] = timeout
+            seen["api_key"] = api_key
 
         def transcribe(self, image_bytes, image_format, *, prompt=None):
             return "x^2 = 9"
@@ -990,6 +994,7 @@ def test_the_vision_call_honours_the_configured_request_timeout(wired, monkeypat
     ).json()
     assert body["accepted"] is True
     assert seen["timeout"] == 600.0
+    assert seen["api_key"] == "vision-secret"
 
 
 def test_vision_server_unreachable_is_a_friendly_refusal_not_500(wired, monkeypatch):

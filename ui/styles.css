@@ -746,7 +746,10 @@ details.thinking .think-label.shimmer {
 .chip .x:hover { color: var(--danger); }
 /* Reading a photo takes 15-90 s here, and a failed read must stay visible long after any
    toast has faded — the chip is what tells the student whether the tutor can see it. */
-.chip-status { font-size: 0.75rem; color: var(--muted); }
+.chip-status {
+  max-width: min(28rem, 55vw); white-space: normal; overflow-wrap: anywhere;
+  font-size: 0.75rem; color: var(--muted);
+}
 .chip.reading { opacity: 0.8; }
 .chip.reading .chip-status { animation: chip-pulse 1.4s ease-in-out infinite; }
 .chip.failed { border-color: var(--danger); }

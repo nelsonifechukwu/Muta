@@ -16,6 +16,7 @@ from orchestrator.gateway.capacity import CapacityPlanner, GiB, MiB
 from orchestrator.gateway.deps import RuntimeCapacityController
 from orchestrator.gateway.ladder import DegradationLadder, Level
 from runtime.config import RuntimeConfig
+from runtime.profiles import VISION_FULL_RSS_RESERVE_MIB
 
 
 def _plan(total_gib: int, mode: str):
@@ -182,7 +183,7 @@ def test_system_mode_reserves_full_vision_rss_when_text_uses_different_weights(
 
     profile = planner.plan("system", cfg)
 
-    assert profile.auxiliary_reserve_bytes == 3500 * MiB
+    assert profile.auxiliary_reserve_bytes == VISION_FULL_RSS_RESERVE_MIB * MiB
 
 
 def test_core_guard_reserves_gateway_and_auxiliary_before_whole_ceiling():

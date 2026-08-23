@@ -159,6 +159,7 @@ These carry the `MUTA_RT_` prefix but are read directly from `os.environ`, not t
 | Variable | Default | What it does | Where read |
 |---|---|---|---|
 | `MUTA_RT_VISION_STARTUP_S` | `60.0` *(compose: `300`)* | cold-spawn wait for the vision `llama-server` | `runtime/vision.py:53`, compose `:92` |
+| `MUTA_RT_VISION_MEMORY_MAX_MIB` | `4352` | full-process ceiling for the ephemeral vision server; also the Host planner reserve when vision and text use different GGUFs. Compose reads it from `.env`; native systemd reads it from `~/.config/muta/native.env` | `runtime/profiles.py`, `runtime/vision.py`, `orchestrator/gateway/capacity.py`, compose |
 | `MUTA_RT_LLAMA_CLI_BIN` | `None` | `llama-cli` path used by `verify_models` | `scripts/verify_models.py:53` |
 
 `MUTA_OFFLINE=1` is set automatically by the Linux-native launcher. It forces the cached
