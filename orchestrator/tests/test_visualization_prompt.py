@@ -10,7 +10,12 @@ from orchestrator.gateway.deps import load_prompt
 from orchestrator.gateway.routes import _sampling_for_request
 from orchestrator.gateway.visualizations import (
     _UNSUPPORTED_VISUAL,
+    _heart_spec,
+    _hydrocarbon_spec,
     _normalize_generated_spec,
+    _phase_shift_spec,
+    _projectile_spec,
+    _satellite_orbit_spec,
     _vector_addition_spec,
     append_visualization,
     generate_visualization,
@@ -44,6 +49,10 @@ def test_visual_request_makes_the_primary_completion_prose_only() -> None:
     assert not wants_live_visual("Do not draw a graph; text only.")
     assert not wants_live_visual("No animation, please; text only.")
     assert wants_live_visual("No. I want to see an animation explaining it.")
+    assert wants_live_visual("I need to see an image of a heart.")
+    assert wants_live_visual("Explain how blood circulates through the heart.")
+    assert wants_live_visual("Show the structure of ethane.")
+    assert not wants_live_visual("What does this attached image describe?")
 
 
 def test_visual_intent_and_renderer_selection_cover_common_requests() -> None:
@@ -95,6 +104,9 @@ def test_anaphoric_visual_follow_up_recovers_only_the_previous_learner_topic() -
     resolved = resolve_visualization_request(engine, "No, animate it.", "vector-chat")
     assert resolved.startswith("Explain vector addition with a diagram.")
     assert resolved.endswith("FOLLOW-UP VISUAL REQUEST: No, animate it.")
+    resolved_missing = resolve_visualization_request(engine, "Where is the diagram?", "vector-chat")
+    assert resolved_missing.startswith("Explain vector addition with a diagram.")
+    assert resolved_missing.endswith("FOLLOW-UP VISUAL REQUEST: Where is the diagram?")
     assert resolve_visualization_request(engine, "Plot y = x².", "vector-chat") == "Plot y = x²."
 
 
@@ -275,14 +287,89 @@ def test_canonical_vector_addition_does_not_depend_on_a_second_model_decode() ->
     assert engine.fit_calls == []
 
 
-def test_constrained_pass_degrades_on_invalid_data_and_honours_cancellation() -> None:
-    invalid = _RecordingVisualClient({"version": 1, "library": "d3", "kind": "bar"})
-    assert (
-        generate_visualization(
-            _VisualEngine(invalid), "Draw a D3 bar chart.", "A complete explanation."
-        )
-        is None
+def test_standard_science_visuals_are_deterministic_and_semantically_exact() -> None:
+    phase = _phase_shift_spec("Show a sine wave shifted by 180 degrees.")
+    assert len(phase["series"]) == 2
+    assert phase["series"][0]["points"][8][1] == 1
+    assert phase["series"][1]["points"][8][1] == -1
+
+    projectile = _projectile_spec("Diagram projectile motion at 20 m/s and 45 degrees.")
+    ys = [point[1] for point in projectile["series"][0]["points"]]
+    assert ys[0] == ys[-1] == 0
+    assert max(ys) > 10
+    assert all(ys[index] <= ys[index + 1] for index in range(12))
+    assert all(ys[index] >= ys[index + 1] for index in range(12, 24))
+
+    heart = _heart_spec()
+    heart_ids = {node["id"] for node in heart["nodes"]}
+    assert heart_ids == {"lungs", "ra", "rv", "la", "lv", "body"}
+    assert [(link["source"], link["target"]) for link in heart["links"]] == [
+        ("body", "ra"),
+        ("ra", "rv"),
+        ("rv", "lungs"),
+        ("lungs", "la"),
+        ("la", "lv"),
+        ("lv", "body"),
+    ]
+
+    ethane = _hydrocarbon_spec("Draw ethane.")
+    assert sum(node["label"] == "C" for node in ethane["nodes"]) == 2
+    assert sum(node["label"] == "H" for node in ethane["nodes"]) == 6
+    ethene = _hydrocarbon_spec("Draw ethene.")
+    assert sum(node["label"] == "H" for node in ethene["nodes"]) == 4
+    assert any(link["bond"] == "double" for link in ethene["links"])
+
+    orbit = _satellite_orbit_spec()
+    assert {item["type"] for item in orbit["objects"]} == {
+        "sphere",
+        "line",
+        "box",
+        "vector",
+    }
+    assert len(next(item for item in orbit["objects"] if item["type"] == "line")["points"]) == 49
+    assert orbit["notes"] == ["Circular orbit: v = √(GM/r)", "Period: T = 2π√(r³/GM)"]
+
+
+def test_standard_science_visuals_skip_the_fallible_second_decode() -> None:
+    prompts = {
+        "Show phase shift in a sine wave.": ("d3", "line"),
+        "Draw the anatomy and circulation of a heart.": ("d3", "diagram"),
+        "Show the structural formula of ethane.": ("d3", "diagram"),
+        "Diagram a satellite orbiting Earth and the maths involved.": ("three", "scene3d"),
+        "Explain projectile motion with a graph.": ("d3", "line"),
+    }
+    for prompt, expected in prompts.items():
+        local = _RecordingVisualClient({"this": "must not be used"})
+        engine = _VisualEngine(local)
+        spec = generate_visualization(engine, prompt, "A complete explanation.")
+        assert spec is not None
+        assert (spec["library"], spec["kind"]) == expected
+        assert local.calls == []
+
+
+def test_standard_science_visuals_replace_contradictory_model_copy_with_checked_explanations() -> None:
+    orbit_reply = append_visualization(
+        "A larger radius means a higher speed.", _satellite_orbit_spec()
     )
+    assert "larger orbital radius gives a lower orbital speed" in orbit_reply
+    assert "higher speed" not in orbit_reply
+
+    heart_reply = append_visualization("Blood starts in the left ventricle.", _heart_spec())
+    assert "vena cava, right atrium, and right ventricle" in heart_reply
+    assert "Blood starts" not in heart_reply
+
+    ethane_reply = append_visualization("Ethane has five hydrogens.", _hydrocarbon_spec("ethane"))
+    assert "carbon's valency of four" in ethane_reply
+    assert "five hydrogens" not in ethane_reply
+
+
+def test_constrained_pass_falls_back_on_invalid_data_and_honours_cancellation() -> None:
+    invalid = _RecordingVisualClient({"version": 1, "library": "d3", "kind": "bar"})
+    fallback = generate_visualization(
+        _VisualEngine(invalid), "Draw a D3 bar chart.", "A complete explanation."
+    )
+    assert fallback is not None
+    assert (fallback["library"], fallback["kind"]) == ("d3", "diagram")
 
     cancelled = threading.Event()
     cancelled.set()
@@ -311,6 +398,17 @@ def test_constrained_pass_degrades_on_invalid_data_and_honours_cancellation() ->
     )
     assert len(cancelled_after_decode.calls) == 1
     assert cancelled_after_decode.closed is True
+
+
+def test_visual_protocol_removes_model_refusals_before_the_diagram() -> None:
+    refusal = (
+        "It is impossible for a text-based model to render images. I can only explain the "
+        "concepts and cannot provide a diagram."
+    )
+    reply = append_visualization(refusal, _heart_spec())
+    assert "impossible" not in reply.lower()
+    assert "cannot provide" not in reply.lower()
+    assert "```muta-viz" in reply
 
 
 def test_exact_quadratic_normalizer_does_not_rewrite_shifted_or_scaled_equations() -> None:
