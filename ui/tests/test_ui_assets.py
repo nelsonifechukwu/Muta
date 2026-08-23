@@ -593,7 +593,7 @@ def test_conversation_titles_render_resource_mentions_without_transport_syntax()
     sidebar = js[js.index("async function refreshSidebar(") : js.index(
         "function scheduleConversationRetry(", js.index("async function refreshSidebar(")
     )]
-    assert "MutaResourceMentions?.segment(source)" in renderer
+    assert "MutaResourceMentions?.segmentConversationTitle(source)" in renderer
     assert 'mention.className = "conv-resource-mention"' in renderer
     assert "document.createTextNode(part.value)" in renderer
     assert "label.textContent = part.name" in renderer
@@ -602,6 +602,8 @@ def test_conversation_titles_render_resource_mentions_without_transport_syntax()
     assert "renderConversationTitle(title, displayTitle)" in sidebar
     assert "title: readableTitle" in sidebar
     assert "const MENTION = /@\\{([^{}\\n]+)\\}" in mentions
+    assert "Array.from(source).length !== Math.max(0, Number(legacyLimit) || 0)" in mentions
+    assert 'const opener = source.lastIndexOf("@{")' in mentions
     title_css = "".join(_blocks(".conv-title"))
     icon_css = "".join(_blocks(".conv-resource-mention-icon"))
     assert "text-overflow: ellipsis" in title_css and "min-width: 0" in title_css

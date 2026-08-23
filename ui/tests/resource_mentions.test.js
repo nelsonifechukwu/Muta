@@ -14,6 +14,7 @@ const {
   resolveResources,
   sanitizeDraft,
   segment,
+  segmentConversationTitle,
   tokenFor,
 } = require("../resource-mentions.js");
 
@@ -41,6 +42,61 @@ test("ordinary at signs and malformed tokens remain ordinary text", () => {
   }
   for (const source of ["Used @{notes}chapter.pdf}", "@{partial}suffix", "@{notes}.pdf}"]) {
     assert.deepEqual(segment(source), [{ type: "text", value: source }], source);
+  }
+});
+
+test("recovers old 80-character conversation titles without exposing mention syntax", () => {
+  const titleOnly = `@{${"A very long document name ".repeat(4)}`.slice(0, 80);
+  const prefixed = `according to @{${"Embedded systems handbook ".repeat(4)}`.slice(0, 80);
+  assert.equal(titleOnly.length, 80);
+  assert.equal(prefixed.length, 80);
+  assert.deepEqual(segmentConversationTitle(titleOnly), [
+    { type: "resource", name: nameFor({ name: titleOnly.slice(2) }), legacy: true },
+  ]);
+  assert.deepEqual(segmentConversationTitle(prefixed), [
+    { type: "text", value: "according to " },
+    {
+      type: "resource",
+      name: nameFor({ name: prefixed.slice("according to @{".length) }),
+      legacy: true,
+    },
+  ]);
+  assert.deepEqual(segmentConversationTitle("what does @{ mean?"), [
+    { type: "text", value: "what does @{ mean?" },
+  ]);
+
+  const emojiLegacy = Array.from(`@{📘${"chapter ".repeat(12)}`).slice(0, 80).join("");
+  assert.equal(Array.from(emojiLegacy).length, 80);
+  assert.ok(emojiLegacy.length > 80);
+  assert.equal(segmentConversationTitle(emojiLegacy)[0].type, "resource");
+
+  const utf16OnlyEighty = `@{${"📘".repeat(39)}`;
+  assert.equal(utf16OnlyEighty.length, 80);
+  assert.ok(Array.from(utf16OnlyEighty).length < 80);
+  assert.deepEqual(segmentConversationTitle(utf16OnlyEighty), [
+    { type: "text", value: utf16OnlyEighty },
+  ]);
+
+  const twoDocuments = Array.from(
+    `Read @{Short.pdf}, then @{${"Long reference name ".repeat(6)}`,
+  ).slice(0, 80).join("");
+  assert.deepEqual(segmentConversationTitle(twoDocuments).slice(0, 3), [
+    { type: "text", value: "Read " },
+    { type: "resource", name: "Short.pdf" },
+    { type: "text", value: ", then " },
+  ]);
+  assert.equal(segmentConversationTitle(twoDocuments).at(-1).legacy, true);
+  assert.equal(segmentConversationTitle(twoDocuments).some((part) =>
+    part.type === "text" && part.value.includes("@{")), false);
+
+  for (const invalid of [
+    Array.from(`before @{not { a file ${"x".repeat(80)}`).slice(0, 80).join(""),
+    Array.from(`before @{not\na file ${"x".repeat(80)}`).slice(0, 80).join(""),
+    Array.from(`before @{not\ra file ${"x".repeat(80)}`).slice(0, 80).join(""),
+  ]) {
+    const result = segmentConversationTitle(invalid);
+    assert.equal(result.some((part) => part.type === "resource"), false, invalid);
+    assert.equal(result.some((part) => part.value?.includes("@{")), false, invalid);
   }
 });
 

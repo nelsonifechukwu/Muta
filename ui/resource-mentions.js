@@ -125,6 +125,29 @@
     return parts;
   }
 
+  function segmentConversationTitle(text, legacyLimit = 80) {
+    const source = String(text || "");
+    const parts = segment(source);
+
+    // Before conversation titles became mention-aware, the gateway sliced the first turn at
+    // exactly 80 characters. A long document reference therefore arrived as `@{filename...`
+    // with no closing brace. Restrict this recovery to that historical boundary so ordinary
+    // short malformed prose remains ordinary text while transport syntax never leaks in the list.
+    if (Array.from(source).length !== Math.max(0, Number(legacyLimit) || 0)) return parts;
+    const opener = source.lastIndexOf("@{");
+    if (opener < 0 || source.indexOf("}", opener + 2) >= 0) return parts;
+    const recovered = opener ? segment(source.slice(0, opener)) : [];
+    const tail = source.slice(opener + 2);
+    if (!tail.trim() || /[{}\r\n]/.test(tail)) {
+      const plainTail = cleanName(tail);
+      if (plainTail) recovered.push({ type: "text", value: plainTail });
+      return recovered;
+    }
+    const name = cleanName(tail) || FALLBACK_NAME;
+    recovered.push({ type: "resource", name, legacy: true });
+    return recovered;
+  }
+
   function append(text, resources) {
     let result = String(text || "").trim();
     const present = new Set(segment(result)
@@ -181,6 +204,7 @@
     resolveResources,
     sanitizeDraft,
     segment,
+    segmentConversationTitle,
     tokenFor,
   };
   global.MutaResourceMentions = api;

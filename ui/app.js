@@ -991,7 +991,7 @@ function renderUserBubbleContent(bubble, text, resources = []) {
 
 function renderConversationTitle(target, text) {
   const source = String(text || "");
-  const parts = window.MutaResourceMentions?.segment(source) || [
+  const parts = window.MutaResourceMentions?.segmentConversationTitle(source) || [
     { type: "text", value: source },
   ];
   const readable = [];

@@ -18,7 +18,10 @@ therefore lose its closing brace before the browser sees it.
    boundary, rebuild it from a one-row query for that conversation's first user message. The
    browser keeps its strict parser, so malformed ordinary text remains ordinary and sidebar refresh
    never materializes full transcripts.
-4. Keep the row a single ellipsized line, expose the complete cleaned title to pointer and assistive
+4. Recover the same exact-80 legacy shape in the browser as a deployment-safe fallback. This keeps
+   old, already-running gateways from exposing `@{` while their on-disk update is waiting for a
+   process restart; shorter malformed prose remains plain text rather than being mislabeled.
+5. Keep the row a single ellipsized line, expose the complete cleaned title to pointer and assistive
    technology, and keep the PDF icon decorative.
 
 ## Safety and compatibility
