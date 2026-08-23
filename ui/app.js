@@ -106,6 +106,7 @@ let authRole = null;
 let authUsername = null;
 let csrfToken = null;
 let identityReady = false;
+let startupRoutingReady = false;
 let shareAuthWake = null;
 let revocationReloading = false;
 const localOperatorPage = Boolean(window.MutaAccess?.localOperator);
@@ -113,6 +114,13 @@ const authHeaders = () => ({
   ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
   ...(csrfToken ? { "X-Muta-CSRF": csrfToken } : {}),
 });
+
+function settleStartupRouting() {
+  if (startupRoutingReady) return;
+  startupRoutingReady = true;
+  syncComposerState();
+}
+
 const attachmentUrl = (id) => `/v1/attachments/${id}`;
 const resourcePageUrl = (id, page) =>
   `/v1/resources/${encodeURIComponent(id)}/content#page=${Math.max(1, Number(page) || 1)}`;
@@ -1849,6 +1857,7 @@ async function loadConversation(
     pendingConversationLoad = null;
     conversationRetryTarget = null;
     setConversationLocation(conversationId, { mode: "replace" });
+    settleStartupRouting();
     toast(t("conversation.notFound"));
     return false;
   }
@@ -1890,6 +1899,7 @@ async function loadConversation(
   }
   refreshSidebar();
   renderQueue();
+  settleStartupRouting();
   syncComposerState(); // the send button is only a Stop button in the streaming thread
   scrollToBottom({ force: true });
   if (!restoring) drainQueue(cid);
@@ -1977,18 +1987,23 @@ function syncComposerState() {
   const streaming = viewingLiveStream();
   const modelTrigger = $("#model-trigger");
   const switchingModel = modelTrigger?.dataset.switching === "true";
+  const modelCatalogLoading = modelCatalog === null &&
+    modelTrigger?.dataset.loadFailed !== "true";
+  const inferenceUnavailable = !identityReady ||
+    !startupRoutingReady ||
+    modelCatalogLoading ||
+    switchingModel;
   const imageButton = $("#btn-image");
-  imageButton.disabled = busy || switchingModel;
+  imageButton.disabled = busy || inferenceUnavailable;
   if (!imageButton.disabled) {
     imageButton.title = imageInputProblem() || t("composer.attachImageTitle");
   }
-  $("#btn-audio").disabled = switchingModel;
-  $("#btn-mic").disabled = switchingModel;
+  $("#btn-audio").disabled = inferenceUnavailable;
+  $("#btn-mic").disabled = inferenceUnavailable;
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
   // voice reply (generating without a chat stream) the mic button owns interruption.
   sendBtn.disabled =
-    !identityReady ||
-    switchingModel ||
+    (!streaming && inferenceUnavailable) ||
     busy ||
     voiceModeActive ||
     startingConversations.has(startKeyFor(conversationId));
@@ -3963,21 +3978,25 @@ async function bootChat() {
       window.setTimeout(resolve, 2500);
     });
   }
-  // The model catalog is private in Host/share mode. Loading it before ensureAuth races the
-  // loopback session bootstrap on a fresh browser and leaves the selector stuck on its fallback
-  // label after the expected 401. Treat identity as the same readiness barrier for the catalog
-  // as it already is for conversations, resources and generations.
-  await refreshModelCatalog();
+  // The model catalog is private in Host/share mode, so discovery must start after ensureAuth.
+  // Do not await it here: on a cold start `/v1/models` waits behind the engine-manager lock while
+  // llama-server maps the model. Saved conversations are database-backed and must remain
+  // available during that independent warm-up.
+  void refreshModelCatalog();
   syncComposerState();
   restoreMessageQueue();
-  await loadSettings();
+  // Sidebar history, settings and resources have independent storage paths. Start all three
+  // immediately; only generation recovery remains ordered before selected-chat attachment so an
+  // in-flight assistant row cannot be duplicated.
+  void refreshSidebar();
+  void loadSettings();
+  void loadResources({ quiet: true });
   window.setInterval(() => {
     if (!document.hidden) {
       void refreshPowerStatus();
       void revalidateShareIdentity();
     }
   }, 15_000);
-  await loadResources({ quiet: true });
   await recoverGenerations();
   const selected = conversationFromLocation();
   const pending = pendingRequestFromLocation();
@@ -4008,8 +4027,8 @@ async function bootChat() {
     if (!recovered) refreshSidebar();
   } else {
     if (pending) setConversationLocation(null, { mode: "replace" });
-    refreshSidebar();
   }
+  if (!selected) settleStartupRouting();
 }
 void bootChat();
 

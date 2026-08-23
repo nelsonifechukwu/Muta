@@ -575,12 +575,36 @@ def test_locale_change_cannot_unlock_a_model_switch_in_flight():
     assert "renderModelCatalog(modelCatalog)" not in subscriber
 
 
-def test_model_catalog_waits_for_the_authenticated_identity_barrier():
+def test_model_catalog_starts_after_auth_without_blocking_saved_conversations():
     js = (UI / "app.js").read_text()
     boot = js[js.index("async function bootChat()") : js.index("void bootChat();")]
     assert "while (!(await ensureAuth()))" in boot
-    assert "await refreshModelCatalog();" in boot
-    assert boot.index("while (!(await ensureAuth()))") < boot.index("await refreshModelCatalog();")
+    assert "void refreshModelCatalog();" in boot
+    assert "await refreshModelCatalog();" not in boot
+    assert boot.index("while (!(await ensureAuth()))") < boot.index("void refreshModelCatalog();")
+    assert "void refreshSidebar();" in boot
+    assert "void loadSettings();" in boot
+    assert "void loadResources({ quiet: true });" in boot
+    assert boot.index("void refreshSidebar();") < boot.index("await recoverGenerations();")
+    assert "if (!selected) settleStartupRouting();" in boot
+    load = js[js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")]
+    assert load.count("settleStartupRouting();") == 2
+
+
+def test_inference_controls_stay_locked_until_catalog_and_initial_routing_are_ready():
+    js = (UI / "app.js").read_text()
+    sync = js[
+        js.index("function syncComposerState()") : js.index("async function stopGeneration(")
+    ]
+    assert "let startupRoutingReady = false;" in js
+    assert "modelCatalog === null" in sync
+    assert 'modelTrigger?.dataset.loadFailed !== "true"' in sync
+    assert "const inferenceUnavailable" in sync
+    assert "!startupRoutingReady" in sync
+    assert "imageButton.disabled = busy || inferenceUnavailable" in sync
+    assert '$("#btn-audio").disabled = inferenceUnavailable' in sync
+    assert '$("#btn-mic").disabled = inferenceUnavailable' in sync
+    assert "sendBtn.disabled =\n    (!streaming && inferenceUnavailable)" in sync
 
 
 def test_host_capacity_change_refreshes_image_capability_catalog():
