@@ -935,6 +935,7 @@ def chat(
                 engine,
                 req.message,
                 chat_result.reply,
+                conversation_id=chat_result.conversation_id,
                 on_generation=bench_metrics.record,
             )
             if spec is not None:
@@ -1205,6 +1206,7 @@ def _start_chat_generation(
                     engine,
                     req.message,
                     prose_reply,
+                    conversation_id=cid,
                     cancel_event=cancel_event,
                     on_generation=bench_metrics.record,
                 )
@@ -1883,6 +1885,7 @@ def tutor_chat(
                 engine,
                 turn.text,
                 chat_result.reply,
+                conversation_id=chat_result.conversation_id,
                 on_generation=bench_metrics.record,
             )
             if spec is not None:
@@ -2063,7 +2066,11 @@ def tutor_chat_stream(
             if visual_requested and reply_parts:
                 prose_reply = "".join(reply_parts)
                 spec = generate_visualization(
-                    engine, turn.text, prose_reply, on_generation=bench_metrics.record
+                    engine,
+                    turn.text,
+                    prose_reply,
+                    conversation_id=turn.session_id,
+                    on_generation=bench_metrics.record,
                 )
                 if spec is not None:
                     complete_reply = append_visualization(prose_reply, spec)

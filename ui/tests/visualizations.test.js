@@ -77,6 +77,45 @@ test("validates every supported renderer family", () => {
   }
 });
 
+test("accepts deterministic vector-addition diagrams and replayable animations", () => {
+  const scene = {
+    version: 1,
+    library: "three",
+    kind: "scene3d",
+    title: "Vector addition: head to tail",
+    aria_label: "A and B are arranged head to tail, with their resultant from the origin.",
+    height: 380,
+    objects: [
+      { type: "vector", label: "A = (2, 1)", from: [0, 0, 0], to: [2, 1, 0] },
+      { type: "vector", label: "B = (1, 2)", from: [2, 1, 0], to: [3, 3, 0] },
+      { type: "vector", label: "A + B = (3, 3)", from: [0, 0, 0], to: [3, 3, 0] },
+    ],
+  };
+  assert.equal(viz.validateSpec(scene).ok, true);
+
+  for (const library of ["gsap", "anime", "motion"]) {
+    const animation = {
+      version: 1,
+      library,
+      kind: "animation",
+      title: "Vector addition: move B head to tail",
+      aria_label: "B moves to the head of A before the resultant appears.",
+      height: 380,
+      elements: [
+        { id: "vector_a", type: "arrow", x: 120, y: 250, x1: 0, y1: 0, x2: 140, y2: -70 },
+        { id: "vector_b", type: "arrow", x: 120, y: 250, x1: 0, y1: 0, x2: 70, y2: -140 },
+        { id: "resultant", type: "arrow", x: 120, y: 250, x1: 0, y1: 0, x2: 210, y2: -210 },
+        { id: "label_sum", type: "text", x: 220, y: 170, text: "A + B = (3, 3)" },
+      ],
+      tracks: [
+        { target: "vector_b", from: { x: 120, y: 250, opacity: 0.35 }, to: { x: 260, y: 180, opacity: 1 }, duration: 1.6 },
+        { target: "resultant", from: { opacity: 0 }, to: { opacity: 1 }, duration: 0.9, delay: 1.6 },
+      ],
+    };
+    assert.equal(viz.validateSpec(animation).ok, true, library);
+  }
+});
+
 test("rejects unsafe keys, oversized arrays, bad links, and animation fields", () => {
   const poisoned = JSON.parse(JSON.stringify(line).replace('{"version"', '{"__proto__":{},"version"'));
   assert.equal(viz.validateSpec(poisoned).ok, false);
