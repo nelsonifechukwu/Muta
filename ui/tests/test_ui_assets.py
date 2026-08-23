@@ -70,7 +70,7 @@ def test_loopback_host_opens_the_local_shell_without_the_shared_connection_gate(
     assert 'hostname === "::1"' in ACCESS_BOOTSTRAP
     assert 'hostname.startsWith("127.")' in ACCESS_BOOTSTRAP
     assert 'localOperator ? "operator" : "shared"' in ACCESS_BOOTSTRAP
-    assert 'window.MutaAccess = Object.freeze({ localOperator })' in ACCESS_BOOTSTRAP
+    assert "window.MutaAccess = Object.freeze({ localOperator })" in ACCESS_BOOTSTRAP
     assert 'html[data-muta-access="operator"] #share-auth { display: none; }' in CSS
     assert 'html[data-muta-access="operator"] #app[hidden] { display: flex; }' in CSS
 
@@ -241,11 +241,11 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert js.count("renderResourceSources(") == 3, "history and live replies must share citations"
     assert 'window.matchMedia("(min-width: 1580px)")' in js
     assert 'trigger.setAttribute("aria-expanded", String(expanded))' in js
-    assert 'list.hidden = !expanded' in js
+    assert "list.hidden = !expanded" in js
     assert 'box.classList.toggle("is-rail-active", box === active.box)' in js
-    assert 'box === focusedBox || (' in js
+    assert "box === focusedBox || (" in js
     assert 'box.addEventListener("focusin", () => preferResourceSources(box))' in js
-    assert 'position: fixed' in "".join(_blocks(".resource-sources.is-rail-active"))
+    assert "position: fixed" in "".join(_blocks(".resource-sources.is-rail-active"))
     assert "const markerRect = owner.marker?.isConnected" in js
     assert "active.box.scrollHeight" in js
     assert "if (scrollRect.height < 60)" in js
@@ -253,7 +253,7 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "(markerVisible ? marker : inputEl).focus({ preventScroll: true })" in js
     assert "const availableHeight = scrollRect.height - 16" in js
     assert "syncResourceSourcesLayout(box);\n      continue;" in js
-    assert 'box.contains(document.activeElement)' in js
+    assert "box.contains(document.activeElement)" in js
     assert "moveFocusFromResourceSources(box);" in js
     assert "requestAnimationFrame(() => scrollToBottom());" in js
     assert 'document.addEventListener("muta:localechange"' in js
@@ -261,12 +261,12 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "resourceSourcesOwners.get(box).container.style.minHeight" in js
     assert "style.minHeight = `${" not in js, "the margin rail must not stretch a chat turn"
     assert "if (!resourceCitationRail.matches) scrollToBottom();" in js
-    assert 'link.href = resourcePageUrl(source.resource_id, source.page)' in js
+    assert "link.href = resourcePageUrl(source.resource_id, source.page)" in js
 
     # Model text is never trusted to invent destinations: decoration is post-sanitize and the
     # parser only promotes a reference that maps to a server-owned record.
-    assert 'const REFERENCE = /\\[R([1-9]\\d*)\\]/gi' in citations
-    assert 'if (number <= limit)' in citations
+    assert "const REFERENCE = /\\[R([1-9]\\d*)\\]/gi" in citations
+    assert "if (number <= limit)" in citations
     assert "function planClaimCitations(" in citations
     assert "addFallbackMarkers(root, records, explicitAssignments, options, markers)" in citations
     assert "evidence.exact && evidence.tokenCount >= 3" in citations
@@ -276,11 +276,13 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "function fallbackSentenceRanges(" in citations
     assert "const tail = claim.node.splitText(claim.offset)" in citations
     assert "marker(records[number - 1], number, options)" in citations
-    assert 'node.parentElement?.closest(EXCLUDED)' in citations
+    assert "node.parentElement?.closest(EXCLUDED)" in citations
     assert '"a", "button", "code", "pre", "kbd", "samp", "textarea"' in citations
     assert '".katex", ".katex-display", ".math-source", ".resource-sources"' in citations
 
-    rail = "".join(_blocks(".msg.assistant.has-resource-sources > .resource-sources.is-rail-active"))
+    rail = "".join(
+        _blocks(".msg.assistant.has-resource-sources > .resource-sources.is-rail-active")
+    )
     trigger = "".join(_blocks(".resource-sources-trigger"))
     hidden_list = "".join(_blocks(".resource-sources-list[hidden]"))
     clipped_preview_guard = "".join(_blocks("@media (max-width: 1319px)"))
@@ -288,7 +290,10 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "overflow: hidden" in rail and "--citation-rail-height" in rail
     assert re.search(r"min-height\s*:\s*44px", trigger)
     assert re.search(r"display\s*:\s*none", hidden_list)
-    assert ".resource-citation-preview" in clipped_preview_guard and "display: none" in clipped_preview_guard
+    assert (
+        ".resource-citation-preview" in clipped_preview_guard
+        and "display: none" in clipped_preview_guard
+    )
 
 
 def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
@@ -304,7 +309,7 @@ def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
     assert "addUserMessage(mentionedText ||" in js
     assert "addUserMessage(m.content, m.attachments || [])" in js
     assert "records.set(name, records.has(name) ? null : resource)" in js
-    assert 'const resourceNames = (item.ragResources || [])' in js
+    assert "const resourceNames = (item.ragResources || [])" in js
     assert 'featureT("rag.document", { name: resourceNames })' in js
     assert 'if (e.key === "Enter")' in js
     assert 'mentionMatches.findIndex((resource) => resource.status === "ready")' in js
@@ -315,7 +320,7 @@ def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
     assert 'featureT("rag.pickerResults", { count: readyCount })' in js
     assert 'featureT("rag.pickerClosed")' in js
     assert "const MAX_SELECTED_RAG_RESOURCES = 8" in js
-    assert '.slice(0, MAX_SELECTED_RAG_RESOURCES)' in js
+    assert ".slice(0, MAX_SELECTED_RAG_RESOURCES)" in js
     assert 'featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES })' in js
     assert "window.MutaResourceMentions.resolveResources(" in js
     assert "window.MutaResourceMentions.place(" in js
@@ -352,7 +357,7 @@ def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
     assert "if (event.isComposing) return" in js
     assert "composerOffsetAt(mention.parentNode" in js
     assert "dataset.composerOffset" not in js
-    assert "resourcePdfIcon(\"user-resource-mention-icon\")" in js
+    assert 'resourcePdfIcon("user-resource-mention-icon")' in js
     assert ".composer-resource-mention-icon" in CSS and ".user-resource-mention-icon" in CSS
 
 
@@ -361,9 +366,11 @@ def test_resource_retrieval_is_inferred_from_inline_mentions_without_a_mode_togg
     mentions = (UI / "resource-mentions.js").read_text()
     send = js[js.index("function send(") : js.index("async function dispatch(")]
     trigger = js[js.index("function mentionTrigger(") : js.index("function selectMention(")]
-    keydown = js[js.index('inputEl.addEventListener("keydown"') : js.index(
-        'inputEl.addEventListener("beforeinput"'
-    )]
+    keydown = js[
+        js.index('inputEl.addEventListener("keydown"') : js.index(
+            'inputEl.addEventListener("beforeinput"'
+        )
+    ]
 
     assert 'id="btn-rag"' not in HTML
     assert "rag-toggle" not in HTML and ".rag-toggle" not in CSS
@@ -372,7 +379,7 @@ def test_resource_retrieval_is_inferred_from_inline_mentions_without_a_mode_togg
     assert "!ragResources.length" in send
     assert 'featureT("rag.chooseFile")' not in send
     assert "if (!useRag)" not in trigger
-    assert 'empty.textContent = featureT(emptyKey)' in js
+    assert "empty.textContent = featureT(emptyKey)" in js
     assert '"rag.noFiles": "No files found"' in js
     assert "use_rag: (item.ragResources || []).length > 0" in js
     assert "useRag:" not in js
@@ -557,9 +564,27 @@ def test_locale_change_cannot_unlock_a_model_switch_in_flight():
     switching = helper[: helper.index("renderModelCatalog(modelCatalog)")]
     assert "return;" in switching
     subscriber_start = js.index("window.MutaI18n.subscribe")
-    subscriber = js[subscriber_start : js.index("refreshModelCatalog();", subscriber_start)]
+    subscriber = js[subscriber_start:]
     assert "localizeModelCatalog()" in subscriber
     assert "renderModelCatalog(modelCatalog)" not in subscriber
+
+
+def test_model_catalog_waits_for_the_authenticated_identity_barrier():
+    js = (UI / "app.js").read_text()
+    boot = js[js.index("async function bootChat()") : js.index("void bootChat();")]
+    assert "while (!(await ensureAuth()))" in boot
+    assert "await refreshModelCatalog();" in boot
+    assert boot.index("while (!(await ensureAuth()))") < boot.index("await refreshModelCatalog();")
+
+
+def test_host_capacity_change_refreshes_image_capability_catalog():
+    js = (UI / "app.js").read_text()
+    save = js[
+        js.index("async function saveHostSettings()") : js.index("async function hostUserAction")
+    ]
+    assert "renderHostStatus(payload);" in save
+    assert "await refreshModelCatalog();" in save
+    assert save.index("renderHostStatus(payload);") < save.index("await refreshModelCatalog();")
 
 
 def test_model_menu_remains_inspectable_when_selection_is_not_permitted():
@@ -592,33 +617,47 @@ def test_localized_dynamic_controls_remain_keyboard_and_screen_reader_operable()
     assert 'micBtn.setAttribute("aria-label", t(active ? "voice.stop" : "voice.talk"))' in audio
 
 
-def test_image_reader_refusals_keep_the_backend_reason_and_recovery_path():
+def test_image_attachments_upload_without_an_eager_reader_and_keep_recovery_detail():
     js = (UI / "app.js").read_text()
-    upload = (UI / "vision-upload.js").read_text()
+    upload = (UI / "image-upload.js").read_text()
     add_image = js[js.index("async function addImage(") : js.index("async function addAudio(")]
 
-    assert "MutaVisionUpload.request" in add_image
-    assert "typeof body.accepted" in upload
+    assert "MutaImageUpload.request" in add_image
+    assert '"/v1/attachments/images"' in add_image
+    assert '"/v1/tutor/vision"' not in add_image
+    assert "transcription" not in add_image
+    assert "body.attachment_id" in upload
     assert "return uploadFailure()" in upload
-    assert 'entry.detail = detail' in add_image
-    assert 'toast(detail)' in add_image
-    assert 'aria-live=' not in re.search(r'<div id="attachment-chips"[^>]*>', HTML).group()
+    assert "entry.detail = detail" in add_image
+    assert "toast(detail)" in add_image
+    assert "aria-live=" not in re.search(r'<div id="attachment-chips"[^>]*>', HTML).group()
     assert 'id="toast" dir="auto" role="status" aria-live="assertive"' in HTML
-    assert 'img.alt = ""' in js
+    assert 'img.alt = a.name ? t("attachment.previewNamed"' in js
     assert "white-space: nowrap" not in re.search(
         r"\.chip-status\s*\{([^}]*)\}", CSS, re.DOTALL
     ).group(1)
+    reduced_motion = re.search(
+        r"@media \(prefers-reduced-motion: reduce\)\s*\{\s*"
+        r"\.chip\.uploading \.chip-status\s*\{([^}]*)\}",
+        CSS,
+        re.DOTALL,
+    )
+    assert reduced_motion and "animation: none" in reduced_motion.group(1)
 
 
 def test_conversation_titles_render_resource_mentions_without_transport_syntax():
     js = (UI / "app.js").read_text()
     mentions = (UI / "resource-mentions.js").read_text()
-    renderer = js[js.index("function renderConversationTitle(") : js.index(
-        "function addUserMessage(", js.index("function renderConversationTitle(")
-    )]
-    sidebar = js[js.index("async function refreshSidebar(") : js.index(
-        "function scheduleConversationRetry(", js.index("async function refreshSidebar(")
-    )]
+    renderer = js[
+        js.index("function renderConversationTitle(") : js.index(
+            "function addUserMessage(", js.index("function renderConversationTitle(")
+        )
+    ]
+    sidebar = js[
+        js.index("async function refreshSidebar(") : js.index(
+            "function scheduleConversationRetry(", js.index("async function refreshSidebar(")
+        )
+    ]
     assert "MutaResourceMentions?.segmentConversationTitle(source)" in renderer
     assert 'mention.className = "conv-resource-mention"' in renderer
     assert "document.createTextNode(part.value)" in renderer
@@ -654,7 +693,8 @@ def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
     versions = re.findall(
-        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|vision-upload\.js|app\.js|audio\.js)\?v=([^"]+)"', HTML
+        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|image-upload\.js|app\.js|audio\.js)\?v=([^"]+)"',
+        HTML,
     )
     assert len(versions) == 6
     assert len(set(versions)) == 1

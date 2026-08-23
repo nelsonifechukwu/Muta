@@ -254,7 +254,7 @@ let voiceModeActive = false;
 let allowParallelChats = true;
 let powerOptimizationEnabled = true;
 let latestPowerStatus = null;
-let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
+let pendingAttachments = []; // {id, kind, mime, name?, previewUrl, status?}
 let learningResources = [];
 let resourceCatalogState = "loading"; // loading | ready | error
 let resourceLoadFailures = 0;
@@ -1035,6 +1035,8 @@ function addUserMessage(text, attachments = [], resources = []) {
       if (a.kind === "image") {
         const img = document.createElement("img");
         img.src = a.previewUrl || attachmentUrl(a.id);
+        img.alt = a.name ? t("attachment.sentNamed", { file: a.name }) : t("attachment.sent");
+        img.loading = "lazy";
         row.appendChild(img);
       } else {
         const chip = document.createElement("span");
@@ -1899,13 +1901,22 @@ function newChat({ historyMode = "push" } = {}) {
 $("#new-chat").addEventListener("click", newChat);
 
 // ---------------------------------------------------------------------------
-// Attachments (image via /v1/tutor/vision, audio via /v1/audio/transcribe)
+// Attachments (image upload now; selected-model inference only when the turn is sent)
 // ---------------------------------------------------------------------------
-/** True while any image is still being read. Reading a photo is a 15–90 s job on this
- *  hardware, so the composer has to hold the door: without it a student who sees no progress
- *  clicks again, and each extra click is another CORE-VISION spawn racing for the same port. */
-function readingAnImage() {
-  return pendingAttachments.some((a) => a.status === "reading");
+function uploadingAnImage() {
+  return pendingAttachments.some((a) => a.status === "uploading");
+}
+
+function activeModel() {
+  return modelCatalog?.models?.find((model) => model.id === modelCatalog.active_id) || null;
+}
+
+function imageInputProblem() {
+  const model = activeModel();
+  if (!modelCatalog || !model) return t("model.loading");
+  if (model.supports_images) return "";
+  const cause = model.image_input_reason || `${model.label} accepts text only`;
+  return `${cause}. ${t("attachment.chooseImageModel")}`;
 }
 
 /** True when the reply in flight belongs to the conversation on screen. A stream in another
@@ -1915,11 +1926,15 @@ function viewingLiveStream() {
 }
 
 function syncComposerState() {
-  const busy = readingAnImage();
+  const busy = uploadingAnImage();
   const streaming = viewingLiveStream();
   const modelTrigger = $("#model-trigger");
   const switchingModel = modelTrigger?.dataset.switching === "true";
-  $("#btn-image").disabled = busy || switchingModel;
+  const imageButton = $("#btn-image");
+  imageButton.disabled = busy || switchingModel;
+  if (!imageButton.disabled) {
+    imageButton.title = imageInputProblem() || t("composer.attachImageTitle");
+  }
   $("#btn-audio").disabled = switchingModel;
   $("#btn-mic").disabled = switchingModel;
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
@@ -1973,18 +1988,16 @@ function renderChips() {
     if (a.kind === "image" && a.previewUrl) {
       const img = document.createElement("img");
       img.src = a.previewUrl;
-      img.alt = "";
+      img.alt = a.name ? t("attachment.previewNamed", { file: a.name }) : t("attachment.preview");
       chip.appendChild(img);
     } else {
       chip.append(a.kind === "audio" ? `🎙 ${t("attachment.audio")}` : `📎 ${t("attachment.file")}`);
     }
-    if (a.status === "reading" || a.status === "failed") {
-      // Durable, not a toast that has already faded: this is the only signal that tells the
-      // student whether the tutor can actually see what they attached.
+    if (a.status === "uploading" || a.status === "failed") {
       const label = document.createElement("span");
       label.className = "chip-status";
-      const detail = a.detail || (a.detailKey ? t(a.detailKey) : t("attachment.readFailed"));
-      label.textContent = a.status === "reading" ? t("attachment.reading") : detail;
+      const detail = a.detail || (a.detailKey ? t(a.detailKey) : t("attachment.imageUploadFailed"));
+      label.textContent = a.status === "uploading" ? t("attachment.uploading") : detail;
       if (a.status === "failed") label.title = detail;
       chip.appendChild(label);
     }
@@ -1995,6 +2008,7 @@ function renderChips() {
     x.title = t("attachment.remove");
     x.setAttribute("aria-label", t("attachment.remove"));
     x.addEventListener("click", () => {
+      if (a.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(a.previewUrl);
       pendingAttachments = pendingAttachments.filter((p) => p !== a);
       renderChips();
     });
@@ -2005,14 +2019,18 @@ function renderChips() {
 }
 
 async function addImage(file) {
-  // The chip goes up before the request, not after it: the student needs to see that the
-  // photo landed while CORE-VISION spends the next minute reading it.
+  const capabilityProblem = imageInputProblem();
+  if (capabilityProblem) return toast(capabilityProblem, 6000);
+  if (pendingAttachments.some((attachment) => attachment.kind === "image")) {
+    return toast(t("attachment.oneImage"));
+  }
+  const objectUrl = URL.createObjectURL(file);
   const entry = {
     id: null,
     kind: "image",
-    previewUrl: URL.createObjectURL(file),
-    transcription: "",
-    status: "reading",
+    name: file.name,
+    previewUrl: objectUrl,
+    status: "uploading",
   };
   pendingAttachments.push(entry);
   renderChips();
@@ -2029,16 +2047,18 @@ async function addImage(file) {
     renderChips();
   };
 
-  const result = await MutaVisionUpload.request(fetch, "/v1/tutor/vision", {
+  const result = await MutaImageUpload.request(fetch, "/v1/attachments/images", {
     method: "POST",
     headers: authHeaders(),
     body: form,
   });
   entry.id = result.attachmentId ?? null;
   if (result.status === "ready") {
-    entry.transcription = result.transcription;
+    entry.mime = result.mime;
+    URL.revokeObjectURL(objectUrl);
+    entry.previewUrl = attachmentUrl(entry.id);
     settle("ready");
-    toast(t("attachment.imageRead"), 3000);
+    announce(t("attachment.imageAttached"));
   } else {
     const detail = result.detail || t(result.detailKey);
     settle("failed", detail, result.detailKey);
@@ -2075,7 +2095,11 @@ async function addAudio(file) {
   }
 }
 
-$("#btn-image").addEventListener("click", () => $("#file-image").click());
+$("#btn-image").addEventListener("click", () => {
+  const problem = imageInputProblem();
+  if (problem) return toast(problem, 6000);
+  $("#file-image").click();
+});
 $("#btn-audio").addEventListener("click", () => $("#file-audio").click());
 $("#file-image").addEventListener("change", (e) => {
   if (e.target.files[0]) addImage(e.target.files[0]);
@@ -2158,20 +2182,10 @@ window.addEventListener("drop", (e) => {
 // Sending + SSE streaming
 // ---------------------------------------------------------------------------
 function composeOutgoingMessage(typed, attachments) {
-  // This text is the ONLY thing the tutor learns about a photo: `attachment_ids` binds rows
-  // in Postgres for history, it does not reach the model. So a photo we failed to read has
-  // to be declared too — otherwise the student watches their image sit in the transcript
-  // while the tutor insists there is no image, which is the worst of both worlds.
-  const lines = attachments
-    .filter((a) => a.kind === "image")
-    .map((a) =>
-      a.transcription
-        ? `Problem transcribed from my image: "${a.transcription}"`
-        : "I attached a photo but it could not be read, so you cannot see it. " +
-          "Ask me to type the problem out."
-    );
-  if (!lines.length) return typed;
-  return typed ? `${lines.join("\n")}\n\n${typed}` : lines.join("\n");
+  // attachment_ids now resolve to image content parts at the gateway. Keep the learner's
+  // authored text byte-identical; no hidden transcription or synthetic failure sentence.
+  void attachments;
+  return typed;
 }
 
 // --- the queue: messages typed while the tutor is busy -----------------------------------
@@ -2354,11 +2368,24 @@ function send(steer = false) {
     return toast(t("reply.modelLoading"));
   }
   const typed = composerValue().trim();
-  if (readingAnImage()) return toast(t("reply.imageReading"));
+  if (uploadingAnImage()) return toast(t("reply.imageUploading"));
+  const readyImage = pendingAttachments.some(
+    (attachment) => attachment.kind === "image" && attachment.status === "ready",
+  );
+  if (readyImage) {
+    const capabilityProblem = imageInputProblem();
+    if (capabilityProblem) return toast(capabilityProblem, 6000);
+  }
+  const failedImage = pendingAttachments.find(
+    (attachment) => attachment.kind === "image" && attachment.status === "failed",
+  );
+  if (failedImage) {
+    return toast(failedImage.detail || t(failedImage.detailKey || "attachment.imageUploadFailed"));
+  }
   const ragResources = resourcesFromTypedMentions(typed);
   if (
     !typed &&
-    !pendingAttachments.some((a) => a.transcription) &&
+    !readyImage &&
     !ragResources.length
   ) return;
   if (startingConversations.has(startKeyFor(conversationId))) {
@@ -2466,7 +2493,9 @@ async function dispatch(item, opts = {}) {
         message,
         conversation_id: startedIn,
         client_request_id: clientRequestId,
-        attachment_ids: regenerate ? [] : attachmentIds,
+        // Regeneration must resend the same image content even though it creates no new user
+        // row. The gateway simply skips re-linking when user_message_id is null.
+        attachment_ids: attachmentIds,
         use_web: item.useWeb === true,
         use_rag: (item.ragResources || []).length > 0,
         resource_ids: (item.ragResources || [])
@@ -3547,6 +3576,9 @@ async function saveHostSettings() {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(shareDetail(payload, "Could not update Host mode."));
     renderHostStatus(payload);
+    // Applying a memory policy may atomically replace the serving model. Refresh capability
+    // badges before the learner can attach/send an image against a stale catalog snapshot.
+    await refreshModelCatalog();
   } catch (error) {
     if (previous) renderHostStatus(previous);
     $("#host-save-state").textContent = error.message || "Could not update Host mode.";
@@ -3856,6 +3888,11 @@ async function bootChat() {
       window.setTimeout(resolve, 2500);
     });
   }
+  // The model catalog is private in Host/share mode. Loading it before ensureAuth races the
+  // loopback session bootstrap on a fresh browser and leaves the selector stuck on its fallback
+  // label after the expected 401. Treat identity as the same readiness barrier for the catalog
+  // as it already is for conversations, resources and generations.
+  await refreshModelCatalog();
   syncComposerState();
   restoreMessageQueue();
   await loadSettings();
@@ -4020,6 +4057,12 @@ function makeModelOption(model, activeId, selectionEnabled) {
     badge.textContent = t("model.recommended");
     title.append(badge);
   }
+  if (model.supports_images) {
+    const capability = document.createElement("span");
+    capability.className = "model-capability";
+    capability.textContent = t("model.imageInput");
+    title.append(capability);
+  }
 
   const detail = document.createElement("span");
   detail.className = "model-option-detail";
@@ -4153,8 +4196,13 @@ async function selectModel(target) {
     }
     modelSwitchUncertain = false;
     modelTrigger.dataset.switching = "false";
-    toast(t("model.switchFailed"));
+    const detail = error.message || t("model.switchFailed");
+    modelNote.textContent = detail;
+    toast(detail, 6000);
     await refreshModelCatalog();
+    // Catalog recovery refreshes the menu, but the reason this operation failed remains
+    // useful until the operator tries another model or closes Settings.
+    modelNote.textContent = detail;
   } finally {
     syncComposerState();
   }
@@ -4230,5 +4278,3 @@ window.MutaI18n.subscribe(() => {
   localizeModelCatalog();
   void refreshNetDot();
 });
-
-refreshModelCatalog();

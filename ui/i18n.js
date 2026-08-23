@@ -56,6 +56,7 @@
       "model.runsLocal": "Runs on this machine",
       "model.defaultRecommended": "The recommended model is selected by default.",
       "model.recommended": "Recommended",
+      "model.imageInput": "Image input",
       "model.localTutor": "Local tutor model",
       "model.switching": "Switching model…",
       "model.currentLocal": "Current local model",
@@ -128,6 +129,7 @@
       "reply.voiceTyped": "Finish voice mode before sending a typed message.",
       "reply.modelLoading": "The selected model is still loading — your draft is safe.",
       "reply.imageReading": "Still reading your image — one moment.",
+      "reply.imageUploading": "Still attaching your image — one moment.",
       "reply.previousStarting": "Starting your previous message — this draft is still here.",
       "reply.parallelDisabled": "A reply is running in another chat. Enable multiple chats in Settings to continue here.",
       "reply.earlierRunning": "The earlier reply is still running. This message is queued and will send automatically.",
@@ -141,9 +143,17 @@
       "attachment.audio": "audio",
       "attachment.file": "file",
       "attachment.reading": "reading…",
+      "attachment.uploading": "attaching…",
       "attachment.readFailed": "couldn’t read it",
       "attachment.imageUploadFailed": "Image upload failed — is the backend up?",
       "attachment.imageRead": "Image read. Ask your question and send.",
+      "attachment.imageAttached": "Image attached. Ask your question and send.",
+      "attachment.chooseImageModel": "Choose a model marked ‘Image input’ or remove the image.",
+      "attachment.oneImage": "Send one image per question on this laptop.",
+      "attachment.preview": "Attached image preview",
+      "attachment.previewNamed": "Attached image preview: {file}",
+      "attachment.sent": "Image sent with this question",
+      "attachment.sentNamed": "Image sent with this question: {file}",
       "attachment.photoEmpty": "The photo came back empty — try a closer, sharper shot.",
       "attachment.imageUnreadable": "The image couldn’t be read.",
       "attachment.transcribing": "Transcribing the audio…",
@@ -368,9 +378,36 @@
     return true;
   }
 
+  function multimodalAttachmentMessages(messages) {
+    // The 22 machine-assisted packs are generated in a separately reviewed pipeline.  Do not
+    // hide every non-English interface merely because this feature adds a compact status label:
+    // compose the new labels from each pack's already-translated image/model vocabulary.  This
+    // also deliberately avoids reusing the old "read image" wording that implied OCR.
+    const attach = messages["composer.attachImage"];
+    const choose = messages["model.choose"];
+    if (!attach || !choose) return {};
+    return {
+      "model.imageInput": attach,
+      "reply.imageUploading": `${attach}…`,
+      "attachment.uploading": `${attach}…`,
+      "attachment.imageAttached": `${attach} ✓`,
+      "attachment.chooseImageModel": `${choose} · ${attach}`,
+      "attachment.oneImage": `1 · ${attach}`,
+      "attachment.preview": attach,
+      "attachment.previewNamed": `${attach}: {file}`,
+      "attachment.sent": `${attach} ✓`,
+      "attachment.sentNamed": `${attach}: {file}`,
+    };
+  }
+
   function registerLocale(definition, messages) {
     if (!definition?.tag || !messages) return false;
-    catalogs[definition.tag] = { ...(catalogs[definition.tag] || {}), ...messages };
+    const combined = { ...(catalogs[definition.tag] || {}), ...messages };
+    const attachmentMessages = multimodalAttachmentMessages(combined);
+    catalogs[definition.tag] = {
+      ...attachmentMessages,
+      ...combined,
+    };
     const index = localeDefinitions.findIndex((item) => item.tag === definition.tag);
     if (index >= 0) localeDefinitions[index] = { ...localeDefinitions[index], ...definition };
     else localeDefinitions.push({ ...definition });
