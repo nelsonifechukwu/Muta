@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -209,3 +211,11 @@ def test_voice_ws_relays_automatic_answer_recovery(monkeypatch):
         "delta",
         "done",
     ]
+
+
+def test_voice_receive_heartbeat_catches_the_python_310_asyncio_timeout():
+    # asyncio.TimeoutError became an alias of builtins.TimeoutError only in Python 3.11.
+    # The deployment target is Python 3.10, so the explicit spelling is load-bearing.
+    source = Path(audio_routes.__file__).read_text()
+
+    assert "except asyncio.TimeoutError:" in source
