@@ -598,10 +598,63 @@ def test_visual_stream_persists_owned_row_and_emits_suffix_before_done(wired, mo
     ]
 
     assert frames[-1]["done"] is True
+    assert frames[-3] == {"phase": "visualization"}
     assert "```muta-viz" in frames[-2]["delta"]
     persisted_id, persisted_reply = engine.store.updated_messages[-1]
     assert persisted_id == 41
     assert persisted_reply == "A visual comparison." + frames[-2]["delta"]
+
+
+def test_visual_stream_replaces_a_model_refusal_before_done(wired, monkeypatch):
+    engine, *_ = wired
+
+    class RefusalEvents:
+        assistant_message_id = 42
+
+        def __init__(self):
+            self._events = iter(
+                [
+                    (
+                        "content",
+                        "I am not able to draw diagrams because I am a text-based model.",
+                    )
+                ]
+            )
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return next(self._events)
+
+        def close(self):
+            return None
+
+    engine.stream_events_chat = lambda **_kwargs: ("conv-viz", 1, RefusalEvents())
+    spec = {
+        "version": 1,
+        "library": "d3",
+        "kind": "bar",
+        "title": "Fruit count",
+        "aria_label": "A bar chart comparing apples and bananas.",
+        "height": 300,
+        "data": [{"label": "apples", "value": 3}, {"label": "bananas", "value": 7}],
+    }
+    monkeypatch.setattr(routes, "generate_visualization", lambda *_args, **_kwargs: spec)
+
+    response = client.post(
+        "/v1/tutor/chat/stream",
+        json=turn(text="Draw a bar chart for apples and bananas."),
+    )
+    frames = [
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+
+    assert frames[-3] == {"phase": "visualization"}
+    assert "replace" in frames[-2]
+    assert "text-based" not in frames[-2]["replace"]
+    assert "```muta-viz" in frames[-2]["replace"]
+    assert engine.store.updated_messages[-1] == (42, frames[-2]["replace"])
 
 
 def test_tutor_stream_lang_is_trusted_system_context_not_user_text(wired):

@@ -48,9 +48,9 @@ def test_model_output_is_data_inside_an_opaque_sandbox() -> None:
         assert network_api not in frame
     assert "innerHTML" not in frame
     assert "visualizations.js" in html and "viz-frame.js" in html
-    assert 'viz-theme.js?v=20260823-dark-mode-1' in html
+    assert 'viz-theme.js?v=20260823-viz-progress-1' in html
     assert html.index("viz-theme.js") < html.index("viz-frame.css")
-    assert 'viz-frame.js?v=20260823-dark-mode-1' in html
+    assert 'viz-frame.js?v=20260823-viz-progress-1' in html
     assert "http://" not in html and "https://" not in html
     assert 'frame.loading = "lazy"' in parent
     assert "muta-viz-visibility" in parent and "muta-viz-visibility" in frame
@@ -61,6 +61,7 @@ def test_model_output_is_data_inside_an_opaque_sandbox() -> None:
     assert "render on demand" in frame
     assert "stopAll();" in frame
     assert "applyState(record.group, record.base);" in frame
+    assert "renderDiagram(spec)" in frame
     assert 'role="group"' in html
 
 

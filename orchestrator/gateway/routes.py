@@ -1264,6 +1264,7 @@ def _start_chat_generation(
                     yield f"data: {json.dumps({'replace': finalized_reply})}\n\n"
             if visual_requested and reply_parts and not cancel_event.is_set():
                 prose_reply = "".join(reply_parts)
+                yield f"data: {json.dumps({'phase': 'visualization'})}\n\n"
                 spec = generate_visualization(
                     engine,
                     req.message,
@@ -1274,11 +1275,14 @@ def _start_chat_generation(
                 )
                 if spec is not None:
                     complete_reply = append_visualization(prose_reply, spec)
-                    suffix = complete_reply[len(prose_reply) :]
                     assistant_message_id = getattr(events, "assistant_message_id", None)
                     if assistant_message_id is not None:
                         engine.store.update_message(assistant_message_id, complete_reply)
-                    yield f"data: {json.dumps({'delta': suffix})}\n\n"
+                    if complete_reply.startswith(prose_reply):
+                        suffix = complete_reply[len(prose_reply) :]
+                        yield f"data: {json.dumps({'delta': suffix})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'replace': complete_reply})}\n\n"
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /chat/stream: %r", e)
             error = {"error": _incomplete_stream_message(partial_saved=bool(reply_parts))}
@@ -2120,6 +2124,7 @@ def tutor_chat_stream(
                 yield f"data: {json.dumps({key: text})}\n\n"
             if visual_requested and reply_parts:
                 prose_reply = "".join(reply_parts)
+                yield f"data: {json.dumps({'phase': 'visualization'})}\n\n"
                 spec = generate_visualization(
                     engine,
                     turn.text,
@@ -2129,11 +2134,14 @@ def tutor_chat_stream(
                 )
                 if spec is not None:
                     complete_reply = append_visualization(prose_reply, spec)
-                    suffix = complete_reply[len(prose_reply) :]
                     assistant_message_id = getattr(events, "assistant_message_id", None)
                     if assistant_message_id is not None:
                         engine.store.update_message(assistant_message_id, complete_reply)
-                    yield f"data: {json.dumps({'delta': suffix})}\n\n"
+                    if complete_reply.startswith(prose_reply):
+                        suffix = complete_reply[len(prose_reply) :]
+                        yield f"data: {json.dumps({'delta': suffix})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'replace': complete_reply})}\n\n"
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /tutor/chat/stream: %r", e)
             error = {"error": _incomplete_stream_message(partial_saved=content_count > 0)}

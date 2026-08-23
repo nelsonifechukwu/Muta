@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 import time
 from collections.abc import Callable
@@ -27,6 +28,11 @@ _EXPLICIT_VISUAL = re.compile(
     r"ግራፍ|رسم\s+بياني)\b",
     re.IGNORECASE,
 )
+_OUTPUT_IMAGE_REQUEST = re.compile(
+    r"\b(?:draw|generate|create|make|show|need|want|see|give)\b.{0,36}"
+    r"\b(?:image|picture|illustration|model)\b",
+    re.IGNORECASE,
+)
 _NO_VISUAL = re.compile(
     r"(?:\b(?:do\s+not|don't|without)\b.{0,28}\b(?:visual|graph|plot|chart|diagram|"
     r"animation)\b|\bno\s+(?:(?:live|interactive)\s+)?(?:visual|graph|plot|chart|diagram|"
@@ -42,19 +48,46 @@ _EXPLANATION = re.compile(
 )
 _SPATIAL_TOPIC = re.compile(
     r"\b(?:shape|trajectory|projectile|orbit|derivative|distribution|vector field|"
-    r"coordinate plane|transformation|wave|network|relationship|change over time)\b",
+    r"coordinate plane|transformation|wave|phase shift|network|relationship|"
+    r"change over time|anatomy|heart|circulation|molecule|molecular|hydrocarbon|"
+    r"methane|ethane|ethene|ethylene|ethyne|acetylene|propane|butane|satellite|"
+    r"chemical structure|structural formula)\b",
     re.IGNORECASE,
 )
 _VECTOR_TOPIC = re.compile(r"\bvectors?\b", re.IGNORECASE)
 _VECTOR_ADDITION_TERM = re.compile(
     r"\b(?:addition|add(?:ing)?|sum|resultant|head[- ]to[- ]tail)\b", re.IGNORECASE
 )
-_ANAPHORIC_VISUAL = re.compile(r"\b(?:it|this|that|same|again)\b", re.IGNORECASE)
+_ANAPHORIC_VISUAL = re.compile(
+    r"(?:\b(?:it|this|that|same|again)\b|"
+    r"\bwhere\s+(?:is|was)\s+(?:the\s+)?(?:diagram|visual|image|animation)\b)",
+    re.IGNORECASE,
+)
 _ANIMATION_REQUEST = re.compile(
     r"\b(?:animate|animation|gsap|anime(?:\.js)?|motion(?:\.js)?)\b", re.IGNORECASE
 )
 _NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
 _VECTOR_TUPLE = re.compile(rf"[\[(]\s*({_NUMBER})\s*,\s*({_NUMBER})(?:\s*,\s*({_NUMBER}))?\s*[\])]")
+
+_PHASE_SHIFT_TOPIC = re.compile(
+    r"\b(?:phase\s+(?:shift|difference)|out\s+of\s+phase)\b", re.IGNORECASE
+)
+_PROJECTILE_TOPIC = re.compile(r"\b(?:projectile|ballistic|trajectory)\b", re.IGNORECASE)
+_HEART_TOPIC = re.compile(r"\b(?:heart|cardiac|atria?|ventricles?|circulation)\b", re.IGNORECASE)
+_HYDROCARBON_TOPIC = re.compile(
+    r"\b(?:hydrocarbon|methane|ethane|ethene|ethylene|ethyne|acetylene|propane|butane)\b",
+    re.IGNORECASE,
+)
+_SATELLITE_TOPIC = re.compile(r"\b(?:satellite|orbital?|orbiting)\b", re.IGNORECASE)
+_VISUAL_REFUSAL = re.compile(
+    r"(?:\b(?:cannot|can't|unable|not able|impossible)\b.{0,90}"
+    r"\b(?:draw|render|generate|show|display|provide)\b.{0,50}"
+    r"\b(?:diagrams?|images?|visuals?|animations?)\b|"
+    r"\b(?:text[- ]based|purely text)\b.{0,100}"
+    r"\b(?:diagrams?|images?|visuals?|animations?)\b|"
+    r"\bcan only explain\b)",
+    re.IGNORECASE | re.DOTALL,
+)
 
 _PROSE_TURN_INSTRUCTION = (
     "The learner explicitly requested an explanatory visual. Explain the requested subject "
@@ -71,7 +104,7 @@ def wants_live_visual(text: str) -> bool:
     value = str(text or "")
     if _NO_VISUAL.search(value):
         return False
-    return bool(_EXPLICIT_VISUAL.search(value)) or bool(
+    return bool(_EXPLICIT_VISUAL.search(value) or _OUTPUT_IMAGE_REQUEST.search(value)) or bool(
         _EXPLANATION.search(value) and _SPATIAL_TOPIC.search(value)
     )
 
@@ -415,6 +448,468 @@ def _vector_addition_spec(request: str, current_request: str) -> dict[str, Any]:
     return _vector_addition_three_spec(request)
 
 
+def _phase_shift_spec(request: str) -> dict[str, Any]:
+    angle_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:°|degrees?|deg)\b", request, re.IGNORECASE)
+    degrees = float(angle_match.group(1)) if angle_match else 90.0
+    degrees = degrees % 360
+    phase = math.radians(degrees)
+    points_a: list[list[int | float]] = []
+    points_b: list[list[int | float]] = []
+    for index in range(33):
+        x = (2 * math.pi * index) / 32
+        points_a.append([round(x, 4), round(math.sin(x), 4)])
+        points_b.append([round(x, 4), round(math.sin(x - phase), 4)])
+    degree_label = _clean_number(degrees)
+    return {
+        "version": 1,
+        "library": "d3",
+        "kind": "line",
+        "title": f"Sine-wave phase shift: {degree_label}°",
+        "aria_label": (
+            f"Two sine waves over one cycle. The second is shifted right by {degree_label} "
+            "degrees, so matching peaks occur later along the horizontal axis."
+        ),
+        "height": 380,
+        "x_label": "phase x (radians)",
+        "y_label": "amplitude",
+        "series": [
+            {"label": "y = sin(x)", "points": points_a},
+            {
+                "label": f"y = sin(x − {degree_label}°)",
+                "points": points_b,
+            },
+        ],
+    }
+
+
+def _projectile_spec(request: str) -> dict[str, Any]:
+    speed_match = re.search(
+        r"\b(\d+(?:\.\d+)?)\s*(?:m/s|met(?:re|er)s?\s+per\s+second)\b",
+        request,
+        re.IGNORECASE,
+    )
+    angle_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:°|degrees?|deg)\b", request, re.IGNORECASE)
+    speed = min(200.0, max(1.0, float(speed_match.group(1)) if speed_match else 20.0))
+    angle = min(85.0, max(5.0, float(angle_match.group(1)) if angle_match else 45.0))
+    gravity = 9.81
+    theta = math.radians(angle)
+    flight_time = (2 * speed * math.sin(theta)) / gravity
+    points: list[list[int | float]] = []
+    for index in range(25):
+        elapsed = flight_time * index / 24
+        x = speed * math.cos(theta) * elapsed
+        y = max(0.0, speed * math.sin(theta) * elapsed - 0.5 * gravity * elapsed * elapsed)
+        points.append([round(x, 3), round(y, 3)])
+    speed_label = _clean_number(speed)
+    angle_label = _clean_number(angle)
+    return {
+        "version": 1,
+        "library": "d3",
+        "kind": "line",
+        "title": f"Projectile path: {speed_label} m/s at {angle_label}°",
+        "aria_label": (
+            f"A smooth parabolic projectile trajectory launched at {speed_label} metres per "
+            f"second and {angle_label} degrees, using gravitational acceleration 9.81 metres "
+            "per second squared and no air resistance."
+        ),
+        "height": 380,
+        "x_label": "horizontal distance (m)",
+        "y_label": "height (m)",
+        "series": [{"label": "projectile", "points": points}],
+    }
+
+
+def _heart_spec() -> dict[str, Any]:
+    return {
+        "version": 1,
+        "library": "d3",
+        "kind": "diagram",
+        "title": "Heart: double circulation",
+        "aria_label": (
+            "A labelled circulation schematic. Deoxygenated blood flows from the body through "
+            "the right atrium and right ventricle to the lungs; oxygenated blood returns through "
+            "the left atrium and left ventricle to the body."
+        ),
+        "height": 500,
+        "nodes": [
+            {
+                "id": "lungs",
+                "label": "Lungs",
+                "x": 360,
+                "y": 64,
+                "shape": "rounded",
+                "width": 130,
+                "height": 54,
+                "color": "teal",
+            },
+            {
+                "id": "ra",
+                "label": "Right atrium",
+                "x": 210,
+                "y": 190,
+                "shape": "rounded",
+                "width": 138,
+                "height": 62,
+                "color": "blue",
+            },
+            {
+                "id": "rv",
+                "label": "Right ventricle",
+                "x": 210,
+                "y": 330,
+                "shape": "rounded",
+                "width": 152,
+                "height": 68,
+                "color": "blue",
+            },
+            {
+                "id": "la",
+                "label": "Left atrium",
+                "x": 510,
+                "y": 190,
+                "shape": "rounded",
+                "width": 138,
+                "height": 62,
+                "color": "red",
+            },
+            {
+                "id": "lv",
+                "label": "Left ventricle",
+                "x": 510,
+                "y": 330,
+                "shape": "rounded",
+                "width": 152,
+                "height": 68,
+                "color": "red",
+            },
+            {
+                "id": "body",
+                "label": "Body tissues",
+                "x": 360,
+                "y": 450,
+                "shape": "rounded",
+                "width": 145,
+                "height": 54,
+                "color": "purple",
+            },
+        ],
+        "links": [
+            {
+                "source": "body",
+                "target": "ra",
+                "label": "vena cava",
+                "label_x": 100,
+                "label_y": 365,
+                "via": [[70, 450], [70, 190]],
+                "arrow": True,
+                "bond": "single",
+            },
+            {
+                "source": "ra",
+                "target": "rv",
+                "label": "tricuspid valve",
+                "label_x": 132,
+                "label_y": 264,
+                "arrow": True,
+                "bond": "single",
+            },
+            {
+                "source": "rv",
+                "target": "lungs",
+                "label": "pulmonary artery",
+                "label_x": 245,
+                "label_y": 115,
+                "arrow": True,
+                "bond": "single",
+            },
+            {
+                "source": "lungs",
+                "target": "la",
+                "label": "pulmonary veins",
+                "label_x": 505,
+                "label_y": 115,
+                "arrow": True,
+                "bond": "single",
+            },
+            {
+                "source": "la",
+                "target": "lv",
+                "label": "mitral valve",
+                "label_x": 582,
+                "label_y": 264,
+                "arrow": True,
+                "bond": "single",
+            },
+            {
+                "source": "lv",
+                "target": "body",
+                "label": "aorta",
+                "label_x": 468,
+                "label_y": 416,
+                "arrow": True,
+                "bond": "single",
+            },
+        ],
+        "annotations": [
+            {"text": "deoxygenated blood", "x": 105, "y": 82},
+            {"text": "oxygenated blood", "x": 615, "y": 82},
+        ],
+    }
+
+
+def _hydrocarbon_identity(request: str) -> tuple[str, int, int, str]:
+    value = request.lower()
+    choices = [
+        ("methane", 1, 1, "CH₄"),
+        ("ethane", 2, 1, "C₂H₆"),
+        ("ethene", 2, 2, "C₂H₄"),
+        ("ethylene", 2, 2, "C₂H₄"),
+        ("ethyne", 2, 3, "C₂H₂"),
+        ("acetylene", 2, 3, "C₂H₂"),
+        ("propane", 3, 1, "C₃H₈"),
+        ("butane", 4, 1, "C₄H₁₀"),
+    ]
+    for name, carbons, bond, formula in choices:
+        if re.search(rf"\b{re.escape(name)}\b", value):
+            canonical = {"ethylene": "ethene", "acetylene": "ethyne"}.get(name, name)
+            return canonical, carbons, bond, formula
+    return "ethane", 2, 1, "C₂H₆"
+
+
+def _hydrocarbon_spec(request: str) -> dict[str, Any]:
+    name, carbon_count, chain_bond, formula = _hydrocarbon_identity(request)
+    spacing = 130
+    first_x = 360 - (carbon_count - 1) * spacing / 2
+    carbon_y = 245
+    nodes: list[dict[str, Any]] = []
+    links: list[dict[str, Any]] = []
+    for index in range(carbon_count):
+        carbon_id = f"c{index + 1}"
+        x = first_x + index * spacing
+        nodes.append(
+            {
+                "id": carbon_id,
+                "label": "C",
+                "x": x,
+                "y": carbon_y,
+                "shape": "circle",
+                "size": 27,
+                "color": "gray",
+            }
+        )
+        if index:
+            links.append(
+                {
+                    "source": f"c{index}",
+                    "target": carbon_id,
+                    "bond": "single"
+                    if index > 1
+                    else {1: "single", 2: "double", 3: "triple"}[chain_bond],
+                    "arrow": False,
+                }
+            )
+
+        left_order = chain_bond if index == 1 else 1 if index > 1 else 0
+        right_order = (
+            chain_bond if index == 0 and carbon_count > 1 else 1 if index < carbon_count - 1 else 0
+        )
+        hydrogens = max(0, 4 - left_order - right_order)
+        positions: list[tuple[float, float]] = []
+        if carbon_count == 1:
+            positions = [
+                (x - 95, carbon_y),
+                (x + 95, carbon_y),
+                (x, carbon_y - 105),
+                (x, carbon_y + 105),
+            ]
+        elif hydrogens == 3:
+            outward = x - 95 if index == 0 else x + 95
+            positions = [(outward, carbon_y), (x, carbon_y - 105), (x, carbon_y + 105)]
+        elif hydrogens == 2:
+            positions = [(x, carbon_y - 105), (x, carbon_y + 105)]
+        elif hydrogens == 1:
+            outward = x - 95 if index == 0 else x + 95
+            positions = [(outward, carbon_y)]
+        for hydrogen_index, (hx, hy) in enumerate(positions, start=1):
+            hydrogen_id = f"h{index + 1}_{hydrogen_index}"
+            nodes.append(
+                {
+                    "id": hydrogen_id,
+                    "label": "H",
+                    "x": hx,
+                    "y": hy,
+                    "shape": "circle",
+                    "size": 21,
+                    "color": "teal",
+                }
+            )
+            links.append(
+                {"source": carbon_id, "target": hydrogen_id, "bond": "single", "arrow": False}
+            )
+    return {
+        "version": 1,
+        "library": "d3",
+        "kind": "diagram",
+        "title": f"{name.capitalize()} structural formula ({formula})",
+        "aria_label": (
+            f"A displayed structural formula for {name}, {formula}. Carbon atoms have four "
+            "bonds in total and every attached hydrogen completes a single bond."
+        ),
+        "height": 450,
+        "nodes": nodes,
+        "links": links,
+        "annotations": [
+            {"text": f"{name.capitalize()} · {formula}", "x": 360, "y": 42},
+            {"text": "Each line is a shared electron-pair bond", "x": 360, "y": 418},
+        ],
+    }
+
+
+def _satellite_orbit_spec() -> dict[str, Any]:
+    orbit = [
+        [
+            round(3.2 * math.cos((2 * math.pi * index) / 48), 4),
+            0,
+            round(3.2 * math.sin((2 * math.pi * index) / 48), 4),
+        ]
+        for index in range(49)
+    ]
+    return {
+        "version": 1,
+        "library": "three",
+        "kind": "scene3d",
+        "title": "Satellite in circular orbit",
+        "aria_label": (
+            "A rotatable Earth-and-satellite scene. Gravity points inward and velocity is "
+            "tangent to the orbit. For a circular orbit, v equals the square root of GM over r, "
+            "and the period is two pi times the square root of r cubed over GM."
+        ),
+        "height": 430,
+        "notes": ["Circular orbit: v = √(GM/r)", "Period: T = 2π√(r³/GM)"],
+        "objects": [
+            {
+                "type": "sphere",
+                "label": "Earth",
+                "position": [0, 0, 0],
+                "label_position": [-1.5, 1.7, 0],
+                "size": 1.2,
+                "color": "blue",
+            },
+            {
+                "type": "line",
+                "label": "orbit radius r",
+                "label_position": [-3.2, 0.7, 0],
+                "points": orbit,
+                "color": "teal",
+            },
+            {
+                "type": "box",
+                "label": "satellite",
+                "position": [3.2, 0, 0],
+                "label_position": [3.3, 0.8, 0],
+                "size": 0.35,
+                "color": "gold",
+            },
+            {
+                "type": "vector",
+                "label": "gravity g",
+                "from": [3.2, 0, 0],
+                "to": [2.2, 0, 0],
+                "label_position": [1.7, -0.65, 0],
+                "color": "red",
+            },
+            {
+                "type": "vector",
+                "label": "velocity v",
+                "from": [3.2, 0, 0],
+                "to": [3.2, 0, 1.3],
+                "label_position": [3.3, 0.25, 1.8],
+                "color": "orange",
+            },
+        ],
+    }
+
+
+def _fallback_diagram(request: str) -> dict[str, Any]:
+    topic = " ".join(str(request).replace("FOLLOW-UP VISUAL REQUEST:", "").split())
+    topic = topic[:68].rstrip(".,!?;:") or "the requested concept"
+    return {
+        "version": 1,
+        "library": "d3",
+        "kind": "diagram",
+        "title": f"Visual guide: {topic[:52]}",
+        "aria_label": (
+            f"A concept-map fallback for {topic}. It separates the given information, the key "
+            "relationship, and the result to interpret without inventing numerical data."
+        )[:300],
+        "height": 360,
+        "nodes": [
+            {
+                "id": "topic",
+                "label": topic[:64],
+                "x": 360,
+                "y": 92,
+                "shape": "rounded",
+                "width": 260,
+                "height": 64,
+                "color": "orange",
+            },
+            {
+                "id": "given",
+                "label": "Given information",
+                "x": 120,
+                "y": 260,
+                "shape": "rounded",
+                "width": 150,
+                "height": 54,
+                "color": "teal",
+            },
+            {
+                "id": "relation",
+                "label": "Key relationship",
+                "x": 360,
+                "y": 260,
+                "shape": "rounded",
+                "width": 150,
+                "height": 54,
+                "color": "purple",
+            },
+            {
+                "id": "meaning",
+                "label": "Result and meaning",
+                "x": 600,
+                "y": 260,
+                "shape": "rounded",
+                "width": 155,
+                "height": 54,
+                "color": "blue",
+            },
+        ],
+        "links": [
+            {"source": "topic", "target": "given", "bond": "single", "arrow": True},
+            {"source": "topic", "target": "relation", "bond": "single", "arrow": True},
+            {"source": "topic", "target": "meaning", "bond": "single", "arrow": True},
+        ],
+        "annotations": [],
+    }
+
+
+def _semantic_visualization(request: str, current_request: str) -> dict[str, Any] | None:
+    if _is_vector_addition(request):
+        return _vector_addition_spec(request, current_request)
+    if _PHASE_SHIFT_TOPIC.search(request):
+        return _phase_shift_spec(request)
+    if _PROJECTILE_TOPIC.search(request):
+        return _projectile_spec(request)
+    if _HEART_TOPIC.search(request):
+        return _heart_spec()
+    if _HYDROCARBON_TOPIC.search(request):
+        return _hydrocarbon_spec(request)
+    if _SATELLITE_TOPIC.search(request):
+        return _satellite_orbit_spec()
+    return None
+
+
 def turn_instruction(text: str, language_instruction: str = "") -> str:
     """Keep the primary tutoring completion prose-only; the constrained pass owns the spec."""
     parts = [language_instruction.strip()] if language_instruction.strip() else []
@@ -667,6 +1162,17 @@ def _generated_spec_is_usable(spec: object, library: str, kind: str, request: st
         return bool(spec.get("series"))
     if library == "d3" and kind == "bar":
         return bool(spec.get("data"))
+    if library == "d3" and kind == "diagram":
+        nodes = spec.get("nodes")
+        ids = {node.get("id") for node in nodes or [] if isinstance(node, dict)}
+        return (
+            len(ids) == len(nodes or [])
+            and len(ids) >= 1
+            and all(
+                isinstance(link, dict) and link.get("source") in ids and link.get("target") in ids
+                for link in spec.get("links") or []
+            )
+        )
     if library == "d3":
         nodes = spec.get("nodes")
         ids = {node.get("id") for node in nodes or [] if isinstance(node, dict)}
@@ -804,11 +1310,13 @@ def generate_visualization(
     if cancel_event is not None and cancel_event.is_set():
         return None
     resolved_request = resolve_visualization_request(engine, request, conversation_id)
+    semantic = _semantic_visualization(resolved_request, request)
+    if semantic is not None:
+        return semantic
+    fallback = _fallback_diagram(resolved_request)
     if _UNSUPPORTED_VISUAL.search(resolved_request):
-        log.info("visual request uses an unsupported primitive; returning prose only")
-        return None
-    if _is_vector_addition(resolved_request):
-        return _vector_addition_spec(resolved_request, request)
+        log.info("visual request uses an unsupported primitive; returning a safe schematic")
+        return fallback
     library = select_library(resolved_request)
     kind = select_kind(resolved_request, library)
     schema = visualization_schema(library, kind, resolved_request)
@@ -847,7 +1355,7 @@ def generate_visualization(
         "min_p": 0.0,
         "repeat_penalty": 1.0,
         "seed": 4242,
-        "max_tokens": 480,
+        "max_tokens": 320,
         "enable_thinking": False,
         "response_format": {"type": "json_schema", "json_schema": schema},
     }
@@ -893,9 +1401,9 @@ def generate_visualization(
             completion_chunks,
         )
         spec = _normalize_generated_spec(json.loads(raw), library, resolved_request)
-    except Exception:  # prose remains a complete degraded response
+    except Exception:
         log.warning("visualization generation failed for %s/%s", library, kind, exc_info=True)
-        return None
+        return None if cancel_event is not None and cancel_event.is_set() else fallback
     finally:
         close = getattr(stream, "close", None)
         if callable(close):
@@ -904,11 +1412,69 @@ def generate_visualization(
         return None
     if not _generated_spec_is_usable(spec, library, kind, resolved_request):
         log.warning("visualization model returned unusable %s/%s data", library, kind)
-        return None
+        return fallback
     return spec
+
+
+def _verified_visual_explanation(spec: dict[str, Any]) -> str:
+    """Return checked teaching copy for the deterministic science constructions."""
+    title = str(spec.get("title", ""))
+    if title.startswith("Heart: double circulation"):
+        return (
+            "Deoxygenated blood returns from the body through the vena cava, right atrium, and "
+            "right ventricle before the pulmonary artery carries it to the lungs. Oxygenated "
+            "blood returns through the pulmonary veins, left atrium, and left ventricle; the "
+            "aorta then carries it to the body."
+        )
+    if "structural formula" in title:
+        return (
+            f"The displayed {title.lower()} satisfies carbon's valency of four and hydrogen's "
+            "valency of one. Each line represents one shared electron-pair bond; parallel lines "
+            "show a double or triple carbon-carbon bond where applicable."
+        )
+    if title.startswith("Satellite in circular orbit"):
+        return (
+            "For a circular orbit, gravity supplies the centripetal force: GMm/r² = mv²/r, so "
+            "v = √(GM/r). The period is T = 2πr/v = 2π√(r³/GM); therefore a larger orbital "
+            "radius gives a lower orbital speed and a longer period."
+        )
+    if title.startswith("Sine-wave phase shift"):
+        return (
+            "The two waves have the same amplitude and period; only their horizontal timing is "
+            "different. The labelled phase angle moves corresponding peaks and zero crossings "
+            "by that fraction of one complete cycle without changing the wave's shape."
+        )
+    if title.startswith("Projectile path"):
+        return (
+            "With air resistance ignored, horizontal velocity stays constant while vertical "
+            "velocity changes under the downward acceleration g = 9.81 m/s². Combining "
+            "x = u cos(θ)t with y = u sin(θ)t − ½gt² produces the smooth parabolic path shown."
+        )
+    if title.startswith("Vector addition"):
+        return (
+            "Place the tail of the second vector at the head of the first without changing its "
+            "length or direction. The resultant runs from the original tail to the final head, "
+            "which is equivalent to adding corresponding vector components."
+        )
+    return ""
+
+
+def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
+    """Use checked copy for standard lessons and remove renderer-contradicting refusals."""
+    verified = _verified_visual_explanation(spec)
+    if verified:
+        return verified
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", str(prose or "")) if part.strip()]
+    kept = [part for part in paragraphs if not _VISUAL_REFUSAL.search(part)]
+    if kept:
+        return "\n\n".join(kept)
+    return (
+        "The visual below shows the requested relationships directly. Follow its labels in "
+        "order, then compare them with the governing quantities in the explanation."
+    )
 
 
 def append_visualization(prose: str, spec: dict[str, Any]) -> str:
     """Serialize in the durable reply protocol consumed by browser and history replay."""
     payload = json.dumps(spec, ensure_ascii=False, separators=(",", ":"))
-    return f"{prose.rstrip()}\n\n```muta-viz\n{payload}\n```"
+    return f"{_visual_prose(prose, spec).rstrip()}\n\n```muta-viz\n{payload}\n```"

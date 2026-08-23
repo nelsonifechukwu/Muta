@@ -60,6 +60,17 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 #viz-stage svg .grid path { display: none; }
 #viz-stage svg .domain { stroke: var(--viz-border); }
 
+#viz-stage svg .diagram-node-label {
+  font-size: 13px; font-weight: 700; paint-order: stroke;
+  stroke: var(--viz-bg); stroke-width: 3px; stroke-linejoin: round;
+}
+#viz-stage svg .diagram-link-label,
+#viz-stage svg .diagram-annotation {
+  fill: var(--viz-muted); font-size: 11px; paint-order: stroke;
+  stroke: var(--viz-bg); stroke-width: 4px; stroke-linejoin: round;
+}
+#viz-stage svg .diagram-annotation { font-size: 12px; font-weight: 600; }
+
 .viz-legend {
   position: absolute; inset: 8px 10px auto auto; z-index: 3;
   display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 10px;
@@ -83,6 +94,16 @@ body { background: var(--viz-bg); color: var(--viz-text); }
   padding: 3px 6px; border-radius: 6px; background: color-mix(in srgb, var(--viz-bg) 86%, transparent);
   color: var(--viz-muted); font-size: 10px;
 }
+
+.viz-3d-notes {
+  position: absolute; inset: auto auto 10px 10px; z-index: 3; pointer-events: none;
+  display: grid; gap: 2px; max-width: calc(100% - 130px); padding: 6px 8px;
+  border: 1px solid var(--viz-border); border-radius: 7px;
+  background: color-mix(in srgb, var(--viz-bg) 90%, transparent);
+  color: var(--viz-text); font-size: 11px; line-height: 1.35;
+}
+
+.viz-3d-notes span { display: block; }
 
 #viz-replay {
   position: absolute; inset: auto 9px 8px auto; z-index: 6;

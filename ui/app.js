@@ -862,36 +862,6 @@ function renderCompletedReply(wrap, prose, text) {
   window.MutaViz?.renderAll(wrap, extracted.visualizations);
 }
 
-function clearCursor(root) {
-  root.classList.remove("cursor");
-  for (const el of root.querySelectorAll(".cursor")) el.classList.remove("cursor");
-}
-
-/** Park the blinking cursor on whatever element ends the text.
- *
- * Once a partial reply renders as markdown its tail is a block element, so a cursor on
- * the container would blink on its own line below the paragraph. Descend to the last
- * element that closes the content — skipping the whitespace text nodes marked emits
- * between blocks, and stopping at a trailing text node, whose text comes *after* the
- * last element (`<p>a <em>b</em> c</p>` must keep the cursor on the p, not the em). */
-function placeCursor(root) {
-  clearCursor(root);
-  let el = root;
-  for (;;) {
-    let last = el.lastChild;
-    while (last && last.nodeType === Node.TEXT_NODE && !last.data.trim()) {
-      last = last.previousSibling;
-    }
-    if (!last || last.nodeType !== Node.ELEMENT_NODE) break;
-    if (last.matches(".katex, .katex-display")) {
-      el = last;
-      break;
-    }
-    el = last;
-  }
-  el.classList.add("cursor");
-}
-
 // ---------------------------------------------------------------------------
 // Message rendering
 // ---------------------------------------------------------------------------
@@ -1115,14 +1085,32 @@ function beginAssistantMessage(onAnswerNow) {
   preamble.append(preambleLabel, preambleText);
 
   const prose = document.createElement("div");
-  prose.className = "prose cursor";
+  prose.className = "prose";
   prose.dir = "auto";
+
+  // One stable status line replaces the ambiguous blinking caret for every generation phase.
+  // The label is deliberately explicit during the second model pass, which can take longer than
+  // the prose on a CPU-only machine. Three opacity/transform dots convey activity without moving
+  // surrounding content; reduced-motion CSS leaves them static.
+  const activity = document.createElement("div");
+  activity.className = "generation-status";
+  activity.setAttribute("role", "status");
+  activity.setAttribute("aria-live", "polite");
+  activity.setAttribute("aria-atomic", "true");
+  const activityDots = document.createElement("span");
+  activityDots.className = "generation-dots";
+  activityDots.setAttribute("aria-hidden", "true");
+  activityDots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+  const activityLabel = document.createElement("span");
+  activityLabel.className = "generation-label";
+  activity.append(activityDots, activityLabel);
 
   const recovering = document.createElement("div");
   recovering.className = "reply-recovering";
   recovering.hidden = true;
 
-  wrap.append(thinking, preamble, prose, recovering);
+  wrap.setAttribute("aria-busy", "true");
+  wrap.append(thinking, preamble, prose, activity, recovering);
   messagesEl.appendChild(wrap);
   scrollToBottom();
 
@@ -1131,6 +1119,25 @@ function beginAssistantMessage(onAnswerNow) {
   let thinkStartedAt = 0; // 0 = this reply produced no thinking
   let thinkSettled = false;
   let queuedNotice = false;
+  let activityPhase = "";
+
+  const setActivity = (phase) => {
+    activityPhase = phase;
+    activity.hidden = false;
+    activity.dataset.phase = phase;
+    activityLabel.textContent = {
+      preparing: "Preparing response…",
+      thinking: `${t("thinking.label")}…`,
+      writing: "Writing response…",
+      visualization: "Generating diagram…",
+    }[phase] || "Working…";
+  };
+  const hideActivity = () => { activity.hidden = true; };
+  const finishActivity = () => {
+    activity.remove();
+    wrap.setAttribute("aria-busy", "false");
+  };
+  setActivity("preparing");
 
   // Markdown and math render AS the reply streams. Parsing is O(reply) and tokens land
   // every ~30 ms, so rendering per token would be quadratic and spend the frame budget
@@ -1152,7 +1159,6 @@ function beginAssistantMessage(onAnswerNow) {
     if (streamDone || full.length === renderedLen) return;
     renderedLen = full.length;
     renderMarkdown(prose, full);
-    placeCursor(prose); // after markdown the tail is a block; keep the caret in the text
     scrollToBottom();
   };
 
@@ -1203,7 +1209,6 @@ function beginAssistantMessage(onAnswerNow) {
     delete prose.dataset.i18n;
     prose.removeAttribute("data-i18n-vars");
     prose.textContent = "";
-    prose.classList.add("cursor");
   };
 
   const clearRecovering = () => {
@@ -1216,7 +1221,7 @@ function beginAssistantMessage(onAnswerNow) {
     showQueued(position = 1) {
       queuedNotice = true;
       wrap.classList.add("reply-queued");
-      prose.classList.remove("cursor");
+      hideActivity();
       const key = position > 1 ? "queue.position" : "queue.waiting";
       const variables = position > 1 ? { position } : {};
       prose.dataset.i18n = key;
@@ -1226,6 +1231,7 @@ function beginAssistantMessage(onAnswerNow) {
     },
     startQueued() {
       if (!queuedNotice) return;
+      setActivity("preparing");
       prose.dataset.i18n = "queue.slotFree";
       prose.removeAttribute("data-i18n-vars");
       prose.textContent = t("queue.slotFree");
@@ -1233,6 +1239,7 @@ function beginAssistantMessage(onAnswerNow) {
     },
     showRecovering() {
       clearQueuedNotice();
+      hideActivity();
       recovering.dataset.i18n = "queue.recovering";
       recovering.textContent = t("queue.recovering");
       recovering.hidden = false;
@@ -1241,6 +1248,7 @@ function beginAssistantMessage(onAnswerNow) {
     pushPreamble(chunk) {
       clearQueuedNotice();
       clearRecovering();
+      setActivity("preparing");
       if (preamble.hidden) {
         preamble.hidden = false;
         announce(t("thinking.warmingAnnouncement"));
@@ -1252,6 +1260,7 @@ function beginAssistantMessage(onAnswerNow) {
       clearQueuedNotice();
       clearRecovering();
       clearPreamble();
+      setActivity("thinking");
       if (!thinkStartedAt) {
         thinkStartedAt = performance.now();
         thinking.hidden = false;
@@ -1273,6 +1282,7 @@ function beginAssistantMessage(onAnswerNow) {
       clearRecovering();
       clearPreamble();
       settleThinking();
+      if (activityPhase !== "visualization") setActivity("writing");
       full += t;
       scheduleRender();
     },
@@ -1281,13 +1291,27 @@ function beginAssistantMessage(onAnswerNow) {
       clearRecovering();
       clearPreamble();
       settleThinking();
+      if (renderTimer) clearTimeout(renderTimer);
+      renderTimer = 0;
       full = String(t || "");
       renderedLen = full.length;
       if (streamDone) renderCompletedReply(wrap, prose, full);
-      else {
-        renderMarkdown(prose, full);
-        placeCursor(prose);
-      }
+      else renderMarkdown(prose, full);
+      scrollToBottom();
+    },
+    replaceContent(text) {
+      if (renderTimer) clearTimeout(renderTimer);
+      renderTimer = 0;
+      full = text;
+      renderedLen = -1;
+      prose.replaceChildren();
+    },
+    showPhase(phase) {
+      clearQueuedNotice();
+      clearRecovering();
+      clearPreamble();
+      settleThinking();
+      setActivity(phase === "visualization" ? "visualization" : "preparing");
       scrollToBottom();
     },
     finalize() {
@@ -1297,7 +1321,7 @@ function beginAssistantMessage(onAnswerNow) {
       settleThinking(); // a reply stopped mid-think still gets its label settled
       cancelRender();
       if (full.trim()) renderCompletedReply(wrap, prose, full);
-      clearCursor(prose);
+      finishActivity();
       scrollToBottom();
     },
     remove() {
@@ -1312,6 +1336,7 @@ function beginAssistantMessage(onAnswerNow) {
       clearRecovering();
       settleThinking();
       cancelRender();
+      finishActivity();
       if (!full) {
         if (translationKey) {
           prose.dataset.i18n = translationKey;
@@ -1332,7 +1357,6 @@ function beginAssistantMessage(onAnswerNow) {
         warn.textContent = message || t("reply.connectionLost");
         prose.appendChild(warn);
       }
-      clearCursor(prose);
     },
   };
 }
@@ -2717,6 +2741,8 @@ async function pumpSse(res, job) {
         } else if (ev.recovering) {
           job.recovering = true;
           job.handle?.showRecovering();
+        } else if (ev.phase) {
+          job.handle?.showPhase(ev.phase);
         } else if (ev.source && !ev.done) {
           if (ev.source === "cloud") job.source = "cloud";
           decorateCompletedReply(job, { source: job.source || ev.source });
@@ -2728,14 +2754,14 @@ async function pumpSse(res, job) {
           job.recovering = null;
           job.reasoning += ev.reasoning;
           job.handle?.pushThought(ev.reasoning);
+        } else if (Object.prototype.hasOwnProperty.call(ev, "replace")) {
+          job.recovering = null;
+          job.content = String(ev.replace || "");
+          job.handle?.replaceContent(job.content);
         } else if (ev.delta) {
           job.recovering = null;
           job.content += ev.delta;
           job.handle?.pushDelta(ev.delta);
-        } else if (Object.prototype.hasOwnProperty.call(ev, "replace")) {
-          job.recovering = null;
-          job.content = String(ev.replace || "");
-          job.handle?.replace(job.content);
         } else if (ev.error) {
           job.failed = true;
           job.error = true;
