@@ -435,6 +435,10 @@
     const records = new Map();
     spec.elements.forEach((element, index) => {
       const record = buildAnimationElement(element, index);
+      // Elements without a track are still part of the explanation (labels, axes, or a fixed
+      // first vector). Put every element at its declared base position before animated tracks
+      // selectively override their targets; otherwise static content piles up at SVG (0, 0).
+      applyState(record.group, record.base);
       records.set(element.id, record);
       svg.appendChild(record.group);
     });

@@ -501,7 +501,11 @@ def chat(
         raise _handle_engine_error(e, where="/chat") from e
     if visual_requested:
         spec = generate_visualization(
-            engine, req.message, result.reply, on_generation=bench_metrics.record
+            engine,
+            req.message,
+            result.reply,
+            conversation_id=result.conversation_id,
+            on_generation=bench_metrics.record,
         )
         if spec is not None:
             result.reply = append_visualization(result.reply, spec)
@@ -694,6 +698,7 @@ def _start_chat_generation(
                     engine,
                     req.message,
                     prose_reply,
+                    conversation_id=cid,
                     cancel_event=cancel_event,
                     on_generation=bench_metrics.record,
                 )
@@ -1292,7 +1297,11 @@ def tutor_chat(
         )
         if visual_requested:
             spec = generate_visualization(
-                engine, turn.text, result.reply, on_generation=bench_metrics.record
+                engine,
+                turn.text,
+                result.reply,
+                conversation_id=result.conversation_id,
+                on_generation=bench_metrics.record,
             )
             if spec is not None:
                 result.reply = append_visualization(result.reply, spec)
@@ -1411,7 +1420,11 @@ def tutor_chat_stream(
             if visual_requested and reply_parts:
                 prose_reply = "".join(reply_parts)
                 spec = generate_visualization(
-                    engine, turn.text, prose_reply, on_generation=bench_metrics.record
+                    engine,
+                    turn.text,
+                    prose_reply,
+                    conversation_id=turn.session_id,
+                    on_generation=bench_metrics.record,
                 )
                 if spec is not None:
                     complete_reply = append_visualization(prose_reply, spec)

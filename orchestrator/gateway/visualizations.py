@@ -44,11 +44,24 @@ _SPATIAL_TOPIC = re.compile(
     r"coordinate plane|transformation|wave|network|relationship|change over time)\b",
     re.IGNORECASE,
 )
+_VECTOR_TOPIC = re.compile(r"\bvectors?\b", re.IGNORECASE)
+_VECTOR_ADDITION_TERM = re.compile(
+    r"\b(?:addition|add(?:ing)?|sum|resultant|head[- ]to[- ]tail)\b", re.IGNORECASE
+)
+_ANAPHORIC_VISUAL = re.compile(r"\b(?:it|this|that|same|again)\b", re.IGNORECASE)
+_ANIMATION_REQUEST = re.compile(
+    r"\b(?:animate|animation|gsap|anime(?:\.js)?|motion(?:\.js)?)\b", re.IGNORECASE
+)
+_NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+_VECTOR_TUPLE = re.compile(rf"[\[(]\s*({_NUMBER})\s*,\s*({_NUMBER})(?:\s*,\s*({_NUMBER}))?\s*[\])]")
 
 _PROSE_TURN_INSTRUCTION = (
-    "The learner requested an explanatory visual. Write at least two complete, mathematically "
-    "consistent prose sentences that work without it. A separate trusted renderer pass will add "
-    "the visual, so do not output JSON, code, a muta-viz fence, or library instructions."
+    "The learner explicitly requested an explanatory visual. Explain the requested subject "
+    "accurately in at least two complete, mathematically consistent prose sentences. Never "
+    "refuse the visual, claim that you are text-only, or say that you cannot draw, show, or "
+    "display it: the application will add the live visual after your prose. A separate trusted "
+    "renderer pass owns the visual, so do not output JSON, code, a muta-viz fence, or library "
+    "instructions."
 )
 
 
@@ -73,9 +86,44 @@ def select_library(text: str) -> str:
         return "anime"
     if "motion.js" in value or re.search(r"\buse motion\b", value):
         return "motion"
+    if _VECTOR_TOPIC.search(value):
+        return "three"
     if re.search(r"\b(?:animate|animation)\b", value):
         return "anime"
     return "d3"
+
+
+def _is_vector_addition(text: str) -> bool:
+    return bool(_VECTOR_TOPIC.search(text) and _VECTOR_ADDITION_TERM.search(text))
+
+
+def resolve_visualization_request(
+    engine: ChatEngine,
+    request: str,
+    conversation_id: str | None = None,
+) -> str:
+    """Attach the preceding learner topic to a short visual follow-up.
+
+    The current user and assistant rows have already been persisted when the visual pass runs.
+    Looking only at the current text turns “animate it” into a generic moving circle; the most
+    recent preceding user row supplies the subject without exposing unrelated older history.
+    """
+    value = str(request or "").strip()
+    if not conversation_id or not _ANAPHORIC_VISUAL.search(value):
+        return value
+    try:
+        rows = engine.store.get_messages(conversation_id, limit=8)
+    except Exception:
+        log.warning("could not resolve visualization follow-up context", exc_info=True)
+        return value
+    user_turns = [
+        str(row.get("content") or "").strip()
+        for row in rows
+        if row.get("role") == "user" and str(row.get("content") or "").strip()
+    ]
+    if len(user_turns) < 2:
+        return value
+    return f"{user_turns[-2]}\n\nFOLLOW-UP VISUAL REQUEST: {value}"
 
 
 def select_kind(text: str, library: str | None = None) -> str:
@@ -158,6 +206,212 @@ def _animation_repeat(text: str) -> int:
     if re.search(r"\b(?:repeat|loop|again)\b", value, re.IGNORECASE):
         return 1
     return 0
+
+
+def _clean_number(value: float) -> int | float:
+    return int(value) if float(value).is_integer() else round(value, 4)
+
+
+def _format_vector(values: tuple[float, float, float], dimensions: int) -> str:
+    shown = values[:dimensions]
+    return "(" + ", ".join(str(_clean_number(value)) for value in shown) + ")"
+
+
+def _vector_addition_operands(
+    request: str,
+) -> tuple[tuple[float, float, float], tuple[float, float, float], int]:
+    matches = list(_VECTOR_TUPLE.finditer(request))
+    parsed: list[tuple[float, float, float]] = []
+    dimensions = 2
+    for match in matches[:2]:
+        z_value = match.group(3)
+        dimensions = max(dimensions, 3 if z_value is not None else 2)
+        vector = (float(match.group(1)), float(match.group(2)), float(z_value or 0))
+        if all(-500 <= value <= 500 for value in vector):
+            parsed.append(vector)
+    if len(parsed) != 2:
+        return (2.0, 1.0, 0.0), (1.0, 2.0, 0.0), 2
+    summed = tuple(parsed[0][index] + parsed[1][index] for index in range(3))
+    if any(abs(value) > 1000 for value in summed):
+        return (2.0, 1.0, 0.0), (1.0, 2.0, 0.0), 2
+    return parsed[0], parsed[1], dimensions
+
+
+def _three_vector_object(
+    label: str,
+    start: tuple[float, float, float],
+    end: tuple[float, float, float],
+) -> dict[str, Any]:
+    if start == end:
+        return {
+            "type": "point",
+            "label": label,
+            "position": [_clean_number(value) for value in start],
+            "size": 0.16,
+        }
+    return {
+        "type": "vector",
+        "label": label,
+        "from": [_clean_number(value) for value in start],
+        "to": [_clean_number(value) for value in end],
+    }
+
+
+def _vector_addition_three_spec(request: str) -> dict[str, Any]:
+    first, second, dimensions = _vector_addition_operands(request)
+    origin = (0.0, 0.0, 0.0)
+    total = tuple(first[index] + second[index] for index in range(3))
+    first_label = f"A = {_format_vector(first, dimensions)}"
+    second_label = f"B = {_format_vector(second, dimensions)}"
+    total_label = f"A + B = {_format_vector(total, dimensions)}"
+    return {
+        "version": 1,
+        "library": "three",
+        "kind": "scene3d",
+        "title": "Vector addition: head to tail",
+        "aria_label": (
+            f"Interactive head-to-tail vector addition. {first_label} starts at the origin; "
+            f"{second_label} starts at A's head; {total_label} runs from the origin to the "
+            "final head. Drag or use arrow keys to rotate."
+        ),
+        "height": 380,
+        "objects": [
+            _three_vector_object(first_label, origin, first),
+            _three_vector_object(second_label, first, total),
+            _three_vector_object(total_label, origin, total),
+        ],
+    }
+
+
+def _vector_addition_animation_spec(
+    request: str,
+    library: str,
+) -> dict[str, Any]:
+    first, second, dimensions = _vector_addition_operands(request)
+    total = tuple(first[index] + second[index] for index in range(3))
+    # The SVG adapters are two-dimensional. Preserve genuine 3D requests with the rotatable
+    # Three.js scene instead of projecting away information the learner supplied.
+    if dimensions == 3 and any(value != 0 for value in (first[2], second[2])):
+        return _vector_addition_three_spec(request)
+
+    math_points = [(0.0, 0.0), first[:2], total[:2]]
+    min_x = min(point[0] for point in math_points)
+    max_x = max(point[0] for point in math_points)
+    min_y = min(point[1] for point in math_points)
+    max_y = max(point[1] for point in math_points)
+    span_x = max(1.0, max_x - min_x)
+    span_y = max(1.0, max_y - min_y)
+    scale = min(420 / span_x, 210 / span_y, 90)
+    center_x = (min_x + max_x) / 2
+    center_y = (min_y + max_y) / 2
+
+    def screen(point: tuple[float, float]) -> tuple[float, float]:
+        return (
+            round(360 + (point[0] - center_x) * scale, 3),
+            round(165 - (point[1] - center_y) * scale, 3),
+        )
+
+    origin_xy = screen((0.0, 0.0))
+    first_xy = screen(first[:2])
+    total_xy = screen(total[:2])
+    first_label = f"A = {_format_vector(first, dimensions)}"
+    second_label = f"B = {_format_vector(second, dimensions)}"
+    total_label = f"A + B = {_format_vector(total, dimensions)}"
+
+    def arrow(
+        element_id: str,
+        base: tuple[float, float],
+        delta: tuple[float, float],
+    ) -> dict[str, Any]:
+        if delta == (0.0, 0.0):
+            return {
+                "id": element_id,
+                "type": "circle",
+                "x": base[0],
+                "y": base[1],
+                "r": 7,
+            }
+        return {
+            "id": element_id,
+            "type": "arrow",
+            "x": base[0],
+            "y": base[1],
+            "x1": 0,
+            "y1": 0,
+            "x2": round(delta[0], 3),
+            "y2": round(delta[1], 3),
+            "stroke_width": 5,
+        }
+
+    first_delta = (first_xy[0] - origin_xy[0], first_xy[1] - origin_xy[1])
+    second_delta = (total_xy[0] - first_xy[0], total_xy[1] - first_xy[1])
+    total_delta = (total_xy[0] - origin_xy[0], total_xy[1] - origin_xy[1])
+    midpoint = lambda left, right: round((left + right) / 2, 3)
+    repeat = _animation_repeat(request)
+    return {
+        "version": 1,
+        "library": library,
+        "kind": "animation",
+        "title": "Vector addition: move B head to tail",
+        "aria_label": (
+            f"Replayable head-to-tail animation. {first_label}; {second_label} moves so its "
+            f"tail meets A's head; then the resultant {total_label} appears."
+        ),
+        "height": 380,
+        "elements": [
+            arrow("vector_a", origin_xy, first_delta),
+            arrow("vector_b", origin_xy, second_delta),
+            arrow("resultant", origin_xy, total_delta),
+            {
+                "id": "label_a",
+                "type": "text",
+                "x": midpoint(origin_xy[0], first_xy[0]),
+                "y": midpoint(origin_xy[1], first_xy[1]) - 18,
+                "text": first_label,
+            },
+            {
+                "id": "label_b",
+                "type": "text",
+                "x": midpoint(first_xy[0], total_xy[0]),
+                "y": midpoint(first_xy[1], total_xy[1]) - 18,
+                "text": second_label,
+            },
+            {
+                "id": "label_sum",
+                "type": "text",
+                "x": midpoint(origin_xy[0], total_xy[0]),
+                "y": midpoint(origin_xy[1], total_xy[1]) + 28,
+                "text": total_label,
+            },
+        ],
+        "tracks": [
+            {
+                "target": "vector_b",
+                "from": {"x": origin_xy[0], "y": origin_xy[1], "opacity": 0.35},
+                "to": {"x": first_xy[0], "y": first_xy[1], "opacity": 1},
+                "duration": 1.6,
+                "repeat": repeat,
+                "direction": "normal",
+            },
+            {
+                "target": "resultant",
+                "from": {"opacity": 0},
+                "to": {"opacity": 1},
+                "duration": 0.9,
+                "delay": 1.6,
+                "repeat": repeat,
+                "direction": "normal",
+            },
+        ],
+    }
+
+
+def _vector_addition_spec(request: str, current_request: str) -> dict[str, Any]:
+    if _ANIMATION_REQUEST.search(current_request):
+        library = select_library(current_request)
+        if library in {"gsap", "anime", "motion"}:
+            return _vector_addition_animation_spec(request, library)
+    return _vector_addition_three_spec(request)
 
 
 def turn_instruction(text: str, language_instruction: str = "") -> str:
@@ -304,7 +558,9 @@ def visualization_schema(library: str, kind: str, request: str = "") -> dict[str
         properties["objects"] = {
             "type": "array",
             "minItems": 1,
-            "maxItems": 40,
+            # The frame can replay richer hand-authored scenes, but a tiny model tends to fill
+            # permissive arrays to their maximum. Eight objects fit the constrained decode budget.
+            "maxItems": 8,
             "items": {
                 "type": "object",
                 "properties": object_properties,
@@ -535,6 +791,7 @@ def generate_visualization(
     request: str,
     prose: str,
     *,
+    conversation_id: str | None = None,
     cancel_event: Any | None = None,
     on_generation: Callable[[Generation], None] | None = None,
 ) -> dict[str, Any] | None:
@@ -545,20 +802,23 @@ def generate_visualization(
     """
     if cancel_event is not None and cancel_event.is_set():
         return None
-    if _UNSUPPORTED_VISUAL.search(request):
+    resolved_request = resolve_visualization_request(engine, request, conversation_id)
+    if _UNSUPPORTED_VISUAL.search(resolved_request):
         log.info("visual request uses an unsupported primitive; returning prose only")
         return None
-    library = select_library(request)
-    kind = select_kind(request, library)
-    schema = visualization_schema(library, kind, request)
+    if _is_vector_addition(resolved_request):
+        return _vector_addition_spec(resolved_request, request)
+    library = select_library(resolved_request)
+    kind = select_kind(resolved_request, library)
+    schema = visualization_schema(library, kind, resolved_request)
     adapter_detail = ""
     if library == "three":
-        adapter_detail = f" Required object type: {_three_object_type(request)}."
+        adapter_detail = f" Required object type: {_three_object_type(resolved_request)}."
     elif library not in {"d3", "three"}:
         adapter_detail = (
-            f" Required element type: {_animation_element_type(request)}; animate only the "
-            f"{_animation_field(request)} field. Put the real start/end values in from/to, and "
-            "use duration only for seconds."
+            f" Required element type: {_animation_element_type(resolved_request)}; animate only "
+            f"the {_animation_field(resolved_request)} field. Put the real start/end values in "
+            "from/to, and use duration only for seconds."
         )
     messages = [
         {
@@ -575,7 +835,7 @@ def generate_visualization(
             "role": "user",
             "content": (
                 f"Selected renderer: {library}/{kind}.{adapter_detail}\n"
-                f"LEARNER REQUEST:\n{request}\n\nFINISHED EXPLANATION:\n{prose}"
+                f"LEARNER REQUEST:\n{resolved_request}\n\nFINISHED EXPLANATION:\n{prose}"
             ),
         },
     ]
@@ -631,7 +891,7 @@ def generate_visualization(
             elapsed,
             completion_chunks,
         )
-        spec = _normalize_generated_spec(json.loads(raw), library, request)
+        spec = _normalize_generated_spec(json.loads(raw), library, resolved_request)
     except Exception:  # prose remains a complete degraded response
         log.warning("visualization generation failed for %s/%s", library, kind, exc_info=True)
         return None
@@ -641,7 +901,7 @@ def generate_visualization(
             close()
     if cancel_event is not None and cancel_event.is_set():
         return None
-    if not _generated_spec_is_usable(spec, library, kind, request):
+    if not _generated_spec_is_usable(spec, library, kind, resolved_request):
         log.warning("visualization model returned unusable %s/%s data", library, kind)
         return None
     return spec
