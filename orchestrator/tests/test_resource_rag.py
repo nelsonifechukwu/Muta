@@ -24,6 +24,23 @@ def test_chunks_never_cross_physical_pages():
     assert any("kinetic energy" in chunk["text"] for chunk in chunks if chunk["page"] == 2)
 
 
+def test_resource_prompt_requires_claim_level_citation_markers():
+    context = ResourceService.render_context(
+        [
+            {
+                "title": "Physics.pdf",
+                "page": 2,
+                "text": "Kinetic energy is the energy of motion.",
+            }
+        ],
+        [{"name": "Physics.pdf"}],
+    )
+    assert "immediately after every factual sentence or bullet" in context
+    assert "Never collect citations in a detached list" in context
+    assert "every grounded factual claim has its adjacent citation marker" in context
+    assert "[R1] Physics.pdf, PDF page 2" in context
+
+
 def test_resource_names_remain_visible_and_safe_for_inline_mentions():
     assert safe_resource_name("{}") == "resource.pdf"
     assert safe_resource_name("\u202e\u2067") == "resource.pdf"

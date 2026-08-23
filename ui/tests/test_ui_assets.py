@@ -267,6 +267,15 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     # parser only promotes a reference that maps to a server-owned record.
     assert 'const REFERENCE = /\\[R([1-9]\\d*)\\]/gi' in citations
     assert 'if (number <= limit)' in citations
+    assert "function planClaimCitations(" in citations
+    assert "addFallbackMarkers(root, records, explicitAssignments, options, markers)" in citations
+    assert "evidence.exact && evidence.tokenCount >= 3" in citations
+    assert "evidence.sameModifiers && evidence.sameNumbers && evidence.samePolarity" in citations
+    assert "function normalizeEvidence(" in citations
+    assert "function explicitClaimCitations(" in citations
+    assert "function fallbackSentenceRanges(" in citations
+    assert "const tail = claim.node.splitText(claim.offset)" in citations
+    assert "marker(records[number - 1], number, options)" in citations
     assert 'node.parentElement?.closest(EXCLUDED)' in citations
     assert '"a", "button", "code", "pre", "kbd", "samp", "textarea"' in citations
     assert '".katex", ".katex-display", ".math-source", ".resource-sources"' in citations
