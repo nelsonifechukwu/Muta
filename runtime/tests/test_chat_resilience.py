@@ -850,6 +850,42 @@ def test_cancel_during_recovery_backoff_prevents_another_inference_call(store):
     assert client.calls == 1
 
 
+def test_reasoning_only_stream_retries_as_direct_answer_and_persists_it(store):
+    class ReasoningOnlyThenAnswer:
+        def __init__(self) -> None:
+            self.params: list[dict] = []
+
+        def stream_events(self, messages, **params):
+            self.params.append(params)
+            if len(self.params) == 1:
+                yield "reasoning", "I should define the term."
+                return
+            yield "content", "A projectile is an object moving under gravity after launch."
+
+    client = ReasoningOnlyThenAnswer()
+    engine = ChatEngine(
+        client,
+        store,
+        stream_retry_attempts=1,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat(
+        "s1",
+        "What is a projectile?",
+        enable_thinking=True,
+    )
+
+    received = list(events)
+
+    assert [kind for kind, _text in received] == ["reasoning", "recovering", "content"]
+    assert client.params[1]["enable_thinking"] is False
+    persisted = store.get_messages(cid)[-1]
+    assert persisted["role"] == "assistant"
+    assert persisted["content"] == (
+        "A projectile is an object moving under gravity after launch."
+    )
+
+
 def test_context_error_is_permanent_and_not_retried(store):
     class ContextFailure:
         def __init__(self) -> None:

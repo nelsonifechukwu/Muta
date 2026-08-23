@@ -197,9 +197,10 @@
       setStatus("voice.listening");
     };
     ws.onmessage = onWsMessage;
-    ws.onerror = () => stopVoice(t("voice.connectionFailed"));
+    ws.onerror = () =>
+      stopVoice(t("voice.connectionFailed"), "voice.connectionFailed");
     ws.onclose = () => {
-      if (active) stopVoice();
+      if (active) stopVoice(t("voice.connectionFailed"), "voice.connectionFailed");
     };
   }
 
@@ -221,7 +222,7 @@
           // half-built bubble, free the mic, keep listening. Tearing the whole voice mode
           // down here made every transient error cost the student a click and their flow.
           if (assistant) {
-            assistant.finalize();
+            assistant.fail(t("voice.answerFailed"), "voice.answerFailed");
             assistant = null;
           }
           replying = false;
@@ -233,7 +234,7 @@
           chat.toast(t("voice.answerFailed"));
           break;
         }
-        stopVoice(t("voice.unavailable"));
+        stopVoice(t("voice.unavailable"), "voice.unavailable");
         break;
       case "transcript":
         suppressTts = false; // a new turn: play its speech
@@ -245,6 +246,15 @@
         replying = true;
         micMuted = true;
         setStatus("voice.thinking");
+        break;
+      case "queued":
+        if (assistant) assistant.showQueued(msg.queue_position || 1);
+        break;
+      case "started":
+        if (assistant) assistant.startQueued();
+        break;
+      case "recovering":
+        if (assistant) assistant.showRecovering();
         break;
       case "reasoning":
         if (assistant) assistant.pushThought(msg.text);
@@ -276,7 +286,7 @@
     }
   }
 
-  function stopVoice(toastText) {
+  function stopVoice(toastText, failureKey = null) {
     active = false;
     chat.setVoiceActive(false);
     replying = false;
@@ -293,7 +303,8 @@
       ws = null;
     }
     if (assistant) {
-      assistant.finalize();
+      if (failureKey) assistant.fail(toastText || t(failureKey), failureKey);
+      else assistant.finalize();
       assistant = null;
     }
     chat.setGenerating(false);

@@ -789,7 +789,6 @@ class ChatEngine:
         request_params = params
         retry_params = dict(params)
         structured = "response_format" in params
-        awaiting_completion_progress = False
         stream = self.client.stream_events
         while True:
             if cancel_event is not None and cancel_event.is_set():
@@ -834,14 +833,15 @@ class ChatEngine:
                     if tail:
                         attempt_content_progress = True
                         yield "content", tail
-                if (structured or awaiting_completion_progress) and not attempt_content_progress:
-                    # A clean stop frame with no new answer text is not proof that a previously
-                    # truncated response was completed. Keep trying within the same bound, then
-                    # fail visibly instead of relabeling the old partial as success.
+                if not attempt_content_progress:
+                    # Reasoning-only is not an answer. Some small thinking models can exhaust a
+                    # turn (or emit a clean stop) before producing any content; treating that as
+                    # success persists only the user's transcript and leaves an empty bubble.
+                    # Route it through the bounded direct-answer recovery used for length stops.
                     raise InferenceStreamError(
-                        "continuation ended without producing answer content",
+                        "generation ended without producing answer content",
                         retryable=True,
-                        finish_reason="length" if awaiting_completion_progress else None,
+                        finish_reason="length",
                     )
                 if structured:
                     yield from (("content", text) for text in buffered_content)
@@ -864,7 +864,6 @@ class ChatEngine:
                     # content. Retrying the identical thinking request repeats invisibly; a
                     # continuation/restart needs the direct answer now.
                     retry_params["enable_thinking"] = False
-                    awaiting_completion_progress = True
                     yield "recovering", "The tutor is finishing the answer automatically…"
                     delay = 0.0
                 else:

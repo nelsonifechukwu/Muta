@@ -802,9 +802,8 @@ def test_abandoned_stream_leaves_what_had_streamed_without_being_closed(store):
     assert msgs and msgs[0]["content"] == "one two "
 
 
-def test_thinking_only_turn_still_stores_nothing(store):
-    """Reasoning stays ephemeral: a turn abandoned before the answer began must not leave a
-    half-written assistant row behind."""
+def test_thinking_only_turn_fails_without_storing_an_assistant(store):
+    """Reasoning stays ephemeral, but a clean reasoning-only stop is not a successful answer."""
 
     class ThinkingOnly(StreamingFakeClient):
         def stream_events(self, messages, **params):
@@ -813,7 +812,8 @@ def test_thinking_only_turn_still_stores_nothing(store):
 
     engine = ChatEngine(ThinkingOnly([]), store, persist_interval_s=0.0)
     cid, _mid, gen = engine.stream_events_chat("s1", "hi")
-    list(gen)
+    with pytest.raises(InferenceStreamError, match="without producing answer content"):
+        list(gen)
     assert [m["role"] for m in store.get_messages(cid)] == ["user"]
 
 

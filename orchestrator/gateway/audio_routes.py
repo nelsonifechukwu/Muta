@@ -567,7 +567,10 @@ async def audio_voice(ws: WebSocket) -> None:
                             await ws.close(code=4401)
                         job.request_stop()
                         break
-                if kind in {"source", "recovering"}:
+                if kind == "source":
+                    continue
+                if kind == "recovering":
+                    await ws.send_json({"type": "recovering"})
                     continue
                 hub.tick(cid)
                 if kind == "reasoning":

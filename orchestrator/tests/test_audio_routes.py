@@ -63,6 +63,14 @@ class _RecordingVoiceEngine:
         return "voice-conversation", 1, iter([("content", "Natürlich.")])
 
 
+class _RecoveringVoiceEngine(_RecordingVoiceEngine):
+    def stream_events_chat(self, **kwargs):
+        self.calls.append(kwargs)
+        return "voice-conversation", 1, iter(
+            [("recovering", "retrying"), ("content", "A projectile moves under gravity.")]
+        )
+
+
 def test_an_unavailable_audio_stack_is_retried_not_latched(monkeypatch):
     """Models can arrive after boot (late volume mount, post-boot fetch). The first probe
     finding nothing must not condemn audio to 503 for the life of the process."""
@@ -169,3 +177,35 @@ def test_voice_language_frame_updates_the_next_generation(monkeypatch):
     assert engine.calls[0]["language"] == "auto"
     assert "response language preference is AUTO" in engine.calls[0]["system_prompt"]
     assert engine.calls[0]["turn_instruction"] == ""
+
+
+def test_voice_ws_relays_automatic_answer_recovery(monkeypatch):
+    stack = AudioStack(config=AudioConfig.load(), asr=_StubAsr(), tts=NullTts())
+    engine = _RecoveringVoiceEngine()
+    monkeypatch.setattr(audio_routes, "get_audio", lambda: stack)
+    monkeypatch.setattr(audio_routes, "SileroVad", _NoVad)
+    monkeypatch.setattr(audio_routes, "get_engine", lambda: engine)
+
+    with client.websocket_connect("/v1/audio/voice") as ws:
+        ws.send_json(
+            {
+                "type": "start",
+                "student_id": "voice-recovery-user",
+                "conversation_id": None,
+                "mode": "socratic",
+                "language": "en",
+            }
+        )
+        ws.send_bytes(b"\x01\x00" * 320)
+        ws.send_json({"type": "stop"})
+
+        messages = []
+        while not messages or messages[-1]["type"] != "done":
+            messages.append(ws.receive_json())
+
+    assert [message["type"] for message in messages] == [
+        "transcript",
+        "recovering",
+        "delta",
+        "done",
+    ]
