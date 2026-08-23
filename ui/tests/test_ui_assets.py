@@ -291,7 +291,7 @@ def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
     assert "const MAX_SELECTED_RAG_RESOURCES = 8" in js
     assert '.slice(0, MAX_SELECTED_RAG_RESOURCES)' in js
     assert 'featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES })' in js
-    assert "window.MutaResourceMentions.segment(text)" in js
+    assert "window.MutaResourceMentions.resolveResources(" in js
     assert "window.MutaResourceMentions.place(" in js
     assert "window.MutaResourceMentions.removeMarker(" in js
     assert "window.MutaResourceMentions.sanitizeDraft(" in js
@@ -328,6 +328,42 @@ def test_resource_mentions_hide_transport_syntax_and_flow_inline_with_prose():
     assert "dataset.composerOffset" not in js
     assert "resourcePdfIcon(\"user-resource-mention-icon\")" in js
     assert ".composer-resource-mention-icon" in CSS and ".user-resource-mention-icon" in CSS
+
+
+def test_resource_retrieval_is_inferred_from_inline_mentions_without_a_mode_toggle():
+    js = (UI / "app.js").read_text()
+    mentions = (UI / "resource-mentions.js").read_text()
+    send = js[js.index("function send(") : js.index("async function dispatch(")]
+    trigger = js[js.index("function mentionTrigger(") : js.index("function selectMention(")]
+    keydown = js[js.index('inputEl.addEventListener("keydown"') : js.index(
+        'inputEl.addEventListener("beforeinput"'
+    )]
+
+    assert 'id="btn-rag"' not in HTML
+    assert "rag-toggle" not in HTML and ".rag-toggle" not in CSS
+    assert "let useRag" not in js and "ragButton" not in js
+    assert "const ragResources = resourcesFromTypedMentions(typed);" in send
+    assert "!ragResources.length" in send
+    assert 'featureT("rag.chooseFile")' not in send
+    assert "if (!useRag)" not in trigger
+    assert 'empty.textContent = featureT(emptyKey)' in js
+    assert '"rag.noFiles": "No files found"' in js
+    assert "use_rag: (item.ragResources || []).length > 0" in js
+    assert "useRag:" not in js
+    assert "resolveResources(" in js
+    assert 'resource?.status === "ready"' in mentions
+    assert 'inputEl.removeAttribute("aria-activedescendant");' in js
+    assert 'let resourceCatalogState = "loading"' in js
+    assert 'resourceCatalogState === "error"' in js
+    assert "reconcileQueuedResources()" in js
+    assert "replaceResourceMarker(typed, resource)" in js
+    assert "resourceLoadFailures < RESOURCE_LOAD_MAX_RETRIES || resourceQueueWaiters.size > 0" in js
+    assert "resourceQueueWaiters.delete(item.cid);" in js
+    assert "setTimeout(() => drainQueue(item.cid), 0);" in js
+    assert keydown.index('e.key === "Enter" && e.shiftKey') < keydown.index(
+        "if (!mentionMenu.hidden)"
+    )
+    assert "closeMentionMenu();\n        send(e.ctrlKey || e.metaKey);" in js
 
 
 def test_selected_locale_is_generation_metadata_not_a_user_message_prefix():

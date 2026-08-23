@@ -164,8 +164,7 @@ button.ghost:hover { background: var(--accent-soft); }
   display: block; margin-top: 4px; font-size: 0.68rem; color: var(--muted);
   font-style: italic;
 }
-#btn-web.active,
-#btn-rag.active { color: var(--accent); background: var(--accent-soft, rgba(193, 95, 60, 0.12)); }
+#btn-web.active { color: var(--accent); background: var(--accent-soft, rgba(193, 95, 60, 0.12)); }
 .sources {
   display: block; margin-top: 6px; font-size: 0.72rem; color: var(--muted);
 }
@@ -722,7 +721,10 @@ details.thinking .think-label.shimmer {
 .resource-status { font-size: 0.68rem; font-weight: 700; color: var(--muted); }
 .resource-status.ready { color: #2f7d51; }
 .resource-status.failed { color: var(--danger); }
-.resource-empty { padding: 14px; color: var(--muted); font-size: 0.8rem; }
+.resource-empty {
+  display: grid; place-items: center; min-height: 52px; padding: 14px;
+  color: var(--muted); font-size: 0.84rem; text-align: center;
+}
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
   border: 1px solid var(--border); border-radius: 10px;
@@ -777,8 +779,6 @@ button.icon {
 }
 button.icon:hover { background: var(--accent-soft); color: var(--accent); }
 button.icon svg { width: 18px; height: 18px; fill: currentColor; }
-.rag-toggle { display: inline-flex; align-items: center; gap: 4px; }
-.rag-toggle span { font-size: 0.65rem; font-weight: 700; line-height: 1; }
 button.icon.recording { color: #fff; background: var(--danger); animation: pulse 1.6s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(168, 52, 42, 0.15); } }
 button.send {

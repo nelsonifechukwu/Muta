@@ -14,11 +14,11 @@ const RESOURCE_RAG_COPY = Object.freeze({
   "resources.uploading": "Uploading {name}…",
   "resources.uploaded": "{name} is being prepared. You can keep chatting.",
   "resources.uploadFailed": "Couldn’t upload that PDF.",
+  "resources.loadFailed": "Couldn’t load files.",
   "resources.deleteFailed": "Couldn’t delete that file.",
-  "rag.on": "Resource RAG on — type @ to choose a ready file.",
-  "rag.off": "Resource RAG off.",
-  "rag.noFiles": "No PDFs yet. Add one in Settings → Files.",
-  "rag.chooseFile": "RAG is on — type @ and choose a ready file.",
+  "rag.noFiles": "No files found",
+  "rag.loadingFiles": "Loading files…",
+  "rag.loadFailed": "Couldn’t load files — retrying…",
   "rag.remove": "Remove {name}",
   "rag.document": "Document: {name}",
   "rag.openDocument": "Open document {name}",
@@ -255,8 +255,12 @@ let allowParallelChats = true;
 let powerOptimizationEnabled = true;
 let latestPowerStatus = null;
 let pendingAttachments = []; // {id, kind, mime, previewUrl, transcription?, status?}
-let useRag = false;
 let learningResources = [];
+let resourceCatalogState = "loading"; // loading | ready | error
+let resourceLoadFailures = 0;
+let resourceLoadInFlight = null;
+const RESOURCE_LOAD_MAX_RETRIES = 4;
+const resourceQueueWaiters = new Set();
 let selectedRagResources = []; // stable {id, name}; request authority is always the id
 const MAX_SELECTED_RAG_RESOURCES = 8; // ChatRequest.resource_ids contract maximum
 let resourcePollTimer = null;
@@ -264,7 +268,7 @@ let mentionMatches = [];
 let mentionActiveIndex = 0;
 // Follow-ups typed while a reply is running are view state, but they still have to survive a
 // reload. Each item is scoped to its conversation so navigating elsewhere never discards it.
-let messageQueue = []; // {typed, attachments, ragResources, useRag, cid}
+let messageQueue = []; // {typed, attachments, ragResources, useWeb, cid}
 let telemetrySource = null;
 let telemetryCloseTimer = null;
 // Reasoning effort for new turns: "off" (direct answer) | "auto" (think first) | "extended".
@@ -2088,7 +2092,6 @@ function restoreMessageQueue() {
       return [{
         typed: restoredRag.text.slice(0, 4096),
         attachments,
-        useRag: item.useRag === true,
         ragResources: restoredRag.resources,
         useWeb: item.useWeb === true,
         cid: item.cid,
@@ -2151,8 +2154,10 @@ function renderQueue() {
     x.setAttribute("aria-label", t("queue.dontSend"));
     x.addEventListener("click", () => {
       messageQueue = messageQueue.filter((q) => q !== item);
+      resourceQueueWaiters.delete(item.cid);
       persistMessageQueue();
       renderQueue();
+      setTimeout(() => drainQueue(item.cid), 0);
     });
     row.append(label, x);
     box.appendChild(row);
@@ -2165,6 +2170,30 @@ function discardQueue(cid = conversationId, { announce = true } = {}) {
     toast(t(removed > 1 ? "queue.discardedMany" : "queue.discardedOne", { count: removed }));
   }
   messageQueue = messageQueue.filter((item) => item.cid !== cid);
+  resourceQueueWaiters.delete(cid);
+  persistMessageQueue();
+  renderQueue();
+}
+
+function replaceResourceMarker(text, resource) {
+  const source = String(text || "");
+  if (!window.MutaResourceMentions.isPlacementMarker(resource?.marker)) return source;
+  return source.split(resource.marker).join(window.MutaResourceMentions.tokenFor(resource));
+}
+
+function reconcileQueuedResources() {
+  const readyIds = new Set(learningResources
+    .filter((resource) => resource.status === "ready")
+    .map((resource) => resource.id));
+  messageQueue = messageQueue.map((item) => {
+    let typed = item.typed;
+    const ragResources = [];
+    for (const resource of item.ragResources || []) {
+      if (readyIds.has(resource.id)) ragResources.push(resource);
+      else typed = replaceResourceMarker(typed, resource);
+    }
+    return { ...item, typed, ragResources };
+  });
   persistMessageQueue();
   renderQueue();
 }
@@ -2175,6 +2204,12 @@ function drainQueue(cid = conversationId) {
   }
   const index = messageQueue.findIndex((item) => item.cid === cid);
   if (index < 0) return;
+  const candidate = messageQueue[index];
+  if ((candidate.ragResources || []).length && resourceCatalogState !== "ready") {
+    resourceQueueWaiters.add(cid);
+    void loadResources({ quiet: true });
+    return;
+  }
   const [next] = messageQueue.splice(index, 1);
   persistMessageQueue();
   renderQueue();
@@ -2186,12 +2221,9 @@ function drainQueue(cid = conversationId) {
 
 function restoreDraft(item) {
   pendingAttachments = item.attachments;
-  useRag = item.useRag === true;
   selectedRagResources = (item.ragResources || []).slice(0, MAX_SELECTED_RAG_RESOURCES);
   setComposerValue(item.typed);
   useWeb = item.useWeb === true;
-  ragButton.classList.toggle("active", useRag);
-  ragButton.setAttribute("aria-pressed", String(useRag));
   $("#btn-web").classList.toggle("active", useWeb);
   $("#btn-web").setAttribute("aria-pressed", String(useWeb));
   renderChips();
@@ -2207,24 +2239,22 @@ function send(steer = false) {
   }
   const typed = composerValue().trim();
   if (readingAnImage()) return toast(t("reply.imageReading"));
+  const ragResources = resourcesFromTypedMentions(typed);
   if (
     !typed &&
     !pendingAttachments.some((a) => a.transcription) &&
-    !(useRag && selectedRagResources.length)
+    !ragResources.length
   ) return;
   if (startingConversations.has(startKeyFor(conversationId))) {
     return toast(t("reply.previousStarting"));
   }
 
-  const ragResources = useRag ? resourcesFromTypedMentions(typed) : [];
   if (ragResources.length > MAX_SELECTED_RAG_RESOURCES) {
     return toast(featureT("rag.maxFiles", { count: MAX_SELECTED_RAG_RESOURCES }), 4000);
   }
-  if (useRag && !ragResources.length) return toast(featureT("rag.chooseFile"), 4000);
   const item = {
     typed,
     attachments: pendingAttachments.slice(),
-    useRag,
     ragResources,
     useWeb,
   };
@@ -2322,7 +2352,7 @@ async function dispatch(item, opts = {}) {
         client_request_id: clientRequestId,
         attachment_ids: regenerate ? [] : attachmentIds,
         use_web: item.useWeb === true,
-        use_rag: item.useRag === true,
+        use_rag: (item.ragResources || []).length > 0,
         resource_ids: (item.ragResources || [])
           .slice(0, MAX_SELECTED_RAG_RESOURCES)
           .map((resource) => resource.id),
@@ -2759,6 +2789,14 @@ inputEl.addEventListener("keydown", (e) => {
   // Enter confirms many CJK/Korean IME candidates. It must reach the input method instead of
   // selecting a PDF, inserting a line break, or sending an unfinished composition.
   if (e.isComposing || e.keyCode === 229) return;
+  if (e.key === "Enter" && e.shiftKey) {
+    e.preventDefault();
+    closeMentionMenu();
+    const selection = composerSelection();
+    replaceComposerRange("\n", selection.start, selection.end);
+    autoGrow();
+    return;
+  }
   if (!mentionMenu.hidden) {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -2782,19 +2820,15 @@ inputEl.addEventListener("keydown", (e) => {
       e.preventDefault();
       if (mentionMatches[mentionActiveIndex]?.status === "ready") {
         selectMention(mentionMatches[mentionActiveIndex]);
+      } else {
+        closeMentionMenu();
+        send(e.ctrlKey || e.metaKey);
       }
       return;
     }
   }
   if ((e.key === "Backspace" || e.key === "Delete") && deleteComposerReferenceForKey(e.key)) {
     e.preventDefault();
-    return;
-  }
-  if (e.key === "Enter" && e.shiftKey) {
-    e.preventDefault();
-    const selection = composerSelection();
-    replaceComposerRange("\n", selection.start, selection.end);
-    autoGrow();
     return;
   }
   if (e.key === "Enter" && !e.shiftKey) {
@@ -2812,12 +2846,16 @@ inputEl.addEventListener("beforeinput", (event) => {
     if (!mentionMenu.hidden) {
       if (mentionMatches[mentionActiveIndex]?.status === "ready") {
         selectMention(mentionMatches[mentionActiveIndex]);
+      } else {
+        closeMentionMenu();
+        send();
       }
     } else {
       send();
     }
   } else if (event.inputType === "insertLineBreak") {
     event.preventDefault();
+    closeMentionMenu();
     const selection = composerSelection();
     replaceComposerRange("\n", selection.start, selection.end);
     autoGrow();
@@ -2874,7 +2912,6 @@ window.MutaChat = {
 };
 
 // --- learner PDF resources + @ picker -------------------------------------------------
-const ragButton = $("#btn-rag");
 const mentionMenu = $("#resource-mention-menu");
 const mentionStatus = $("#resource-mention-status");
 const resourceList = $("#resource-list");
@@ -2901,19 +2938,25 @@ function stripResourcePlacement(resource) {
   setComposerValue(next, { start: Math.max(0, start), end: Math.max(0, end) });
 }
 
+function preserveUnavailableResourceAsText(resource) {
+  if (!window.MutaResourceMentions.isPlacementMarker(resource?.marker)) return;
+  const marker = resource.marker;
+  const token = window.MutaResourceMentions.tokenFor(resource);
+  const selection = composerSelection();
+  const source = composerValue();
+  const replace = (value) => value.split(marker).join(token);
+  const start = replace(source.slice(0, selection.start)).length;
+  const end = replace(source.slice(0, selection.end)).length;
+  resource.marker = undefined;
+  setComposerValue(replace(source), { start, end });
+}
+
 function deselectRagResource(resource, { focus = false } = {}) {
   stripResourcePlacement(resource);
   selectedRagResources = selectedRagResources.filter((item) => item.id !== resource.id);
   renderRagChips();
   autoGrow();
   if (focus) inputEl.focus();
-}
-
-function clearSelectedRagResources() {
-  selectedRagResources.forEach(stripResourcePlacement);
-  selectedRagResources = [];
-  renderRagChips();
-  autoGrow();
 }
 
 function renderRagChips() {
@@ -2930,7 +2973,6 @@ function closeMentionMenu() {
 }
 
 function mentionTrigger() {
-  if (!useRag) return null;
   const caret = composerSelection().start;
   const source = composerValue();
   const before = source.slice(0, caret);
@@ -2998,6 +3040,7 @@ function positionMentionMenu() {
 function renderMentionMenu() {
   const trigger = mentionTrigger();
   if (!trigger) return closeMentionMenu();
+  inputEl.removeAttribute("aria-activedescendant");
   mentionMenu.innerHTML = "";
   mentionMatches = learningResources.filter(
     (resource) => !trigger.query || window.MutaResourceMentions
@@ -3005,10 +3048,14 @@ function renderMentionMenu() {
       .toLowerCase()
       .includes(trigger.query),
   );
+  let emptyKey = null;
   if (!mentionMatches.length) {
     const empty = document.createElement("div");
     empty.className = "resource-empty";
-    empty.textContent = featureT(learningResources.length ? "resources.empty" : "rag.noFiles");
+    emptyKey = resourceCatalogState === "loading"
+      ? "rag.loadingFiles"
+      : resourceCatalogState === "error" ? "rag.loadFailed" : "rag.noFiles";
+    empty.textContent = featureT(emptyKey);
     mentionMenu.appendChild(empty);
   } else {
     mentionActiveIndex = Math.min(mentionActiveIndex, mentionMatches.length - 1);
@@ -3045,24 +3092,22 @@ function renderMentionMenu() {
   const readyCount = mentionMatches.filter((resource) => resource.status === "ready").length;
   mentionStatus.textContent = readyCount
     ? featureT("rag.pickerResults", { count: readyCount })
-    : featureT("rag.pickerEmpty");
+    : featureT(emptyKey || "rag.pickerEmpty");
   requestAnimationFrame(positionMentionMenu);
+  if (
+    resourceCatalogState === "error" &&
+    !resourceLoadInFlight &&
+    !resourcePollTimer
+  ) void loadResources({ quiet: true });
 }
 
 function resourcesFromTypedMentions(text) {
-  const selected = [...selectedRagResources];
-  const names = window.MutaResourceMentions.segment(text)
-    .filter((part) => part.type === "resource")
-    .map((part) => part.name);
-  names.forEach((name) => {
-    const matches = learningResources.filter(
-      (resource) => window.MutaResourceMentions.nameFor(resource) === name,
-    );
-    if (matches.length === 1 && !selected.some((resource) => resource.id === matches[0].id)) {
-      selected.push({ id: matches[0].id, name });
-    }
-  });
-  return selected;
+  return window.MutaResourceMentions.resolveResources(
+    text,
+    selectedRagResources,
+    learningResources,
+    MAX_SELECTED_RAG_RESOURCES,
+  );
 }
 
 function renderResourceList() {
@@ -3070,7 +3115,11 @@ function renderResourceList() {
   if (!learningResources.length) {
     const empty = document.createElement("div");
     empty.className = "resource-list-empty";
-    empty.textContent = featureT("resources.empty");
+    empty.textContent = featureT(
+      resourceCatalogState === "loading"
+        ? "rag.loadingFiles"
+        : resourceCatalogState === "error" ? "resources.loadFailed" : "resources.empty",
+    );
     resourceList.appendChild(empty);
     return;
   }
@@ -3108,28 +3157,58 @@ function renderResourceList() {
 function scheduleResourcePoll() {
   clearTimeout(resourcePollTimer);
   resourcePollTimer = null;
-  if (learningResources.some((resource) => resource.status === "processing")) {
-    resourcePollTimer = setTimeout(() => loadResources({ quiet: true }), 1500);
-  }
+  const preparing = learningResources.some((resource) => resource.status === "processing");
+  const retrying = resourceCatalogState === "error" &&
+    (resourceLoadFailures < RESOURCE_LOAD_MAX_RETRIES || resourceQueueWaiters.size > 0);
+  if (!preparing && !retrying) return;
+  const delay = retrying ? Math.min(10_000, 1000 * (2 ** (resourceLoadFailures - 1))) : 1500;
+  resourcePollTimer = setTimeout(() => loadResources({ quiet: true }), delay);
 }
 
 async function loadResources({ quiet = false } = {}) {
+  if (resourceLoadInFlight) return resourceLoadInFlight;
+  clearTimeout(resourcePollTimer);
+  resourcePollTimer = null;
+  resourceCatalogState = "loading";
+  renderResourceList();
+  if (!mentionMenu.hidden) renderMentionMenu();
+  resourceLoadInFlight = (async () => {
+    try {
+      const response = await fetch("/v1/resources", { headers: authHeaders() });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      learningResources = Array.isArray(body.resources) ? body.resources : [];
+      resourceCatalogState = "ready";
+      resourceLoadFailures = 0;
+      const ids = new Set(learningResources
+        .filter((resource) => resource.status === "ready")
+        .map((resource) => resource.id));
+      selectedRagResources
+        .filter((resource) => !ids.has(resource.id))
+        .forEach(preserveUnavailableResourceAsText);
+      selectedRagResources = selectedRagResources.filter((resource) => ids.has(resource.id));
+      reconcileQueuedResources();
+      const waitingConversations = [...resourceQueueWaiters];
+      resourceQueueWaiters.clear();
+      waitingConversations.forEach((cid) => setTimeout(() => drainQueue(cid), 0));
+      renderRagChips();
+      renderResourceList();
+      if (!mentionMenu.hidden) renderMentionMenu();
+      return true;
+    } catch {
+      resourceCatalogState = "error";
+      resourceLoadFailures += 1;
+      learningResources = [];
+      renderResourceList();
+      if (!mentionMenu.hidden) renderMentionMenu();
+      if (!quiet) toast(featureT("resources.loadFailed"), 4000);
+      return false;
+    }
+  })();
   try {
-    const response = await fetch("/v1/resources", { headers: authHeaders() });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const body = await response.json();
-    learningResources = Array.isArray(body.resources) ? body.resources : [];
-    const ids = new Set(learningResources.map((resource) => resource.id));
-    selectedRagResources
-      .filter((resource) => !ids.has(resource.id))
-      .forEach(stripResourcePlacement);
-    selectedRagResources = selectedRagResources.filter((resource) => ids.has(resource.id));
-    renderRagChips();
-    renderResourceList();
-    if (!mentionMenu.hidden) renderMentionMenu();
-  } catch {
-    if (!quiet) resourceList.textContent = featureT("resources.uploadFailed");
+    return await resourceLoadInFlight;
   } finally {
+    resourceLoadInFlight = null;
     scheduleResourcePoll();
   }
 }
@@ -3180,22 +3259,9 @@ async function deleteResource(resourceId) {
   learningResources = learningResources.filter((resource) => resource.id !== resourceId);
   const selected = selectedRagResources.find((resource) => resource.id === resourceId);
   if (selected) deselectRagResource(selected);
+  reconcileQueuedResources();
   renderResourceList();
 }
-
-ragButton.addEventListener("click", () => {
-  useRag = !useRag;
-  ragButton.classList.toggle("active", useRag);
-  ragButton.setAttribute("aria-pressed", String(useRag));
-  if (!useRag) {
-    clearSelectedRagResources();
-    closeMentionMenu();
-  } else {
-    void loadResources({ quiet: true });
-  }
-  toast(featureT(useRag ? "rag.on" : "rag.off"), 3000);
-  inputEl.focus();
-});
 
 inputEl.addEventListener("input", () => {
   const draft = composerValue();

@@ -146,6 +146,30 @@
     return result;
   }
 
+  function resolveResources(text, selected, catalog, limit = 8) {
+    const resolved = [];
+    const ids = new Set();
+    for (const resource of Array.isArray(selected) ? selected : []) {
+      if (!resource || typeof resource.id !== "string" || ids.has(resource.id)) continue;
+      ids.add(resource.id);
+      resolved.push(resource);
+      if (resolved.length >= Math.max(0, Number(limit) || 0)) return resolved;
+    }
+    const names = segment(text)
+      .filter((part) => part.type === "resource")
+      .map((part) => part.name);
+    for (const name of names) {
+      const matches = (Array.isArray(catalog) ? catalog : []).filter((resource) =>
+        resource?.status === "ready" && nameFor(resource) === name
+      );
+      if (matches.length !== 1 || ids.has(matches[0].id)) continue;
+      ids.add(matches[0].id);
+      resolved.push({ id: matches[0].id, name });
+      if (resolved.length >= Math.max(0, Number(limit) || 0)) break;
+    }
+    return resolved;
+  }
+
   const api = {
     append,
     hasTriggerBoundary,
@@ -154,6 +178,7 @@
     place,
     removeMarker,
     removeTrigger,
+    resolveResources,
     sanitizeDraft,
     segment,
     tokenFor,

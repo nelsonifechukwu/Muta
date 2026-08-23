@@ -9,7 +9,10 @@ make both states especially noisy.
 
 ## Desired interaction
 
-1. Typing `@` still opens the keyboard-accessible ready-resource picker.
+1. Typing `@` opens the keyboard-accessible resource picker without requiring a separate RAG
+   mode or toggle. The picker lists matching uploaded documents, includes preparing/failed state
+   where relevant, and shows a clear `No files found` empty state when nothing matches. Without an
+   active `@` trigger, the composer remains ordinary text input.
 2. Choosing a resource replaces the typed query with one inline document reference at that exact
    point in the editable sentence. The composer is a controlled, multiline rich-text textbox:
    ordinary text remains editable text, while the PDF icon and filename are one atomic,
@@ -26,6 +29,9 @@ make both states especially noisy.
 5. Old conversations containing raw mention tokens immediately receive the same presentation.
 6. Removing an inline composer reference removes the selected resource; typed legacy tokens remain
    supported.
+7. Retrieval is inferred at send time: a turn with one or more resolved resource IDs sends
+   `use_rag: true`; every other turn sends `use_rag: false`. Queue and draft restoration derive the
+   same state from their resource records instead of persisting a user-controlled RAG mode.
 
 ## Safety and compatibility
 
@@ -35,11 +41,19 @@ make both states especially noisy.
 - Only the exact canonical `@{...}` form becomes a mention. Ordinary `@` text and email addresses
   remain text.
 - The request still sends `resource_ids`; the canonical token is added once and never duplicated.
+- A manually typed legacy token resolves only when exactly one matching document is ready. Loading,
+  processing, failed, deleted, and ambiguous documents never silently activate retrieval.
 - Placement markers are chosen from a fixed allow-list, persisted with queued/draft resource
   records, and removed with their inline composer reference. Backspace/Delete treats a reference
   as one character, and deleting its marker also deselects the corresponding resource.
-- Queueing, draft restoration, history rendering, attachments, and RAG preflight share the same
-  message/resource state.
+- Queueing, draft restoration, history rendering, attachments, and retrieval preflight share the
+  same message/resource state. There is no separate composer control whose state can disagree with
+  the inline references.
+- Resource-catalog loading and failure are distinct from a genuinely empty result. Idle catalog
+  reads retry a bounded number of times and retry again on an explicit `@` interaction; an
+  explicitly waiting queued turn keeps a capped-rate retry alive until recovery. Failed reads clear
+  stale picker options, and queued resource turns wait until their IDs have been reconciled against
+  the ready catalog.
 - Composer and sent mentions are both prose-level inline references that wrap with the surrounding
   sentence instead of truncating the document name. The composer retains native textbox keyboard,
   selection, paste-as-plain-text, IME, queue, refresh, and screen-reader semantics.

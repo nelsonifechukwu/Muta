@@ -11,6 +11,7 @@ const {
   place,
   removeMarker,
   removeTrigger,
+  resolveResources,
   sanitizeDraft,
   segment,
   tokenFor,
@@ -151,4 +152,16 @@ test("removes a picker query without leaving broken prose or a misplaced caret",
       caret: expectedCaret,
     });
   }
+});
+
+test("resolves typed legacy mentions only to one ready document", () => {
+  const ready = { id: "a".repeat(32), name: "Physics.pdf", status: "ready" };
+  const processing = { id: "b".repeat(32), name: "Physics.pdf", status: "processing" };
+  const failed = { id: "c".repeat(32), name: "Failed.pdf", status: "failed" };
+  assert.deepEqual(resolveResources("Read @{Physics.pdf}", [], [processing, ready], 8), [
+    { id: ready.id, name: "Physics.pdf" },
+  ]);
+  assert.deepEqual(resolveResources("Read @{Failed.pdf}", [], [failed], 8), []);
+  assert.deepEqual(resolveResources("Read @{Physics.pdf}", [], [ready, { ...ready, id: "d".repeat(32) }], 8), []);
+  assert.deepEqual(resolveResources("Anything", [ready], [failed], 8), [ready]);
 });
