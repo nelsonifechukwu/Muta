@@ -268,6 +268,12 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "const REFERENCE = /\\[R([1-9]\\d*)\\]/gi" in citations
     assert "if (number <= limit)" in citations
     assert "function planClaimCitations(" in citations
+    assert "function normalizeReferences(" in citations
+    assert 'job.handle?.replace(job.content)' in js
+    assert 'Object.prototype.hasOwnProperty.call(ev, "replace")' in js
+    assert "{ legacyNumeric: true }" in js
+    assert "job.terminalEvent = { ...ev" in js
+    assert "decorateCompletedReply(job, job.terminalEvent" in js
     assert "addFallbackMarkers(root, records, explicitAssignments, options, markers)" in citations
     assert "evidence.exact && evidence.tokenCount >= 3" in citations
     assert "evidence.sameModifiers && evidence.sameNumbers && evidence.samePolarity" in citations

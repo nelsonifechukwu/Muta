@@ -396,13 +396,14 @@ class SQLiteConversationStore:
             ).fetchone()
         return int(row["id"]) if row else None
 
-    def add_message_sources(self, message_id: int, sources: list[dict]) -> None:
+    def add_message_sources(self, message_id: int, sources: list[dict]) -> list[dict]:
+        persisted: list[dict] = []
         with self._lock, self._conn:
             for source in sources:
                 # The learner can delete a resource while its answer is streaming. Insert
                 # from the live parent row so that race becomes a skipped citation rather
                 # than a foreign-key error during generation cleanup.
-                self._conn.execute(
+                cursor = self._conn.execute(
                     "INSERT OR IGNORE INTO message_sources "
                     "(message_id, resource_id, title, page_number, chunk_index, excerpt) "
                     "SELECT ?, r.id, ?, ?, ?, ? FROM learning_resources r WHERE r.id = ?",
@@ -415,6 +416,27 @@ class SQLiteConversationStore:
                         source["resource_id"],
                     ),
                 )
+                if cursor.rowcount:
+                    persisted.append(dict(source))
+        return persisted
+
+    def get_message_sources(self, message_id: int) -> list[dict]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT resource_id, title, page_number, chunk_index, excerpt "
+                "FROM message_sources WHERE message_id = ? ORDER BY id ASC",
+                (message_id,),
+            ).fetchall()
+        return [
+            {
+                "resource_id": row["resource_id"],
+                "title": row["title"],
+                "page": row["page_number"],
+                "chunk_index": row["chunk_index"],
+                "excerpt": row["excerpt"],
+            }
+            for row in rows
+        ]
 
     # --- learner resources -----------------------------------------------------------
 
