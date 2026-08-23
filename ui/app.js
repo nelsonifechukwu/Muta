@@ -1321,23 +1321,99 @@ function beginAssistantMessage(onAnswerNow) {
   };
 }
 
-function syncResourceSourcesLayout(box) {
-  const container = box.closest(".msg.assistant");
-  const list = box.querySelector(".resource-sources-list");
-  if (!container || !list) return;
-  container.style.minHeight = "";
-  if (!resourceCitationRail.matches || list.hidden) {
-    if (box.isConnected) scrollToBottom();
+let resourceSourcesLayoutFrame = 0;
+let preferredResourceSourcesBox = null;
+const resourceSourcesOwners = new WeakMap();
+
+function moveFocusFromResourceSources(box, bounds = chatScroller.getBoundingClientRect()) {
+  const marker = resourceSourcesOwners.get(box)?.marker;
+  const markerRect = marker?.isConnected ? marker.getBoundingClientRect() : null;
+  const markerVisible = markerRect && markerRect.bottom >= bounds.top
+    && markerRect.top <= bounds.bottom;
+  (markerVisible ? marker : inputEl).focus({ preventScroll: true });
+}
+
+function layoutResourceSourceRails() {
+  resourceSourcesLayoutFrame = 0;
+  const boxes = [...document.querySelectorAll(".resource-sources")].filter(
+    (box) => box.isConnected && resourceSourcesOwners.get(box)?.container?.isConnected,
+  );
+
+  // A source rail is a viewport-bound margin note, not part of the transcript's vertical
+  // measure. Clear the former height reservation and every fixed-rail measurement first.
+  for (const box of boxes) {
+    resourceSourcesOwners.get(box).container.style.minHeight = "";
+    for (const property of ["--citation-rail-left", "--citation-rail-top", "--citation-rail-height"]) {
+      box.style.removeProperty(property);
+    }
+  }
+
+  if (!resourceCitationRail.matches || !boxes.length) {
+    for (const box of boxes) box.classList.remove("is-rail-active");
     return;
   }
-  requestAnimationFrame(() => {
-    if (!box.isConnected || !resourceCitationRail.matches || list.hidden) return;
-    const railBottom = box.offsetTop + box.offsetHeight;
-    if (railBottom > container.offsetHeight) {
-      container.style.minHeight = `${Math.ceil(railBottom)}px`;
-    }
-    scrollToBottom();
-  });
+
+  const scrollRect = chatScroller.getBoundingClientRect();
+  const focusedBox = document.activeElement?.closest?.(".resource-sources");
+  // A fixed rail needs the 44px disclosure target plus breathing room. At extreme keyboard or
+  // short-window heights, hide it instead of covering the composer; inline citations remain.
+  if (scrollRect.height < 60) {
+    if (focusedBox) moveFocusFromResourceSources(focusedBox, scrollRect);
+    for (const box of boxes) box.classList.remove("is-rail-active");
+    return;
+  }
+  const focusY = scrollRect.top + Math.min(scrollRect.height * 0.4, 280);
+  const candidates = boxes.map((box) => {
+    const owner = resourceSourcesOwners.get(box);
+    const containerRect = owner.container.getBoundingClientRect();
+    const markerRect = owner.marker?.isConnected ? owner.marker.getBoundingClientRect() : null;
+    const anchorY = markerRect ? markerRect.top - 8 : containerRect.top;
+    return { box, containerRect, anchorY };
+  }).filter(({ box, containerRect }) => (
+    box === focusedBox || (
+      containerRect.bottom >= scrollRect.top && containerRect.top <= scrollRect.bottom
+    )
+  ));
+  if (!candidates.length) {
+    for (const box of boxes) box.classList.remove("is-rail-active");
+    return;
+  }
+
+  // One contextual panel owns the margin at a time. This keeps every rail independent from the
+  // transcript and prevents consecutive short cited replies from creating a blank scroll tail.
+  const preferred = candidates.find(({ box }) => box === preferredResourceSourcesBox);
+  const active = preferred || candidates.reduce((best, candidate) => (
+    Math.abs(candidate.anchorY - focusY) < Math.abs(best.anchorY - focusY) ? candidate : best
+  ));
+  // Switch the visible rail only after selecting its replacement. Transiently setting a
+  // focused panel to display:none makes browsers discard keyboard focus.
+  for (const box of boxes) box.classList.toggle("is-rail-active", box === active.box);
+
+  const columnRect = $("#chat-column").getBoundingClientRect();
+  const railWidth = active.box.offsetWidth || 240;
+  const rtl = getComputedStyle(document.documentElement).direction === "rtl";
+  const left = rtl ? columnRect.left - railWidth - 22 : columnRect.right + 22;
+  const availableHeight = scrollRect.height - 16;
+  active.box.style.setProperty("--citation-rail-height", `${Math.floor(availableHeight)}px`);
+  const panelHeight = Math.min(active.box.scrollHeight, availableHeight);
+  const minTop = scrollRect.top + 8;
+  const maxTop = Math.max(minTop, scrollRect.bottom - panelHeight - 8);
+  const top = Math.min(Math.max(active.anchorY, minTop), maxTop);
+  active.box.style.setProperty("--citation-rail-left", `${Math.round(left)}px`);
+  active.box.style.setProperty("--citation-rail-top", `${Math.round(top)}px`);
+}
+
+function preferResourceSources(box) {
+  preferredResourceSourcesBox = box;
+  syncResourceSourcesLayout(box);
+}
+
+function syncResourceSourcesLayout(box) {
+  // History builds source boxes before their turn is attached to #messages. Schedule anyway;
+  // the animation-frame pass runs after the completed turn enters the document.
+  if (!box) return;
+  if (resourceSourcesLayoutFrame) cancelAnimationFrame(resourceSourcesLayoutFrame);
+  resourceSourcesLayoutFrame = requestAnimationFrame(layoutResourceSourceRails);
 }
 
 function setResourceSourcesExpanded(box, expanded) {
@@ -1352,6 +1428,7 @@ function setResourceSourcesExpanded(box, expanded) {
     featureT(expanded ? "rag.hideSources" : "rag.showSources", { count }),
   );
   syncResourceSourcesLayout(box);
+  if (!resourceCitationRail.matches) scrollToBottom();
 }
 
 function renderResourceSources(container, sources) {
@@ -1451,6 +1528,7 @@ function renderResourceSources(container, sources) {
   });
 
   const setActive = (number, active) => {
+    if (active) preferResourceSources(box);
     for (const element of container.querySelectorAll(`[data-resource-citation="${number}"]`)) {
       element.classList.toggle("is-active", active);
     }
@@ -1468,6 +1546,7 @@ function renderResourceSources(container, sources) {
     box.dataset.userToggled = "true";
     setResourceSourcesExpanded(box, trigger.getAttribute("aria-expanded") !== "true");
   });
+  box.addEventListener("focusin", () => preferResourceSources(box));
 
   box.append(trigger, list);
   container.appendChild(box);
@@ -1486,9 +1565,7 @@ function renderResourceSources(container, sources) {
     onActive: setActive,
   }) || [];
   const firstMarker = markers[0];
-  if (firstMarker) {
-    box.style.setProperty("--citation-anchor-y", `${Math.max(0, firstMarker.offsetTop - 8)}px`);
-  }
+  resourceSourcesOwners.set(box, { container, marker: firstMarker || null });
   syncResourceSourcesLayout(box);
 }
 renderResourceSources.sequence = 0;
@@ -1500,8 +1577,24 @@ resourceCitationRail.addEventListener?.("change", ({ matches }) => {
       syncResourceSourcesLayout(box);
       continue;
     }
+    if (!matches && box.contains(document.activeElement)) {
+      moveFocusFromResourceSources(box);
+    }
     setResourceSourcesExpanded(box, matches);
   }
+  // A user-toggled panel keeps its disclosure state across the breakpoint. Moving it back into
+  // normal flow can add hundreds of pixels, so restore the tail after responsive layout settles;
+  // scrollToBottom remains a no-op for a reader who deliberately paused auto-follow.
+  requestAnimationFrame(() => scrollToBottom());
+});
+chatScroller.addEventListener("scroll", () => {
+  if (resourceCitationRail.matches) syncResourceSourcesLayout(document.querySelector(".resource-sources"));
+}, { passive: true });
+window.addEventListener("resize", () => {
+  syncResourceSourcesLayout(document.querySelector(".resource-sources"));
+}, { passive: true });
+document.addEventListener("muta:localechange", () => {
+  syncResourceSourcesLayout(document.querySelector(".resource-sources"));
 });
 
 function renderHistoryMessage(m) {

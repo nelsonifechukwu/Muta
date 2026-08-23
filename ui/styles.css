@@ -180,7 +180,6 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 .sources a { color: inherit; text-decoration: underline; margin-inline-end: 2px; }
 .resource-sources {
-  --citation-anchor-y: 0px;
   margin-top: 12px; max-width: 44rem; color: var(--text); font-family: var(--sans);
 }
 .resource-sources-trigger {
@@ -265,16 +264,19 @@ button.ghost:hover { background: var(--accent-soft); }
 }
 
 @media (min-width: 1580px) {
-  .msg.assistant.has-resource-sources { position: relative; }
   .msg.assistant.has-resource-sources > .resource-sources {
-    position: absolute; top: var(--citation-anchor-y); inset-inline-start: calc(100% + 22px);
-    width: 15rem; margin-top: 0;
+    display: none;
+  }
+  .msg.assistant.has-resource-sources > .resource-sources.is-rail-active {
+    position: fixed; z-index: 20; top: var(--citation-rail-top); left: var(--citation-rail-left);
+    display: flex; flex-direction: column; width: 15rem; max-height: var(--citation-rail-height);
+    margin-top: 0; overflow: hidden;
   }
   .resource-sources-trigger {
     grid-template-columns: 18px auto 1fr 18px; padding-inline: 7px; border-color: transparent;
     background: transparent;
   }
-  .resource-sources-list { margin-top: 0; }
+  .resource-sources-list { min-height: 0; margin-top: 0; overflow-y: auto; }
 }
 
 @media (max-width: 1319px) {

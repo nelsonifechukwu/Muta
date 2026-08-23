@@ -242,9 +242,25 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert 'window.matchMedia("(min-width: 1580px)")' in js
     assert 'trigger.setAttribute("aria-expanded", String(expanded))' in js
     assert 'list.hidden = !expanded' in js
-    assert 'container.style.minHeight = `${Math.ceil(railBottom)}px`' in js
+    assert 'box.classList.toggle("is-rail-active", box === active.box)' in js
+    assert 'box === focusedBox || (' in js
+    assert 'box.addEventListener("focusin", () => preferResourceSources(box))' in js
+    assert 'position: fixed' in "".join(_blocks(".resource-sources.is-rail-active"))
+    assert "const markerRect = owner.marker?.isConnected" in js
+    assert "active.box.scrollHeight" in js
+    assert "if (scrollRect.height < 60)" in js
+    assert "function moveFocusFromResourceSources(" in js
+    assert "(markerVisible ? marker : inputEl).focus({ preventScroll: true })" in js
+    assert "const availableHeight = scrollRect.height - 16" in js
     assert "syncResourceSourcesLayout(box);\n      continue;" in js
-    assert "container.style.minHeight" in js and "scrollToBottom();" in js
+    assert 'box.contains(document.activeElement)' in js
+    assert "moveFocusFromResourceSources(box);" in js
+    assert "requestAnimationFrame(() => scrollToBottom());" in js
+    assert 'document.addEventListener("muta:localechange"' in js
+    assert 'window.addEventListener("muta:localechange"' not in js
+    assert "resourceSourcesOwners.get(box).container.style.minHeight" in js
+    assert "style.minHeight = `${" not in js, "the margin rail must not stretch a chat turn"
+    assert "if (!resourceCitationRail.matches) scrollToBottom();" in js
     assert 'link.href = resourcePageUrl(source.resource_id, source.page)' in js
 
     # Model text is never trusted to invent destinations: decoration is post-sanitize and the
@@ -255,11 +271,12 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert '"a", "button", "code", "pre", "kbd", "samp", "textarea"' in citations
     assert '".katex", ".katex-display", ".math-source", ".resource-sources"' in citations
 
-    rail = "".join(_blocks(".msg.assistant.has-resource-sources > .resource-sources"))
+    rail = "".join(_blocks(".msg.assistant.has-resource-sources > .resource-sources.is-rail-active"))
     trigger = "".join(_blocks(".resource-sources-trigger"))
     hidden_list = "".join(_blocks(".resource-sources-list[hidden]"))
     clipped_preview_guard = "".join(_blocks("@media (max-width: 1319px)"))
-    assert "position: absolute" in rail and "inset-inline-start" in rail
+    assert "position: fixed" in rail and "--citation-rail-left" in rail
+    assert "overflow: hidden" in rail and "--citation-rail-height" in rail
     assert re.search(r"min-height\s*:\s*44px", trigger)
     assert re.search(r"display\s*:\s*none", hidden_list)
     assert ".resource-citation-preview" in clipped_preview_guard and "display: none" in clipped_preview_guard
