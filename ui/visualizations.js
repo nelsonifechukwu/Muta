@@ -4,7 +4,7 @@
 ((global) => {
   const LIBRARIES = new Set(["d3", "three", "gsap", "anime", "motion"]);
   const KINDS = Object.freeze({
-    d3: new Set(["line", "scatter", "bar", "force"]),
+    d3: new Set(["line", "scatter", "bar", "force", "diagram"]),
     three: new Set(["scene3d"]),
     gsap: new Set(["animation"]),
     anime: new Set(["animation"]),
@@ -12,6 +12,8 @@
   });
   const ELEMENT_TYPES = new Set(["circle", "rect", "line", "arrow", "text"]);
   const OBJECT_TYPES = new Set(["sphere", "box", "point", "line", "vector"]);
+  const DIAGRAM_SHAPES = new Set(["circle", "rounded", "label"]);
+  const BOND_TYPES = new Set(["single", "double", "triple", "dashed"]);
   const TRACK_FIELDS = new Set(["x", "y", "scale", "rotate", "opacity"]);
   const MAX_SPEC_CHARS = 48 * 1024;
   const MAX_TREE_NODES = 2500;
@@ -101,6 +103,74 @@
       }
       return "";
     }
+    if (spec.kind === "diagram") {
+      if (!Array.isArray(spec.nodes) || spec.nodes.length < 1 || spec.nodes.length > 40) {
+        return "schematic diagrams need 1 to 40 nodes";
+      }
+      const ids = new Set();
+      for (const node of spec.nodes) {
+        if (!node || !SAFE_ID.test(node.id) || ids.has(node.id)) {
+          return "schematic nodes need unique safe ids";
+        }
+        if (!nonEmptyString(node.label, 80) || !DIAGRAM_SHAPES.has(node.shape)) {
+          return "schematic nodes need a label and supported shape";
+        }
+        if (!finiteNumber(node.x, 0, 1000) || !finiteNumber(node.y, 0, 1000)) {
+          return "schematic node coordinates are out of range";
+        }
+        if (node.size !== undefined && !finiteNumber(node.size, 6, 80)) {
+          return "schematic node size is out of range";
+        }
+        if (node.width !== undefined && !finiteNumber(node.width, 20, 280)) {
+          return "schematic node width is out of range";
+        }
+        if (node.height !== undefined && !finiteNumber(node.height, 20, 160)) {
+          return "schematic node height is out of range";
+        }
+        ids.add(node.id);
+      }
+      if (!Array.isArray(spec.links) || spec.links.length > 100) {
+        return "schematic diagrams support up to 100 links";
+      }
+      for (const link of spec.links) {
+        if (!link || !ids.has(link.source) || !ids.has(link.target)) {
+          return "every schematic link must reference existing nodes";
+        }
+        if (link.bond !== undefined && !BOND_TYPES.has(link.bond)) {
+          return "schematic link style is unsupported";
+        }
+        if (link.arrow !== undefined && typeof link.arrow !== "boolean") {
+          return "schematic arrow must be true or false";
+        }
+        if (link.label !== undefined && !nonEmptyString(link.label, 80)) {
+          return "schematic link label is invalid";
+        }
+        for (const coordinate of [link.label_x, link.label_y]) {
+          if (coordinate !== undefined && !finiteNumber(coordinate, 0, 1000)) {
+            return "schematic link label coordinate is invalid";
+          }
+        }
+        if (link.via !== undefined && (
+          !Array.isArray(link.via) || link.via.length > 4
+          || !link.via.every((item) => Array.isArray(item) && item.length === 2
+            && item.every((coordinate) => finiteNumber(coordinate, 0, 1000)))
+        )) {
+          return "schematic link route is invalid";
+        }
+      }
+      if (spec.annotations !== undefined) {
+        if (!Array.isArray(spec.annotations) || spec.annotations.length > 20) {
+          return "schematic diagrams support up to 20 annotations";
+        }
+        for (const note of spec.annotations) {
+          if (!note || !nonEmptyString(note.text, 120)
+            || !finiteNumber(note.x, 0, 1000) || !finiteNumber(note.y, 0, 1000)) {
+            return "schematic annotation is invalid";
+          }
+        }
+      }
+      return "";
+    }
     if (!Array.isArray(spec.nodes) || spec.nodes.length < 2 || spec.nodes.length > 50) {
       return "force diagrams need 2 to 50 nodes";
     }
@@ -124,6 +194,12 @@
     if (!Array.isArray(spec.objects) || spec.objects.length < 1 || spec.objects.length > 40) {
       return "3D scenes need 1 to 40 objects";
     }
+    if (spec.notes !== undefined && (
+      !Array.isArray(spec.notes) || spec.notes.length > 4
+      || !spec.notes.every((note) => nonEmptyString(note, 120))
+    )) {
+      return "3D scene notes are invalid";
+    }
     for (const object of spec.objects) {
       if (!object || !OBJECT_TYPES.has(object.type)) return "unsupported 3D object";
       if (object.type === "vector") {
@@ -138,6 +214,9 @@
         if (!object.points.every(vector3)) return "3D line points need three coordinates";
       } else if (!vector3(object.position || [0, 0, 0])) {
         return "3D object positions need three coordinates";
+      }
+      if (object.label_position !== undefined && !vector3(object.label_position)) {
+        return "3D label positions need three coordinates";
       }
       if (object.size !== undefined && !finiteNumber(object.size, 0.01, 100)) {
         return "3D object size is out of range";

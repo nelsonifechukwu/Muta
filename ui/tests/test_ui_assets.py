@@ -514,7 +514,20 @@ def test_math_is_protected_before_markdown_and_loaded_before_the_chat_app():
     assert 'slot.closest("pre, code, script, style, textarea, noscript, option, title")' in math
     assert HTML.index('<script src="math.js?') < HTML.index('<script src="app.js?')
     assert "MutaMath.render(el, text)" in js
-    assert 'last.matches(".katex, .katex-display")' in js
+
+
+def test_generation_feedback_replaces_the_blinking_cursor_and_names_visual_work():
+    js = (UI / "app.js").read_text()
+    css = (UI / "styles.css").read_text()
+    assert 'activity.className = "generation-status"' in js
+    assert 'wrap.setAttribute("aria-busy", "true")' in js
+    assert 'visualization: "Generating diagram…"' in js
+    assert 'job.handle?.showPhase(ev.phase)' in js
+    assert 'job.handle?.replaceContent(ev.replace)' in js
+    assert ".generation-dots" in css and "@keyframes generation-dot" in css
+    assert "prefers-reduced-motion: reduce" in css
+    assert ".cursor::after" not in css
+    assert "placeCursor(" not in js
 
 
 def test_display_math_cannot_widen_the_conversation_column():

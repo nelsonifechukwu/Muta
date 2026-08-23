@@ -191,6 +191,100 @@
     new ResizeObserver(draw).observe(stage);
   }
 
+  function renderDiagram(spec) {
+    stage.replaceChildren();
+    const width = 720;
+    const height = Math.max(240, spec.height);
+    const nodes = new Map(spec.nodes.map((node) => [node.id, node]));
+    const svg = d3.select(stage).append("svg").attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("role", "img").attr("aria-label", spec.aria_label);
+    svg.append("defs").append("marker").attr("id", "diagram-arrow")
+      .attr("viewBox", "0 0 10 10").attr("refX", 8).attr("refY", 5)
+      .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto-start-reverse")
+      .append("path").attr("d", "M 0 0 L 10 5 L 0 10 z").attr("fill", neutral);
+
+    const linkLayer = svg.append("g").attr("class", "diagram-links");
+    const boundaryDistance = (node, ux, uy) => {
+      if (node.shape === "circle") return (node.size || 24) + 3;
+      if (node.shape === "label") return 5;
+      const halfWidth = (node.width || 150) / 2;
+      const halfHeight = (node.height || 58) / 2;
+      return 1 / Math.max(Math.abs(ux) / halfWidth, Math.abs(uy) / halfHeight, 0.001) + 3;
+    };
+    const lineFor = (link, offset = 0) => {
+      const source = nodes.get(link.source);
+      const target = nodes.get(link.target);
+      const route = (link.via || []).map(([x, y]) => ({ x, y }));
+      const first = route[0] || target;
+      const last = route[route.length - 1] || source;
+      const firstLength = Math.max(1, Math.hypot(first.x - source.x, first.y - source.y));
+      const lastLength = Math.max(1, Math.hypot(target.x - last.x, target.y - last.y));
+      const sourceUx = (first.x - source.x) / firstLength;
+      const sourceUy = (first.y - source.y) / firstLength;
+      const targetUx = (target.x - last.x) / lastLength;
+      const targetUy = (target.y - last.y) / lastLength;
+      const sourceInset = boundaryDistance(source, sourceUx, sourceUy);
+      const targetInset = boundaryDistance(target, targetUx, targetUy);
+      const points = [
+        {
+          x: source.x + sourceUx * sourceInset,
+          y: source.y + sourceUy * sourceInset,
+        },
+        ...route,
+        {
+          x: target.x - targetUx * targetInset,
+          y: target.y - targetUy * targetInset,
+        },
+      ];
+      if (offset && route.length === 0) {
+        const ox = -sourceUy * offset;
+        const oy = sourceUx * offset;
+        points.forEach((point) => { point.x += ox; point.y += oy; });
+      }
+      const line = linkLayer.append("polyline")
+        .attr("points", points.map((point) => `${point.x},${point.y}`).join(" "))
+        .attr("fill", "none")
+        .attr("stroke", neutral).attr("stroke-width", 2)
+        .attr("stroke-dasharray", link.bond === "dashed" ? "7 6" : null)
+        .attr("marker-end", link.arrow && offset === 0 ? "url(#diagram-arrow)" : null);
+      line.append("title").text(link.label || `${source.label} to ${target.label}`);
+    };
+    spec.links.forEach((link) => {
+      if (link.bond === "double") [-3, 3].forEach((offset) => lineFor(link, offset));
+      else if (link.bond === "triple") [-5, 0, 5].forEach((offset) => lineFor(link, offset));
+      else lineFor(link);
+      if (link.label) {
+        const source = nodes.get(link.source);
+        const target = nodes.get(link.target);
+        linkLayer.append("text").attr("x", link.label_x ?? (source.x + target.x) / 2)
+          .attr("y", link.label_y ?? (source.y + target.y) / 2 - 8).attr("text-anchor", "middle")
+          .attr("class", "diagram-link-label").text(link.label);
+      }
+    });
+
+    const nodeLayer = svg.append("g").attr("class", "diagram-nodes");
+    spec.nodes.forEach((item, index) => {
+      const node = nodeLayer.append("g").attr("transform", `translate(${item.x},${item.y})`)
+        .attr("tabindex", 0).attr("role", "img").attr("aria-label", item.label);
+      if (item.shape === "circle") {
+        node.append("circle").attr("r", item.size || 24).attr("fill", color(item.color, index));
+      } else if (item.shape === "rounded") {
+        const nodeWidth = item.width || 150;
+        const nodeHeight = item.height || 58;
+        node.append("rect").attr("x", -nodeWidth / 2).attr("y", -nodeHeight / 2)
+          .attr("width", nodeWidth).attr("height", nodeHeight).attr("rx", 14)
+          .attr("fill", color(item.color, index));
+      }
+      node.append("text").attr("text-anchor", "middle").attr("y", 5)
+        .attr("class", "diagram-node-label").text(item.label);
+      node.append("title").text(item.label);
+    });
+    (spec.annotations || []).forEach((note) => {
+      svg.append("text").attr("x", note.x).attr("y", note.y)
+        .attr("text-anchor", "middle").attr("class", "diagram-annotation").text(note.text);
+    });
+  }
+
   function renderForce(spec) {
     stage.replaceChildren();
     const width = Math.max(320, stage.clientWidth || 720);
@@ -238,6 +332,7 @@
   function renderD3(spec) {
     if (spec.kind === "line" || spec.kind === "scatter") renderCartesian(spec);
     else if (spec.kind === "bar") renderBars(spec);
+    else if (spec.kind === "diagram") renderDiagram(spec);
     else renderForce(spec);
   }
 
@@ -276,7 +371,7 @@
     const group = new THREE.Group();
     group.add(new THREE.AxesHelper(3));
     scene.add(group);
-    const points = [];
+    const bounds = new THREE.Box3();
     spec.objects.forEach((object, index) => {
       const shade = new THREE.Color(color(object.color, index));
       let mesh;
@@ -284,11 +379,9 @@
         const from = new THREE.Vector3(...object.from);
         const delta = new THREE.Vector3(...object.to).sub(from);
         mesh = new THREE.ArrowHelper(delta.clone().normalize(), from, delta.length(), shade, 0.35, 0.2);
-        points.push(from, new THREE.Vector3(...object.to));
       } else if (object.type === "line") {
         const geometry = new THREE.BufferGeometry().setFromPoints(object.points.map((item) => new THREE.Vector3(...item)));
         mesh = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: shade }));
-        object.points.forEach((item) => points.push(new THREE.Vector3(...item)));
       } else {
         const size = object.size || (object.type === "point" ? 0.12 : 0.55);
         const geometry = object.type === "box"
@@ -296,18 +389,20 @@
           : new THREE.SphereGeometry(size, 28, 18);
         mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: shade, roughness: 0.55 }));
         mesh.position.set(...(object.position || [0, 0, 0]));
-        points.push(new THREE.Vector3(...(object.position || [0, 0, 0])));
       }
       group.add(mesh);
+      mesh.updateMatrixWorld(true);
+      bounds.expandByObject(mesh);
       if (object.label) {
         const label = textSprite(object.label, neutral);
-        const anchor = object.type === "vector" ? object.to : (object.position || [0, 0, 0]);
-        label.position.set(anchor[0] + 0.35, anchor[1] + 0.35 + (index % 3) * 0.38, anchor[2]);
+        const anchor = object.label_position
+          || (object.type === "vector" ? object.to : (object.position || [0, 0, 0]));
+        const automaticOffset = object.label_position ? 0 : 0.35 + (index % 3) * 0.38;
+        label.position.set(anchor[0] + (object.label_position ? 0 : 0.35), anchor[1] + automaticOffset, anchor[2]);
         group.add(label);
       }
     });
     group.updateMatrixWorld(true);
-    const bounds = new THREE.Box3().setFromObject(group);
     const center = bounds.getCenter(new THREE.Vector3());
     const extent = Math.max(3, bounds.getSize(new THREE.Vector3()).length());
     camera.near = Math.max(0.01, extent / 1000);
@@ -339,6 +434,17 @@
     hint.className = "viz-3d-hint";
     hint.textContent = "drag to rotate";
     stage.appendChild(hint);
+    if (spec.notes?.length) {
+      const notes = document.createElement("div");
+      notes.className = "viz-3d-notes";
+      notes.setAttribute("aria-label", "Orbital relationships");
+      spec.notes.forEach((value) => {
+        const line = document.createElement("span");
+        line.textContent = value;
+        notes.appendChild(line);
+      });
+      stage.appendChild(notes);
+    }
     const resize = () => {
       const width = Math.max(1, stage.clientWidth);
       const height = Math.max(1, stage.clientHeight);

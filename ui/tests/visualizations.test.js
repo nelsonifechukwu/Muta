@@ -62,9 +62,20 @@ test("validates every supported renderer family", () => {
     version: 1, library: "d3", kind: "force", title: "Network", aria_label: "Two linked nodes.", height: 300,
     nodes: [{ id: "a" }, { id: "b" }], links: [{ source: "a", target: "b" }],
   };
+  const diagram = {
+    version: 1, library: "d3", kind: "diagram", title: "Heart flow",
+    aria_label: "Blood flows from the right atrium to the right ventricle.", height: 360,
+    nodes: [
+      { id: "ra", label: "Right atrium", x: 180, y: 120, shape: "rounded", width: 140, height: 58, color: "blue" },
+      { id: "rv", label: "Right ventricle", x: 180, y: 260, shape: "rounded", width: 150, height: 64, color: "blue" },
+    ],
+    links: [{ source: "ra", target: "rv", label: "tricuspid valve", bond: "single", arrow: true }],
+    annotations: [{ text: "deoxygenated blood", x: 440, y: 180 }],
+  };
   const scene = {
     version: 1, library: "three", kind: "scene3d", title: "Vector", aria_label: "A three dimensional vector.", height: 360,
-    objects: [{ type: "vector", from: [0, 0, 0], to: [1, 2, 3] }],
+    notes: ["v = √(GM/r)", "T = 2π√(r³/GM)"],
+    objects: [{ type: "vector", from: [0, 0, 0], to: [1, 2, 3], label_position: [1, 2.4, 3] }],
   };
   const animation = (library) => ({
     version: 1, library, kind: "animation", title: "Motion", aria_label: "A moving dot.", height: 300,
@@ -72,7 +83,7 @@ test("validates every supported renderer family", () => {
     tracks: [{ target: "dot", to: { x: 100, opacity: 0.5 }, duration: 1 }],
   });
 
-  for (const spec of [line, bar, force, scene, animation("gsap"), animation("anime"), animation("motion")]) {
+  for (const spec of [line, bar, force, diagram, scene, animation("gsap"), animation("anime"), animation("motion")]) {
     assert.equal(viz.validateSpec(spec).ok, true, `${spec.library}/${spec.kind}`);
   }
 });
@@ -128,6 +139,13 @@ test("rejects unsafe keys, oversized arrays, bad links, and animation fields", (
   };
   assert.equal(viz.validateSpec(badForce).ok, false);
 
+  const badDiagram = {
+    version: 1, library: "d3", kind: "diagram", title: "Bad", aria_label: "Bad diagram.", height: 300,
+    nodes: [{ id: "a", label: "A", x: 10, y: 10, shape: "circle" }],
+    links: [{ source: "a", target: "missing", bond: "quadruple", arrow: true }],
+  };
+  assert.equal(viz.validateSpec(badDiagram).ok, false);
+
   const badAnimation = {
     version: 1, library: "gsap", kind: "animation", title: "Bad", aria_label: "Bad animation.", height: 300,
     elements: [{ id: "dot", type: "circle" }],
@@ -165,6 +183,13 @@ test("rejects unsafe keys, oversized arrays, bad links, and animation fields", (
     objects: [{ type: "vector", from: [1, 1, 1], to: [1, 1, 1] }],
   };
   assert.equal(viz.validateSpec(zeroVector).ok, false);
+
+  const badThreeNote = {
+    ...zeroVector,
+    notes: ["A".repeat(121)],
+    objects: [{ type: "vector", from: [0, 0, 0], to: [1, 1, 1], label_position: [0, 1] }],
+  };
+  assert.equal(viz.validateSpec(badThreeNote).ok, false);
 });
 
 test("round-trips Unicode through a fragment-safe frame URL", () => {
