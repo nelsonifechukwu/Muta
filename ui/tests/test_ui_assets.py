@@ -566,6 +566,30 @@ def test_localized_dynamic_controls_remain_keyboard_and_screen_reader_operable()
     assert 'micBtn.setAttribute("aria-label", t(active ? "voice.stop" : "voice.talk"))' in audio
 
 
+def test_conversation_titles_render_resource_mentions_without_transport_syntax():
+    js = (UI / "app.js").read_text()
+    mentions = (UI / "resource-mentions.js").read_text()
+    renderer = js[js.index("function renderConversationTitle(") : js.index(
+        "function addUserMessage(", js.index("function renderConversationTitle(")
+    )]
+    sidebar = js[js.index("async function refreshSidebar(") : js.index(
+        "function scheduleConversationRetry(", js.index("async function refreshSidebar(")
+    )]
+    assert "MutaResourceMentions?.segment(source)" in renderer
+    assert 'mention.className = "conv-resource-mention"' in renderer
+    assert "document.createTextNode(part.value)" in renderer
+    assert "label.textContent = part.name" in renderer
+    assert 'resourcePdfIcon("conv-resource-mention-icon")' in renderer
+    assert "title.textContent = displayTitle" not in sidebar
+    assert "renderConversationTitle(title, displayTitle)" in sidebar
+    assert "title: readableTitle" in sidebar
+    assert "const MENTION = /@\\{([^{}\\n]+)\\}" in mentions
+    title_css = "".join(_blocks(".conv-title"))
+    icon_css = "".join(_blocks(".conv-resource-mention-icon"))
+    assert "text-overflow: ellipsis" in title_css and "min-width: 0" in title_css
+    assert "vertical-align" in icon_css and "width: 0.95em" in icon_css
+
+
 def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
     js = (UI / "app.js").read_text()
     html = (UI / "index.html").read_text()

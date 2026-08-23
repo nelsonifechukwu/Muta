@@ -25,12 +25,20 @@ test("segments canonical document mentions without changing surrounding prose", 
     { type: "resource", name: "Physics notes.pdf" },
     { type: "text", value: "." },
   ]);
+  assert.deepEqual(segment("Read @{a\rb}"), [
+    { type: "text", value: "Read " },
+    { type: "resource", name: "a b" },
+  ]);
 });
 
 test("ordinary at signs and malformed tokens remain ordinary text", () => {
-  assert.deepEqual(segment("Email me@example.org or type @book and @{unfinished"), [
-    { type: "text", value: "Email me@example.org or type @book and @{unfinished" },
-  ]);
+  for (const source of [
+    "Email me@example.org or type @book and @{unfinished",
+    "Explain @{not\na document}",
+    "Read @{x}\u0301 now",
+  ]) {
+    assert.deepEqual(segment(source), [{ type: "text", value: source }]);
+  }
   for (const source of ["Used @{notes}chapter.pdf}", "@{partial}suffix", "@{notes}.pdf}"]) {
     assert.deepEqual(segment(source), [{ type: "text", value: source }], source);
   }

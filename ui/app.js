@@ -989,6 +989,34 @@ function renderUserBubbleContent(bubble, text, resources = []) {
   }
 }
 
+function renderConversationTitle(target, text) {
+  const source = String(text || "");
+  const parts = window.MutaResourceMentions?.segment(source) || [
+    { type: "text", value: source },
+  ];
+  const readable = [];
+  target.replaceChildren();
+  target.dir = "auto";
+  for (const part of parts) {
+    if (part.type === "text") {
+      target.appendChild(document.createTextNode(part.value));
+      readable.push(part.value);
+      continue;
+    }
+    const mention = document.createElement("span");
+    mention.className = "conv-resource-mention";
+    mention.dir = "auto";
+    const label = document.createElement("span");
+    label.textContent = part.name;
+    mention.append(resourcePdfIcon("conv-resource-mention-icon"), label);
+    target.appendChild(mention);
+    readable.push(part.name);
+  }
+  const readableTitle = readable.join("") || source;
+  target.title = readableTitle;
+  return readableTitle;
+}
+
 function addUserMessage(text, attachments = [], resources = []) {
   hideEmptyState();
   const wrap = document.createElement("div");
@@ -1567,8 +1595,8 @@ async function refreshSidebar() {
       const title = document.createElement("span");
       title.className = "conv-title";
       const displayTitle = c.title || t("conversation.untitled");
-      title.textContent = displayTitle;
-      open.setAttribute("aria-label", t("conversation.open", { title: displayTitle }));
+      const readableTitle = renderConversationTitle(title, displayTitle);
+      open.setAttribute("aria-label", t("conversation.open", { title: readableTitle }));
       if (c.id === conversationId) open.setAttribute("aria-current", "page");
       if (backgroundJob) {
         const dot = document.createElement("span");

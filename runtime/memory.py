@@ -314,6 +314,16 @@ class ConversationStore:
                 rows = list(reversed(rows))
         return [dict(r) for r in rows]
 
+    def get_first_user_message(self, conversation_id: str) -> dict | None:
+        """Return one opening user row without materializing the conversation transcript."""
+        with self._pool.connection() as conn:
+            row = conn.execute(
+                "SELECT role, content, created_at FROM messages "
+                "WHERE conversation_id = %s AND role = 'user' ORDER BY id ASC LIMIT 1",
+                (conversation_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
     def list_messages(self, conversation_id: str) -> list[dict]:
         """Full history for a UI: message ids plus linked attachment refs (no blob bytes)."""
         with self._pool.connection() as conn:

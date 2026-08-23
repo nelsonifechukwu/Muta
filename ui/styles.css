@@ -121,7 +121,17 @@ button.ghost:hover { background: var(--accent-soft); }
 .conv-generating.queued {
   background: transparent; border: 1.5px solid var(--accent-strong); animation: none;
 }
-.conv-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-title {
+  flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.conv-resource-mention {
+  display: inline; color: var(--accent); font-weight: 600;
+}
+.conv-resource-mention > span { display: inline; }
+.conv-resource-mention-icon {
+  display: inline-block; width: 0.95em; height: 0.95em; margin-inline-end: 0.2em;
+  color: #d9564f; vertical-align: -0.16em;
+}
 .conv-del {
   visibility: hidden; border: none; background: none; cursor: pointer;
   color: var(--muted); font-size: 0.9rem; padding: 0 2px;

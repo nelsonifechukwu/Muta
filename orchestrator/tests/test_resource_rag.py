@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import unicodedata
 
 from fastapi.testclient import TestClient
 
@@ -27,6 +28,62 @@ def test_resource_names_remain_visible_and_safe_for_inline_mentions():
     assert safe_resource_name("{}") == "resource.pdf"
     assert safe_resource_name("\u202e\u2067") == "resource.pdf"
     assert safe_resource_name("notes{chapter}.pdf") == "notes chapter.pdf"
+
+
+def test_conversation_title_never_cuts_through_a_resource_mention():
+    long_name = "(Embedded technology series) Lewin A. R. W. Edwards - " * 3 + "Guide.pdf"
+    title = routes._conversation_title(
+        f"according to @{{{long_name}}}, what are the details in working for a small company?"
+    )
+    assert len(title) <= routes._CONVERSATION_TITLE_LIMIT
+    assert title.startswith("according to @{")
+    assert title.endswith("}")
+    assert title.count("@{") == title.count("}") == 1
+    assert "…" in title
+    assert routes._conversation_title("hello\nworld") == "hello\nworld"
+    multiline = "Explain @{not\na document}"
+    assert routes._conversation_title(multiline) == multiline
+    assert not routes._has_title_resource_mention(routes._conversation_title(multiline))
+    combining = "Read @{x}\u0301 now"
+    assert routes._conversation_title(combining) == combining
+    assert not routes._has_title_resource_mention(routes._conversation_title(combining))
+    assert routes._conversation_title("Read @{a\rb}") == "Read @{a b}"
+    emoji_title = routes._conversation_title("@{" + "👨‍👩‍👧‍👦" * 30 + "}")
+    compact_name = emoji_title.removeprefix("@{").removesuffix("}")
+    assert emoji_title.endswith("…}")
+    assert compact_name[-2] != "\u200d"
+    assert not unicodedata.category(compact_name[-2]).startswith("M")
+
+
+def test_conversation_list_repairs_only_real_legacy_resource_titles(tmp_path):
+    store = ConversationStore(f"sqlite:///{tmp_path / 'titles.sqlite3'}")
+    long_name = "Embedded technology series Lewin A. R. W. Edwards " * 3 + "Guide.pdf"
+    opening = f"according to @{{{long_name}}}, explain chapter three"
+    cid = store.create_conversation("a", title=opening[: routes._CONVERSATION_TITLE_LIMIT])
+    store.add_message(cid, "user", opening)
+    row = store.get_conversation(cid)
+    repaired = routes._listed_conversation_title(row, store)
+    assert repaired == routes._conversation_title(opening)
+    assert repaired.endswith("}") and "@{" in repaired
+
+    malformed = ("ordinary text " + "@{unfinished " + "x" * 100)[: routes._CONVERSATION_TITLE_LIMIT]
+    malformed_cid = store.create_conversation("a", title=malformed)
+    store.add_message(malformed_cid, "user", malformed + "still ordinary")
+    malformed_row = store.get_conversation(malformed_cid)
+    assert routes._listed_conversation_title(malformed_row, store) == malformed
+
+    for prefix_length in (76, 77, 78):
+        prefix = "x" * prefix_length
+        content = prefix + "@{Long.pdf}"
+        legacy = content[: routes._CONVERSATION_TITLE_LIMIT]
+        edge_cid = store.create_conversation("a", title=legacy)
+        store.add_message(edge_cid, "user", content)
+        repaired_edge = routes._listed_conversation_title(
+            store.get_conversation(edge_cid), store
+        )
+        assert repaired_edge == routes._conversation_title(content)
+        assert repaired_edge.count("@{") == repaired_edge.count("}")
+    store.close()
 
 
 def test_private_resources_search_and_citations_are_owner_scoped(tmp_path):

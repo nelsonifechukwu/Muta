@@ -19,6 +19,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 import uuid
 from functools import lru_cache
 
@@ -161,6 +162,103 @@ log = logging.getLogger("muta.gateway.routes")
 
 # SSE through a proxy: no caching, and tell nginx not to buffer the stream.
 _SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+_CONVERSATION_TITLE_LIMIT = 80
+_TITLE_RESOURCE_MENTION = re.compile(r"@\{([^{}\n]+)\}")
+_TITLE_BIDI_CONTROLS = re.compile(r"[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
+_TITLE_SPACE_BEFORE_PUNCTUATION = re.compile(r"\s+([.,;:!?\])])")
+
+
+def _title_resource_name(value: str) -> str:
+    """Mirror `resource-mentions.js` display normalization for public-API title text."""
+    name = _TITLE_BIDI_CONTROLS.sub("", value)
+    name = "".join(" " if ord(char) < 32 or ord(char) == 127 else char for char in name)
+    name = name.replace("{", " ").replace("}", " ").replace("\n", " ")
+    name = re.sub(r"\s+", " ", name)
+    name = _TITLE_SPACE_BEFORE_PUNCTUATION.sub(r"\1", name).strip()
+    return name or "resource.pdf"
+
+
+def _compact_title_resource_name(name: str, limit: int) -> str:
+    if len(name) <= limit:
+        return name
+    cut = max(0, limit - 1)
+    # Never leave a joiner, combining mark, variation selector, or skin-tone modifier dangling
+    # before the ellipsis. This is a conservative grapheme boundary for document-title previews.
+    while cut and (
+        name[cut - 1] == "\u200d"
+        or unicodedata.category(name[cut - 1]).startswith("M")
+        or "\ufe00" <= name[cut - 1] <= "\ufe0f"
+        or "\U0001f3fb" <= name[cut - 1] <= "\U0001f3ff"
+    ):
+        cut -= 1
+    return name[:cut].rstrip() + "…"
+
+
+def _title_resource_mentions(source: str):
+    """Yield the same complete mention grammar accepted by the browser's Unicode parser."""
+    for match in _TITLE_RESOURCE_MENTION.finditer(source):
+        end = match.end()
+        following = source[end : end + 1]
+        category = unicodedata.category(following) if following else ""
+        if following == "_" or category[:1] in {"L", "N", "M"}:
+            continue
+        after_dot = source[end + 1 : end + 2] if following == "." else ""
+        dot_category = unicodedata.category(after_dot) if after_dot else ""
+        if following == "." and dot_category[:1] in {"L", "N"}:
+            continue
+        yield match
+
+
+def _has_title_resource_mention(source: str) -> bool:
+    return next(_title_resource_mentions(source), None) is not None
+
+
+def _conversation_title(message: str) -> str:
+    """Compact a first turn without cutting through its resource-mention transport token."""
+    # Parse before presentation compaction. Normalizing a newline inside malformed ordinary text
+    # such as `@{not\na document}` would otherwise synthesize a valid resource mention.
+    source = message.strip()
+    output: list[str] = []
+    used = 0
+    cursor = 0
+    for match in _title_resource_mentions(source):
+        plain = source[cursor : match.start()]
+        remaining = _CONVERSATION_TITLE_LIMIT - used
+        if len(plain) >= remaining:
+            output.append(plain[:remaining])
+            return "".join(output)
+        output.append(plain)
+        used += len(plain)
+        remaining = _CONVERSATION_TITLE_LIMIT - used
+        name = _title_resource_name(match.group(1))
+        token = f"@{{{name}}}"
+        if len(token) > remaining:
+            name_limit = remaining - 3
+            if name_limit < 1:
+                return "".join(output)
+            compact_name = _compact_title_resource_name(name, name_limit)
+            output.append(f"@{{{compact_name}}}")
+            return "".join(output)
+        output.append(token)
+        used += len(token)
+        cursor = match.end()
+    output.append(source[cursor : cursor + (_CONVERSATION_TITLE_LIMIT - used)])
+    return "".join(output)
+
+
+def _listed_conversation_title(row: dict, store) -> str | None:
+    """Repair titles created before mention-aware compaction, without guessing malformed text."""
+    title = row.get("title")
+    if not isinstance(title, str) or len(title) != _CONVERSATION_TITLE_LIMIT:
+        return title
+    opener = title.rfind("@{")
+    if opener < 0 or "}" in title[opener + 2 :]:
+        return title
+    message = store.get_first_user_message(row["id"])
+    if message is not None and _has_title_resource_mention(message.get("content", "")):
+        return _conversation_title(message.get("content", ""))
+    return title
 
 # Serve stored attachments as inert downloads: never let a browser MIME-sniff or render bytes
 # a student uploaded (an audio/HTML polyglot with a client-set text/html type was a stored-XSS
@@ -732,7 +830,7 @@ def chat(
             persona=req.persona.value,
             subject=req.subject.value,
             language=req.language,
-            title=req.message[:80],
+            title=_conversation_title(req.message),
             regenerate=req.regenerate,
             cancel_event=turn_cancel,
             **_sampling_for_request(
@@ -920,7 +1018,7 @@ def _start_chat_generation(
             persona=req.persona.value,
             subject=req.subject.value,
             language=req.language,
-            title=req.message[:80],
+            title=_conversation_title(req.message),
             regenerate=req.regenerate,  # 'answer now' re-runs this turn without a new user msg
             cancel_event=cancel_event,
             # §6.5 sampling profiles apply to the UI's primary path too — without them the
@@ -1336,7 +1434,7 @@ def conversations(
             ConversationOut(
                 id=r["id"],
                 student_id=r["student_id"],
-                title=r.get("title"),
+                title=_listed_conversation_title(r, engine.store),
                 mode=r.get("mode"),
                 created_at=r["created_at"],
                 updated_at=r["updated_at"],

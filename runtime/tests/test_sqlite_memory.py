@@ -95,6 +95,9 @@ test_messages_round_trip_in_order = contract.test_messages_round_trip_in_order
 test_recent_limit_returns_last_n_chronologically = (
     contract.test_recent_limit_returns_last_n_chronologically
 )
+test_first_user_message_reads_only_the_opening_user_turn = (
+    contract.test_first_user_message_reads_only_the_opening_user_turn
+)
 test_conversations_scoped_to_student = contract.test_conversations_scoped_to_student
 test_persists_across_reconnect = contract.test_persists_across_reconnect
 test_add_message_returns_monotonic_ids_and_bumps_updated_at = (

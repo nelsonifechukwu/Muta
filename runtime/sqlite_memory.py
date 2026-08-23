@@ -272,6 +272,15 @@ class SQLiteConversationStore:
                 rows = list(reversed(rows))
         return [dict(row) for row in rows]
 
+    def get_first_user_message(self, conversation_id: str) -> dict | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT role, content, created_at FROM messages "
+                "WHERE conversation_id = ? AND role = 'user' ORDER BY id ASC LIMIT 1",
+                (conversation_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
     def list_messages(self, conversation_id: str) -> list[dict]:
         with self._lock:
             messages = self._conn.execute(

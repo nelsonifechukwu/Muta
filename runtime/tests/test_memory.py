@@ -24,6 +24,21 @@ def test_recent_limit_returns_last_n_chronologically(store: ConversationStore):
     assert [m["content"] for m in recent] == ["m3", "m4"]
 
 
+def test_first_user_message_reads_only_the_opening_user_turn(store: ConversationStore):
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "assistant", "preamble")
+    store.add_message(cid, "user", "opening question")
+    store.add_message(cid, "assistant", "answer")
+    store.add_message(cid, "user", "follow-up")
+
+    first = store.get_first_user_message(cid)
+
+    assert first is not None
+    assert first["role"] == "user"
+    assert first["content"] == "opening question"
+    assert store.get_first_user_message("missing") is None
+
+
 def test_conversations_scoped_to_student(store: ConversationStore):
     a = store.create_conversation("alice")
     store.create_conversation("bob")
