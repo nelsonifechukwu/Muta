@@ -70,6 +70,32 @@ PROFILES: dict[str, ServingProfile] = {
 }
 DEFAULT_PROFILE = "classroom"
 
+#: Full separately-weighted CORE-VISION process reserve. The 1,100 MiB marginal estimate is
+#: valid only when the resident text server maps the exact same 4B GGUF. Native/model-switcher
+#: deployments serve smaller text models while vision retains its paired 4B weights + mmproj.
+#: The shipped files (2,614 + 641 MiB), q8 KV/recurrent state (~236 MiB), and provisional
+#: -ub 256 compute buffer (~300 MiB) total ~3,791 MiB before allocator/engine overhead. Keep
+#: MemoryHigh above that analytical floor and MemoryMax another 10% above MemoryHigh.
+VISION_FULL_RSS_RESERVE_MIB = 4352
+
+
+def vision_full_rss_reserve_mib() -> int:
+    """Return the enforced full-process vision ceiling.
+
+    Keep the previous Host-planner override as a compatibility fallback, but make the runtime
+    variable authoritative so admission planning and the transient cgroup share one value.
+    Invalid/non-positive overrides fail safe to the measured default.
+    """
+    raw = os.environ.get(
+        "MUTA_RT_VISION_MEMORY_MAX_MIB",
+        os.environ.get("MUTA_SHARE_VISION_RSS_RESERVE_MIB", str(VISION_FULL_RSS_RESERVE_MIB)),
+    )
+    try:
+        value = int(raw)
+    except ValueError:
+        return VISION_FULL_RSS_RESERVE_MIB
+    return value if value > 0 else VISION_FULL_RSS_RESERVE_MIB
+
 
 def get_profile(name: str | None = None) -> ServingProfile:
     key = (name or os.environ.get("PROFILE") or DEFAULT_PROFILE).strip()

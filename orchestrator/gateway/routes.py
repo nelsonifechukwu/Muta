@@ -2103,7 +2103,13 @@ async def tutor_vision(
     def _read(cancel_event: threading.Event | None = None) -> str:
         with vision.in_use():
             base_url = vision.ensure()  # spawns CORE-VISION if needed
-            client = VisionClient(base_url, timeout=RuntimeConfig().request_timeout_s)
+            key_file = vision.paths.api_key_file
+            api_key = key_file.read_text().strip() if key_file.is_file() else None
+            client = VisionClient(
+                base_url,
+                timeout=RuntimeConfig().request_timeout_s,
+                api_key=api_key,
+            )
             if cancel_event is None:
                 return client.transcribe(prepared.data, prepared.format)
             return client.transcribe(prepared.data, prepared.format, cancel_event=cancel_event)

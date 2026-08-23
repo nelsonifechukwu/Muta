@@ -6,6 +6,7 @@ InferenceClient stays string-only.
 from __future__ import annotations
 
 import base64
+import threading
 
 import httpx
 import pytest
@@ -24,6 +25,7 @@ def _capture(monkeypatch, payload: dict) -> dict:
     def fake_post(url, **kwargs):
         seen["url"] = url
         seen["json"] = kwargs.get("json")
+        seen["headers"] = kwargs.get("headers")
         return httpx.Response(200, json=payload, request=httpx.Request("POST", url))
 
     monkeypatch.setattr(httpx, "post", fake_post)
@@ -61,6 +63,59 @@ def test_thinking_is_disabled_for_the_transcription(monkeypatch):
     seen = _capture(monkeypatch, {"choices": [{"message": {"content": "ok"}}]})
     VisionClient("http://127.0.0.1:8082").transcribe(b"x", "PNG")
     assert seen["json"]["chat_template_kwargs"] == {"enable_thinking": False}
+
+
+def test_api_key_is_sent_to_a_protected_vision_server(monkeypatch):
+    seen = _capture(monkeypatch, {"choices": [{"message": {"content": "ok"}}]})
+
+    VisionClient("http://127.0.0.1:8082", api_key="vision-secret").transcribe(b"x", "PNG")
+
+    assert seen["headers"] == {"authorization": "Bearer vision-secret"}
+
+
+def test_api_key_is_sent_on_the_cancellable_request_path(monkeypatch):
+    seen = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def read(self):
+            return b""
+
+        def close(self):
+            return None
+
+        def json(self):
+            return {"choices": [{"message": {"content": "ok"}}]}
+
+    class FakeClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def build_request(self, method, url, **kwargs):
+            seen.update(method=method, url=url, headers=kwargs.get("headers"))
+            return object()
+
+        def send(self, _request, *, stream):
+            seen["stream"] = stream
+            return FakeResponse()
+
+    monkeypatch.setattr(httpx, "Client", FakeClient)
+
+    result = VisionClient("http://127.0.0.1:8082", api_key="vision-secret").transcribe(
+        b"x", "PNG", cancel_event=threading.Event()
+    )
+
+    assert result == "ok"
+    assert seen["headers"] == {"authorization": "Bearer vision-secret"}
+    assert seen["stream"] is True
 
 
 def test_transport_error_propagates(monkeypatch):

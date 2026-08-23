@@ -20,7 +20,12 @@ import psutil
 from runtime.config import RuntimeConfig
 from runtime.gguf import GGUFError, read_metadata
 from runtime.kvmath import KVCost, RecurrentStateCost, compute_buffer_mib
-from runtime.profiles import BundlePaths, ServingProfile, physical_cores
+from runtime.profiles import (
+    BundlePaths,
+    ServingProfile,
+    physical_cores,
+    vision_full_rss_reserve_mib,
+)
 
 MiB = 1024**2
 GiB = 1024**3
@@ -168,13 +173,12 @@ class CapacityPlanner:
                     BundlePaths.from_env().core_model.resolve() != model_path.resolve()
                 )
         full_vision_rss = mode == "competition" or vision_uses_different_weights
-        auxiliary_env = (
-            "MUTA_SHARE_VISION_RSS_RESERVE_MIB"
+        auxiliary_reserve_mib = (
+            vision_full_rss_reserve_mib()
             if full_vision_rss
-            else "MUTA_SHARE_AUXILIARY_RESERVE_MIB"
+            else int(os.environ.get("MUTA_SHARE_AUXILIARY_RESERVE_MIB", "1100"))
         )
-        auxiliary_default = "3500" if full_vision_rss else "1100"
-        auxiliary_reserve = int(os.environ.get(auxiliary_env, auxiliary_default)) * MiB
+        auxiliary_reserve = auxiliary_reserve_mib * MiB
         prompt_cache = cfg.cache_ram_mib * MiB
         kv_per_token = 0.0
         recurrent_per_slot = 0

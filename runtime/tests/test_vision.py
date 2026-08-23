@@ -100,8 +100,9 @@ def test_an_already_running_instance_serves_even_under_pressure(manager):
 def test_missing_model_is_a_denial_not_a_crash(bundle, monkeypatch):  # noqa: F811
     (bundle.root / "models" / "core" / "mmproj-q8_0.gguf").unlink()
     mgr = VisionManager(paths=BundlePaths(bundle.root))
-    with pytest.raises(VisionDenied, match="not staged"):
+    with pytest.raises(VisionDenied, match="isn't installed correctly") as exc:
         mgr.ensure()
+    assert str(bundle.root) not in str(exc.value)
 
 
 def test_a_server_that_dies_during_startup_is_reported(bundle, monkeypatch):  # noqa: F811
@@ -299,15 +300,28 @@ def test_status_is_reportable(manager):
 # --- process wrapping --------------------------------------------------------------------
 
 
-def test_systemd_scope_carries_the_marginal_memory_cap(monkeypatch):
+def test_systemd_scope_uses_the_gateway_user_manager_and_full_vision_cap(monkeypatch):
     from runtime.profiles import Invocation
 
     monkeypatch.setattr("runtime.vision.shutil.which", lambda _n: "/usr/bin/systemd-run")
     argv = _wrap_with_scope(Invocation(["llama-server", "-m", "x.gguf"]))
-    assert argv[:2] == ["systemd-run", "--scope"]
-    assert "MemoryMax=1100M" in argv  # §5.1: the vision instance's marginal budget
+    assert argv[:4] == ["systemd-run", "--user", "--scope", "--collect"]
+    assert "MemoryMax=4352M" in argv
+    assert "MemoryHigh=3916M" in argv
     assert "Slice=tutor.slice" in argv
     assert argv[-2:] == ["-m", "x.gguf"]
+
+
+def test_vision_memory_cap_is_env_tunable_without_rebuilding(monkeypatch):
+    from runtime.profiles import Invocation
+
+    monkeypatch.setattr("runtime.vision.shutil.which", lambda _n: "/usr/bin/systemd-run")
+    monkeypatch.setenv("MUTA_RT_VISION_MEMORY_MAX_MIB", "4096")
+
+    argv = _wrap_with_scope(Invocation(["llama-server"]))
+
+    assert "MemoryMax=4096M" in argv
+    assert "MemoryHigh=3686M" in argv
 
 
 def test_without_systemd_the_command_runs_bare(monkeypatch):
@@ -315,6 +329,21 @@ def test_without_systemd_the_command_runs_bare(monkeypatch):
 
     monkeypatch.setattr("runtime.vision.shutil.which", lambda _n: None)
     assert _wrap_with_scope(Invocation(["llama-server"])) == ["llama-server"]
+
+
+def test_vision_launch_log_redacts_api_key():
+    from runtime.vision import _redact_cli_secrets
+
+    argv = ["llama-server", "--api-key", "vision-secret", "--port", "8082"]
+
+    assert _redact_cli_secrets(argv) == [
+        "llama-server",
+        "--api-key",
+        "<redacted>",
+        "--port",
+        "8082",
+    ]
+    assert argv[2] == "vision-secret"
 
 
 def test_ffmpeg_caps_frames_and_resolution():

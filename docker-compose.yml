@@ -131,6 +131,7 @@ services:
       # The vision spawn gets the same courtesy: 60 s covers a warm spawn on the target,
       # but a cold mmproj load under emulation can exceed it.
       MUTA_RT_VISION_STARTUP_S: "300"
+      MUTA_RT_VISION_MEMORY_MAX_MIB: "${MUTA_RT_VISION_MEMORY_MAX_MIB:-4352}"
       # TTFT preamble (docs/ttft-preamble.md): the in-process NumPy warm-up model writes a
       # labelled placeholder while llama-server prefills. Off unless asked for —
       # `MUTA_RT_TTFT_PREAMBLE=1 ./run.sh`. Needs `make fetch-ttft` (models/ttft, 15 MB);

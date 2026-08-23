@@ -41,10 +41,12 @@ class VisionClient:
         *,
         model: str = "core-vision",
         timeout: float = 120.0,
+        api_key: str | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
+        self._headers = {"authorization": f"Bearer {api_key}"} if api_key else {}
 
     def transcribe(
         self,
@@ -81,11 +83,11 @@ class VisionClient:
         }
         url = f"{self.base_url}/v1/chat/completions"
         if cancel_event is None:
-            r = httpx.post(url, json=payload, timeout=self.timeout)
+            r = httpx.post(url, json=payload, timeout=self.timeout, headers=self._headers)
             r.raise_for_status()
         else:
             with httpx.Client(timeout=self.timeout) as client:
-                request = client.build_request("POST", url, json=payload)
+                request = client.build_request("POST", url, json=payload, headers=self._headers)
                 r = client.send(request, stream=True)
                 watcher_stop = threading.Event()
 

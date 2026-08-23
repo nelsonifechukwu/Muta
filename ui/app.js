@@ -1880,6 +1880,7 @@ function renderChips() {
     if (a.kind === "image" && a.previewUrl) {
       const img = document.createElement("img");
       img.src = a.previewUrl;
+      img.alt = "";
       chip.appendChild(img);
     } else {
       chip.append(a.kind === "audio" ? `🎙 ${t("attachment.audio")}` : `📎 ${t("attachment.file")}`);
@@ -1889,9 +1890,9 @@ function renderChips() {
       // student whether the tutor can actually see what they attached.
       const label = document.createElement("span");
       label.className = "chip-status";
-      label.textContent = a.status === "reading" ? t("attachment.reading") : t("attachment.readFailed");
-      if (a.detailKey) label.title = t(a.detailKey);
-      else if (a.detail) label.title = a.detail;
+      const detail = a.detail || (a.detailKey ? t(a.detailKey) : t("attachment.readFailed"));
+      label.textContent = a.status === "reading" ? t("attachment.reading") : detail;
+      if (a.status === "failed") label.title = detail;
       chip.appendChild(label);
     }
     const x = document.createElement("button");
@@ -1928,33 +1929,27 @@ async function addImage(file) {
   if (conversationId) form.append("conversation_id", conversationId);
   form.append("image", file);
 
-  const settle = (status, detailKey = null) => {
+  const settle = (status, detail = "", detailKey = null) => {
     entry.status = status;
+    entry.detail = detail;
     entry.detailKey = detailKey;
     renderChips();
   };
 
-  let body;
-  try {
-    const r = await fetch("/v1/tutor/vision", { method: "POST", body: form });
-    body = await r.json();
-  } catch {
-    settle("failed", "attachment.imageUploadFailed");
-    return toast(t("attachment.imageUploadFailed"));
-  }
-  entry.id = body.attachment_id ?? null;
-  if (body.accepted && body.transcription) {
-    entry.transcription = body.transcription;
+  const result = await MutaVisionUpload.request(fetch, "/v1/tutor/vision", {
+    method: "POST",
+    headers: authHeaders(),
+    body: form,
+  });
+  entry.id = result.attachmentId ?? null;
+  if (result.status === "ready") {
+    entry.transcription = result.transcription;
     settle("ready");
     toast(t("attachment.imageRead"), 3000);
-  } else if (body.accepted) {
-    // The reader ran but saw nothing it could transcribe — a camera problem, not a system
-    // problem. Say so: "couldn't be read" sends the student hunting for a bug that isn't there.
-    settle("failed", "attachment.photoEmpty");
-    toast(t("attachment.photoEmpty"));
   } else {
-    settle("failed", "attachment.imageUnreadable");
-    toast(t("attachment.imageUnreadable"));
+    const detail = result.detail || t(result.detailKey);
+    settle("failed", detail, result.detailKey);
+    toast(detail);
   }
 }
 

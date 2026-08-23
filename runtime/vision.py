@@ -35,6 +35,7 @@ from runtime.profiles import (
     ServingProfile,
     core_vision_command,
     get_profile,
+    vision_full_rss_reserve_mib,
 )
 
 log = logging.getLogger("muta.runtime.vision")
@@ -55,9 +56,6 @@ def _startup_timeout_from_env() -> float:
         return STARTUP_TIMEOUT_SECONDS
 
 
-#: §5.1 — the vision instance's marginal cap. Enforced by systemd where available so a
-#: runaway vision job is bounded by the kernel rather than by our own good intentions.
-MEMORY_MAX = "1100M"
 CPU_WEIGHT = "500"
 
 
@@ -143,10 +141,14 @@ class VisionManager:
         try:
             invocation = core_vision_command(self.paths, self.profile)
         except (FileNotFoundError, RuntimeError) as e:
-            raise VisionDenied(f"vision model not staged: {e}") from e
+            log.warning("CORE-VISION model staging failed: %s", e)
+            raise VisionDenied(
+                "the image reader isn't installed correctly — "
+                "type the problem and I'll work through it with you"
+            ) from e
 
         argv = _wrap_with_scope(invocation)
-        log.info("spawning CORE-VISION: %s", " ".join(argv))
+        log.info("spawning CORE-VISION: %s", " ".join(_redact_cli_secrets(argv)))
         started = self.clock()
         # Start the idle clock at spawn, not after the load finishes. `_wait_until_ready`
         # blocks for tens of seconds, and for all of it `running` is already True; leaving
@@ -239,7 +241,7 @@ class VisionManager:
     def reap_if_idle(self) -> bool:
         """TTL reaper tick. Returns True when it killed the instance.
 
-        Called on a timer by the gateway: the 1.1 GiB this frees is the headroom the
+        Called on a timer by the gateway: the auxiliary RSS this frees is headroom the
         degradation ladder spends (§5.3), so holding an idle vision server is not free even
         when nothing is asking for memory yet.
         """
@@ -295,22 +297,39 @@ def _wrap_with_scope(invocation: Invocation) -> list[str]:
     if shutil.which("systemd-run") is None:
         log.info("systemd-run absent — spawning vision without a cgroup cap (dev only)")
         return invocation.argv
+    memory_max_mib = vision_full_rss_reserve_mib()
     return [
         "systemd-run",
+        # Native Muta is itself a systemd user unit. Calling the system manager here asks an
+        # unprivileged process to create a root-owned scope and exits before llama-server ever
+        # starts; use the same per-user manager that owns the gateway.
+        "--user",
         "--scope",
+        # CollectMode=inactive-or-failed: an OOM/crash must not leave the fixed unit name in
+        # the failed state and make every later image retry fail with "unit already exists".
+        "--collect",
         "--quiet",
         "--unit",
         "tutor-core-vision",
         "-p",
-        f"MemoryMax={MEMORY_MAX}",
+        f"MemoryMax={memory_max_mib}M",
         "-p",
-        f"MemoryHigh={int(int(MEMORY_MAX.rstrip('M')) * 0.9)}M",
+        f"MemoryHigh={int(memory_max_mib * 0.9)}M",
         "-p",
         f"CPUWeight={CPU_WEIGHT}",
         "-p",
         "Slice=tutor.slice",
         *invocation.argv,
     ]
+
+
+def _redact_cli_secrets(argv: list[str]) -> list[str]:
+    """Return a log-safe command without exposing llama-server credentials."""
+    redacted = list(argv)
+    for index, argument in enumerate(redacted[:-1]):
+        if argument == "--api-key":
+            redacted[index + 1] = "<redacted>"
+    return redacted
 
 
 def ffmpeg_frames_command(
