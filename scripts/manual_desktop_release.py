@@ -30,6 +30,7 @@ SEMVER_RE = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
     r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
+INTEL_MAC_CRYPTOGRAPHY = "cryptography==46.0.3"
 
 
 class ReleaseError(RuntimeError):
@@ -168,6 +169,22 @@ def mac_python(target: str, worktree: Path, cache_root: Path, *, dry_run: bool) 
     python = venv / "bin" / "python"
     if not python.is_file():
         run([str(base_python), "-m", "venv", str(venv)], dry_run=dry_run)
+    if target == "darwin-x86_64":
+        # cryptography 47+ stopped publishing an Intel macOS wheel. Without this
+        # compatible universal2 pin, pip tries to cross-compile OpenSSL from an
+        # Apple Silicon host and the offline Intel package cannot be produced.
+        run(
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "--disable-pip-version-check",
+                "--only-binary=:all:",
+                INTEL_MAC_CRYPTOGRAPHY,
+            ],
+            dry_run=dry_run,
+        )
     run(
         [
             str(python),
@@ -322,7 +339,7 @@ def build_gcp(
         status_result = gcp_ssh_capture(
             instance,
             zone,
-            f'cat "$HOME/{status_path}" 2>/dev/null || printf \'missing\\n\'',
+            f"cat \"$HOME/{status_path}\" 2>/dev/null || printf 'missing\\n'",
         )
         status = status_result.stdout.strip() if status_result.returncode == 0 else "unreachable"
         if status == "complete":

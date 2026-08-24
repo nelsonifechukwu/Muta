@@ -109,6 +109,26 @@ def test_gateway_worker_uses_external_cargo_cache(tmp_path: Path) -> None:
     )
 
 
+def test_intel_mac_python_installs_compatible_binary_cryptography(
+    tmp_path: Path, monkeypatch
+) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], **_kwargs):
+        commands.append(command)
+        return type("Result", (), {"returncode": 0})()
+
+    monkeypatch.setattr(release, "run", fake_run)
+    monkeypatch.setattr(release, "uv_python", lambda *_args, **_kwargs: tmp_path / "base")
+
+    release.mac_python("darwin-x86_64", tmp_path / "worktree", tmp_path, dry_run=False)
+
+    assert any(
+        "--only-binary=:all:" in command and release.INTEL_MAC_CRYPTOGRAPHY in command
+        for command in commands
+    )
+
+
 def test_linux_worker_caps_compiler_parallelism_on_eight_gb_builder(
     tmp_path: Path, monkeypatch
 ) -> None:
