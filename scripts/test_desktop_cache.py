@@ -83,6 +83,14 @@ def test_cache_change_classifier_keeps_layers_independent() -> None:
     assert all(workflow.values())
 
 
+def test_macos_native_build_maps_aarch64_to_apple_arm64() -> None:
+    script = (desktop_cache_key.REPO_ROOT / "scripts/build_desktop_native.sh").read_text()
+    assert 'if [ "$(uname -s)" = "Darwin" ] && [ "$apple_arch" = "aarch64" ]' in script
+    assert 'apple_arch="arm64"' in script
+    assert '-DCMAKE_OSX_ARCHITECTURES="$apple_arch"' in script
+    assert '--cc="clang -arch $apple_arch"' in script
+
+
 def test_frozen_gateway_requires_complete_onedir(tmp_path: Path) -> None:
     gateway = tmp_path / "gateway"
     gateway.mkdir()
