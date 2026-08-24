@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build release-native llama.cpp and a self-contained FFmpeg command on the current runner.
-# Called from the per-OS CI matrix; cross-compiling these artifacts is intentionally unsupported.
+# Called from the per-OS CI matrix. macOS may additionally target Intel from Apple Silicon;
+# other operating systems still build on their destination OS.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -8,6 +9,7 @@ output="${1:-$repo_root/desktop/build/native}"
 work="${MUTA_NATIVE_WORK:-$repo_root/desktop/build/native-work}"
 llama_commit="602f828b4d93a2fefdd546145d9e761825f3bd11"
 ffmpeg_commit="db69d06eeeab4f46da15030a80d539efb4503ca8"
+target_arch="${MUTA_DESKTOP_TARGET_ARCH:-$(uname -m)}"
 
 mkdir -p "$output" "$work"
 
@@ -43,13 +45,14 @@ case "$(uname -s)" in
   Darwin)
     cmake_args+=(
       -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
+      -DCMAKE_OSX_ARCHITECTURES="$target_arch"
       -DGGML_METAL=ON
       # Current Accelerate headers route cblas_sgemm through a macOS 13.3 symbol even when
       # the deployment target is 12. Keep the documented macOS 12 baseline and use ggml's
       # native CPU/Metal kernels instead of shipping a binary that can fail on 12.x.
       -DGGML_BLAS=OFF
     )
-    if [ "$(uname -m)" = "x86_64" ]; then
+    if [ "$target_arch" = "x86_64" ]; then
       cmake_args+=(
         -DGGML_AVX2=ON
         -DGGML_F16C=ON
@@ -103,7 +106,7 @@ validate_native_binary() {
   local executable="$1"
   case "$(uname -s)" in
     Darwin)
-      file "$executable" | grep -Eq "Mach-O.*$(uname -m)|Mach-O universal"
+      file "$executable" | grep -Eq "Mach-O.*$target_arch|Mach-O universal"
       # A developer download built for a future macOS must never slip into a release.
       otool -l "$executable" \
         | awk '/minos/{ if ($2 + 0 > 12.0) { print "minimum macOS is too new: " $2 > "/dev/stderr"; exit 1 } }'
@@ -141,6 +144,15 @@ test "$(git -C "$ffmpeg_src" rev-parse HEAD)" = "$ffmpeg_commit"
 ffmpeg_prefix="$work/ffmpeg-install"
 rm -rf "$work/ffmpeg-build" "$ffmpeg_prefix"
 mkdir -p "$work/ffmpeg-build" "$ffmpeg_prefix"
+ffmpeg_target_args=()
+if [ "$(uname -s)" = "Darwin" ] && [ "$target_arch" != "$(uname -m)" ]; then
+  ffmpeg_target_args=(
+    --arch="$target_arch"
+    --cc="clang -arch $target_arch"
+    --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-12.0}"
+    --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-12.0}"
+  )
+fi
 (
   cd "$work/ffmpeg-build"
   "$ffmpeg_src/configure" \
@@ -154,7 +166,8 @@ mkdir -p "$work/ffmpeg-build" "$ffmpeg_prefix"
     --disable-ffplay \
     --disable-ffprobe \
     --enable-ffmpeg \
-    --enable-small
+    --enable-small \
+    "${ffmpeg_target_args[@]}"
   make -j "${NUMBER_OF_PROCESSORS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)}"
   make install
 )

@@ -24,7 +24,8 @@ dependencies = [
     # gateway, so their footprint is charged to the 300 MiB tool pool rather than to the
     # gateway's 600 MiB cap — but they must be in the bundle, hence core dependencies.
     "sympy>=1.12",  # answer verification
-    "numpy>=1.26",  # renderer + flat index
+    # NumPy 2.x's macOS x86 wheel requires macOS 14; keep the desktop baseline at macOS 12.
+    "numpy>=1.26,<2",  # renderer + flat index
     "matplotlib>=3.8",  # diagram rendering (Agg only, no display)
     "pillow>=10.0",  # image guard: downscale, EXIF strip (TDD §4.2)
     "pypdf>=5.0",  # learner-resource PDF extraction with physical page preservation

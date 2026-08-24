@@ -33,7 +33,15 @@ def target() -> tuple[str, str]:
     if target_os is None:
         raise BuildError(f"unsupported desktop build OS: {system}")
     machine = platform.machine().lower()
-    target_arch = "aarch64" if machine in {"arm64", "aarch64"} else "x86_64"
+    target_arch = os.environ.get("MUTA_DESKTOP_TARGET_ARCH") or (
+        "aarch64" if machine in {"arm64", "aarch64"} else "x86_64"
+    )
+    if target_arch not in {"aarch64", "x86_64"}:
+        raise BuildError(f"unsupported desktop target architecture: {target_arch}")
+    if target_os != "macos" and target_arch != (
+        "aarch64" if machine in {"arm64", "aarch64"} else "x86_64"
+    ):
+        raise BuildError("architecture override is supported only for macOS cross-builds")
     return target_os, target_arch
 
 
@@ -185,6 +193,14 @@ def build(args: argparse.Namespace) -> None:
         )
 
     tauri_command = ["npm", "run", "tauri", "--", "build"]
+    target_triple = os.environ.get("MUTA_DESKTOP_TARGET_TRIPLE", "")
+    if target_triple:
+        if target_os != "macos" or target_triple not in {
+            "aarch64-apple-darwin",
+            "x86_64-apple-darwin",
+        }:
+            raise BuildError(f"unsupported Tauri target override: {target_triple}")
+        tauri_command += ["--target", target_triple]
     if args.tauri_config:
         tauri_command += ["--config", str(args.tauri_config.resolve())]
     run(tauri_command, cwd=DESKTOP, env={**os.environ, "MACOSX_DEPLOYMENT_TARGET": "12.0"})
@@ -201,14 +217,17 @@ def build(args: argparse.Namespace) -> None:
                 str(DESKTOP / "src-tauri" / "target" / "release"),
             ]
         )
-    assemble_portable_kit(target_os)
+    target_root = DESKTOP / "src-tauri" / "target"
+    target_release = (
+        target_root / target_triple / "release" if target_triple else target_root / "release"
+    )
+    assemble_portable_kit(target_os, target_release)
 
 
-def assemble_portable_kit(target_os: str) -> None:
+def assemble_portable_kit(target_os: str, target_release: Path) -> None:
     kit = BUILD / "offline-kit"
     shutil.rmtree(kit, ignore_errors=True)
     kit.mkdir(parents=True)
-    target_release = DESKTOP / "src-tauri" / "target" / "release"
     if target_os == "macos":
         app = target_release / "bundle" / "macos" / "Muta.app"
         if not app.is_dir():
