@@ -35,12 +35,13 @@ if (-not (Test-Path $ModelMarker)) {
 }
 Copy-Item -Path (Join-Path $ModelRoot "*") -Destination $SourceRoot -Recurse -Force
 
+$MsysRoot = if (Test-Path "C:\msys64") { "C:\msys64" } else { "C:\tools\msys64" }
 $env:Path = @(
     "C:\Program Files\nodejs",
     "C:\Program Files\CMake\bin",
     "C:\Program Files\NASM",
-    "C:\msys64\usr\bin",
-    "C:\msys64\mingw64\bin",
+    (Join-Path $MsysRoot "usr\bin"),
+    (Join-Path $MsysRoot "mingw64\bin"),
     "$env:USERPROFILE\.cargo\bin",
     $env:Path
 ) -join ";"

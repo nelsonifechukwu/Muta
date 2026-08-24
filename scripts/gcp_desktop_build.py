@@ -351,6 +351,21 @@ def build_windows(
                     str(output),
                 ]
             )
+        cleanup = (
+            f"Remove-Item -Recurse -Force C:/MutaPackageOutput/{commit}/{version}; "
+            f"Remove-Item -Recurse -Force C:/MutaPackageCache/source/{commit}; "
+            f"Remove-Item -Force C:/MutaIncoming/{source_archive.name}"
+        )
+        run(
+            [
+                *ssh_base(key_file, address),
+                "powershell.exe",
+                "-NoProfile",
+                "-Command",
+                cleanup,
+            ],
+            check=False,
+        )
     finally:
         run(
             ["gcloud", "compute", "instances", "stop", instance, "--zone", zone],
@@ -413,6 +428,8 @@ def main(argv: list[str] | None = None) -> int:
                     args.windows_instance,
                 )
             upload(output, args.version, target, prefix)
+            for suffix in ("", ".sha256"):
+                (output / f"{name}{suffix}").unlink(missing_ok=True)
         print(prefix)
     except (GcpBuildError, OSError, subprocess.SubprocessError) as error:
         print(f"GCP desktop build failed: {error}", file=sys.stderr)

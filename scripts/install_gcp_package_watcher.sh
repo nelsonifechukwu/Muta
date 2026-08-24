@@ -3,8 +3,10 @@
 set -euo pipefail
 
 builder_user="${MUTA_PACKAGE_BUILDER_USER:-$USER}"
+builder_home="$(getent passwd "$builder_user" | cut -d: -f6)"
 repo="${MUTA_PACKAGE_REPO:-$HOME/Muta}"
 state_root="${MUTA_PACKAGE_STATE_ROOT:-$HOME/.local/state/muta-packages}"
+test -n "$builder_home"
 test -x "$repo/scripts/gcp_package_watch.sh"
 mkdir -p "$state_root"
 
@@ -24,6 +26,7 @@ Type=oneshot
 User=$builder_user
 Environment=MUTA_PACKAGE_REPO=$repo
 Environment=MUTA_PACKAGE_STATE_ROOT=$state_root
+Environment=PATH=$builder_home/.local/bin:$builder_home/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=$repo/scripts/gcp_package_watch.sh
 EOF
 
