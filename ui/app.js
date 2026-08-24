@@ -2617,7 +2617,7 @@ async function dispatch(item, opts = {}) {
         return;
       }
       if (assistant) {
-        if (typeof detail === "string" && (res.status === 404 || res.status === 409)) {
+        if (typeof detail === "string") {
           assistant.fail(detail);
         } else {
           const variables = { status: res.status };
@@ -4162,7 +4162,7 @@ function makeModelOption(model, activeId, selectionEnabled) {
   detail.className = "model-option-detail";
   detail.dir = "auto";
   detail.textContent = !model.available
-    ? t("model.unavailable")
+    ? model.disabled_reason || t("model.unavailable")
     : modelSummary(model) || t("model.localTutor");
   const check = document.createElement("span");
   check.className = "model-check";

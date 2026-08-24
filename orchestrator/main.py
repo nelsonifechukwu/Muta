@@ -70,6 +70,7 @@ VISION_REAP_INTERVAL_S = 30.0
 ENGINE_POLL_INTERVAL_S = 5.0
 ENGINE_RESPAWN_BACKOFF_MIN_S = 2.0
 ENGINE_RESPAWN_BACKOFF_MAX_S = 60.0
+ENGINE_PARENT_SHUTDOWN_GRACE_S = 1.0
 
 log = logging.getLogger("muta.orchestrator.main")
 
@@ -128,6 +129,12 @@ def _start_engine_thread(
                 if planned:
                     log.info("llama-server stopped for a requested model change")
                     break
+                # The desktop shell terminates the gateway's Unix process group, so the child
+                # can receive SIGTERM a fraction before FastAPI enters lifespan shutdown and
+                # sets this Event. Give the parent that bounded grace instead of respawning a
+                # fresh model while the application is closing.
+                if stop.wait(ENGINE_PARENT_SHUTDOWN_GRACE_S):
+                    return
                 _engine_state["restarts"] = int(_engine_state["restarts"]) + 1  # type: ignore[arg-type]
                 log.error(
                     "llama-server exited with code %s — respawning (restart #%s)",

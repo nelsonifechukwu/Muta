@@ -247,6 +247,90 @@ fn copy_model_pack(
     Ok(())
 }
 
+fn valid_custom_gguf(path: &Path) -> bool {
+    let Ok(metadata) = fs::symlink_metadata(path) else {
+        return false;
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return false;
+    }
+    let Ok(mut stream) = File::open(path) else {
+        return false;
+    };
+    let mut header = [0_u8; 8];
+    if stream.read_exact(&mut header).is_err() || &header[..4] != b"GGUF" {
+        return false;
+    }
+    matches!(u32::from_le_bytes(header[4..8].try_into().unwrap()), 2 | 3)
+}
+
+fn custom_files_below(root: &Path, current: &Path, found: &mut Vec<(PathBuf, PathBuf)>) {
+    let Ok(entries) = fs::read_dir(current) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
+        if kind.is_symlink() {
+            continue;
+        }
+        if kind.is_dir() {
+            custom_files_below(root, &path, found);
+        } else if path
+            .extension()
+            .and_then(|value| value.to_str())
+            .is_some_and(|value| value.eq_ignore_ascii_case("gguf"))
+            && valid_custom_gguf(&path)
+        {
+            if let Ok(relative) = path.strip_prefix(root) {
+                found.push((path.clone(), relative.to_path_buf()));
+            }
+        }
+    }
+}
+
+fn sync_custom_models(source: &Path, destination: &Path) -> Result<(), String> {
+    let mut files = Vec::new();
+    // A literal GGUF in model-pack is accepted for convenience and normalised into the
+    // dedicated custom directory. Nested files belong below models/custom.
+    if let Ok(entries) = fs::read_dir(source) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if valid_custom_gguf(&path) {
+                files.push((path, PathBuf::from(entry.file_name())));
+            }
+        }
+    }
+    let custom = source.join("models/custom");
+    if custom.is_dir() {
+        custom_files_below(&custom, &custom, &mut files);
+    }
+    for (from, relative) in files {
+        let relative = safe_relative(&relative.to_string_lossy())?;
+        let to = destination.join("models/custom").join(relative);
+        if from.canonicalize().ok() == to.canonicalize().ok() && to.is_file() {
+            continue;
+        }
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        let temporary = to.with_extension(format!("gguf.incoming-{}", std::process::id()));
+        fs::copy(&from, &temporary)
+            .map_err(|error| format!("copying custom model {}: {error}", from.display()))?;
+        if !valid_custom_gguf(&temporary) {
+            let _ = fs::remove_file(&temporary);
+            return Err(format!(
+                "custom model changed while copying: {}",
+                from.display()
+            ));
+        }
+        replace_file(&temporary, &to)?;
+    }
+    Ok(())
+}
+
 #[cfg(windows)]
 fn replace_file(source: &Path, destination: &Path) -> Result<(), String> {
     use std::os::windows::ffi::OsStrExt;
@@ -298,10 +382,12 @@ fn install_model_pack(
             fs::remove_dir_all(&incoming).map_err(|error| error.to_string())?;
         }
         copy_model_pack(source, &incoming, &manifest)?;
+        sync_custom_models(source, &incoming)?;
         verify_model_pack(&incoming, required_id)?;
         fs::rename(&incoming, &destination).map_err(|error| error.to_string())?;
     } else {
         verify_model_pack(&destination, required_id)?;
+        sync_custom_models(source, &destination)?;
     }
     let pointer = ActivePointer {
         pack_id: manifest.pack_id,
@@ -330,14 +416,6 @@ fn candidate_model_roots(data_root: &Path, required_id: &str) -> Vec<PathBuf> {
     if let Some(explicit) = std::env::var_os("MUTA_MODEL_ROOT") {
         candidates.push(PathBuf::from(explicit));
     }
-    let pointer_path = data_root.join("model-packs/active.json");
-    if let Ok(pointer) = read_json::<ActivePointer>(&pointer_path) {
-        if pointer.pack_id == required_id {
-            if let Ok(relative) = safe_relative(&pointer.path) {
-                candidates.push(data_root.join("model-packs").join(relative));
-            }
-        }
-    }
     let mut anchors = Vec::new();
     if let Some(appimage) = std::env::var_os("APPIMAGE") {
         anchors.push(PathBuf::from(appimage));
@@ -349,6 +427,17 @@ fn candidate_model_roots(data_root: &Path, required_id: &str) -> Vec<PathBuf> {
         for ancestor in anchor.ancestors().take(7) {
             candidates.push(ancestor.join("model-pack"));
             candidates.push(ancestor.join("model-packs").join(required_id));
+        }
+    }
+    // Prefer first-install media over the active installed pointer. This lets a user add a
+    // GGUF beside Muta and simply reopen the app: the launcher re-verifies the immutable base
+    // pack, imports new custom models, then atomically updates the installed copy.
+    let pointer_path = data_root.join("model-packs/active.json");
+    if let Ok(pointer) = read_json::<ActivePointer>(&pointer_path) {
+        if pointer.pack_id == required_id {
+            if let Ok(relative) = safe_relative(&pointer.path) {
+                candidates.push(data_root.join("model-packs").join(relative));
+            }
         }
     }
     candidates
@@ -676,6 +765,39 @@ mod tests {
         assert!(safe_relative("models/core/model.gguf").is_ok());
         assert!(safe_relative("../model.gguf").is_err());
         assert!(safe_relative("/tmp/model.gguf").is_err());
+    }
+
+    #[test]
+    fn custom_gguf_requires_magic_and_supported_version() {
+        let root = std::env::temp_dir().join(format!("muta-custom-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let valid = root.join("valid.gguf");
+        fs::write(&valid, [b'G', b'G', b'U', b'F', 3, 0, 0, 0]).unwrap();
+        let invalid = root.join("invalid.gguf");
+        fs::write(&invalid, b"not a model").unwrap();
+        assert!(valid_custom_gguf(&valid));
+        assert!(!valid_custom_gguf(&invalid));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn first_install_media_precedes_the_installed_pointer() {
+        let data_root =
+            std::env::temp_dir().join(format!("muta-candidate-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&data_root);
+        let pointer_root = data_root.join("model-packs/packs/current");
+        fs::create_dir_all(data_root.join("model-packs")).unwrap();
+        fs::create_dir_all(&pointer_root).unwrap();
+        fs::write(
+            data_root.join("model-packs/active.json"),
+            br#"{"pack_id":"test-pack","path":"packs/current"}"#,
+        )
+        .unwrap();
+
+        let candidates = candidate_model_roots(&data_root, "test-pack");
+        assert_eq!(candidates.last(), Some(&pointer_root));
+        fs::remove_dir_all(data_root).unwrap();
     }
 
     #[test]

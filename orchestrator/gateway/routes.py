@@ -107,6 +107,7 @@ from orchestrator.gateway.deps import (
     load_prompt,
     refresh_engine_dependencies,
     runtime_lifecycle,
+    wait_for_engine_ready,
 )
 from orchestrator.gateway.generations import (
     GenerationCapacityError,
@@ -345,6 +346,13 @@ def _engine_unreachable() -> HTTPException:
     )
 
 
+def _await_local_tutor() -> None:
+    try:
+        wait_for_engine_ready()
+    except GenerationCapacityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 def _incomplete_stream_message(*, partial_saved: bool) -> str:
     if partial_saved:
         return "The tutor could not resume automatically. Your partial answer is saved."
@@ -426,12 +434,43 @@ def models(request: Request) -> ModelCatalogResponse:
     if manager is None:
         return ModelCatalogResponse()
     status = manager.status()
+    _apply_model_capacity(status, manager)
     principal = principal_from_request(request)
     status["selection_enabled"] = bool(
         _model_switch_allowed(request)
         and (not strict_share_security() or (principal and principal.role == "host"))
     )
     return ModelCatalogResponse.model_validate(status)
+
+
+def _model_memory_mode() -> str:
+    if strict_share_security():
+        return str(get_sharing_service().settings()["memory_mode"])
+    return "system"
+
+
+def _apply_model_capacity(status: dict, manager) -> None:
+    """Keep oversized custom GGUFs visible, but never selectable on this laptop."""
+    if not hasattr(manager, "candidate_config") or not hasattr(manager, "cfg"):
+        return
+    mode = _model_memory_mode()
+    planner = get_capacity_controller().planner
+    for model in status.get("models", []):
+        if model.get("kind") != "local" or not model.get("available"):
+            continue
+        try:
+            candidate = manager.candidate_config(str(model["id"]))
+            profile = planner.plan(mode, candidate, current_cfg=manager.cfg)
+        except (ModelSwitchError, OSError, ValueError) as exc:
+            model["available"] = False
+            model["disabled_reason"] = str(exc)
+            continue
+        if not profile.fits:
+            model["available"] = False
+            model["disabled_reason"] = (
+                f"Needs about {profile.estimated_peak_bytes / 1024**3:.1f} GB; "
+                f"the current safe RAM ceiling is {profile.memory_ceiling_bytes / 1024**3:.1f} GB"
+            )
 
 
 @router.post("/models/select", response_model=ModelSelectResponse, tags=["runtime"])
@@ -463,15 +502,19 @@ def select_model(
 
         def replace_model():
             nonlocal profile
-            if strict_share_security() and hasattr(manager, "candidate_config"):
+            if hasattr(manager, "candidate_config"):
                 # Read the persisted mode and hash/price the target only after idle admission
                 # is locked. A concurrent Host setting change cannot install a stale profile.
-                mode = get_sharing_service().settings()["memory_mode"]
+                mode = _model_memory_mode()
                 candidate = manager.candidate_config(req.model_id)
-                profile = get_capacity_controller().planner.plan(mode, candidate)
+                planner = get_capacity_controller().planner
+                if hasattr(manager, "cfg"):
+                    profile = planner.plan(mode, candidate, current_cfg=manager.cfg)
+                else:  # compatibility for an externally supplied/test model manager
+                    profile = planner.plan(mode, candidate)
                 if not profile.fits:
                     raise GenerationCapacityError(
-                        "that model cannot fit safely under the active Host memory policy"
+                        "that model cannot fit safely in the RAM currently available"
                     )
                 status = manager.switch(
                     req.model_id,
@@ -489,6 +532,7 @@ def select_model(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ModelSwitchError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _apply_model_capacity(status, manager)
     status["selection_enabled"] = True
     return ModelSelectResponse.model_validate(status)
 
@@ -869,6 +913,7 @@ def chat(
         raise HTTPException(status_code=401, detail="sign in to continue")
     if caller is not None and caller != req.student_id:
         raise HTTPException(status_code=403, detail="you can only chat as yourself")
+    _await_local_tutor()
     # Fast refusal: an unsupported image turn should not wait behind valid generations or
     # have a full queue mask the actionable model error. `_run_chat` repeats this check inside
     # the lifecycle barrier to close the model-switch race.
@@ -1433,6 +1478,7 @@ def chat_stream(
     """Backwards-compatible streaming start; disconnecting no longer cancels inference."""
     if caller != req.student_id:
         raise HTTPException(status_code=403, detail="you can only start your own generation")
+    _await_local_tutor()
     job = _start_chat_generation(
         req,
         engine=engine,
@@ -1466,6 +1512,7 @@ def generation_start(
     """Start a durable browser turn and return its ids before subscribing to tokens."""
     if caller != req.student_id:
         raise HTTPException(status_code=403, detail="you can only start your own generation")
+    _await_local_tutor()
     job = _start_chat_generation(
         req,
         engine=engine,

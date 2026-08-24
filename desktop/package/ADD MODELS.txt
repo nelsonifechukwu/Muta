@@ -1,0 +1,14 @@
+ADD OPTIONAL GGUF MODELS
+
+1. Close Muta.
+2. Open model-pack/models/custom inside this extracted release folder.
+3. Copy one or more .gguf model files into that folder. Keep the base model-pack files.
+4. Start Muta through Muta.command (macOS), Muta.sh (Linux), or Install-Muta.cmd (Windows).
+5. Open the model menu at the top of the chat. Valid models appear as "Added locally" entries.
+
+Muta checks each GGUF and estimates its complete RAM cost. A model that cannot fit safely on the
+current laptop remains visible but disabled. User-added models are text-only unless a future
+signed add-on explicitly supplies a matching image projector.
+
+Optional models published by Muta are separate downloads so the four application archives keep
+their existing small base model. Never rename a non-GGUF file to .gguf.

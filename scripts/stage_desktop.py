@@ -197,6 +197,15 @@ def stage(args: argparse.Namespace) -> None:
     if projector_source is not None:
         _copy_file(projector_source, model_root / spec["mmproj_path"])
 
+    custom_model_guide = model_root / "models" / "custom" / "ADD GGUF MODELS HERE.txt"
+    custom_model_guide.parent.mkdir(parents=True, exist_ok=True)
+    custom_model_guide.write_text(
+        "Copy additional .gguf model files into this folder, then restart Muta.\n"
+        "Muta validates each GGUF and shows models that fit this computer in the model menu.\n"
+        "Keep the original model-pack files and model-pack.json unchanged.\n",
+        encoding="utf-8",
+    )
+
     if args.include_optional_models:
         for relative in ("models/asr", "models/tts", "models/embed", "models/ttft"):
             source = REPO_ROOT / relative
@@ -209,9 +218,7 @@ def stage(args: argparse.Namespace) -> None:
     if projector_source is not None:
         license_names.add("mmproj.Apache-2.0.txt")
     if args.include_optional_models:
-        license_names.update(
-            {"asr.MIT.txt", "vad.MIT.txt", "tts.CC0-1.0.txt", "embed.MIT.txt"}
-        )
+        license_names.update({"asr.MIT.txt", "vad.MIT.txt", "tts.CC0-1.0.txt", "embed.MIT.txt"})
     for name in sorted(license_names):
         source = REPO_ROOT / "models" / "LICENSES" / name
         if source.is_file():
@@ -326,8 +333,13 @@ def _parser() -> argparse.ArgumentParser:
     stage_parser.add_argument("--target-os", choices=("windows", "macos", "linux"), required=True)
     stage_parser.add_argument("--target-arch", choices=("x86_64", "aarch64"), required=True)
     stage_parser.add_argument("--include-optional-models", action="store_true")
-    stage_parser.add_argument("--heartbeat-url", default="")
-    stage_parser.add_argument("--heartbeat-ingest-key", default="")
+    stage_parser.add_argument(
+        "--heartbeat-url", default=os.environ.get("MUTA_DESKTOP_HEARTBEAT_URL", "")
+    )
+    stage_parser.add_argument(
+        "--heartbeat-ingest-key",
+        default=os.environ.get("MUTA_DESKTOP_HEARTBEAT_INGEST_KEY", ""),
+    )
 
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("root", type=Path)

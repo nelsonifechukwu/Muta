@@ -25,6 +25,14 @@ def command(*args: str) -> str:
     return result.stdout
 
 
+def verify_required_heartbeat(product: dict) -> None:
+    heartbeat = product.get("heartbeat") or {}
+    if not str(heartbeat.get("url", "")).startswith("https://"):
+        fail("release heartbeat URL is missing or is not HTTPS")
+    if not str(heartbeat.get("ingest_key", "")).strip():
+        fail("release heartbeat ingest key is missing")
+
+
 def inspect(args: argparse.Namespace) -> None:
     app = args.app_resources.resolve()
     gateway = args.gateway.resolve()
@@ -66,6 +74,8 @@ def inspect(args: argparse.Namespace) -> None:
         fail("product target does not match the requested inspector target")
     if product["model_pack_id"] != pack["pack_id"]:
         fail("application and model-pack identities differ")
+    if args.require_heartbeat:
+        verify_required_heartbeat(product)
     if args.release and not (models / "model-pack.json.sig").is_file():
         fail("release model pack has no trusted signature")
 
@@ -115,6 +125,7 @@ def main() -> int:
     parser.add_argument("--target-os", choices=("linux", "windows", "macos"), required=True)
     parser.add_argument("--target-arch", choices=("x86_64", "aarch64"), required=True)
     parser.add_argument("--release", action="store_true")
+    parser.add_argument("--require-heartbeat", action="store_true")
     args = parser.parse_args()
     try:
         inspect(args)

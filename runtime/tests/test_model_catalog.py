@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import struct
 import threading
+import time
 from pathlib import Path
 from typing import ClassVar
 
@@ -66,6 +68,21 @@ class _Server:
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _gguf(name: str) -> bytes:
+    key = b"general.name"
+    value = name.encode("utf-8")
+    return b"".join(
+        (
+            struct.pack("<4sIQQ", b"GGUF", 3, 0, 1),
+            struct.pack("<Q", len(key)),
+            key,
+            struct.pack("<I", 8),
+            struct.pack("<Q", len(value)),
+            value,
+        )
+    )
 
 
 def _manager(
@@ -333,3 +350,72 @@ def test_failed_capacity_reconfiguration_restores_previous_profile(tmp_path):
     assert manager.cfg.n_parallel == original.n_parallel
     assert manager.cfg.n_ctx == original.n_ctx
     assert sum(server.is_up() for server in _Server.instances) == 1
+
+
+def test_discovers_and_switches_operator_added_gguf_without_catalog_edit(tmp_path):
+    custom = tmp_path / "models" / "custom"
+    custom.mkdir(parents=True)
+    model = custom / "lesson-model.gguf"
+    model.write_bytes(_gguf("Lesson Model 1.2B"))
+    manager = _manager(tmp_path)
+
+    added = next(item for item in manager.status()["models"] if item["user_added"])
+
+    assert added["label"] == "Lesson Model 1.2B"
+    assert added["available"] is True
+    assert added["supports_images"] is False
+    assert "Added locally" in added["description"]
+    result = manager.switch(added["id"])
+    assert result["active_id"] == added["id"]
+    assert manager.cfg.model_path == model
+
+
+def test_custom_catalog_refresh_ignores_invalid_files_and_symlinks(tmp_path):
+    manager = _manager(tmp_path)
+    custom = tmp_path / "models" / "custom"
+    custom.mkdir(parents=True)
+    (custom / "not-gguf.gguf").write_bytes(b"not a model")
+    valid = custom / "valid.gguf"
+    valid.write_bytes(_gguf("Valid Local Model"))
+    symlink = custom / "linked.gguf"
+    try:
+        symlink.symlink_to(valid)
+    except OSError:
+        pytest.skip("symlinks unavailable on this platform")
+
+    added = [item for item in manager.status()["models"] if item["user_added"]]
+
+    assert [item["label"] for item in added] == ["Valid Local Model"]
+    first_id = added[0]["id"]
+    assert manager.status()["models"][-1]["id"] == first_id
+
+
+def test_custom_catalog_rejects_hostile_gguf_lengths_without_large_reads(tmp_path):
+    manager = _manager(tmp_path)
+    custom = tmp_path / "models" / "custom"
+    custom.mkdir(parents=True)
+    hostile = custom / "hostile.gguf"
+    hostile.write_bytes(
+        struct.pack("<4sIQQQ", b"GGUF", 3, 0, 1, 2**63)
+    )
+
+    added = [item for item in manager.status()["models"] if item["user_added"]]
+
+    assert added == []
+
+
+def test_generation_admission_waits_for_supervised_engine_recovery(tmp_path):
+    manager = _manager(tmp_path)
+    manager._server._up = False
+
+    def recover():
+        time.sleep(0.05)
+        manager._server._up = True
+
+    thread = threading.Thread(target=recover)
+    thread.start()
+    assert manager.wait_until_ready(0.5) is True
+    thread.join(timeout=1)
+
+    manager._server._up = False
+    assert manager.wait_until_ready(0.02) is False

@@ -97,6 +97,32 @@ def test_system_capacity_is_bounded_by_currently_available_ram(tmp_path):
     assert profile.memory_ceiling_bytes < int(16 * GiB * 0.85)
 
 
+def test_loaded_model_can_shrink_or_hold_profile_when_free_ram_is_temporarily_low(tmp_path):
+    model = tmp_path / "loaded.gguf"
+    with model.open("wb") as stream:
+        stream.truncate(512 * MiB)
+    planner = CapacityPlanner(
+        memory_probe=lambda: (24 * GiB, 24 * GiB, None),
+        available_probe=lambda: int(1.5 * GiB),
+        core_probe=lambda: 8,
+        resident_probe=lambda: int(0.6 * GiB),
+    )
+    cfg = RuntimeConfig(
+        model_dir=tmp_path,
+        model_file=model.name,
+        n_parallel=2,
+        n_ctx=4096,
+        cache_ram_mib=256,
+        auto_download=False,
+        _env_file=None,
+    )
+
+    profile = planner.plan("competition", cfg, current_cfg=cfg)
+
+    assert profile.fits is True
+    assert profile.memory_ceiling_bytes >= profile.estimated_peak_bytes
+
+
 def test_measured_resident_floor_can_reject_a_file_size_only_fit(monkeypatch, tmp_path):
     monkeypatch.setenv("MUTA_SHARE_FALLBACK_WEIGHTS_MIB", "256")
     monkeypatch.setenv("MUTA_SHARE_AUXILIARY_RESERVE_MIB", "0")
@@ -262,6 +288,65 @@ def test_default_8gb_docker_profile_no_longer_reserves_a_second_vision_model(mon
     assert manager.switched is None
     assert status["fits"] is True
     assert status["active_parallel"] == manager.cfg.n_parallel
+
+
+def test_competition_fallback_uses_smallest_installed_release_model(monkeypatch, tmp_path):
+    large = tmp_path / "large.gguf"
+    small = tmp_path / "release-base.gguf"
+    with large.open("wb") as stream:
+        stream.truncate(6 * GiB)
+    with small.open("wb") as stream:
+        stream.truncate(512 * MiB)
+    active = RuntimeConfig(
+        model_dir=tmp_path,
+        model_file=large.name,
+        n_parallel=2,
+        n_ctx=4096,
+        auto_download=False,
+        _env_file=None,
+    )
+
+    class Manager:
+        cfg = active
+        switched = None
+
+        def local_model_ids_by_size(self):
+            return ("release-base",)
+
+        def candidate_config(self, model_id):
+            assert model_id == "release-base"
+            return self.cfg.model_copy(update={"model_dir": tmp_path, "model_file": small.name})
+
+        def switch(self, model_id, *, n_parallel, n_ctx):
+            self.switched = model_id
+            self.cfg = self.candidate_config(model_id).model_copy(
+                update={"n_parallel": n_parallel, "n_ctx": n_ctx}
+            )
+
+    class Generations:
+        def run_when_idle(self, operation):
+            operation()
+
+        def status(self):
+            return {"running": 0, "queued": 0, "reservations": 0}
+
+    manager = Manager()
+    planner = CapacityPlanner(
+        memory_probe=lambda: (8 * GiB, 8 * GiB, None),
+        available_probe=lambda: 8 * GiB,
+        core_probe=lambda: 4,
+        resident_probe=lambda: 0,
+    )
+    controller = RuntimeCapacityController(planner)
+    monkeypatch.setattr(deps, "get_model_manager", lambda: manager)
+    monkeypatch.setattr(deps, "active_runtime_config", lambda: manager.cfg)
+    monkeypatch.setattr(deps, "get_generation_manager", lambda: Generations())
+    monkeypatch.setattr(deps, "refresh_engine_dependencies", lambda _profile: None)
+
+    status = controller.apply("competition")
+
+    assert manager.switched == "release-base"
+    assert status["fits"] is True
 
 
 def test_auxiliary_queue_waiters_do_not_occupy_the_worker_pool():

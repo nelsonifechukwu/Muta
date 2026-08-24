@@ -101,13 +101,10 @@ def build(args: argparse.Namespace) -> None:
         stage_command += ["--ffmpeg-bin", str(ffmpeg)]
     heartbeat_url = os.environ.get("MUTA_DESKTOP_HEARTBEAT_URL", "")
     heartbeat_key = os.environ.get("MUTA_DESKTOP_HEARTBEAT_INGEST_KEY", "")
-    if heartbeat_url or heartbeat_key:
-        stage_command += [
-            "--heartbeat-url",
-            heartbeat_url,
-            "--heartbeat-ingest-key",
-            heartbeat_key,
-        ]
+    if bool(heartbeat_url) != bool(heartbeat_key):
+        raise BuildError("desktop heartbeat URL and ingest key must be supplied together")
+    # stage_desktop inherits these values. Never put the write-only key in argv: build command
+    # logging and process listings are not secret stores.
     run(stage_command)
 
     if not args.no_tauri:

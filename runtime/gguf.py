@@ -36,10 +36,27 @@ _SCALARS: dict[int, tuple[str, int]] = {
     12: ("<d", 8),  # float64
 }
 _STRING, _ARRAY = 8, 9
+_DEFAULT_MAX_HEADER_BYTES = 512 * 1024 * 1024
+_DEFAULT_MAX_ARRAY_ITEMS = 2_000_000
 
 
 class GGUFError(RuntimeError):
     pass
+
+
+class _BoundedReader:
+    """Prevent corrupt length fields from turning model discovery into an unbounded read."""
+
+    def __init__(self, stream: BinaryIO, limit: int) -> None:
+        self.stream = stream
+        self.remaining = limit
+
+    def read(self, size: int) -> bytes:
+        if size < 0 or size > self.remaining:
+            raise GGUFError("GGUF metadata exceeds the safe header limit")
+        data = self.stream.read(size)
+        self.remaining -= len(data)
+        return data
 
 
 def _read(fh: BinaryIO, n: int) -> bytes:
@@ -59,7 +76,7 @@ def _string(fh: BinaryIO) -> str:
     return _read(fh, length).decode("utf-8", errors="replace")
 
 
-def _value(fh: BinaryIO, type_id: int) -> Any:
+def _value(fh: BinaryIO, type_id: int, *, max_array_items: int) -> Any:
     if type_id in _SCALARS:
         return _scalar(fh, type_id)
     if type_id == _STRING:
@@ -67,7 +84,9 @@ def _value(fh: BinaryIO, type_id: int) -> Any:
     if type_id == _ARRAY:
         (elem_type,) = struct.unpack("<I", _read(fh, 4))
         (count,) = struct.unpack("<Q", _read(fh, 8))
-        return [_value(fh, elem_type) for _ in range(count)]
+        if count > max_array_items:
+            raise GGUFError(f"implausible GGUF metadata array length {count}")
+        return [_value(fh, elem_type, max_array_items=max_array_items) for _ in range(count)]
     raise GGUFError(f"unknown GGUF value type {type_id}")
 
 
@@ -176,9 +195,16 @@ def _as_int(raw: Any, *, reduce=max) -> int:
     return int(raw or 0)
 
 
-def read_metadata(path: Path | str, *, max_kv: int = 100_000) -> GGUFMetadata:
+def read_metadata(
+    path: Path | str,
+    *,
+    max_kv: int = 100_000,
+    max_header_bytes: int = _DEFAULT_MAX_HEADER_BYTES,
+    max_array_items: int = _DEFAULT_MAX_ARRAY_ITEMS,
+) -> GGUFMetadata:
     path = Path(path)
-    with open(path, "rb") as fh:
+    with open(path, "rb") as stream:
+        fh = _BoundedReader(stream, max_header_bytes)
         if _read(fh, 4) != MAGIC:
             raise GGUFError(f"{path} is not a GGUF file (bad magic)")
         version, tensor_count, kv_count = struct.unpack("<IQQ", _read(fh, 20))
@@ -190,7 +216,7 @@ def read_metadata(path: Path | str, *, max_kv: int = 100_000) -> GGUFMetadata:
         for _ in range(kv_count):
             key = _string(fh)
             (type_id,) = struct.unpack("<I", _read(fh, 4))
-            value = _value(fh, type_id)
+            value = _value(fh, type_id, max_array_items=max_array_items)
             # The tokenizer arrays are ~150k strings and nothing here needs them; keep only
             # their length so a caller can still see they exist.
             if isinstance(value, list) and len(value) > 1024:
