@@ -130,12 +130,19 @@ mkdir -p "$work/ffmpeg-build" "$ffmpeg_prefix"
       --enable-small \
       "$@"
   }
-  if [ "$(uname -s)" = "Darwin" ] && [ "$apple_arch" != "$(uname -m)" ]; then
-    configure_ffmpeg \
-      --arch="$apple_arch" \
-      --cc="clang -arch $apple_arch" \
-      --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}" \
-      --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
+  if [ "$(uname -s)" = "Darwin" ]; then
+    macos_min="${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
+    if [ "$apple_arch" != "$(uname -m)" ]; then
+      configure_ffmpeg \
+        --arch="$apple_arch" \
+        --cc="clang -arch $apple_arch" \
+        --extra-cflags="-mmacosx-version-min=$macos_min" \
+        --extra-ldflags="-mmacosx-version-min=$macos_min"
+    else
+      configure_ffmpeg \
+        --extra-cflags="-mmacosx-version-min=$macos_min" \
+        --extra-ldflags="-mmacosx-version-min=$macos_min"
+    fi
   elif [[ "$(uname -s)" = MINGW* || "$(uname -s)" = MSYS* || "$(uname -s)" = CYGWIN* ]]; then
     # FFmpeg otherwise leaves libwinpthread-1.dll as an undeclared target dependency even
     # when its own libraries are static. The offline kit must use only Windows system DLLs.

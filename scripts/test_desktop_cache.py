@@ -91,6 +91,8 @@ def test_macos_native_build_maps_aarch64_to_apple_arm64() -> None:
     assert '--cc="clang -arch $apple_arch"' in script
     assert "ffmpeg_target_args" not in script
     assert "configure_ffmpeg()" in script
+    assert 'macos_min="${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"' in script
+    assert '--extra-ldflags="-mmacosx-version-min=$macos_min"' in script
 
 
 def test_frozen_gateway_requires_complete_onedir(tmp_path: Path) -> None:
