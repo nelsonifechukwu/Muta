@@ -403,6 +403,50 @@ def upload(output: Path, version: str, platform_name: str, prefix: str) -> None:
         run(["gcloud", "storage", "cp", str(source), f"{prefix}/"])
 
 
+def prune_completed_commits(cache_root: Path, commit: str) -> None:
+    """Remove commit-scoped scratch data while retaining reusable build layers."""
+    worktrees = cache_root / "worktrees" / "linux-x86_64"
+    removed_worktrees = 0
+    if worktrees.is_dir():
+        for candidate in sorted(worktrees.iterdir()):
+            if candidate.name == commit or not SHA_RE.fullmatch(candidate.name):
+                continue
+            run(
+                ["git", "worktree", "remove", "--force", str(candidate)],
+                check=False,
+            )
+            if candidate.exists():
+                shutil.rmtree(candidate)
+            removed_worktrees += 1
+        run(["git", "worktree", "prune"], check=False)
+
+    removed_transfers = 0
+    transfer = cache_root / "transfer"
+    if transfer.is_dir():
+        for candidate in transfer.glob("source-*.tar.gz"):
+            archived_commit = candidate.name.removeprefix("source-").removesuffix(".tar.gz")
+            if archived_commit == commit or not SHA_RE.fullmatch(archived_commit):
+                continue
+            candidate.unlink()
+            removed_transfers += 1
+
+    removed_outputs = 0
+    outputs = cache_root / "outputs"
+    if outputs.is_dir():
+        for candidate in sorted(outputs.iterdir()):
+            if candidate.name == commit or not SHA_RE.fullmatch(candidate.name):
+                continue
+            shutil.rmtree(candidate)
+            removed_outputs += 1
+
+    print(
+        "pruned completed commit scratch data: "
+        f"{removed_worktrees} worktree(s), {removed_transfers} source archive(s), "
+        f"{removed_outputs} output tree(s); reusable caches retained",
+        flush=True,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--commit", required=True)
@@ -458,6 +502,7 @@ def main(argv: list[str] | None = None) -> int:
                 upload(output, args.version, target, prefix)
                 for suffix in ("", ".sha256"):
                     (output / f"{name}{suffix}").unlink(missing_ok=True)
+            prune_completed_commits(cache_root, args.commit)
             print(prefix)
     except (GcpBuildError, OSError, subprocess.SubprocessError) as error:
         print(f"GCP desktop build failed: {error}", file=sys.stderr)
