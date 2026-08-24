@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import platform
 import shutil
@@ -20,6 +21,11 @@ BUILD = DESKTOP / "build"
 
 class BuildError(RuntimeError):
     pass
+
+
+def tauri_version_config(version: str) -> str:
+    """Return the final Tauri override so installer metadata matches the release."""
+    return json.dumps({"version": version}, separators=(",", ":"))
 
 
 def run(command: list[str], *, cwd: Path = REPO_ROOT, env: dict[str, str] | None = None) -> None:
@@ -191,6 +197,9 @@ def build(args: argparse.Namespace) -> None:
         tauri_command += ["--target", target_triple]
     if args.tauri_config:
         tauri_command += ["--config", str(args.tauri_config.resolve())]
+    # Keep this override last so a flavor config cannot silently reset installer
+    # version metadata and break Windows/macOS upgrade ordering.
+    tauri_command += ["--config", tauri_version_config(args.version)]
     tauri_env = {**os.environ, "MACOSX_DEPLOYMENT_TARGET": "12.0"}
     if target_os == "linux":
         # linuxdeploy scans the complete PyInstaller onedir closure. NumPy wheels keep their
