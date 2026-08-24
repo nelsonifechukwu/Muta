@@ -85,6 +85,16 @@ def test_gateway_worker_uses_external_cargo_cache(tmp_path: Path) -> None:
     )
 
 
+def test_linux_worker_caps_compiler_parallelism_on_eight_gb_builder(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.delenv("CMAKE_BUILD_PARALLEL_LEVEL", raising=False)
+    monkeypatch.delenv("NUMBER_OF_PROCESSORS", raising=False)
+    environment = worker.target_environment("linux-x86_64", tmp_path)
+    assert environment["CMAKE_BUILD_PARALLEL_LEVEL"] == "2"
+    assert environment["NUMBER_OF_PROCESSORS"] == "2"
+
+
 def test_gcp_model_key_changes_with_manifest(tmp_path: Path) -> None:
     for relative in (
         "runtime/model-catalog.json",
