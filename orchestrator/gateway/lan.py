@@ -8,7 +8,6 @@ import ipaddress
 import os
 import socket
 import ssl
-import subprocess
 import threading
 import time
 from pathlib import Path
@@ -16,6 +15,9 @@ from pathlib import Path
 import psutil
 import qrcode
 import uvicorn
+
+from orchestrator.gateway.certificates import CertificateError, generate_local_tls
+from runtime.paths import data_root
 
 
 class LanServerError(RuntimeError):
@@ -111,9 +113,9 @@ class LanServerManager:
     def __init__(self) -> None:
         self.host = os.environ.get("MUTA_SHARE_BIND", "0.0.0.0")
         self.port = int(os.environ.get("MUTA_SHARE_PORT", "8443"))
-        root = Path(os.environ.get("TUTOR_ROOT", ".")).resolve()
-        self.cert_dir = Path(os.environ.get("MUTA_SHARE_CERT_DIR", str(root / "data/share-certs")))
-        self._root = root
+        self.cert_dir = Path(
+            os.environ.get("MUTA_SHARE_CERT_DIR", str(data_root() / "share-certs"))
+        )
         self._lock = threading.RLock()
         self._server: uvicorn.Server | None = None
         self._thread: threading.Thread | None = None
@@ -149,23 +151,10 @@ class LanServerManager:
         addresses = [item.strip("[]") for item in lan_addresses()]
         if not addresses:
             raise LanServerError("no usable LAN address was found")
-        script = self._root / "scripts/gen_local_tls.sh"
-        if not script.is_file():
-            script = Path(__file__).resolve().parents[2] / "scripts/gen_local_tls.sh"
         try:
-            result = subprocess.run(
-                [str(script), "--out", str(self.cert_dir), *addresses],
-                cwd=str(self._root),
-                capture_output=True,
-                text=True,
-                timeout=30,
-                check=False,
-            )
-        except (OSError, subprocess.SubprocessError) as exc:
+            generate_local_tls(self.cert_dir, addresses)
+        except (OSError, CertificateError) as exc:
             raise LanServerError("could not create the offline LAN certificate") from exc
-        if result.returncode != 0:
-            detail = (result.stderr or result.stdout or "certificate generation failed").strip()
-            raise LanServerError(detail.splitlines()[-1][:240])
         self._certified_addresses = tuple(
             f"[{address}]" if ":" in address else address for address in addresses
         )

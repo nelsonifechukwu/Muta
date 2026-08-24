@@ -57,6 +57,7 @@ from orchestrator.telemetry import get_hub
 from orchestrator.version import git_sha
 from runtime.config import RuntimeConfig
 from runtime.model_catalog import ModelManager
+from runtime.paths import data_root, model_root, resource_root
 from runtime.server import LlamaServer
 
 configure_logging()  # make muta.* logs visible in the container before anything logs
@@ -235,8 +236,9 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
         get_resource_service()
 
     cfg = RuntimeConfig()
-    root = Path(os.environ.get("TUTOR_ROOT", "/opt/tutor"))
-    engine_log = root / "data" / "logs" / "llama-server.log"
+    root = model_root()
+    mutable = data_root()
+    engine_log = mutable / "logs" / "llama-server.log"
     startup_profile: CapacityProfile | None = None
     if share_listener_requested and share_settings is not None:
         try:
@@ -256,10 +258,10 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     engine_stop: threading.Event | None = None
     reaper_task: asyncio.Task | None = None
     if cfg.autostart:
-        for sub in ("data/logs", "data/kv-slots"):
+        for sub in ("logs", "kv-slots"):
             # CORE-VISION's --log-file dies at startup if data/logs is missing.
             with contextlib.suppress(OSError):
-                (root / sub).mkdir(parents=True, exist_ok=True)
+                (mutable / sub).mkdir(parents=True, exist_ok=True)
         engine_server = ModelManager(
             cfg,
             root=root,
@@ -428,7 +430,11 @@ app.mount("/internal/bench", bench_app)
 # Static browser surfaces, mounted only when their checked-in bundles are present. The app
 # stays the first client of /v1, not a privileged one. Mount the public landing page last so
 # its root catch-all cannot shadow the API, docs, internal services, or the app at /chat.
-_ui_root = Path(__file__).resolve().parent.parent / "ui"
+_installed_root = resource_root()
+_source_root = Path(__file__).resolve().parent.parent
+_ui_root = _installed_root / "ui"
+if not _ui_root.is_dir():
+    _ui_root = _source_root / "ui"
 _ui_dist = _ui_root / "dist"
 _ui_assets = _ui_dist if _ui_dist.is_dir() else _ui_root
 _APP_CSP = (
@@ -461,6 +467,8 @@ if (_ui_assets / "index.html").is_file():
     app.mount("/chat", StaticFiles(directory=str(_ui_assets), html=True), name="chat")
 
 
-_landing_assets = Path(__file__).resolve().parent.parent / "landing"
+_landing_assets = _installed_root / "landing"
+if not _landing_assets.is_dir():
+    _landing_assets = _source_root / "landing"
 if (_landing_assets / "index.html").is_file():
     app.mount("/", StaticFiles(directory=str(_landing_assets), html=True), name="landing")

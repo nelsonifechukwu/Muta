@@ -38,7 +38,7 @@ ALLOWED_LICENSES = {
 # Build-time network is allowed (TDD §11.2); nothing here is read at run time.
 SPDX_TEXT_URL = {
     "Apache-2.0": "https://www.apache.org/licenses/LICENSE-2.0.txt",
-    "MIT": "https://opensource.org/license/mit",
+    "MIT": "https://spdx.org/licenses/MIT.txt",
     "CC0-1.0": "https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt",
     "CC-BY-4.0": "https://creativecommons.org/licenses/by/4.0/legalcode.txt",
 }
@@ -258,7 +258,10 @@ ARTIFACTS: list[Artifact] = [
             spdx="MIT",
             repo="BAAI/bge-small-en-v1.5",
             path=None,
-            url="https://huggingface.co/BAAI/bge-small-en-v1.5",
+            # The upstream and repackager expose the MIT Hub tag but no standalone LICENSE
+            # file. Use SPDX's canonical plain-text terms; fetching the model page here would
+            # silently bundle more than a megabyte of changing HTML instead of a licence.
+            url=None,
             note="BAAI ships bge-small-en-v1.5 under MIT (Hub license tag); the GGUF "
             "repackager carries the same tag and no LICENSE file.",
         ),

@@ -1,0 +1,146 @@
+name: desktop-packages
+
+on:
+  push:
+    branches:
+      - muta-packages
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version"
+        required: true
+        default: "0.1.0"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x86_64
+            runner: ubuntu-22.04
+            target_os: linux
+            target_arch: x86_64
+            python_arch: x64
+          - platform: windows-x86_64
+            runner: windows-2022
+            target_os: windows
+            target_arch: x86_64
+            python_arch: x64
+          - platform: darwin-aarch64
+            runner: macos-15
+            target_os: macos
+            target_arch: aarch64
+            python_arch: arm64
+          - platform: darwin-x86_64
+            runner: macos-15-intel
+            target_os: macos
+            target_arch: x86_64
+            python_arch: x64
+    runs-on: ${{ matrix.runner }}
+    env:
+      PACKAGE_VERSION: ${{ inputs.version || '0.1.0' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: ${{ matrix.python_arch }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install Rust
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Install Linux native dependencies
+        if: matrix.target_os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build nasm pkg-config file \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            patchelf libssl-dev libasound2-dev
+      - name: Install macOS native dependencies
+        if: matrix.target_os == 'macos'
+        run: brew install cmake ninja nasm
+      - uses: msys2/setup-msys2@v2
+        if: matrix.target_os == 'windows'
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git make diffutils file
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-nasm
+      - name: Build pinned Linux/macOS native sidecars
+        if: matrix.target_os != 'windows'
+        shell: bash
+        run: bash scripts/build_desktop_native.sh desktop/build/native
+      - name: Build pinned Windows native sidecars
+        if: matrix.target_os == 'windows'
+        shell: msys2 {0}
+        run: bash scripts/build_desktop_native.sh desktop/build/native
+      - name: Install Python dependencies
+        shell: bash
+        run: python -m pip install -e ".[desktop]"
+      - name: Install locked Tauri dependencies
+        shell: bash
+        working-directory: desktop
+        run: npm ci
+      - name: Build the offline browser UI
+        shell: bash
+        run: python scripts/build_ui_dist.py
+      - name: Provision and verify all offline product models
+        shell: bash
+        run: bash scripts/prepare_desktop_models.sh
+      - name: Build the native offline application
+        shell: bash
+        run: |
+          python scripts/build_desktop.py \
+            --engine-dir desktop/build/native \
+            --include-optional-models \
+            --version "$PACKAGE_VERSION" \
+            --model-pack-id "muta-models-2026.08"
+      - name: Inspect architecture, dependencies and packaged contents
+        shell: bash
+        run: |
+          python scripts/inspect_desktop_artifact.py \
+            --app-resources desktop/build/app-resources \
+            --gateway desktop/build/gateway \
+            --model-pack desktop/build/model-pack \
+            --target-os "${{ matrix.target_os }}" \
+            --target-arch "${{ matrix.target_arch }}"
+      - name: Create one copyable offline archive
+        shell: bash
+        run: |
+          python scripts/collect_desktop_package.py \
+            --platform "${{ matrix.platform }}" \
+            --version "$PACKAGE_VERSION" \
+            --bundle-root desktop/src-tauri/target/release/bundle \
+            --offline-kit desktop/build/offline-kit \
+            --output desktop/package-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Muta-${{ matrix.platform }}
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            desktop/package-output/*.tar.gz
+            desktop/package-output/*.zip
+            desktop/package-output/*.sha256

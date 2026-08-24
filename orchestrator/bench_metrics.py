@@ -15,13 +15,13 @@ from __future__ import annotations
 
 import threading
 from collections import deque
-from pathlib import Path
 
 from orchestrator._common import make_service
 from runtime.client import Generation
+from runtime.paths import data_root
 
 WINDOW = 64
-PIDFILE = Path("data/muta.pid")
+PIDFILE = data_root() / "muta.pid"
 
 _lock = threading.Lock()
 _rates: deque[float] = deque(maxlen=WINDOW)
@@ -71,5 +71,3 @@ app = make_service("bench")
 def metrics() -> dict:
     """Recent generation rates. Read by bench/monitor.py; not part of the /v1 contract."""
     return snapshot()
-
-

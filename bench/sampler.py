@@ -17,8 +17,6 @@ branch would add code that can only ever feed a provisional figure.
 from __future__ import annotations
 
 import contextlib
-import shutil
-import subprocess
 import threading
 import time
 from collections.abc import Iterable, Iterator
@@ -26,15 +24,14 @@ from dataclasses import dataclass
 
 import psutil
 
+from runtime.system_metrics import family, family_rss_bytes, read_temp_c
+
 _MB = 1024**2
 
 # Upstream constants — changing these desynchronises us from the scored methodology.
 POLL_INTERVAL_S = 0.1
 THERMAL_INTERVAL_S = 0.5
 STEADY_STATE_WINDOW_S = 60.0
-
-_CORE_HINTS = ("core", "cpu", "tdie", "tccd", "package")
-
 
 @dataclass(frozen=True)
 class Sample:
@@ -63,85 +60,6 @@ class ThermalReport:
     cpu_percent_p99: float
     core_temp_c_peak: float | None
     throttled: bool
-
-
-def family(pids: int | Iterable[int]) -> dict[int, psutil.Process]:
-    """`[root] + children(recursive=True)` per root, de-duplicated by PID.
-
-    Shared by TreeSampler (bench runs) and orchestrator/telemetry.py (the live hub) so the
-    tree-walk definition — the thing the score depends on — exists exactly once."""
-    root_pids = [pids] if isinstance(pids, int) else [p for p in pids if p]
-    out: dict[int, psutil.Process] = {}
-    for pid in root_pids:
-        try:
-            root = psutil.Process(pid)
-        except psutil.NoSuchProcess:
-            continue
-        try:
-            procs = [root] + root.children(recursive=True)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-        for proc in procs:
-            if proc.is_running():
-                out[proc.pid] = proc
-    return out
-
-
-def family_rss_bytes(pids: int | Iterable[int]) -> int:
-    """Whole-tree RSS right now; 0 when nothing is measurable. Never raises."""
-    total = 0
-    for proc in family(pids).values():
-        try:
-            total += proc.memory_info().rss
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-    return total
-
-
-def read_temp_c() -> float | None:
-    """CPU package/core temperature in °C, or None when unmeasurable (e.g. Docker on macOS:
-    no hwmon in the VM). psutil first, `sensors -u` as fallback — same hint matching as the
-    upstream profiler."""
-    if hasattr(psutil, "sensors_temperatures"):
-        try:
-            temps = psutil.sensors_temperatures() or {}
-            fallback: float | None = None
-            for entries in temps.values():
-                for entry in entries:
-                    if not entry.current or entry.current <= 0:
-                        continue
-                    label = (entry.label or "").lower()
-                    if any(h in label for h in _CORE_HINTS):
-                        return float(entry.current)
-                    if fallback is None:
-                        fallback = float(entry.current)
-            if fallback is not None:
-                return fallback
-        except (AttributeError, OSError):
-            pass
-    if shutil.which("sensors"):
-        try:
-            out = subprocess.check_output(["sensors", "-u"], text=True, timeout=2)
-        except (subprocess.SubprocessError, OSError):
-            return None
-        fallback_value: float | None = None
-        block_is_core = False
-        for line in out.splitlines():
-            stripped = line.strip()
-            if stripped and not stripped.startswith("+") and ":" not in stripped:
-                block_is_core = any(h in stripped.lower() for h in _CORE_HINTS)
-            if "_input:" in line:
-                try:
-                    value = float(line.split(":", 1)[1].strip())
-                except ValueError:
-                    continue
-                if value > 0:
-                    if block_is_core:
-                        return value
-                    if fallback_value is None:
-                        fallback_value = value
-        return fallback_value
-    return None
 
 
 def summarize(samples: list[Sample]) -> MemoryReport:

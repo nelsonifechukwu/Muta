@@ -341,7 +341,7 @@ def ffmpeg_frames_command(
     frame count, and one careless clip would eat a whole slot's context.
     """
     return [
-        "ffmpeg",
+        os.environ.get("MUTA_FFMPEG_BIN", "ffmpeg"),
         "-i",
         source,
         "-vf",

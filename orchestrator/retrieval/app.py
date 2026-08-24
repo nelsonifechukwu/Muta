@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from orchestrator._common import make_service
 from orchestrator.retrieval.embedder import ServerEmbedder
 from orchestrator.retrieval.index import IndexMismatch, Retriever
+from runtime.paths import resource_root
 
 log = logging.getLogger("muta.retrieval")
 
@@ -25,7 +26,7 @@ app = make_service("retrieval")
 
 
 def index_dir() -> Path:
-    return Path(os.environ.get("TUTOR_INDEX_DIR") or Path(os.environ.get("TUTOR_ROOT", "/opt/tutor")) / "index")
+    return Path(os.environ.get("TUTOR_INDEX_DIR") or resource_root() / "index")
 
 
 @lru_cache(maxsize=1)

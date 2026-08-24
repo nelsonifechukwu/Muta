@@ -40,6 +40,7 @@ from fastapi import Cookie, Header, HTTPException, Query, Request
 from starlette.requests import HTTPConnection
 
 from orchestrator.gateway.sharing import SESSION_COOKIE, SESSION_PREFIX, get_sharing_service
+from runtime.paths import data_root
 
 _SECRET_ENV = "MUTA_AUTH_SECRET"
 # Bound the token so a signed value cannot be a prompt-bomb in its own right, and reject
@@ -88,7 +89,8 @@ def operator_student_id() -> str:
     and an SSH tunnel's local port is part of that origin.  An exclusive mode-0600 create keeps
     concurrent first requests from producing different ids.
     """
-    path = Path(os.environ.get(_OPERATOR_ID_FILE_ENV, "data/operator-student-id"))
+    configured = os.environ.get(_OPERATOR_ID_FILE_ENV)
+    path = Path(configured) if configured else data_root() / "operator-student-id"
 
     def read() -> str:
         value = path.read_text().strip()

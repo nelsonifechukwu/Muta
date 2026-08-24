@@ -21,6 +21,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 import re
 import subprocess
 import threading
@@ -150,7 +151,7 @@ def _ffmpeg_to_pcm16k(data: bytes) -> bytes | None:
             # wall-clock timeout. Output is still bounded a second way by MAX_AUDIO_SECONDS ×
             # 16 kHz × 2 bytes ≈ 9.6 MB.
             [
-                "ffmpeg",
+                os.environ.get("MUTA_FFMPEG_BIN", "ffmpeg"),
                 "-hide_banner",
                 "-loglevel",
                 "error",
@@ -169,6 +170,7 @@ def _ffmpeg_to_pcm16k(data: bytes) -> bytes | None:
             input=data,
             capture_output=True,
             timeout=30,
+            check=False,
         )
     except (OSError, subprocess.SubprocessError):
         return None

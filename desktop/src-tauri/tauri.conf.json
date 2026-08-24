@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Muta",
+  "version": "0.1.0",
+  "identifier": "com.muta.tutor",
+  "mainBinaryName": "Muta",
+  "build": {
+    "frontendDist": "../splash"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Muta",
+        "width": 1180,
+        "height": 800,
+        "minWidth": 760,
+        "minHeight": 560,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:* ws://127.0.0.1:*"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": false,
+    "category": "Education",
+    "shortDescription": "Offline adaptive math and science tutor",
+    "longDescription": "Muta is a private, adaptive AI tutor that runs completely on this computer.",
+    "copyright": "Copyright © 2026 Muta",
+    "resources": {
+      "../build/gateway/": "gateway/",
+      "../build/app-resources/": "resources/"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "entitlements": "Entitlements.plist",
+      "infoPlist": "Info.plist",
+      "hardenedRuntime": true
+    },
+    "windows": {
+      "webviewInstallMode": { "type": "offlineInstaller" },
+      "nsis": { "installMode": "currentUser" }
+    },
+    "linux": {
+      "appimage": { "bundleMediaFramework": true }
+    }
+  }
+}
