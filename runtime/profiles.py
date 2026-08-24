@@ -22,6 +22,8 @@ import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from runtime.paths import data_root, model_root, resource_root
+
 # ---------------------------------------------------------------------------------------
 # Profiles (§5.2 slot budget table)
 # ---------------------------------------------------------------------------------------
@@ -186,43 +188,55 @@ def _env_threads(plan: ThreadPlan) -> ThreadPlan:
 @dataclass(frozen=True)
 class BundlePaths:
     root: Path
+    mutable_root: Path | None = None
+    model_storage: Path | None = None
 
     @classmethod
-    def from_env(cls) -> "BundlePaths":
-        return cls(Path(os.environ.get("TUTOR_ROOT", "/opt/tutor")))
+    def from_env(cls) -> BundlePaths:
+        return cls(resource_root(), data_root(), model_root())
+
+    @property
+    def data(self) -> Path:
+        # Direct construction is used throughout the existing tests and older tools. Preserve
+        # their `<root>/data` layout while packaged launches pass the explicit mutable root.
+        return self.mutable_root or self.root / "data"
+
+    @property
+    def models(self) -> Path:
+        return (self.model_storage or self.root) / "models"
 
     @property
     def core_model(self) -> Path:
-        return _one_gguf(self.root / "models" / "core", exclude="mmproj")
+        return _one_gguf(self.models / "core", exclude="mmproj")
 
     @property
     def mmproj(self) -> Path:
-        return _one_gguf(self.root / "models" / "core", include="mmproj")
+        return _one_gguf(self.models / "core", include="mmproj")
 
     @property
     def draft_model(self) -> Path:
-        return _one_gguf(self.root / "models" / "draft")
+        return _one_gguf(self.models / "draft")
 
     @property
     def embed_model(self) -> Path:
-        return _one_gguf(self.root / "models" / "embed")
+        return _one_gguf(self.models / "embed")
 
     @property
     def adapters(self) -> list[Path]:
-        d = self.root / "models" / "adapters"
+        d = self.models / "adapters"
         return sorted(d.glob("*.gguf")) if d.is_dir() else []
 
     @property
     def slot_dir(self) -> Path:
-        return self.root / "data" / "kv-slots"
+        return self.data / "kv-slots"
 
     @property
     def log_dir(self) -> Path:
-        return self.root / "data" / "logs"
+        return self.data / "logs"
 
     @property
     def api_key_file(self) -> Path:
-        return self.root / "data" / "api.key"
+        return self.data / "api.key"
 
     def engine_bin(self) -> str:
         explicit = os.environ.get("TUTOR_LLAMA_SERVER_BIN")
@@ -254,7 +268,9 @@ def _one_gguf(directory: Path, *, include: str | None = None, exclude: str | Non
     if not files:
         raise FileNotFoundError(f"no matching GGUF in {directory}")
     if len(files) > 1:
-        raise RuntimeError(f"{directory} holds {len(files)} candidate GGUFs: {[f.name for f in files]}")
+        raise RuntimeError(
+            f"{directory} holds {len(files)} candidate GGUFs: {[f.name for f in files]}"
+        )
     return files[0]
 
 
@@ -293,33 +309,51 @@ def core_text_command(
 
     argv = [
         paths.engine_bin(),
-        "-m", str(model),
-        "--alias", "core",
-        "--host", "127.0.0.1",  # loopback only; the gateway is the sole LAN surface (§13)
-        "--port", str(port("CORE", 8081)),
+        "-m",
+        str(model),
+        "--alias",
+        "core",
+        "--host",
+        "127.0.0.1",  # loopback only; the gateway is the sole LAN surface (§13)
+        "--port",
+        str(port("CORE", 8081)),
         # The primary RAM knob: total context divided across slots (§5.2). --parallel is set
         # explicitly because auto-sizing fights the cgroup cap.
-        "-c", str(profile.n_ctx),
-        "--parallel", str(profile.n_parallel),
+        "-c",
+        str(profile.n_ctx),
+        "--parallel",
+        str(profile.n_parallel),
         "--kv-unified",  # one shared KV buffer: a long solo session can borrow idle budget
         "--cont-batching",
         # Halves KV vs f16 at no measurable quality cost for this model size (D6).
-        "--cache-type-k", profile.cache_type,
-        "--cache-type-v", profile.cache_type,
+        "--cache-type-k",
+        profile.cache_type,
+        "--cache-type-v",
+        profile.cache_type,
         # Forced on, not auto: stable bench numbers, O(N)→ attention working set, and a
         # prerequisite for quantized V cache.
-        "--flash-attn", "on",
-        "-b", str(profile.batch),
-        "-ub", str(profile.ubatch),
-        "--threads", str(plan.core_threads),
-        "--threads-batch", str(plan.core_threads_batch),
-        "--threads-http", str(plan.http_threads),
-        "--cache-reuse", str(profile.cache_reuse),
-        "--cache-ram", str(profile.cache_ram_mib),
-        "--slot-save-path", str(paths.slot_dir),  # the suspend/resume mechanism (§8.3)
+        "--flash-attn",
+        "on",
+        "-b",
+        str(profile.batch),
+        "-ub",
+        str(profile.ubatch),
+        "--threads",
+        str(plan.core_threads),
+        "--threads-batch",
+        str(plan.core_threads_batch),
+        "--threads-http",
+        str(plan.http_threads),
+        "--cache-reuse",
+        str(profile.cache_reuse),
+        "--cache-ram",
+        str(profile.cache_ram_mib),
+        "--slot-save-path",
+        str(paths.slot_dir),  # the suspend/resume mechanism (§8.3)
         # KV fragmentation defrag trigger. Unified KV + churny classroom slots make
         # fragmentation real, not theoretical; 0.10 is the conservative end.
-        "--defrag-thold", f"{profile.defrag_thold:.2f}",
+        "--defrag-thold",
+        f"{profile.defrag_thold:.2f}",
     ]
     if profile.context_shift:
         argv.append("--context-shift")
@@ -338,8 +372,12 @@ def core_text_command(
 
     argv += [
         "--jinja",  # the model's own chat template, tool tokens included — never hand-rolled
-        "--metrics", "--slots", "--props", "--no-webui",
-        "--seed", "-1",  # per-request override to 4242 for anything scored (§6.5)
+        "--metrics",
+        "--slots",
+        "--props",
+        "--no-webui",
+        "--seed",
+        "-1",  # per-request override to 4242 for anything scored (§6.5)
     ]
 
     key = paths.api_key_file
@@ -356,7 +394,11 @@ def core_text_command(
     if _numa_nodes() > 1:
         argv += ["--numa", "distribute"]
         notes.append("multi-node NUMA detected — added --numa distribute (§6.2)")
-    return Invocation(argv, describe=f"CORE-TEXT [{profile.name}] {profile.n_parallel}×{profile.ctx_per_slot}", notes=notes)
+    return Invocation(
+        argv,
+        describe=f"CORE-TEXT [{profile.name}] {profile.n_parallel}×{profile.ctx_per_slot}",
+        notes=notes,
+    )
 
 
 def _speculation_flags(paths: BundlePaths, plan: ThreadPlan, notes: list[str]) -> list[str]:
@@ -371,11 +413,16 @@ def _speculation_flags(paths: BundlePaths, plan: ThreadPlan, notes: list[str]) -
     # NOTE: inert at pin b10035 — speculation requires --spec-type (docs/engine-flags.md);
     # flags kept for the main-branch launch path.
     return [
-        "--spec-draft-model", str(draft),
-        "--spec-draft-n-max", "8",
-        "--spec-draft-n-min", "1",
-        "--spec-draft-p-min", "0.75",
-        "--threads-draft", str(max(1, plan.core_threads // 2)),
+        "--spec-draft-model",
+        str(draft),
+        "--spec-draft-n-max",
+        "8",
+        "--spec-draft-n-min",
+        "1",
+        "--spec-draft-p-min",
+        "0.75",
+        "--threads-draft",
+        str(max(1, plan.core_threads // 2)),
     ]
 
 
@@ -403,31 +450,51 @@ def core_vision_command(
     plan = _env_threads(plan or thread_plan())
     argv = [
         paths.engine_bin(),
-        "-m", str(paths.core_model),
-        "--mmproj", str(paths.mmproj),
-        "--alias", "core-vision",
-        "--host", "127.0.0.1",
-        "--port", str(port("VISION", 8082)),
-        "-c", "8192",
-        "--parallel", "2",
-        "--cache-type-k", profile.cache_type,
-        "--cache-type-v", profile.cache_type,
-        "--flash-attn", "on",
-        "-b", "1024",
-        "-ub", "256",
+        "-m",
+        str(paths.core_model),
+        "--mmproj",
+        str(paths.mmproj),
+        "--alias",
+        "core-vision",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port("VISION", 8082)),
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "--cache-type-k",
+        profile.cache_type,
+        "--cache-type-v",
+        profile.cache_type,
+        "--flash-attn",
+        "on",
+        "-b",
+        "1024",
+        "-ub",
+        "256",
         # The engine warns at load that Qwen-VL needs ≥ 1024 image tokens to read accurately
         # (upstream #16842); without the floor a 1280 px photo encodes to ~58 tokens and the
         # "transcription" is confident garbage. Costs prefill time, buys correctness.
-        "--image-min-tokens", "1024",
+        "--image-min-tokens",
+        "1024",
         # Explicit because -ngl defaults to *auto* at this pin: a Metal host would otherwise
         # offload silently. run.sh native GPU mode sets the env to "all".
-        "--n-gpu-layers", os.environ.get("MUTA_RT_N_GPU_LAYERS", "0"),
-        "--threads", str(plan.vision_threads),
-        "--threads-http", "1",
+        "--n-gpu-layers",
+        os.environ.get("MUTA_RT_N_GPU_LAYERS", "0"),
+        "--threads",
+        str(plan.vision_threads),
+        "--threads-http",
+        "1",
         "--no-repack",
         "--jinja",
-        "--metrics", "--slots", "--props", "--no-webui",
-        "--log-file", str(paths.log_dir / "vision.jsonl"),
+        "--metrics",
+        "--slots",
+        "--props",
+        "--no-webui",
+        "--log-file",
+        str(paths.log_dir / "vision.jsonl"),
     ]
     key = paths.api_key_file
     if key.is_file():
@@ -444,17 +511,26 @@ def embed_command(paths: BundlePaths | None = None) -> Invocation:
     paths = paths or BundlePaths.from_env()
     argv = [
         paths.engine_bin(),
-        "-m", str(paths.embed_model),
+        "-m",
+        str(paths.embed_model),
         "--embeddings",
-        "--pooling", "cls",
-        "--alias", "embed",
-        "--host", "127.0.0.1",
-        "--port", str(port("EMBED", 8083)),
-        "-c", "512",
-        "-np", "2",
-        "--threads", "1",
+        "--pooling",
+        "cls",
+        "--alias",
+        "embed",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port("EMBED", 8083)),
+        "-c",
+        "512",
+        "-np",
+        "2",
+        "--threads",
+        "1",
         "--no-webui",
-        "--log-file", str(paths.log_dir / "embed.jsonl"),
+        "--log-file",
+        str(paths.log_dir / "embed.jsonl"),
     ]
     key = paths.api_key_file
     if key.is_file():
@@ -468,13 +544,20 @@ def draft_command(paths: BundlePaths | None = None) -> Invocation:
     paths = paths or BundlePaths.from_env()
     argv = [
         paths.engine_bin(),
-        "-m", str(paths.draft_model),
-        "--alias", "hint",
-        "--host", "127.0.0.1",
-        "--port", str(port("DRAFT", 8086)),
-        "-c", "2048",
-        "-np", "2",
-        "--flash-attn", "on",
+        "-m",
+        str(paths.draft_model),
+        "--alias",
+        "hint",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port("DRAFT", 8086)),
+        "-c",
+        "2048",
+        "-np",
+        "2",
+        "--flash-attn",
+        "on",
         "--jinja",
         "--no-webui",
     ]
@@ -502,7 +585,9 @@ COMMANDS = {
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ("print", "exec"):
         s = sub.add_parser(name, help=f"{name} a service invocation")
@@ -515,11 +600,20 @@ def main(argv: list[str] | None = None) -> int:
         plan = _env_threads(thread_plan())
         profile = get_profile()
         print(f"profile           {profile.name}")
-        print(f"  -c / --parallel {profile.n_ctx} / {profile.n_parallel}  ({profile.ctx_per_slot} ctx per slot)")
-        print(f"  KV cache type   {profile.cache_type}   mlock={profile.mlock}  tts={profile.tts_engine}")
-        print(f"physical cores    {plan.cores}" + ("" if plan.from_table else "   (off-table: extrapolated, see §6.4)"))
+        print(
+            f"  -c / --parallel {profile.n_ctx} / {profile.n_parallel}  ({profile.ctx_per_slot} ctx per slot)"
+        )
+        print(
+            f"  KV cache type   {profile.cache_type}   mlock={profile.mlock}  tts={profile.tts_engine}"
+        )
+        print(
+            f"physical cores    {plan.cores}"
+            + ("" if plan.from_table else "   (off-table: extrapolated, see §6.4)")
+        )
         print(f"  core threads    {plan.core_threads} decode / {plan.core_threads_batch} prefill")
-        print(f"  vision / audio  {plan.vision_threads} / {plan.audio_threads}   http {plan.http_threads}")
+        print(
+            f"  vision / audio  {plan.vision_threads} / {plan.audio_threads}   http {plan.http_threads}"
+        )
         return 0
 
     build = COMMANDS[args.service]

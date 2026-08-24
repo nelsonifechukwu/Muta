@@ -2,6 +2,11 @@
 
 Offline, adaptive AI tutor for math and scientific reasoning, running on the 8 GB ADTC laptop. [Brilliant](http://brilliant.org)'s / [Marble's](https://withmarble.com/) interactivity + Khan Academy's curriculum breadth + Encarta/Britannica's self-containedness — no server required. 
 
+Native offline applications are built for Ubuntu x86-64, Windows x86-64, and both Apple
+Silicon and Intel macOS. The Tauri shell uses the existing Muta UI; it does not fork or replace
+the frontend. See [Desktop builds and releases](docs/desktop-releases.md) for local builds,
+signing setup, first-install model packs, and the tag-driven GitHub release pipeline.
+
 **[Moat](https://chatgpt.com/share/6a885ad3-2a20-83ed-acc2-cc44a665dd9e)**: Muta’s moat is the deeply integrated educational intelligence layer that connects students, teachers, parents, institutions, and curriculum—accumulating context, workflows, and learning data over time. The underlying AI model can be swapped; **Muta’s education graph, relationships, and institutional integration cannot be easily replicated.** See also [Marble](https://withmarble.com/#:~:text=03-,Marble,-follows%20their%20curiosity).
 
 

@@ -18,7 +18,7 @@ import time
 from collections import deque
 from functools import lru_cache
 
-from bench.sampler import family_rss_bytes, read_temp_c
+from runtime import system_metrics
 
 _GB = 1024**3
 ACTIVE_SAMPLE_INTERVAL_S = 1.0
@@ -74,11 +74,11 @@ class TelemetryHub:
 
     def sample_once(self, now: float | None = None) -> None:
         now = time.monotonic() if now is None else now
-        rss = family_rss_bytes(self._root_pid)
+        rss = system_metrics.family_rss_bytes(self._root_pid)
         temp: float | None = None
         if not self._temp_unavailable:
             try:
-                temp = read_temp_c()
+                temp = system_metrics.read_temp_c()
             except Exception:  # noqa: BLE001 — telemetry must never take the service down
                 temp = None
             if temp is None:

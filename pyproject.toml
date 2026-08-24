@@ -29,6 +29,7 @@ dependencies = [
     "pillow>=10.0",  # image guard: downscale, EXIF strip (TDD §4.2)
     "pypdf>=5.0",  # learner-resource PDF extraction with physical page preservation
     "qrcode>=8.0",  # offline Host-mode LAN join QR (Pillow is already bundled above)
+    "cryptography>=43.0",  # cross-platform offline Host-mode CA/certificate generation
 ]
 
 [project.optional-dependencies]
@@ -38,12 +39,15 @@ dev = [
     "schemathesis>=3.30",
     "rich>=13",  # bench/monitor.py HUD only — dev tooling
 ]
+desktop = [
+    "pyinstaller==6.22.2",
+]
 
 # One distribution, two import packages: the frozen contract and the app that serves it.
 # Everything collapses into a single process at deploy (ROADMAP A.2) — hence one workspace,
 # not five packages.
 [tool.hatch.build.targets.wheel]
-packages = ["bench", "contracts", "orchestrator", "runtime"]
+packages = ["bench", "contracts", "desktop", "orchestrator", "runtime"]
 
 [tool.ruff]
 line-length = 100
@@ -54,10 +58,10 @@ extend-select = ["I"]  # import sorting
 
 [tool.pytest.ini_options]
 # Tests live next to the code they cover (lane-owned), so discover across the packages.
-testpaths = ["contracts", "orchestrator", "runtime", "bench", "scripts", "ui"]
+testpaths = ["contracts", "orchestrator", "runtime", "bench", "scripts", "ui", "desktop"]
 python_files = ["test_*.py"]
 # Integration tests create a venv / hit the network; opt in with `pytest -m integration`.
-addopts = "-q -m 'not integration'"
+addopts = "-q -m 'not integration' --ignore=desktop/build --ignore=desktop/src-tauri/target"
 markers = [
     "integration: creates the profiler venv or hits the network; deselected by default",
 ]

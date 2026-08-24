@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-import bench.sampler as sampler
-import orchestrator.telemetry as telemetry
+from orchestrator import telemetry
 from orchestrator.main import app
 from orchestrator.telemetry import TelemetryHub
+from runtime import system_metrics
 
 client = TestClient(app)
 
@@ -37,8 +37,8 @@ def test_rate_is_none_when_idle(monkeypatch):
 
 def test_snapshot_null_temp_means_null_throttled(monkeypatch):
     hub = TelemetryHub()
-    monkeypatch.setattr(telemetry, "family_rss_bytes", lambda pid: 2 * 1024**3)
-    monkeypatch.setattr(telemetry, "read_temp_c", lambda: None)
+    monkeypatch.setattr(system_metrics, "family_rss_bytes", lambda pid: 2 * 1024**3)
+    monkeypatch.setattr(system_metrics, "read_temp_c", lambda: None)
     hub.sample_once()
     snap = hub.snapshot("c1")
     assert snap["cpu_temp_c"] is None
@@ -48,8 +48,8 @@ def test_snapshot_null_temp_means_null_throttled(monkeypatch):
 
 def test_snapshot_throttled_true_above_85(monkeypatch):
     hub = TelemetryHub()
-    monkeypatch.setattr(telemetry, "family_rss_bytes", lambda pid: 1024**3)
-    monkeypatch.setattr(telemetry, "read_temp_c", lambda: 91.5)
+    monkeypatch.setattr(system_metrics, "family_rss_bytes", lambda pid: 1024**3)
+    monkeypatch.setattr(system_metrics, "read_temp_c", lambda: 91.5)
     hub.sample_once()
     snap = hub.snapshot("c1")
     assert snap["cpu_temp_c"] == 91.5
@@ -59,8 +59,8 @@ def test_snapshot_throttled_true_above_85(monkeypatch):
 def test_peak_rss_is_monotonic(monkeypatch):
     hub = TelemetryHub()
     readings = iter([100 * 1024**2, 50 * 1024**2])
-    monkeypatch.setattr(telemetry, "family_rss_bytes", lambda pid: next(readings))
-    monkeypatch.setattr(telemetry, "read_temp_c", lambda: None)
+    monkeypatch.setattr(system_metrics, "family_rss_bytes", lambda pid: next(readings))
+    monkeypatch.setattr(system_metrics, "read_temp_c", lambda: None)
     hub.sample_once()
     hub.sample_once()
     snap = hub.snapshot("c1")
@@ -81,8 +81,8 @@ def test_stale_conversations_are_pruned(monkeypatch):
     hub = TelemetryHub()
     clock = {"now": 100.0}
     monkeypatch.setattr(telemetry.time, "monotonic", lambda: clock["now"])
-    monkeypatch.setattr(telemetry, "family_rss_bytes", lambda pid: 0)
-    monkeypatch.setattr(telemetry, "read_temp_c", lambda: None)
+    monkeypatch.setattr(system_metrics, "family_rss_bytes", lambda pid: 0)
+    monkeypatch.setattr(system_metrics, "read_temp_c", lambda: None)
     hub.tick("old")
     clock["now"] += telemetry.TICKS_IDLE_TTL_S + 1
     hub.sample_once()
@@ -90,9 +90,9 @@ def test_stale_conversations_are_pruned(monkeypatch):
 
 
 def test_read_temp_c_none_when_no_sensors(monkeypatch):
-    monkeypatch.setattr(sampler.psutil, "sensors_temperatures", lambda: {}, raising=False)
-    monkeypatch.setattr(sampler.shutil, "which", lambda name: None)
-    assert sampler.read_temp_c() is None
+    monkeypatch.setattr(system_metrics.psutil, "sensors_temperatures", dict, raising=False)
+    monkeypatch.setattr(system_metrics.shutil, "which", lambda name: None)
+    assert system_metrics.read_temp_c() is None
 
 
 def test_telemetry_snapshot_endpoint_shape():

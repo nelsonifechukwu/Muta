@@ -1,0 +1,90 @@
+name: desktop-ci
+
+on:
+  push:
+    paths:
+      - "desktop/**"
+      - "orchestrator/**"
+      - "runtime/**"
+      - "contracts/**"
+      - "ui/**"
+      - "landing/**"
+      - "scripts/*desktop*"
+      - "pyproject.toml"
+      - "Makefile"
+      - ".github/workflows/desktop-*.yml"
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "orchestrator/**"
+      - "runtime/**"
+      - "contracts/**"
+      - "ui/**"
+      - "landing/**"
+      - "scripts/*desktop*"
+      - "pyproject.toml"
+      - "Makefile"
+      - ".github/workflows/desktop-*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop-source-and-shell:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Install Python desktop and test dependencies
+        run: python -m pip install -e ".[desktop,dev]"
+      - name: Install locked Tauri CLI
+        working-directory: desktop
+        run: npm ci
+      - name: Desktop Python tests
+        run: >-
+          python -m pytest
+          desktop
+          runtime/tests/test_paths.py
+          orchestrator/tests/test_certificates.py
+          orchestrator/tests/test_telemetry.py
+          scripts/test_stage_desktop.py
+          scripts/test_desktop_release.py
+      - name: Desktop lint
+        run: >-
+          ruff check
+          desktop
+          runtime/paths.py
+          runtime/system_metrics.py
+          orchestrator/gateway/certificates.py
+          scripts/build_desktop.py
+          scripts/collect_desktop_release.py
+          scripts/collect_desktop_package.py
+          scripts/generate_latest_json.py
+          scripts/inspect_desktop_artifact.py
+          scripts/prepare_tauri_release.py
+          scripts/stage_desktop.py
+          scripts/test_desktop_release.py
+          scripts/test_stage_desktop.py
+      - name: Rust launcher tests
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
+      - name: Dependency audit
+        working-directory: desktop
+        run: npm audit --audit-level=high

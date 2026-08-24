@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from runtime.paths import model_root
+
 DEFAULT_CONFIG = Path(__file__).resolve().parent / "audio.yaml"
 
 
@@ -58,9 +60,9 @@ class AudioConfig:
         return self.root / relative
 
     @classmethod
-    def load(cls, path: Path | str | None = None, *, root: Path | str | None = None) -> "AudioConfig":
+    def load(cls, path: Path | str | None = None, *, root: Path | str | None = None) -> AudioConfig:
         path = Path(path or os.environ.get("TUTOR_AUDIO_CONFIG") or DEFAULT_CONFIG)
-        root = Path(root or os.environ.get("TUTOR_ROOT", "/opt/tutor"))
+        root = Path(root) if root is not None else model_root()
         if not path.is_file():
             return cls(root=root)  # defaults are a working config, not a stub
         raw = yaml.safe_load(path.read_text()) or {}

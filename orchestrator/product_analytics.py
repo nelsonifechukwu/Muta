@@ -28,6 +28,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from orchestrator.version import git_sha, version
+from runtime.paths import data_root
 
 log = logging.getLogger("muta.product_analytics")
 
@@ -93,9 +94,8 @@ class ProductAnalyticsState:
     """One mode-0600 SQLite row: consent and delivery bookkeeping, never learner data."""
 
     def __init__(self, path: Path | str | None = None) -> None:
-        root = Path(os.environ.get("TUTOR_ROOT", "."))
         configured = path or os.environ.get("MUTA_FLEET_STATE_PATH")
-        self.path = Path(configured) if configured else root / "data/product-analytics.sqlite3"
+        self.path = Path(configured) if configured else data_root() / "product-analytics.sqlite3"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with suppress(OSError):
             self.path.parent.chmod(0o700)

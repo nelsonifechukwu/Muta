@@ -26,6 +26,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from runtime.paths import data_root
+
 SESSION_PREFIX = "msh_"
 HOST_ROLE = "host"
 MEMBER_ROLE = "member"
@@ -199,9 +201,10 @@ CREATE INDEX IF NOT EXISTS idx_share_enrollments_user ON share_enrollments(user_
 
 class SharingService:
     def __init__(self, path: Path | str | None = None) -> None:
-        root = Path(os.environ.get("TUTOR_ROOT", "."))
         configured = (
-            path or os.environ.get("MUTA_SHARE_DB_PATH") or root / "data/muta-share.sqlite3"
+            path
+            or os.environ.get("MUTA_SHARE_DB_PATH")
+            or data_root() / "muta-share.sqlite3"
         )
         self.path = Path(configured)
         self.path.parent.mkdir(parents=True, exist_ok=True)

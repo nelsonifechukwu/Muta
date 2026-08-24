@@ -19,6 +19,7 @@ import psutil
 from runtime.config import RuntimeConfig
 from runtime.gguf import GGUFError, read_metadata
 from runtime.kvmath import KVCost, RecurrentStateCost, compute_buffer_mib
+from runtime.paths import resource_root
 from runtime.profiles import ServingProfile, physical_cores
 
 MiB = 1024**2
@@ -126,7 +127,7 @@ class CapacityPlanner:
             raise ValueError("memory mode must be competition or system")
         effective, physical, cgroup = self.memory_probe()
         available = max(0, int(self.available_probe()))
-        root = (root or Path(os.environ.get("TUTOR_ROOT", "."))).resolve()
+        root = (root or resource_root()).resolve()
         model_path = cfg.model_path
         if not model_path.is_absolute():
             model_path = root / model_path

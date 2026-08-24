@@ -18,10 +18,6 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from psycopg.rows import dict_row
-from psycopg.types.json import Jsonb
-from psycopg_pool import ConnectionPool
-
 # --- Schema migrations ------------------------------------------------------------------
 # Ordered, append-only. Each runs once; the version is recorded in `schema_migrations`. A
 # deployed muta-pgdata volume upgrades by running only the versions it has not seen, so a new
@@ -169,7 +165,15 @@ class ConversationStore:
         return super().__new__(cls)
 
     def __init__(self, dsn: str = "sqlite:///data/muta.sqlite3") -> None:
+        # Desktop builds are SQLite-only and deliberately omit libpq. Keep the server-only
+        # native dependency outside module import so freezing the portable product does not
+        # drag Postgres client libraries into every platform package.
+        from psycopg.rows import dict_row
+        from psycopg.types.json import Jsonb
+        from psycopg_pool import ConnectionPool
+
         self.dsn = str(dsn)
+        self._jsonb = Jsonb
         self._pool = ConnectionPool(
             self.dsn,
             min_size=1,
@@ -574,7 +578,7 @@ class ConversationStore:
                         chunk["chunk_index"],
                         chunk["page"],
                         chunk["text"],
-                        Jsonb(chunk["embedding"]),
+                        self._jsonb(chunk["embedding"]),
                     ),
                 )
             conn.execute(
@@ -693,7 +697,7 @@ class ConversationStore:
                 "VALUES (%s, %s, %s) "
                 "ON CONFLICT (student_id) DO UPDATE "
                 "SET settings = EXCLUDED.settings, updated_at = EXCLUDED.updated_at",
-                (student_id, Jsonb(settings), _now()),
+                (student_id, self._jsonb(settings), _now()),
             )
 
     def patch_settings(self, student_id: str, changes: dict) -> dict:
@@ -705,7 +709,7 @@ class ConversationStore:
                 "ON CONFLICT (student_id) DO UPDATE SET "
                 "settings = user_settings.settings || EXCLUDED.settings, "
                 "updated_at = EXCLUDED.updated_at RETURNING settings",
-                (student_id, Jsonb(changes), _now()),
+                (student_id, self._jsonb(changes), _now()),
             ).fetchone()
         return dict(row["settings"])
 

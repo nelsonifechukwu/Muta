@@ -34,6 +34,7 @@ from runtime.client import InferenceClient
 from runtime.config import RuntimeConfig
 from runtime.memory import ConversationStore
 from runtime.model_catalog import ModelManager, ModelSwitchError
+from runtime.paths import data_root, resource_root
 from runtime.profiles import BundlePaths
 from runtime.slots import SlotClient, SnapshotReaper
 from runtime.ttft import PreambleWriter
@@ -432,7 +433,7 @@ def get_twin_store() -> TwinStore:
     the orphaned module into live adaptivity. A real deploy sets TUTOR_ROOT=/app (writable);
     if the configured path is not writable (e.g. the default /opt/tutor in a dev shell) the
     store degrades to an ephemeral temp dir rather than 500ing the pedagogy endpoints."""
-    target = Path(os.environ.get("TUTOR_ROOT", "/opt/tutor")) / "data" / "twins"
+    target = data_root() / "twins"
     try:
         return TwinStore(target)
     except OSError:
@@ -458,7 +459,7 @@ def get_preamble_writer() -> PreambleWriter | None:
     cfg = RuntimeConfig()
     if not cfg.ttft_preamble:
         return None
-    root = Path(os.environ.get("TUTOR_ROOT", "."))
+    root = resource_root()
     directory = cfg.ttft_model_dir
     if not directory.is_absolute():
         directory = root / directory

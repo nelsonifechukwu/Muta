@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -65,7 +66,10 @@ class ModelSpec:
 
 
 def load_catalog(root: Path, path: Path | None = None) -> tuple[ModelSpec, ...]:
-    catalog_path = path or root / "runtime" / "model-catalog.json"
+    configured = os.environ.get("MUTA_MODEL_CATALOG_PATH")
+    catalog_path = path or (
+        Path(configured) if configured else root / "runtime" / "model-catalog.json"
+    )
     if path is None and not catalog_path.is_file():
         # Tests and editable installs may deliberately point TUTOR_ROOT at an empty data root;
         # the versioned registry still lives alongside this source tree.

@@ -35,15 +35,22 @@ from __future__ import annotations
 
 import json
 import os
-import resource
+import queue
 import shutil
 import subprocess
 import sys
 import sysconfig
+import tempfile
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
+
+try:  # ``resource`` does not exist on Windows.
+    import resource
+except ImportError:  # pragma: no cover - exercised by Windows CI
+    resource = None  # type: ignore[assignment]
 
 WORKER = Path(__file__).resolve().parent / "_worker.py"
 
@@ -98,14 +105,18 @@ def _library_path() -> str:
 
 
 def sandbox_env() -> dict[str, str]:
+    temp = tempfile.gettempdir()
     return {
-        "PATH": "/usr/bin:/bin",
-        "HOME": "/nonexistent",
+        "PATH": os.defpath,
+        # HOME is intentionally isolated but must be a valid platform path: several numeric
+        # libraries consult it before MPLCONFIGDIR is considered.
+        "HOME": temp,
+        "USERPROFILE": temp,
         "PYTHONPATH": _library_path(),
         "PYTHONHASHSEED": "0",  # deterministic tools should be deterministic end to end
         "PYTHONDONTWRITEBYTECODE": "1",
         "MPLBACKEND": "Agg",  # never try to reach a display
-        "MPLCONFIGDIR": "/tmp/muta-mpl",
+        "MPLCONFIGDIR": str(Path(temp) / "muta-mpl"),
         "OMP_NUM_THREADS": "1",  # a tool must not steal the decode threads (§6.4)
         "OPENBLAS_NUM_THREADS": "1",
         "NO_PROXY": "*",
@@ -114,6 +125,8 @@ def sandbox_env() -> dict[str, str]:
 
 def _preexec(limits: Limits):
     def apply() -> None:  # runs in the child between fork and exec
+        if resource is None:
+            return
         os.setsid()
         as_bytes = limits.address_space_mib * 1024 * 1024
         for what, value in (
@@ -123,12 +136,20 @@ def _preexec(limits: Limits):
             (resource.RLIMIT_CORE, 0),  # no core dumps: a 256 MiB core on a full disk helps nobody
         ):
             try:
-                soft, hard = resource.getrlimit(what)
+                _soft, hard = resource.getrlimit(what)
                 resource.setrlimit(what, (value, min(value, hard) if hard > 0 else value))
             except (ValueError, OSError):
                 pass  # a limit the platform refuses is a weaker jail, not a failed tool call
 
     return apply
+
+
+def _process_kwargs(limits: Limits) -> dict[str, Any]:
+    if os.name == "posix":
+        return {"preexec_fn": _preexec(limits)}
+    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    flags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return {"creationflags": flags}
 
 
 def _command(limits: Limits) -> list[str]:
@@ -138,7 +159,12 @@ def _command(limits: Limits) -> list[str]:
     # user site directory and `-S` drops site.py/.pth processing, which is the isolation that
     # was actually wanted; the environment is replaced wholesale anyway (`env=sandbox_env()`),
     # so there is nothing to inherit.
-    base = [sys.executable, "-s", "-S", str(WORKER)]
+    if getattr(sys, "frozen", False):
+        # In a frozen app sys.executable is the Muta sidecar, not a Python interpreter. The
+        # entrypoint dispatches this mode before importing FastAPI.
+        base = [sys.executable, "--tool-worker"]
+    else:
+        base = [sys.executable, "-s", "-S", str(WORKER)]
     unshare = shutil.which("unshare")
     if unshare and sys.platform.startswith("linux"):
         # The real network guarantee where it exists: a new, empty network namespace.
@@ -158,7 +184,8 @@ def run_once(op: str, payload: dict[str, Any], limits: Limits = VERIFIER_LIMITS)
             text=True,
             timeout=limits.wall_seconds,
             env=sandbox_env(),
-            preexec_fn=_preexec(limits),
+            check=False,
+            **_process_kwargs(limits),
         )
     except subprocess.TimeoutExpired:
         return SandboxResult(False, error=f"timeout after {limits.wall_seconds}s", killed=True,
@@ -218,10 +245,10 @@ class WorkerPool:
             text=True,
             bufsize=1,
             env=sandbox_env(),
-            preexec_fn=_preexec(limits),
+            **_process_kwargs(limits),
         )
 
-    def start(self) -> "WorkerPool":
+    def start(self) -> WorkerPool:
         while len(self._workers) < self.size:
             self._workers.append(self._spawn())
         return self
@@ -258,10 +285,22 @@ class WorkerPool:
 
     def _kill(self, worker: subprocess.Popen) -> None:
         with_pid = worker.pid
-        try:
-            os.killpg(os.getpgid(with_pid), 9)  # setsid gave it its own group: kill the tree
-        except (ProcessLookupError, PermissionError):
-            worker.kill()
+        if os.name == "nt":
+            # taskkill is present on supported Windows versions and closes descendants too.
+            # CREATE_NO_WINDOW prevents this helper from flashing a console window.
+            subprocess.run(
+                ["taskkill", "/PID", str(with_pid), "/T", "/F"],
+                capture_output=True,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                check=False,
+            )
+            if worker.poll() is None:
+                worker.kill()
+        else:
+            try:
+                os.killpg(os.getpgid(with_pid), 9)  # setsid gave it its own group
+            except (ProcessLookupError, PermissionError):
+                worker.kill()
         try:
             worker.wait(timeout=2)
         except subprocess.TimeoutExpired:
@@ -279,7 +318,7 @@ class WorkerPool:
                 worker.kill()
         self._workers.clear()
 
-    def __enter__(self) -> "WorkerPool":
+    def __enter__(self) -> Self:
         return self.start()
 
     def __exit__(self, *exc) -> None:
@@ -292,9 +331,22 @@ def _read_line(worker: subprocess.Popen, timeout: float) -> str | None:
     `select` on the pipe rather than a reader thread: one fewer thread per in-flight tool
     call in a process whose RSS is capped at 600 MiB.
     """
+    assert worker.stdout is not None
+    if os.name == "nt":
+        result: queue.Queue[str] = queue.Queue(maxsize=1)
+
+        def read() -> None:
+            result.put(worker.stdout.readline())
+
+        threading.Thread(target=read, name="muta-tool-pipe", daemon=True).start()
+        try:
+            line = result.get(timeout=timeout)
+        except queue.Empty:
+            return None
+        return line or None
+
     import select
 
-    assert worker.stdout is not None
     deadline = time.monotonic() + timeout
     buf = ""
     while True:

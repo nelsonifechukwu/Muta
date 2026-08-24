@@ -6,7 +6,8 @@ PY ?= python3
 .PHONY: help install dev test ui-test lint fmt contract contract-test build up down smoke \
 	model fetch-models verify-models serve profiles core-cmd kv-budget index audio \
 	bench profile monitor bench-target eval backup restore \
-	bench-native-linux export-native-linux
+	bench-native-linux export-native-linux \
+	desktop-models desktop-native desktop-stage desktop-freeze desktop-build desktop-test
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -118,3 +119,23 @@ restore: ## Restore from a dump: make restore DUMP=backups/muta-<ts>.dump  (DEST
 	@test -f "$(DUMP)" || { echo "no such dump: $(DUMP)"; exit 2; }
 	@echo "restoring $(DUMP) into the muta db (existing data is replaced)…"
 	docker compose exec -T db pg_restore -U muta -d muta --clean --if-exists < "$(DUMP)"
+
+# --- Native desktop packaging (always runs on the target OS/architecture) ---
+desktop-models: ## Provision the verified offline tutor, vision, voice and retrieval models
+	scripts/prepare_desktop_models.sh
+
+desktop-native: ## Build pinned llama.cpp + FFmpeg for this native runner
+	scripts/build_desktop_native.sh desktop/build/native
+
+desktop-stage: ## Stage signed app resources + separate verified model pack. Args: ARGS="..."
+	$(PY) scripts/stage_desktop.py stage $(ARGS)
+
+desktop-freeze: ## Build/test the PyInstaller onedir sidecar without Tauri. Args: ARGS="..."
+	$(PY) scripts/build_desktop.py --no-tauri $(ARGS)
+
+desktop-build: ## Build the native Tauri package and offline portable kit. Args: ARGS="..."
+	$(PY) scripts/build_desktop.py $(ARGS)
+
+desktop-test: ## Verify staging/freezer Python and the Tauri launcher
+	$(PY) -m pytest desktop/tests scripts/test_stage_desktop.py scripts/test_desktop_release.py runtime/tests/test_paths.py
+	cd desktop/src-tauri && cargo fmt --check && cargo test --locked

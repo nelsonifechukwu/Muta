@@ -11,6 +11,7 @@ Run standalone:  `python -m runtime.server`  (or `make serve`) — launches and 
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import signal
 import subprocess
@@ -22,6 +23,7 @@ import httpx
 
 from runtime.config import RuntimeConfig
 from runtime.models import resolve_model
+from runtime.paths import resource_root
 
 log = logging.getLogger("muta.runtime.server")
 
@@ -31,7 +33,13 @@ _BUILD_BIN = Path(__file__).resolve().parent / "build" / "bin" / "llama-server"
 
 
 def find_binary(cfg: RuntimeConfig) -> str:
-    for candidate in (cfg.llama_server_bin, str(_BUILD_BIN) if _BUILD_BIN.exists() else None):
+    executable = "llama-server.exe" if sys.platform == "win32" else "llama-server"
+    installed = resource_root() / "bin" / executable
+    for candidate in (
+        cfg.llama_server_bin,
+        str(installed) if installed.exists() else None,
+        str(_BUILD_BIN) if _BUILD_BIN.exists() else None,
+    ):
         if candidate and Path(candidate).exists():
             return candidate
     on_path = shutil.which("llama-server")
@@ -186,6 +194,10 @@ class LlamaServer:
     def ensure(self, log_file: str | Path | None = None) -> tuple["LlamaServer", bool]:
         """Attach if a server is already up; otherwise start one. Returns (self, managed)."""
         if self.is_up():
+            if os.environ.get("MUTA_DESKTOP") == "1" and self.process is None:
+                raise RuntimeError(
+                    f"refusing to attach the desktop app to an unidentified server at {self.base_url}"
+                )
             log.info("attaching to existing llama-server at %s", self.base_url)
             self._managed = False
             return self, False
