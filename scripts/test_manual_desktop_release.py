@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import build_desktop
 import gcp_desktop_build as gcp
 import manual_desktop_release as release
 import manual_desktop_worker as worker
@@ -27,6 +28,12 @@ def test_archive_names_cover_all_four_targets() -> None:
     assert release.archive_name("1.2.3", "darwin-x86_64").endswith(".tar.gz")
     assert release.archive_name("1.2.3", "linux-x86_64").endswith(".tar.gz")
     assert release.archive_name("1.2.3", "windows-x86_64").endswith(".zip")
+
+
+def test_tauri_installer_version_matches_requested_release() -> None:
+    assert json.loads(build_desktop.tauri_version_config("2.4.1-beta.2")) == {
+        "version": "2.4.1-beta.2"
+    }
 
 
 def test_final_manifest_verifies_every_checksum(tmp_path: Path) -> None:
