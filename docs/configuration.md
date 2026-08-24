@@ -209,7 +209,7 @@ Source: `runtime/profiles.py` plus the audio/retrieval apps. See
 ## Family 3 — cloud boost, web grounding, probe, ladder, infra
 
 Small `MUTA_*` (non-`RT`) and infrastructure vars. **All off by default** except where a
-compose/env default is shown. The first four are the off-device switches — see
+compose/env default is shown. The cloud/search/probe/fleet rows govern off-device flows — see
 [`privacy-and-data-flows.md`](privacy-and-data-flows.md).
 
 | Variable | Default | What it does | Where read |
@@ -220,6 +220,12 @@ compose/env default is shown. The first four are the off-device switches — see
 | `MUTA_SEARCH_URL` | *(unset)* | SearXNG base URL; enables web grounding (with `use_web:true` + online) | `routes.py:192`, `websearch.py:29` |
 | `MUTA_NET_PROBE_URL` | `https://huggingface.co` | host the connectivity probe HEADs (~1/min); also gates cloud/web | `connectivity.py:23`, `run.sh:115` |
 | `MUTA_NET_PROBE_INTERVAL_S` | `60` | seconds between connectivity probes | `connectivity.py:24` |
+| `MUTA_FLEET_URL` | *(unset)* | consent-gated online fleet collector origin; inert unless the ingest key is also set | `product_analytics.py` |
+| `MUTA_FLEET_INGEST_KEY` | *(unset)* | write-only fleet heartbeat credential; never grants dashboard reads | `product_analytics.py` |
+| `MUTA_FLEET_SYNC_INTERVAL_S` | `60` | seconds between best-effort heartbeats while consent is granted | `product_analytics.py` |
+| `MUTA_FLEET_TIMEOUT_S` | `5` | heartbeat/delete timeout; failures never affect local tutoring | `product_analytics.py` |
+| `MUTA_FLEET_ACTIVE_WINDOW_S` | `300` | recent-use window for aggregate active-user counting | `product_analytics.py` |
+| `MUTA_FLEET_STATE_PATH` | `$TUTOR_ROOT/data/product-analytics.sqlite3` | mode-0600 consent, random installation ID, and delivery receipt | `product_analytics.py` |
 | `MUTA_CORE_CAP_MIB` | `4300` *(compose: `5400`)* | degradation-ladder core-RSS cap (MiB) — L4 fires above it | `ladder.py:42`, compose `:63` |
 | `MUTA_MODEL_DIR` / `MUTA_MODEL_FILE` / `MUTA_MODEL_ALIAS` | *(unset; compose interpolation)* | **host-side** interpolation for `MUTA_RT_MODEL_*`, exported by `./run.sh --model` | compose `:51-53`, `run.sh:254-256` |
 

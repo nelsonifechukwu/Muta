@@ -17,8 +17,11 @@ doubles as a known-issues document. It is **not legal advice**; the regulatory s
 
 ## 1. What is collected and where it lives
 
-All persistent student data is in **one Postgres database**, in the Docker named volume
-**`muta-pgdata`** (`docker-compose.yml:16-17`, `131-132`). There is no other datastore.
+All persistent student content is in **one Postgres database**, in the Docker named volume
+**`muta-pgdata`** (`docker-compose.yml:16-17`, `131-132`). A separate mode-0600 SQLite file,
+`data/product-analytics.sqlite3`, stores only the laptop operator's product-analytics choice,
+a random installation UUID, a last-sync receipt, and any pending remote-erasure flag. It never
+contains student identity, content, or location.
 The schema is defined in `runtime/memory.py:25-62`:
 
 | Table | What it holds | Sensitivity |
@@ -49,10 +52,10 @@ Everything in `muta-pgdata` survives `./run.sh down` / `docker compose down`. On
 
 ---
 
-## 2. The three off-device data flows
+## 2. The four off-device data flows
 
 By default Muta is **fully offline** — nothing student-related leaves the box. Three
-optional flows can change that. All three are **off unless an operator sets the relevant
+optional flows can change that. All are **off unless an operator sets the relevant
 environment variables** (and, for web grounding, a per-request toggle). This section states
 exactly what leaves the device in each, when, and how to keep it disabled.
 
@@ -123,6 +126,30 @@ exactly what leaves the device in each, when, and how to keep it disabled.
   target that never succeeds, `online()` stays `False` and **flows (a) and (b) can never
   activate** — a locked-down probe target is also a hard gate on the other two.
 
+### (d) Consented product heartbeat — installation metadata and coarse location
+
+*Code on the laptop:* `orchestrator/product_analytics.py`,
+`orchestrator/gateway/product_analytics.py`. The remote processor is operated separately and is
+not distributed with Muta.
+
+- **What leaves the device:** a random installation UUID, app version/build, operating-system
+  family and architecture, last-use time, and aggregate registered/active counts consisting of
+  the laptop operator plus approved offline LAN accounts. This is pseudonymous, linkable
+  installation metadata—not anonymous data. It sends no conversations, prompts,
+  files, names, email, hostname, GPS, or coordinates. The online collector derives a public-IP
+  location, rounds it to 0.1° (city-level), stores that coarse location, and does not insert the
+  raw IP into its database or responses. Its configured GeoIP service necessarily sees the IP.
+- **When:** only when **both** `MUTA_FLEET_URL` and `MUTA_FLEET_INGEST_KEY` are configured **and**
+  the local laptop operator explicitly chooses **Share product activity**. An unknown or
+  declined choice sends no heartbeat. Network failure is a normal retry and cannot block Muta.
+- **Choice and erasure:** the choice is shown once and saved locally; it remains changeable under
+  Settings → Privacy. Turning sharing off stops future heartbeats and queues deletion of that
+  installation and its location history for the next connection. After confirmed deletion, the
+  local installation UUID rotates so a later opt-in cannot relink the erased row.
+- **How to disable:** leave either fleet variable unset (no prompt or worker), or choose **Keep
+  private**. This flow is installation-level product observability; it is not consent for cloud
+  inference, web grounding, conversation storage, or any processing of a child's work.
+
 ### Summary
 
 | Flow | What leaves | Trigger (all off by default) | Disable |
@@ -130,6 +157,7 @@ exactly what leaves the device in each, when, and how to keep it disabled.
 | (a) Cloud boost | full system prompt + up to 20 turns of history + current message → third-party API | `MUTA_CLOUD_URL` + `MUTA_CLOUD_MODEL` + `MUTA_CLOUD_API_KEY` all set, and online | unset any of the three |
 | (b) Web grounding | current student message text → `MUTA_SEARCH_URL` | `use_web:true` + `MUTA_SEARCH_URL` set + online | unset `MUTA_SEARCH_URL` / UI toggle off |
 | (c) Connectivity probe | HTTP HEAD (no student data; reveals IP + liveness) | always on while backend runs | repoint `MUTA_NET_PROBE_URL` to a LAN/loopback host |
+| (d) Product heartbeat | random installation/build/activity/aggregate count → Muta Fleet; server derives coarse city | collector configured + explicit operator opt-in | Settings → Privacy off, or unset either `MUTA_FLEET_*` variable |
 
 ---
 
@@ -176,8 +204,9 @@ enablement as a third-party disclosure decision, documented and consented.
 These are real and tracked in the project's **production-readiness audit**. None of them is
 fixed in the code today.
 
-1. **No consent flow.** Nothing asks the student or a guardian for permission before storing
-   their work, and cloud boost / web grounding surface only a *post-hoc* badge — never prior,
+1. **No consent flow for student work or cloud/web processing.** The product heartbeat in §2(d)
+   has its own explicit operator choice, but nothing asks the student or a guardian before
+   storing their work, and cloud boost / web grounding surface only a *post-hoc* badge — never prior,
    informed consent. There is no guardian-consent capture anywhere.
 2. **No retention policy.** Conversations, messages, and attachments persist in `muta-pgdata`
    forever. There is no per-student expiry, no time-based purge, no automatic deletion. The
