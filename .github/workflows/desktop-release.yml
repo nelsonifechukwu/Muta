@@ -59,7 +59,7 @@ jobs:
           python -m pip install -e ".[desktop,dev]"
           python -m pytest desktop scripts/test_stage_desktop.py scripts/test_desktop_release.py runtime/tests/test_paths.py
 
-  models:
+  inputs:
     needs: validate
     runs-on: ubuntu-22.04
     environment: desktop-release
@@ -72,17 +72,52 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install model provisioning dependencies
         run: python -m pip install -e ".[desktop]"
-      - name: Provision and verify the offline product models
+      - id: model-cache
+        name: Restore verified desktop models
+        uses: actions/cache@v4
+        with:
+          path: |
+            muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf
+            models/mmproj/
+            models/asr/
+            models/tts/
+            models/embed/
+            models/LICENSES/
+            models/MANIFEST.json
+          key: >-
+            desktop-models-v2-${{ hashFiles('scripts/prepare_desktop_models.sh',
+            'scripts/verify_desktop_models.py', 'scripts/fetch_models.sh',
+            'scripts/fetch_models.py', 'scripts/model_specs.py', 'models/pins.lock.json',
+            'runtime/model-catalog.json', 'muta-iq/download_model.sh',
+            'muta-iq/opt/scripts/**', 'muta-iq/opt/eval/system_prompt.txt') }}
+      - name: Provision product models on cache miss
+        if: steps.model-cache.outputs.cache-hit != 'true'
         env:
           MODEL_URL: ${{ secrets.MUTA_MODEL_URL }}
         run: bash scripts/prepare_desktop_models.sh
+      - name: Verify cached product models
+        run: python scripts/verify_desktop_models.py
+      - id: ui-cache
+        name: Restore offline UI
+        uses: actions/cache@v4
+        with:
+          path: ui/dist
+          key: >-
+            desktop-ui-v2-${{ hashFiles('scripts/build_ui_dist.py', 'ui/*.html', 'ui/*.css',
+            'ui/*.js', 'ui/VISUALIZATION-LICENSES.txt', 'ui/vendor/viz/**') }}
+      - name: Build offline UI on cache miss
+        if: steps.ui-cache.outputs.cache-hit != 'true'
+        run: python scripts/build_ui_dist.py
+      - name: Verify cached offline UI
+        run: python scripts/build_ui_dist.py --verify-only
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-model-inputs
+          name: desktop-build-inputs
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
           path: |
+            ui/dist/
             muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf
             models/mmproj/
             models/asr/
@@ -93,7 +128,7 @@ jobs:
             models/pins.lock.json
 
   build:
-    needs: [validate, models]
+    needs: [validate, inputs]
     environment: desktop-release
     strategy:
       fail-fast: false
@@ -142,7 +177,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: desktop-model-inputs
+          name: desktop-build-inputs
           path: .
       - uses: actions/setup-python@v5
         with:
@@ -181,21 +216,48 @@ jobs:
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
             mingw-w64-x86_64-nasm
+      - id: native-cache
+        name: Restore target-native sidecars
+        uses: actions/cache@v4
+        with:
+          path: desktop/build/native
+          key: >-
+            desktop-native-v2-${{ matrix.platform }}-${{
+            hashFiles('scripts/build_desktop_native.sh', 'scripts/verify_desktop_native.sh',
+            'scripts/desktop_native_pins.env') }}
       - name: Build pinned Linux/macOS native sidecars
-        if: matrix.target_os != 'windows'
+        if: matrix.target_os != 'windows' && steps.native-cache.outputs.cache-hit != 'true'
         shell: bash
         run: bash scripts/build_desktop_native.sh desktop/build/native
       - name: Build pinned Windows native sidecars
-        if: matrix.target_os == 'windows'
+        if: matrix.target_os == 'windows' && steps.native-cache.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: bash scripts/build_desktop_native.sh desktop/build/native
+      - name: Verify Linux/macOS native sidecars
+        if: matrix.target_os != 'windows'
+        shell: bash
+        run: bash scripts/verify_desktop_native.sh desktop/build/native
+      - name: Verify Windows native sidecars
+        if: matrix.target_os == 'windows'
+        shell: msys2 {0}
+        run: bash scripts/verify_desktop_native.sh desktop/build/native
       - name: Install Python dependencies
         shell: bash
         run: python -m pip install -e ".[desktop]"
-      - name: Install locked Tauri dependencies
+      - id: gateway-key
+        name: Compute frozen gateway cache key
         shell: bash
-        working-directory: desktop
-        run: npm ci
+        run: echo "key=$(python scripts/desktop_cache_key.py gateway)" >> "$GITHUB_OUTPUT"
+      - id: gateway-cache
+        name: Restore frozen Python gateway
+        uses: actions/cache@v4
+        with:
+          path: desktop/build/gateway
+          key: desktop-gateway-v2-${{ matrix.platform }}-${{ steps.gateway-key.outputs.key }}
+      - name: Verify restored frozen Python gateway
+        if: steps.gateway-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: python scripts/freeze_desktop_gateway.py --verify-only
       - name: Require protected signing configuration
         shell: bash
         run: |
@@ -238,13 +300,18 @@ jobs:
       - name: Build signed offline application
         shell: bash
         run: |
+          reuse=()
+          if [ "${{ steps.gateway-cache.outputs.cache-hit }}" = true ]; then
+            reuse+=(--reuse-frozen-gateway)
+          fi
           python scripts/build_desktop.py \
             --release \
             --engine-dir desktop/build/native \
             --include-optional-models \
             --version "$MUTA_RELEASE_VERSION" \
             --model-pack-id "muta-models-2026.08" \
-            --tauri-config desktop/build/tauri.release.json
+            --tauri-config desktop/build/tauri.release.json \
+            "${reuse[@]}"
       - name: Inspect staged artifact and dependency closure
         shell: bash
         run: |

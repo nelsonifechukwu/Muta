@@ -118,6 +118,12 @@ Python/Rust/dependency gates. `desktop-release.yml` runs only for a protected Se
 8. assemble a signed offline update directory for flash-drive delivery;
 9. publish immutable artifacts to the GitHub Release.
 
+`desktop-cache.yml` is a trusted, path-filtered default-branch cache warmer. Its exact keys split
+platform-independent model/UI inputs, target-native pinned sidecars, and target-specific frozen
+Python gateways. Package branches and release tags can restore default-branch entries, but every
+restored layer is verified and every workflow can regenerate it. Tauri assembly, signing, package
+inspection and final artifact creation are deliberately never skipped.
+
 Signing secrets exist only in the protected `desktop-release` environment. Pull requests,
 including forked PRs, never receive them. CI must refuse to generate a replacement signing key.
 

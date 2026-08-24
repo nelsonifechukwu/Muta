@@ -82,6 +82,19 @@ They are intentionally unsigned: macOS requires right-clicking the app and choos
 first launch, and Windows displays an **Unknown Publisher** warning. Use the protected release
 workflow below for public, warning-free distribution.
 
+The package workflow restores three content-addressed layers when their inputs have not changed:
+the verified platform-independent models/UI, each target's pinned native sidecars, and each
+target's complete frozen Python gateway. It always stages, bundles, smoke-tests and inspects a new
+final package. A cache miss is not an error; the runner regenerates and verifies that layer before
+continuing.
+
+`.github/workflows/desktop-cache.yml` populates trusted default-branch caches after relevant pushes
+to `main`, making those entries visible to the package branch and release tags. Run it manually
+once after GitHub Actions is enabled if its initial push run was missed. UI changes invalidate only
+the UI layer; Python/dependency changes invalidate only the frozen gateway; native pin/build changes
+invalidate only native sidecars; model pin/provisioning changes invalidate only the model layer.
+GitHub may evict caches, so no release depends on them for correctness.
+
 ## One-time GitHub release setup
 
 Create a protected GitHub Actions environment named `desktop-release`. Require approval and
@@ -129,10 +142,11 @@ git tag -s v0.2.0 -m "Muta 0.2.0"
 git push origin v0.2.0
 ```
 
-The tag runs `.github/workflows/desktop-release.yml`. It provisions and verifies models once,
-then performs four native builds in parallel. Each build freezes the Python onedir, signs nested
-code, signs the model manifest, builds the Tauri installer/updater, signs or notarizes the outer
-artifact, inspects architecture/dependencies, and creates a complete offline first-install kit.
+The tag runs `.github/workflows/desktop-release.yml`. It restores or provisions and verifies models
+once, then performs four native assemblies in parallel. Each build restores or freezes the Python
+onedir and native sidecars, signs nested code, signs the model manifest, builds the Tauri
+installer/updater, signs or notarizes the outer artifact, inspects architecture/dependencies, and
+creates a complete offline first-install kit.
 The publish job refuses to overwrite an existing release, creates `latest.json`, and uploads all
 installers, offline kits, updater signatures and checksums to the immutable GitHub Release.
 
