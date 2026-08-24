@@ -131,7 +131,7 @@ def collect(args: argparse.Namespace) -> None:
     for asset in assets:
         lines.append(f"{sha256(asset)}  {asset.name}")
     (output / f"SHA256SUMS_{args.platform}.txt").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
+        "\n".join(lines) + "\n", encoding="utf-8", newline="\n"
     )
 
 
