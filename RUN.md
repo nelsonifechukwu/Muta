@@ -126,17 +126,17 @@ connection. If address detection chooses the wrong interface, set it explicitly:
 MUTA_GCP_LAN_IP=192.168.1.25 ./scripts/gcp_share_relay.sh
 ```
 
-To connect that GCP-hosted Muta installation to an operator-owned fleet collector, provide the
-collector origin and write-only credential to the laptop-side launcher. The launcher carries the
-key over SSH stdin; it never includes it in the remote command or dry-run output:
+To launch the GCP-hosted Muta installation with its operator-owned fleet collector, use the
+one-command wrapper on the laptop:
 
 ```bash
-export MUTA_FLEET_URL=https://your-ingest-service.example
-export MUTA_FLEET_INGEST_KEY="$(gcloud secrets versions access latest \
-  --project=your-project --secret=your-ingest-secret)"
-./scripts/gcp_share_relay.sh
-unset MUTA_FLEET_INGEST_KEY
+./scripts/gcp_share_start.sh
 ```
+
+It retrieves `muta-fleet-ingest-key` from project `muta-adtc`, supplies the configured Cloud Run
+ingest origin, and starts `gcp_share_relay.sh`. The relay carries the key over SSH stdin; it never
+includes it in the remote command or dry-run output. Override `MUTA_GCP_PROJECT`,
+`MUTA_GCP_FLEET_SECRET`, or `MUTA_FLEET_URL` only for another deployment.
 
 The operator must still accept the one-time privacy prompt in Muta. Do not provide the fleet
 admin URL or database credentials to this launcher.

@@ -2,6 +2,8 @@
 # Run on the operator laptop. The phone reaches this laptop's Wi-Fi address; SSH carries the
 # encrypted bytes to Muta's dedicated learner listener on GCP. No GCP firewall port is opened.
 
+# A caller may invoke this with ``bash -x``. Disable tracing before reading the secret env value.
+set +x
 set -euo pipefail
 
 VM="${MUTA_GCP_VM:-muta-vm}"
@@ -114,7 +116,7 @@ if [ -n "$FLEET_URL" ]; then
 fi
 command=(gcloud compute ssh "$VM" "--zone=$ZONE")
 [ -z "$PROJECT" ] || command+=("--project=$PROJECT")
-command+=(-- -o ExitOnForwardFailure=yes -L "$operator_forward" -L "$learner_forward" -- "$remote_command")
+command+=(-- -o BatchMode=yes -o ExitOnForwardFailure=yes -L "$operator_forward" -L "$learner_forward" -- "$remote_command")
 
 printf 'Muta operator: http://127.0.0.1:%s/chat/\n' "$OPERATOR_PORT"
 printf 'Learner relay: https://%s:%s/chat/\n' "$LAN_IP" "$SHARE_PORT"
@@ -158,6 +160,12 @@ for host, port, label in targets:
 PY
 
 if [ "$fleet_enabled" -eq 1 ]; then
+    # Establish gcloud/SSH credentials before the key ever reaches stdin. ``--quiet`` and
+    # BatchMode make a first-run prompt fail safely instead of consuming the heartbeat key.
+    preflight=(gcloud compute ssh "$VM" "--zone=$ZONE" --quiet --command=true)
+    [ -z "$PROJECT" ] || preflight+=("--project=$PROJECT")
+    preflight+=(-- -o BatchMode=yes)
+    "${preflight[@]}" </dev/null >/dev/null
     exec "${command[@]}" <<<"$FLEET_INGEST_KEY"
 fi
 exec "${command[@]}"
