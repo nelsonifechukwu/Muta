@@ -58,6 +58,30 @@ class ReadyResponse(BaseModel):
     )
 
 
+class ProductAnalyticsConsentRequest(BaseModel):
+    allowed: bool = Field(
+        description=(
+            "Whether the laptop operator permits pseudonymous installation heartbeats and "
+            "coarse, network-derived location."
+        )
+    )
+
+
+class ProductAnalyticsStatus(BaseModel):
+    configured: bool = Field(
+        description="True when this build has a fleet collector URL and ingest credential."
+    )
+    manageable: bool = Field(
+        description="True only on the laptop operator's local surface."
+    )
+    consent: Literal["unknown", "granted", "declined"]
+    prompt_required: bool = False
+    location_mode: Literal["none", "approximate_ip"] = "none"
+    last_synced_at: str | None = None
+    deletion_pending: bool = False
+    data_shared: list[str] = Field(default_factory=list)
+
+
 class ModelBackend(BaseModel):
     """One fixed backend from the local model registry; browser clients never send paths."""
 

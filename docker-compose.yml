@@ -133,6 +133,11 @@ services:
       # Model load can take minutes under emulation; generous is free.
       MUTA_RT_STARTUP_TIMEOUT_S: "900"
       MUTA_RT_REQUEST_TIMEOUT_S: "600"
+      # Optional, consent-gated product heartbeat. Empty means no prompt, worker, or request.
+      # The collector derives coarse location from the request IP; the laptop sends no GPS.
+      MUTA_FLEET_URL: "${MUTA_FLEET_URL:-}"
+      MUTA_FLEET_INGEST_KEY: "${MUTA_FLEET_INGEST_KEY:-}"
+      MUTA_FLEET_SYNC_INTERVAL_S: "${MUTA_FLEET_SYNC_INTERVAL_S:-60}"
       # The vision spawn gets the same courtesy: 60 s covers a warm spawn on the target,
       # but a cold mmproj load under emulation can exceed it.
       MUTA_RT_VISION_STARTUP_S: "300"

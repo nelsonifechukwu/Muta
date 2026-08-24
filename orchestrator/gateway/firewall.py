@@ -41,6 +41,10 @@ async def enforce_share_firewall(
     }
     if relative in public or relative.startswith("/share/enrollments/"):
         return await call_next(request)
+    if relative == "/product-analytics":
+        if operator:
+            return await call_next(request)
+        return JSONResponse(status_code=403, content={"detail": "host access is local only"})
     if relative == "/auth/session":
         if operator:
             return await call_next(request)

@@ -2062,6 +2062,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/product-analytics:
+    get:
+      tags:
+      - product analytics
+      summary: Product Analytics Status
+      operationId: product_analytics_status_v1_product_analytics_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAnalyticsStatus'
+    put:
+      tags:
+      - product analytics
+      summary: Update Product Analytics
+      operationId: update_product_analytics_v1_product_analytics_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductAnalyticsConsentRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAnalyticsStatus'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
     AnswerCheckRequest:
@@ -3113,6 +3150,65 @@ components:
       type: object
       title: PowerStatus
       description: Battery state of the laptop serving Muta, plus the effective learner policy.
+    ProductAnalyticsConsentRequest:
+      properties:
+        allowed:
+          type: boolean
+          title: Allowed
+          description: Whether the laptop operator permits pseudonymous installation heartbeats and coarse,
+            network-derived location.
+      type: object
+      required:
+      - allowed
+      title: ProductAnalyticsConsentRequest
+    ProductAnalyticsStatus:
+      properties:
+        configured:
+          type: boolean
+          title: Configured
+          description: True when this build has a fleet collector URL and ingest credential.
+        manageable:
+          type: boolean
+          title: Manageable
+          description: True only on the laptop operator's local surface.
+        consent:
+          type: string
+          enum:
+          - unknown
+          - granted
+          - declined
+          title: Consent
+        prompt_required:
+          type: boolean
+          title: Prompt Required
+          default: false
+        location_mode:
+          type: string
+          enum:
+          - none
+          - approximate_ip
+          title: Location Mode
+          default: none
+        last_synced_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Synced At
+        deletion_pending:
+          type: boolean
+          title: Deletion Pending
+          default: false
+        data_shared:
+          items:
+            type: string
+          type: array
+          title: Data Shared
+      type: object
+      required:
+      - configured
+      - manageable
+      - consent
+      title: ProductAnalyticsStatus
     ReadyResponse:
       properties:
         ready:

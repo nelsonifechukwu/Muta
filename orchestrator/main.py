@@ -39,6 +39,7 @@ from orchestrator.gateway.deps import (
     set_model_manager,
 )
 from orchestrator.gateway.firewall import enforce_share_firewall
+from orchestrator.gateway.product_analytics import router as product_analytics_router
 from orchestrator.gateway.routes import router as gateway_router
 from orchestrator.gateway.share_routes import (
     reconcile_share_deletions,
@@ -195,6 +196,17 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
 
     get_hub().start()  # 1 Hz while generating; lower-frequency idle RSS/temp sampling
 
+    from orchestrator.product_analytics import get_product_analytics
+
+    analytics_service = None
+    try:
+        # Optional fleet state must not make an otherwise healthy offline tutor fail to boot.
+        analytics_service = get_product_analytics()
+        analytics_service.start()  # inert until configured and operator consent
+    except Exception:
+        log.exception("optional product analytics could not initialize")
+    app_instance.state.product_analytics = analytics_service
+
     from orchestrator.gateway.connectivity import get_connectivity
 
     get_connectivity().start()  # ~1/min online/offline verdict for /v1/ready and the UI
@@ -292,6 +304,9 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
             get_resource_service.cache_clear()
         with contextlib.suppress(Exception):
             get_connectivity().stop()
+        if analytics_service is not None:
+            with contextlib.suppress(Exception):
+                analytics_service.stop()
         if engine_stop is not None:
             engine_stop.set()  # tell the supervisor to stop respawning before we kill the child
         if reaper_task is not None:
@@ -342,6 +357,37 @@ async def _request_id(request, call_next):
         response = await call_next(request)
     finally:
         request_id_var.reset(token)
+    excluded_activity_paths = {
+        "/v1/health",
+        "/v1/ready",
+        "/v1/metrics",
+        "/v1/auth/session",
+        "/v1/product-analytics",
+        "/v1/share/status",
+        "/v1/share/signup",
+        "/v1/share/login",
+        "/v1/share/logout",
+    }
+    if response.status_code < 400 and request.url.path not in excluded_activity_paths:
+        # Only a successful, authorised, activity-bearing operation counts. Health probes,
+        # failed/forged tokens and consent polling cannot keep an installation active.
+        analytics = getattr(request.app.state, "product_analytics", None)
+        if analytics is not None:
+            with contextlib.suppress(Exception):
+                from orchestrator.gateway.auth import is_operator_request, principal_from_request
+
+                principal = principal_from_request(request)
+                subject = None
+                if is_operator_request(request):
+                    subject = "local-operator"
+                elif (
+                    principal is not None
+                    and principal.auth_kind == "share"
+                    and principal.role == "member"
+                ):
+                    subject = principal.subject
+                if subject is not None:
+                    analytics.touch(subject)
     response.headers["X-Request-ID"] = rid
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
@@ -369,6 +415,7 @@ async def _request_id(request, call_next):
 app.include_router(gateway_router, prefix=API_PREFIX)
 app.include_router(audio_router, prefix=API_PREFIX)  # /v1/audio/transcribe + WS /v1/audio/voice
 app.include_router(share_router, prefix=API_PREFIX)
+app.include_router(product_analytics_router, prefix=API_PREFIX)
 
 # Logical services, collapsed into this process. Internal — not part of the /v1 contract.
 app.mount("/internal/math", math_app)
