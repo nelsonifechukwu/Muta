@@ -392,6 +392,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cache-root", type=Path, default=Path.home() / ".cache/muta-packages")
     args = parser.parse_args(argv)
     try:
+        user_tools = (Path.home() / ".local/bin", Path.home() / ".cargo/bin")
+        os.environ["PATH"] = os.pathsep.join(
+            [*(str(path) for path in user_tools), os.environ.get("PATH", "")]
+        )
         if not SHA_RE.fullmatch(args.commit):
             raise GcpBuildError("--commit must be a full lowercase Git SHA")
         if not SEMVER_RE.fullmatch(args.version):
