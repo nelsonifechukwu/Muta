@@ -8,6 +8,12 @@ source "$repo_root/scripts/desktop_native_pins.env"
 
 output="${1:-$repo_root/desktop/build/native}"
 target_arch="${MUTA_DESKTOP_TARGET_ARCH:-$(uname -m)}"
+file_arch="$target_arch"
+if [ "$(uname -s)" = "Darwin" ] && [ "$file_arch" = "aarch64" ]; then
+  # Muta uses the cross-platform `aarch64` label; Apple's Mach-O tools report
+  # the same architecture as `arm64`.
+  file_arch="arm64"
+fi
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) executable_suffix=.exe ;;
   *) executable_suffix= ;;
@@ -47,7 +53,7 @@ validate_native_binary() {
   local executable="$1"
   case "$(uname -s)" in
     Darwin)
-      file "$executable" | grep -Eq "Mach-O.*$target_arch|Mach-O universal"
+      file "$executable" | grep -Eq "Mach-O.*$file_arch|Mach-O universal"
       otool -l "$executable" \
         | awk -v maximum="$MUTA_MACOS_DEPLOYMENT_TARGET" \
           '/minos/{ if ($2 + 0 > maximum + 0) { print "minimum macOS is too new: " $2 > "/dev/stderr"; exit 1 } }'
