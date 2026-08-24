@@ -31,6 +31,9 @@ if ($InstalledNode -ne $NodeVersion) {
 $MsysRoot = if (Test-Path "C:\msys64") { "C:\msys64" } else { "C:\tools\msys64" }
 $Bash = Join-Path $MsysRoot "usr\bin\bash.exe"
 if (-not (Test-Path $Bash)) { throw "MSYS2 bash is missing" }
+$env:MSYSTEM = "MINGW64"
+$env:CHERE_INVOKING = "1"
+$env:MSYS2_PATH_TYPE = "inherit"
 & $Bash -lc "pacman -Syu --noconfirm"
 & $Bash -lc "pacman -S --needed --noconfirm git make diffutils file mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-nasm"
 if ($LASTEXITCODE -ne 0) { throw "MSYS2 dependency installation failed" }
