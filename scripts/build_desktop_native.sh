@@ -5,10 +5,12 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+source "$repo_root/scripts/desktop_native_pins.env"
 output="${1:-$repo_root/desktop/build/native}"
 work="${MUTA_NATIVE_WORK:-$repo_root/desktop/build/native-work}"
-llama_commit="602f828b4d93a2fefdd546145d9e761825f3bd11"
-ffmpeg_commit="db69d06eeeab4f46da15030a80d539efb4503ca8"
+llama_commit="$MUTA_LLAMA_COMMIT"
+ffmpeg_commit="$MUTA_FFMPEG_COMMIT"
 target_arch="${MUTA_DESKTOP_TARGET_ARCH:-$(uname -m)}"
 
 mkdir -p "$output" "$work"
@@ -44,7 +46,7 @@ cmake_args=(
 case "$(uname -s)" in
   Darwin)
     cmake_args+=(
-      -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
+      -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
       -DCMAKE_OSX_ARCHITECTURES="$target_arch"
       -DGGML_METAL=ON
       # Current Accelerate headers route cblas_sgemm through a macOS 13.3 symbol even when
@@ -91,52 +93,6 @@ llama_binary="$(find "$work/llama-build/bin" -type f \( -name llama-server -o -n
 test -n "$llama_binary"
 cp "$llama_binary" "$output/"
 
-assert_no_avx512() {
-  local executable="$1"
-  local disassembler=""
-  if command -v llvm-objdump >/dev/null 2>&1; then
-    disassembler="llvm-objdump"
-  elif command -v objdump >/dev/null 2>&1; then
-    disassembler="objdump"
-  fi
-  if [ -n "$disassembler" ] && "$disassembler" -d "$executable" 2>/dev/null \
-      | grep -Eiq '(^|[^[:alnum:]_])(zmm[0-9]+|%k[1-7])([^[:alnum:]_]|$)'; then
-    echo "AVX-512 instruction/register found in $executable" >&2
-    exit 1
-  fi
-}
-
-validate_native_binary() {
-  local executable="$1"
-  case "$(uname -s)" in
-    Darwin)
-      file "$executable" | grep -Eq "Mach-O.*$target_arch|Mach-O universal"
-      # A developer download built for a future macOS must never slip into a release.
-      otool -l "$executable" \
-        | awk '/minos/{ if ($2 + 0 > 12.0) { print "minimum macOS is too new: " $2 > "/dev/stderr"; exit 1 } }'
-      if otool -L "$executable" | grep -Eq '/(opt/homebrew|usr/local)/'; then
-        echo "non-system package-manager dependency found in $executable" >&2
-        exit 1
-      fi
-      ;;
-    Linux)
-      file "$executable" | grep -q 'ELF 64-bit.*x86-64'
-      assert_no_avx512 "$executable"
-      ;;
-    MINGW*|MSYS*|CYGWIN*)
-      file "$executable" | grep -Eq 'PE32\+.*x86-64'
-      assert_no_avx512 "$executable"
-      if objdump -p "$executable" 2>/dev/null \
-          | grep -Eiq 'DLL Name:.*(libgcc|libstdc\+\+|libwinpthread|msys-2)'; then
-        echo "non-system MinGW/MSYS runtime dependency found in $executable" >&2
-        exit 1
-      fi
-      ;;
-  esac
-}
-
-validate_native_binary "$output/$(basename "$llama_binary")"
-
 ffmpeg_src="$work/ffmpeg"
 if [ ! -d "$ffmpeg_src/.git" ]; then
   git clone --filter=blob:none https://git.ffmpeg.org/ffmpeg.git "$ffmpeg_src"
@@ -153,8 +109,8 @@ if [ "$(uname -s)" = "Darwin" ] && [ "$target_arch" != "$(uname -m)" ]; then
   ffmpeg_target_args=(
     --arch="$target_arch"
     --cc="clang -arch $target_arch"
-    --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-12.0}"
-    --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-12.0}"
+    --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
+    --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
   )
 elif [[ "$(uname -s)" = MINGW* || "$(uname -s)" = MSYS* || "$(uname -s)" = CYGWIN* ]]; then
   # FFmpeg otherwise leaves libwinpthread-1.dll as an undeclared target dependency even
@@ -184,6 +140,8 @@ fi
 ffmpeg_binary="$(find "$ffmpeg_prefix/bin" -maxdepth 1 -type f \( -name ffmpeg -o -name ffmpeg.exe \) -print -quit)"
 test -n "$ffmpeg_binary"
 cp "$ffmpeg_binary" "$output/"
-validate_native_binary "$output/$(basename "$ffmpeg_binary")"
-
-printf '%s\n' "llama.cpp=b10035/$llama_commit" "ffmpeg=n7.1.1/$ffmpeg_commit" > "$output/VERSIONS.txt"
+printf '%s\n' \
+  "llama.cpp=$MUTA_LLAMA_LABEL/$llama_commit" \
+  "ffmpeg=$MUTA_FFMPEG_LABEL/$ffmpeg_commit" \
+  > "$output/VERSIONS.txt"
+bash "$repo_root/scripts/verify_desktop_native.sh" "$output"

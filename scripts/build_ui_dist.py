@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import shutil
 import ssl
@@ -135,6 +136,36 @@ def build() -> None:
         shutil.copy2(temp / "purify.min.js", vendor / "purify.min.js")
 
 
+def verify() -> None:
+    if not OUTPUT.is_dir():
+        raise RuntimeError(f"offline UI output is missing: {OUTPUT}")
+    for name in UI_FILES:
+        source = UI / name
+        output = OUTPUT / name
+        if not output.is_file() or sha256(output) != sha256(source):
+            raise RuntimeError(f"offline UI cache is stale or corrupt: {name}")
+
+    vendor = OUTPUT / "vendor"
+    for name, expected in VIZ_HASHES.items():
+        candidate = vendor / "viz" / name
+        if not candidate.is_file() or sha256(candidate) != expected:
+            raise RuntimeError(f"offline UI visualization cache is corrupt: {name}")
+    for name in ("marked.min.js", "purify.min.js"):
+        candidate = vendor / name
+        expected = DOWNLOADS[name][1]
+        if not candidate.is_file() or sha256(candidate) != expected:
+            raise RuntimeError(f"offline UI vendor cache is corrupt: {name}")
+    if not (vendor / "katex" / "katex.min.js").is_file():
+        raise RuntimeError("offline UI KaTeX cache is incomplete")
+
+
 if __name__ == "__main__":
-    build()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verify-only", action="store_true")
+    args = parser.parse_args()
+    if args.verify_only:
+        verify()
+    else:
+        build()
+        verify()
     print(OUTPUT)

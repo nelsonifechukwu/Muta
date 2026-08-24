@@ -75,14 +75,19 @@ jobs:
           runtime/system_metrics.py
           orchestrator/gateway/certificates.py
           scripts/build_desktop.py
+          scripts/desktop_cache_changes.py
+          scripts/desktop_cache_key.py
           scripts/collect_desktop_release.py
           scripts/collect_desktop_package.py
+          scripts/freeze_desktop_gateway.py
           scripts/generate_latest_json.py
           scripts/inspect_desktop_artifact.py
           scripts/prepare_tauri_release.py
           scripts/stage_desktop.py
+          scripts/test_desktop_cache.py
           scripts/test_desktop_release.py
           scripts/test_stage_desktop.py
+          scripts/verify_desktop_models.py
       - name: Rust launcher tests
         run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
       - name: Dependency audit

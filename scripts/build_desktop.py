@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from freeze_desktop_gateway import FreezeError, freeze_gateway, validate_gateway
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DESKTOP = REPO_ROOT / "desktop"
 BUILD = DESKTOP / "build"
@@ -43,10 +45,6 @@ def target() -> tuple[str, str]:
     ):
         raise BuildError("architecture override is supported only for macOS cross-builds")
     return target_os, target_arch
-
-
-def frozen_executable() -> Path:
-    return BUILD / "gateway" / ("muta-gateway.exe" if os.name == "nt" else "muta-gateway")
 
 
 def build(args: argparse.Namespace) -> None:
@@ -128,24 +126,13 @@ def build(args: argparse.Namespace) -> None:
             cwd=DESKTOP,
         )
 
-    shutil.rmtree(BUILD / "gateway", ignore_errors=True)
-    run(
-        [
-            sys.executable,
-            "-m",
-            "PyInstaller",
-            "--clean",
-            "--noconfirm",
-            "--distpath",
-            str(BUILD),
-            "--workpath",
-            str(BUILD / "pyinstaller-work"),
-            str(DESKTOP / "pyinstaller" / "muta_gateway.spec"),
-        ]
-    )
-    executable = frozen_executable()
-    if not executable.is_file() or not (executable.parent / "_internal").is_dir():
-        raise BuildError("PyInstaller onedir output is incomplete")
+    try:
+        if not args.reuse_frozen_gateway:
+            freeze_gateway(BUILD)
+        executable = validate_gateway(BUILD)
+    except FreezeError as error:
+        source = "cached" if args.reuse_frozen_gateway else "built"
+        raise BuildError(f"{source} {error}") from error
     run(
         [
             str(executable),
@@ -278,6 +265,11 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--tauri-config", type=Path)
     result.add_argument("--no-tauri", action="store_true")
     result.add_argument("--release", action="store_true")
+    result.add_argument(
+        "--reuse-frozen-gateway",
+        action="store_true",
+        help="reuse a cache-restored PyInstaller onedir after running its normal smoke test",
+    )
     return result
 
 
