@@ -183,3 +183,33 @@ def test_windows_uses_native_job_instead_of_posix_parent_watchdog():
     assert backend_entry._use_parent_watchdog(1234, "nt") is False
     assert backend_entry._use_parent_watchdog(1234, "posix") is True
     assert backend_entry._use_parent_watchdog(0, "posix") is False
+
+
+def test_packaged_heartbeat_overrides_inherited_fleet_and_printing_redacts_key(
+    tmp_path, monkeypatch, capsys
+):
+    resource, model_root, _model, engine = _bundle(tmp_path)
+    manifest_path = resource / "desktop-product.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["heartbeat"] = {
+        "url": "https://fleet.example",
+        "ingest_key": "write-only-secret",
+    }
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    argv = [
+        "--print-config",
+        "--resource-root",
+        str(resource),
+        "--model-root",
+        str(model_root),
+        "--data-root",
+        str(tmp_path / "state"),
+        "--llama-server",
+        str(engine),
+    ]
+
+    assert backend_entry.main(argv) == 0
+    printed = capsys.readouterr().out
+    assert "https://fleet.example" in printed
+    assert "write-only-secret" not in printed
+    assert "<redacted>" in printed

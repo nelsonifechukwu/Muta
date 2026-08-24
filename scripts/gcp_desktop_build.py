@@ -18,6 +18,8 @@ import tarfile
 import time
 from pathlib import Path
 
+from release_heartbeat import HeartbeatConfigError, release_heartbeat_environment
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
@@ -466,6 +468,7 @@ def main(argv: list[str] | None = None) -> int:
         if not SEMVER_RE.fullmatch(args.version):
             raise GcpBuildError("--version must be SemVer")
         cache_root = args.cache_root.expanduser().resolve()
+        os.environ.update(release_heartbeat_environment())
         with coordinator_lock(cache_root):
             output = cache_root / "outputs" / args.commit / args.version
             output.mkdir(parents=True, exist_ok=True)
@@ -475,9 +478,7 @@ def main(argv: list[str] | None = None) -> int:
             python = python_environment(worktree, cache_root)
             for target in ("linux-x86_64", "windows-x86_64"):
                 name = archive_name(args.version, target)
-                if output_exists(f"{prefix}/{name}") and output_exists(
-                    f"{prefix}/{name}.sha256"
-                ):
+                if output_exists(f"{prefix}/{name}") and output_exists(f"{prefix}/{name}.sha256"):
                     print(f"final cache hit: {target}")
                     continue
                 if target == "linux-x86_64":
@@ -502,9 +503,24 @@ def main(argv: list[str] | None = None) -> int:
                 upload(output, args.version, target, prefix)
                 for suffix in ("", ".sha256"):
                     (output / f"{name}{suffix}").unlink(missing_ok=True)
+            run(
+                [
+                    str(python),
+                    "scripts/publish_desktop_model_addons.py",
+                    "--source-root",
+                    str(REPO_ROOT),
+                    "--catalog-root",
+                    str(worktree),
+                    "--bucket",
+                    args.bucket,
+                    "--commit",
+                    args.commit,
+                ],
+                cwd=worktree,
+            )
             prune_completed_commits(cache_root, args.commit)
             print(prefix)
-    except (GcpBuildError, OSError, subprocess.SubprocessError) as error:
+    except (HeartbeatConfigError, GcpBuildError, OSError, subprocess.SubprocessError) as error:
         print(f"GCP desktop build failed: {error}", file=sys.stderr)
         return 1
     return 0

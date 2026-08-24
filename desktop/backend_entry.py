@@ -248,7 +248,11 @@ def main(argv: list[str] | None = None) -> int:
 
     values = configure(args)
     if args.print_config:
-        print(json.dumps(values, indent=2, sort_keys=True))
+        redacted = dict(values)
+        for key in ("MUTA_FLEET_INGEST_KEY", "MUTA_CLOUD_API_KEY"):
+            if key in redacted:
+                redacted[key] = "<redacted>"
+        print(json.dumps(redacted, indent=2, sort_keys=True))
         return 0
 
     # RuntimeConfig supports a source-checkout .env for developers. A staged resource root is

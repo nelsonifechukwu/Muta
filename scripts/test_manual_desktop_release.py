@@ -46,6 +46,21 @@ def test_gcp_output_cache_requires_both_archives_and_checksums(monkeypatch) -> N
     ]
 
 
+def test_gcp_addon_cache_requires_the_exact_commit(monkeypatch) -> None:
+    commit = "a" * 40
+
+    def fake_run(_command: list[str], **_kwargs):
+        return type(
+            "Result",
+            (),
+            {"returncode": 0, "stdout": json.dumps({"git_commit": commit})},
+        )()
+
+    monkeypatch.setattr(release.subprocess, "run", fake_run)
+    assert release.gcp_addon_manifest_is_current(commit, "packages") is True
+    assert release.gcp_addon_manifest_is_current("b" * 40, "packages") is False
+
+
 def test_tauri_installer_version_matches_requested_release() -> None:
     assert json.loads(build_desktop.tauri_version_config("2.4.1-beta.2")) == {
         "version": "2.4.1-beta.2"

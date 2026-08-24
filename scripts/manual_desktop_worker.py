@@ -285,6 +285,7 @@ def build(args: argparse.Namespace) -> Path:
                 target_os,
                 "--target-arch",
                 target_arch,
+                "--require-heartbeat",
             ]
         )
         run(

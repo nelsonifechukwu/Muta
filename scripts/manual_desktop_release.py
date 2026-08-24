@@ -16,6 +16,8 @@ import sys
 import time
 from pathlib import Path
 
+from release_heartbeat import HeartbeatConfigError, release_heartbeat_environment
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLATFORMS = (
     "darwin-aarch64",
@@ -222,6 +224,7 @@ def build_mac(
     output: Path,
     *,
     dry_run: bool,
+    env: dict[str, str] | None = None,
 ) -> None:
     if platform.system() != "Darwin":
         raise ReleaseError("macOS packages must be coordinated from the development Mac")
@@ -246,6 +249,7 @@ def build_mac(
             str(output),
         ],
         cwd=worktree,
+        env=env,
         dry_run=dry_run,
     )
 
@@ -269,6 +273,22 @@ def gcp_output_set_exists(commit: str, version: str, bucket: str) -> bool:
             if result.returncode:
                 return False
     return True
+
+
+def gcp_addon_manifest_is_current(commit: str, bucket: str) -> bool:
+    result = subprocess.run(
+        ["gcloud", "storage", "cat", f"gs://{bucket}/model-addons/v1/manifest.json"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode:
+        return False
+    try:
+        return json.loads(result.stdout).get("git_commit") == commit
+    except (AttributeError, json.JSONDecodeError):
+        return False
 
 
 def gcp_ssh_capture(instance: str, zone: str, command: str) -> subprocess.CompletedProcess[str]:
@@ -299,7 +319,11 @@ def build_gcp(
     *,
     dry_run: bool,
 ) -> None:
-    if not dry_run and gcp_output_set_exists(commit, version, bucket):
+    if (
+        not dry_run
+        and gcp_output_set_exists(commit, version, bucket)
+        and gcp_addon_manifest_is_current(commit, bucket)
+    ):
         print("final cache hit: linux-x86_64")
         print("final cache hit: windows-x86_64")
         return
@@ -345,6 +369,8 @@ def build_gcp(
         if status == "complete":
             if not gcp_output_set_exists(commit, version, bucket):
                 raise ReleaseError("GCP job completed without the four expected cloud objects")
+            if not gcp_addon_manifest_is_current(commit, bucket):
+                raise ReleaseError("GCP job completed without the current model add-on manifest")
             return
         if status.startswith("failed:"):
             log_result = gcp_ssh_capture(
@@ -450,6 +476,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.dry_run:
             output.mkdir(parents=True, exist_ok=True)
         print(f"Packaging Muta {version} from {commit}")
+        release_env = (
+            None if args.dry_run or args.gcp_only else release_heartbeat_environment()
+        )
         if not args.mac_only:
             build_gcp(
                 commit,
@@ -469,6 +498,7 @@ def main(argv: list[str] | None = None) -> int:
                     cache_root,
                     output,
                     dry_run=args.dry_run,
+                    env=release_env,
                 )
             if not args.skip_upload:
                 prefix = gcs_prefix(args.bucket, commit, version)
@@ -501,7 +531,7 @@ def main(argv: list[str] | None = None) -> int:
                 dry_run=args.dry_run,
             )
         print(f"Four-platform package set: {manifest}")
-    except (OSError, ReleaseError, subprocess.SubprocessError) as error:
+    except (HeartbeatConfigError, OSError, ReleaseError, subprocess.SubprocessError) as error:
         print(f"final package build failed: {error}", file=sys.stderr)
         return 1
     return 0

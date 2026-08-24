@@ -49,6 +49,23 @@ $env:Path = @(
     $env:Path
 ) -join ";"
 
+$env:MUTA_DESKTOP_HEARTBEAT_URL = "https://muta-fleet-ingest-3lobbxiywa-uc.a.run.app"
+if (-not $env:MUTA_DESKTOP_HEARTBEAT_INGEST_KEY) {
+    $Headers = @{ "Metadata-Flavor" = "Google" }
+    $TokenReply = Invoke-RestMethod `
+        -Headers $Headers `
+        -Uri "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
+    $SecretReply = Invoke-RestMethod `
+        -Headers @{ Authorization = "Bearer $($TokenReply.access_token)" } `
+        -Uri "https://secretmanager.googleapis.com/v1/projects/muta-adtc/secrets/muta-fleet-ingest-key/versions/latest:access"
+    $env:MUTA_DESKTOP_HEARTBEAT_INGEST_KEY = [Text.Encoding]::UTF8.GetString(
+        [Convert]::FromBase64String($SecretReply.payload.data)
+    ).Trim()
+}
+if (-not $env:MUTA_DESKTOP_HEARTBEAT_INGEST_KEY) {
+    throw "Fleet heartbeat ingest key is empty"
+}
+
 $Venv = Join-Path $CacheRoot "venvs\windows-x86_64"
 $Python = Join-Path $Venv "Scripts\python.exe"
 if (-not (Test-Path $Python)) {
