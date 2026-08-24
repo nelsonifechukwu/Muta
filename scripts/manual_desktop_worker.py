@@ -104,10 +104,33 @@ def platform_lock(cache_root: Path, platform_name: str):
     try:
         lock.mkdir()
     except FileExistsError as exc:
-        raise WorkerError(f"another {platform_name} package build is active: {lock}") from exc
+        owner_path = lock / "owner.json"
+        stale = False
+        try:
+            owner = json.loads(owner_path.read_text(encoding="utf-8"))
+            owner_pid = int(owner["pid"])
+            owner_host = str(owner["host"])
+            if owner_host == platform.node():
+                try:
+                    os.kill(owner_pid, 0)
+                except ProcessLookupError:
+                    stale = True
+                except PermissionError:
+                    pass
+        except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+            try:
+                stale = time.time() - lock.stat().st_mtime > 300
+            except OSError:
+                pass
+        if not stale:
+            raise WorkerError(f"another {platform_name} package build is active: {lock}") from exc
+        shutil.rmtree(lock)
+        lock.mkdir()
     try:
         (lock / "owner.json").write_text(
-            json.dumps({"pid": os.getpid(), "started": time.time()}) + "\n", encoding="utf-8"
+            json.dumps({"pid": os.getpid(), "host": platform.node(), "started": time.time()})
+            + "\n",
+            encoding="utf-8",
         )
         yield
     finally:
