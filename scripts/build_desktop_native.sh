@@ -160,6 +160,8 @@ fi
     --disable-doc \
     --disable-debug \
     --disable-network \
+    --disable-avx512 \
+    --disable-avx512icl \
     --disable-shared \
     --enable-static \
     --disable-autodetect \

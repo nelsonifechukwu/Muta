@@ -262,6 +262,7 @@ bench/.artifacts/
 backups/
 
 # Desktop build output is reproducible; configuration/spec sources remain tracked.
+!desktop/pyinstaller/muta_gateway.spec
 desktop/build/
 desktop/node_modules/
 desktop/src-tauri/target/

@@ -102,6 +102,9 @@ jobs:
         shell: bash
         working-directory: desktop
         run: npm ci
+      - name: Build the offline browser UI
+        shell: bash
+        run: python scripts/build_ui_dist.py
       - name: Provision and verify all offline product models
         shell: bash
         run: bash scripts/prepare_desktop_models.sh

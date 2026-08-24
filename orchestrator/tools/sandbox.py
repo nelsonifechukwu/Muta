@@ -45,7 +45,12 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Self
+from typing import Any
+
+try:
+    from typing import Self
+except ImportError:  # Python 3.10 compatibility
+    from typing_extensions import Self
 
 try:  # ``resource`` does not exist on Windows.
     import resource

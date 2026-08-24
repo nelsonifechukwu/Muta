@@ -203,7 +203,18 @@ def build(args: argparse.Namespace) -> None:
         tauri_command += ["--target", target_triple]
     if args.tauri_config:
         tauri_command += ["--config", str(args.tauri_config.resolve())]
-    run(tauri_command, cwd=DESKTOP, env={**os.environ, "MACOSX_DEPLOYMENT_TARGET": "12.0"})
+    tauri_env = {**os.environ, "MACOSX_DEPLOYMENT_TARGET": "12.0"}
+    if target_os == "linux":
+        # linuxdeploy scans the complete PyInstaller onedir closure. NumPy wheels keep their
+        # hashed Fortran dependencies below numpy.libs, so expose that private directory to
+        # the bundler's resolver without flattening or rewriting PyInstaller's sibling tree.
+        numpy_libs = executable.parent / "_internal" / "numpy.libs"
+        if numpy_libs.is_dir():
+            existing = tauri_env.get("LD_LIBRARY_PATH", "")
+            tauri_env["LD_LIBRARY_PATH"] = os.pathsep.join(
+                item for item in (str(numpy_libs), existing) if item
+            )
+    run(tauri_command, cwd=DESKTOP, env=tauri_env)
     if args.release and target_os == "windows":
         run(
             [
