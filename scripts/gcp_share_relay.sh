@@ -101,6 +101,9 @@ import sys
 targets = (("127.0.0.1", int(sys.argv[2]), "operator"), (sys.argv[1], int(sys.argv[3]), "learner"))
 for host, port, label in targets:
     sock = socket.socket()
+    # A just-closed SSH tunnel can leave accepted connections in TIME_WAIT. That does not mean
+    # another process owns the listener; SO_REUSEADDR matches OpenSSH's safe restart behaviour.
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         sock.bind((host, port))
     except OSError as exc:
