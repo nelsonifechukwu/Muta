@@ -13,6 +13,12 @@ llama_commit="$MUTA_LLAMA_COMMIT"
 ffmpeg_commit="$MUTA_FFMPEG_COMMIT"
 target_arch="${MUTA_DESKTOP_TARGET_ARCH:-$(uname -m)}"
 native_jobs="${MUTA_NATIVE_JOBS:-${NUMBER_OF_PROCESSORS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)}}"
+apple_arch="$target_arch"
+if [ "$(uname -s)" = "Darwin" ] && [ "$apple_arch" = "aarch64" ]; then
+  # Muta's cross-platform label is aarch64; Apple Clang, CMake and FFmpeg call
+  # the same architecture arm64 and reject `-arch aarch64`.
+  apple_arch="arm64"
+fi
 
 mkdir -p "$output" "$work"
 
@@ -48,7 +54,7 @@ case "$(uname -s)" in
   Darwin)
     cmake_args+=(
       -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
-      -DCMAKE_OSX_ARCHITECTURES="$target_arch"
+      -DCMAKE_OSX_ARCHITECTURES="$apple_arch"
       -DGGML_METAL=ON
       # Current Accelerate headers route cblas_sgemm through a macOS 13.3 symbol even when
       # the deployment target is 12. Keep the documented macOS 12 baseline and use ggml's
@@ -106,10 +112,10 @@ ffmpeg_prefix="$work/ffmpeg-install"
 rm -rf "$work/ffmpeg-build" "$ffmpeg_prefix"
 mkdir -p "$work/ffmpeg-build" "$ffmpeg_prefix"
 ffmpeg_target_args=()
-if [ "$(uname -s)" = "Darwin" ] && [ "$target_arch" != "$(uname -m)" ]; then
+if [ "$(uname -s)" = "Darwin" ] && [ "$apple_arch" != "$(uname -m)" ]; then
   ffmpeg_target_args=(
-    --arch="$target_arch"
-    --cc="clang -arch $target_arch"
+    --arch="$apple_arch"
+    --cc="clang -arch $apple_arch"
     --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
     --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
   )
