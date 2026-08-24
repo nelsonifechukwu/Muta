@@ -148,6 +148,7 @@ def target_environment(platform_name: str, cache_root: Path) -> dict[str, str]:
         # compiler jobs avoid four simultaneous llama.cpp translation units forcing swap thrash.
         env.setdefault("CMAKE_BUILD_PARALLEL_LEVEL", "2")
         env.setdefault("NUMBER_OF_PROCESSORS", "2")
+        env.setdefault("MUTA_NATIVE_JOBS", "2")
     if platform_name == "darwin-x86_64":
         env["MUTA_DESKTOP_TARGET_TRIPLE"] = "x86_64-apple-darwin"
     elif platform_name == "darwin-aarch64":

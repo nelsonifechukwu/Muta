@@ -12,6 +12,7 @@ work="${MUTA_NATIVE_WORK:-$repo_root/desktop/build/native-work}"
 llama_commit="$MUTA_LLAMA_COMMIT"
 ffmpeg_commit="$MUTA_FFMPEG_COMMIT"
 target_arch="${MUTA_DESKTOP_TARGET_ARCH:-$(uname -m)}"
+native_jobs="${MUTA_NATIVE_JOBS:-${NUMBER_OF_PROCESSORS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)}}"
 
 mkdir -p "$output" "$work"
 
@@ -87,7 +88,7 @@ case "$(uname -s)" in
   *) echo "unsupported native build host: $(uname -s)" >&2; exit 1 ;;
 esac
 cmake "${cmake_args[@]}"
-cmake --build "$work/llama-build" --config Release --parallel --target llama-server
+cmake --build "$work/llama-build" --config Release --parallel "$native_jobs" --target llama-server
 
 llama_binary="$(find "$work/llama-build/bin" -type f \( -name llama-server -o -name llama-server.exe \) -print -quit)"
 test -n "$llama_binary"
@@ -134,7 +135,7 @@ fi
     --enable-ffmpeg \
     --enable-small \
     "${ffmpeg_target_args[@]}"
-  make -j "${NUMBER_OF_PROCESSORS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)}"
+  make -j "$native_jobs"
   make install
 )
 ffmpeg_binary="$(find "$ffmpeg_prefix/bin" -maxdepth 1 -type f \( -name ffmpeg -o -name ffmpeg.exe \) -print -quit)"

@@ -90,9 +90,11 @@ def test_linux_worker_caps_compiler_parallelism_on_eight_gb_builder(
 ) -> None:
     monkeypatch.delenv("CMAKE_BUILD_PARALLEL_LEVEL", raising=False)
     monkeypatch.delenv("NUMBER_OF_PROCESSORS", raising=False)
+    monkeypatch.delenv("MUTA_NATIVE_JOBS", raising=False)
     environment = worker.target_environment("linux-x86_64", tmp_path)
     assert environment["CMAKE_BUILD_PARALLEL_LEVEL"] == "2"
     assert environment["NUMBER_OF_PROCESSORS"] == "2"
+    assert environment["MUTA_NATIVE_JOBS"] == "2"
 
 
 def test_gcp_model_key_changes_with_manifest(tmp_path: Path) -> None:
