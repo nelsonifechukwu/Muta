@@ -120,6 +120,37 @@ def test_gcp_powershell_commands_survive_ssh_argument_parsing() -> None:
     assert base64.b64decode(command[-1]).decode("utf-16-le") == script
 
 
+def test_gcp_prunes_only_old_commit_scratch_data(tmp_path: Path, monkeypatch) -> None:
+    current = "a" * 40
+    old = "b" * 40
+    worktrees = tmp_path / "worktrees/linux-x86_64"
+    transfer = tmp_path / "transfer"
+    outputs = tmp_path / "outputs"
+    for path in (worktrees / current, worktrees / old, outputs / current, outputs / old):
+        path.mkdir(parents=True)
+    transfer.mkdir(parents=True)
+    (transfer / f"source-{current}.tar.gz").write_bytes(b"current")
+    (transfer / f"source-{old}.tar.gz").write_bytes(b"old")
+    (transfer / "model-inputs-keep.tar.gz").write_bytes(b"model")
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], **_kwargs):
+        commands.append(command)
+        return type("Result", (), {"returncode": 0})()
+
+    monkeypatch.setattr(gcp, "run", fake_run)
+    gcp.prune_completed_commits(tmp_path, current)
+
+    assert (worktrees / current).is_dir()
+    assert not (worktrees / old).exists()
+    assert (outputs / current).is_dir()
+    assert not (outputs / old).exists()
+    assert (transfer / f"source-{current}.tar.gz").is_file()
+    assert not (transfer / f"source-{old}.tar.gz").exists()
+    assert (transfer / "model-inputs-keep.tar.gz").is_file()
+    assert ["git", "worktree", "prune"] in commands
+
+
 def test_manual_worker_rejects_wrong_host(monkeypatch) -> None:
     monkeypatch.setattr(worker.platform, "system", lambda: "Darwin")
     try:
