@@ -111,36 +111,38 @@ test "$(git -C "$ffmpeg_src" rev-parse HEAD)" = "$ffmpeg_commit"
 ffmpeg_prefix="$work/ffmpeg-install"
 rm -rf "$work/ffmpeg-build" "$ffmpeg_prefix"
 mkdir -p "$work/ffmpeg-build" "$ffmpeg_prefix"
-ffmpeg_target_args=()
-if [ "$(uname -s)" = "Darwin" ] && [ "$apple_arch" != "$(uname -m)" ]; then
-  ffmpeg_target_args=(
-    --arch="$apple_arch"
-    --cc="clang -arch $apple_arch"
-    --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
-    --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
-  )
-elif [[ "$(uname -s)" = MINGW* || "$(uname -s)" = MSYS* || "$(uname -s)" = CYGWIN* ]]; then
-  # FFmpeg otherwise leaves libwinpthread-1.dll as an undeclared target dependency even
-  # when its own libraries are static. The offline kit must use only Windows system DLLs.
-  ffmpeg_target_args=(--extra-ldflags=-static)
-fi
 (
   cd "$work/ffmpeg-build"
-  "$ffmpeg_src/configure" \
-    --prefix="$ffmpeg_prefix" \
-    --disable-doc \
-    --disable-debug \
-    --disable-network \
-    --disable-avx512 \
-    --disable-avx512icl \
-    --disable-shared \
-    --enable-static \
-    --disable-autodetect \
-    --disable-ffplay \
-    --disable-ffprobe \
-    --enable-ffmpeg \
-    --enable-small \
-    "${ffmpeg_target_args[@]}"
+  configure_ffmpeg() {
+    "$ffmpeg_src/configure" \
+      --prefix="$ffmpeg_prefix" \
+      --disable-doc \
+      --disable-debug \
+      --disable-network \
+      --disable-avx512 \
+      --disable-avx512icl \
+      --disable-shared \
+      --enable-static \
+      --disable-autodetect \
+      --disable-ffplay \
+      --disable-ffprobe \
+      --enable-ffmpeg \
+      --enable-small \
+      "$@"
+  }
+  if [ "$(uname -s)" = "Darwin" ] && [ "$apple_arch" != "$(uname -m)" ]; then
+    configure_ffmpeg \
+      --arch="$apple_arch" \
+      --cc="clang -arch $apple_arch" \
+      --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}" \
+      --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-$MUTA_MACOS_DEPLOYMENT_TARGET}"
+  elif [[ "$(uname -s)" = MINGW* || "$(uname -s)" = MSYS* || "$(uname -s)" = CYGWIN* ]]; then
+    # FFmpeg otherwise leaves libwinpthread-1.dll as an undeclared target dependency even
+    # when its own libraries are static. The offline kit must use only Windows system DLLs.
+    configure_ffmpeg --extra-ldflags=-static
+  else
+    configure_ffmpeg
+  fi
   make -j "$native_jobs"
   make install
 )

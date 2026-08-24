@@ -89,6 +89,8 @@ def test_macos_native_build_maps_aarch64_to_apple_arm64() -> None:
     assert 'apple_arch="arm64"' in script
     assert '-DCMAKE_OSX_ARCHITECTURES="$apple_arch"' in script
     assert '--cc="clang -arch $apple_arch"' in script
+    assert "ffmpeg_target_args" not in script
+    assert "configure_ffmpeg()" in script
 
 
 def test_frozen_gateway_requires_complete_onedir(tmp_path: Path) -> None:
