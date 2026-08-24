@@ -96,7 +96,9 @@ def collect(args: argparse.Namespace) -> Path:
 
     shutil.rmtree(staging)
     checksum = output / f"{archive.name}.sha256"
-    checksum.write_text(f"{_sha256(archive)}  {archive.name}\n", encoding="utf-8")
+    checksum.write_text(
+        f"{_sha256(archive)}  {archive.name}\n", encoding="utf-8", newline="\n"
+    )
     return archive
 
 
