@@ -88,7 +88,7 @@
       "composer.sendMessage": "Send message",
       "composer.stop": "Stop the reply (Esc)",
       "fineprint": "Muta runs entirely on this machine. Answers can be wrong — check the working.",
-      "drop.addFile": "Drop an image or audio file to add it",
+      "drop.addFile": "Drop an image, audio file, or PDF to add it",
       "telemetry.ramTitle": "Current RSS of the backend process tree",
       "telemetry.peakTitle": "Peak RSS since backend start",
       "telemetry.tempTitle": "CPU package temperature",

@@ -156,6 +156,9 @@
             data-empty="true" spellcheck="true"></div>
           <div id="composer-buttons">
             <div class="left">
+              <button id="btn-resource" class="icon" type="button" title="Attach a PDF" aria-label="Attach a PDF">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l4 4v16H6V2Zm8 2.8V7h2.2L14 4.8ZM8.5 11v2h7v-2h-7Zm0 4v2h7v-2h-7Z"/></svg>
+              </button>
               <button id="btn-image" class="icon" title="Attach an image (or drag one in)" aria-label="Attach an image" data-i18n-title="composer.attachImageTitle" data-i18n-aria-label="composer.attachImage">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm-3.5 8 4.5-6 3.5 4.5 2.5-3L20 19H5z"/></svg>
               </button>
@@ -294,9 +297,8 @@
         <div class="settings-section-heading">
           <div>
             <h3>Files</h3>
-            <p>Upload textbooks and notes for private, page-cited chat.</p>
+            <p>Review and manage textbooks and notes used for private, page-cited chat.</p>
           </div>
-          <button id="resource-upload" type="button" class="resource-upload">Upload PDF</button>
         </div>
         <div id="resource-list" class="resource-list" aria-live="polite"></div>
       </div>
@@ -324,7 +326,7 @@
     </section>
   </div>
 
-  <div id="drop-overlay" hidden><div data-i18n="drop.addFile">Drop an image or audio file to add it</div></div>
+  <div id="drop-overlay" hidden><div data-i18n="drop.addFile">Drop an image, audio file, or PDF to add it</div></div>
   <div id="toast" dir="auto" role="status" aria-live="assertive" hidden></div>
   <!-- Screen-reader announcements: the finalized reply and status changes, without spamming
        every streamed token. app.js writes here; visually hidden (see .sr-only). -->

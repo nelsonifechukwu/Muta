@@ -46,4 +46,6 @@ def test_publishes_optional_models_but_not_the_base_archive_model(tmp_path, monk
 
     assert [item["id"] for item in manifest["models"]] == ["extra"]
     assert manifest["models"][0]["install_path"] == "model-pack/models/custom/extra.gguf"
-    assert any(command[-1].endswith("/extra/extra.gguf") for command in commands)
+    expected_object = f"gs://bucket/model-addons/v1/extra/{digest}/extra.gguf"
+    assert manifest["models"][0]["gcs_uri"] == expected_object
+    assert any(command[-1] == expected_object for command in commands)

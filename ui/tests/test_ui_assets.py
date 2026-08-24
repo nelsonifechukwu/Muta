@@ -626,6 +626,31 @@ def test_model_menu_remains_inspectable_when_selection_is_not_permitted():
     assert "Only the laptop operator can change the shared tutor model." in I18N
 
 
+def test_pdf_upload_is_a_labelled_composer_control_not_a_settings_action():
+    html = (UI / "index.html").read_text()
+    js = (UI / "app.js").read_text()
+    composer_start = html.index('<div id="composer">')
+    composer = html[composer_start : html.index('</main>', composer_start)]
+    settings = html[html.index('<div id="settings-modal"') : html.index('<div id="toast"')]
+
+    assert 'id="btn-resource"' in composer
+    assert 'aria-label="Attach a PDF"' in composer
+    assert 'title="Attach a PDF"' in composer
+    assert 'id="resource-upload"' not in settings
+    assert '$("#btn-resource").addEventListener("click"' in js
+    assert '$("#file-resource").click()' in js
+
+
+def test_audio_file_upload_uses_the_active_session_and_surfaces_server_errors():
+    js = (UI / "app.js").read_text()
+    audio_start = js.index("async function addAudio(")
+    add_audio = js[audio_start : js.index('$("#btn-image")', audio_start)]
+
+    assert "headers: authHeaders()" in add_audio
+    assert "if (!r.ok)" in add_audio
+    assert "body.detail" in add_audio
+
+
 def test_settings_icon_has_intrinsic_dimensions_even_before_css_loads():
     settings = re.search(r'<button id="settings-open".*?</button>', HTML, re.DOTALL)
     assert settings

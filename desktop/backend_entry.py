@@ -152,6 +152,9 @@ def configure(
         "TUTOR_ROOT": str(resource),
         "MUTA_OFFLINE": "1",
         "MUTA_DESKTOP": "1",
+        # The packaged operator owns the local llama process and may switch between models
+        # that passed ModelManager's catalog/path/RAM checks. Shared members never see this UI.
+        "MUTA_ALLOW_MODEL_SWITCH": "1",
         "MUTA_DEPLOY_MODE": "mounted",
         "MUTA_RT_AUTOSTART": "1",
         "MUTA_RT_AUTO_DOWNLOAD": "0",

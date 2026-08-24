@@ -67,6 +67,7 @@ def test_configure_forces_offline_absolute_desktop_paths(tmp_path):
     values = backend_entry.configure(args, environment)
 
     assert values["MUTA_OFFLINE"] == "1"
+    assert values["MUTA_ALLOW_MODEL_SWITCH"] == "1"
     assert values["MUTA_RT_AUTO_DOWNLOAD"] == "0"
     assert values["MUTA_RT_MODEL_DIR"] == str(model.parent)
     assert values["MUTA_MODEL_ROOT"] == str(model_root)

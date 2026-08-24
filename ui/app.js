@@ -2000,6 +2000,7 @@ function syncComposerState() {
   }
   $("#btn-audio").disabled = inferenceUnavailable;
   $("#btn-mic").disabled = inferenceUnavailable;
+  $("#btn-resource").disabled = !identityReady || !startupRoutingReady;
   // During a chat stream the send button *is* the stop button, so it stays enabled. During a
   // voice reply (generating without a chat stream) the mic button owns interruption.
   sendBtn.disabled =
@@ -2136,11 +2137,18 @@ async function addAudio(file) {
   form.append("audio", file);
   let body;
   try {
-    const r = await fetch("/v1/audio/transcribe", { method: "POST", body: form });
-    if (r.status === 503) {
-      return toast(t("attachment.speechUnavailable"));
+    const r = await fetch("/v1/audio/transcribe", {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    });
+    body = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (r.status === 503) return toast(t("attachment.speechUnavailable"));
+      return toast(typeof body.detail === "string" && body.detail
+        ? body.detail
+        : t("attachment.audioUploadFailed"));
     }
-    body = await r.json();
   } catch {
     return toast(t("attachment.audioUploadFailed"));
   }
@@ -2163,6 +2171,7 @@ $("#btn-image").addEventListener("click", () => {
   $("#file-image").click();
 });
 $("#btn-audio").addEventListener("click", () => $("#file-audio").click());
+$("#btn-resource").addEventListener("click", () => $("#file-resource").click());
 $("#file-image").addEventListener("change", (e) => {
   if (e.target.files[0]) addImage(e.target.files[0]);
   e.target.value = "";
@@ -3502,7 +3511,6 @@ inputEl.addEventListener("click", renderMentionMenu);
 inputEl.addEventListener("blur", () => setTimeout(closeMentionMenu, 100));
 window.addEventListener("resize", positionMentionMenu);
 
-$("#resource-upload").addEventListener("click", () => $("#file-resource").click());
 $("#file-resource").addEventListener("change", (event) => {
   const file = event.target.files[0];
   event.target.value = "";

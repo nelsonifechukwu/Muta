@@ -19,6 +19,7 @@
   let audioCtx = null;
   let mediaStream = null;
   let captureNode = null;
+  let captureSink = null;
   let sourceNode = null;
   let ws = null;
   let active = false; // voice mode on
@@ -73,25 +74,32 @@
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     await audioCtx.resume();
     sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+    // WebKit may stop pulling an AudioWorklet graph that has no path to a destination. Keep
+    // capture live through a silent gain node; the microphone is never played through speakers.
+    captureSink = audioCtx.createGain();
+    captureSink.gain.value = 0;
+    captureSink.connect(audioCtx.destination);
     if (audioCtx.audioWorklet) {
       await audioCtx.audioWorklet.addModule(new URL("worklet.js", document.baseURI));
       captureNode = new AudioWorkletNode(audioCtx, "muta-capture");
       captureNode.port.onmessage = (ev) => onCapture(ev.data);
       sourceNode.connect(captureNode);
+      captureNode.connect(captureSink);
     } else {
       // Legacy fallback; every 2026 evergreen browser has AudioWorklet.
       captureNode = audioCtx.createScriptProcessor(4096, 1, 1);
       captureNode.onaudioprocess = (ev) => onCapture(ev.inputBuffer.getChannelData(0).slice(0));
       sourceNode.connect(captureNode);
-      captureNode.connect(audioCtx.destination);
+      captureNode.connect(captureSink);
     }
   }
 
   function stopCapture() {
     if (sourceNode) sourceNode.disconnect();
     if (captureNode) captureNode.disconnect();
+    if (captureSink) captureSink.disconnect();
     if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
-    sourceNode = captureNode = mediaStream = null;
+    sourceNode = captureNode = captureSink = mediaStream = null;
     pending = new Int16Array(0);
   }
 

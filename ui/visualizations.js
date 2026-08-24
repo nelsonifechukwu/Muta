@@ -406,36 +406,29 @@
       const frame = document.createElement("iframe");
       frame.className = "muta-visualization-frame";
       frame.sandbox = "allow-scripts";
-      frame.loading = "lazy";
       frame.referrerPolicy = "no-referrer";
       frame.title = spec.aria_label;
       frame.style.height = `${spec.height}px`;
       let source = frameUrl(spec);
+      // Assign the local frame immediately. Tauri's WebKit can omit intersection callbacks for
+      // sandboxed iframes inside the chat scroller; visibility observation is an optimization,
+      // never a prerequisite for rendering the learner's visual.
+      frame.src = source;
       const refreshTheme = () => {
         const nextSource = frameUrl(spec);
         if (source === nextSource) return;
         source = nextSource;
-        if (frame.hasAttribute("src")) frame.src = source;
+        frame.src = source;
       };
       document.addEventListener("muta:themechange", refreshTheme);
       if (typeof global.IntersectionObserver === "function") {
-        let intersecting = false;
-        let unloadTimer = 0;
+        let intersecting = true;
         const sendVisibility = () => frame.contentWindow?.postMessage(
           { type: "muta-viz-visibility", visible: intersecting && !document.hidden },
           "*",
         );
         const observer = new IntersectionObserver((entries) => {
           intersecting = Boolean(entries[0]?.isIntersecting);
-          if (intersecting) {
-            if (unloadTimer) global.clearTimeout(unloadTimer);
-            unloadTimer = 0;
-            if (frame.getAttribute("src") !== source) frame.src = source;
-          } else if (frame.hasAttribute("src")) {
-            unloadTimer = global.setTimeout(() => {
-              if (!intersecting) frame.removeAttribute("src");
-            }, 10000);
-          }
           sendVisibility();
         }, { rootMargin: "160px 0px" });
         const onVisibility = () => sendVisibility();
@@ -443,13 +436,11 @@
         document.addEventListener("visibilitychange", onVisibility);
         observer.observe(frame);
         frame._mutaVizCleanup = () => {
-          if (unloadTimer) global.clearTimeout(unloadTimer);
           observer.disconnect();
           document.removeEventListener("visibilitychange", onVisibility);
           document.removeEventListener("muta:themechange", refreshTheme);
         };
       } else {
-        frame.src = source;
         frame._mutaVizCleanup = () => {
           document.removeEventListener("muta:themechange", refreshTheme);
         };

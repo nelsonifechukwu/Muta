@@ -1058,12 +1058,10 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
 }
 .settings-section-heading h3 { margin-bottom: 3px; }
 .settings-section-heading p { margin: 0; color: var(--muted); font-size: 0.76rem; }
-.resource-upload,
 .resource-action {
   flex: none; border: 1px solid var(--border); border-radius: 8px; background: var(--card);
   color: var(--text); padding: 7px 10px; font: inherit; font-size: 0.76rem; cursor: pointer;
 }
-.resource-upload:hover,
 .resource-action:hover { border-color: var(--accent-border); background: var(--accent-soft); }
 .resource-list { display: grid; }
 .resource-row {

@@ -35,3 +35,13 @@ def test_unexpected_socket_close_keeps_an_empty_or_partial_reply_visibly_failed(
     )[0]
     assert "if (failureKey) assistant.fail(toastText || t(failureKey), failureKey)" in stop_voice
     assert "else assistant.finalize()" in stop_voice
+
+
+def test_webkit_audio_worklet_is_kept_alive_through_a_silent_output_graph():
+    source = (ROOT / "audio.js").read_text()
+
+    assert "captureSink = audioCtx.createGain()" in source
+    assert "captureSink.gain.value = 0" in source
+    assert "captureSink.connect(audioCtx.destination)" in source
+    assert "captureNode.connect(captureSink)" in source
+    assert "if (captureSink) captureSink.disconnect()" in source

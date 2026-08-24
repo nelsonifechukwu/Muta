@@ -52,7 +52,10 @@ def test_model_output_is_data_inside_an_opaque_sandbox() -> None:
     assert html.index("viz-theme.js") < html.index("viz-frame.css")
     assert 'viz-frame.js?v=20260823-viz-progress-1' in html
     assert "http://" not in html and "https://" not in html
-    assert 'frame.loading = "lazy"' in parent
+    assert "frame.src = source" in parent
+    assert 'frame.loading = "lazy"' not in parent
+    assert 'frame.removeAttribute("src")' not in parent
+    assert "let intersecting = true" in parent
     assert "muta-viz-visibility" in parent and "muta-viz-visibility" in frame
     assert 'document.addEventListener("muta:themechange", refreshTheme)' in parent
     assert 'viz-frame.html?theme=${safeTheme}#' in parent
