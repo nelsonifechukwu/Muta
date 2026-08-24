@@ -10,4 +10,4 @@ if [ ! -f "$app" ]; then
 fi
 
 chmod +x "$app"
-exec "$app"
+exec "$app" --install-model-pack "$package_dir/model-pack"

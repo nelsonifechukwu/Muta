@@ -17,4 +17,4 @@ fi
 if ! /usr/bin/xattr -c -r "$app"; then
   /usr/bin/find "$app" -exec /usr/bin/xattr -c {} +
 fi
-/usr/bin/open "$app"
+/usr/bin/open "$app" --args --install-model-pack "$package_dir/model-pack"

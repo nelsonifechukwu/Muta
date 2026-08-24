@@ -38,6 +38,7 @@ def test_supervisor_respawns_a_dead_engine(monkeypatch):
     # Make backoff instant so the test doesn't sleep.
     monkeypatch.setattr(main_mod, "ENGINE_RESPAWN_BACKOFF_MIN_S", 0.0)
     monkeypatch.setattr(main_mod, "ENGINE_POLL_INTERVAL_S", 0.01)
+    monkeypatch.setattr(main_mod, "ENGINE_PARENT_SHUTDOWN_GRACE_S", 0.0)
 
     stop = threading.Event()
     server = _FakeServer(stop)
@@ -49,3 +50,19 @@ def test_supervisor_respawns_a_dead_engine(monkeypatch):
     assert main_mod._engine_state["restarts"] >= 1
     assert main_mod._engine_state["last_exit_code"] == 1
     assert returned_stop is stop or returned_stop.is_set()
+
+
+def test_supervisor_does_not_respawn_during_parent_shutdown_grace(monkeypatch):
+    monkeypatch.setattr(main_mod, "ENGINE_PARENT_SHUTDOWN_GRACE_S", 0.2)
+    stop = threading.Event()
+    server = _FakeServer(stop)
+    server.ensures = -1  # first ensure becomes zero, so the fake does not set stop itself
+    timer = threading.Timer(0.02, stop.set)
+    timer.start()
+
+    thread, _ = main_mod._start_engine_thread(server, log_file=None, stop=stop)
+    thread.join(timeout=2.0)
+    timer.cancel()
+
+    assert not thread.is_alive()
+    assert server.ensures == 0

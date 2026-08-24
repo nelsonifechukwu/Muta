@@ -113,7 +113,8 @@ class RuntimeCapacityController:
         self._last_profile: CapacityProfile | None = None
 
     def plan(self, mode: str) -> CapacityProfile:
-        return self.planner.plan(mode, active_runtime_config())
+        cfg = active_runtime_config()
+        return self.planner.plan(mode, cfg, current_cfg=cfg)
 
     def plan_config(
         self,
@@ -156,7 +157,7 @@ class RuntimeCapacityController:
 
             def restore_profile() -> None:
                 manager.restore_runtime(snapshot)
-                profile = self.plan_config(mode, snapshot[0])
+                profile = self.plan_config(mode, snapshot[0], current_cfg=snapshot[0])
                 self._last_profile = profile
                 refresh_engine_dependencies(profile)
 
@@ -178,14 +179,28 @@ class RuntimeCapacityController:
             # Image selection stores guarded bytes only. There is no auxiliary inference
             # process to drain; active chat generations are the sole replacement barrier.
             current_cfg = active_runtime_config()
-            profile = self.plan_config(mode, current_cfg)
+            profile = self.plan_config(mode, current_cfg, current_cfg=current_cfg)
             target_model_id: str | None = None
             if mode == "competition" and not profile.fits and manager is not None:
-                target_model_id = os.environ.get(
-                    "MUTA_SHARE_COMPETITION_MODEL_ID", "qwen3.5-0.8b-q4_k_m"
+                configured = os.environ.get("MUTA_SHARE_COMPETITION_MODEL_ID", "").strip()
+                candidates = [configured] if configured else []
+                candidates.extend(
+                    model_id
+                    for model_id in manager.local_model_ids_by_size()
+                    if model_id not in candidates
                 )
-                candidate = manager.candidate_config(target_model_id)
-                profile = self.plan_config(mode, candidate, current_cfg=current_cfg)
+                for model_id in candidates:
+                    try:
+                        candidate = manager.candidate_config(model_id)
+                    except ModelSwitchError:
+                        continue
+                    candidate_profile = self.plan_config(
+                        mode, candidate, current_cfg=current_cfg
+                    )
+                    if candidate_profile.fits:
+                        target_model_id = model_id
+                        profile = candidate_profile
+                        break
             if not profile.fits:
                 raise GenerationCapacityError(
                     "Muta cannot fit one competition-safe chat in the RAM currently available; "
@@ -196,7 +211,8 @@ class RuntimeCapacityController:
             if manager is None:
                 if profile.n_parallel != cfg.n_parallel or profile.n_ctx != cfg.n_ctx:
                     raise GenerationCapacityError(
-                        "this engine is externally managed; restart Muta with the requested capacity"
+                        "this engine is externally managed; restart Muta with the requested "
+                        "capacity"
                     )
                 refresh_engine_dependencies(profile)
                 return
@@ -224,6 +240,22 @@ class RuntimeCapacityController:
         profile = applied["profile"]
         self._last_profile = profile
         return self.status(mode)
+
+
+def wait_for_engine_ready(timeout_s: float | None = None) -> None:
+    """Bound a transient supervisor/model-replacement gap before admitting a learner turn."""
+    manager = get_model_manager()
+    if manager is None or not hasattr(manager, "wait_until_ready"):
+        return
+    timeout = (
+        float(os.environ.get("MUTA_ENGINE_ADMISSION_WAIT_S", "20"))
+        if timeout_s is None
+        else timeout_s
+    )
+    if not manager.wait_until_ready(max(0.0, timeout)):
+        raise GenerationCapacityError(
+            "the local tutor is still recovering — wait a moment and send again"
+        )
 
 
 @lru_cache(maxsize=1)

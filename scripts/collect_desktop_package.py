@@ -15,6 +15,7 @@ class PackageError(RuntimeError):
 
 
 INSTALL_GUIDE = "HOW TO INSTALL.txt"
+MODEL_GUIDE = "ADD MODELS.txt"
 PACKAGE_ASSETS = Path(__file__).resolve().parents[1] / "desktop" / "package"
 
 
@@ -52,6 +53,7 @@ def collect(args: argparse.Namespace) -> Path:
         shutil.rmtree(staging)
     staging.mkdir()
     shutil.copytree(source_kit / "model-pack", staging / "model-pack")
+    shutil.copy2(PACKAGE_ASSETS / MODEL_GUIDE, staging / MODEL_GUIDE)
 
     if args.platform in {"darwin-aarch64", "darwin-x86_64"}:
         app = _one(bundle, "macos/*.app", "macOS application")
@@ -92,9 +94,7 @@ def collect(args: argparse.Namespace) -> Path:
 
     shutil.rmtree(staging)
     checksum = output / f"{archive.name}.sha256"
-    checksum.write_text(
-        f"{_sha256(archive)}  {archive.name}\n", encoding="utf-8", newline="\n"
-    )
+    checksum.write_text(f"{_sha256(archive)}  {archive.name}\n", encoding="utf-8", newline="\n")
     return archive
 
 

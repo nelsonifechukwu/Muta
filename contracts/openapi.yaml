@@ -2980,6 +2980,11 @@ components:
           type: boolean
           title: Recommended
           default: false
+        user_added:
+          type: boolean
+          title: User Added
+          description: True for an operator-supplied GGUF discovered below models/custom.
+          default: false
         supports_images:
           type: boolean
           title: Supports Images
@@ -3000,7 +3005,7 @@ components:
       - available
       - active
       title: ModelBackend
-      description: One fixed backend from the local model registry; browser clients never send paths.
+      description: One safe backend from the local registry; browser clients never send paths.
     ModelCatalogResponse:
       properties:
         active_id:

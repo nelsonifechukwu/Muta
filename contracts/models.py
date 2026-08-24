@@ -83,7 +83,7 @@ class ProductAnalyticsStatus(BaseModel):
 
 
 class ModelBackend(BaseModel):
-    """One fixed backend from the local model registry; browser clients never send paths."""
+    """One safe backend from the local registry; browser clients never send paths."""
 
     id: str
     label: str
@@ -96,6 +96,10 @@ class ModelBackend(BaseModel):
     arc_easy: float | None = None
     audit_proxy_tps: float | None = None
     recommended: bool = False
+    user_added: bool = Field(
+        False,
+        description="True for an operator-supplied GGUF discovered below models/custom.",
+    )
     supports_images: bool = Field(
         False,
         description="True only when this model's verified projector is installed.",

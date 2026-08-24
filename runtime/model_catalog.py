@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from runtime.config import RuntimeConfig
+from runtime.gguf import GGUFError, read_metadata
 from runtime.server import LlamaServer
 
 log = logging.getLogger("muta.runtime.model_catalog")
@@ -41,6 +42,9 @@ class ModelSpec:
     mmproj_path: str | None = None
     mmproj_sha256: str | None = None
     mmproj_size_bytes: int | None = None
+    user_added: bool = False
+    file_mtime_ns: int | None = None
+    file_ctime_ns: int | None = None
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> ModelSpec:
@@ -98,7 +102,8 @@ class ModelManager:
     ) -> None:
         self.root = root.resolve()
         self.log_file = log_file
-        self.specs = load_catalog(self.root, catalog_path)
+        self._catalog_specs = load_catalog(self.root, catalog_path)
+        self.specs = self._catalog_specs
         self._by_id = {spec.id: spec for spec in self.specs}
         self._server_factory = server_factory
         self._lock = threading.RLock()
@@ -109,6 +114,8 @@ class ModelManager:
         self._switching = False
         self._planned_exits: set[int] = set()
         self._hash_cache: dict[tuple[Path, int, int, int], str] = {}
+        self._custom_spec_cache: dict[tuple[Path, int, int, int], ModelSpec] = {}
+        self._refresh_custom_models_locked()
         self._active_id = self._match_config(cfg)
         # A native launcher supplies the active text GGUF through RuntimeConfig. Recover the
         # projector from the catalog before the first server instance is constructed, so a
@@ -126,6 +133,7 @@ class ModelManager:
         while True:
             self._switch_done.wait()
             with self._lock:
+                self._refresh_custom_models_locked()
                 # The Event can be observed just before switch() clears it. Re-check the
                 # state under the lock rather than starting a second child in that gap.
                 if self._switching:
@@ -167,6 +175,7 @@ class ModelManager:
 
     def status(self) -> dict[str, Any]:
         with self._lock:
+            self._refresh_custom_models_locked()
             return {
                 "active_id": self._active_id,
                 "switching": self._switching,
@@ -308,6 +317,7 @@ class ModelManager:
     def candidate_config(self, model_id: str) -> RuntimeConfig:
         """Return the verified target-model config without changing the running engine."""
         with self._lock:
+            self._refresh_custom_models_locked()
             spec = self._by_id.get(model_id)
             if spec is None:
                 raise ModelSwitchError("unknown model id")
@@ -332,6 +342,7 @@ class ModelManager:
         marked_switching = False
         try:
             with self._lock:
+                self._refresh_custom_models_locked()
                 spec = self._by_id.get(model_id)
                 if spec is None:
                     raise ModelSwitchError("unknown model id")
@@ -416,6 +427,122 @@ class ModelManager:
                 return spec.id
         return None
 
+    def local_model_ids_by_size(self) -> tuple[str, ...]:
+        """Verified installed local ids, smallest first, for a RAM-safe fallback search."""
+        with self._lock:
+            self._refresh_custom_models_locked()
+            ordered = sorted(
+                (spec for spec in self.specs if spec.kind == "local"),
+                key=lambda spec: (spec.size_bytes or 1 << 62, spec.id),
+            )
+        available: list[str] = []
+        for spec in ordered:
+            try:
+                self._verified_path(spec)
+            except ModelSwitchError:
+                continue
+            available.append(spec.id)
+        return tuple(available)
+
+    def wait_until_ready(self, timeout_s: float) -> bool:
+        """Wait for the supervisor/model replacement instead of rejecting a learner turn."""
+        import time
+
+        deadline = time.monotonic() + max(0.0, timeout_s)
+        while time.monotonic() < deadline:
+            self._switch_done.wait(timeout=min(0.2, max(0.0, deadline - time.monotonic())))
+            with self._lock:
+                if not self._switching and self._server.is_up():
+                    return True
+            time.sleep(0.1)
+        return False
+
+    def _custom_model_paths(self) -> tuple[Path, ...]:
+        """Regular GGUFs supplied by the operator, never signed catalog dependencies."""
+        candidates: set[Path] = set()
+        custom_root = self.root / "models" / "custom"
+        if custom_root.is_dir():
+            candidates.update(
+                path for path in custom_root.rglob("*") if path.suffix.lower() == ".gguf"
+            )
+        # Also accept the literal model-pack root requested by operators. Launchers normalise
+        # these into models/custom when installing from release media.
+        if self.root.is_dir():
+            candidates.update(
+                path for path in self.root.iterdir() if path.suffix.lower() == ".gguf"
+            )
+        catalog_paths = {
+            self._path_for(spec)
+            for spec in self._catalog_specs
+            if spec.kind == "local" and spec.path is not None
+        }
+        safe: list[Path] = []
+        for candidate in sorted(candidates):
+            try:
+                resolved = candidate.resolve()
+            except OSError:
+                continue
+            if (
+                candidate.is_symlink()
+                or not candidate.is_file()
+                or resolved == self.root
+                or self.root not in resolved.parents
+                or resolved in catalog_paths
+            ):
+                continue
+            safe.append(resolved)
+        return tuple(safe)
+
+    @staticmethod
+    def _custom_label(path: Path, metadata: Any) -> str:
+        raw = metadata.kv.get("general.name") or metadata.kv.get("general.basename")
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()[:96]
+        label = path.stem.replace("_", " ").replace("-", " ")
+        return " ".join(label.split())[:96] or "Custom GGUF"
+
+    def _refresh_custom_models_locked(self) -> None:
+        custom: list[ModelSpec] = []
+        current_keys: set[tuple[Path, int, int, int]] = set()
+        for path in self._custom_model_paths():
+            try:
+                stat = path.stat()
+                size = stat.st_size
+                relative = path.relative_to(self.root).as_posix()
+            except (GGUFError, OSError, ValueError):
+                log.warning("ignoring invalid custom GGUF: %s", path)
+                continue
+            key = (path, size, stat.st_mtime_ns, stat.st_ctime_ns)
+            current_keys.add(key)
+            cached = self._custom_spec_cache.get(key)
+            if cached is not None:
+                custom.append(cached)
+                continue
+            try:
+                metadata = read_metadata(path, max_kv=4096, max_header_bytes=128 * 1024 * 1024)
+            except (GGUFError, OSError, ValueError):
+                log.warning("ignoring invalid custom GGUF: %s", path)
+                continue
+            identifier = hashlib.sha256(relative.encode("utf-8")).hexdigest()[:20]
+            spec = ModelSpec(
+                id=f"custom-{identifier}",
+                label=self._custom_label(path, metadata),
+                kind="local",
+                path=relative,
+                size_bytes=size,
+                description=f"Added locally · {size / 1024**3:.2f} GB · text only.",
+                user_added=True,
+                file_mtime_ns=stat.st_mtime_ns,
+                file_ctime_ns=stat.st_ctime_ns,
+            )
+            self._custom_spec_cache[key] = spec
+            custom.append(spec)
+        self._custom_spec_cache = {
+            key: spec for key, spec in self._custom_spec_cache.items() if key in current_keys
+        }
+        self.specs = (*self._catalog_specs, *custom)
+        self._by_id = {spec.id: spec for spec in self.specs}
+
     def _path_for(self, spec: ModelSpec) -> Path:
         assert spec.path is not None
         path = (self.root / spec.path).resolve()
@@ -479,11 +606,18 @@ class ModelManager:
     def _verified_path(self, spec: ModelSpec) -> Path:
         path = self._path_for(spec)
         try:
-            if not path.is_file():
+            if path.is_symlink() or not path.is_file():
                 raise ModelSwitchError(f"{spec.label} is not installed")
             stat = path.stat()
             if spec.size_bytes is not None and stat.st_size != spec.size_bytes:
                 raise ModelSwitchError(f"{spec.label} has the wrong byte size")
+            if spec.user_added:
+                if (
+                    spec.file_mtime_ns != stat.st_mtime_ns
+                    or spec.file_ctime_ns != stat.st_ctime_ns
+                ):
+                    raise ModelSwitchError(f"{spec.label} changed while it was being selected")
+                return path
             key = (path, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
             with self._hash_lock:
                 digest = self._hash_cache.get(key)
@@ -494,7 +628,7 @@ class ModelManager:
                             h.update(chunk)
                     digest = h.hexdigest()
                     self._hash_cache[key] = digest
-        except OSError as exc:
+        except (OSError, GGUFError) as exc:
             raise ModelSwitchError(f"{spec.label} cannot be read") from exc
         if digest != spec.sha256:
             raise ModelSwitchError(f"{spec.label} failed SHA-256 verification")
@@ -533,6 +667,7 @@ class ModelManager:
             "arc_easy": spec.arc_easy,
             "audit_proxy_tps": spec.audit_proxy_tps,
             "recommended": spec.recommended,
+            "user_added": spec.user_added,
             "supports_images": supports_images,
             "image_input_reason": image_reason,
         }

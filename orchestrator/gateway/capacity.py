@@ -209,7 +209,6 @@ class CapacityPlanner:
         # headroom. Preserve a final reserve for short-lived OS/application allocations.
         available_reserve = int(os.environ.get("MUTA_SHARE_AVAILABLE_RESERVE_MIB", "512")) * MiB
         usable_now = measured_resident + max(0, available - available_reserve)
-        ceiling = min(ceiling, usable_now)
 
         checkpoints_multiplier = 1 + max(0, cfg.ctx_checkpoints)
 
@@ -270,6 +269,25 @@ class CapacityPlanner:
         def price(slots: int) -> tuple[int, int, int, int, int]:
             n_ctx, kv, state, buffer, variable = variable_price(slots)
             return n_ctx, kv, state, buffer, resident_base + variable
+
+        # Reconfiguring the already-loaded model to an equal/smaller serving profile does not
+        # need to allocate its weights a second time. MemAvailable can be temporarily tiny on
+        # a busy laptop even though the running tutor is healthy; refusing a Host toggle in
+        # that state produced a misleading fallback attempt. Preserve the priced footprint of
+        # the live profile, while still using real additional headroom for expansion or a new
+        # model and retaining the absolute competition/system ceiling above.
+        available_ceiling = usable_now
+        if current_cfg is not None:
+            current_model = current_cfg.model_path
+            if not current_model.is_absolute():
+                current_model = root / current_model
+            if current_model.resolve() == model_path.resolve():
+                current_slots = max(1, current_cfg.n_parallel)
+                available_ceiling = max(
+                    available_ceiling,
+                    min(ceiling, price(current_slots)[4]),
+                )
+        ceiling = min(ceiling, available_ceiling)
 
         slots = candidate_slots
         if mode == "system":
