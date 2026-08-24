@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import contextlib
+import fcntl
 import hashlib
 import os
 import re
@@ -221,11 +224,39 @@ def ssh_base(key: Path, address: str) -> list[str]:
     ]
 
 
+def powershell_command(script: str) -> list[str]:
+    """Encode PowerShell so OpenSSH cannot reinterpret spaces or operators."""
+    encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    return [
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-EncodedCommand",
+        encoded,
+    ]
+
+
+@contextlib.contextmanager
+def coordinator_lock(cache_root: Path):
+    """Serialize timer and manual builds while allowing the caller to wait safely."""
+    lock_path = cache_root / "locks" / "gcp-coordinator.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+", encoding="utf-8") as handle:
+        print(f"waiting for GCP package coordinator lock: {lock_path}", flush=True)
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
 def wait_for_windows(key: Path, address: str) -> None:
     deadline = time.monotonic() + 15 * 60
     while time.monotonic() < deadline:
         probe = run(
-            [*ssh_base(key, address), "powershell.exe", "-NoProfile", "-Command", "'ok'"],
+            [*ssh_base(key, address), *powershell_command("exit 0")],
             check=False,
         )
         if probe.returncode == 0:
@@ -239,10 +270,9 @@ def remote_has_model(key_file: Path, address: str, key: str) -> bool:
     result = run(
         [
             *ssh_base(key_file, address),
-            "powershell.exe",
-            "-NoProfile",
-            "-Command",
-            f"if (Test-Path '{marker}') {{ exit 0 }} else {{ exit 1 }}",
+            *powershell_command(
+                f"if (Test-Path -LiteralPath '{marker}') {{ exit 0 }} else {{ exit 1 }}"
+            ),
         ],
         check=False,
     )
@@ -302,10 +332,9 @@ def build_windows(
         run(
             [
                 *ssh_base(key_file, address),
-                "powershell.exe",
-                "-NoProfile",
-                "-Command",
-                "New-Item -Force -Type Directory C:/MutaIncoming | Out-Null",
+                *powershell_command(
+                    "New-Item -Force -ItemType Directory -Path 'C:/MutaIncoming' | Out-Null"
+                ),
             ]
         )
         scp_to_windows(key_file, address, source_archive, source_archive.name)
@@ -328,12 +357,7 @@ def build_windows(
         run(
             [
                 *ssh_base(key_file, address),
-                "powershell.exe",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                command,
+                *powershell_command(command),
             ]
         )
         name = archive_name(version, "windows-x86_64")
@@ -359,10 +383,7 @@ def build_windows(
         run(
             [
                 *ssh_base(key_file, address),
-                "powershell.exe",
-                "-NoProfile",
-                "-Command",
-                cleanup,
+                *powershell_command(cleanup),
             ],
             check=False,
         )
@@ -401,40 +422,43 @@ def main(argv: list[str] | None = None) -> int:
         if not SEMVER_RE.fullmatch(args.version):
             raise GcpBuildError("--version must be SemVer")
         cache_root = args.cache_root.expanduser().resolve()
-        output = cache_root / "outputs" / args.commit / args.version
-        output.mkdir(parents=True, exist_ok=True)
-        prefix = f"gs://{args.bucket}/builds/{args.commit}/{args.version}"
-        worktree = exact_worktree(args.commit, cache_root)
-        sync_models(worktree)
-        python = python_environment(worktree, cache_root)
-        for target in ("linux-x86_64", "windows-x86_64"):
-            name = archive_name(args.version, target)
-            if output_exists(f"{prefix}/{name}") and output_exists(f"{prefix}/{name}.sha256"):
-                print(f"final cache hit: {target}")
-                continue
-            if target == "linux-x86_64":
-                build_linux(
-                    worktree,
-                    python,
-                    cache_root,
-                    output,
-                    args.commit,
-                    args.version,
-                )
-            else:
-                build_windows(
-                    worktree,
-                    cache_root,
-                    output,
-                    args.commit,
-                    args.version,
-                    args.zone,
-                    args.windows_instance,
-                )
-            upload(output, args.version, target, prefix)
-            for suffix in ("", ".sha256"):
-                (output / f"{name}{suffix}").unlink(missing_ok=True)
-        print(prefix)
+        with coordinator_lock(cache_root):
+            output = cache_root / "outputs" / args.commit / args.version
+            output.mkdir(parents=True, exist_ok=True)
+            prefix = f"gs://{args.bucket}/builds/{args.commit}/{args.version}"
+            worktree = exact_worktree(args.commit, cache_root)
+            sync_models(worktree)
+            python = python_environment(worktree, cache_root)
+            for target in ("linux-x86_64", "windows-x86_64"):
+                name = archive_name(args.version, target)
+                if output_exists(f"{prefix}/{name}") and output_exists(
+                    f"{prefix}/{name}.sha256"
+                ):
+                    print(f"final cache hit: {target}")
+                    continue
+                if target == "linux-x86_64":
+                    build_linux(
+                        worktree,
+                        python,
+                        cache_root,
+                        output,
+                        args.commit,
+                        args.version,
+                    )
+                else:
+                    build_windows(
+                        worktree,
+                        cache_root,
+                        output,
+                        args.commit,
+                        args.version,
+                        args.zone,
+                        args.windows_instance,
+                    )
+                upload(output, args.version, target, prefix)
+                for suffix in ("", ".sha256"):
+                    (output / f"{name}{suffix}").unlink(missing_ok=True)
+            print(prefix)
     except (GcpBuildError, OSError, subprocess.SubprocessError) as error:
         print(f"GCP desktop build failed: {error}", file=sys.stderr)
         return 1

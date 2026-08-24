@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -109,6 +110,14 @@ def test_gcp_model_key_changes_with_manifest(tmp_path: Path) -> None:
     before = gcp.model_key(tmp_path)
     (tmp_path / "models/MANIFEST.json").write_text("changed", encoding="utf-8")
     assert gcp.model_key(tmp_path) != before
+
+
+def test_gcp_powershell_commands_survive_ssh_argument_parsing() -> None:
+    script = "& 'C:/MutaIncoming/build.ps1' -Version '1.2.3-beta.1'; exit 0"
+    command = gcp.powershell_command(script)
+
+    assert command[-2] == "-EncodedCommand"
+    assert base64.b64decode(command[-1]).decode("utf-16-le") == script
 
 
 def test_manual_worker_rejects_wrong_host(monkeypatch) -> None:
