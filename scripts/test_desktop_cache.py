@@ -95,6 +95,13 @@ def test_macos_native_build_maps_aarch64_to_apple_arm64() -> None:
     assert '--extra-ldflags="-mmacosx-version-min=$macos_min"' in script
 
 
+def test_macos_native_verifier_maps_aarch64_to_apple_arm64() -> None:
+    script = (desktop_cache_key.REPO_ROOT / "scripts/verify_desktop_native.sh").read_text()
+    assert 'if [ "$(uname -s)" = "Darwin" ] && [ "$file_arch" = "aarch64" ]' in script
+    assert 'file_arch="arm64"' in script
+    assert 'grep -Eq "Mach-O.*$file_arch|Mach-O universal"' in script
+
+
 def test_frozen_gateway_requires_complete_onedir(tmp_path: Path) -> None:
     gateway = tmp_path / "gateway"
     gateway.mkdir()
