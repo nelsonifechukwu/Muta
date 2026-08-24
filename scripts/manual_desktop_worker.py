@@ -120,6 +120,11 @@ def target_environment(platform_name: str, cache_root: Path) -> dict[str, str]:
     env["MUTA_DESKTOP_TARGET_ARCH"] = target_arch
     env["MUTA_NATIVE_WORK"] = str(cache_root / "native-work" / platform_name)
     env["CARGO_TARGET_DIR"] = str(cache_root / "cargo-target" / platform_name)
+    if platform_name == "linux-x86_64":
+        # The GCP coordinator deliberately matches the 8 GB competition laptop. Two native
+        # compiler jobs avoid four simultaneous llama.cpp translation units forcing swap thrash.
+        env.setdefault("CMAKE_BUILD_PARALLEL_LEVEL", "2")
+        env.setdefault("NUMBER_OF_PROCESSORS", "2")
     if platform_name == "darwin-x86_64":
         env["MUTA_DESKTOP_TARGET_TRIPLE"] = "x86_64-apple-darwin"
     elif platform_name == "darwin-aarch64":
