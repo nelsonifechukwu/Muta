@@ -28,6 +28,9 @@ surface without an explicit product decision.
    requests, even when SSH forwarding makes their peer address `127.0.0.1`.
 6. Document that the ordinary operator-only tunnel is not a classroom relay and that phones must
    trust Muta's local CA once before opening the HTTPS URL.
+7. When the operator explicitly supplies fleet configuration, pass the HTTPS collector origin in
+   the remote launch command and the write-only key over SSH stdin. Never expose the key in the
+   command line or dry-run output; telemetry remains inert until local consent is granted.
 
 ## Verification
 
@@ -36,4 +39,6 @@ surface without an explicit product decision.
 - HTTP security regression proves a loopback peer on the TLS learner port cannot mint a host
   session, including with a forged `Host: localhost` header.
 - Existing direct-loopback and trusted-primary-listener host bootstrap tests remain green.
+- Relay tests prove partial/invalid fleet configuration fails closed and dry-run never prints the
+  supplied write-only key.
 - Full suite, diff check and focused browser/QR validation run before review.
