@@ -244,12 +244,21 @@ def is_operator_request(request: HTTPConnection) -> bool:
     """
     if not _operator_host_allowed(request):
         return False
+    server = request.scope.get("server")
+    server_port = int(server[1]) if server else None
+    # A laptop-side SSH relay makes a learner request arrive at GCP from 127.0.0.1. Listener
+    # identity is therefore load-bearing: the dedicated TLS share port can never mint or reuse
+    # host authority, even when its peer and a forged Host header both look loopback-local.
+    if server_port == int(os.environ.get("MUTA_SHARE_PORT", "8443")):
+        return False
     if is_loopback_request(request):
         return True
     if os.environ.get("MUTA_TRUST_PRIMARY_LISTENER") != "1":
         return False
-    server = request.scope.get("server")
-    return bool(server and int(server[1]) == int(os.environ.get("MUTA_PRIMARY_PORT", "8000")))
+    return bool(
+        server_port is not None
+        and server_port == int(os.environ.get("MUTA_PRIMARY_PORT", "8000"))
+    )
 
 
 def require_principal(

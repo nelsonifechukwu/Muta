@@ -357,6 +357,15 @@ def test_operator_bootstrap_rejects_dns_rebinding_host_and_origin(monkeypatch, t
         )
         assert hostile_origin.status_code == 403
         assert proxy.post("/v1/auth/session", json={"student_id": "x"}).status_code == 200
+
+        # SSH forwarding collapses a learner's peer address to loopback. The dedicated learner
+        # listener must still reject host bootstrap, even with a forged localhost Host header.
+        forwarded_lan = TestClient(
+            assembled_app,
+            base_url="https://localhost:8443",
+            client=("127.0.0.1", 51003),
+        )
+        assert forwarded_lan.post("/v1/auth/session", json={"student_id": "x"}).status_code == 403
     finally:
         get_sharing_service().close()
         get_sharing_service.cache_clear()
@@ -382,6 +391,18 @@ def test_lan_material_is_offline_https_qr_with_private_keys_locked_down(monkeypa
 def test_container_never_advertises_its_private_bridge_address(monkeypatch):
     monkeypatch.delenv("MUTA_SHARE_HOST", raising=False)
     monkeypatch.setenv("MUTA_CONTAINERIZED", "1")
+    assert lan.lan_addresses() == []
+
+    monkeypatch.setenv("MUTA_SHARE_HOST", "192.168.50.20")
+    assert lan.lan_addresses() == ["192.168.50.20"]
+
+
+def test_cloud_launch_requires_an_explicit_relay_host(monkeypatch):
+    monkeypatch.delenv("MUTA_SHARE_HOST", raising=False)
+    monkeypatch.delenv("MUTA_CONTAINERIZED", raising=False)
+    monkeypatch.setenv("MUTA_SHARE_REQUIRE_HOST", "1")
+    monkeypatch.setattr(lan, "_default_route_address", lambda _ipv6: "10.138.0.2")
+
     assert lan.lan_addresses() == []
 
     monkeypatch.setenv("MUTA_SHARE_HOST", "192.168.50.20")

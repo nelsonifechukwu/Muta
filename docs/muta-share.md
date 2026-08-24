@@ -78,3 +78,14 @@ only its unreachable bridge address. Native starts prefer the physical default-r
 over Docker/VPN bridges and list alternatives; set `MUTA_SHARE_HOST=192.168.x.x` to override an
 unusual route. Muta refuses to advertise a container bridge address when the injected host value
 is unavailable.
+
+### GCP is not the learner LAN
+
+A cloud VM's private `10.x` address belongs to its VPC. Phones cannot reach it merely because the
+VM, laptop and phone all have Internet access. The normal GCP SSH tunnel exposes only the local
+operator page and must not produce a learner QR.
+
+For GCP demos, run `./scripts/gcp_share_relay.sh` on the laptop that shares Wi-Fi with the phones.
+It advertises and certifies the laptop's LAN address, forwards learner TLS through SSH to the GCP
+share listener, and leaves GCP firewall ports closed. Learners still authenticate as members;
+the relay's loopback appearance on GCP is explicitly forbidden from granting host authority.

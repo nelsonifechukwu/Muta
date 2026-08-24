@@ -105,6 +105,31 @@ Mac, use an SSH tunnel rather than opening a public firewall rule:
 gcloud compute ssh muta-vm --zone=us-west1-b -- -L 8000:127.0.0.1:8000
 ```
 
+That ordinary tunnel is **operator-only**. A GCP VM is not on the phone's LAN: its private
+`10.x` address is routable only inside Google's VPC, so a Host-mode QR containing that address
+cannot work from home or school Wi-Fi. Internet access on both devices does not make those private
+networks the same network.
+
+For a GCP classroom/demo run, stop the old SSH launch and run this **on the laptop sharing Wi-Fi
+with the phones**:
+
+```bash
+./scripts/gcp_share_relay.sh
+```
+
+The launcher keeps the operator at <http://127.0.0.1:18001/chat/>, binds the learner relay only to
+the laptop's detected Wi-Fi IPv4 on port 8443, and starts GCP Muta with that address as its
+certificate/QR host. GCP firewall ports remain closed; both streams cross the authenticated SSH
+connection. If address detection chooses the wrong interface, set it explicitly:
+
+```bash
+MUTA_GCP_LAN_IP=192.168.1.25 ./scripts/gcp_share_relay.sh
+```
+
+Enable Host mode after the relay launch, then install Muta's local CA on each learner device once
+and scan the new QR. Ctrl-C stops the GCP launch and both forwards. Never use a stale QR from the
+ordinary operator-only tunnel.
+
 ### Keep the GCP native UI running
 
 Do not launch the GCP gateway with `nohup`: when its SSH session is collected, the gateway can

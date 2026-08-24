@@ -57,6 +57,11 @@ def lan_addresses() -> list[str]:
     if override:
         address = usable(override)
         return [address] if address else []
+    # Cloud VMs have a perfectly valid-looking private address that belongs to their VPC, not
+    # the classroom LAN. Native launchers set this guard on known cloud hosts so Host mode fails
+    # clearly until a relay supplies the laptop address through MUTA_SHARE_HOST.
+    if os.environ.get("MUTA_SHARE_REQUIRE_HOST") == "1":
+        return []
     # A container only sees its private bridge address. Advertising that in the QR creates
     # a plausible-looking but unreachable classroom URL; run.sh injects the host address.
     if os.environ.get("MUTA_CONTAINERIZED") == "1":

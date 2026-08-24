@@ -289,6 +289,15 @@ native_linux_env() {
     [ "$(uname -s)/$(uname -m)" = "Linux/x86_64" ] \
         || die "Linux native mode requires a Linux/x86_64 host"
     native_python
+    # A GCP VM's 10.x source address is private to Google's VPC, not the learner LAN. Refuse to
+    # turn it into a plausible but dead QR unless the laptop relay supplied its reachable Wi-Fi
+    # address explicitly. This check is local/offline and has no metadata-network dependency.
+    if [ -z "${MUTA_SHARE_HOST:-}" ] \
+        && [ -r /sys/class/dmi/id/product_name ] \
+        && grep -qi 'Google Compute Engine' /sys/class/dmi/id/product_name; then
+        export MUTA_SHARE_REQUIRE_HOST=1
+        warn "GCP Host mode needs the laptop relay: run ./scripts/gcp_share_relay.sh on the laptop"
+    fi
     if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
         running_containers=$(docker compose ps -q 2>/dev/null || true)
         [ -z "$running_containers" ] \
