@@ -1,0 +1,10 @@
+HOW TO INSTALL MUTA ON WINDOWS
+
+1. Extract the complete ZIP archive.
+2. Keep Install-Muta.cmd, Muta-Setup.exe, and model-pack together in the extracted folder.
+3. Double-click Install-Muta.cmd.
+4. This unsigned private test build may show an Unknown Publisher warning. Choose More info, then
+   Run anyway, only if you received this archive directly from the Muta team.
+
+The helper installs Muta for the current user, verifies and imports the offline model pack, then
+starts Muta. No internet connection or separate model download is required.

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import shutil
+import stat
 from pathlib import Path
 
 
@@ -19,6 +20,13 @@ UPDATE_PATTERNS = {
     "linux-x86_64": "appimage/*.AppImage",
     "windows-x86_64": "nsis/*-setup.exe",
 }
+INSTALL_GUIDE = "HOW TO INSTALL.txt"
+PACKAGE_ASSETS = Path(__file__).resolve().parents[1] / "desktop" / "package"
+
+
+def _copy_executable(source: Path, destination: Path) -> None:
+    shutil.copy2(source, destination)
+    destination.chmod(destination.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
 def extension(path: Path) -> str:
@@ -67,6 +75,8 @@ def collect(args: argparse.Namespace) -> None:
     update = copy_named(update_source, output, args.version, args.platform)
     shutil.copy2(signature_source, Path(f"{update}.sig"))
 
+    (kit / "README.txt").unlink(missing_ok=True)
+
     if args.platform == "linux-x86_64":
         for obsolete in (kit / "Muta", kit / "gateway", kit / "resources"):
             if obsolete.is_dir():
@@ -76,11 +86,8 @@ def collect(args: argparse.Namespace) -> None:
         portable = kit / "Muta.AppImage"
         shutil.copy2(update_source, portable)
         portable.chmod(portable.stat().st_mode | 0o111)
-        (kit / "README.txt").write_text(
-            "Run ./Muta.AppImage. The first launch verifies and installs model-pack locally; "
-            "no internet or system installation is required.\n",
-            encoding="utf-8",
-        )
+        _copy_executable(PACKAGE_ASSETS / "linux/Muta.sh", kit / "Muta.sh")
+        shutil.copy2(PACKAGE_ASSETS / f"linux/{INSTALL_GUIDE}", kit / INSTALL_GUIDE)
     elif args.platform == "windows-x86_64":
         for obsolete in (kit / "Muta.exe", kit / "gateway", kit / "resources"):
             if obsolete.is_dir():
@@ -89,19 +96,18 @@ def collect(args: argparse.Namespace) -> None:
                 obsolete.unlink()
         shutil.copy2(update_source, kit / "Muta-Setup.exe")
         (kit / "Install-Muta.cmd").write_text(
-            "@echo off\r\n"
-            "start /wait \"\" \"%~dp0Muta-Setup.exe\" /S\r\n"
-            "if not exist \"%LOCALAPPDATA%\\Muta\\Muta.exe\" (\r\n"
-            "  echo Muta installation was not found. 1>&2\r\n"
-            "  exit /b 1\r\n"
-            ")\r\n"
-            "\"%LOCALAPPDATA%\\Muta\\Muta.exe\" --install-model-pack \"%~dp0model-pack\"\r\n",
+            (PACKAGE_ASSETS / "windows/Install-Muta.cmd").read_text(encoding="utf-8"),
             encoding="utf-8",
+            newline="\r\n",
         )
-        (kit / "README.txt").write_text(
-            "Double-click Install-Muta.cmd. It installs the bundled WebView runtime, verifies "
-            "the offline model pack and then opens Muta. No internet is required.\r\n",
+        (kit / INSTALL_GUIDE).write_text(
+            (PACKAGE_ASSETS / f"windows/{INSTALL_GUIDE}").read_text(encoding="utf-8"),
             encoding="utf-8",
+            newline="\r\n",
+        )
+    else:
+        shutil.copy2(
+            PACKAGE_ASSETS / "macos/HOW TO INSTALL SIGNED.txt", kit / INSTALL_GUIDE
         )
 
     archive_format = "zip" if args.platform.startswith("windows-") else "gztar"

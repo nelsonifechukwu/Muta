@@ -216,7 +216,9 @@ def build(args: argparse.Namespace) -> None:
                 str(DESKTOP / "src-tauri" / "target" / "release"),
             ]
         )
-    target_root = DESKTOP / "src-tauri" / "target"
+    target_root = Path(
+        os.environ.get("CARGO_TARGET_DIR", str(DESKTOP / "src-tauri" / "target"))
+    ).resolve()
     target_release = (
         target_root / target_triple / "release" if target_triple else target_root / "release"
     )
@@ -249,9 +251,16 @@ def assemble_portable_kit(target_os: str, target_release: Path) -> None:
 
 
 def parser() -> argparse.ArgumentParser:
-    default_sha = subprocess.check_output(
-        ["git", "rev-parse", "--short=12", "HEAD"], cwd=REPO_ROOT, text=True
-    ).strip()
+    default_sha = os.environ.get("MUTA_BUILD_GIT_SHA", "")
+    if not default_sha:
+        identity = subprocess.run(
+            ["git", "rev-parse", "--short=12", "HEAD"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        default_sha = identity.stdout.strip() if identity.returncode == 0 else "unknown"
     result = argparse.ArgumentParser(prog="build_desktop.py")
     result.add_argument("--engine-dir", type=Path, default=BUILD / "native")
     result.add_argument("--ffmpeg-bin", type=Path)

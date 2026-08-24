@@ -14,6 +14,15 @@ class PackageError(RuntimeError):
     pass
 
 
+INSTALL_GUIDE = "HOW TO INSTALL.txt"
+PACKAGE_ASSETS = Path(__file__).resolve().parents[1] / "desktop" / "package"
+
+
+def _copy_executable(source: Path, destination: Path) -> None:
+    shutil.copy2(source, destination)
+    destination.chmod(destination.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+
 def _one(root: Path, pattern: str, label: str) -> Path:
     matches = sorted(root.glob(pattern))
     if len(matches) != 1:
@@ -47,12 +56,8 @@ def collect(args: argparse.Namespace) -> Path:
     if args.platform in {"darwin-aarch64", "darwin-x86_64"}:
         app = _one(bundle, "macos/*.app", "macOS application")
         shutil.copytree(app, staging / "Muta.app", symlinks=True)
-        (staging / "README.txt").write_text(
-            "Copy this folder to the Mac and keep model-pack beside Muta.app. "
-            "Right-click Muta.app and choose Open on first launch. Muta then verifies and "
-            "installs the offline model pack into the current user's Application Support.\n",
-            encoding="utf-8",
-        )
+        _copy_executable(PACKAGE_ASSETS / "macos/Muta.command", staging / "Muta.command")
+        shutil.copy2(PACKAGE_ASSETS / f"macos/{INSTALL_GUIDE}", staging / INSTALL_GUIDE)
         archive = Path(
             shutil.make_archive(str(output / name), "gztar", root_dir=output, base_dir=name)
         )
@@ -61,11 +66,8 @@ def collect(args: argparse.Namespace) -> Path:
         destination = staging / "Muta.AppImage"
         shutil.copy2(appimage, destination)
         destination.chmod(destination.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-        (staging / "README.txt").write_text(
-            "Keep model-pack beside Muta.AppImage, then run: chmod +x Muta.AppImage && "
-            "./Muta.AppImage. No installation or internet connection is required.\n",
-            encoding="utf-8",
-        )
+        _copy_executable(PACKAGE_ASSETS / "linux/Muta.sh", staging / "Muta.sh")
+        shutil.copy2(PACKAGE_ASSETS / f"linux/{INSTALL_GUIDE}", staging / INSTALL_GUIDE)
         archive = Path(
             shutil.make_archive(str(output / name), "gztar", root_dir=output, base_dir=name)
         )
@@ -73,20 +75,14 @@ def collect(args: argparse.Namespace) -> Path:
         installer = _one(bundle, "nsis/*-setup.exe", "Windows NSIS installer")
         shutil.copy2(installer, staging / "Muta-Setup.exe")
         (staging / "Install-Muta.cmd").write_text(
-            "@echo off\r\n"
-            "start /wait \"\" \"%~dp0Muta-Setup.exe\" /S\r\n"
-            "if not exist \"%LOCALAPPDATA%\\Muta\\Muta.exe\" (\r\n"
-            "  echo Muta installation was not found. 1>&2\r\n"
-            "  exit /b 1\r\n"
-            ")\r\n"
-            "\"%LOCALAPPDATA%\\Muta\\Muta.exe\" --install-model-pack \"%~dp0model-pack\"\r\n",
+            (PACKAGE_ASSETS / "windows/Install-Muta.cmd").read_text(encoding="utf-8"),
             encoding="utf-8",
+            newline="\r\n",
         )
-        (staging / "README.txt").write_text(
-            "Double-click Install-Muta.cmd. Windows may show an Unknown Publisher warning "
-            "for this unsigned test build; choose More info, then Run anyway. The installer "
-            "and all models are offline.\r\n",
+        (staging / INSTALL_GUIDE).write_text(
+            (PACKAGE_ASSETS / f"windows/{INSTALL_GUIDE}").read_text(encoding="utf-8"),
             encoding="utf-8",
+            newline="\r\n",
         )
         archive = Path(
             shutil.make_archive(str(output / name), "zip", root_dir=output, base_dir=name)

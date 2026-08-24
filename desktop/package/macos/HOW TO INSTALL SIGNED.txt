@@ -1,0 +1,9 @@
+HOW TO INSTALL MUTA ON macOS
+
+1. Extract the complete archive.
+2. Keep Muta.app and model-pack together in the extracted folder.
+3. Double-click Muta.app.
+
+Muta is Developer ID signed and notarized. On first launch, Muta verifies and installs the sibling
+offline model pack in the current user's Application Support. No internet connection or separate
+model download is required.

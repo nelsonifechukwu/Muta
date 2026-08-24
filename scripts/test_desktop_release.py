@@ -3,6 +3,9 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import stat
+import tarfile
+import zipfile
 from pathlib import Path
 
 import collect_desktop_package as package
@@ -103,3 +106,131 @@ def test_unsigned_package_collector_creates_linux_offline_archive(tmp_path: Path
     assert archive.name == "Muta_1.2.3_linux-x86_64_offline.tar.gz"
     assert archive.is_file()
     assert Path(f"{archive}.sha256").is_file()
+    with tarfile.open(archive, "r:gz") as package_archive:
+        root = "Muta_1.2.3_linux-x86_64_offline"
+        names = set(package_archive.getnames())
+        assert f"{root}/{package.INSTALL_GUIDE}" in names
+        launcher = package_archive.getmember(f"{root}/Muta.sh")
+        assert launcher.mode & stat.S_IXUSR
+        script = package_archive.extractfile(launcher)
+        assert script is not None
+        assert b'chmod +x "$app"' in script.read()
+
+
+def test_unsigned_package_collector_adds_macos_private_test_launcher(tmp_path: Path):
+    bundle = tmp_path / "bundle"
+    app = bundle / "macos/Muta.app"
+    app.mkdir(parents=True)
+    (app / "placeholder").write_bytes(b"app")
+    kit = tmp_path / "offline-kit"
+    (kit / "model-pack").mkdir(parents=True)
+    (kit / "model-pack/model-pack.json").write_text('{"schema": 1}', encoding="utf-8")
+    args = argparse.Namespace(
+        platform="darwin-aarch64",
+        version="1.2.3",
+        bundle_root=bundle,
+        offline_kit=kit,
+        output=tmp_path / "output",
+    )
+
+    archive = package.collect(args)
+
+    with tarfile.open(archive, "r:gz") as package_archive:
+        root = "Muta_1.2.3_darwin-aarch64_offline"
+        names = set(package_archive.getnames())
+        assert f"{root}/{package.INSTALL_GUIDE}" in names
+        launcher = package_archive.getmember(f"{root}/Muta.command")
+        assert launcher.mode & stat.S_IXUSR
+        script = package_archive.extractfile(launcher)
+        assert script is not None
+        body = script.read()
+        assert b'/usr/bin/xattr -c -r "$app"' in body
+        assert b'/usr/bin/open "$app"' in body
+
+
+def test_unsigned_package_collector_names_windows_install_guide(tmp_path: Path):
+    bundle = tmp_path / "bundle"
+    (bundle / "nsis").mkdir(parents=True)
+    (bundle / "nsis/Muta-setup.exe").write_bytes(b"installer")
+    kit = tmp_path / "offline-kit"
+    (kit / "model-pack").mkdir(parents=True)
+    (kit / "model-pack/model-pack.json").write_text('{"schema": 1}', encoding="utf-8")
+    args = argparse.Namespace(
+        platform="windows-x86_64",
+        version="1.2.3",
+        bundle_root=bundle,
+        offline_kit=kit,
+        output=tmp_path / "output",
+    )
+
+    archive = package.collect(args)
+
+    with zipfile.ZipFile(archive) as package_archive:
+        root = "Muta_1.2.3_windows-x86_64_offline"
+        names = set(package_archive.namelist())
+        assert f"{root}/{package.INSTALL_GUIDE}" in names
+        assert f"{root}/Install-Muta.cmd" in names
+        guide = package_archive.read(f"{root}/{package.INSTALL_GUIDE}")
+        assert b"HOW TO INSTALL MUTA ON WINDOWS\r\n" in guide
+        installer = package_archive.read(f"{root}/Install-Muta.cmd")
+        assert b"\r\n" in installer
+        assert b"\r\r\n" not in installer
+
+
+def test_signed_macos_release_uses_notarized_install_guide(tmp_path: Path):
+    bundle = tmp_path / "bundle"
+    (bundle / "macos").mkdir(parents=True)
+    update = bundle / "macos/Muta.app.tar.gz"
+    update.write_bytes(b"signed update")
+    Path(f"{update}.sig").write_text("signature", encoding="utf-8")
+    kit = tmp_path / "offline-kit"
+    (kit / "Muta.app").mkdir(parents=True)
+    (kit / "model-pack").mkdir()
+    (kit / "README.txt").write_text("old instructions", encoding="utf-8")
+    args = argparse.Namespace(
+        platform="darwin-aarch64",
+        version="1.2.3",
+        bundle_root=bundle,
+        offline_kit=kit,
+        output=tmp_path / "release",
+    )
+
+    collect.collect(args)
+
+    archive = args.output / "Muta_1.2.3_darwin-aarch64_offline.tar.gz"
+    with tarfile.open(archive, "r:gz") as package_archive:
+        names = set(package_archive.getnames())
+        assert "offline-kit/HOW TO INSTALL.txt" in names
+        assert "offline-kit/README.txt" not in names
+        assert "offline-kit/Muta.command" not in names
+        guide = package_archive.extractfile("offline-kit/HOW TO INSTALL.txt")
+        assert guide is not None
+        assert b"Developer ID signed and notarized" in guide.read()
+
+
+def test_signed_windows_release_uses_install_helper_and_guide(tmp_path: Path):
+    bundle = tmp_path / "bundle"
+    (bundle / "nsis").mkdir(parents=True)
+    update = bundle / "nsis/Muta-setup.exe"
+    update.write_bytes(b"signed installer")
+    Path(f"{update}.sig").write_text("signature", encoding="utf-8")
+    kit = tmp_path / "offline-kit"
+    (kit / "model-pack").mkdir(parents=True)
+    (kit / "README.txt").write_text("old instructions", encoding="utf-8")
+    args = argparse.Namespace(
+        platform="windows-x86_64",
+        version="1.2.3",
+        bundle_root=bundle,
+        offline_kit=kit,
+        output=tmp_path / "release",
+    )
+
+    collect.collect(args)
+
+    archive = args.output / "Muta_1.2.3_windows-x86_64_offline.zip"
+    with zipfile.ZipFile(archive) as package_archive:
+        names = set(package_archive.namelist())
+        assert "offline-kit/HOW TO INSTALL.txt" in names
+        assert "offline-kit/README.txt" not in names
+        assert "offline-kit/Install-Muta.cmd" in names
+        assert b"\r\r\n" not in package_archive.read("offline-kit/Install-Muta.cmd")
