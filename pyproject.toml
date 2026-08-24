@@ -31,6 +31,7 @@ dependencies = [
     "pypdf>=5.0",  # learner-resource PDF extraction with physical page preservation
     "qrcode>=8.0",  # offline Host-mode LAN join QR (Pillow is already bundled above)
     "cryptography>=43.0",  # cross-platform offline Host-mode CA/certificate generation
+    "certifi>=2024.7.4",  # deterministic CA bundle for native Windows packaging downloads
 ]
 
 [project.optional-dependencies]

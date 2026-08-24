@@ -231,6 +231,11 @@ def _watch_parent(expected_pid: int) -> None:
             return
 
 
+def _use_parent_watchdog(expected_pid: int, platform_name: str | None = None) -> bool:
+    platform_name = os.name if platform_name is None else platform_name
+    return expected_pid > 0 and platform_name != "nt"
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.tool_worker:
@@ -249,7 +254,11 @@ def main(argv: list[str] | None = None) -> int:
     # RuntimeConfig supports a source-checkout .env for developers. A staged resource root is
     # signed and intentionally contains no .env, making it a safe desktop working directory.
     os.chdir(values["MUTA_RESOURCE_ROOT"])
-    if args.parent_pid > 0:
+    # On Windows the native shell already owns the gateway through a
+    # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE job. Python's os.kill(pid, 0) is not a
+    # POSIX-style liveness probe there: it can fail with ERROR_INVALID_HANDLE
+    # for a healthy GUI parent and make every gateway attempt self-terminate.
+    if _use_parent_watchdog(args.parent_pid):
         threading.Thread(
             target=_watch_parent,
             args=(args.parent_pid,),

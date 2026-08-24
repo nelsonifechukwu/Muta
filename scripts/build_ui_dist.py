@@ -5,15 +5,19 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import ssl
 import tarfile
 import tempfile
 import time
 import urllib.request
 from pathlib import Path, PurePosixPath
 
+import certifi
+
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "ui"
 OUTPUT = UI / "dist"
+TLS_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 UI_FILES = (
     "VISUALIZATION-LICENSES.txt",
@@ -80,7 +84,7 @@ def download(url: str, destination: Path, expected: str) -> None:
         try:
             request = urllib.request.Request(url, headers={"User-Agent": "Muta-Packager/1"})
             with (
-                urllib.request.urlopen(request, timeout=60) as response,
+                urllib.request.urlopen(request, timeout=60, context=TLS_CONTEXT) as response,
                 destination.open("wb") as stream,
             ):
                 shutil.copyfileobj(response, stream)

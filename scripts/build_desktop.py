@@ -51,6 +51,7 @@ def frozen_executable() -> Path:
 
 def build(args: argparse.Namespace) -> None:
     target_os, target_arch = target()
+    npm = "npm.cmd" if target_os == "windows" else "npm"
     engine_dir = args.engine_dir.resolve()
     engine_name = "llama-server.exe" if target_os == "windows" else "llama-server"
     if not (engine_dir / engine_name).is_file():
@@ -106,7 +107,7 @@ def build(args: argparse.Namespace) -> None:
     run(stage_command)
 
     if not args.no_tauri:
-        run(["npm", "ci"], cwd=DESKTOP)
+        run([npm, "ci"], cwd=DESKTOP)
     if args.release:
         if not os.environ.get("TAURI_SIGNING_PRIVATE_KEY"):
             raise BuildError("release build requires TAURI_SIGNING_PRIVATE_KEY")
@@ -116,7 +117,7 @@ def build(args: argparse.Namespace) -> None:
             raise BuildError("release build requires MUTA_MODEL_PACK_PUBLIC_KEY")
         run(
             [
-                "npm",
+                npm,
                 "run",
                 "tauri",
                 "--",
@@ -192,7 +193,7 @@ def build(args: argparse.Namespace) -> None:
             ]
         )
 
-    tauri_command = ["npm", "run", "tauri", "--", "build"]
+    tauri_command = [npm, "run", "tauri", "--", "build"]
     target_triple = os.environ.get("MUTA_DESKTOP_TARGET_TRIPLE", "")
     if target_triple:
         if target_os != "macos" or target_triple not in {

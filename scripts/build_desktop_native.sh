@@ -71,6 +71,10 @@ case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*)
     cmake_args+=(
       -G Ninja
+      # cpp-httplib requires CreateFile2 and deliberately rejects the older implicit
+      # MinGW API baseline. Muta supports Windows 10/11, so declare that contract.
+      -DCMAKE_C_FLAGS=-D_WIN32_WINNT=0x0A00
+      -DCMAKE_CXX_FLAGS=-D_WIN32_WINNT=0x0A00
       -DGGML_AVX2=ON
       -DGGML_F16C=ON
       -DGGML_FMA=ON
@@ -152,6 +156,10 @@ if [ "$(uname -s)" = "Darwin" ] && [ "$target_arch" != "$(uname -m)" ]; then
     --extra-cflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-12.0}"
     --extra-ldflags="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-12.0}"
   )
+elif [[ "$(uname -s)" = MINGW* || "$(uname -s)" = MSYS* || "$(uname -s)" = CYGWIN* ]]; then
+  # FFmpeg otherwise leaves libwinpthread-1.dll as an undeclared target dependency even
+  # when its own libraries are static. The offline kit must use only Windows system DLLs.
+  ffmpeg_target_args=(--extra-ldflags=-static)
 fi
 (
   cd "$work/ffmpeg-build"

@@ -177,3 +177,9 @@ def test_inherited_engine_and_heartbeat_settings_are_not_used(tmp_path):
     assert "MUTA_SEARCH_URL" not in environment
     assert "MUTA_RT_HF_REPO" not in environment
     assert values["MUTA_RT_MMPROJ_PATH"].endswith("mmproj.gguf")
+
+
+def test_windows_uses_native_job_instead_of_posix_parent_watchdog():
+    assert backend_entry._use_parent_watchdog(1234, "nt") is False
+    assert backend_entry._use_parent_watchdog(1234, "posix") is True
+    assert backend_entry._use_parent_watchdog(0, "posix") is False
