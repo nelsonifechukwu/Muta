@@ -1014,6 +1014,30 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
 }
 .settings-row select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .settings-footnote { margin: 16px 2px 0; color: var(--muted); font-size: 0.72rem; }
+.product-analytics-state { margin: 6px 2px 0; min-height: 1.2em; color: var(--muted); font-size: 0.72rem; line-height: 1.4; }
+.product-consent-modal {
+  position: fixed; top: var(--app-top, 0px); right: 0; bottom: auto; left: 0;
+  height: var(--app-height, 100dvh); z-index: 80; display: grid; place-items: center;
+  padding: 20px; background: var(--modal-scrim); backdrop-filter: blur(3px);
+}
+.product-consent-modal[hidden] { display: none; }
+.product-consent-card {
+  width: min(35rem, 100%); max-height: calc(var(--app-height, 100dvh) - 40px); overflow-y: auto;
+  padding: clamp(22px, 5vw, 34px); border: 1px solid var(--border); border-radius: 18px;
+  background: var(--card); box-shadow: var(--panel-shadow);
+}
+.product-consent-eyebrow { margin: 0 0 9px; color: var(--accent); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.product-consent-card h2 { margin: 0; font-family: var(--serif); font-size: clamp(1.6rem, 5vw, 2.15rem); line-height: 1.08; }
+.product-consent-card > p:not(.product-consent-eyebrow, .product-consent-error) { color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
+.product-consent-card ul { margin: 18px 0 24px; padding-inline-start: 22px; color: var(--muted); font-size: 0.78rem; line-height: 1.55; }
+.product-consent-card li + li { margin-top: 8px; }
+.product-consent-actions { display: flex; justify-content: flex-end; gap: 9px; }
+.product-consent-actions button { min-height: 44px; border-radius: 9px; padding: 0 15px; font: inherit; font-size: 0.8rem; font-weight: 650; cursor: pointer; }
+.product-consent-secondary { border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.product-consent-primary { border: 1px solid var(--accent-strong); background: var(--accent-strong); color: white; }
+.product-consent-actions button:hover { filter: brightness(1.06); }
+.product-consent-actions button:disabled { opacity: 0.55; cursor: wait; }
+.product-consent-error { min-height: 1.2em; margin: 10px 0 0; color: var(--danger); font-size: 0.75rem; }
 .power-status {
   margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 11px;
   background: color-mix(in srgb, var(--card) 82%, var(--bg));

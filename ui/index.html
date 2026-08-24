@@ -279,6 +279,17 @@
           <div id="host-user-list" aria-live="polite"></div>
         </div>
       </div>
+      <div id="product-analytics-settings" class="settings-section" lang="en" hidden>
+        <h3>Privacy</h3>
+        <label class="settings-row" for="setting-product-analytics">
+          <span>
+            <strong>Share pseudonymous product activity</strong>
+            <small>Send a durable random installation ID, app version/build, operating-system and processor family, last-use time, active/registered local-user counts, and approximate city-level network location when this laptop is online. Never sends chats, files, usernames, email, GPS, or the laptop name.</small>
+          </span>
+          <input id="setting-product-analytics" type="checkbox" role="switch" disabled>
+        </label>
+        <p id="product-analytics-state" class="product-analytics-state" role="status"></p>
+      </div>
       <div class="settings-section resource-settings">
         <div class="settings-section-heading">
           <div>
@@ -290,6 +301,26 @@
         <div id="resource-list" class="resource-list" aria-live="polite"></div>
       </div>
       <p class="settings-footnote" data-i18n="settings.limits">Muta stays within the operator’s fixed inference-slot and memory limits.</p>
+    </section>
+  </div>
+
+  <div id="product-consent-modal" class="product-consent-modal" hidden>
+    <section class="product-consent-card" role="dialog" aria-modal="true"
+      aria-labelledby="product-consent-title" aria-describedby="product-consent-copy" lang="en">
+      <p class="product-consent-eyebrow">Your privacy, your choice</p>
+      <h2 id="product-consent-title">Help us see where Muta is useful.</h2>
+      <p id="product-consent-copy">When this laptop gets online, Muta can share pseudonymous product activity and an approximate city-level location derived from its network. This helps us count active installations and map Muta’s reach.</p>
+      <ul>
+        <li>Sends a durable random installation ID, app version/build, operating-system and processor family, recent-use time, and active/registered local-user counts.</li>
+        <li>Never sends conversations, questions, files, voice, usernames, email, GPS, or the laptop name.</li>
+        <li>Your choice is saved on this laptop, so Muta will not keep asking.</li>
+        <li>You can change this in Settings. Turning it off also asks the server to delete this installation’s history.</li>
+      </ul>
+      <div class="product-consent-actions">
+        <button id="product-consent-decline" class="product-consent-secondary" type="button">Keep private</button>
+        <button id="product-consent-allow" class="product-consent-primary" type="button">Share product activity</button>
+      </div>
+      <p id="product-consent-error" class="product-consent-error" role="alert"></p>
     </section>
   </div>
 
@@ -315,6 +346,7 @@
   <script src="resource-mentions.js?v=20260823-viz-progress-1"></script>
   <script src="image-upload.js?v=20260823-viz-progress-1"></script>
   <script src="app.js?v=20260823-viz-progress-1"></script>
+  <script src="product-analytics.js?v=20260823-fleet-1"></script>
   <script src="audio.js?v=20260823-viz-progress-1"></script>
 </body>
 </html>
