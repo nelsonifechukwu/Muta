@@ -1,0 +1,11 @@
+HOW TO INSTALL MUTA ON LINUX
+
+1. Extract the complete archive.
+2. Keep Muta.sh, Muta.AppImage, and model-pack together in the extracted folder.
+3. Open a terminal in that folder and run: ./Muta.sh
+
+If your archive tool removed the launcher's executable permission, run:
+chmod +x Muta.sh && ./Muta.sh
+
+Muta is portable: no root access, package manager, internet connection, or separate model download
+is required.

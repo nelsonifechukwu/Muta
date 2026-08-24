@@ -78,9 +78,13 @@ signing keys and are not suitable for distribution.
 Pushing the `muta-packages` branch runs `.github/workflows/desktop-packages.yml` on four native
 GitHub runners and uploads one complete offline archive for each supported target. These archives
 include the application and model pack and are suitable for copying to test laptops immediately.
-They are intentionally unsigned: macOS requires right-clicking the app and choosing **Open** on
-first launch, and Windows displays an **Unknown Publisher** warning. Use the protected release
-workflow below for public, warning-free distribution.
+Every archive exposes `HOW TO INSTALL.txt` at its top level. They are intentionally unsigned:
+the macOS test kit includes `Muta.command`, which clears download quarantine only from its sibling
+`Muta.app` before opening it; the tester may need to right-click the command and choose **Open**.
+Windows displays an **Unknown Publisher** warning, and Linux includes `Muta.sh` to restore the
+AppImage executable bit. These helpers are private-test conveniences, not substitutes for platform
+trust. Use the protected release workflow below for public, warning-free distribution; its
+notarized macOS kit opens `Muta.app` directly and does not include the quarantine helper.
 
 The package workflow restores three content-addressed layers when their inputs have not changed:
 the verified platform-independent models/UI, each target's pinned native sidecars, and each
@@ -94,6 +98,30 @@ once after GitHub Actions is enabled if its initial push run was missed. UI chan
 the UI layer; Python/dependency changes invalidate only the frozen gateway; native pin/build changes
 invalidate only native sidecars; model pin/provisioning changes invalidate only the model layer.
 GitHub may evict caches, so no release depends on them for correctness.
+
+## Manual four-platform builds through GCP
+
+GitHub Actions is not required. After committing and pushing an update to `main`, run this on the
+development Mac:
+
+```bash
+make final-package
+```
+
+That command resolves the exact pushed commit, derives a SemVer such as `0.1.394`, builds Ubuntu
+and Windows through GCP, builds both macOS architectures locally, verifies all four checksums, and
+writes the result below `desktop/build/final-packages/`. Use `ARGS="--version 0.2.0"` to choose an
+explicit version. The command refuses unpushed commits so every package remains reproducible.
+
+The manual workers reuse content-addressed model, UI, native-sidecar, frozen-gateway and Cargo
+caches. Final assembly and checksums always run. `muta-vm` also has a five-minute systemd timer:
+when `origin/main` changes, it automatically warms/builds the Linux and Windows outputs. GCP cannot
+host macOS, so the two Mac outputs are completed by `make final-package` while the Mac is awake;
+the command reuses the GCP outputs instead of rebuilding them.
+
+For diagnosis, `make final-package ARGS="--dry-run --skip-upload"` prints the complete execution
+plan. GCP watcher logs are available with
+`journalctl -u muta-package-watch.service --no-pager`.
 
 ## One-time GitHub release setup
 

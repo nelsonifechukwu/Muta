@@ -7,7 +7,8 @@ PY ?= python3
 	model fetch-models verify-models serve profiles core-cmd kv-budget index audio \
 	bench profile monitor bench-target eval backup restore \
 	bench-native-linux export-native-linux \
-	desktop-models desktop-native desktop-stage desktop-freeze desktop-build desktop-test
+	desktop-models desktop-native desktop-stage desktop-freeze desktop-build desktop-test \
+	final-package final-packages
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -139,3 +140,6 @@ desktop-build: ## Build the native Tauri package and offline portable kit. Args:
 desktop-test: ## Verify staging/freezer Python and the Tauri launcher
 	$(PY) -m pytest desktop/tests scripts/test_stage_desktop.py scripts/test_desktop_release.py runtime/tests/test_paths.py
 	cd desktop/src-tauri && cargo fmt --check && cargo test --locked
+
+final-package final-packages: ## Build four cached offline packages from pushed HEAD. Args: ARGS="--version 0.2.0"
+	$(PY) scripts/manual_desktop_release.py $(ARGS)
