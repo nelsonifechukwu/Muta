@@ -30,6 +30,22 @@ def test_archive_names_cover_all_four_targets() -> None:
     assert release.archive_name("1.2.3", "windows-x86_64").endswith(".zip")
 
 
+def test_gcp_output_cache_requires_both_archives_and_checksums(monkeypatch) -> None:
+    requested: list[str] = []
+
+    def fake_run(command: list[str], **_kwargs):
+        requested.append(command[-1])
+        return type("Result", (), {"returncode": 0})()
+
+    monkeypatch.setattr(release.subprocess, "run", fake_run)
+    assert release.gcp_output_set_exists("a" * 40, "1.2.3", "packages")
+    assert requested == [
+        f"gs://packages/builds/{'a' * 40}/1.2.3/{release.archive_name('1.2.3', target)}{suffix}"
+        for target in release.GCP_PLATFORMS
+        for suffix in ("", ".sha256")
+    ]
+
+
 def test_tauri_installer_version_matches_requested_release() -> None:
     assert json.loads(build_desktop.tauri_version_config("2.4.1-beta.2")) == {
         "version": "2.4.1-beta.2"

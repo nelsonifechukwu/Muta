@@ -13,6 +13,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -236,6 +237,42 @@ def gcs_prefix(bucket: str, commit: str, version: str) -> str:
     return f"gs://{bucket}/builds/{commit}/{version}"
 
 
+def gcp_output_set_exists(commit: str, version: str, bucket: str) -> bool:
+    prefix = gcs_prefix(bucket, commit, version)
+    for target in GCP_PLATFORMS:
+        name = archive_name(version, target)
+        for suffix in ("", ".sha256"):
+            result = subprocess.run(
+                ["gcloud", "storage", "ls", f"{prefix}/{name}{suffix}"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode:
+                return False
+    return True
+
+
+def gcp_ssh_capture(instance: str, zone: str, command: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            "gcloud",
+            "compute",
+            "ssh",
+            instance,
+            "--zone",
+            zone,
+            "--command",
+            command,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def build_gcp(
     commit: str,
     version: str,
@@ -245,17 +282,17 @@ def build_gcp(
     *,
     dry_run: bool,
 ) -> None:
+    if not dry_run and gcp_output_set_exists(commit, version, bucket):
+        print("final cache hit: linux-x86_64")
+        print("final cache hit: windows-x86_64")
+        return
+
     remote = shlex.join(
         [
-            "python3",
-            "scripts/gcp_desktop_build.py",
-            "--commit",
+            "scripts/launch_gcp_desktop_build.sh",
             commit,
-            "--version",
             version,
-            "--bucket",
             bucket,
-            "--zone",
             zone,
         ]
     )
@@ -272,6 +309,44 @@ def build_gcp(
             command,
         ],
         dry_run=dry_run,
+    )
+    if dry_run:
+        return
+
+    job = f"{commit}-{version}"
+    status_path = f".local/state/muta-packages/manual/{job}.status"
+    log_path = f".local/state/muta-packages/manual/{job}.log"
+    deadline = time.monotonic() + 6 * 60 * 60
+    next_update = time.monotonic()
+    while time.monotonic() < deadline:
+        status_result = gcp_ssh_capture(
+            instance,
+            zone,
+            f'cat "$HOME/{status_path}" 2>/dev/null || printf \'missing\\n\'',
+        )
+        status = status_result.stdout.strip() if status_result.returncode == 0 else "unreachable"
+        if status == "complete":
+            if not gcp_output_set_exists(commit, version, bucket):
+                raise ReleaseError("GCP job completed without the four expected cloud objects")
+            return
+        if status.startswith("failed:"):
+            log_result = gcp_ssh_capture(
+                instance,
+                zone,
+                f'tail -n 120 "$HOME/{log_path}" 2>/dev/null || true',
+            )
+            detail = log_result.stdout.strip()
+            raise ReleaseError(
+                f"GCP package job {status}"
+                + (f"\nLast remote log lines:\n{detail}" if detail else "")
+            )
+        now = time.monotonic()
+        if now >= next_update:
+            print(f"GCP package job status: {status}; waiting...", flush=True)
+            next_update = now + 120
+        time.sleep(20)
+    raise ReleaseError(
+        f"GCP package job exceeded six hours; inspect $HOME/{log_path} on {instance}"
     )
 
 
