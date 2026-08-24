@@ -117,3 +117,18 @@ def test_manual_worker_rejects_wrong_host(monkeypatch) -> None:
         assert "must build on Linux" in str(error)
     else:
         raise AssertionError("cross-OS desktop build was accepted")
+
+
+def test_worker_recovers_lock_left_by_dead_process(tmp_path: Path) -> None:
+    lock = tmp_path / "locks/linux-x86_64.lock"
+    lock.mkdir(parents=True)
+    (lock / "owner.json").write_text(
+        json.dumps({"pid": 999_999_999, "host": worker.platform.node()}),
+        encoding="utf-8",
+    )
+
+    with worker.platform_lock(tmp_path, "linux-x86_64"):
+        owner = json.loads((lock / "owner.json").read_text(encoding="utf-8"))
+        assert owner["pid"] > 0
+
+    assert not lock.exists()
