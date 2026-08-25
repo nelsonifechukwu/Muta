@@ -1,7 +1,7 @@
 # Muta IQ experiment report and profiler
 
-This local, offline report explains how Muta’s model and runtime choices developed from July to
-20 August 2026. Its operational appendix profiles the GGUF files in `../model/` with
+This local, offline report explains Muta’s model search, optimization, fine-tuning, and current
+runtime-dependent submission decision. Its operational appendix profiles the GGUF files in `../model/` with
 [adtc-profiler](https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler), stores each run,
 and can promote a completed report without hand-editing `metadata.json` or copying
 `submission.json`.
@@ -32,11 +32,11 @@ default; set `ADTC_PROFILER` to use another executable.
 ## What the report contains
 
 - A chaptered account of the score, runtime baseline, model funnel, GGUF and quantisation work,
-  ternary branch, weight-streaming tests, the 19 August campaign, and the 20 August overnight
-  model and AVX2 extension.
-- A seven-artifact paired total-score figure with scalar and portable AVX2 bars, plus a dedicated
-  two-finalist figure that shows the latest direct scalar and controlled AVX2 totals. The charts
-  print each total and identify the winner under each accuracy sample.
+  ternary branch, weight-streaming tests, model-search campaigns, and the 15-run fine-tuning
+  campaign.
+- A combined 17-result scalar/vector figure, plus dedicated fine-tuning figures for matched
+  control accuracy and finalist totals. Every chart prints its values and has a visible table or
+  screen-reader summary.
 - Interactive score, disk-budget, and website-sensitivity controls. These controls are read-only:
   they do not change campaign data or stored runs.
 - Native HTML and SVG figures that work without a network connection, including three hand-drawn
@@ -60,7 +60,7 @@ The report never treats all benchmark rows as interchangeable.
    `../../bench/measurements/campaign-20260819/official-profiler/summary.json`. Override the path
    with `MUTA_CAMPAIGN_SUMMARY`.
 
-   The overview and overnight chapter use the 20 August direct finalist reports from
+   The earlier model-search chapters use the direct finalist reports from
    `../../bench/measurements/campaign-20260820-overnight/summary.json`. The operational campaign
    table remains the dated 19 August four-model set so both complete campaigns stay inspectable.
    If an override points to a different direct campaign, the page displays a warning and leaves
@@ -79,7 +79,7 @@ The report never treats all benchmark rows as interchangeable.
    uses the same documented 45 MiB profiler-root estimate as the parity screens. Override the path
    with `MUTA_CAMPAIGN_ALTERNATIVE`.
 
-4. **Controlled AVX2 proxy.** The 19 August five-artifact campaign and 20 August two-finalist
+4. **Controlled vector proxy.** The five-artifact campaign and two-finalist
    extension use the GCP 2C/4T proxy with AVX, AVX2, FMA, and F16C enabled; native tuning and
    AVX-512 disabled. They use the fixed/capped 15 tok/s score, but are not participant-profiler
    runs. The source artifacts are
@@ -88,7 +88,12 @@ The report never treats all benchmark rows as interchangeable.
    transfers the pinned source measurement only after tensor-identity verification. The dashboard
    state API exposes the dated campaign as `campaign_avx2_score` and the extension as `overnight`.
 
-5. **Development result.** Earlier Mac, Docker, GCP, or custom-engine evidence used to accept or
+5. **Fine-tuning control.** The current finalists use matched exported controls, ARC-Easy-500,
+   and repeated scalar/vector measurements from
+   `../../model-development/finetune/results/summary.json`. The 45 MiB profiler-root allowance is
+   an estimate; GCP temperature is unavailable. Interrupted secondary runs remain pending.
+
+6. **Development result.** Earlier Mac, Docker, GCP, or custom-engine evidence used to accept or
    reject an engineering idea. It explains the decision history but is not ranked against the
    direct profiler campaign.
 

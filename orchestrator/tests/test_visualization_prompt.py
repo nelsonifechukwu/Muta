@@ -363,6 +363,19 @@ def test_standard_science_visuals_replace_contradictory_model_copy_with_checked_
     assert "five hydrogens" not in ethane_reply
 
 
+def test_standard_science_visuals_preserve_a_complete_explanation() -> None:
+    prose = (
+        "Gravity continually bends the satellite's straight-line motion toward Earth. "
+        "At the orbital speed, that inward acceleration makes the satellite fall around Earth "
+        "instead of into it."
+    )
+
+    reply = append_visualization(prose, _satellite_orbit_spec())
+
+    assert reply.startswith(prose + "\n\n```muta-viz\n")
+    assert "gravity supplies the centripetal force" not in reply
+
+
 def test_constrained_pass_falls_back_on_invalid_data_and_honours_cancellation() -> None:
     invalid = _RecordingVisualClient({"version": 1, "library": "d3", "kind": "bar"})
     fallback = generate_visualization(

@@ -1460,14 +1460,23 @@ def _verified_visual_explanation(spec: dict[str, Any]) -> str:
 
 
 def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
-    """Use checked copy for standard lessons and remove renderer-contradicting refusals."""
-    verified = _verified_visual_explanation(spec)
-    if verified:
-        return verified
+    """Keep a complete lesson explanation; use checked copy only as a safe fallback.
+
+    Standard visualizations have deterministic teaching copy because very small models sometimes
+    emit a refusal or a single, contradictory sentence.  That copy must not replace an otherwise
+    complete explanation: the diagram is supporting material, not the whole answer.
+    """
     paragraphs = [part.strip() for part in re.split(r"\n\s*\n", str(prose or "")) if part.strip()]
     kept = [part for part in paragraphs if not _VISUAL_REFUSAL.search(part)]
-    if kept:
-        return "\n\n".join(kept)
+    explanation = "\n\n".join(kept)
+    verified = _verified_visual_explanation(spec)
+    sentence_count = len(re.findall(r"[.!?](?=\s|$)", explanation))
+    if explanation and (not verified or sentence_count >= 2):
+        return explanation
+    if verified:
+        return verified
+    if explanation:
+        return explanation
     return (
         "The visual below shows the requested relationships directly. Follow its labels in "
         "order, then compare them with the governing quantities in the explanation."

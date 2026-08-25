@@ -12,8 +12,9 @@ transcript out, finalisation on a VAD endpoint.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator, Protocol
+from typing import Protocol
 
 from orchestrator.audio.config import AudioConfig
 
@@ -91,7 +92,7 @@ class SherpaAsr:
 
     def __post_init__(self) -> None:
         try:
-            import sherpa_onnx  # noqa: F401
+            import sherpa_onnx
         except ImportError:
             log.info("sherpa-onnx unavailable — ASR degrades to text-only input")
             return
@@ -147,6 +148,14 @@ class SherpaAsr:
 
     def transcribe_samples(self, samples) -> str:
         if not self.available:
+            return ""
+        import numpy as np
+
+        samples = np.asarray(samples, dtype=np.float32)
+        # sherpa's Moonshine convolution rejects an empty waveform. Silero can expose an empty
+        # segment when a learner stops a silent capture, so treat that as "not heard" instead of
+        # invoking ONNX with shape {1,0} and printing a native exception into the desktop log.
+        if samples.size == 0:
             return ""
         stream = self._recognizer.create_stream()  # type: ignore[attr-defined]
         stream.accept_waveform(self.config.asr.sample_rate, samples)

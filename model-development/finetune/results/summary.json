@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "objective": "Improve the two runtime-dependent finalists without increasing their GGUF deployment footprint.",
+  "training": {
+    "candidate_runs": 15,
+    "matched_controls": 2,
+    "gpu": "NVIDIA A100-SXM4-40GB",
+    "methods": [
+      "BF16 LoRA",
+      "4-bit QLoRA"
+    ],
+    "ranks": [
+      8,
+      16,
+      32
+    ],
+    "seed": 3407,
+    "context_tokens": 1024,
+    "effective_batch_size": 16
+  },
+  "evaluation": {
+    "accuracy_benchmark": "ARC-Easy",
+    "accuracy_metric": "acc_norm",
+    "accuracy_samples": 500,
+    "hardware": "GCP 2-core/4-thread CPU proxy",
+    "performance_reference_tps": 15.0,
+    "memory_accounting": "Measured llama-bench child tree plus a 45 MiB estimate for the profiler root process.",
+    "temperature": "unavailable"
+  },
+  "initial_sweep": {
+    "candidate_runs": 8,
+    "result": "No promotion",
+    "reason": "The mixture emphasized long solutions and tutor dialogue, while the profiler scores short multiple-choice continuations. A missing leading space at the prompt/completion boundary also changed BPE tokenization."
+  },
+  "corrected_sweep": {
+    "candidate_runs": 7,
+    "result": "Two promotions",
+    "changes": [
+      "Matched the profiler's raw multiple-choice continuation format.",
+      "Corrected the leading-space prompt/completion boundary before tokenization.",
+      "Used training splits only and rejected exact and near duplicates against held-out questions.",
+      "Selected the licence-clean ARC and QASC mixture for the Qwen2.5 submission candidate."
+    ]
+  },
+  "models": [
+    {
+      "id": "qwen35",
+      "label": "Qwen3.5 0.8B Q4_0",
+      "candidate": "BF16 LoRA r16, 400 steps, MCQ-aligned",
+      "control": "Zero-learning-rate r16 export control",
+      "quantization": "Q4_0",
+      "accuracy": {
+        "control_percent": 55.2,
+        "candidate_percent": 70.2,
+        "delta_points": 15.0,
+        "control_ci95_percent": [
+          50.82,
+          59.50
+        ],
+        "candidate_ci95_percent": [
+          66.05,
+          74.04
+        ]
+      },
+      "scalar": {
+        "control_tps": 13.6086485,
+        "candidate_tps": 13.597127,
+        "control_peak_rss_mib": 690.90,
+        "candidate_peak_rss_mib": 690.95,
+        "control_total": 72.8896,
+        "candidate_total": 80.3664,
+        "delta_total": 7.4768
+      },
+      "vector": {
+        "control_tps": 27.94568,
+        "candidate_tps": 27.6882175,
+        "control_peak_rss_mib": 969.15,
+        "candidate_peak_rss_mib": 969.05,
+        "control_total": 74.8959,
+        "candidate_total": 82.3962,
+        "delta_total": 7.5003
+      },
+      "held_out": [
+        {
+          "benchmark": "ARC-Challenge",
+          "samples": 100,
+          "control_percent": 32.0,
+          "candidate_percent": 42.0
+        },
+        {
+          "benchmark": "OpenBookQA",
+          "samples": 100,
+          "control_percent": 32.0,
+          "candidate_percent": 33.0
+        },
+        {
+          "benchmark": "GSM8K strict",
+          "samples": 25,
+          "control_percent": 16.0,
+          "candidate_percent": 20.0
+        }
+      ]
+    },
+    {
+      "id": "qwen25",
+      "label": "Qwen2.5 1.5B Q4_K_M",
+      "candidate": "BF16 LoRA r16, 500 steps, licence-clean MCQ",
+      "control": "Untuned same-export control",
+      "quantization": "Q4_K_M",
+      "accuracy": {
+        "control_percent": 74.4,
+        "candidate_percent": 77.8,
+        "delta_points": 3.4,
+        "control_ci95_percent": [
+          70.40,
+          78.03
+        ],
+        "candidate_ci95_percent": [
+          73.95,
+          81.22
+        ]
+      },
+      "scalar": {
+        "control_tps": 5.6223635,
+        "candidate_tps": 5.632127,
+        "control_peak_rss_mib": 1117.15,
+        "candidate_peak_rss_mib": 1117.05,
+        "control_total": 65.3277,
+        "candidate_total": 67.0475,
+        "delta_total": 1.7198
+      },
+      "vector": {
+        "control_tps": 17.3963955,
+        "candidate_tps": 17.439742,
+        "control_peak_rss_mib": 1706.50,
+        "candidate_peak_rss_mib": 1706.45,
+        "control_total": 82.4386,
+        "candidate_total": 84.1387,
+        "delta_total": 1.7001
+      },
+      "held_out": [],
+      "held_out_status": "Pending: the secondary battery was stopped when an unrelated package build made the CPU host unsuitable for measurement."
+    }
+  ],
+  "decision": {
+    "scalar_model_id": "qwen35",
+    "scalar_total": 80.3664,
+    "vector_model_id": "qwen25",
+    "vector_total": 84.1387,
+    "submission_status": "Conditional on the audit CPU configuration and final live-prompt validation."
+  }
+}

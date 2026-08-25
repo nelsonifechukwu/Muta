@@ -59,6 +59,10 @@ MODEL_EXTENSION_SUMMARY = Path(os.environ.get(
     "MUTA_MODEL_EXTENSION_SUMMARY",
     REPO_ROOT / "bench/measurements/model-extension/summary.json",
 ))
+FINETUNE_SUMMARY = Path(os.environ.get(
+    "MUTA_FINETUNE_SUMMARY",
+    REPO_ROOT / "model-development/finetune/results/summary.json",
+))
 
 # Historical archive constants. New campaign evidence is scored by bench/score.py and loaded
 # from CAMPAIGN_SUMMARY. The SQLite archive preserves its old capped fastest-local-run proxy
@@ -457,6 +461,10 @@ def state_payload() -> dict:
         model_extension = json.loads(MODEL_EXTENSION_SUMMARY.read_text())
     except (OSError, json.JSONDecodeError):
         model_extension = None
+    try:
+        finetune = json.loads(FINETUNE_SUMMARY.read_text())
+    except (OSError, json.JSONDecodeError):
+        finetune = None
     return {
         "models": models,
         "current": current,
@@ -475,6 +483,7 @@ def state_payload() -> dict:
         "campaign_avx2_score": campaign_avx2_score,
         "overnight": overnight,
         "model_extension": model_extension,
+        "finetune": finetune,
     }
 
 

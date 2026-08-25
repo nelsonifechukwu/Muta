@@ -259,6 +259,12 @@ bench/.venv-profiler/
 bench/adtc-profiler/
 # generated measurement artifacts: submission.json, runs.jsonl, synthesized submission dir
 bench/.artifacts/
+# local or remote fine-tuning outputs; keep only scripts and manifests in git
+model-development/finetune/runs/
+model-development/finetune/runs-metric/
+model-development/finetune/data/
+model-development/finetune/data-reasoning/
+model-development/finetune/data-metric-*/
 backups/
 
 # Desktop build output is reproducible; configuration/spec sources remain tracked.

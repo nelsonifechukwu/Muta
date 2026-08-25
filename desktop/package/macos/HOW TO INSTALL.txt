@@ -5,11 +5,13 @@ the Muta team.
 
 1. Extract the complete archive.
 2. Keep Muta.command, Muta.app, and model-pack together in the extracted folder.
-3. Double-click Muta.command.
-4. If macOS blocks Muta.command, right-click it, choose Open, then confirm Open.
+3. Open Terminal.
+4. Type `/bin/zsh ` including the space at the end.
+5. Drag Muta.command from the extracted folder into the Terminal window, then press Return.
 
-Muta.command removes macOS download quarantine from this copy of Muta.app and opens it. Muta then
-verifies and installs the sibling offline model pack in the current user's Application Support.
-No internet connection or separate model download is required.
+Running the command through Terminal avoids Finder's quarantine check on the helper. Muta.command
+then removes download quarantine from this copy of Muta.app and opens it. Muta verifies and
+installs the sibling offline model pack in the current user's Application Support. No internet
+connection or separate model download is required.
 
 A public Muta release must be Developer ID signed and notarized and will not need this workaround.

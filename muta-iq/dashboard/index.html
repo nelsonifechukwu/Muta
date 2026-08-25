@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="The story of building Muta for the Africa Deep Tech Challenge: the constraints, the mechanisms we tried, and how each one narrowed the model further.">
-<title>Muta IQ — How we got here</title>
+<meta name="description" content="Muta's model-selection, quantization, fine-tuning, and CPU benchmark report for the Africa Deep Tech Challenge.">
+<title>Muta IQ — Experiment report</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,11 +13,11 @@
 
 <header class="topbar">
   <a class="wordmark" href="#overview" aria-label="Muta IQ experiment report home">
-    <strong>Muta IQ</strong><small>How we got here</small>
+    <strong>Muta IQ</strong><small>Experiment report</small>
   </a>
   <nav class="topnav" aria-label="Report shortcuts">
     <a href="#scoreboard">Scoreboard</a>
-    <a href="#search">Widening the search</a>
+    <a href="#finetuning">Fine-tuning</a>
     <a href="#current-state">Where we've landed</a>
     <a href="#ledger">Every experiment</a>
     <a href="#profiler">Profiler workspace</a>
@@ -32,7 +32,7 @@
       <li><a href="#overview">Why we're here</a></li>
       <li><a href="#competition">The competition</a></li>
       <li><a href="#paths">Two roads</a></li>
-      <li><a href="#methods">Nine ways to shrink a model</a></li>
+      <li><a href="#methods">Ten optimization methods</a></li>
       <li><a href="#quantization">Quantization</a></li>
       <li><a href="#dedup">Cutting the duplicate head</a></li>
       <li><a href="#vocabulary">Pruning the vocabulary</a></li>
@@ -44,6 +44,7 @@
       <li><a href="#search">Widening the search</a></li>
       <li><a href="#second-search">A second widening</a></li>
       <li><a href="#behaviour">Teaching the file to behave</a></li>
+      <li><a href="#finetuning">Fine-tuning the finalists</a></li>
       <li><a href="#current-state">Where we've landed</a></li>
       <li><a href="#ledger">Every experiment</a></li>
       <li><a href="#faq">Challenge requirements</a></li>
@@ -52,7 +53,7 @@
     <div class="contents-note">
       <span class="status-dot official"></span>
       Current recommendation<br>
-      <span id="contents-winner">Scalar leader, n=500: Qwen3.5 0.8B Q4_0<br>Vector leader, n=500: Qwen2.5 1.5B Q4_K_M</span>
+      <span id="contents-winner">Scalar leader, tuned n=500: Qwen3.5 0.8B Q4_0<br>Vector leader, tuned n=500: Qwen2.5 1.5B Q4_K_M</span>
     </div>
   </aside>
 
@@ -62,36 +63,34 @@
       <h1>Teaching a laptop to tutor</h1>
       <p class="dek">I picked Math &amp; Scientific Reasoning because pragmatic education is something African classrooms need and rarely get enough of: too many students for one teacher, and too little time to slow down on the question any single student actually got wrong.</p>
 
-      <p class="dek">The catch is where it has to run. The competition doesn't judge a model in a data centre. It judges whatever fits on a $150–$500 laptop already sitting in that classroom, offline, on whatever battery and memory that laptop happens to have. That single constraint turns model selection into a fight between three things that all cost each other: a model has to know enough to teach, answer fast enough to hold a conversation, and fit in memory tight enough that most laptops would call it cramped. Push on any one of those and the other two push back.</p>
-
-      <p class="dek">This page is the story of that fight: the two approaches we tried, and everything we pulled on to make one of them fit.</p>
+      <p class="dek">The competition evaluates an offline model on a $150–$500 CPU-only laptop. The model must therefore balance teaching accuracy, response speed, and memory use. This report follows the experiments that narrowed those three variables to two runtime-dependent finalists.</p>
 
       <div class="verdict">
         <div>
           <p class="verdict-label">Where the story stands, for now</p>
-          <h2><code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code></h2>
-          <p>That's still our supplied-profiler submission: once every finalist is matched to the same 500-item ARC-Easy sample, it leads the scalar comparison. Under the vector configuration, though, a different model leads instead: Qwen2.5 1.5B Q4_K_M, a candidate we hadn't even tested until the second widening below. Which one the judges actually see depends on a CPU feature this page can't confirm from here. The rest of the page tells you how we got to that split.</p>
+          <h2>Fine-tuning improved both finalists</h2>
+          <p>Qwen3.5 0.8B remains the scalar leader after a 15-point ARC-Easy gain. Qwen2.5 1.5B remains the vector leader after a smaller 3.4-point gain. These are the best measured GGUFs, not yet the packaged submission: both still need the tutor metadata and live-prompt checks, and the final choice still depends on the audit CPU configuration.</p>
         </div>
         <div class="regime-result-grid">
           <article class="scalar-result">
             <p><span class="evidence-badge official">Scalar leader, n=500</span><strong>Qwen3.5 0.8B Q4_0</strong></p>
-            <dl><div><dt>Scalar total</dt><dd>72.7895</dd></div><div><dt>Vector total</dt><dd>76.8104</dd></div><div><dt>Direct generation</dt><dd>12.63 tok/s</dd></div><div><dt>Direct peak RSS</dt><dd>670 MiB</dd></div><div><dt>ARC-Easy, n=500</dt><dd>58.8%</dd></div></dl>
+            <dl><div><dt>Scalar total</dt><dd>80.3664</dd></div><div><dt>Vector total</dt><dd>82.3962</dd></div><div><dt>Scalar generation</dt><dd>13.60 tok/s</dd></div><div><dt>Est. scalar RSS</dt><dd>691 MiB</dd></div><div><dt>ARC-Easy, n=500</dt><dd>70.2%</dd></div></dl>
           </article>
           <article class="avx2-result">
             <p><span class="evidence-badge avx2">Vector leader, n=500</span><strong>Qwen2.5 1.5B Q4_K_M</strong></p>
-            <dl><div><dt>Vector total</dt><dd>80.7697</dd></div><div><dt>Scalar total</dt><dd>63.8176</dd></div><div><dt>Vector generation</dt><dd>17.23 tok/s</dd></div><div><dt>Vector RSS</dt><dd>1,839 MiB</dd></div><div><dt>ARC-Easy, n=500</dt><dd>71.8%</dd></div></dl>
+            <dl><div><dt>Vector total</dt><dd>84.1387</dd></div><div><dt>Scalar total</dt><dd>67.0475</dd></div><div><dt>Vector generation</dt><dd>17.44 tok/s</dd></div><div><dt>Est. vector RSS</dt><dd>1,706 MiB</dd></div><div><dt>ARC-Easy, n=500</dt><dd>77.8%</dd></div></dl>
           </article>
         </div>
       </div>
 
-      <p class="hero-caveat"><strong>Selection condition:</strong> submit Qwen3.5 if the audit runs the supplied scalar configuration, since it leads that matched comparison. Qwen2.5 1.5B leads the vector comparison, but still needs the same physical-target run as Qwen3.5, plus the embedded-behaviour check Qwen3.5 has already been through, before it could replace it. Neither candidate is a guaranteed winner outside its own CPU configuration.</p>
+      <p class="hero-caveat"><strong>Selection condition:</strong> use the tuned Qwen3.5 candidate for the supplied scalar configuration; use tuned Qwen2.5 only if the audit is confirmed to use the vector configuration. Before submission, apply the same embedded tutor policy to the chosen GGUF and repeat the live-prompt and physical-target checks.</p>
       <p class="override-warning" id="campaign-override-warning" hidden><strong>Loaded evidence differs from the report snapshot.</strong> The operational appendix shows the configured campaign.</p>
 
       <dl class="artifact-line">
-        <div><dt>Model file size</dt><dd>507.2 MB</dd></div>
+        <div><dt>Scalar candidate size</dt><dd>513.0 MB</dd></div>
         <div><dt>Quantization</dt><dd>Q4_0</dd></div>
         <div><dt>Target</dt><dd>8 GB, CPU-only</dd></div>
-        <div><dt>Selection basis</dt><dd>Scalar-matched accuracy and efficiency</dd></div>
+        <div><dt>Selection basis</dt><dd>Matched n=500 accuracy, speed, and RSS</dd></div>
       </dl>
     </header>
 
@@ -147,8 +146,8 @@
       <figure class="report-figure wide-figure">
         <div class="figure-head"><div><p class="figure-kicker">Separate accuracy evaluations</p><h3>Candidate measurements</h3></div><div class="chart-legend"><span class="q4">Reasoning study</span><span class="audit">Audit campaign</span></div></div>
         <div class="svg-chart tall-chart" id="model-funnel-chart" role="img" aria-label="Model size, accuracy proxy, and campaign status for evaluated candidate models" aria-describedby="model-funnel-summary"></div>
-        <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses a separate ARC-Easy proxy. The current Qwen3.5 0.8B Q4_0 final is 0.47 GiB at 64% and is the risk-adjusted recommendation. Math-Expert 0.6B Q4_K_M is 0.37 GiB at 68% and is the raw fixed-15 leader. Earlier candidates remain as comparison points.</p>
-        <figcaption><span>Fig. 2</span> The audit-campaign points are a preview of where this story's scoreboard eventually lands, several sections ahead; this section is really about the reasoning-study points, the four-task scale study that started everything. Older candidates stay in as comparison points; their accuracy values use the stated ARC-Easy proxy, not the four-task development mean.</figcaption>
+        <p class="sr-only" id="model-funnel-summary">The separate four-task reasoning study recorded Qwen3.5 4B at 2.55 GiB and 73.3, 2B at 1.19 GiB and 64.8, and 0.8B at 0.50 GiB and 51.3. The audit-candidate panel uses separate ARC-Easy proxies. Fine-tuned Qwen3.5 0.8B is 0.48 GiB at 70.2% and leads the scalar total. Fine-tuned Qwen2.5 1.5B is 0.92 GiB at 77.8% and leads the vector total. Earlier candidates remain as comparison points.</p>
+        <figcaption><span>Fig. 2</span> The reasoning-study points use a four-task development mean; audit candidates use ARC-Easy proxies. The two fine-tuned finalists are marked separately from the historical candidates.</figcaption>
       </figure>
 
       <p>4B beat 2B beat 0.8B, cleanly, on every task. Under a formula that pays 0.50 total-score points per accuracy point and only 2.86 per gigabyte saved, that curve makes a strong case for going as big as the RAM ceiling allows. But RSS on Linux tracks file bytes almost one-to-one, so "as big as the ceiling allows" is a number in the hundreds of megabytes, not gigabytes, once quantization is priced in. That tension split our search down two roads at once, plus one number neither road was allowed to cross:</p>
@@ -164,9 +163,9 @@
     <section class="chapter" id="methods" aria-labelledby="methods-title">
       <header class="chapter-head">
         <span class="chapter-number">03</span>
-        <div><p class="eyebrow">The toolbox</p><h2 id="methods-title">Nine ways to make a model fit</h2></div>
+        <div><p class="eyebrow">The toolbox</p><h2 id="methods-title">Ten optimization methods</h2></div>
       </header>
-      <p class="lead">Once we knew the shape of the trade-off, the question became mechanical: which levers actually move file size, RAM, and speed on this exact evaluator? We ended up pulling nine of them, roughly in this order, and each one either survived and narrowed the model further, or it didn't and we recorded why not.</p>
+      <p class="lead">We tested ten ways to change accuracy, file size, RAM, or speed. Each method either narrowed the candidate set or was retained as a measured rejection.</p>
 
       <div class="experiment-sequence" aria-label="Overview of methods explored">
         <article><span>1</span><h3>Quantization</h3><p>Which quantization type the audit binary can actually run fast, not just how many bits per weight.</p></article>
@@ -177,10 +176,11 @@
         <article><span>6</span><h3>Instruction-set targeting</h3><p>Discovering that the audit binary's actual CPU features change which quantization type wins, and testing both readings.</p></article>
         <article><span>7</span><h3>Widening the model search</h3><p>Testing nine more candidates and a specialist fine-tune once the first roster stopped improving.</p></article>
         <article><span>8</span><h3>Baking behaviour into the file</h3><p>Persona, chat template, and sampling defaults, since judges talk to the bare GGUF with no app layer in front of it.</p></article>
-        <article><span>9</span><h3>Runtime configuration we couldn't submit</h3><p>Repacking, mmap policy, thread count: real engineering wins that live in Muta's own runtime, not in the scored file.</p></article>
+        <article><span>9</span><h3>Fine-tuning</h3><p>Updating the two finalists on verified math and science questions matched to the profiler's continuation format.</p></article>
+        <article><span>10</span><h3>Runtime configuration we couldn't submit</h3><p>Repacking, mmap policy, thread count: measured changes that live in Muta's runtime, not in the submitted GGUF.</p></article>
       </div>
 
-      <p>Quantization, deduplication, and behaviour-baking are the three that live directly in the file we ship. Vocabulary pruning shaped the other road's file, the one that didn't win. Streaming and runtime tuning are engine-only: one got rejected outright, the other just makes every later comparison trustworthy. The sixth, instruction-set targeting, doesn't touch the file either, but it changes which quantization choice actually wins. Widening the search, twice, decided which model earns all of this. Quantization first, since it's the lever every other decision had to route around.</p>
+      <p>Quantization, deduplication, embedded behaviour, and fine-tuning can change the submitted GGUF. Streaming and runtime tuning cannot. The model search identifies which architecture receives those changes; the scalar/vector comparison determines how each candidate is scored.</p>
     </section>
 
     <section class="chapter" id="quantization" aria-labelledby="quant-title">
@@ -680,16 +680,16 @@
 
       <p>Under vector, Qwen2.5 1.5B leads all three finalists. Under scalar, the ranking reverses entirely: Qwen3.5 leads, Math-Expert follows, and Qwen2.5 falls to third, because the profiler kernel that runs Qwen2.5's Q4_K_M tensors is the same slow generic-C path that cost every k-quant in this story. Neither raw finalist we found first turns out to be the best answer in every regime; the honest one depends on which binary the final audit actually runs.</p>
 
-      <p>Put every model this project ever paired under matched scalar and vector execution on one axis, the seven from the first exploration alongside the eight from this one, and the same shape holds across all fifteen:</p>
+      <p>The combined figure retains the original 15-model search and adds the two tuned finalists, so the latest result remains visible beside the candidates that produced it:</p>
 
       <figure class="report-figure wide-figure isa-score-figure">
         <div class="figure-head">
-          <div><p class="figure-kicker">Both explorations, one axis</p><h3>Every paired model, scalar versus vector</h3></div>
+          <div><p class="figure-kicker">Model search and tuned finalists</p><h3>Every paired model, scalar versus vector</h3></div>
           <div class="chart-legend isa-legend"><span class="scalar">Scalar</span><span class="avx2">Vector</span></div>
         </div>
-        <div class="svg-chart tall-chart" id="all-models-score-chart" role="img" aria-label="Vertical paired scalar and vector total scores for every model measured across both the seven-model ladder and the eight-model screen" aria-describedby="all-models-score-summary"></div>
+        <div class="svg-chart tall-chart" id="all-models-score-chart" role="img" aria-label="Vertical paired scalar and vector total scores for the model search and both fine-tuned finalists" aria-describedby="all-models-score-summary"></div>
         <p class="sr-only" id="all-models-score-summary" aria-live="polite">Loading the combined comparison across both explorations.</p>
-        <figcaption><span>Fig. 15</span> Fifteen GGUFs, matched scalar and vector totals, sorted by vector total. The first seven come from the quantization-ladder exploration above; the last eight are this section's screen. Qwen2.5 1.5B holds the highest vector total of any model measured in this project; Math-Expert holds the highest scalar total.</figcaption>
+        <figcaption><span>Fig. 15</span> Seventeen GGUF results on one axis: the 15-model search and two fine-tuned finalists. The tuned Qwen2.5 has the highest vector total; the tuned Qwen3.5 has the highest scalar total.</figcaption>
       </figure>
 
       <p><strong>Narrowing.</strong> Qwen2.5 1.5B becomes the vector-configuration recommendation, provisionally, pending the same physical-target run and embedded-behaviour check Qwen3.5 has already been through. Qwen3.5 0.8B remains the scalar-configuration recommendation, ahead of Math-Expert once both are read at the same sample size. The submission choice depends on which CPU configuration the supplied profiler actually runs, not on either finalist's small-sample score alone.</p>
@@ -704,7 +704,7 @@
 
       <figure class="report-figure wide-figure">
         <svg viewBox="0 0 720 264" role="img" aria-labelledby="derivation-title" aria-describedby="derivation-summary">
-          <title id="derivation-title">Metadata-only derivation of the current recommended Qwen3.5 GGUF</title>
+          <title id="derivation-title">Metadata-only derivation of the previously packaged Qwen3.5 GGUF</title>
           <style>
             .dv-stage { fill: #ffffff; stroke: #cec8be; stroke-width: 1.5; }
             .dv-stage.final { stroke: #1b6ca8; fill: #eaf1f8; }
@@ -757,42 +757,89 @@
           <text class="dv-op" x="0" y="256">Runtime flags, engine patches, and application code are not included.</text>
         </svg>
         <p class="sr-only" id="derivation-summary">The Qwen3.5 0.8B Q4_0 source is 507.2 MB. The build adds the tutor policy, English language tag, non-thinking ChatML template, and sampling defaults without changing model tensors. Verification confirms that all 320 model tensors are identical.</p>
-        <figcaption><span>Fig. 16</span> The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata. The tensor-identity check lets us transfer the source vector measurement; the final model itself still completed the direct scalar profiler run.</figcaption>
+        <figcaption><span>Fig. 16</span> The previous packaged Qwen3.5 model differed from its source quant only in GGUF metadata. The tuned finalist must receive and revalidate the same policy before submission.</figcaption>
       </figure>
 
       <p>We replace the chat template with a clean ChatML template that injects the Muta tutoring persona as the system turn whenever the client sends none, and always opens the assistant turn with an empty <code>&lt;think&gt;&lt;/think&gt;</code> block, forcing a direct answer instead of a long reasoning trace. That last part isn't cosmetic. A live four-prompt acceptance test with unrestricted thinking left both finalists spending their entire 256-token allowance on hidden reasoning and returning no usable answer at all, a minute of silence per prompt at audit-box speed. Disabling thinking fixed that. Sampling defaults (temperature 0.4, top-p 0.9, min-p 0.05, repeat penalty 1.05) are read straight from the file by <code>llama-server</code>, and the persona runs about 130 tokens, so a judge's first turn pays little extra prefill for it.</p>
 
-      <p>We verified this on both paths a judge could plausibly use: llama.cpp's own Jinja engine, probed on a stock server with zero flags, correctly injecting the persona and answering test prompts with <code>finish_reason: stop</code>; and llama-cpp-python's separate jinja2 path. Neither finalist passed everything, though. Both still failed the hardest prompt in that battery, proving √2 is irrational, and some Qwen answers ran into the 256-token limit trying. We record that as a real quality limit, not a rounding error we can explain away.</p>
+      <p>We verified this on llama.cpp's Jinja engine and llama-cpp-python's separate jinja2 path. The previous Qwen3.5 package injected the persona and stopped correctly, but the hardest proof prompt still failed. The fine-tuned finalists below have not yet repeated this battery; measured accuracy alone does not clear that requirement.</p>
+    </section>
+
+    <section class="chapter" id="finetuning" aria-labelledby="finetuning-title">
+      <header class="chapter-head">
+        <span class="chapter-number">15</span>
+        <div><p class="eyebrow">Method nine</p><h2 id="finetuning-title">Fine-tuning the two finalists</h2></div>
+      </header>
+      <p class="lead">We trained 15 candidates across Qwen3.5 0.8B and Qwen2.5 1.5B, varying LoRA rank, BF16 LoRA versus QLoRA, data mixture, learning rate, and training length. Every survivor was exported to its deployment quantization and evaluated as a GGUF; training loss did not select a winner.</p>
+
+      <p>The first eight runs did not improve ARC-Easy-500. Most training examples were long solutions or tutor dialogue, while the profiler scores short answer continuations. The original data builder also omitted the leading space between <code>Answer:</code> and the candidate continuation, changing the BPE tokens used during training. We corrected both problems, filtered against held-out questions, and used only source training splits. The final Qwen2.5 mixture excludes OpenBookQA because its published licence is unclear.</p>
+
+      <div class="finding-pair finetune-methods">
+        <article><p class="figure-kicker">Initial sweep</p><h3>Eight runs · no promotion</h3><p>Balanced and reasoning-heavy mixtures improved validation loss but did not improve the exact profiler task.</p></article>
+        <article><p class="figure-kicker">Metric-aligned sweep</p><h3>Seven runs · two promotions</h3><p>Raw multiple-choice continuations, corrected token boundaries, verified answers, and leakage checks improved both finalists.</p></article>
+      </div>
+
+      <div class="campaign-summary-grid finetune-chart-grid">
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Matched 500-item evaluation</p><h3>Accuracy before and after tuning</h3></div><div class="chart-legend"><span class="control">Control</span><span class="tuned">Fine-tuned</span></div></div>
+          <div class="svg-chart compact-chart" id="finetune-accuracy-chart" role="img" aria-label="ARC-Easy accuracy for matched control and fine-tuned Qwen3.5 and Qwen2.5 GGUFs" aria-describedby="finetune-accuracy-summary"></div>
+          <p class="sr-only" id="finetune-accuracy-summary" aria-live="polite">Loading fine-tuning accuracy results.</p>
+          <figcaption><span>Fig. 17</span> Qwen3.5 improved from 55.2% to 70.2%; Qwen2.5 improved from 74.4% to 77.8%. Both comparisons use matched exports and the same 500-item metric.</figcaption>
+        </figure>
+        <figure class="report-figure">
+          <div class="figure-head"><div><p class="figure-kicker">Fine-tuned GGUFs</p><h3>Total score by CPU configuration</h3></div><div class="chart-legend isa-legend"><span class="scalar">Scalar</span><span class="avx2">Vector</span></div></div>
+          <div class="svg-chart compact-chart" id="finetune-score-chart" role="img" aria-label="Scalar and vector fixed-15 total scores for the two fine-tuned finalists" aria-describedby="finetune-score-summary"></div>
+          <p class="sr-only" id="finetune-score-summary" aria-live="polite">Loading fine-tuned finalist scores.</p>
+          <figcaption><span>Fig. 18</span> The scalar and vector rankings remain split: tuned Qwen3.5 leads scalar; tuned Qwen2.5 leads vector.</figcaption>
+        </figure>
+      </div>
+
+      <details class="reasoning-check measurement-disclosure" open>
+        <summary>Matched control, performance, and memory results</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="finetune-results-table" aria-label="Fine-tuning control and candidate benchmark results"></table></div></div>
+      </details>
+
+      <p>Qwen3.5 gained 15.0 accuracy points and approximately 7.5 total points in either CPU configuration. Qwen2.5 gained 3.4 accuracy points and approximately 1.7 total points. Throughput and memory were effectively unchanged within each matched pair, so these score gains come from accuracy rather than a deployment trade-off.</p>
+
+      <details class="reasoning-check measurement-disclosure">
+        <summary>Secondary held-out checks</summary>
+        <div><div class="table-wrap editorial-table-wrap"><table class="editorial-table" id="finetune-heldout-table" aria-label="Secondary held-out results for fine-tuned candidates"></table></div><p id="finetune-heldout-note"></p></div>
+      </details>
+
+      <aside class="design-note warning-note">
+        <p class="design-note-label">Evidence boundary</p>
+        <p>RSS is measured for the benchmark child tree and then adjusted by a 45 MiB estimate for the profiler process. GCP exposes no package temperature. Qwen2.5's secondary held-out battery remains pending because unrelated CPU work interrupted the run; no partial value is reported.</p>
+      </aside>
     </section>
 
     <section class="chapter" id="current-state" aria-labelledby="current-state-title">
       <header class="chapter-head">
-        <span class="chapter-number">15</span>
-        <div><p class="eyebrow">Where the story stands</p><h2 id="current-state-title">Nine methods, and a runtime-dependent answer</h2></div>
+        <span class="chapter-number">16</span>
+        <div><p class="eyebrow">Current decision</p><h2 id="current-state-title">Fine-tuning raises both scores; the runtime split remains</h2></div>
       </header>
-      <p class="lead">Nine mechanisms, two roads, and two widenings of the model search later, the scoreboard doesn't converge on one file. It converges on two, cleanly split by which CPU configuration actually runs the judging, once every candidate is matched to the same 500-item accuracy sample.</p>
+      <p class="lead">The matched 500-item comparison still selects one model per CPU configuration. Fine-tuning raises both totals without materially changing speed or memory.</p>
 
       <div class="finding-pair">
-        <article><p class="figure-kicker">Scalar configuration, n=500</p><h3>Qwen3.5 0.8B Q4_0 · 72.7895</h3><p>Leads Math-Expert (71.2324) and Qwen2.5 1.5B (63.8176). This is our supplied-profiler submission.</p></article>
-        <article><p class="figure-kicker">Vector configuration, n=500</p><h3>Qwen2.5 1.5B Q4_K_M · 80.7697</h3><p>Leads Qwen3.5 (76.8104) and Math-Expert (75.1803). Provisional: the physical-target and behaviour checks below are still open.</p></article>
+        <article><p class="figure-kicker">Scalar configuration, n=500</p><h3>Fine-tuned Qwen3.5 0.8B · 80.3664</h3><p>70.2% ARC-Easy, 13.60 tok/s, and an estimated 691 MiB profiler RSS.</p></article>
+        <article><p class="figure-kicker">Vector configuration, n=500</p><h3>Fine-tuned Qwen2.5 1.5B · 84.1387</h3><p>77.8% ARC-Easy, 17.44 tok/s, and an estimated 1,706 MiB profiler RSS.</p></article>
       </div>
 
       <aside class="design-note warning-note">
         <p class="design-note-label">Required validation</p>
-        <p>We still need to run the final Qwen3.5 file and Qwen2.5 1.5B on the physical target using the competition procedure, recording repeated throughput, whole-tree RSS, temperature, and throttling. Qwen2.5 also needs the same embedded chat-template check the final Qwen3.5 file has already been through, described in the next section: template injection and stop-token behaviour both check out, but the hardest prompt in that battery still fails.</p>
+        <p>Apply the embedded tutor policy to both tuned GGUFs, repeat the live-prompt battery, and run the chosen file on the physical target with repeated throughput, whole-tree RSS, temperature, and throttling measurements. Complete Qwen2.5's interrupted secondary held-out battery.</p>
       </aside>
 
       <aside class="design-note warning-note">
         <p class="design-note-label">Submission decision</p>
-        <p><strong>We recommend submitting <code>Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf</code> under the supplied scalar profiler.</strong> Qwen2.5 1.5B Q4_K_M is the validated vector candidate; it replaces Qwen3.5 only if the final audit is confirmed to run the vector configuration and Qwen2.5 passes the physical-target and embedded-behaviour checks. Neither candidate is a guaranteed winner outside its own CPU configuration, and neither has yet passed the difficult proof prompt in our live acceptance battery.</p>
+        <p><strong>The tuned Qwen3.5 0.8B Q4_0 is the current scalar candidate.</strong> The tuned Qwen2.5 1.5B Q4_K_M replaces it only if the audit is confirmed to use the vector configuration. This is a measurement decision, not yet a submission-ready artifact decision.</p>
       </aside>
 
-      <p>Nine methods, two roads, two widenings, and one lesson that came back every time we changed the CPU configuration: on this evaluator, the kernel a quantization type runs on matters more than its file size, and the kernel is the one thing that depends on hardware we can't fully confirm from here. Whatever this page says next time you read it, that's the one conclusion we don't expect to change.</p>
+      <p>Quantization determines the available CPU kernel; fine-tuning changes accuracy without changing that kernel. The final model choice therefore remains conditional on the evaluator's CPU configuration.</p>
     </section>
 
     <section class="chapter" id="ledger" aria-labelledby="ledger-title">
       <header class="chapter-head">
-        <span class="chapter-number">16</span>
+        <span class="chapter-number">17</span>
         <div><p class="eyebrow">The receipts</p><h2 id="ledger-title">Every experiment, adopted, rejected, and deferred</h2></div>
       </header>
       <p class="lead">The measurements above produced the decisions below. Adopted changes appear first; use the filters to see rejected, neutral, and deferred tests.</p>
@@ -808,7 +855,7 @@
 
     <section class="chapter" id="faq" aria-labelledby="faq-title">
       <header class="chapter-head">
-        <span class="chapter-number">17</span>
+        <span class="chapter-number">18</span>
         <div><p class="eyebrow">Challenge requirements</p><h2 id="faq-title">Requirement status</h2></div>
       </header>
       <p class="lead">Model selection also has to satisfy the published challenge requirements. Each entry pairs one requirement with what we have actually implemented.</p>

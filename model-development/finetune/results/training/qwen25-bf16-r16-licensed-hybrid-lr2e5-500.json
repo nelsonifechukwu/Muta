@@ -1,0 +1,47 @@
+{
+  "batch_size": 4,
+  "cuda": "12.8",
+  "elapsed_seconds": 619.643,
+  "epochs": 1.0,
+  "eval_batch_size": 4,
+  "gguf_method": "q4_k_m",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gradient_accumulation": 4,
+  "learning_rate": 2e-05,
+  "max_length": 1024,
+  "max_steps": 500,
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "python": "3.12.3",
+  "rank": 16,
+  "raw_completion_boundary": "lm_eval_leading_space",
+  "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "schema_version": 1,
+  "seed": 3407,
+  "torch": "2.7.0",
+  "train_input": {
+    "path": "data-metric-licensed-hybrid/train.jsonl",
+    "sha256": "d70dfe0e0126489a3abc4c0370875aee4c398539dda21c8412558f9756de2090"
+  },
+  "train_metrics": {
+    "epoch": 0.6011421701232341,
+    "total_flos": 1.35051805584384e+16,
+    "train_loss": 0.8696806373596191,
+    "train_runtime": 563.4071,
+    "train_samples_per_second": 14.199,
+    "train_steps_per_second": 0.887
+  },
+  "train_rows": 13307,
+  "training_method": "lora_bf16",
+  "validation_input": {
+    "path": "data-metric-licensed-hybrid/validation.jsonl",
+    "sha256": "8b8c3bc0ed09d54c2571543b2ee4c1ab2209c93cf03468e0886659c94f86399a"
+  },
+  "validation_metrics": {
+    "epoch": 0.6011421701232341,
+    "eval_loss": 1.5985842943191528,
+    "eval_runtime": 11.7391,
+    "eval_samples_per_second": 58.778,
+    "eval_steps_per_second": 14.737
+  },
+  "validation_rows": 690
+}

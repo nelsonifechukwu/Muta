@@ -13,8 +13,10 @@ launcher that restores the AppImage executable bit; Windows retains its existing
 
 - macOS: `Muta.command`, `Muta.app`, `model-pack/`, and `HOW TO INSTALL.txt` stay together.
   `Muta.command` resolves its own directory, refuses to target a missing sibling app, invokes the
-  system `/usr/bin/xattr`, and opens only that app. The guide discloses that this is an unsigned
-  private-test workaround and that a public build must be Developer ID signed and notarized.
+  system `/usr/bin/xattr`, and opens only that app. The guide invokes the quarantined helper
+  explicitly through `/bin/zsh` in Terminal instead of asking Finder to launch it. It discloses
+  that this is an unsigned private-test workaround and that a public build must be Developer ID
+  signed and notarized.
 - Linux: `Muta.sh`, `Muta.AppImage`, `model-pack/`, and `HOW TO INSTALL.txt` stay together.
   `Muta.sh` restores the executable bit and replaces itself with the AppImage process.
 - Windows: `Install-Muta.cmd`, `Muta-Setup.exe`, `model-pack/`, and `HOW TO INSTALL.txt` stay

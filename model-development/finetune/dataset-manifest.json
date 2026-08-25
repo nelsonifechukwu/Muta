@@ -1,0 +1,43 @@
+{
+  "excluded": [
+    "all validation and test splits",
+    "the ARC-Easy-500 evaluation questions",
+    "the two submitted ADTC prompts"
+  ],
+  "profile": "balanced",
+  "schema_version": 1,
+  "seed": 3407,
+  "source_revisions": {
+    "HuggingFaceTB/smoltalk": "5feaf2fd3ffca7c237fc38d1861bc30365d48ffa",
+    "allenai/ai2_arc": "210d026faf9955653af8916fad021475a3f00453",
+    "allenai/openbookqa": "388097ea7776314e93a529163e0fea805b8a6454",
+    "eth-nlped/mathdial-chat": "52b3ffd70162631400016b8ce15a647e4b397ae1",
+    "openai/gsm8k": "740312add88f781978c0658806c59bc2815b9866"
+  },
+  "train": {
+    "rows": 9348,
+    "sha256": "2622ae5073d2e28e91fb7bcc399049f5134685bcf424933ccdbe22d138e5e5c1",
+    "sources": {
+      "arc_challenge_train": 764,
+      "arc_easy_train": 1425,
+      "gsm8k_train": 3792,
+      "mathdial_train": 1427,
+      "openbookqa_train": 949,
+      "smoltalk_everyday_train": 761,
+      "verified_african_arithmetic": 230
+    }
+  },
+  "validation": {
+    "rows": 492,
+    "sha256": "7e9d4aaa32975d371cef13505ef3a1b15ffe82b601a7fd2346156dee2f3a9079",
+    "sources": {
+      "arc_challenge_train": 36,
+      "arc_easy_train": 75,
+      "gsm8k_train": 208,
+      "mathdial_train": 73,
+      "openbookqa_train": 51,
+      "smoltalk_everyday_train": 39,
+      "verified_african_arithmetic": 10
+    }
+  }
+}

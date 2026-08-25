@@ -80,11 +80,13 @@ GitHub runners and uploads one complete offline archive for each supported targe
 include the application and model pack and are suitable for copying to test laptops immediately.
 Every archive exposes `HOW TO INSTALL.txt` at its top level. They are intentionally unsigned:
 the macOS test kit includes `Muta.command`, which clears download quarantine only from its sibling
-`Muta.app` before opening it; the tester may need to right-click the command and choose **Open**.
-Windows displays an **Unknown Publisher** warning, and Linux includes `Muta.sh` to restore the
-AppImage executable bit. These helpers are private-test conveniences, not substitutes for platform
-trust. Use the protected release workflow below for public, warning-free distribution; its
-notarized macOS kit opens `Muta.app` directly and does not include the quarantine helper.
+`Muta.app` before opening it. Because Finder can quarantine the helper too, the guide has the
+tester invoke it explicitly by typing `/bin/zsh ` in Terminal, dragging `Muta.command` into that
+window and pressing Return. Windows displays an **Unknown Publisher** warning, and Linux includes
+`Muta.sh` to restore the AppImage executable bit. These helpers are private-test conveniences, not
+substitutes for platform trust. Use the protected release workflow below for public, warning-free
+distribution; its notarized macOS kit opens `Muta.app` directly and does not include the quarantine
+helper.
 
 The package workflow restores three content-addressed layers when their inputs have not changed:
 the verified platform-independent models/UI, each target's pinned native sidecars, and each
