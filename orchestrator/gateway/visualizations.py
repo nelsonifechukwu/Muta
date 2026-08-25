@@ -1459,6 +1459,105 @@ def _verified_visual_explanation(spec: dict[str, Any]) -> str:
     return ""
 
 
+def _contradicts_verified_visual(prose: str, spec: dict[str, Any]) -> bool:
+    """Reject a few high-cost misconceptions the deterministic construction can disprove.
+
+    This is intentionally narrow: it is a safety barrier for the standard visuals, not a claim
+    to understand arbitrary prose.  Unknown wording falls through to the existing completeness
+    rule; explicit contradictions use the checked explanation instead.
+    """
+    title = str(spec.get("title", ""))
+    value = " ".join(str(prose or "").split())
+    if title.startswith("Satellite in circular orbit"):
+        return bool(
+            re.search(
+                r"\b(?:larger|higher|greater)\s+(?:orbital\s+)?radius\b[^.!?]{0,90}"
+                r"\b(?:higher|greater|faster)\s+(?:orbital\s+)?speed\b",
+                value,
+                re.IGNORECASE,
+            )
+            or re.search(
+                r"\b(?:orbital|sideways)\s+speed\b[^.!?]{0,55}"
+                r"\b(?:must|needs?|has|is|required|to)\b[^.!?]{0,30}"
+                r"\b(?:constantly|continuously)\b[^.!?]{0,20}"
+                r"\b(?:increase|decrease|change|get\s+faster|get\s+slower)\b",
+                value,
+                re.IGNORECASE,
+            )
+        )
+    if title.startswith("Heart: double circulation"):
+        return bool(
+            re.search(
+                r"\bblood\s+(?:flow\s+)?starts?\s+in\s+the\s+left\s+ventricle\b",
+                value,
+                re.IGNORECASE,
+            )
+            or re.search(
+                r"\bpulmonary\s+artery\b[^.!?]{0,40}\boxygenated\b",
+                value,
+                re.IGNORECASE,
+            )
+            or re.search(
+                r"\bpulmonary\s+veins?\b[^.!?]{0,40}\bdeoxygenated\b",
+                value,
+                re.IGNORECASE,
+            )
+        )
+    if "structural formula" in title:
+        expected_hydrogens = sum(
+            1
+            for node in spec.get("nodes") or []
+            if isinstance(node, dict) and node.get("label") == "H"
+        )
+        words = {
+            "one": 1,
+            "two": 2,
+            "three": 3,
+            "four": 4,
+            "five": 5,
+            "six": 6,
+            "seven": 7,
+            "eight": 8,
+            "nine": 9,
+            "ten": 10,
+        }
+        count = re.search(
+            r"\bhas\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)"
+            r"\s+hydrogens?\b",
+            value,
+            re.IGNORECASE,
+        )
+        if count:
+            stated = words.get(
+                count.group(1).lower(), int(count.group(1)) if count.group(1).isdigit() else -1
+            )
+            return stated != expected_hydrogens
+    if title.startswith("Sine-wave phase shift"):
+        return bool(
+            re.search(
+                r"\bphase\s+(?:shift|angle)\b[^.!?]{0,60}\bchanges?\b[^.!?]{0,30}"
+                r"\b(?:amplitude|period|frequency)\b",
+                value,
+                re.IGNORECASE,
+            )
+        )
+    if title.startswith("Projectile path"):
+        return bool(
+            re.search(
+                r"\bhorizontal\s+velocity\b[^.!?]{0,40}"
+                r"\b(?:changes?|increases?|decreases?|accelerates?)\b",
+                value,
+                re.IGNORECASE,
+            )
+            or re.search(
+                r"\bvertical\s+acceleration\b[^.!?]{0,35}\bupward\b",
+                value,
+                re.IGNORECASE,
+            )
+        )
+    return False
+
+
 def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
     """Keep a complete lesson explanation; use checked copy only as a safe fallback.
 
@@ -1471,7 +1570,9 @@ def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
     explanation = "\n\n".join(kept)
     verified = _verified_visual_explanation(spec)
     sentence_count = len(re.findall(r"[.!?](?=\s|$)", explanation))
-    if explanation and (not verified or sentence_count >= 2):
+    if explanation and (
+        not verified or (sentence_count >= 2 and not _contradicts_verified_visual(explanation, spec))
+    ):
         return explanation
     if verified:
         return verified

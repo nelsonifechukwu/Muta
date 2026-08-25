@@ -29,8 +29,9 @@ Repair five regressions reported in the signed desktop releases without changing
 - Ignore empty VAD segments before invoking the native Moonshine decoder so a zero-length capture cannot trigger a native shape exception.
 - Add a labelled SVG PDF attachment button to the existing composer icon row, wire it to the hidden PDF input, remove the Settings upload action, and keep Settings only for managing already uploaded resources.
 - Improve recorded-audio upload errors and authenticated requests while touching that path.
-- Preserve non-refusal explanations containing at least two complete sentences. Keep the checked
-  deterministic explanation as the fallback for refusals and thin one-sentence output.
+- Preserve non-refusal explanations containing at least two complete sentences when they do not
+  contradict facts encoded by the deterministic visual. Keep the checked deterministic
+  explanation as the fallback for refusals, thin output, and explicit high-cost misconceptions.
 
 ## Verification
 

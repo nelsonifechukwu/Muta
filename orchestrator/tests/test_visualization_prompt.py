@@ -376,6 +376,18 @@ def test_standard_science_visuals_preserve_a_complete_explanation() -> None:
     assert "gravity supplies the centripetal force" not in reply
 
 
+def test_complete_but_contradictory_visual_explanation_uses_checked_copy() -> None:
+    prose = (
+        "Gravity turns the satellite toward Earth. The sideways speed must constantly increase "
+        "as the satellite travels around its circular path."
+    )
+
+    reply = append_visualization(prose, _satellite_orbit_spec())
+
+    assert "sideways speed must constantly increase" not in reply
+    assert "larger orbital radius gives a lower orbital speed" in reply
+
+
 def test_constrained_pass_falls_back_on_invalid_data_and_honours_cancellation() -> None:
     invalid = _RecordingVisualClient({"version": 1, "library": "d3", "kind": "bar"})
     fallback = generate_visualization(
