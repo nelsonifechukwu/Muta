@@ -371,10 +371,14 @@ fn install_model_pack(
     let store = data_root.join("model-packs");
     let packs = store.join("packs");
     fs::create_dir_all(&packs).map_err(|error| error.to_string())?;
-    let destination = packs.join(&manifest.pack_id);
+    // A human-readable pack id is not a content version: a promoted model may change while the
+    // product still calls the pack `muta-models-2026.08`. Store each verified manifest in its own
+    // immutable directory so upgrades never reuse stale bytes or overwrite a mmap-open GGUF.
+    let manifest_hash = hash_file(&source.join("model-pack.json"))?;
+    let destination = packs.join(format!("{}-{manifest_hash}", manifest.pack_id));
     if !destination.is_dir() {
         let incoming = packs.join(format!(
-            ".incoming-{}-{}",
+            ".incoming-{}-{}-{manifest_hash}",
             std::process::id(),
             manifest.pack_id
         ));
@@ -382,11 +386,48 @@ fn install_model_pack(
             fs::remove_dir_all(&incoming).map_err(|error| error.to_string())?;
         }
         copy_model_pack(source, &incoming, &manifest)?;
+        // Preserve valid user-added GGUFs from the previously active version before switching
+        // the pointer. Base files remain governed exclusively by the new signed manifest.
+        let pointer_path = store.join("active.json");
+        if let Ok(previous) = read_json::<ActivePointer>(&pointer_path) {
+            if previous.pack_id == required_id {
+                if let Ok(relative) = safe_relative(&previous.path) {
+                    sync_custom_models(&store.join(relative), &incoming)?;
+                }
+            }
+        }
         sync_custom_models(source, &incoming)?;
         verify_model_pack(&incoming, required_id)?;
         fs::rename(&incoming, &destination).map_err(|error| error.to_string())?;
     } else {
-        verify_model_pack(&destination, required_id)?;
+        if let Err(verification_error) = verify_model_pack(&destination, required_id) {
+            // The content-addressed destination should be immutable. If it was interrupted or
+            // corrupted, rebuild it beside the old directory and swap only after verification.
+            let incoming = packs.join(format!(
+                ".repair-{}-{}-{manifest_hash}",
+                std::process::id(),
+                manifest.pack_id
+            ));
+            let backup = packs.join(format!(
+                ".replaced-{}-{}-{manifest_hash}",
+                std::process::id(),
+                manifest.pack_id
+            ));
+            let _ = fs::remove_dir_all(&incoming);
+            let _ = fs::remove_dir_all(&backup);
+            copy_model_pack(source, &incoming, &manifest)?;
+            sync_custom_models(&destination, &incoming)?;
+            sync_custom_models(source, &incoming)?;
+            verify_model_pack(&incoming, required_id)?;
+            fs::rename(&destination, &backup).map_err(|error| {
+                format!("replacing corrupt model pack after {verification_error}: {error}")
+            })?;
+            if let Err(error) = fs::rename(&incoming, &destination) {
+                let _ = fs::rename(&backup, &destination);
+                return Err(format!("installing repaired model pack: {error}"));
+            }
+            fs::remove_dir_all(&backup).map_err(|error| error.to_string())?;
+        }
         sync_custom_models(source, &destination)?;
     }
     let pointer = ActivePointer {
@@ -798,6 +839,57 @@ mod tests {
         let candidates = candidate_model_roots(&data_root, "test-pack");
         assert_eq!(candidates.last(), Some(&pointer_root));
         fs::remove_dir_all(data_root).unwrap();
+    }
+
+    fn write_test_pack(root: &Path, payload: &[u8]) {
+        let model = root.join("models/core/model.gguf");
+        fs::create_dir_all(model.parent().unwrap()).unwrap();
+        fs::write(&model, payload).unwrap();
+        let sha256 = hash_file(&model).unwrap();
+        fs::write(
+            root.join("model-pack.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema": 1,
+                "pack_id": "test-pack",
+                "active_model_id": "test-model",
+                "files": [{
+                    "path": "models/core/model.gguf",
+                    "size_bytes": payload.len(),
+                    "sha256": sha256,
+                }],
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn model_pack_upgrade_replaces_stale_content_and_preserves_custom_models() {
+        let root =
+            std::env::temp_dir().join(format!("muta-pack-upgrade-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let data_root = root.join("data");
+        let first_source = root.join("first");
+        let second_source = root.join("second");
+        write_test_pack(&first_source, b"old model bytes");
+        write_test_pack(&second_source, b"new promoted model bytes");
+
+        let first = install_model_pack(&first_source, &data_root, "test-pack").unwrap();
+        let custom = first.join("models/custom/teacher.gguf");
+        fs::create_dir_all(custom.parent().unwrap()).unwrap();
+        fs::write(&custom, [b'G', b'G', b'U', b'F', 3, 0, 0, 0]).unwrap();
+
+        let second = install_model_pack(&second_source, &data_root, "test-pack").unwrap();
+
+        assert_ne!(first, second);
+        assert_eq!(
+            fs::read(second.join("models/core/model.gguf")).unwrap(),
+            b"new promoted model bytes"
+        );
+        assert!(second.join("models/custom/teacher.gguf").is_file());
+        let pointer: ActivePointer = read_json(&data_root.join("model-packs/active.json")).unwrap();
+        assert_eq!(data_root.join("model-packs").join(pointer.path), second);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
