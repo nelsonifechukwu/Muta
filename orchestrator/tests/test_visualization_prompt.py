@@ -363,17 +363,19 @@ def test_standard_science_visuals_replace_contradictory_model_copy_with_checked_
     assert "five hydrogens" not in ethane_reply
 
 
-def test_standard_science_visuals_preserve_a_complete_explanation() -> None:
+def test_standard_science_visuals_use_checked_explanation_beside_the_diagram() -> None:
     prose = (
-        "Gravity continually bends the satellite's straight-line motion toward Earth. "
-        "At the orbital speed, that inward acceleration makes the satellite fall around Earth "
-        "instead of into it."
+        "A force pushes the satellite forward while gravity acts perpendicular to the orbital "
+        "plane. Without that forward force, the satellite would fly into space."
     )
 
     reply = append_visualization(prose, _satellite_orbit_spec())
 
-    assert reply.startswith(prose + "\n\n```muta-viz\n")
-    assert "gravity supplies the centripetal force" not in reply
+    assert "force pushes the satellite forward" not in reply
+    assert "perpendicular to the orbital plane" not in reply
+    assert reply.startswith("For a circular orbit, gravity supplies the centripetal force:")
+    assert "larger orbital radius gives a lower orbital speed" in reply
+    assert "\n\n```muta-viz\n" in reply
 
 
 def test_complete_but_contradictory_visual_explanation_uses_checked_copy() -> None:

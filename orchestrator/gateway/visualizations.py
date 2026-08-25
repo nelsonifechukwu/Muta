@@ -1559,21 +1559,18 @@ def _contradicts_verified_visual(prose: str, spec: dict[str, Any]) -> bool:
 
 
 def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
-    """Keep a complete lesson explanation; use checked copy only as a safe fallback.
+    """Keep an explanation beside every visual, using checked copy for standard science.
 
-    Standard visualizations have deterministic teaching copy because very small models sometimes
-    emit a refusal or a single, contradictory sentence.  That copy must not replace an otherwise
-    complete explanation: the diagram is supporting material, not the whole answer.
+    The standard constructions already encode the exact scientific relationship shown. Their
+    deterministic teaching copy is therefore authoritative: a fluent small-model explanation can
+    still invent a second force or reverse a direction without matching one narrow phrase filter.
+    Unknown/custom visuals retain the model's complete prose. In both cases the diagram remains
+    supporting material rather than replacing the written explanation.
     """
     paragraphs = [part.strip() for part in re.split(r"\n\s*\n", str(prose or "")) if part.strip()]
     kept = [part for part in paragraphs if not _VISUAL_REFUSAL.search(part)]
     explanation = "\n\n".join(kept)
     verified = _verified_visual_explanation(spec)
-    sentence_count = len(re.findall(r"[.!?](?=\s|$)", explanation))
-    if explanation and (
-        not verified or (sentence_count >= 2 and not _contradicts_verified_visual(explanation, spec))
-    ):
-        return explanation
     if verified:
         return verified
     if explanation:
