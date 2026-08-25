@@ -143,7 +143,10 @@ def target_environment(platform_name: str, cache_root: Path) -> dict[str, str]:
     # Shell provisioning helpers must use the worker's prepared interpreter. Calling an ambient
     # `python3` is unsafe on macOS (Homebrew may point at a different version without the build
     # dependencies) and on Windows (MSYS may not have any Python on PATH).
-    python = Path(sys.executable).resolve()
+    # Keep the virtual-environment launcher path intact.  On macOS ``venv/bin/python`` is a
+    # symlink to the uv-managed base interpreter; resolving that symlink silently leaves the
+    # prepared venv (and its desktop dependencies such as huggingface_hub).
+    python = Path(sys.executable).absolute()
     env["PYTHON"] = msys_path(python)
     env["PATH"] = str(python.parent) + os.pathsep + env.get("PATH", "")
     env["MUTA_DESKTOP_TARGET_ARCH"] = target_arch

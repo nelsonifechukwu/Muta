@@ -122,10 +122,27 @@ def test_gateway_worker_uses_external_cargo_cache(tmp_path: Path) -> None:
     assert worker.bundle_root(environment) == (
         tmp_path / "cargo-target/darwin-x86_64/x86_64-apple-darwin/release/bundle"
     )
-    assert Path(environment["PYTHON"]).resolve() == Path(worker.sys.executable).resolve()
+    assert environment["PYTHON"] == worker.msys_path(Path(worker.sys.executable).absolute())
     assert Path(environment["PATH"].split(worker.os.pathsep)[0]) == Path(
         worker.sys.executable
-    ).resolve().parent
+    ).absolute().parent
+
+
+def test_gateway_worker_does_not_resolve_venv_python_symlink(
+    tmp_path: Path, monkeypatch
+) -> None:
+    base_python = tmp_path / "base" / "python3.11"
+    base_python.parent.mkdir()
+    base_python.touch()
+    venv_python = tmp_path / "venv" / "bin" / "python"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.symlink_to(base_python)
+    monkeypatch.setattr(worker.sys, "executable", str(venv_python))
+
+    environment = worker.target_environment("darwin-aarch64", tmp_path / "cache")
+
+    assert environment["PYTHON"] == str(venv_python)
+    assert environment["PYTHON"] != str(base_python)
 
 
 def test_intel_mac_python_installs_compatible_binary_cryptography(
