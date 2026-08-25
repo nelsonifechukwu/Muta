@@ -1,0 +1,76 @@
+# Muta IQ report → GitHub Pages (the repository's project page,
+# https://<owner>.github.io/<repo>/ — docs/report-hosting.md).
+#
+# The report in muta-iq/dashboard/ normally polls app.py for its evidence. This workflow runs
+# muta-iq/dashboard/build_static.py, which pre-renders that /api/state payload into
+# api/state.json and stamps index.html into its read-only published-snapshot mode (relative
+# URLs, so the /<repo>/ prefix works; profiler controls disabled). Nothing here compiles the
+# engine or fetches models: the inputs are the tracked JSON summaries under
+# bench/measurements/, muta-iq/metadata.json and the tracked dashboard/profiler.db.
+#
+# Pages must be enabled with "Source: GitHub Actions"; configure-pages (enablement: true)
+# does that on the first run when the token is allowed to. NOTE: this repository is private,
+# and GitHub Pages on a private repository requires a paid plan — see docs/report-hosting.md.
+#
+# MANUAL-ONLY for now: Pages is not enabled on this private repository and the report is
+# hosted on Vercel (.github/workflows/vercel.yml), so a push trigger would only add a failing
+# run to every dashboard commit. Run it from the Actions tab once Pages is enabled, and restore
+# the push trigger below at that point.
+
+name: pages
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - muta-iq/dashboard/**
+  #     - muta-iq/metadata.json
+  #     - bench/measurements/**
+  #     - .github/workflows/pages.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; let an in-flight deploy finish rather than cancelling it half-way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Dashboard safeguards (report tests + JS syntax)
+        # The dashboard is stdlib-only; pytest is the only dependency these tests need.
+        run: |
+          pip install pytest
+          python -m pytest muta-iq/dashboard -q -p no:cacheprovider
+          node --check muta-iq/dashboard/script.js
+      - name: Render the static report
+        run: python muta-iq/dashboard/build_static.py --out site
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -140,11 +140,35 @@ stored run is not a defensible competition denominator. Do not use archive total
 19 August campaign. African-use-case and budget-laptop badges are metadata claims only; their
 judging-panel multipliers are not included in local totals.
 
+## Publish as a static site (GitHub Pages)
+
+The report can be rendered without its server:
+
+```bash
+python3 muta-iq/dashboard/build_static.py --out site     # or: make pages
+```
+
+`build_static.py` copies the three page files, pre-renders the `/api/state` payload into
+`api/state.json` (with every stored run and its raw report embedded, e-mail addresses
+redacted), and stamps `<html data-snapshot="api/state.json">`. That attribute switches
+`script.js` into **published-snapshot mode**: it fetches the file once over a relative URL (so
+the site works under a `/<repo>/` project-page prefix), keeps every read-only view including
+History and Raw report, shows a "Published snapshot" pill, and disables Start profile, Set as
+submission, and Delete record. The build fails if any evidence lane is missing rather than
+publishing "unavailable" placeholders, and it only clears an output directory it created.
+
+`make vercel` deploys that output to Vercel (project `muta-iq`, https://muta-iq.vercel.app) as a
+prebuilt upload; `.github/workflows/vercel.yml` does the same on pushes to `main` that touch the
+dashboard, `muta-iq/metadata.json`, or `bench/measurements/` (once the `VERCEL_TOKEN` secret is
+set and Actions runs on the repository), and `.github/workflows/pages.yml` is the manual
+GitHub Pages variant. See `docs/report-hosting.md` for all three, the Vercel Git-integration
+route, and the private-repository caveat for Pages.
+
 ## Tests
 
 From the repository root:
 
 ```bash
-.venv/bin/python -m pytest muta-iq/dashboard/test_app.py -q
+.venv/bin/python -m pytest muta-iq/dashboard -q      # app logic, report safeguards, static build
 node --check muta-iq/dashboard/script.js
 ```

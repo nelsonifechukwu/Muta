@@ -1,0 +1,63 @@
+# Muta IQ report → Vercel on push (docs/report-hosting.md).
+#
+# Mirrors `make vercel`: scripts/deploy_report_vercel.sh runs vercel.json's buildCommand on the
+# runner (muta-iq/dashboard/build_static.py -> site/) and uploads only that output as a prebuilt
+# production deployment of the `muta-iq` project (https://muta-iq.vercel.app). Nothing is built
+# on Vercel and no repository sources are uploaded.
+#
+# Needs one repository secret, VERCEL_TOKEN (Vercel → Account Settings → Tokens; add it with
+# `gh secret set VERCEL_TOKEN`). The org and project ids below are identifiers, not secrets;
+# they match .vercel/project.json and let `vercel pull` link the checkout without one.
+
+name: vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - muta-iq/dashboard/**
+      - muta-iq/metadata.json
+      - bench/measurements/**
+      - vercel.json
+      - scripts/deploy_report_vercel.sh
+      - .github/workflows/vercel.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One production deploy at a time; let an in-flight deploy finish rather than cancelling it.
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_b1tELNehj5WFfHCa7xybOlYd
+  VERCEL_PROJECT_ID: prj_EUmuDXI44wZbzU4897XkReLwCMGj
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the VERCEL_TOKEN secret
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "::error::Repository secret VERCEL_TOKEN is not set. Create a token at https://vercel.com/account/tokens and add it with 'gh secret set VERCEL_TOKEN' (docs/report-hosting.md)."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Dashboard safeguards (report tests + JS syntax)
+        run: |
+          pip install pytest
+          python -m pytest muta-iq/dashboard -q -p no:cacheprovider
+          node --check muta-iq/dashboard/script.js
+      - name: Install Vercel CLI
+        run: npm install --global vercel@58
+      - name: Build locally and deploy the prebuilt output to production
+        run: scripts/deploy_report_vercel.sh
