@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "python3 muta-iq/dashboard/build_static.py --out site",
+  "outputDirectory": "site"
+}

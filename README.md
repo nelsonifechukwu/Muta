@@ -7,6 +7,12 @@ Silicon and Intel macOS. The Tauri shell uses the existing Muta UI; it does not 
 the frontend. See [Desktop builds and releases](docs/desktop-releases.md) for local builds,
 signing setup, first-install model packs, and the tag-driven GitHub release pipeline.
 
+The **Muta IQ experiment report** — the model-selection evidence behind the submission — is
+published from `muta-iq/dashboard/` as a static site: on Vercel (https://muta-iq.vercel.app,
+`make vercel`) and as this repository's GitHub Pages project page
+(`.github/workflows/pages.yml`); see [docs/report-hosting.md](docs/report-hosting.md).
+`make pages` renders the same site locally.
+
 **[Moat](https://chatgpt.com/share/6a885ad3-2a20-83ed-acc2-cc44a665dd9e)**: Muta’s moat is the deeply integrated educational intelligence layer that connects students, teachers, parents, institutions, and curriculum—accumulating context, workflows, and learning data over time. The underlying AI model can be swapped; **Muta’s education graph, relationships, and institutional integration cannot be easily replicated.** See also [Marble](https://withmarble.com/#:~:text=03-,Marble,-follows%20their%20curiosity).
 
 

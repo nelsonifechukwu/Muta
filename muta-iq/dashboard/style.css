@@ -245,6 +245,14 @@ code { color: var(--rejected); overflow-wrap: anywhere; }
   border-left: 2px solid var(--parity);
   font: 14px/1.5 var(--sans);
 }
+.snapshot-note {
+  margin: 18px 0 0; padding: 12px 14px;
+  color: var(--fg2); background: var(--official-soft);
+  border-left: 2px solid var(--official);
+  font: 14px/1.5 var(--sans);
+}
+.snapshot-note strong { color: var(--fg); }
+.snapshot-note code { font: 13px var(--mono); }
 .artifact-line {
   display: grid; grid-template-columns: repeat(4, 1fr);
   margin: 30px 0 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);

@@ -1,5 +1,12 @@
 "use strict";
 
+// Published-snapshot mode. build_static.py stamps <html data-snapshot="api/state.json"> when it
+// renders the report for static hosting (GitHub Pages). With no app.py behind the page, it
+// fetches that pre-rendered /api/state payload once — relatively, so a /<repo>/ project-page
+// prefix works — keeps every read-only view, and disables the profiler's mutating controls.
+const SNAPSHOT_URL = document.documentElement.dataset.snapshot || "";
+const STATIC = SNAPSHOT_URL !== "";
+
 const state = {
   data: null,
   quick: false,
@@ -326,18 +333,41 @@ function updateActiveChapter() {
 async function poll() {
   clearTimeout(state.timer);
   try {
-    const res = await fetch("/api/state");
+    const res = await fetch(STATIC ? SNAPSHOT_URL : "/api/state");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     state.data = await res.json();
     state.pollAt = Date.now();
     await refreshExpandedRuns();
     render();
-  } catch (e) { /* server briefly away; keep previous render */ }
+  } catch (e) {
+    if (STATIC) renderSnapshotFailure();
+    /* otherwise the server is briefly away; keep the previous render */
+  }
+  if (STATIC) return; // a published snapshot never changes, so there is nothing to poll
   const busy = !!(state.data && state.data.current);
   state.timer = setTimeout(poll, busy ? 2500 : 8000);
 }
 
+function renderSnapshotFailure() {
+  const pill = $("status-pill");
+  pill.classList.remove("busy");
+  pill.textContent = "Snapshot unavailable";
+  pill.title = `The pre-rendered evidence file (${SNAPSHOT_URL}) could not be loaded.`;
+}
+
+function snapshotRuns(file) {
+  const byModel = (state.data && state.data.runs_by_model) || {};
+  return byModel[file] || [];
+}
+
+function snapshotRun(id) {
+  const byModel = (state.data && state.data.runs_by_model) || {};
+  return Object.values(byModel).flat().find((run) => String(run.id) === String(id)) || null;
+}
+
 async function refreshExpandedRuns() {
   for (const file of state.expanded) {
+    if (STATIC) { state.runsCache[file] = snapshotRuns(file); continue; }
     try {
       const res = await fetch("/api/runs?model=" + encodeURIComponent(file));
       state.runsCache[file] = (await res.json()).runs;
@@ -797,7 +827,11 @@ function renderHeader(d) {
     (claims.length ? ` · ${claims.join(" · ")}` : "") +
     (m.current_model_path ? ` · selected model: ${shortName(m.current_model_path.split("/").pop())}` : "");
   const pill = $("status-pill");
-  if (d.current) {
+  if (STATIC) {
+    pill.classList.remove("busy");
+    pill.textContent = "Published snapshot";
+    pill.title = "Read-only copy rendered from the repository's stored evidence; profiling needs the local dashboard server.";
+  } else if (d.current) {
     pill.classList.add("busy");
     pill.textContent = `Profiling ${shortName(d.current.model_file)}`;
   } else {
@@ -899,10 +933,12 @@ function renderTable(d) {
   const busy = !!d.current;
   const present = d.models.filter((m) => m.present).length;
   const gone = d.models.length - present;
-  $("models-sub").textContent =
-    `${present} GGUF file${present === 1 ? "" : "s"} in model/` +
-    (gone ? ` · ${gone} removed artifact${gone === 1 ? "" : "s"} with retained run records` : "") +
-    ` · the latest run appears below; open History for the complete record`;
+  $("models-sub").textContent = STATIC
+    ? `${d.models.length} artifact${d.models.length === 1 ? "" : "s"} with stored run records` +
+      ` · published snapshot; the latest run appears below and History opens the complete record`
+    : `${present} GGUF file${present === 1 ? "" : "s"} in model/` +
+      (gone ? ` · ${gone} removed artifact${gone === 1 ? "" : "s"} with retained run records` : "") +
+      ` · the latest run appears below; open History for the complete record`;
   const head = `<thead><tr>
     <th>Model</th><th>S_total</th><th>S_acc</th><th>S_perf</th><th>S_eff</th>
     <th>arc_easy</th><th>tok/s</th><th>TTFT ms</th><th>Peak RAM</th><th>CPU temp</th>
@@ -911,9 +947,13 @@ function renderTable(d) {
   const rows = d.models.map((m) => {
     const r = m.latest, s = r ? r.scores : null;
     const running = d.current && d.current.model_file === m.file;
-    const info = m.present
-      ? [fmt.gb(m.size_bytes), m.quant, m.params]
-      : ["artifact removed; run records retained", m.quant, m.params];
+    // A published snapshot is built without the model/ directory, so disk presence is simply
+    // unknown there, not "removed".
+    const info = STATIC
+      ? [m.quant, m.params]
+      : m.present
+        ? [fmt.gb(m.size_bytes), m.quant, m.params]
+        : ["artifact removed; run records retained", m.quant, m.params];
     const sub = info.filter(Boolean).join(" · ") +
       (m.runs_count
         ? ` · ${m.runs_count} run${m.runs_count === 1 ? "" : "s"}`
@@ -921,11 +961,12 @@ function renderTable(d) {
     const arc = r && r.arc_score != null ? `${r.arc_score.toFixed(3)}` : "—";
     const main = `<tr class="model-row" data-model="${esc(m.file)}">
       <td>
-        <div class="model-name${m.present ? "" : " dim"}">${esc(shortName(m.file))}</div>
+        <div class="model-name${m.present || STATIC ? "" : " dim"}">${esc(shortName(m.file))}</div>
         <div class="model-sub">${esc(sub)}</div>
         <div class="model-actions">
           <button class="btn primary small" data-action="profile" data-model="${esc(m.file)}"
-            ${busy || !m.present ? "disabled" : ""}>${running ? "Running…" : "Start profile"}</button>
+            ${busy || !m.present || STATIC ? "disabled" : ""}
+            ${STATIC ? 'title="Profiling needs the local dashboard server"' : ""}>${running ? "Running…" : "Start profile"}</button>
           <button class="btn small" data-action="history" data-model="${esc(m.file)}"
             ${m.runs_count ? "" : "disabled"}>History ${state.expanded.has(m.file) ? "▴" : "▾"}</button>
         </div>
@@ -967,9 +1008,11 @@ function historyRow(file) {
       <td>
         <button class="btn small" data-action="json" data-id="${r.id}">Raw report</button>
         <button class="btn small" data-action="promote" data-id="${r.id}"
-          ${r.status === "ok" && !gone ? "" : "disabled"}
-          ${gone ? 'title="The model artifact is no longer present and cannot be promoted"' : ""}>Set as submission</button>
-        <button class="btn small danger" data-action="delete" data-id="${r.id}">Delete record</button>
+          ${r.status === "ok" && !gone && !STATIC ? "" : "disabled"}
+          ${STATIC ? 'title="Promotion needs the local dashboard server"'
+            : gone ? 'title="The model artifact is no longer present and cannot be promoted"' : ""}>Set as submission</button>
+        <button class="btn small danger" data-action="delete" data-id="${r.id}"
+          ${STATIC ? 'disabled title="Deleting a record needs the local dashboard server"' : ""}>Delete record</button>
       </td>
     </tr>`;
   }).join("");
@@ -1003,6 +1046,9 @@ document.addEventListener("click", async (ev) => {
   const btn = ev.target.closest("[data-action]");
   if (!btn) return;
   const action = btn.dataset.action;
+  // The published snapshot has no server to mutate. Its buttons are disabled in render; this
+  // guard keeps a stray click from reaching an /api route that does not exist there.
+  if (STATIC && ["profile", "cancel", "promote", "delete"].includes(action)) return;
 
   if (action === "profile") {
     const res = await fetch("/api/profile", {
@@ -1026,8 +1072,14 @@ document.addEventListener("click", async (ev) => {
     }
     render();
   } else if (action === "json") {
-    const res = await fetch("/api/runs/" + btn.dataset.id);
-    const d = await res.json();
+    let d;
+    if (STATIC) {
+      d = snapshotRun(btn.dataset.id);
+      if (!d) return;
+    } else {
+      const res = await fetch("/api/runs/" + btn.dataset.id);
+      d = await res.json();
+    }
     $("modal-title").textContent = `Run #${d.id} · ${d.model_file} · ${d.status}`;
     $("modal-body").textContent = d.report
       ? JSON.stringify(d.report, null, 2)
@@ -1110,5 +1162,9 @@ document.addEventListener("mousemove", (ev) => {
   tip.style.top = y + "px";
 });
 
+if (STATIC) {
+  $("static-notice").hidden = false;
+  $("quick-toggle").closest("label").hidden = true; // the toggle only configures a live run
+}
 initReport();
 poll();

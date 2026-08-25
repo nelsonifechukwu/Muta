@@ -3,7 +3,7 @@
 .DEFAULT_GOAL := help
 PY ?= python3
 
-.PHONY: help install dev test ui-test lint fmt contract contract-test build up down smoke \
+.PHONY: help install dev test ui-test pages vercel lint fmt contract contract-test build up down smoke \
 	model fetch-models verify-models serve profiles core-cmd kv-budget index audio \
 	bench profile monitor bench-target eval backup restore \
 	bench-native-linux export-native-linux \
@@ -25,6 +25,12 @@ test: ## Run tests (portable SQLite always; Postgres parity tests use compose db
 
 ui-test: ## Run browser-client unit tests without starting the backend
 	node --test ui/tests/*.test.js
+
+pages: ## Render the Muta IQ report as a static site in site/ (what .github/workflows/pages.yml deploys)
+	$(PY) muta-iq/dashboard/build_static.py --out site
+
+vercel: ## Deploy the Muta IQ report to Vercel as a prebuilt static site (docs/report-hosting.md)
+	scripts/deploy_report_vercel.sh
 
 lint: ## Lint (ruff)
 	$(PY) -m ruff check .
