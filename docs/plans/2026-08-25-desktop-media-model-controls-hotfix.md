@@ -12,15 +12,16 @@ Repair four regressions reported in the signed desktop releases without changing
 ## Confirmed causes
 
 - The packaged gateway never sets `MUTA_ALLOW_MODEL_SWITCH=1`, so `/v1/models` intentionally marks every alternative model as non-selectable.
-- The AudioWorklet capture node is not connected to an output graph. WebKit may stop pulling an unconnected worklet, so no voice frames reach the local WebSocket.
-- Visualization iframe `src` is assigned only after `IntersectionObserver` reports an intersection. That callback is unreliable for the sandboxed iframe inside the Tauri/WebKit chat scroller.
+- The first audio fix connected the AudioWorklet through a zero-gain node. Packaged-app logs then proved that WebKit still pruned the graph: the voice WebSocket connected, but Moonshine received an empty `{1, 0}` input. WebKit needs a directly connected, silent capture node that remains part of the destination graph.
+- Assigning the visualization iframe `src` synchronously fixed one lifecycle bug but not the blank Mac canvas. A Safari A/B test proved that `sandbox="allow-scripts"` gives the local Three.js frame an opaque origin and leaves WebGL blank, while the same trusted local frame renders with `sandbox="allow-scripts allow-same-origin"`.
 - The hidden PDF file input is connected only to the Settings upload button even though the composer is the primary file workflow.
 
 ## Implementation
 
 - Set the packaged model-switch flag before importing the gateway and cover it in the desktop entrypoint tests.
-- Route the capture worklet through a muted gain node to the audio destination, then disconnect the full graph on stop.
-- Assign visualization iframe sources synchronously and use visibility observation only to pause animation work, never to unload the source.
+- On WebKit, capture PCM through a directly connected `ScriptProcessorNode` whose untouched output is silent. On other engines, use an explicitly configured AudioWorklet input/output node connected directly to the destination. Disconnect the full graph on stop.
+- Assign visualization iframe sources synchronously and use visibility observation only to pause animation work, never to unload the source. Give the trusted, bundled renderer same-origin access while retaining the frame's strict no-network CSP, declarative JSON validation, and prohibitions on dynamic code and HTML injection.
+- Ignore empty VAD segments before invoking the native Moonshine decoder so a zero-length capture cannot trigger a native shape exception.
 - Add a labelled SVG PDF attachment button to the existing composer icon row, wire it to the hidden PDF input, remove the Settings upload action, and keep Settings only for managing already uploaded resources.
 - Improve recorded-audio upload errors and authenticated requests while touching that path.
 
@@ -28,7 +29,8 @@ Repair four regressions reported in the signed desktop releases without changing
 
 - Run focused desktop entrypoint, UI asset, visualization, audio, and resource-upload tests.
 - Run the complete UI JavaScript/Python suites and the relevant Python desktop/gateway suites.
-- Exercise the built UI through the local browser: selectable model menu, PDF control placement, and rendered visualization.
+- Exercise the built UI through the local browser: selectable model menu, PDF control placement, and rendered visualization. Reproduce the visualization in Safari with and without same-origin sandboxing to verify the WebKit-specific cause.
+- Inspect packaged-app logs to verify that the microphone permission and voice WebSocket paths work independently of PCM production, then regression-test empty-segment handling.
 - Rebuild all supported release targets through the cached `final-package` pipeline and verify checksums/manifests.
 
 ## Release safety

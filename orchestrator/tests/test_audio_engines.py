@@ -7,7 +7,7 @@ import types
 from pathlib import Path
 
 from orchestrator.audio.config import DEFAULT_CONFIG, AudioConfig
-from orchestrator.audio.engines import SherpaTts, SileroVad
+from orchestrator.audio.engines import SherpaAsr, SherpaTts, SileroVad
 
 
 def test_default_config_lives_next_to_the_package():
@@ -77,3 +77,17 @@ def test_silero_vad_degrades_without_sherpa(monkeypatch, tmp_path):
     assert vad.available is False
     vad.accept(b"\x00\x00" * 100)  # must be a silent no-op, never a crash
     assert vad.pop_segment() is None
+
+
+def test_moonshine_does_not_decode_an_empty_vad_segment():
+    class _Recognizer:
+        def create_stream(self):
+            raise AssertionError("empty audio must not reach Moonshine")
+
+    asr = object.__new__(SherpaAsr)
+    asr.config = AudioConfig.load(DEFAULT_CONFIG)
+    asr.available = True
+    asr._recognizer = _Recognizer()
+    asr._stream = None
+
+    assert asr.transcribe_samples([]) == ""

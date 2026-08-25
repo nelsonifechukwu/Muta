@@ -405,7 +405,10 @@
       heading.append(title, badge);
       const frame = document.createElement("iframe");
       frame.className = "muta-visualization-frame";
-      frame.sandbox = "allow-scripts";
+      // Safari/WebKit gives a script-enabled opaque-origin frame a blank WebGL/SVG surface.
+      // The frame is a same-origin trusted renderer: model output crosses only as validated JSON,
+      // its CSP disables network/form/child content, and it contains no eval or innerHTML sink.
+      frame.sandbox = "allow-scripts allow-same-origin";
       frame.referrerPolicy = "no-referrer";
       frame.title = spec.aria_label;
       frame.style.height = `${spec.height}px`;

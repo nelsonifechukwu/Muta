@@ -35,22 +35,23 @@ def test_chat_loads_visualization_parser_before_the_chat_client() -> None:
     assert "renderCompletedReply(wrap, prose, full)" in (UI / "app.js").read_text()
 
 
-def test_model_output_is_data_inside_an_opaque_sandbox() -> None:
+def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> None:
     parent = (UI / "visualizations.js").read_text()
     frame = (UI / "viz-frame.js").read_text()
     html = (UI / "viz-frame.html").read_text()
 
-    assert 'frame.sandbox = "allow-scripts"' in parent
-    assert "allow-same-origin" not in parent
+    # WebKit refuses to render the local Three.js/SVG surface in an opaque-origin iframe. The
+    # trusted same-origin frame is still isolated from every network and injection sink below.
+    assert 'frame.sandbox = "allow-scripts allow-same-origin"' in parent
     assert "new Function" not in parent + frame
     assert "eval(" not in parent + frame
     for network_api in ("fetch(", "XMLHttpRequest", "WebSocket", "EventSource"):
         assert network_api not in frame
     assert "innerHTML" not in frame
     assert "visualizations.js" in html and "viz-frame.js" in html
-    assert 'viz-theme.js?v=20260823-viz-progress-1' in html
+    assert 'viz-theme.js?v=20260825-mac-media-2' in html
     assert html.index("viz-theme.js") < html.index("viz-frame.css")
-    assert 'viz-frame.js?v=20260823-viz-progress-1' in html
+    assert 'viz-frame.js?v=20260825-mac-media-2' in html
     assert "http://" not in html and "https://" not in html
     assert "frame.src = source" in parent
     assert 'frame.loading = "lazy"' not in parent

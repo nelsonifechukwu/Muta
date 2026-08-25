@@ -37,11 +37,11 @@ def test_unexpected_socket_close_keeps_an_empty_or_partial_reply_visibly_failed(
     assert "else assistant.finalize()" in stop_voice
 
 
-def test_webkit_audio_worklet_is_kept_alive_through_a_silent_output_graph():
+def test_webkit_uses_a_direct_silent_script_processor_instead_of_a_prunable_gain_branch():
     source = (ROOT / "audio.js").read_text()
 
-    assert "captureSink = audioCtx.createGain()" in source
-    assert "captureSink.gain.value = 0" in source
-    assert "captureSink.connect(audioCtx.destination)" in source
-    assert "captureNode.connect(captureSink)" in source
-    assert "if (captureSink) captureSink.disconnect()" in source
+    assert "/AppleWebKit/i.test(navigator.userAgent)" in source
+    assert "audioCtx.audioWorklet && !webKit" in source
+    assert "captureNode.connect(audioCtx.destination)" in source
+    assert "captureSink" not in source
+    assert "outputChannelCount: [1]" in source

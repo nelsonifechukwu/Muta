@@ -19,7 +19,6 @@
   let audioCtx = null;
   let mediaStream = null;
   let captureNode = null;
-  let captureSink = null;
   let sourceNode = null;
   let ws = null;
   let active = false; // voice mode on
@@ -74,32 +73,36 @@
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     await audioCtx.resume();
     sourceNode = audioCtx.createMediaStreamSource(mediaStream);
-    // WebKit may stop pulling an AudioWorklet graph that has no path to a destination. Keep
-    // capture live through a silent gain node; the microphone is never played through speakers.
-    captureSink = audioCtx.createGain();
-    captureSink.gain.value = 0;
-    captureSink.connect(audioCtx.destination);
-    if (audioCtx.audioWorklet) {
+    // Safari/WKWebView can prune a zero-gain AudioWorklet branch completely. Its deployed
+    // symptom is an open voice websocket with exactly zero samples reaching Moonshine. Use the
+    // WebKit-supported ScriptProcessor path there; its untouched output buffer is silence, so it
+    // can connect directly to the destination without ever playing the microphone back.
+    const webKit = /AppleWebKit/i.test(navigator.userAgent)
+      && !/(Chrome|Chromium|CriOS|Edg|OPR)/i.test(navigator.userAgent);
+    if (audioCtx.audioWorklet && !webKit) {
       await audioCtx.audioWorklet.addModule(new URL("worklet.js", document.baseURI));
-      captureNode = new AudioWorkletNode(audioCtx, "muta-capture");
+      captureNode = new AudioWorkletNode(audioCtx, "muta-capture", {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
+      });
       captureNode.port.onmessage = (ev) => onCapture(ev.data);
       sourceNode.connect(captureNode);
-      captureNode.connect(captureSink);
+      captureNode.connect(audioCtx.destination);
     } else {
-      // Legacy fallback; every 2026 evergreen browser has AudioWorklet.
+      // WebKit and older-browser fallback. The output remains all-zero unless explicitly filled.
       captureNode = audioCtx.createScriptProcessor(4096, 1, 1);
       captureNode.onaudioprocess = (ev) => onCapture(ev.inputBuffer.getChannelData(0).slice(0));
       sourceNode.connect(captureNode);
-      captureNode.connect(captureSink);
+      captureNode.connect(audioCtx.destination);
     }
   }
 
   function stopCapture() {
     if (sourceNode) sourceNode.disconnect();
     if (captureNode) captureNode.disconnect();
-    if (captureSink) captureSink.disconnect();
     if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
-    sourceNode = captureNode = captureSink = mediaStream = null;
+    sourceNode = captureNode = mediaStream = null;
     pending = new Int16Array(0);
   }
 
