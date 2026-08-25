@@ -86,30 +86,26 @@ def test_static_verdict_matches_overnight_recommendation() -> None:
     assert "507.2 MB" in html
 
 
-def test_current_artifact_diagram_uses_tensor_identity_control() -> None:
+def test_previous_packaged_artifact_diagram_uses_tensor_identity_control() -> None:
     html = (DASHBOARD / "index.html").read_text()
 
     assert "Qwen3.5 source quant" in html
     assert "320 model tensors compared" in html
     assert "all tensor payloads identical" in html
-    assert (
-        "The current recommendation differs from its Qwen3.5 source quant only in GGUF metadata"
-        in html
-    )
+    assert "The previous packaged Qwen3.5 model differed from its source quant only in GGUF metadata" in html
+    assert "The tuned finalist must receive and revalidate the same policy before submission" in html
 
 
 def test_all_current_visual_defaults_use_the_current_campaign_decision() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert (
-        '{ name: "Qwen3.5 0.8B Q4_0 final", gb: 0.47, acc: 64, lane: "audit", selected: true }' in script
-    )
-    assert '{ name: "Qwen2.5 1.5B Q4_K_M", gb:' not in script
+    assert '{ name: "Fine-tuned Qwen3.5 0.8B", gb: 0.48, acc: 70.2, lane: "audit", selected: true }' in script
+    assert '{ name: "Fine-tuned Qwen2.5 1.5B", gb: 0.92, acc: 77.8, lane: "audit", leader: true }' in script
     assert 'Qwen3 1.7B Q4_K_M", gb: 0.96, acc: 72, lane: "audit", selected: true' not in script
-    assert "82.8697" in html
+    assert "84.1387" in html
     assert "Vector leader, n=500" in html
-    assert "renderModelExtension(d.model_extension)" in script
+    assert "renderFinetune(d.finetune)" in script
     assert "entry.official.arc_easy_50" in script
 
 
@@ -322,10 +318,42 @@ def test_combined_all_models_chart_spans_both_explorations() -> None:
 
     assert 'id="all-models-score-chart"' in html
     assert "Every paired model, scalar versus vector" in html
-    assert "function renderCombinedComparison(ladderModels, extensionModels)" in script
-    assert "renderCombinedComparison(ladderModels, extensionModels)" in script
+    assert "function renderCombinedComparison(ladderModels, extensionModels, finetuneModels)" in script
+    assert "renderCombinedComparison(ladderModels, extensionModels, finetuneModels)" in script
     assert 'group: "First exploration"' in script
     assert 'group: "Second exploration"' in script
+    assert 'group: "Fine-tuned finalists"' in script
+
+
+def test_finetuning_section_uses_the_machine_readable_summary() -> None:
+    summary = json.loads(
+        (REPOSITORY / "model-development/finetune/results/summary.json").read_text()
+    )
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert summary["training"]["candidate_runs"] == 15
+    assert summary["evaluation"]["accuracy_samples"] == 500
+    qwen35 = next(item for item in summary["models"] if item["id"] == "qwen35")
+    qwen25 = next(item for item in summary["models"] if item["id"] == "qwen25")
+    assert qwen35["accuracy"]["delta_points"] == 15.0
+    assert qwen35["scalar"]["candidate_total"] == 80.3664
+    assert qwen25["accuracy"]["delta_points"] == 3.4
+    assert qwen25["vector"]["candidate_total"] == 84.1387
+    assert qwen25["held_out"] == [] and qwen25["held_out_status"].startswith("Pending:")
+
+    for element_id in (
+        "finetuning",
+        "finetune-accuracy-chart",
+        "finetune-score-chart",
+        "finetune-results-table",
+        "finetune-heldout-table",
+    ):
+        assert f'id="{element_id}"' in html
+    assert "function renderFinetune(finetune)" in script
+    assert 'className: "control"' in script
+    assert 'className: "tuned"' in script
+    assert "45 MiB estimate" in html
 
 
 def test_compact_report_defaults_to_adopted_ledger_entries() -> None:

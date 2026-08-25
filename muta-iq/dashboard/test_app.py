@@ -34,6 +34,7 @@ def tmp_app_env():
             app.CAMPAIGN_AVX2_SCORE,
             app.OVERNIGHT_SUMMARY,
             app.MODEL_EXTENSION_SUMMARY,
+            app.FINETUNE_SUMMARY,
         )
         (
             app.MODEL_DIR,
@@ -46,6 +47,7 @@ def tmp_app_env():
             app.CAMPAIGN_AVX2_SCORE,
             app.OVERNIGHT_SUMMARY,
             app.MODEL_EXTENSION_SUMMARY,
+            app.FINETUNE_SUMMARY,
         ) = (
             tmp / "model",
             tmp / "profiler.db",
@@ -57,6 +59,7 @@ def tmp_app_env():
             tmp / "campaign-avx2-score.json",
             tmp / "overnight-summary.json",
             tmp / "model-extension-summary.json",
+            tmp / "finetune-summary.json",
         )
         try:
             app.init_db()
@@ -73,6 +76,7 @@ def tmp_app_env():
                 app.CAMPAIGN_AVX2_SCORE,
                 app.OVERNIGHT_SUMMARY,
                 app.MODEL_EXTENSION_SUMMARY,
+                app.FINETUNE_SUMMARY,
             ) = saved
 
 
@@ -315,6 +319,14 @@ class TestStatePayloadKeepsDeletedModels(unittest.TestCase):
             app.MODEL_EXTENSION_SUMMARY.write_text(json.dumps(extension))
             payload = app.state_payload()
             self.assertEqual(payload["model_extension"], extension)
+            self.assertIsNone(payload["campaign"])
+
+    def test_finetune_summary_is_exposed_separately(self):
+        with tmp_app_env():
+            finetune = {"schema_version": 1, "decision": {"scalar_model_id": "qwen35"}}
+            app.FINETUNE_SUMMARY.write_text(json.dumps(finetune))
+            payload = app.state_payload()
+            self.assertEqual(payload["finetune"], finetune)
             self.assertIsNone(payload["campaign"])
 
 

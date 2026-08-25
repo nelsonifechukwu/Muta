@@ -8,6 +8,7 @@ const state = {
   pollAt: 0,                // Date.now() of last successful poll
   timer: null,
   modalReturnFocus: null,
+  hashRestored: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -56,7 +57,9 @@ const REPORT_FUNNEL = [
   { name: "Qwen3.5 4B", gb: 2.55, acc: 73.3, lane: "reasoning" },
   { name: "Qwen3.5 2B", gb: 1.19, acc: 64.8, lane: "reasoning" },
   { name: "Qwen3.5 0.8B", gb: 0.50, acc: 51.3, lane: "reasoning" },
-  { name: "Qwen3.5 0.8B Q4_0 final", gb: 0.47, acc: 64, lane: "audit", selected: true },
+  { name: "Qwen3.5 0.8B Q4_0 final", gb: 0.47, acc: 64, lane: "audit" },
+  { name: "Fine-tuned Qwen3.5 0.8B", gb: 0.48, acc: 70.2, lane: "audit", selected: true },
+  { name: "Fine-tuned Qwen2.5 1.5B", gb: 0.92, acc: 77.8, lane: "audit", leader: true },
   { name: "Math-Expert 0.6B Q4_K_M", gb: 0.37, acc: 68, lane: "audit", leader: true },
   { name: "Qwen3 1.7B Q4_0", gb: 0.91, acc: 72, lane: "audit" },
   { name: "Qwen3.5 0.8B Q4_K_M", gb: 0.50, acc: 68, lane: "audit" },
@@ -103,12 +106,15 @@ const EXPERIMENTS = [
   { status: "rejected", name: "Custom tensor layout", finding: "We kept the stock quantiser layout. An unsupported alignment or packing scheme could fail to load and disqualify the run.", source: "tensor-layout study" },
   { status: "adopted", name: "Embedded chat template", finding: "The GGUF contains the chat template and tutoring persona, both verified on a live server. They affect evaluator responses but do not affect raw ARC or throughput measurements.", source: "prompt-format study" },
   { status: "rejected", name: "Weight streaming for submission", finding: "Streaming could cut residency to hundreds of MiB, but SSD bandwidth missed the 15 tok/s target and a custom engine cannot accompany a GGUF-only entry.", source: "weight-streaming study" },
-  { status: "adopted", name: "Runtime-conditional model choice", finding: "Matched to the same 500-item ARC-Easy sample, Qwen3.5 0.8B leads the scalar comparison (72.7895) and Qwen2.5 1.5B leads the vector comparison (80.7697). Math-Expert is second under scalar (71.2324) but third under vector (75.1803). The submission choice depends on which CPU configuration the audit runs.", source: "expanded model search and second widening" },
+  { status: "adopted", name: "Runtime-conditional model choice", finding: "After fine-tuning and matched 500-item evaluation, Qwen3.5 0.8B leads the scalar comparison at 80.3664 and Qwen2.5 1.5B leads the vector comparison at 84.1387. The submission choice still depends on the audit CPU configuration.", source: "fine-tuning campaign" },
   { status: "adopted", name: "Second widening: Qwen2/2.5, Llama 3.2, Gemma 2, Phi-4 Mini, Orca Mini", finding: "Eight matched GGUFs under scalar and vector execution put Qwen2.5 1.5B Q4_K_M first on the vector total at 82.8697 (ARC-Easy-50). A 500-item rerun lowered that to 80.7697 at 71.8% accuracy, still the leading vector candidate.", source: "second model-architecture widening" },
   { status: "adopted", name: "Tied output head", finding: "The final tied-versus-untied control saved about 175 MB of file bytes with the same 72% ARC-Easy proxy.", source: "quantization sweep" },
   { status: "adopted", name: "Reproducible artifact build", finding: "We rebuilt the promoted candidate from its documented source. It matched byte-for-byte once we corrected a 32-byte metadata-name difference.", source: "artifact construction study" },
   { status: "adopted", name: "Direct participant-profiler campaign", finding: "Four models completed full participant runs. The 1.7B Q4_0 total exceeded the initially tested 0.8B Q4_K_M total by 0.92 points.", source: "direct profiler measurements" },
-  { status: "adopted", name: "Vector score of record", finding: "The combined ledger contains seven models from the quantization sweep and expanded search, plus the eight-model second widening. Qwen2.5 1.5B Q4_K_M has the highest vector total at matched n=500, 80.7697; Qwen3.5 0.8B leads the matched scalar total, 72.7895.", source: "combined vector comparison" },
+  { status: "adopted", name: "Metric-aligned Qwen3.5 fine-tune", finding: "BF16 LoRA rank 16 on corrected multiple-choice continuations raised ARC-Easy-500 from 55.2% to 70.2%. Matched throughput and RSS were unchanged; total rose by about 7.5 points in both CPU configurations.", source: "fine-tuning campaign" },
+  { status: "adopted", name: "Licence-clean Qwen2.5 fine-tune", finding: "BF16 LoRA rank 16 on licence-clean ARC and QASC training rows raised ARC-Easy-500 from 74.4% to 77.8%. The vector total rose from 82.4386 to 84.1387.", source: "fine-tuning campaign" },
+  { status: "rejected", name: "Initial LoRA and QLoRA mixtures", finding: "Eight balanced and reasoning-heavy runs improved validation loss but did not improve the exact 500-item profiler task. The mixtures overrepresented long solutions and used the wrong prompt/completion token boundary.", source: "fine-tuning campaign" },
+  { status: "adopted", name: "Vector score of record", finding: "The fine-tuned Qwen2.5 1.5B Q4_K_M has the highest measured vector total at matched n=500, 84.1387. The fine-tuned Qwen3.5 0.8B leads the matched scalar total at 80.3664.", source: "fine-tuning campaign" },
   { status: "deferred", name: "QAT or distillation", finding: "QAT and distillation may recover capability in a smaller artifact. Neither has completed a controlled campaign.", source: "future model-development study" },
 ];
 
@@ -118,17 +124,17 @@ const CHALLENGE_FAQ = [
   { q: "Can teams develop on stronger hardware?", rule: "Yes, but the final artifact is evaluated on the standard laptop profile.", progress: "We developed on an M2 Mac and a GCP x86 proxy. We classify Mac results as development evidence." },
   { q: "Does adding an African language qualify for the use-case bonus?", rule: "Language support alone does not establish the African use case.", progress: "" },
   { q: "What does cross-disciplinary integration require?", rule: "The model must depend substantively on another deep-tech discipline.", progress: "Muta plans to combine scientific tutoring with verified mathematics and local retrieval. Several relevant routes remain incomplete or return 501, so this requirement is not yet satisfied." },
-  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "Math-Expert, a public Qwen3 fine-tune, is the scalar-configuration runner-up at matched sample size. The final Qwen3.5 recommendation and the Qwen2.5 vector candidate both derive from official Qwen checkpoints rather than a fine-tune. We document all three models’ source, licence, and transformation." },
+  { q: "Are fine-tuned open models allowed?", rule: "Yes, subject to the competition’s open-model and artifact rules.", progress: "Both current finalists are BF16 LoRA fine-tunes of official Qwen checkpoints. The training code pins source revisions, records dataset manifests, excludes evaluation splits, filters held-out overlap, and exports the merged weights to GGUF." },
   { q: "Which countries are eligible?", rule: "Eligibility follows the organiser’s published country rules.", progress: "" },
   { q: "Can Africans studying abroad enter?", rule: "The FAQ describes the applicable eligibility route.", progress: "" },
   { q: "Is there an age restriction?", rule: "The organiser’s FAQ gives the eligibility condition.", progress: "" },
   { q: "How is the team identified in the artifact?", rule: "Submission metadata must identify the registered team.", progress: "The current metadata uses team ID `team-muta`. Registration details still need a final submission check." },
-  { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "The current Qwen3 base uses an open licence. We document its source model, conversion method, licence, and artifact size." },
+  { q: "Must the base model be open source?", rule: "The submission must follow the challenge’s open-model requirements.", progress: "Both tuned candidates derive from official Qwen checkpoints with documented source, training data, conversion method, licence, and artifact size." },
   { q: "Which inference formats and tools are allowed?", rule: "The model-only track evaluates GGUF with llama.cpp.", progress: "We measured the submitted GGUFs under matched scalar and vector configurations. Custom streaming and lazy-mmap engines stay out of the scoring claim." },
   { q: "What is the maximum model size?", rule: "The practical limit is the 7 GB memory ceiling on the standard machine.", progress: "The direct campaign spans about 0.50–2.31 GiB peak model footprints, all below the ceiling. Whole-tree RSS remains the unit of record." },
   { q: "Where should the final benchmark be run?", rule: "The organiser evaluates the artifact on its standard hardware; local results are preparatory.", progress: "We have full participant runs on a four-vCPU GCP x86 proxy under the competition procedure. Package temperature and physical-laptop bandwidth remain unmeasured." },
   { q: "What must the Gate 1 submission contain?", rule: "Gate 1 requires the open-source repository and structured report, a working model download path, two test prompts, screenshots or clips, and a 2-minute demo video.", progress: "The repository contains the model metadata, reproducible experiments, runtime, and this report. Final packaging, the two submission prompts, and the video remain incomplete." },
-  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "On the controlled vector proxy, all three current finalists reach S_perf 100.00. Estimated S_eff is 89.40 for Math-Expert, 87.05 for Qwen3.5, and 74.35 for Qwen2.5 1.5B, the larger vector RSS costing it the most efficiency score. The corresponding ARC-Easy values remain internal accuracy proxies, not submitted S_acc values." },
+  { q: "What should teams enter as self-reported scores?", rule: "DevPost asks for separate S_perf and S_eff values computed from local profiler telemetry. Teams do not submit S_acc.", progress: "The tuned vector candidates both reach the capped performance score on the GCP proxy. Estimated vector efficiency is 86.48 for Qwen3.5 and 76.19 for Qwen2.5. These are controlled proxy values; the physical-target profiler run remains required." },
   { q: "Is the whole application evaluated, or only the model?", rule: "The model-only evaluation uses the submitted GGUF in the organiser’s runtime.", progress: "We record product improvements separately from model-only evidence. Retrieval, the custom streamer, and UI changes stay out of the GGUF campaign score." },
   { q: "How many prompts are visible before submission?", rule: "The FAQ describes two visible prompts plus hidden tests.", progress: "The local profiler path covers the visible task shape and accuracy proxies. Hidden-prompt performance remains unknown by design." },
   { q: "How is temperature handled?", rule: "Temperature is checked around evaluation and can trigger a 10-point penalty above the threshold or when throttling is detected.", progress: "The GCP host exposed no usable package sensor and reported no throttling. Temperature is recorded as unavailable." },
@@ -175,7 +181,7 @@ function verticalGroupedChart(items, series, options = {}) {
     return mark + svgText(center, labelY, options.label(item), `text-anchor="end" transform="rotate(-38 ${center} ${labelY})" class="vgc-label"`);
   }).join("");
   return `<svg viewBox="0 0 ${width} ${height}" data-orientation="vertical" aria-hidden="true"><style>
-    .vgc-grid{stroke:#e6e2db;stroke-width:1}.vgc-tick{font-size:9px;fill:#8a8580}.vgc-label{font-size:9px;fill:#3c3836}.vgc-bar.scalar{fill:#b57614}.vgc-bar.avx2{fill:#31714f}.vgc-bar.official{fill:#1b6ca8}.vgc-bar.diagnostic{fill:#b8afa3}.vgc-bar.throughput{fill:#427b58}.vgc-bar.winner{stroke:#282828;stroke-width:2}.vgc-value{font-size:8px;fill:#504945;font-weight:700}
+    .vgc-grid{stroke:#e6e2db;stroke-width:1}.vgc-tick{font-size:9px;fill:#8a8580}.vgc-label{font-size:9px;fill:#3c3836}.vgc-bar.scalar{fill:#b57614}.vgc-bar.avx2{fill:#31714f}.vgc-bar.official,.vgc-bar.tuned{fill:#1b6ca8}.vgc-bar.diagnostic,.vgc-bar.control{fill:#b8afa3}.vgc-bar.throughput{fill:#427b58}.vgc-bar.winner{stroke:#282828;stroke-width:2}.vgc-value{font-size:8px;fill:#504945;font-weight:700}
   </style>${grid}${bars}</svg>`;
 }
 
@@ -357,12 +363,22 @@ function render() {
   const ladderModels = renderIsaComparison(d.campaign_avx2_score, d.overnight);
   renderOvernight(d.overnight);
   const extensionModels = renderModelExtension(d.model_extension);
-  renderCombinedComparison(ladderModels, extensionModels);
+  const finetuneModels = renderFinetune(d.finetune);
+  renderCombinedComparison(ladderModels, extensionModels, finetuneModels);
   renderCampaignSnapshotWarning(d.campaign);
   renderTpsRef(d);
   renderRunCard(d);
   renderChart(d);
   renderTable(d);
+  restoreInitialHash();
+}
+
+function restoreInitialHash() {
+  if (state.hashRestored || !location.hash) return;
+  const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  if (!target) return;
+  state.hashRestored = true;
+  requestAnimationFrame(() => requestAnimationFrame(() => target.scrollIntoView()));
 }
 
 function renderOvernight(campaign) {
@@ -717,11 +733,76 @@ function renderModelExtension(modelExtension) {
   }));
 }
 
-function renderCombinedComparison(ladderModels, extensionModels) {
+function renderFinetune(finetune) {
+  const accuracyChart = $("finetune-accuracy-chart");
+  const accuracySummary = $("finetune-accuracy-summary");
+  const scoreChart = $("finetune-score-chart");
+  const scoreSummary = $("finetune-score-summary");
+  const resultsTable = $("finetune-results-table");
+  const heldoutTable = $("finetune-heldout-table");
+  const heldoutNote = $("finetune-heldout-note");
+  if (!accuracyChart || !scoreChart || !resultsTable || !heldoutTable) return null;
+  if (!finetune || !Array.isArray(finetune.models)) {
+    accuracyChart.innerHTML = '<p class="chart-empty">The fine-tuning summary is unavailable.</p>';
+    scoreChart.innerHTML = '<p class="chart-empty">The fine-tuning summary is unavailable.</p>';
+    resultsTable.innerHTML = "";
+    heldoutTable.innerHTML = "";
+    if (accuracySummary) accuracySummary.textContent = "The fine-tuning summary is unavailable.";
+    if (scoreSummary) scoreSummary.textContent = "The fine-tuning summary is unavailable.";
+    return null;
+  }
+
+  const models = finetune.models;
+  const scalarWinner = [...models].sort((a, b) => b.scalar.candidate_total - a.scalar.candidate_total)[0];
+  const vectorWinner = [...models].sort((a, b) => b.vector.candidate_total - a.vector.candidate_total)[0];
+
+  accuracyChart.innerHTML = verticalGroupedChart(models, [
+    {className: "control", value: (item) => item.accuracy.control_percent},
+    {className: "tuned", value: (item) => item.accuracy.candidate_percent,
+      winner: (item) => item.id === vectorWinner.id},
+  ], {width: 470, height: 270, bottom: 74, max: 85, ticks: [0, 20, 40, 60, 80],
+    label: (item) => item.label.replace(/ Q4_.+$/, ""), valueFormat: (value) => `${value.toFixed(1)}%`});
+
+  scoreChart.innerHTML = verticalGroupedChart(models, [
+    {className: "scalar", value: (item) => item.scalar.candidate_total,
+      winner: (item) => item.id === scalarWinner.id},
+    {className: "avx2", value: (item) => item.vector.candidate_total,
+      winner: (item) => item.id === vectorWinner.id},
+  ], {width: 470, height: 270, bottom: 74, max: 90, ticks: [0, 20, 40, 60, 80],
+    label: (item) => item.label.replace(/ Q4_.+$/, ""), valueFormat: (value) => value.toFixed(1)});
+
+  if (accuracySummary) {
+    accuracySummary.textContent = models.map((item) =>
+      `${item.label}: ${item.accuracy.control_percent.toFixed(1)}% control, ${item.accuracy.candidate_percent.toFixed(1)}% fine-tuned, ${item.accuracy.delta_points.toFixed(1)} points gained`
+    ).join("; ") + ".";
+  }
+  if (scoreSummary) {
+    scoreSummary.textContent = models.map((item) =>
+      `${item.label}: scalar ${item.scalar.candidate_total.toFixed(4)}, vector ${item.vector.candidate_total.toFixed(4)}`
+    ).join("; ") + `. Scalar leader: ${scalarWinner.label}. Vector leader: ${vectorWinner.label}.`;
+  }
+
+  resultsTable.innerHTML = `<thead><tr><th>Model</th><th>ARC-Easy control → tuned</th><th>Scalar tok/s · est. RSS</th><th>Scalar total control → tuned</th><th>Vector tok/s · est. RSS</th><th>Vector total control → tuned</th></tr></thead><tbody>` +
+    models.map((item) => `<tr class="${item.id === scalarWinner.id || item.id === vectorWinner.id ? "selected-row" : ""}"><td><strong>${esc(item.label)}</strong><small>${esc(item.candidate)}</small></td><td>${fmt.num(item.accuracy.control_percent, 1)}% → <strong>${fmt.num(item.accuracy.candidate_percent, 1)}%</strong><small>+${fmt.num(item.accuracy.delta_points, 1)} points</small></td><td>${fmt.num(item.scalar.candidate_tps, 2)} · ${fmt.num(item.scalar.candidate_peak_rss_mib, 0)} MiB</td><td>${fmt.num(item.scalar.control_total, 4)} → <strong>${fmt.num(item.scalar.candidate_total, 4)}</strong><small>+${fmt.num(item.scalar.delta_total, 4)}</small></td><td>${fmt.num(item.vector.candidate_tps, 2)} · ${fmt.num(item.vector.candidate_peak_rss_mib, 0)} MiB</td><td>${fmt.num(item.vector.control_total, 4)} → <strong>${fmt.num(item.vector.candidate_total, 4)}</strong><small>+${fmt.num(item.vector.delta_total, 4)}</small></td></tr>`).join("") + `</tbody>`;
+
+  const heldoutRows = models.flatMap((item) => (item.held_out || []).map((result) => ({item, result})));
+  heldoutTable.innerHTML = heldoutRows.length
+    ? `<thead><tr><th>Model</th><th>Benchmark</th><th>Samples</th><th>Control → tuned</th></tr></thead><tbody>` + heldoutRows.map(({item, result}) => `<tr><td>${esc(item.label)}</td><td>${esc(result.benchmark)}</td><td>${fmt.int(result.samples)}</td><td>${fmt.num(result.control_percent, 1)}% → <strong>${fmt.num(result.candidate_percent, 1)}%</strong></td></tr>`).join("") + `</tbody>`
+    : "";
+  const pending = models.filter((item) => item.held_out_status).map((item) => `${item.label}: ${item.held_out_status}`);
+  if (heldoutNote) heldoutNote.textContent = pending.join(" ");
+
+  return models.map((item) => ({
+    key: `finetune:${item.id}`, label: `Tuned ${item.label}`, group: "Fine-tuned finalists",
+    scalar_total: item.scalar.candidate_total, avx2_total: item.vector.candidate_total,
+  }));
+}
+
+function renderCombinedComparison(ladderModels, extensionModels, finetuneModels) {
   const chart = $("all-models-score-chart");
   const summary = $("all-models-score-summary");
   if (!chart) return;
-  const combined = [...(ladderModels || []), ...(extensionModels || [])];
+  const combined = [...(ladderModels || []), ...(extensionModels || []), ...(finetuneModels || [])];
   if (!combined.length) {
     chart.innerHTML = '<p class="chart-empty">The combined model comparison is unavailable.</p>';
     if (summary) summary.textContent = "The combined model comparison is unavailable.";
