@@ -146,6 +146,11 @@ def test_unsigned_package_collector_adds_macos_private_test_launcher(tmp_path: P
         body = script.read()
         assert b'/usr/bin/xattr -c -r "$app"' in body
         assert b'/usr/bin/open "$app"' in body
+        guide = package_archive.extractfile(f"{root}/{package.INSTALL_GUIDE}")
+        assert guide is not None
+        instructions = guide.read()
+        assert b"/bin/zsh " in instructions
+        assert b"Double-click Muta.command" not in instructions
 
 
 def test_unsigned_package_collector_names_windows_install_guide(tmp_path: Path):
