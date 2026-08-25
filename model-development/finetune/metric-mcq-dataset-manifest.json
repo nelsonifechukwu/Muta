@@ -1,0 +1,68 @@
+{
+  "excluded": [
+    "all source validation and test splits",
+    "exact, >=0.8 five-gram-Jaccard or >=0.92 sequence overlaps with held-out questions",
+    "OpenR1 traces without both Math Verify and completeness checks",
+    "OpenR1 traces longer than 4500 characters",
+    "submitted competition prompts"
+  ],
+  "profile": "mcq",
+  "quality_controls": {
+    "heldout_question_count": 8477,
+    "heldout_sources": {
+      "ai2_arc/ARC-Challenge/test": 1172,
+      "ai2_arc/ARC-Challenge/validation": 299,
+      "ai2_arc/ARC-Easy/test": 2376,
+      "ai2_arc/ARC-Easy/validation": 570,
+      "allenai/openbookqa/test": 500,
+      "allenai/openbookqa/validation": 500,
+      "allenai/qasc/test": 920,
+      "allenai/qasc/validation": 926,
+      "openai/gsm8k/test": 1319
+    },
+    "mcq_fraction": 1.0,
+    "rejected": {
+      "arc_challenge_train_heldout_overlap": 9,
+      "arc_easy_train_heldout_overlap": 26,
+      "duplicate_prompt_completion": 187,
+      "openbookqa_train_heldout_overlap": 62,
+      "qasc_train_heldout_overlap": 14
+    }
+  },
+  "schema_version": 1,
+  "seed": 3407,
+  "source_licenses": {
+    "allenai/ai2_arc": "CC-BY-SA-4.0",
+    "allenai/openbookqa": "unknown",
+    "allenai/qasc": "CC-BY-4.0",
+    "open-r1/OpenR1-Math-220k": "Apache-2.0",
+    "openai/gsm8k": "MIT"
+  },
+  "source_revisions": {
+    "allenai/ai2_arc": "210d026faf9955653af8916fad021475a3f00453",
+    "allenai/openbookqa": "388097ea7776314e93a529163e0fea805b8a6454",
+    "allenai/qasc": "a34ba204eb9a33b919c10cc08f4f1c8dae5ec070",
+    "open-r1/OpenR1-Math-220k": "e4e141ec9dea9f8326f4d347be56105859b2bd68",
+    "openai/gsm8k": "740312add88f781978c0658806c59bc2815b9866"
+  },
+  "train": {
+    "rows": 15355,
+    "sha256": "7c94bf1599c728bda94f1ad3a9854b1322254ad446f93e0036e9127ed2fbd6c2",
+    "sources": {
+      "arc_challenge_train": 1055,
+      "arc_easy_train": 2104,
+      "openbookqa_train": 4596,
+      "qasc_train": 7600
+    }
+  },
+  "validation": {
+    "rows": 808,
+    "sha256": "747067e0de043665e6e435d7a3be92dd75db7924bf08fee25aeb71c7c7b7ceb8",
+    "sources": {
+      "arc_challenge_train": 54,
+      "arc_easy_train": 121,
+      "openbookqa_train": 245,
+      "qasc_train": 388
+    }
+  }
+}

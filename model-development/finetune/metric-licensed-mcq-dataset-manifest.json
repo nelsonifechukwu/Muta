@@ -1,0 +1,60 @@
+{
+  "excluded": [
+    "all source validation and test splits",
+    "exact, >=0.8 five-gram-Jaccard or >=0.92 sequence overlaps with held-out questions",
+    "OpenR1 traces without both Math Verify and completeness checks",
+    "OpenR1 traces longer than 4500 characters",
+    "submitted competition prompts"
+  ],
+  "profile": "licensed-mcq",
+  "quality_controls": {
+    "heldout_question_count": 8477,
+    "heldout_sources": {
+      "ai2_arc/ARC-Challenge/test": 1172,
+      "ai2_arc/ARC-Challenge/validation": 299,
+      "ai2_arc/ARC-Easy/test": 2376,
+      "ai2_arc/ARC-Easy/validation": 570,
+      "allenai/openbookqa/test": 500,
+      "allenai/openbookqa/validation": 500,
+      "allenai/qasc/test": 920,
+      "allenai/qasc/validation": 926,
+      "openai/gsm8k/test": 1319
+    },
+    "mcq_fraction": 1.0,
+    "rejected": {
+      "arc_challenge_train_heldout_overlap": 9,
+      "arc_easy_train_heldout_overlap": 26,
+      "duplicate_prompt_completion": 133,
+      "openbookqa_train_heldout_overlap": 62,
+      "qasc_train_heldout_overlap": 14
+    }
+  },
+  "schema_version": 1,
+  "seed": 3407,
+  "source_licenses": {
+    "allenai/ai2_arc": "CC-BY-SA-4.0",
+    "allenai/qasc": "CC-BY-4.0"
+  },
+  "source_revisions": {
+    "allenai/ai2_arc": "210d026faf9955653af8916fad021475a3f00453",
+    "allenai/qasc": "a34ba204eb9a33b919c10cc08f4f1c8dae5ec070"
+  },
+  "train": {
+    "rows": 10756,
+    "sha256": "0d1b52db8dc0785fe8c0b62cbe374e79c35192b9ccd7fe86480c998808c3734c",
+    "sources": {
+      "arc_challenge_train": 1061,
+      "arc_easy_train": 2105,
+      "qasc_train": 7590
+    }
+  },
+  "validation": {
+    "rows": 566,
+    "sha256": "fd48e23f20afb5ae8986730b19cb42523610cd0620e71021e9e2e8aa99dbf69b",
+    "sources": {
+      "arc_challenge_train": 48,
+      "arc_easy_train": 120,
+      "qasc_train": 398
+    }
+  }
+}

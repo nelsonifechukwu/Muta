@@ -1,0 +1,46 @@
+{
+  "batch_size": 4,
+  "cuda": "12.8",
+  "elapsed_seconds": 392.656,
+  "epochs": 1.0,
+  "eval_batch_size": 4,
+  "gguf_method": "q4_k_m",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gradient_accumulation": 4,
+  "learning_rate": 0.0001,
+  "max_length": 1024,
+  "max_steps": 250,
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "python": "3.12.3",
+  "rank": 16,
+  "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "schema_version": 1,
+  "seed": 3407,
+  "torch": "2.7.0",
+  "train_input": {
+    "path": "/home/ubuntu/muta-finetune/data-reasoning/train.jsonl",
+    "sha256": "bb2f815ad4c6f21d62837b7c3749fed32dbef3308de1fbccdcad57bb6d21ab93"
+  },
+  "train_metrics": {
+    "epoch": 0.5078720162519045,
+    "total_flos": 8144885976084480.0,
+    "train_loss": 0.567562744140625,
+    "train_runtime": 339.4013,
+    "train_samples_per_second": 11.785,
+    "train_steps_per_second": 0.737
+  },
+  "train_rows": 7876,
+  "training_method": "qlora_4bit",
+  "validation_input": {
+    "path": "/home/ubuntu/muta-finetune/data-reasoning/validation.jsonl",
+    "sha256": "6bf2d2320a740c7e70c3f4b17507cf12b9aefd258e4a40ee7a336c1b9fe8a047"
+  },
+  "validation_metrics": {
+    "epoch": 0.5078720162519045,
+    "eval_loss": 0.5259601473808289,
+    "eval_runtime": 8.6322,
+    "eval_samples_per_second": 47.96,
+    "eval_steps_per_second": 12.048
+  },
+  "validation_rows": 414
+}

@@ -1,0 +1,38 @@
+{
+  "batch_size": 4,
+  "cuda": "12.8",
+  "elapsed_seconds": 341.259,
+  "epochs": 1.0,
+  "eval_batch_size": 4,
+  "gguf_method": "q4_0",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gradient_accumulation": 4,
+  "learning_rate": 0.0001,
+  "max_length": 1024,
+  "max_steps": 250,
+  "model": "Qwen/Qwen3.5-0.8B",
+  "python": "3.12.3",
+  "rank": 8,
+  "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+  "schema_version": 1,
+  "seed": 3407,
+  "torch": "2.7.0",
+  "train_metrics": {
+    "epoch": 0.4278990158322636,
+    "total_flos": 3681735644682240.0,
+    "train_loss": 0.7054959411621093,
+    "train_runtime": 290.7247,
+    "train_samples_per_second": 13.759,
+    "train_steps_per_second": 0.86
+  },
+  "train_rows": 9348,
+  "training_method": "lora_bf16",
+  "validation_metrics": {
+    "epoch": 0.4278990158322636,
+    "eval_loss": 0.6847065687179565,
+    "eval_runtime": 8.7636,
+    "eval_samples_per_second": 56.141,
+    "eval_steps_per_second": 14.035
+  },
+  "validation_rows": 492
+}

@@ -1,0 +1,12 @@
+{
+  "artifact": {
+    "bytes": 986048160,
+    "path": "controls/qwen25-base-same-export_gguf/Qwen2.5-1.5B-Instruct.Q4_K_M.gguf",
+    "sha256": "690da7580eb1a18d4093955e71820897be9c7be3b8afd6c1dff892f00eb80fcf"
+  },
+  "gguf_method": "q4_k_m",
+  "max_length": 1024,
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "schema_version": 1
+}

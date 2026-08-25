@@ -1,0 +1,47 @@
+{
+  "batch_size": 4,
+  "cuda": "12.8",
+  "elapsed_seconds": 94.907,
+  "epochs": 1.0,
+  "eval_batch_size": 4,
+  "gguf_method": "q4_0",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gradient_accumulation": 4,
+  "learning_rate": 0.0,
+  "max_length": 1024,
+  "max_steps": 1,
+  "model": "Qwen/Qwen3.5-0.8B",
+  "python": "3.12.3",
+  "rank": 16,
+  "raw_completion_boundary": "lm_eval_leading_space",
+  "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+  "schema_version": 1,
+  "seed": 3407,
+  "torch": "2.7.0",
+  "train_input": {
+    "path": "data-metric-mcq/train.jsonl",
+    "sha256": "7c94bf1599c728bda94f1ad3a9854b1322254ad446f93e0036e9127ed2fbd6c2"
+  },
+  "train_metrics": {
+    "epoch": 0.001041938004688721,
+    "total_flos": 2432612560896.0,
+    "train_loss": 4.744836330413818,
+    "train_runtime": 39.6368,
+    "train_samples_per_second": 0.404,
+    "train_steps_per_second": 0.025
+  },
+  "train_rows": 15355,
+  "training_method": "lora_bf16",
+  "validation_input": {
+    "path": "data-metric-mcq/validation.jsonl",
+    "sha256": "747067e0de043665e6e435d7a3be92dd75db7924bf08fee25aeb71c7c7b7ceb8"
+  },
+  "validation_metrics": {
+    "epoch": 0.001041938004688721,
+    "eval_loss": 5.659572601318359,
+    "eval_runtime": 13.8863,
+    "eval_samples_per_second": 58.187,
+    "eval_steps_per_second": 14.547
+  },
+  "validation_rows": 808
+}

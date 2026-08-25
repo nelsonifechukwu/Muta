@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "id": "qwen35-bf16-r16-balanced-full",
+      "bytes": 512977376,
+      "quantization": "Q4_0",
+      "sha256": "14304f1f6d7c813cdfd13aeb5519bb6ddaeaae5d97f1ff742d5a8ab9d240855f"
+    },
+    {
+      "id": "qwen35-bf16-r8-balanced-250",
+      "bytes": 512977376,
+      "quantization": "Q4_0",
+      "sha256": "405d90060c777d1b66734787ac062a8cb56950322ade70bc20e948288e1de93c"
+    },
+    {
+      "id": "qwen35-bf16-r32-reasoning-250",
+      "bytes": 512977376,
+      "quantization": "Q4_0",
+      "sha256": "45dbf85fcea3d30f4ce9d7eb2e870d0b2b537b307bd9df0a00534d75781bf7e1"
+    },
+    {
+      "id": "qwen35-qlora-r16-reasoning-250",
+      "bytes": 512977376,
+      "quantization": "Q4_0",
+      "sha256": "020e8625b47092c8aa38bc93184a9e9a4a22ac13fc42971ad9093a5fd6de2774"
+    },
+    {
+      "id": "qwen25-bf16-r16-balanced-full",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "c0cfc663452449c3a8e4fea12d987b5d8b953c77b287136cdc283574893e39c8"
+    },
+    {
+      "id": "qwen25-bf16-r8-balanced-250",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "1c124e5840fd497ff211821a381a88195633117e8c8f5834b26906aef7cd1a73"
+    },
+    {
+      "id": "qwen25-bf16-r32-reasoning-250",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "da2640064a6406b32ced2f705eebc0a830506c067a0c52883ea8d10232710305"
+    },
+    {
+      "id": "qwen25-qlora-r16-reasoning-250",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "910ce9a5e76c470fc3c8bca26e54c3b78751a4d94b987dde17525a0494bee853"
+    },
+    {
+      "id": "qwen25-bf16-r16-mcq-lr2e5-500",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "dffaad40055a60eca39480e5b776e75eacbb4bbd3dfe4456a60d4309a5033b75"
+    },
+    {
+      "id": "qwen25-bf16-r16-hybrid-lr2e5-500",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "271a3332620d12da77205048f47c7d851c12ea17735491d5f6255994d90ad5c0"
+    },
+    {
+      "id": "qwen25-bf16-r32-mcq-lr1e5-250",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "87c86f342363e0eb1e0b5356befd7b32ef7974be00041d577802ee11c0d6a8ca"
+    },
+    {
+      "id": "qwen25-qlora-r16-mcq-lr2e5-250",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "98544eba7b96c17197d4fbc2c928fdabba39977a7b1c9656378ee6113bcb0b1a"
+    },
+    {
+      "id": "qwen35-bf16-r16-mcq-lr2e5-400",
+      "bytes": 512977376,
+      "quantization": "Q4_0",
+      "sha256": "552de22f7ea6f161a458985900e2c961d7578baa1ea9c23018ae27151623ff26"
+    },
+    {
+      "id": "qwen25-bf16-r16-licensed-hybrid-lr2e5-500",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "a153b74d41c24a4fd2d980f2be1361aa0f430c517caecca8e2a970ef371c2443"
+    },
+    {
+      "id": "qwen25-bf16-r16-licensed-mcq-lr2e5-500",
+      "bytes": 986048128,
+      "quantization": "Q4_K_M",
+      "sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb"
+    },
+    {
+      "id": "qwen25-base-same-export-control",
+      "bytes": 986048160,
+      "quantization": "Q4_K_M",
+      "sha256": "690da7580eb1a18d4093955e71820897be9c7be3b8afd6c1dff892f00eb80fcf"
+    },
+    {
+      "id": "qwen35-zero-lr-r16-control",
+      "bytes": 512977376,
+      "quantization": "Q4_0",
+      "sha256": "f2412901329466d4f3dde8379245558088a154d45f0d8e79a9d882ef737fc59b"
+    }
+  ]
+}
