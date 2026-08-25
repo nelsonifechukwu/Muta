@@ -2,7 +2,8 @@
 `WS /v1/audio/voice` (TDD §7.2's designed-but-unbuilt `WS /v1/audio/stream`, realised).
 
 Voice protocol (client ↔ server over one socket):
-- client → text start frame with student, conversation, tutoring mode, and language fields
+- client → text start frame with student, conversation, tutoring mode, and language fields;
+  `transcription_only: true` returns recognized text without starting inference or TTS
 - client → binary frames: 16 kHz mono int16 PCM (~320 ms each)
 - client → text `{"type":"language","language":"de"}` updates the next turn;
   `{"type":"stop"}` forces the endpoint; `{"type":"barge"}` cancels the reply
@@ -332,6 +333,10 @@ async def audio_voice(ws: WebSocket) -> None:
         "language": _preferred_language(start.get("language")),
         "power_optimization_enabled": True,
     }
+    # Desktop/web microphone turns are speech-to-text input, not an implicit audio reply mode.
+    # In this mode the socket owns capture + VAD + ASR only; the browser submits the returned
+    # text through the ordinary chat route so the recognized question and response stay visible.
+    transcription_only = start.get("transcription_only") is True
 
     vad = await run_in_threadpool(SileroVad, stack.config)
     endpointer = Endpointer(
@@ -425,6 +430,8 @@ async def audio_voice(ws: WebSocket) -> None:
         if not voice_session_valid():
             await close_revoked_voice()
             return
+        if transcription_only:
+            await ws.send_json({"type": "transcribing"})
         try:
             async with auxiliary_slot(_asr_slots):
                 if isinstance(utterance, (bytes, bytearray)):
@@ -439,6 +446,10 @@ async def audio_voice(ws: WebSocket) -> None:
             return
         if not voice_session_valid():
             await close_revoked_voice()
+            return
+        if transcription_only:
+            await ws.send_json({"type": "transcript", "text": text})
+            await ws.send_json({"type": "done", "heard": True})
             return
 
         # get_engine's first call constructs the Postgres store (can wait on the pool) and
@@ -632,7 +643,10 @@ async def audio_voice(ws: WebSocket) -> None:
                 if vad.available:
                     await run_in_threadpool(vad.accept, bytes(frame))
                     segment = vad.pop_segment()
-                    if segment is not None:
+                    # sherpa can expose an empty segment after a short utterance. Empty is not
+                    # an endpoint: preserve the raw PCM so an explicit stop can still transcribe
+                    # the student's whole question.
+                    if segment is not None and len(segment):
                         buffer.clear()
                         await _endpoint(segment)
                 else:
@@ -653,10 +667,13 @@ async def audio_voice(ws: WebSocket) -> None:
                 if kind == "stop" and not busy:
                     vad.flush()
                     segment = vad.pop_segment() if vad.available else None
-                    utt = segment if segment is not None else bytes(buffer)
+                    # Silero's flush may return `[]` when it cannot close a confident speech
+                    # segment. Falling back to the raw capture is essential on WebKit, where an
+                    # otherwise valid short question used to become `done: heard=false`.
+                    utt = segment if segment is not None and len(segment) else bytes(buffer)
                     buffer.clear()
                     endpointer.reset()
-                    if segment is not None or len(utt):
+                    if len(utt):
                         await _endpoint(utt)
                 elif kind == "barge":
                     cancel.set()

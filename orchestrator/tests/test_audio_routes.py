@@ -56,6 +56,15 @@ class _NoVad:
         return None
 
 
+class _EmptyFlushVad(_NoVad):
+    """Matches sherpa's observed short-utterance flush: available, but an empty segment."""
+
+    available = True
+
+    def pop_segment(self):
+        return []
+
+
 class _RecordingVoiceEngine:
     def __init__(self) -> None:
         self.calls: list[dict] = []
@@ -179,6 +188,56 @@ def test_voice_language_frame_updates_the_next_generation(monkeypatch):
     assert engine.calls[0]["language"] == "auto"
     assert "response language preference is AUTO" in engine.calls[0]["system_prompt"]
     assert engine.calls[0]["turn_instruction"] == ""
+
+
+def test_transcription_only_voice_returns_text_without_starting_inference(monkeypatch):
+    stack = AudioStack(config=AudioConfig.load(), asr=_StubAsr(), tts=NullTts())
+    monkeypatch.setattr(audio_routes, "get_audio", lambda: stack)
+    monkeypatch.setattr(audio_routes, "SileroVad", _NoVad)
+
+    def inference_must_not_start():
+        raise AssertionError("transcription-only microphone input started the chat engine")
+
+    monkeypatch.setattr(audio_routes, "get_engine", inference_must_not_start)
+
+    with client.websocket_connect("/v1/audio/voice") as ws:
+        ws.send_json(
+            {
+                "type": "start",
+                "student_id": "speech-to-text-user",
+                "conversation_id": None,
+                "mode": "socratic",
+                "language": "en",
+                "transcription_only": True,
+            }
+        )
+        ws.send_bytes(b"\x01\x00" * 320)
+        ws.send_json({"type": "stop"})
+        messages = [ws.receive_json(), ws.receive_json(), ws.receive_json()]
+
+    assert messages == [
+        {"type": "transcribing"},
+        {"type": "transcript", "text": "hi"},
+        {"type": "done", "heard": True},
+    ]
+
+
+def test_transcription_only_falls_back_to_raw_pcm_when_vad_flush_is_empty(monkeypatch):
+    stack = AudioStack(config=AudioConfig.load(), asr=_StubAsr(), tts=NullTts())
+    monkeypatch.setattr(audio_routes, "get_audio", lambda: stack)
+    monkeypatch.setattr(audio_routes, "SileroVad", _EmptyFlushVad)
+
+    with client.websocket_connect("/v1/audio/voice") as ws:
+        ws.send_json({"type": "start", "transcription_only": True})
+        ws.send_bytes(b"\x01\x00" * 320)
+        ws.send_json({"type": "stop"})
+        messages = [ws.receive_json(), ws.receive_json(), ws.receive_json()]
+
+    assert messages == [
+        {"type": "transcribing"},
+        {"type": "transcript", "text": "hi"},
+        {"type": "done", "heard": True},
+    ]
 
 
 def test_voice_ws_relays_automatic_answer_recovery(monkeypatch):

@@ -45,3 +45,22 @@ def test_webkit_uses_a_direct_silent_script_processor_instead_of_a_prunable_gain
     assert "captureNode.connect(audioCtx.destination)" in source
     assert "captureSink" not in source
     assert "outputChannelCount: [1]" in source
+
+
+def test_microphone_is_one_shot_speech_to_text_submitted_through_normal_chat():
+    audio = (ROOT / "audio.js").read_text()
+    app = (ROOT / "app.js").read_text()
+
+    assert "transcription_only: true" in audio
+    assert 'ws.send(JSON.stringify({ type: "stop" }))' in audio
+    assert "if (pending.length) ws.send(pending.buffer)" in audio
+    transcript = audio.split('case "transcript":', 1)[1].split('case "queued":', 1)[0]
+    done = audio.split('case "done":', 1)[1].split("function stopVoice", 1)[0]
+    assert "recognizedTranscript" in transcript
+    assert "stopVoice()" in done
+    assert "chat.submitTranscript(transcript)" in done
+    assert "chat.addUserMessage" not in transcript
+    assert "chat.beginAssistantMessage" not in transcript
+    submit = app.split("submitTranscript: (text) =>", 1)[1].split("},", 1)[0]
+    assert "setComposerValue(transcript)" in submit
+    assert "send()" in submit

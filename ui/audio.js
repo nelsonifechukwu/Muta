@@ -1,10 +1,10 @@
-/* Voice loop client: mic → WS /v1/audio/voice → transcript + streamed reply + spoken audio.
+/* Speech-to-text microphone: mic → WS /v1/audio/voice → composer text → normal chat send.
  *
- * Half-duplex: the mic is muted while the tutor speaks (no echo cancellation needed).
- * One persistent AudioContext is created on the mic click — that user gesture is what lets
- * the reply auto-play later with zero extra clicks.
+ * This intentionally uses the same PCM/VAD/ASR socket as the optional voice service, but asks
+ * for transcription only. The recognized question then follows the exact typed-message path,
+ * so it is visible in the chat and the tutor responds in text.
  *
- * Mic button states: idle → listening → (replying/speaking: click = barge) → listening.
+ * Mic button states: idle → listening → transcribing → idle.
  */
 "use strict";
 
@@ -21,7 +21,8 @@
   let captureNode = null;
   let sourceNode = null;
   let ws = null;
-  let active = false; // voice mode on
+  let active = false; // microphone capture on
+  let finishing = false; // capture stopped; waiting for ASR text
   let replying = false; // server is generating/speaking
   let micMuted = false; // drop capture while TTS plays
   let suppressTts = false; // after a barge: ignore stale TTS until the next turn
@@ -30,6 +31,7 @@
   let activeSources = [];
   let ttsRate = 22050;
   let assistant = null;
+  let recognizedTranscript = "";
   let statusEl = null;
   let statusKey = null;
   let statusVariables = {};
@@ -169,6 +171,7 @@
 
   function syncMicAccessibility() {
     micBtn.setAttribute("aria-pressed", String(active));
+    micBtn.disabled = finishing;
     micBtn.title = t(active ? "voice.stopTitle" : "voice.talkTitle");
     micBtn.setAttribute("aria-label", t(active ? "voice.stop" : "voice.talk"));
   }
@@ -197,9 +200,12 @@
           conversation_id: chat.getConversationId(),
           mode: "socratic",
           language: window.MutaI18n.responseLanguage,
+          transcription_only: true,
         })
       );
       active = true;
+      finishing = false;
+      recognizedTranscript = "";
       chat.setVoiceActive(true);
       replying = false;
       micMuted = false;
@@ -247,16 +253,15 @@
         }
         stopVoice(t("voice.unavailable"), "voice.unavailable");
         break;
-      case "transcript":
-        suppressTts = false; // a new turn: play its speech
-        chat.setConversationId(msg.conversation_id);
-        chat.addUserMessage(msg.text, [{ kind: "audio" }]);
-        assistant = chat.beginAssistantMessage();
-        chat.setGenerating(true);
-        chat.openTelemetry(msg.conversation_id);
-        replying = true;
+      case "transcribing":
+        finishing = true;
         micMuted = true;
-        setStatus("voice.thinking");
+        stopCapture();
+        syncMicAccessibility();
+        setStatus("attachment.transcribing");
+        break;
+      case "transcript":
+        recognizedTranscript = String(msg.text || "").trim();
         break;
       case "queued":
         if (assistant) assistant.showQueued(msg.queue_position || 1);
@@ -283,7 +288,13 @@
         break;
       case "done":
         if (msg.heard === false) {
-          setStatus("voice.didNotCatch");
+          stopVoice(t("voice.didNotCatch"));
+          return;
+        } else if (recognizedTranscript) {
+          const transcript = recognizedTranscript;
+          stopVoice();
+          chat.submitTranscript(transcript);
+          return;
         } else if (assistant) {
           assistant.finalize();
         }
@@ -299,6 +310,8 @@
 
   function stopVoice(toastText, failureKey = null) {
     active = false;
+    finishing = false;
+    recognizedTranscript = "";
     chat.setVoiceActive(false);
     replying = false;
     micMuted = false;
@@ -323,6 +336,24 @@
     micBtn.classList.remove("recording");
     syncMicAccessibility();
     if (toastText) chat.toast(toastText);
+  }
+
+  function finishVoice() {
+    if (!active || finishing) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      stopVoice(t("voice.connectionFailed"), "voice.connectionFailed");
+      return;
+    }
+    finishing = true;
+    micMuted = true;
+    // ScriptProcessor/AudioWorklet batching can leave the final <320 ms in memory. Flush it
+    // before stopping capture or a short spoken question can become an empty recording.
+    if (pending.length) ws.send(pending.buffer);
+    pending = new Int16Array(0);
+    stopCapture();
+    ws.send(JSON.stringify({ type: "stop" }));
+    syncMicAccessibility();
+    setStatus("attachment.transcribing");
   }
 
   function barge() {
@@ -352,7 +383,6 @@
 
   micBtn.addEventListener("click", () => {
     if (!active) startVoice();
-    else if (replying || activeSources.length) barge();
-    else stopVoice();
+    else finishVoice();
   });
 })();

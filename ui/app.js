@@ -3142,6 +3142,15 @@ window.MutaChat = {
     syncComposerState();
     if (!v) drainQueue(); // a message typed during a voice reply goes out when it ends
   },
+  submitTranscript: (text) => {
+    const transcript = String(text || "").trim();
+    if (!transcript) return;
+    setComposerValue(transcript);
+    autoGrow();
+    inputEl.focus();
+    announce(transcript);
+    send();
+  },
 };
 
 // --- learner PDF resources + @ picker -------------------------------------------------
