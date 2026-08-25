@@ -2,12 +2,14 @@
 
 ## Scope
 
-Repair four regressions reported in the signed desktop releases without changing the existing model packs or the offline-first architecture:
+Repair five regressions reported in the signed desktop releases without changing the existing model packs or the offline-first architecture:
 
 1. allow the laptop operator to select any verified, compatible GGUF discovered in the model pack;
 2. keep microphone capture producing PCM frames in WebKit/Tauri as well as Chromium;
 3. render offline visualizations immediately instead of depending on an intersection callback;
 4. move the PDF upload entry point from Settings to the chat composer file control.
+5. keep the tutor's complete explanation when a diagram is appended instead of replacing it with
+   the deterministic safety caption.
 
 ## Confirmed causes
 
@@ -15,6 +17,9 @@ Repair four regressions reported in the signed desktop releases without changing
 - The first audio fix connected the AudioWorklet through a zero-gain node. Packaged-app logs then proved that WebKit still pruned the graph: the voice WebSocket connected, but Moonshine received an empty `{1, 0}` input. WebKit needs a directly connected, silent capture node that remains part of the destination graph.
 - Assigning the visualization iframe `src` synchronously fixed one lifecycle bug but not the blank Mac canvas. A Safari A/B test proved that `sandbox="allow-scripts"` gives the local Three.js frame an opaque origin and leaves WebGL blank, while the same trusted local frame renders with `sandbox="allow-scripts allow-same-origin"`.
 - The hidden PDF file input is connected only to the Settings upload button even though the composer is the primary file workflow.
+- Standard science diagrams always selected deterministic checked prose, even when the model had
+  already produced the requested multi-sentence explanation. Streaming therefore emitted a
+  `replace` event and overwrote the visible lesson text.
 
 ## Implementation
 
@@ -24,6 +29,8 @@ Repair four regressions reported in the signed desktop releases without changing
 - Ignore empty VAD segments before invoking the native Moonshine decoder so a zero-length capture cannot trigger a native shape exception.
 - Add a labelled SVG PDF attachment button to the existing composer icon row, wire it to the hidden PDF input, remove the Settings upload action, and keep Settings only for managing already uploaded resources.
 - Improve recorded-audio upload errors and authenticated requests while touching that path.
+- Preserve non-refusal explanations containing at least two complete sentences. Keep the checked
+  deterministic explanation as the fallback for refusals and thin one-sentence output.
 
 ## Verification
 
@@ -31,6 +38,8 @@ Repair four regressions reported in the signed desktop releases without changing
 - Run the complete UI JavaScript/Python suites and the relevant Python desktop/gateway suites.
 - Exercise the built UI through the local browser: selectable model menu, PDF control placement, and rendered visualization. Reproduce the visualization in Safari with and without same-origin sandboxing to verify the WebKit-specific cause.
 - Inspect packaged-app logs to verify that the microphone permission and voice WebSocket paths work independently of PCM production, then regression-test empty-segment handling.
+- Verify in the packaged Mac app that WebKit transmits live PCM continuously, transcribe a known
+  speech fixture through the packaged endpoint, and retain full prose before a rendered diagram.
 - Rebuild all supported release targets through the cached `final-package` pipeline and verify checksums/manifests.
 
 ## Release safety
