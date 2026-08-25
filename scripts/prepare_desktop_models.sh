@@ -33,12 +33,12 @@ for artifact in asr vad tts embed; do
   fetch_product_model "$artifact"
 done
 
-test "$(wc -c < muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf | tr -d ' ')" = "507148832"
+test "$(wc -c < muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf | tr -d ' ')" = "512977376"
 test "$(wc -c < models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf | tr -d ' ')" = "204987232"
 checksum_manifest="$(mktemp)"
 trap 'rm -f "$checksum_manifest"' EXIT
 printf '%s  %s\n' \
-  "c96df4ef6d9416bea6a35866751cb6cf02e20ec6ce28b20980d66c90604d5d7b" \
+  "552de22f7ea6f161a458985900e2c961d7578baa1ea9c23018ae27151623ff26" \
   "muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf" \
   "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453" \
   "models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf" \

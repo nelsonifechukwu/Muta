@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Fetch the exact Qwen2.5 1.5B Instruct Q4_K_M artifact used by the GCP campaign.
+# Fetch the exact fine-tuned Qwen2.5 1.5B Q4_K_M artifact promoted by the campaign.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODEL_DIR="$HERE/model"
 FINAL="$MODEL_DIR/qwen2.5-1.5b-instruct-q4_k_m.gguf"
-FINAL_SHA="6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
-FINAL_BYTES=1117320736
-SOURCE_REV="91cad51170dc346986eccefdc2dd33a9da36ead9"
-SOURCE_URL="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/$SOURCE_REV/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+FINAL_SHA="a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb"
+FINAL_BYTES=986048128
+HF_REPO="timiiowolabi/Muta-Tutor-Qwen2.5-1.5B-ADTC-GGUF"
+HF_FILE="Muta-Tutor-Qwen2.5-1.5B-Q4_K_M.gguf"
 
 sha() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1
@@ -23,26 +23,33 @@ bytes() {
 }
 
 verify() {
-  [ "$(bytes "$1")" = "$FINAL_BYTES" ] && [ "$(sha "$1")" = "$FINAL_SHA" ]
+  [ -f "$1" ] && [ "$(bytes "$1")" = "$FINAL_BYTES" ] && [ "$(sha "$1")" = "$FINAL_SHA" ]
+}
+
+hf_cli() {
+  if [ -n "${HF_CLI:-}" ] && [ -x "$HF_CLI" ]; then printf '%s\n' "$HF_CLI"
+  elif command -v hf >/dev/null 2>&1; then command -v hf
+  elif [ -x "$HOME/.local/bin/hf" ]; then printf '%s\n' "$HOME/.local/bin/hf"
+  else return 1
+  fi
 }
 
 mkdir -p "$MODEL_DIR"
-if [ -f "$FINAL" ] && verify "$FINAL"; then
-  echo "Qwen2.5 already present and verified: $FINAL"
+if verify "$FINAL"; then
+  echo "fine-tuned Qwen2.5 already present and verified: $FINAL"
   exit 0
 fi
 
-rm -f "$FINAL.partial"
-if command -v curl >/dev/null 2>&1; then
-  curl -fL --retry 5 --retry-delay 5 --progress-bar -o "$FINAL.partial" "$SOURCE_URL"
-elif command -v wget >/dev/null 2>&1; then
-  wget --show-progress -O "$FINAL.partial" "$SOURCE_URL"
-else
-  echo "neither curl nor wget is available" >&2
-  exit 1
-fi
+HF="$(hf_cli || true)"
+[ -n "$HF" ] \
+  || { echo "Hugging Face CLI missing — install it from https://hf.co/cli/install.sh" >&2; exit 1; }
+"$HF" auth whoami --format quiet >/dev/null 2>&1 \
+  || { echo "Hugging Face login required for the private model: run 'hf auth login'" >&2; exit 1; }
 
-verify "$FINAL.partial" \
-  || { echo "downloaded Qwen2.5 GGUF failed byte-size or SHA-256 verification" >&2; exit 1; }
-mv "$FINAL.partial" "$FINAL"
+echo "downloading the promoted fine-tuned Qwen2.5 GGUF…"
+"$HF" download "$HF_REPO" "$HF_FILE" --local-dir "$MODEL_DIR" >/dev/null
+DOWNLOAD="$MODEL_DIR/$HF_FILE"
+verify "$DOWNLOAD" \
+  || { echo "downloaded fine-tuned Qwen2.5 GGUF failed integrity verification" >&2; exit 1; }
+mv "$DOWNLOAD" "$FINAL"
 echo "done: $FINAL (size and sha256 verified)"
