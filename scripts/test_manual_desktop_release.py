@@ -122,6 +122,10 @@ def test_gateway_worker_uses_external_cargo_cache(tmp_path: Path) -> None:
     assert worker.bundle_root(environment) == (
         tmp_path / "cargo-target/darwin-x86_64/x86_64-apple-darwin/release/bundle"
     )
+    assert Path(environment["PYTHON"]).resolve() == Path(worker.sys.executable).resolve()
+    assert Path(environment["PATH"].split(worker.os.pathsep)[0]) == Path(
+        worker.sys.executable
+    ).resolve().parent
 
 
 def test_intel_mac_python_installs_compatible_binary_cryptography(

@@ -140,6 +140,12 @@ def platform_lock(cache_root: Path, platform_name: str):
 def target_environment(platform_name: str, cache_root: Path) -> dict[str, str]:
     _, _, target_arch = SUPPORTED[platform_name]
     env = {**os.environ}
+    # Shell provisioning helpers must use the worker's prepared interpreter. Calling an ambient
+    # `python3` is unsafe on macOS (Homebrew may point at a different version without the build
+    # dependencies) and on Windows (MSYS may not have any Python on PATH).
+    python = Path(sys.executable).resolve()
+    env["PYTHON"] = msys_path(python)
+    env["PATH"] = str(python.parent) + os.pathsep + env.get("PATH", "")
     env["MUTA_DESKTOP_TARGET_ARCH"] = target_arch
     env["MUTA_NATIVE_WORK"] = str(cache_root / "native-work" / platform_name)
     env["CARGO_TARGET_DIR"] = str(cache_root / "cargo-target" / platform_name)
@@ -242,7 +248,7 @@ def build(args: argparse.Namespace) -> Path:
     with platform_lock(cache_root, args.platform):
         model_check = run([sys.executable, "scripts/verify_desktop_models.py"], check=False)
         if model_check.returncode:
-            run(["bash", "scripts/prepare_desktop_models.sh"])
+            run(["bash", "scripts/prepare_desktop_models.sh"], env=env)
             run([sys.executable, "scripts/verify_desktop_models.py"])
         prepare_ui(cache_root)
         native = prepare_native(args.platform, cache_root, env)
