@@ -158,10 +158,11 @@ submission, and Delete record. The build fails if any evidence lane is missing r
 publishing "unavailable" placeholders, and it only clears an output directory it created.
 
 `make vercel` deploys that output to Vercel (project `muta-iq`, https://muta-iq.vercel.app) as a
-prebuilt upload, and `.github/workflows/pages.yml` runs the same build on pushes to `main` that
-touch the dashboard, `muta-iq/metadata.json`, or `bench/measurements/` for the repository's
-GitHub Pages project page. See `docs/report-hosting.md` for both, including the
-private-repository caveat for Pages.
+prebuilt upload; `.github/workflows/vercel.yml` does the same on pushes to `main` that touch the
+dashboard, `muta-iq/metadata.json`, or `bench/measurements/` (once the `VERCEL_TOKEN` secret is
+set and Actions runs on the repository), and `.github/workflows/pages.yml` is the manual
+GitHub Pages variant. See `docs/report-hosting.md` for all three, the Vercel Git-integration
+route, and the private-repository caveat for Pages.
 
 ## Tests
 

@@ -11,18 +11,23 @@
 # Pages must be enabled with "Source: GitHub Actions"; configure-pages (enablement: true)
 # does that on the first run when the token is allowed to. NOTE: this repository is private,
 # and GitHub Pages on a private repository requires a paid plan — see docs/report-hosting.md.
+#
+# MANUAL-ONLY for now: Pages is not enabled on this private repository and the report is
+# hosted on Vercel (.github/workflows/vercel.yml), so a push trigger would only add a failing
+# run to every dashboard commit. Run it from the Actions tab once Pages is enabled, and restore
+# the push trigger below at that point.
 
 name: pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - muta-iq/dashboard/**
-      - muta-iq/metadata.json
-      - bench/measurements/**
-      - .github/workflows/pages.yml
   workflow_dispatch:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - muta-iq/dashboard/**
+  #     - muta-iq/metadata.json
+  #     - bench/measurements/**
+  #     - .github/workflows/pages.yml
 
 permissions:
   contents: read

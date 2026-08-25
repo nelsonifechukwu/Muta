@@ -6,8 +6,8 @@ mode" below); they differ only in who builds it and where it is served.
 
 | Host | URL | Built by | Status |
 |---|---|---|---|
-| **Vercel** (project `muta-iq`, scope `iitimiis-projects`) | **https://muta-iq.vercel.app** | locally, `make vercel` (prebuilt upload) | live |
-| GitHub Pages project page | `https://nelsonifechukwu.github.io/Muta/` | `.github/workflows/pages.yml` on push to `main` | needs Pages enabled; private repo → paid plan |
+| **Vercel** (project `muta-iq`, scope `iitimiis-projects`) | **https://muta-iq.vercel.app** | `make vercel` locally; `.github/workflows/vercel.yml` on push (see "Deploying on push") | live |
+| GitHub Pages project page | `https://nelsonifechukwu.github.io/Muta/` | `.github/workflows/pages.yml`, manual (`workflow_dispatch`) | needs Pages enabled; private repo → paid plan |
 
 ## Vercel
 
@@ -26,9 +26,44 @@ root, which created `.vercel/project.json` (gitignored). `vercel.json` also carr
 build command and `outputDirectory: site`, so if the repository is ever connected to Vercel's
 Git integration the project builds the same way there (the build image has `python3`).
 
-Deploys are manual by design: the report changes when evidence is re-analysed, not on every
-commit, and the Vercel account (`iitimii`) is not the GitHub repository owner, so Git
-integration would need the owner to install Vercel's GitHub app on `nelsonifechukwu/Muta`.
+### Deploying on push
+
+Three routes exist; as of 2026-08-25 only the manual one works end to end, because the two
+automatic ones each wait on something only the repository owner (`nelsonifechukwu`) can do.
+
+1. **Vercel Git integration (recommended).** Vercel clones the repository on every push and
+   runs `vercel.json`'s `buildCommand` itself (its build image has `python3`); pushes to
+   `main` become production, other branches become preview URLs, and `ignoreCommand` skips
+   commits that touch none of `muta-iq/dashboard/`, `muta-iq/metadata.json`,
+   `bench/measurements/`, `vercel.json`. It needs no GitHub Actions minutes and no token.
+   **Blocked until the owner installs Vercel's GitHub App on the `nelsonifechukwu` account**
+   with access to `Muta`: Vercel's GitHub connection for this account (`iitimii`) currently
+   sees only the `iitimii` namespace (`iitimii/muta-iq`, `iitimii/Muta_v2`, …), so
+   `nelsonifechukwu/Muta` cannot be selected. Steps: log in to GitHub as `nelsonifechukwu` →
+   https://github.com/apps/vercel → Install → choose the `nelsonifechukwu` account → grant
+   `Muta`; then from the repository root `vercel git connect` (or Vercel dashboard → project
+   `muta-iq` → Settings → Git → Connect). The project settings are already correct for this
+   (framework `null`, the build command, output `site`).
+2. **GitHub Actions → Vercel** (`.github/workflows/vercel.yml`). On pushes to `main` that
+   touch the report inputs it runs the dashboard tests, then `scripts/deploy_report_vercel.sh`
+   with `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` (identifiers, in the workflow) and the
+   **`VERCEL_TOKEN` repository secret** (create at https://vercel.com/account/tokens, then
+   `gh secret set VERCEL_TOKEN -R nelsonifechukwu/Muta`; the workflow fails with a clear
+   message while it is missing). **Blocked until GitHub Actions works on this repository:**
+   GitHub Actions has *never* started here. All 200 runs in the repository's history, from
+   the first push after `ci.yml` was added on 2026-08-08 to today, ended in
+   `startup_failure` attributed to a deleted `BuildFailed` placeholder workflow, while the
+   five real workflow files — which all parse, are plain blobs, and are not touched by the
+   LFS rules in `.gitattributes` — get no runs at all. A repo-wide pattern like that is not
+   a workflow-file error; it is an account-level block on the owner (`nelsonifechukwu`)
+   side, which a collaborator without admin rights cannot inspect (the repository's
+   Actions-permissions API answers 404 to this account). Owner checks, in order: repository
+   Settings → Actions → General (Actions permissions must allow workflows); account
+   Settings → Billing and plans → Actions (a private repository consumes paid minutes and
+   the desktop macOS builds are billed at 10×, so a spending limit of 0 or a failed payment
+   blocks every run); and if both look fine, GitHub Support with a run URL.
+3. **Manual** — `make vercel` from a linked checkout, as above. This is how every deploy so
+   far was made.
 
 ## GitHub Pages (project page)
 
@@ -78,8 +113,10 @@ and `node --check` before building.
 
 ## Enabling Pages, and the private-repository caveat
 
-- The workflow calls `actions/configure-pages` with `enablement: true`, which asks GitHub to
-  create the Pages site with source "GitHub Actions" on the first run. If that step is refused,
+- The workflow is `workflow_dispatch`-only for now (its push trigger is kept commented out in
+  the file) so it does not add a failing run to every dashboard commit while Pages is off. It
+  calls `actions/configure-pages` with `enablement: true`, which asks GitHub to create the
+  Pages site with source "GitHub Actions" on the first run. If that step is refused,
   enable it once by hand: **Settings → Pages → Build and deployment → Source: GitHub Actions**,
   then re-run the workflow. Enabling Pages needs repository admin rights.
 - **This repository is private.** GitHub Pages on a private repository is only available on paid
