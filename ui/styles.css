@@ -1462,4 +1462,12 @@ html[dir="rtl"] .host-switch input:checked::after { transform: translateX(-18px)
   button.icon { min-width: 44px; min-height: 44px; padding: 11px; }
   #composer-buttons .left { gap: 0; }
 }
+@media (max-width: 400px) {
+  /* Six 44 px tool targets plus the 44 px Send/Stop target fit at 375 px only when the
+     reasoning label collapses to its already-labelled icon. Keep every touch target intact. */
+  #composer { padding-inline: 8px; }
+  #composer-buttons { gap: 4px; }
+  #composer-buttons .left { min-width: 0; }
+  .think-current { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .share-spinner { animation: none; } }

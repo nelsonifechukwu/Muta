@@ -7,6 +7,7 @@ process — the boundary the architecture already draws (ROADMAP A.2).
 from __future__ import annotations
 
 import json
+import socket
 import threading
 import time
 from collections.abc import Iterator
@@ -16,6 +17,33 @@ from typing import Any
 import httpx
 
 Message = dict[str, Any]
+
+
+def _interrupt_blocked_response(response: httpx.Response) -> None:
+    """Wake a synchronous socket read without owning the response iterator.
+
+    ``Response.close()`` from a second thread does not reliably interrupt ``recv()`` on
+    macOS. It can therefore leave the generation worker blocked until the full HTTP timeout
+    even though llama-server noticed the disconnected client and stopped decoding. A socket
+    shutdown is the cross-thread wake-up primitive; the iterator-owning thread still performs
+    the normal response close as it exits the context manager.
+    """
+    extensions = getattr(response, "extensions", {})
+    network_stream = extensions.get("network_stream") if isinstance(extensions, dict) else None
+    get_extra_info = getattr(network_stream, "get_extra_info", None)
+    transport_socket = get_extra_info("socket") if callable(get_extra_info) else None
+    if transport_socket is not None:
+        try:
+            transport_socket.shutdown(socket.SHUT_RDWR)
+            return
+        except OSError:
+            # The peer may have completed between cancellation and this watcher waking.
+            return
+    # Test doubles and unusual transports may not expose the standard network-stream
+    # extension. Preserve the former best-effort behavior for those cases.
+    close = getattr(response, "close", None)
+    if callable(close):
+        close()
 
 
 class InferenceStreamError(RuntimeError):
@@ -218,9 +246,7 @@ class InferenceClient:
                 def close_on_cancel() -> None:
                     while not stream_done.is_set():
                         if cancel_event.wait(0.1):
-                            close = getattr(r, "close", None)
-                            if callable(close):
-                                close()
+                            _interrupt_blocked_response(r)
                             return
 
                 threading.Thread(
@@ -231,54 +257,62 @@ class InferenceClient:
             terminal = False
             finish_reason: str | None = None
             try:
-                for line in r.iter_lines():
+                try:
+                    for line in r.iter_lines():
+                        if cancel_event is not None and cancel_event.is_set():
+                            return
+                        if not line or not line.startswith("data: "):
+                            continue
+                        data = line[len("data: ") :]
+                        if data.strip() == "[DONE]":
+                            terminal = True
+                            break
+                        try:
+                            body = json.loads(data)
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            continue
+                        error = body.get("error") if isinstance(body, dict) else None
+                        if error:
+                            if isinstance(error, dict):
+                                message = str(
+                                    error.get("message")
+                                    or error.get("type")
+                                    or "inference failed"
+                                )
+                                code = error.get("code")
+                            else:
+                                message, code = str(error), None
+                            lower = message.lower()
+                            retryable = (
+                                "context size" not in lower
+                                and "context window" not in lower
+                                and (
+                                    str(code)
+                                    in {"408", "425", "429", "500", "502", "503", "504"}
+                                    or "temporar" in lower
+                                    or "unavailable" in lower
+                                )
+                            )
+                            raise InferenceStreamError(message, retryable=retryable)
+                        try:
+                            choice = body["choices"][0]
+                            delta = choice["delta"]
+                        except (KeyError, IndexError, TypeError):
+                            continue
+                        reason = choice.get("finish_reason")
+                        if reason is not None:
+                            terminal = True
+                            finish_reason = str(reason)
+                        reasoning = delta.get("reasoning_content")
+                        if reasoning:
+                            yield "reasoning", reasoning
+                        content = delta.get("content")
+                        if content:
+                            yield "content", content
+                except httpx.HTTPError:
                     if cancel_event is not None and cancel_event.is_set():
                         return
-                    if not line or not line.startswith("data: "):
-                        continue
-                    data = line[len("data: ") :]
-                    if data.strip() == "[DONE]":
-                        terminal = True
-                        break
-                    try:
-                        body = json.loads(data)
-                    except (json.JSONDecodeError, KeyError, IndexError):
-                        continue
-                    error = body.get("error") if isinstance(body, dict) else None
-                    if error:
-                        if isinstance(error, dict):
-                            message = str(
-                                error.get("message") or error.get("type") or "inference failed"
-                            )
-                            code = error.get("code")
-                        else:
-                            message, code = str(error), None
-                        lower = message.lower()
-                        retryable = (
-                            "context size" not in lower
-                            and "context window" not in lower
-                            and (
-                                str(code) in {"408", "425", "429", "500", "502", "503", "504"}
-                                or "temporar" in lower
-                                or "unavailable" in lower
-                            )
-                        )
-                        raise InferenceStreamError(message, retryable=retryable)
-                    try:
-                        choice = body["choices"][0]
-                        delta = choice["delta"]
-                    except (KeyError, IndexError, TypeError):
-                        continue
-                    reason = choice.get("finish_reason")
-                    if reason is not None:
-                        terminal = True
-                        finish_reason = str(reason)
-                    reasoning = delta.get("reasoning_content")
-                    if reasoning:
-                        yield "reasoning", reasoning
-                    content = delta.get("content")
-                    if content:
-                        yield "content", content
+                    raise
             finally:
                 stream_done.set()
             if cancel_event is not None and cancel_event.is_set():

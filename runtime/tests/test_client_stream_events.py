@@ -9,6 +9,7 @@ that don't want the reasoning.
 from __future__ import annotations
 
 import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import httpx
 import pytest
@@ -146,7 +147,7 @@ def test_cancel_closes_a_transport_blocked_inside_the_next_socket_read(monkeypat
                     _muta_cancel_event=cancel,
                 )
             )
-        except BaseException as exc:  # pragma: no cover - asserted below
+        except (httpx.HTTPError, RuntimeError) as exc:  # pragma: no cover - asserted below
             failure.append(exc)
 
     worker = threading.Thread(target=consume)
@@ -157,3 +158,54 @@ def test_cancel_closes_a_transport_blocked_inside_the_next_socket_read(monkeypat
     assert blocked.closed.is_set()
     assert not worker.is_alive()
     assert failure == []
+
+
+def test_cancel_interrupts_a_real_transport_blocked_inside_recv():
+    release_server = threading.Event()
+
+    class StreamingHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.send_response(200)
+            self.send_header("content-type", "text/event-stream")
+            self.end_headers()
+            self.wfile.write(
+                b'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'
+            )
+            self.wfile.flush()
+            release_server.wait(timeout=2)
+
+        def log_message(self, *_args):
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), StreamingHandler)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    cancel = threading.Event()
+    events = InferenceClient(
+        base_url=f"http://127.0.0.1:{server.server_port}", timeout=30
+    ).stream_events(
+        [{"role": "user", "content": "hi"}],
+        _muta_cancel_event=cancel,
+    )
+    try:
+        assert next(events) == ("content", "partial")
+        failure: list[BaseException] = []
+
+        def drain() -> None:
+            try:
+                list(events)
+            except (httpx.HTTPError, RuntimeError) as exc:  # pragma: no cover - asserted below
+                failure.append(exc)
+
+        worker = threading.Thread(target=drain)
+        worker.start()
+        cancel.set()
+        worker.join(timeout=1)
+
+        assert not worker.is_alive(), "cancel left the real socket read blocked"
+        assert failure == []
+    finally:
+        release_server.set()
+        server.shutdown()
+        server.server_close()
+        server_thread.join(timeout=1)

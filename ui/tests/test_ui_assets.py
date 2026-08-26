@@ -398,6 +398,23 @@ def test_mobile_keyboard_and_large_composer_regions_remain_bounded():
     assert re.search(r"min-height\s*:\s*4\.6rem", compact_composer)
 
 
+def test_375px_composer_keeps_every_touch_target_and_send_button_visible():
+    narrow = re.search(r"@media \(max-width: 400px\) \{(?P<body>.*?)\n\}", CSS, re.DOTALL)
+    assert narrow
+    body = narrow.group("body")
+    assert re.search(r"#composer\s*\{[^}]*padding-inline\s*:\s*8px", body)
+    assert re.search(r"#composer-buttons\s*\{[^}]*gap\s*:\s*4px", body)
+    assert re.search(r"\.think-current\s*\{[^}]*display\s*:\s*none", body)
+    coarse = re.search(
+        r"@media \(max-width: 720px\), \(pointer: coarse\) \{(?P<body>.*?)\n\}",
+        CSS,
+        re.DOTALL,
+    )
+    assert coarse
+    assert "min-width: 44px" in coarse.group("body")
+    assert "min-height: 44px" in coarse.group("body")
+
+
 def test_reasoning_menu_escapes_the_clipped_composer_and_tracks_its_trigger():
     composer_start = HTML.index('<div id="composer-wrap">')
     composer_end = HTML.index("</main>", composer_start)
