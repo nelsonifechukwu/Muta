@@ -1,0 +1,3902 @@
+{
+  "schema_version": 1,
+  "phase": "awaiting-dependencies",
+  "sources": {
+    "html": [
+      "ui/index.html",
+      "ui/viz-frame.html"
+    ],
+    "javascript": [
+      "ui/access-bootstrap.js",
+      "ui/app.js",
+      "ui/audio.js",
+      "ui/citations.js",
+      "ui/image-upload.js",
+      "ui/math.js",
+      "ui/popover-position.js",
+      "ui/product-analytics.js",
+      "ui/resource-mentions.js",
+      "ui/theme.js",
+      "ui/visualizations.js",
+      "ui/viz-frame.js",
+      "ui/viz-theme.js"
+    ]
+  },
+  "catalog": {
+    "english_key_count": 165,
+    "english_keys": [
+      "attachment.audio",
+      "attachment.audioUploadFailed",
+      "attachment.chooseImageModel",
+      "attachment.file",
+      "attachment.heardNothing",
+      "attachment.imageAttached",
+      "attachment.imageRead",
+      "attachment.imageUnreadable",
+      "attachment.imageUploadFailed",
+      "attachment.oneImage",
+      "attachment.photoEmpty",
+      "attachment.preview",
+      "attachment.previewNamed",
+      "attachment.readFailed",
+      "attachment.reading",
+      "attachment.remove",
+      "attachment.sent",
+      "attachment.sentNamed",
+      "attachment.speechUnavailable",
+      "attachment.transcribing",
+      "attachment.unknownFile",
+      "attachment.uploading",
+      "badge.checkFailed",
+      "badge.cloud",
+      "badge.sources",
+      "badge.verified",
+      "badge.verifiedTitle",
+      "chat.conversation",
+      "composer.attachAudio",
+      "composer.attachAudioTitle",
+      "composer.attachImage",
+      "composer.attachImageTitle",
+      "composer.placeholder",
+      "composer.send",
+      "composer.sendMessage",
+      "composer.stop",
+      "conversation.background",
+      "conversation.delete",
+      "conversation.notFound",
+      "conversation.open",
+      "conversation.unavailable",
+      "conversation.untitled",
+      "conversation.voiceChanging",
+      "country.southAfrica",
+      "country.zimbabwe",
+      "drop.addFile",
+      "empty.body",
+      "empty.title",
+      "fineprint",
+      "groups.african",
+      "groups.other",
+      "model.checking",
+      "model.choose",
+      "model.chooseLocal",
+      "model.connectionDropped",
+      "model.currentLocal",
+      "model.defaultRecommended",
+      "model.imageInput",
+      "model.loading",
+      "model.loadingNamed",
+      "model.loadingNote",
+      "model.localTutor",
+      "model.noneInstalled",
+      "model.operatorOnly",
+      "model.outsideRegistry",
+      "model.ready",
+      "model.readyNew",
+      "model.recommended",
+      "model.registryFailed",
+      "model.runsLocal",
+      "model.stopBeforeChange",
+      "model.switchFailed",
+      "model.switchUncertain",
+      "model.switching",
+      "model.switchingNamed",
+      "model.unavailable",
+      "nav.aboutMuta",
+      "nav.conversations",
+      "nav.home",
+      "nav.newChat",
+      "nav.showConversations",
+      "network.offline",
+      "network.online",
+      "queue.automatic",
+      "queue.discardedMany",
+      "queue.discardedOne",
+      "queue.dontSend",
+      "queue.fromImage",
+      "queue.messages",
+      "queue.position",
+      "queue.recovering",
+      "queue.slotFree",
+      "queue.waiting",
+      "queue.waitingSlot",
+      "reason.auto",
+      "reason.autoHelp",
+      "reason.changed",
+      "reason.extended",
+      "reason.extendedHelp",
+      "reason.off",
+      "reason.offHelp",
+      "reason.title",
+      "reply.connectionLost",
+      "reply.couldNotFinish",
+      "reply.didNotStart",
+      "reply.earlierFinishing",
+      "reply.earlierRunning",
+      "reply.httpAnswerFailed",
+      "reply.imageReading",
+      "reply.imageUploading",
+      "reply.modelLoading",
+      "reply.openingChats",
+      "reply.parallelDisabled",
+      "reply.previousStarting",
+      "reply.reconnecting",
+      "reply.startFailed",
+      "reply.stopFailed",
+      "reply.stopped",
+      "reply.tutorReplied",
+      "reply.voiceTyped",
+      "runtime.offlineLocal",
+      "settings.close",
+      "settings.general",
+      "settings.interface",
+      "settings.language",
+      "settings.languageAuto",
+      "settings.languageHelp",
+      "settings.limits",
+      "settings.parallel",
+      "settings.parallelHelp",
+      "settings.saveFailed",
+      "settings.title",
+      "telemetry.no",
+      "telemetry.peak",
+      "telemetry.peakTitle",
+      "telemetry.ramTitle",
+      "telemetry.tempTitle",
+      "telemetry.throttle",
+      "telemetry.throttleTitle",
+      "telemetry.tpsTitle",
+      "telemetry.yes",
+      "thinking.answerNow",
+      "thinking.label",
+      "thinking.minutes",
+      "thinking.seconds",
+      "thinking.warming",
+      "thinking.warmingAnnouncement",
+      "voice.answerFailed",
+      "voice.connectionFailed",
+      "voice.didNotCatch",
+      "voice.listening",
+      "voice.permission",
+      "voice.speaking",
+      "voice.stop",
+      "voice.stopTitle",
+      "voice.talk",
+      "voice.talkTitle",
+      "voice.thinking",
+      "voice.unavailable",
+      "voice.unavailableReason",
+      "voice.wait",
+      "web.label",
+      "web.off",
+      "web.on",
+      "web.title"
+    ],
+    "placeholders": {
+      "groups.african": [],
+      "groups.other": [],
+      "country.southAfrica": [],
+      "country.zimbabwe": [],
+      "nav.showConversations": [],
+      "nav.conversations": [],
+      "nav.newChat": [],
+      "nav.home": [],
+      "nav.aboutMuta": [],
+      "settings.title": [],
+      "settings.close": [],
+      "settings.interface": [],
+      "settings.language": [],
+      "settings.languageAuto": [],
+      "settings.languageHelp": [],
+      "settings.general": [],
+      "settings.parallel": [],
+      "settings.parallelHelp": [],
+      "settings.limits": [],
+      "settings.saveFailed": [],
+      "runtime.offlineLocal": [],
+      "model.loading": [],
+      "model.choose": [],
+      "model.runsLocal": [],
+      "model.defaultRecommended": [],
+      "model.recommended": [],
+      "model.imageInput": [],
+      "model.localTutor": [],
+      "model.switching": [],
+      "model.currentLocal": [],
+      "model.chooseLocal": [],
+      "model.operatorOnly": [],
+      "model.outsideRegistry": [],
+      "model.noneInstalled": [],
+      "model.checking": [],
+      "model.switchUncertain": [],
+      "model.registryFailed": [],
+      "model.stopBeforeChange": [],
+      "model.loadingNamed": [
+        "{model}"
+      ],
+      "model.loadingNote": [
+        "{model}"
+      ],
+      "model.switchingNamed": [
+        "{model}"
+      ],
+      "model.readyNew": [
+        "{model}"
+      ],
+      "model.ready": [
+        "{model}"
+      ],
+      "model.connectionDropped": [],
+      "model.switchFailed": [],
+      "model.unavailable": [],
+      "empty.title": [],
+      "empty.body": [],
+      "chat.conversation": [],
+      "composer.placeholder": [],
+      "composer.attachImageTitle": [],
+      "composer.attachImage": [],
+      "composer.attachAudioTitle": [],
+      "composer.attachAudio": [],
+      "composer.send": [],
+      "composer.sendMessage": [],
+      "composer.stop": [],
+      "fineprint": [],
+      "drop.addFile": [],
+      "telemetry.ramTitle": [],
+      "telemetry.peakTitle": [],
+      "telemetry.tempTitle": [],
+      "telemetry.throttleTitle": [],
+      "telemetry.tpsTitle": [],
+      "telemetry.peak": [],
+      "telemetry.throttle": [],
+      "telemetry.yes": [],
+      "telemetry.no": [],
+      "queue.messages": [],
+      "queue.position": [
+        "{position}"
+      ],
+      "queue.waiting": [],
+      "queue.slotFree": [],
+      "queue.recovering": [],
+      "queue.waitingSlot": [
+        "{position}"
+      ],
+      "queue.automatic": [],
+      "queue.fromImage": [],
+      "queue.dontSend": [],
+      "queue.discardedOne": [
+        "{count}"
+      ],
+      "queue.discardedMany": [
+        "{count}"
+      ],
+      "thinking.label": [],
+      "thinking.answerNow": [],
+      "thinking.warming": [],
+      "thinking.warmingAnnouncement": [],
+      "thinking.seconds": [
+        "{seconds}"
+      ],
+      "thinking.minutes": [
+        "{minutes}",
+        "{seconds}"
+      ],
+      "conversation.untitled": [],
+      "conversation.background": [],
+      "conversation.delete": [],
+      "conversation.open": [
+        "{title}"
+      ],
+      "conversation.voiceChanging": [],
+      "conversation.unavailable": [],
+      "conversation.notFound": [],
+      "reply.connectionLost": [],
+      "reply.couldNotFinish": [],
+      "reply.stopFailed": [],
+      "reply.openingChats": [],
+      "reply.voiceTyped": [],
+      "reply.modelLoading": [],
+      "reply.imageReading": [],
+      "reply.imageUploading": [],
+      "reply.previousStarting": [],
+      "reply.parallelDisabled": [],
+      "reply.earlierRunning": [],
+      "reply.earlierFinishing": [],
+      "reply.startFailed": [],
+      "reply.httpAnswerFailed": [
+        "{status}"
+      ],
+      "reply.reconnecting": [],
+      "reply.stopped": [],
+      "reply.tutorReplied": [],
+      "reply.didNotStart": [],
+      "attachment.audio": [],
+      "attachment.file": [],
+      "attachment.reading": [],
+      "attachment.uploading": [],
+      "attachment.readFailed": [],
+      "attachment.imageUploadFailed": [],
+      "attachment.imageRead": [],
+      "attachment.imageAttached": [],
+      "attachment.chooseImageModel": [],
+      "attachment.oneImage": [],
+      "attachment.preview": [],
+      "attachment.previewNamed": [
+        "{file}"
+      ],
+      "attachment.sent": [],
+      "attachment.sentNamed": [
+        "{file}"
+      ],
+      "attachment.photoEmpty": [],
+      "attachment.imageUnreadable": [],
+      "attachment.transcribing": [],
+      "attachment.speechUnavailable": [],
+      "attachment.audioUploadFailed": [],
+      "attachment.heardNothing": [],
+      "attachment.unknownFile": [
+        "{file}"
+      ],
+      "attachment.remove": [],
+      "reason.title": [],
+      "reason.off": [],
+      "reason.offHelp": [],
+      "reason.auto": [],
+      "reason.autoHelp": [],
+      "reason.extended": [],
+      "reason.extendedHelp": [],
+      "reason.changed": [
+        "{level}"
+      ],
+      "web.title": [],
+      "web.label": [],
+      "web.on": [],
+      "web.off": [],
+      "network.online": [],
+      "network.offline": [],
+      "badge.sources": [],
+      "badge.cloud": [],
+      "badge.verified": [],
+      "badge.verifiedTitle": [],
+      "badge.checkFailed": [],
+      "voice.talkTitle": [],
+      "voice.talk": [],
+      "voice.listening": [],
+      "voice.thinking": [],
+      "voice.speaking": [],
+      "voice.wait": [],
+      "voice.permission": [],
+      "voice.stopTitle": [],
+      "voice.stop": [],
+      "voice.connectionFailed": [],
+      "voice.answerFailed": [],
+      "voice.unavailable": [],
+      "voice.unavailableReason": [
+        "{reason}"
+      ],
+      "voice.didNotCatch": []
+    },
+    "visible_locales": [
+      {
+        "tag": "aa",
+        "direction": "ltr"
+      },
+      {
+        "tag": "af",
+        "direction": "ltr"
+      },
+      {
+        "tag": "am",
+        "direction": "ltr"
+      },
+      {
+        "tag": "ar",
+        "direction": "rtl"
+      },
+      {
+        "tag": "bem",
+        "direction": "ltr"
+      },
+      {
+        "tag": "din",
+        "direction": "ltr"
+      },
+      {
+        "tag": "ff",
+        "direction": "ltr"
+      },
+      {
+        "tag": "ha",
+        "direction": "ltr"
+      },
+      {
+        "tag": "ig",
+        "direction": "ltr"
+      },
+      {
+        "tag": "kg",
+        "direction": "ltr"
+      },
+      {
+        "tag": "mg",
+        "direction": "ltr"
+      },
+      {
+        "tag": "ny",
+        "direction": "ltr"
+      },
+      {
+        "tag": "rn",
+        "direction": "ltr"
+      },
+      {
+        "tag": "rw",
+        "direction": "ltr"
+      },
+      {
+        "tag": "sn",
+        "direction": "ltr"
+      },
+      {
+        "tag": "so",
+        "direction": "ltr"
+      },
+      {
+        "tag": "ss",
+        "direction": "ltr"
+      },
+      {
+        "tag": "st",
+        "direction": "ltr"
+      },
+      {
+        "tag": "sw",
+        "direction": "ltr"
+      },
+      {
+        "tag": "tn",
+        "direction": "ltr"
+      },
+      {
+        "tag": "xh",
+        "direction": "ltr"
+      },
+      {
+        "tag": "yo",
+        "direction": "ltr"
+      },
+      {
+        "tag": "zu",
+        "direction": "ltr"
+      },
+      {
+        "tag": "en",
+        "direction": "ltr"
+      },
+      {
+        "tag": "es",
+        "direction": "ltr"
+      },
+      {
+        "tag": "fr",
+        "direction": "ltr"
+      },
+      {
+        "tag": "pt",
+        "direction": "ltr"
+      },
+      {
+        "tag": "de",
+        "direction": "ltr"
+      }
+    ]
+  },
+  "key_references": [
+    {
+      "file": "ui/app.js",
+      "line": 10,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.failed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1016,
+      "kind": "js:t",
+      "key": "attachment.sent"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1016,
+      "kind": "js:t",
+      "key": "attachment.sentNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1024,
+      "kind": "js:t",
+      "key": "attachment.audio"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1055,
+      "kind": "js:t",
+      "key": "thinking.label"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1065,
+      "kind": "js:t",
+      "key": "thinking.answerNow"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1089,
+      "kind": "js:t",
+      "key": "thinking.warming"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 11,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.pages"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1138,
+      "kind": "js:t",
+      "key": "thinking.label"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 12,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.retry"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1245,
+      "kind": "js:t",
+      "key": "queue.slotFree"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1252,
+      "kind": "js:t",
+      "key": "queue.recovering"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1262,
+      "kind": "js:t",
+      "key": "thinking.warmingAnnouncement"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 13,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1365,
+      "kind": "js:t",
+      "key": "reply.connectionLost"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 14,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.uploading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1490,
+      "kind": "js:featureT",
+      "key": "rag.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 15,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.uploaded"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1507,
+      "kind": "js:featureT",
+      "key": "rag.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1540,
+      "kind": "js:featureT",
+      "key": "rag.openPage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1552,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 16,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.uploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1604,
+      "kind": "js:featureT",
+      "key": "rag.citation"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1610,
+      "kind": "js:featureT",
+      "key": "rag.previewLabel"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1611,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1680,
+      "kind": "js:t",
+      "key": "telemetry.no"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1680,
+      "kind": "js:t",
+      "key": "telemetry.yes"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1690,
+      "kind": "js:t",
+      "key": "telemetry.peak"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1693,
+      "kind": "js:t",
+      "key": "telemetry.throttle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 17,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1745,
+      "kind": "js:t",
+      "key": "conversation.untitled"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1747,
+      "kind": "js:t",
+      "key": "conversation.open"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1753,
+      "kind": "js:t",
+      "key": "queue.waitingSlot"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1756,
+      "kind": "js:t",
+      "key": "conversation.background"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1765,
+      "kind": "js:t",
+      "key": "conversation.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1766,
+      "kind": "js:t",
+      "key": "conversation.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 18,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.deleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1820,
+      "kind": "js:t",
+      "key": "conversation.voiceChanging"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1853,
+      "kind": "js:t",
+      "key": "conversation.unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1861,
+      "kind": "js:t",
+      "key": "conversation.notFound"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 19,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.noFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1921,
+      "kind": "js:t",
+      "key": "reply.couldNotFinish"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1935,
+      "kind": "js:t",
+      "key": "conversation.voiceChanging"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1973,
+      "kind": "js:t",
+      "key": "model.loading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1976,
+      "kind": "js:t",
+      "key": "attachment.chooseImageModel"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1999,
+      "kind": "js:t",
+      "key": "composer.attachImageTitle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 20,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.loadingFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2012,
+      "kind": "js:t",
+      "key": "composer.send"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2012,
+      "kind": "js:t",
+      "key": "composer.stop"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2013,
+      "kind": "js:t",
+      "key": "composer.sendMessage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2013,
+      "kind": "js:t",
+      "key": "composer.stop"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2041,
+      "kind": "js:t",
+      "key": "reply.stopFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2054,
+      "kind": "js:t",
+      "key": "attachment.preview"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2054,
+      "kind": "js:t",
+      "key": "attachment.previewNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2057,
+      "kind": "js:t",
+      "key": "attachment.audio"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2057,
+      "kind": "js:t",
+      "key": "attachment.file"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2062,
+      "kind": "js:t",
+      "key": "attachment.imageUploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2063,
+      "kind": "js:t",
+      "key": "attachment.uploading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2071,
+      "kind": "js:t",
+      "key": "attachment.remove"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2072,
+      "kind": "js:t",
+      "key": "attachment.remove"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2088,
+      "kind": "js:t",
+      "key": "attachment.oneImage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 21,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2124,
+      "kind": "js:t",
+      "key": "attachment.imageAttached"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2133,
+      "kind": "js:t",
+      "key": "attachment.transcribing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2147,
+      "kind": "js:t",
+      "key": "attachment.speechUnavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2150,
+      "kind": "js:t",
+      "key": "attachment.audioUploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2153,
+      "kind": "js:t",
+      "key": "attachment.audioUploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2164,
+      "kind": "js:t",
+      "key": "attachment.heardNothing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 22,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.remove"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2252,
+      "kind": "js:t",
+      "key": "attachment.unknownFile"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 23,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.document"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2351,
+      "kind": "js:featureT",
+      "key": "rag.document"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2352,
+      "kind": "js:t",
+      "key": "queue.fromImage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2358,
+      "kind": "js:t",
+      "key": "queue.dontSend"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2359,
+      "kind": "js:t",
+      "key": "queue.dontSend"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 24,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.openDocument"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2440,
+      "kind": "js:t",
+      "key": "reply.openingChats"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2441,
+      "kind": "js:t",
+      "key": "reply.voiceTyped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2443,
+      "kind": "js:t",
+      "key": "reply.modelLoading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2446,
+      "kind": "js:t",
+      "key": "reply.imageUploading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2467,
+      "kind": "js:t",
+      "key": "reply.previousStarting"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2471,
+      "kind": "js:featureT",
+      "key": "rag.maxFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 25,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.maxFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2507,
+      "kind": "js:t",
+      "key": "reply.parallelDisabled"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2533,
+      "kind": "js:t",
+      "key": "queue.fromImage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 26,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.pickerResults"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2608,
+      "kind": "js:t",
+      "key": "reply.earlierRunning"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2625,
+      "kind": "js:t",
+      "key": "reply.earlierFinishing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2637,
+      "kind": "js:t",
+      "key": "reply.httpAnswerFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2679,
+      "kind": "js:t",
+      "key": "queue.automatic"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2693,
+      "kind": "js:t",
+      "key": "reply.startFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 27,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.pickerEmpty"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2727,
+      "kind": "js:t",
+      "key": "reply.reconnecting"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2796,
+      "kind": "js:t",
+      "key": "reply.couldNotFinish"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 28,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.pickerClosed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2801,
+      "kind": "js:t",
+      "key": "reply.stopped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2804,
+      "kind": "js:t",
+      "key": "reply.tutorReplied"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2842,
+      "kind": "js:t",
+      "key": "badge.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2863,
+      "kind": "js:t",
+      "key": "badge.cloud"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2870,
+      "kind": "js:t",
+      "key": "badge.checkFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2877,
+      "kind": "js:t",
+      "key": "badge.verified"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2878,
+      "kind": "js:t",
+      "key": "badge.verifiedTitle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 29,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.sourcePage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 30,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.openPage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3016,
+      "kind": "js:t",
+      "key": "reply.didNotStart"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 31,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 32,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.sourceCount"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3218,
+      "kind": "js:featureT",
+      "key": "rag.pickerClosed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3239,
+      "kind": "js:featureT",
+      "key": "rag.maxFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3259,
+      "kind": "js:featureT",
+      "key": "rag.maxFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 33,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.sourceCountOne"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3325,
+      "kind": "js:featureT",
+      "key": "resources.pages"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3340,
+      "kind": "js:featureT",
+      "key": "rag.pickerResults"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3380,
+      "kind": "js:featureT",
+      "key": "resources.pages"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3388,
+      "kind": "js:featureT",
+      "key": "resources.retry"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3395,
+      "kind": "js:featureT",
+      "key": "resources.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 34,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.sourceMeta"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3450,
+      "kind": "js:featureT",
+      "key": "resources.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3465,
+      "kind": "js:featureT",
+      "key": "resources.uploading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3482,
+      "kind": "js:featureT",
+      "key": "resources.uploaded"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3486,
+      "kind": "js:featureT",
+      "key": "resources.uploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3495,
+      "kind": "js:featureT",
+      "key": "resources.uploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 35,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.citation"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3504,
+      "kind": "js:featureT",
+      "key": "resources.deleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 36,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.previewLabel"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 37,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.showSources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3780,
+      "kind": "js:t",
+      "key": "settings.saveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 38,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "rag.hideSources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3809,
+      "kind": "js:powerText",
+      "key": "critical"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3810,
+      "kind": "js:powerText",
+      "key": "sensorGrace"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3816,
+      "kind": "js:powerText",
+      "key": "actions"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3820,
+      "kind": "js:powerText",
+      "key": "critical"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3824,
+      "kind": "js:powerText",
+      "key": "critical"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3824,
+      "kind": "js:powerText",
+      "key": "openSettings"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3824,
+      "kind": "js:powerText",
+      "key": "sensorGrace"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3828,
+      "kind": "js:powerText",
+      "key": "unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3829,
+      "kind": "js:powerText",
+      "key": "unavailableHelp"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3839,
+      "kind": "js:powerText",
+      "key": "connectedDraining"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3841,
+      "kind": "js:powerText",
+      "key": "plugged"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3844,
+      "kind": "js:powerText",
+      "key": "battery"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3848,
+      "kind": "js:powerText",
+      "key": "remaining"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3851,
+      "kind": "js:powerText",
+      "key": "rate"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3853,
+      "kind": "js:powerText",
+      "key": "checkingHelp"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3860,
+      "kind": "js:powerText",
+      "key": "actions"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3878,
+      "kind": "js:powerText",
+      "key": "battery"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3879,
+      "kind": "js:powerText",
+      "key": "openSettings"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3915,
+      "kind": "js:t",
+      "key": "settings.saveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 411,
+      "kind": "js:featureT",
+      "key": "rag.document"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4127,
+      "kind": "js:t",
+      "key": "reason.changed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4232,
+      "kind": "js:t",
+      "key": "model.recommended"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4238,
+      "kind": "js:t",
+      "key": "model.imageInput"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4246,
+      "kind": "js:t",
+      "key": "model.unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4247,
+      "kind": "js:t",
+      "key": "model.localTutor"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4266,
+      "kind": "js:t",
+      "key": "model.switching"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4267,
+      "kind": "js:t",
+      "key": "model.choose"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4267,
+      "kind": "js:t",
+      "key": "model.currentLocal"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4268,
+      "kind": "js:t",
+      "key": "model.chooseLocal"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4270,
+      "kind": "js:t",
+      "key": "model.operatorOnly"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4274,
+      "kind": "js:t",
+      "key": "model.outsideRegistry"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4275,
+      "kind": "js:t",
+      "key": "model.noneInstalled"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 43,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "checking"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4312,
+      "kind": "js:t",
+      "key": "model.checking"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4313,
+      "kind": "js:t",
+      "key": "model.switchUncertain"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4318,
+      "kind": "js:t",
+      "key": "model.localTutor"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4319,
+      "kind": "js:t",
+      "key": "model.registryFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4333,
+      "kind": "js:t",
+      "key": "model.stopBeforeChange"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4341,
+      "kind": "js:t",
+      "key": "model.loadingNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4343,
+      "kind": "js:t",
+      "key": "model.loadingNote"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4344,
+      "kind": "js:t",
+      "key": "model.switchingNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4361,
+      "kind": "js:t",
+      "key": "model.readyNew"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4362,
+      "kind": "js:t",
+      "key": "model.ready"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4366,
+      "kind": "js:t",
+      "key": "model.checking"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4367,
+      "kind": "js:t",
+      "key": "model.switchUncertain"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4368,
+      "kind": "js:t",
+      "key": "model.connectionDropped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4374,
+      "kind": "js:t",
+      "key": "model.switchFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 44,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "checkingHelp"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4438,
+      "kind": "js:t",
+      "key": "model.switchUncertain"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 45,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 46,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "unavailableHelp"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 47,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "sensorGrace"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 48,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "off"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 49,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "normal"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 50,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "eco"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 51,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "critical"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 52,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "plugged"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 53,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "connectedDraining"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 54,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "battery"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 55,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "remaining"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 56,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "rate"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 57,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "actions"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 58,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "action_limit_auto_reasoning"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 59,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "action_limit_response_length"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 60,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "action_direct_responses"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 61,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "action_pause_vision"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 62,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "action_pause_tts"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 63,
+      "kind": "js-copy-definition:POWER_COPY",
+      "key": "openSettings"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 7,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.empty"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 8,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.processing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 9,
+      "kind": "js-copy-definition:RESOURCE_RAG_COPY",
+      "key": "resources.ready"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 187,
+      "kind": "js:t",
+      "key": "voice.wait"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 191,
+      "kind": "js:t",
+      "key": "voice.permission"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 218,
+      "kind": "js:t",
+      "key": "voice.connectionFailed"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 220,
+      "kind": "js:t",
+      "key": "voice.connectionFailed"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 242,
+      "kind": "js:t",
+      "key": "voice.answerFailed"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 251,
+      "kind": "js:t",
+      "key": "voice.answerFailed"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 254,
+      "kind": "js:t",
+      "key": "voice.unavailable"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 291,
+      "kind": "js:t",
+      "key": "voice.didNotCatch"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 344,
+      "kind": "js:t",
+      "key": "voice.connectionFailed"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 106,
+      "kind": "html:data-i18n",
+      "key": "model.choose"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 107,
+      "kind": "html:data-i18n",
+      "key": "model.runsLocal"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 110,
+      "kind": "html:data-i18n",
+      "key": "model.defaultRecommended"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 119,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.home"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 124,
+      "kind": "html:data-i18n",
+      "key": "empty.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 125,
+      "kind": "html:data-i18n",
+      "key": "empty.body"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 127,
+      "kind": "html:data-i18n-aria-label",
+      "key": "chat.conversation"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 133,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.ramTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 135,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.peakTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 137,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.tempTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 139,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.throttleTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 141,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.tpsTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 144,
+      "kind": "html:data-i18n-aria-label",
+      "key": "queue.messages"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 150,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.placeholder"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 150,
+      "kind": "html:data-i18n-data-placeholder",
+      "key": "composer.placeholder"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 162,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.attachImage"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 162,
+      "kind": "html:data-i18n-title",
+      "key": "composer.attachImageTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 165,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.attachAudio"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 165,
+      "kind": "html:data-i18n-title",
+      "key": "composer.attachAudioTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 168,
+      "kind": "html:data-i18n-aria-label",
+      "key": "voice.talk"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 168,
+      "kind": "html:data-i18n-title",
+      "key": "voice.talkTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 171,
+      "kind": "html:data-i18n-aria-label",
+      "key": "web.label"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 171,
+      "kind": "html:data-i18n-title",
+      "key": "web.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 175,
+      "kind": "html:data-i18n-title",
+      "key": "reason.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 177,
+      "kind": "html:data-i18n",
+      "key": "reason.auto"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 181,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.sendMessage"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 181,
+      "kind": "html:data-i18n-title",
+      "key": "composer.send"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 187,
+      "kind": "html:data-i18n",
+      "key": "fineprint"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 194,
+      "kind": "html:data-i18n-aria-label",
+      "key": "reason.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 195,
+      "kind": "html:data-i18n",
+      "key": "reason.off"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 195,
+      "kind": "html:data-i18n",
+      "key": "reason.offHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 196,
+      "kind": "html:data-i18n",
+      "key": "reason.auto"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 196,
+      "kind": "html:data-i18n",
+      "key": "reason.autoHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 197,
+      "kind": "html:data-i18n",
+      "key": "reason.extended"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 197,
+      "kind": "html:data-i18n",
+      "key": "reason.extendedHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 203,
+      "kind": "html:data-i18n",
+      "key": "settings.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 204,
+      "kind": "html:data-i18n-aria-label",
+      "key": "settings.close"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 207,
+      "kind": "html:data-i18n",
+      "key": "settings.interface"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 210,
+      "kind": "html:data-i18n",
+      "key": "settings.language"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 211,
+      "kind": "html:data-i18n",
+      "key": "settings.languageHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 228,
+      "kind": "html:data-i18n",
+      "key": "settings.general"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 231,
+      "kind": "html:data-i18n",
+      "key": "settings.parallel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 232,
+      "kind": "html:data-i18n",
+      "key": "settings.parallelHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 308,
+      "kind": "html:data-i18n",
+      "key": "settings.limits"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 332,
+      "kind": "html:data-i18n",
+      "key": "drop.addFile"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 65,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.showConversations"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 71,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.home"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 72,
+      "kind": "html:data-i18n",
+      "key": "nav.newChat"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 72,
+      "kind": "html:data-i18n-title",
+      "key": "nav.newChat"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 74,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.conversations"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 80,
+      "kind": "html:data-i18n",
+      "key": "nav.aboutMuta"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 85,
+      "kind": "html:data-i18n",
+      "key": "settings.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 91,
+      "kind": "html:data-i18n",
+      "key": "runtime.offlineLocal"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 99,
+      "kind": "html:data-i18n",
+      "key": "model.loading"
+    }
+  ],
+  "literal_candidates": [
+    {
+      "file": "ui/app.js",
+      "line": 10,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Failed",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 11,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "{count} PDF pages",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1137,
+      "kind": "js-ui-assignment",
+      "text": "Preparing response…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1139,
+      "kind": "js-ui-assignment",
+      "text": "Writing response…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1140,
+      "kind": "js-ui-assignment",
+      "text": "Generating diagram…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1141,
+      "kind": "js-ui-assignment",
+      "text": "Working…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 12,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Retry",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 13,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Delete",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 14,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Uploading {name}…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 143,
+      "kind": "js-ui-assignment",
+      "text": "Muta host",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 144,
+      "kind": "js-ui-assignment",
+      "text": "Host",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 144,
+      "kind": "js-ui-assignment",
+      "text": "Member",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 15,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "{name} is being prepared. You can keep chatting.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 16,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Couldn’t upload that PDF.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1689,
+      "kind": "js-ui-assignment",
+      "text": "RAM",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 17,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Couldn’t load files.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 170,
+      "kind": "js-ui-assignment",
+      "text": "Sign in to open your private tutor.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 170,
+      "kind": "js-ui-assignment",
+      "text": "This laptop is not sharing Muta right now.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 18,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Couldn’t delete that file.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 19,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "No files found",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 20,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Loading files…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 21,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Couldn’t load files — retrying…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 215,
+      "kind": "js-ui-call",
+      "text": "Could not reach this Muta. Check the network and try again.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2197,
+      "kind": "js-ui-return",
+      "text": "Files",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 22,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Remove {name}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 23,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Document: {name}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 24,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Open document {name}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 25,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "You can use up to {count} documents in one message.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 26,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "{count} ready documents available. Use Up and Down arrows, then Enter.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 27,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "No ready documents match.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 28,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Document picker closed.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 29,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "{title}, PDF page {page}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 30,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Open {title} at PDF page {page}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 31,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Sources",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3166,
+      "kind": "js-ui-return",
+      "text": "resources.${resource.status || \"processing\"}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 32,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "{count} sources",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 33,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "1 source",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 34,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "PDF · page {page}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 35,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Citation {number}: {title}, PDF page {page}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3581,
+      "kind": "js-ui-assignment",
+      "text": "Waiting for approval",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3582,
+      "kind": "js-ui-assignment",
+      "text": "Removing data…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3583,
+      "kind": "js-ui-assignment",
+      "text": "Approved",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3583,
+      "kind": "js-ui-assignment",
+      "text": "Approved · has signed in",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 36,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Citation {number}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3600,
+      "kind": "js-ui-assignment",
+      "text": "Remove",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3620,
+      "kind": "js-ui-assignment",
+      "text": "Certificate fingerprint unavailable",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3641,
+      "kind": "js-ui-assignment",
+      "text": "${users.length} account${users.length === 1 ? \"\" : \"s\"}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3650,
+      "kind": "js-ui-assignment",
+      "text": "No one has asked to join yet.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3657,
+      "kind": "js-ui-assignment",
+      "text": "Host mode is off.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3657,
+      "kind": "js-ui-assignment",
+      "text": "Host mode is on. New replies are queued when all slots are busy.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3667,
+      "kind": "js-ui-assignment",
+      "text": "Could not read Host mode settings.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3680,
+      "kind": "js-ui-assignment",
+      "text": "Applying the safe chat capacity…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3695,
+      "kind": "js-ui-assignment",
+      "text": "Could not update Host mode.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 37,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Show {count} sources",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3718,
+      "kind": "js-ui-assignment",
+      "text": "Could not update that account.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3732,
+      "kind": "js-ui-assignment",
+      "text": "Join address copied.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3735,
+      "kind": "js-ui-assignment",
+      "text": "Address selected — copy it from the field.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3793,
+      "kind": "js-ui-return",
+      "text": "${hours}h ${remainder}m",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 38,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Hide {count} sources",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 43,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Checking host power…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 44,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Reading the battery of the laptop serving Muta.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 45,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Power information unavailable",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 46,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "This device does not expose a battery sensor. Muta still keeps its fixed memory and thermal safeguards.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 47,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Battery sensor temporarily unavailable; Critical reserve remains active.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 48,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Power optimization off",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 49,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Balanced",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 50,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Eco mode",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 51,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Critical battery mode",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 52,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Plugged in",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 53,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Power connected; battery still draining",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 54,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Host battery {percentage}%",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 55,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "about {time} remaining",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 56,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "{watts} W",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 57,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Active: {actions}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 58,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "bounded automatic reasoning",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 59,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "shorter replies",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 60,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "direct responses",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 61,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "new image reading paused",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 62,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "speech playback paused",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 63,
+      "kind": "js-copy-map:POWER_COPY",
+      "text": "Open power settings",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 7,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "No learning resources yet.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 8,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Preparing…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 89,
+      "kind": "js-ui-return",
+      "text": "${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 9,
+      "kind": "js-copy-map:RESOURCE_RAG_COPY",
+      "text": "Ready",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 925,
+      "kind": "js-ui-assignment",
+      "text": "PDF",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/audio.js",
+      "line": 183,
+      "kind": "js-ui-return",
+      "text": "${proto}://${location.host}/v1/audio/voice",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/citations.js",
+      "line": 261,
+      "kind": "js-ui-return",
+      "text": "${sentence.slice(0, offset).trimEnd()} [R${number}]${sentence.slice(offset)}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/citations.js",
+      "line": 350,
+      "kind": "js-ui-return",
+      "text": "NFKC",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/citations.js",
+      "line": 355,
+      "kind": "js-ui-return",
+      "text": "NFKC",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 10,
+      "kind": "html-text",
+      "text": "Muta",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 113,
+      "kind": "html-attribute:aria-label",
+      "text": "Open power settings",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 115,
+      "kind": "html-text",
+      "text": "Eco",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 119,
+      "kind": "html-text",
+      "text": "Muta.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 133,
+      "kind": "html-text",
+      "text": "RAM —",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 135,
+      "kind": "html-text",
+      "text": "peak —",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 137,
+      "kind": "html-text",
+      "text": "— °C",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 139,
+      "kind": "html-text",
+      "text": "throttle —",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 141,
+      "kind": "html-text",
+      "text": "— tok/s",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 148,
+      "kind": "html-attribute:aria-label",
+      "text": "Learning resources",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 159,
+      "kind": "html-attribute:aria-label",
+      "text": "Attach a PDF",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 159,
+      "kind": "html-attribute:title",
+      "text": "Attach a PDF",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 217,
+      "kind": "html-text",
+      "text": "Appearance",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 218,
+      "kind": "html-text",
+      "text": "Use your device setting, or keep Muta in light or dark mode.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 220,
+      "kind": "html-attribute:aria-label",
+      "text": "Appearance",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 221,
+      "kind": "html-text",
+      "text": "System",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 222,
+      "kind": "html-text",
+      "text": "Light",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 223,
+      "kind": "html-text",
+      "text": "Dark",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 238,
+      "kind": "html-text",
+      "text": "Power",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 24,
+      "kind": "html-text",
+      "text": "Muta.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 241,
+      "kind": "html-text",
+      "text": "Muta power optimization",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 242,
+      "kind": "html-text",
+      "text": "On battery, Muta uses bounded automatic reasoning and shorter replies. Explicit Extended reasoning and assessed work keep their full budget.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 249,
+      "kind": "html-text",
+      "text": "Checking host power…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 251,
+      "kind": "html-text",
+      "text": "Reading the battery of the laptop serving Muta.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 258,
+      "kind": "html-text",
+      "text": "Host mode",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 259,
+      "kind": "html-text",
+      "text": "Share this Muta privately with people on the same network.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 262,
+      "kind": "html-text",
+      "text": "Enable Host mode",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 267,
+      "kind": "html-text",
+      "text": "Memory limit",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 268,
+      "kind": "html-text",
+      "text": "ADTC competition",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 268,
+      "kind": "html-text",
+      "text": "Stay inside the 7 GB competition budget. Extra chats wait in line.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 269,
+      "kind": "html-text",
+      "text": "Detect usable RAM and CPU, then run as many safe chats as this laptop supports.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 269,
+      "kind": "html-text",
+      "text": "Use this system",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 27,
+      "kind": "html-text",
+      "text": "Connecting to this Muta…",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 273,
+      "kind": "html-attribute:alt",
+      "text": "QR code for the secure Muta join URL",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 275,
+      "kind": "html-text",
+      "text": "Share this address",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 276,
+      "kind": "html-attribute:aria-label",
+      "text": "Muta join URL",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 276,
+      "kind": "html-text",
+      "text": "Copy",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 277,
+      "kind": "html-text",
+      "text": "Learners must be on this network. On first use, install Muta’s local certificate, then compare its fingerprint with the host.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 278,
+      "kind": "html-text",
+      "text": "Download trust certificate",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 284,
+      "kind": "html-text",
+      "text": "People",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 289,
+      "kind": "html-text",
+      "text": "Privacy",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 292,
+      "kind": "html-text",
+      "text": "Share pseudonymous product activity",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 293,
+      "kind": "html-text",
+      "text": "Send a durable random installation ID, app version/build, operating-system and processor family, last-use time, active/registered local-user counts, and approximate city-level network location when this laptop is online. Never sends chats, files, usernames, email, GPS, or the laptop name.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 30,
+      "kind": "html-text",
+      "text": "Shared from a nearby laptop",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 302,
+      "kind": "html-text",
+      "text": "Files",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 303,
+      "kind": "html-text",
+      "text": "Review and manage textbooks and notes used for private, page-cited chat.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 31,
+      "kind": "html-text",
+      "text": "Welcome to Muta",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 315,
+      "kind": "html-text",
+      "text": "Your privacy, your choice",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 316,
+      "kind": "html-text",
+      "text": "Help us see where Muta is useful.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 317,
+      "kind": "html-text",
+      "text": "When this laptop gets online, Muta can share pseudonymous product activity and an approximate city-level location derived from its network. This helps us count active installations and map Muta’s reach.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 319,
+      "kind": "html-text",
+      "text": "Sends a durable random installation ID, app version/build, operating-system and processor family, recent-use time, and active/registered local-user counts.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 32,
+      "kind": "html-text",
+      "text": "Sign in to open your private tutor.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 320,
+      "kind": "html-text",
+      "text": "Never sends conversations, questions, files, voice, usernames, email, GPS, or the laptop name.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 321,
+      "kind": "html-text",
+      "text": "Your choice is saved on this laptop, so Muta will not keep asking.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 322,
+      "kind": "html-text",
+      "text": "You can change this in Settings. Turning it off also asks the server to delete this installation’s history.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 325,
+      "kind": "html-text",
+      "text": "Keep private",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 326,
+      "kind": "html-text",
+      "text": "Share product activity",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 33,
+      "kind": "html-text",
+      "text": "Open secure Muta",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 34,
+      "kind": "html-attribute:aria-label",
+      "text": "Account access",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 35,
+      "kind": "html-text",
+      "text": "Log in",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 36,
+      "kind": "html-text",
+      "text": "Sign up",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 39,
+      "kind": "html-text",
+      "text": "Username",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 41,
+      "kind": "html-text",
+      "text": "Password",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 43,
+      "kind": "html-text",
+      "text": "Log in",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 46,
+      "kind": "html-text",
+      "text": "Choose a username",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 48,
+      "kind": "html-text",
+      "text": "3–32 letters or numbers; dots, dashes and underscores are allowed inside.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 49,
+      "kind": "html-text",
+      "text": "Choose a password",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 51,
+      "kind": "html-text",
+      "text": "Ask to join",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 55,
+      "kind": "html-text",
+      "text": "Request sent",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 56,
+      "kind": "html-text",
+      "text": "Ask the person hosting Muta to approve you. This page will open automatically.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 57,
+      "kind": "html-text",
+      "text": "Use another account",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 71,
+      "kind": "html-text",
+      "text": "Muta.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 75,
+      "kind": "html-attribute:aria-label",
+      "text": "Muta",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 88,
+      "kind": "html-text",
+      "text": "Host",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 88,
+      "kind": "html-text",
+      "text": "Muta host",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 89,
+      "kind": "html-text",
+      "text": "Log out",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/product-analytics.js",
+      "line": 18,
+      "kind": "js-ui-return",
+      "text": "Deletion is queued and will complete when this laptop is online.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/product-analytics.js",
+      "line": 21,
+      "kind": "js-ui-return",
+      "text": "Sharing is on · last synced ${new Date(status.last_synced_at).toLocaleString()}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/product-analytics.js",
+      "line": 22,
+      "kind": "js-ui-return",
+      "text": "Sharing is on · waiting for the next internet connection.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/product-analytics.js",
+      "line": 24,
+      "kind": "js-ui-return",
+      "text": "Sharing is off. Muta stays fully offline-capable.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/product-analytics.js",
+      "line": 25,
+      "kind": "js-ui-return",
+      "text": "No choice has been saved yet.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/product-analytics.js",
+      "line": 77,
+      "kind": "js-ui-assignment",
+      "text": "Muta could not save that choice. Please try again.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/product-analytics.js",
+      "line": 78,
+      "kind": "js-ui-assignment",
+      "text": "Muta could not save that privacy setting. Please try again.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/resource-mentions.js",
+      "line": 36,
+      "kind": "js-ui-return",
+      "text": "@{${nameFor(resource)}}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/theme.js",
+      "line": 65,
+      "kind": "js-ui-variable",
+      "text": "Switch to light mode",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/theme.js",
+      "line": 66,
+      "kind": "js-ui-variable",
+      "text": "Switch to dark mode",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 101,
+      "kind": "js-ui-return",
+      "text": "bar records need a label and numeric value",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 108,
+      "kind": "js-ui-return",
+      "text": "schematic diagrams need 1 to 40 nodes",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 113,
+      "kind": "js-ui-return",
+      "text": "schematic nodes need unique safe ids",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 116,
+      "kind": "js-ui-return",
+      "text": "schematic nodes need a label and supported shape",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 119,
+      "kind": "js-ui-return",
+      "text": "schematic node coordinates are out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 122,
+      "kind": "js-ui-return",
+      "text": "schematic node size is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 125,
+      "kind": "js-ui-return",
+      "text": "schematic node width is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 128,
+      "kind": "js-ui-return",
+      "text": "schematic node height is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 133,
+      "kind": "js-ui-return",
+      "text": "schematic diagrams support up to 100 links",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 137,
+      "kind": "js-ui-return",
+      "text": "every schematic link must reference existing nodes",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 140,
+      "kind": "js-ui-return",
+      "text": "schematic link style is unsupported",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 143,
+      "kind": "js-ui-return",
+      "text": "schematic arrow must be true or false",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 146,
+      "kind": "js-ui-return",
+      "text": "schematic link label is invalid",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 150,
+      "kind": "js-ui-return",
+      "text": "schematic link label coordinate is invalid",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 158,
+      "kind": "js-ui-return",
+      "text": "schematic link route is invalid",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 163,
+      "kind": "js-ui-return",
+      "text": "schematic diagrams support up to 20 annotations",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 168,
+      "kind": "js-ui-return",
+      "text": "schematic annotation is invalid",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 175,
+      "kind": "js-ui-return",
+      "text": "force diagrams need 2 to 50 nodes",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 180,
+      "kind": "js-ui-return",
+      "text": "force nodes need unique safe ids",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 185,
+      "kind": "js-ui-return",
+      "text": "force diagrams need 1 to 100 links",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 188,
+      "kind": "js-ui-return",
+      "text": "every force link must reference existing nodes",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 195,
+      "kind": "js-ui-return",
+      "text": "3D scenes need 1 to 40 objects",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 201,
+      "kind": "js-ui-return",
+      "text": "3D scene notes are invalid",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 204,
+      "kind": "js-ui-return",
+      "text": "unsupported 3D object",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 206,
+      "kind": "js-ui-return",
+      "text": "vectors need from/to triples",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 208,
+      "kind": "js-ui-return",
+      "text": "vectors must have non-zero length",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 212,
+      "kind": "js-ui-return",
+      "text": "3D lines need 2 to 100 points",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 214,
+      "kind": "js-ui-return",
+      "text": "3D line points need three coordinates",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 216,
+      "kind": "js-ui-return",
+      "text": "3D object positions need three coordinates",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 219,
+      "kind": "js-ui-return",
+      "text": "3D label positions need three coordinates",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 222,
+      "kind": "js-ui-return",
+      "text": "3D object size is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 230,
+      "kind": "js-ui-return",
+      "text": "animations need 1 to 30 elements",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 235,
+      "kind": "js-ui-return",
+      "text": "animation elements need unique safe ids",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 237,
+      "kind": "js-ui-return",
+      "text": "unsupported animation element",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 240,
+      "kind": "js-ui-return",
+      "text": "animation element ${field} is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 245,
+      "kind": "js-ui-return",
+      "text": "animation element ${field} must be positive",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 250,
+      "kind": "js-ui-return",
+      "text": "animation element ${field} is invalid",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 256,
+      "kind": "js-ui-return",
+      "text": "animations need 1 to 60 tracks",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 260,
+      "kind": "js-ui-return",
+      "text": "animation track target does not exist",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 261,
+      "kind": "js-ui-return",
+      "text": "use at most one animation track per element",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 263,
+      "kind": "js-ui-return",
+      "text": "animation tracks need a to object",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 268,
+      "kind": "js-ui-return",
+      "text": "unsupported animation field: ${key}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 272,
+      "kind": "js-ui-return",
+      "text": "track duration is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 274,
+      "kind": "js-ui-return",
+      "text": "track delay is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 279,
+      "kind": "js-ui-return",
+      "text": "track repeat must be an integer from 0 to 3",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 282,
+      "kind": "js-ui-return",
+      "text": "track direction is unsupported",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 290,
+      "kind": "js-ui-return",
+      "text": "visualization must be a JSON object",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 296,
+      "kind": "js-ui-return",
+      "text": "visualization cannot be serialized",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 298,
+      "kind": "js-ui-return",
+      "text": "visualization is too large",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 301,
+      "kind": "js-ui-return",
+      "text": "unsupported visualization version",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 302,
+      "kind": "js-ui-return",
+      "text": "unsupported library",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 304,
+      "kind": "js-ui-return",
+      "text": "renderer and kind are incompatible",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 306,
+      "kind": "js-ui-return",
+      "text": "title is required",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 308,
+      "kind": "js-ui-return",
+      "text": "aria_label is required",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 311,
+      "kind": "js-ui-return",
+      "text": "height must be an integer from 240 to 600",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 315,
+      "kind": "js-ui-return",
+      "text": "axis label is invalid",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 379,
+      "kind": "js-ui-return",
+      "text": "viz-frame.html?theme=${safeTheme}#${encodeSpec(spec)}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 404,
+      "kind": "js-ui-assignment",
+      "text": "3D",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 51,
+      "kind": "js-ui-return",
+      "text": "visualization has too many values",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 52,
+      "kind": "js-ui-return",
+      "text": "visualization is nested too deeply",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 54,
+      "kind": "js-ui-return",
+      "text": "visualization text is too long",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 56,
+      "kind": "js-ui-return",
+      "text": "number is out of range",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 59,
+      "kind": "js-ui-return",
+      "text": "visualization array is too long",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 66,
+      "kind": "js-ui-return",
+      "text": "unsupported visualization value",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 68,
+      "kind": "js-ui-return",
+      "text": "forbidden key: ${key}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 69,
+      "kind": "js-ui-return",
+      "text": "visualization key is too long",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 71,
+      "kind": "js-ui-return",
+      "text": "unsafe color: ${String(item)}",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 84,
+      "kind": "js-ui-return",
+      "text": "line and scatter plots need 1 to 6 series",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 87,
+      "kind": "js-ui-return",
+      "text": "each series needs a label",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 89,
+      "kind": "js-ui-return",
+      "text": "each series needs 2 to 200 points",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 91,
+      "kind": "js-ui-return",
+      "text": "plot points must be [x,y] number pairs",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/visualizations.js",
+      "line": 97,
+      "kind": "js-ui-return",
+      "text": "bar plots need 1 to 30 records",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.html",
+      "line": 14,
+      "kind": "html-text",
+      "text": "Replay",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.html",
+      "line": 15,
+      "kind": "html-text",
+      "text": "This visualization could not be drawn.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.html",
+      "line": 7,
+      "kind": "html-text",
+      "text": "Muta visualization",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 361,
+      "kind": "js-accessible-attribute",
+      "text": "${spec.aria_label} Use arrow keys to rotate.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 435,
+      "kind": "js-ui-assignment",
+      "text": "drag to rotate",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 440,
+      "kind": "js-accessible-attribute",
+      "text": "Orbital relationships",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 510,
+      "kind": "js-ui-return",
+      "text": "sine.inOut",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 514,
+      "kind": "js-ui-return",
+      "text": "easeInOutSine",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 56,
+      "kind": "js-ui-assignment",
+      "text": "This visualization could not be drawn.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 596,
+      "kind": "js-ui-call",
+      "text": "The visualization data was incomplete.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 601,
+      "kind": "js-ui-call",
+      "text": "The visualization data was not valid.",
+      "status": "pending-i18n"
+    },
+    {
+      "file": "ui/viz-frame.js",
+      "line": 613,
+      "kind": "js-ui-call",
+      "text": "This visualization could not be drawn.",
+      "status": "pending-i18n"
+    }
+  ]
+}

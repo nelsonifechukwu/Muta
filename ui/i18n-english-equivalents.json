@@ -1,0 +1,82 @@
+{
+  "af": {
+    "country.zimbabwe": "Proper country name is conventionally identical."
+  },
+  "de": {
+    "network.offline": "The international technical status word is conventional German UI copy."
+  },
+  "es": {
+    "attachment.audio": "Audio is the ordinary Spanish spelling.",
+    "settings.general": "General is the ordinary Spanish spelling.",
+    "telemetry.no": "No is the ordinary Spanish spelling."
+  },
+  "fr": {
+    "attachment.audio": "Audio is the ordinary French spelling.",
+    "chat.conversation": "Conversation is the ordinary French spelling.",
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "nav.conversations": "Conversations is the ordinary French spelling.",
+    "settings.interface": "Interface is the ordinary French spelling."
+  },
+  "ha": {
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "network.offline": "International technical status token retained intentionally.",
+    "settings.interface": "International technical loan retained intentionally.",
+    "settings.languageAuto": "Auto is an established compact control label.",
+    "telemetry.peak": "International telemetry token retained intentionally."
+  },
+  "ig": {
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "network.offline": "International technical status token retained intentionally.",
+    "settings.interface": "International technical loan retained intentionally.",
+    "telemetry.throttle": "International telemetry token retained intentionally."
+  },
+  "mg": {
+    "settings.interface": "International technical loan retained intentionally."
+  },
+  "ny": {
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "settings.languageAuto": "Auto is an established compact control label.",
+    "telemetry.peak": "International telemetry token retained intentionally.",
+    "telemetry.throttle": "International telemetry token retained intentionally."
+  },
+  "pt": {
+    "network.offline": "International technical status token retained intentionally.",
+    "settings.interface": "Interface is the ordinary Portuguese spelling."
+  },
+  "rn": {
+    "country.zimbabwe": "Proper country name is conventionally identical."
+  },
+  "rw": {
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "settings.interface": "International technical loan retained intentionally.",
+    "settings.languageAuto": "Auto is an established compact control label.",
+    "telemetry.peak": "International telemetry token retained intentionally.",
+    "telemetry.throttle": "International telemetry token retained intentionally."
+  },
+  "sn": {
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "network.offline": "International technical status token retained intentionally.",
+    "settings.interface": "International technical loan retained intentionally.",
+    "telemetry.peak": "International telemetry token retained intentionally.",
+    "telemetry.throttle": "International telemetry token retained intentionally."
+  },
+  "so": {
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "network.offline": "International technical status token retained intentionally.",
+    "settings.languageAuto": "Auto is an established compact control label."
+  },
+  "st": {
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "telemetry.peak": "International telemetry token retained intentionally.",
+    "telemetry.throttle": "International telemetry token retained intentionally."
+  },
+  "sw": {
+    "country.zimbabwe": "Proper country name is conventionally identical."
+  },
+  "xh": {
+    "reason.off": "Instant is an established compact mode label in this pack."
+  },
+  "yo": {
+    "country.zimbabwe": "Proper country name is conventionally identical."
+  }
+}
