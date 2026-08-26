@@ -11,6 +11,7 @@ their own stubs, but nothing on the public `/v1` surface returns 501.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ipaddress
 import json
 import logging
@@ -113,6 +114,7 @@ from orchestrator.gateway.generations import (
     GenerationCapacityError,
     GenerationJob,
     GenerationManager,
+    stream_completion_callback,
 )
 from orchestrator.gateway.images import MAX_UPLOAD_BYTES as MAX_IMAGE_UPLOAD_BYTES
 from orchestrator.gateway.images import ImageRejected, prepare_image
@@ -1330,7 +1332,17 @@ def _start_chat_generation(
                         yield f"data: {json.dumps({'replace': complete_reply})}\n\n"
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /chat/stream: %r", e)
-            error = {"error": _incomplete_stream_message(partial_saved=bool(reply_parts))}
+            partial_saved = bool(reply_parts)
+            error = {
+                "error": _incomplete_stream_message(partial_saved=partial_saved),
+                # A subscriber/socket loss never reaches this branch: the process-owned job
+                # keeps consuming and the browser reconnects to its replay cursor. This flag is
+                # therefore terminal producer evidence and offers continuation only when an
+                # auditable partial assistant row exists.
+                "terminal": True,
+                "partial_saved": partial_saved,
+                "recoverable": partial_saved,
+            }
             yield f"data: {json.dumps(error)}\n\n"
             return
         finally:
@@ -1353,6 +1365,8 @@ def _start_chat_generation(
             finally:
                 # Cleanup failures must never strand the one physical inference admission.
                 sessions.release(admission_id)
+        if cancel_event.is_set():
+            return
         # Deltas approximate tokens (llama-server streams ~one token per chunk). Rate is the
         # DECODE window — first token to last — so it excludes prefill/time-to-first-token and
         # reads close to the engine's own generation rate rather than being dragged down by a
@@ -1445,6 +1459,9 @@ def _start_chat_generation(
             queued_cleanup=_cleanup_while_queued,
             before_start=_claim_inference_session,
             cancel_event=cancel_event,
+            # GenerationJob is the sole terminal-state arbiter. It checks a late Stop after
+            # producer post-processing but before durable history can say "complete".
+            on_completion_state=stream_completion_callback(events),
         )
     except Exception:
         _close_events(streamed)
@@ -1591,7 +1608,15 @@ def generation_stop(
     job = generations.get(job_id, student_id=caller)
     if job is None:
         raise HTTPException(status_code=404, detail="unknown generation")
-    return GenerationStopped(job_id=job.id, stopping=job.request_stop())
+    accepted = job.request_stop()
+    if accepted:
+        # Real inference streams close within ~100 ms through their cancel watcher. Waiting a
+        # bounded interval makes the common Stop response a settlement barrier, so an immediate
+        # next question does not collide with the cancelled turn. Arbitrary test/custom
+        # producers may be non-cooperative, so the HTTP request remains bounded.
+        with contextlib.suppress(TimeoutError):
+            job.wait(timeout_s=1.0)
+    return GenerationStopped(job_id=job.id, stopping=accepted)
 
 
 @router.get("/settings", response_model=UserSettings, tags=["conversations"])
@@ -1684,6 +1709,7 @@ def conversation_messages(
                 created_at=m["created_at"],
                 attachments=[AttachmentRef(**a) for a in m["attachments"]],
                 resource_citations=m.get("resource_citations", []),
+                completion_state=m.get("completion_state"),
             )
             for m in rows
         ],
@@ -1747,11 +1773,28 @@ async def conversation_telemetry_stream(
 def conversation_delete(
     conversation_id: str,
     engine: ChatEngine = Depends(get_engine),
+    generations: GenerationManager = Depends(get_generation_manager),
     caller: str = Depends(require_caller),
 ) -> ConversationDeleted:
     """Delete one of the caller's own threads. 404 (not a false success) when the caller does
-    not own it or it does not exist — a client cannot destroy another student's history."""
-    if not engine.store.delete_conversation(conversation_id, owner_id=caller):
+    not own it or it does not exist — a client cannot destroy another student's history.
+
+    Deletion is also a server-side generation barrier: another tab/device cannot keep a reply
+    running, or start a new one, while the durable conversation rows are being removed.
+    """
+    conversation = engine.store.get_conversation(conversation_id)
+    if conversation is None or conversation.get("student_id") != caller:
+        raise HTTPException(status_code=404, detail="unknown conversation")
+    try:
+        deleted = generations.run_after_conversation_drained(
+            caller,
+            conversation_id,
+            lambda: engine.store.delete_conversation(conversation_id, owner_id=caller),
+        )
+    except GenerationCapacityError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not deleted:
+        # An out-of-process administrative erase can still win after the owner preflight.
         raise HTTPException(status_code=404, detail="unknown conversation")
     return ConversationDeleted(id=conversation_id)
 
@@ -2139,6 +2182,7 @@ def tutor_chat_stream(
         raise
 
     streamed = with_preamble(events, preamble, **_preamble_opts())
+    persist_terminal_state = stream_completion_callback(events)
 
     def _sse():
         started = time.monotonic()
@@ -2233,13 +2277,14 @@ def tutor_chat_stream(
                 )
             return admission.admitted
 
-        def _queued_cleanup() -> None:
-            try:
-                _close_events(streamed)
-            finally:
-                _close_events(events)
-                sessions.release(admission_id)
+    def _queued_cleanup() -> None:
+        try:
+            _close_events(streamed)
+        finally:
+            _close_events(events)
+            sessions.release(admission_id)
 
+    if strict:
         try:
             job = generations.start(
                 student_id=student_id,
@@ -2249,6 +2294,7 @@ def tutor_chat_stream(
                 queued_cleanup=_queued_cleanup,
                 before_start=_claim_session,
                 cancel_event=turn_cancel,
+                on_completion_state=persist_terminal_state,
             )
         except Exception:
             _queued_cleanup()
@@ -2256,7 +2302,17 @@ def tutor_chat_stream(
         return StreamingResponse(
             job.subscribe(), media_type="text/event-stream", headers=_SSE_HEADERS
         )
-    return StreamingResponse(_sse(), media_type="text/event-stream", headers=_SSE_HEADERS)
+    # Legacy/local clients predate the replay registry, but they still need the same terminal
+    # arbitration so a fully drained reply cannot remain durably labelled "streaming".
+    job = GenerationJob(
+        student_id=student_id,
+        conversation_id=cid,
+        producer=_sse(),
+        queued_cleanup=_queued_cleanup,
+        on_completion_state=persist_terminal_state,
+    )
+    job.start()
+    return StreamingResponse(job.subscribe(), media_type="text/event-stream", headers=_SSE_HEADERS)
 
 
 async def _persist_image_upload(

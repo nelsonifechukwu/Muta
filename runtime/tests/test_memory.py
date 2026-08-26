@@ -112,6 +112,22 @@ def test_list_messages_includes_ids_and_attachment_refs(store: ConversationStore
     assert msgs[1]["attachments"] == []
 
 
+def test_assistant_completion_state_is_durable_and_legacy_rows_remain_complete(store):
+    cid = store.create_conversation("s1")
+    legacy = store.add_message(cid, "assistant", "already complete")
+    partial = store.add_message(
+        cid,
+        "assistant",
+        "saved partial",
+        completion_state="streaming",
+    )
+    store.set_message_completion(partial, "failed")
+
+    messages = store.list_messages(cid)
+    assert messages[0]["id"] == legacy and messages[0]["completion_state"] is None
+    assert messages[1]["id"] == partial and messages[1]["completion_state"] == "failed"
+
+
 def test_set_title_only_when_unset(store: ConversationStore):
     cid = store.create_conversation("s1")
     store.set_title(cid, "first message")

@@ -108,6 +108,9 @@ test_attachment_round_trip_and_linking = contract.test_attachment_round_trip_and
 test_list_messages_includes_ids_and_attachment_refs = (
     contract.test_list_messages_includes_ids_and_attachment_refs
 )
+test_assistant_completion_state_is_durable_and_legacy_rows_remain_complete = (
+    contract.test_assistant_completion_state_is_durable_and_legacy_rows_remain_complete
+)
 test_set_title_only_when_unset = contract.test_set_title_only_when_unset
 test_settings_round_trip = contract.test_settings_round_trip
 test_settings_patch_preserves_independent_controls = (

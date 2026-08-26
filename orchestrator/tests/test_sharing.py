@@ -23,6 +23,8 @@ from orchestrator.gateway.sharing import (
     get_sharing_service,
 )
 from orchestrator.main import app as assembled_app
+from orchestrator.pedagogy.twin import TwinStore
+from runtime.sqlite_memory import SQLiteConversationStore
 
 
 def test_account_survives_logout_restart_and_is_erased_only_by_host(tmp_path):
@@ -270,6 +272,139 @@ def test_https_signup_host_approval_cookie_exchange_and_logout(monkeypatch, tmp_
     assert remote.get("/v1/share/me").json()["user_id"] == user_id
     assert remote.post("/v1/share/logout").status_code == 200
     assert remote.get("/v1/share/me").status_code == 401
+
+
+def test_canonical_remove_route_revokes_persists_and_requires_reapproval(monkeypatch, tmp_path):
+    path = tmp_path / "share.sqlite3"
+    service = SharingService(path)
+    service.update_settings(enabled=True, memory_mode="competition")
+    service.signup("Chika", "private classroom password", throttle_key="signup")
+    original_id = service.users()[0]["id"]
+    service.approve(original_id)
+    member_session = service.login("chika", "private classroom password", throttle_key="login")
+    app = _share_app(monkeypatch, service)
+    product_path = tmp_path / "product.sqlite3"
+    store = SQLiteConversationStore(f"sqlite:///{product_path}")
+    conversation_id = store.create_conversation(original_id, title="private work")
+    message_id = store.add_message(conversation_id, "user", "my private question")
+    attachment_id = store.add_attachment(
+        "image",
+        "image/png",
+        b"private image",
+        conversation_id=conversation_id,
+        message_id=message_id,
+        owner_id=original_id,
+    )
+    store.create_resource(original_id, "private notes.pdf", "application/pdf", b"private pdf")
+    store.put_settings(original_id, {"allow_parallel_chats": False})
+    twins = TwinStore(tmp_path / "twins")
+    twin_path = twins.path_for(original_id)
+    twin_path.write_text('{"mastery": {"algebra": 0.5}}')
+
+    class _Generations:
+        def stop_student(self, subject):
+            assert subject == original_id
+            return 1
+
+        def active(self, subject):
+            assert subject == original_id
+            return []
+
+    class _OwnedWork:
+        def stop_owner(self, subject):
+            assert subject == original_id
+            return True
+
+    class _Reaper:
+        def drop(self, selected_conversation):
+            assert selected_conversation == conversation_id
+            return True
+
+    monkeypatch.setattr(share_routes, "get_generation_manager", lambda: _Generations())
+    monkeypatch.setattr(share_routes, "get_owner_work_manager", lambda: _OwnedWork())
+    monkeypatch.setattr(share_routes, "get_resource_service", lambda: _OwnedWork())
+    monkeypatch.setattr(share_routes, "get_engine", lambda: SimpleNamespace(store=store))
+    monkeypatch.setattr(share_routes, "get_reaper", lambda: _Reaper())
+    monkeypatch.setattr(share_routes, "get_twin_store", lambda: twins)
+    member = TestClient(
+        app,
+        base_url="https://muta.test:8443",
+        client=("192.168.1.20", 51000),
+    )
+    member.cookies.set("muta_share_session", member_session.token)
+    host_session = service.issue_host_session("operator")
+    host = TestClient(app, base_url="http://localhost", client=("127.0.0.1", 51001))
+    host.cookies.set("muta_share_session", host_session.token)
+    rebound_host = TestClient(
+        app,
+        base_url="https://muta.test:8443",
+        client=("192.168.1.21", 51002),
+    )
+    rebound_host.cookies.set("muta_share_session", host_session.token)
+    endpoint = f"/v1/share/host/users/{original_id}"
+
+    assert (
+        TestClient(
+            app,
+            base_url="https://muta.test:8443",
+            client=("192.168.1.22", 51003),
+        )
+        .delete(endpoint)
+        .status_code
+        == 401
+    )
+    assert member.delete(endpoint).status_code == 403
+    assert (
+        rebound_host.delete(endpoint, headers={"X-Muta-CSRF": host_session.csrf_token}).status_code
+        == 403
+    )
+    assert host.delete(endpoint).status_code == 403
+    assert host.delete(endpoint, headers={"X-Muta-CSRF": "wrong"}).status_code == 403
+
+    removed = host.delete(endpoint, headers={"X-Muta-CSRF": host_session.csrf_token})
+    assert removed.status_code == 200
+    assert removed.json()["status"] == "removed"
+    assert removed.json()["erased"] == {
+        "conversations": 1,
+        "learning_twin": 1,
+        "orphan_attachments": 1,
+        "resources": 1,
+        "settings": 1,
+    }
+    assert service.resolve_session(member_session.token) is None
+    assert member.get("/v1/share/me").status_code == 401
+    assert service.users() == []
+    assert store.list_conversations(original_id) == []
+    assert store.list_resources(original_id) == []
+    assert store.get_attachment(attachment_id, owner_id=original_id) is None
+    assert store.get_settings(original_id) == {}
+    assert not twin_path.exists()
+
+    service.close()
+    store.close()
+    reopened = SharingService(path)
+    reopened_store = SQLiteConversationStore(f"sqlite:///{product_path}")
+    assert reopened.users() == []
+    assert reopened_store.list_conversations(original_id) == []
+    assert reopened_store.list_resources(original_id) == []
+    assert reopened_store.get_settings(original_id) == {}
+    replacement = reopened.signup(
+        "CHIKA", "a different private password", throttle_key="replacement"
+    )
+    replacement_id = reopened.users()[0]["id"]
+    assert replacement["status"] == "pending"
+    assert replacement_id != original_id
+    with pytest.raises(AuthenticationError, match="waiting"):
+        reopened.login("chika", "a different private password", throttle_key="pending-again")
+    reopened.approve(replacement_id)
+    assert (
+        reopened.login(
+            "chika", "a different private password", throttle_key="approved-again"
+        ).principal.subject
+        == replacement_id
+    )
+    reopened_store.close()
+    reopened.close()
 
 
 def test_remote_password_endpoint_refuses_plain_http(monkeypatch, tmp_path):

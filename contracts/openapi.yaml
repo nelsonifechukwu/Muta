@@ -2916,6 +2916,18 @@ components:
         created_at:
           type: string
           title: Created At
+        completion_state:
+          anyOf:
+          - type: string
+            enum:
+            - complete
+            - streaming
+            - failed
+            - stopped
+          - type: 'null'
+          title: Completion State
+          description: How an assistant row ended. Null is a legacy completed row; streaming means a persisted
+            partial whose owning process ended before terminal settlement.
         attachments:
           items:
             $ref: '#/components/schemas/AttachmentRef'

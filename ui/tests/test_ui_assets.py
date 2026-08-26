@@ -172,12 +172,19 @@ def test_only_the_chat_pane_scrolls_while_the_composer_stays_docked():
 def test_mobile_keyboard_and_large_composer_regions_remain_bounded():
     viewport = re.search(r'<meta name="viewport" content="([^"]+)">', HTML)
     assert viewport and "interactive-widget=resizes-content" in viewport.group(1)
+    assert "viewport-fit=cover" in viewport.group(1)
 
     js = (UI / "app.js").read_text()
-    assert "viewport?.height || window.innerHeight" in js
-    assert "viewport?.offsetTop || 0" in js
+    lifecycle = (UI / "release-lifecycle.js").read_text()
+    assert "window.MutaReleaseLifecycle.viewportMetrics" in js
+    assert "visualViewport?.height || innerHeight" in lifecycle
+    assert "visualViewport?.offsetTop || 0" in lifecycle
+    assert "visualViewport?.offsetLeft || 0" in lifecycle
     assert 'style.setProperty("--app-height"' in js
     assert 'style.setProperty("--app-top"' in js
+    assert 'style.setProperty("--app-left"' in js
+    assert 'style.setProperty("--app-width"' in js
+    assert 'style.setProperty("--visual-bottom-gap"' in js
     assert 'style.setProperty("--composer-region-max"' in js
     assert 'window.visualViewport?.addEventListener("resize"' in js
     assert 'window.visualViewport?.addEventListener("scroll"' in js
@@ -185,6 +192,10 @@ def test_mobile_keyboard_and_large_composer_regions_remain_bounded():
     assert "viewportResizeActive = true" in js
     assert "if (preserveFollow) scrollToBottom({ force: true })" in js
     assert "}, 320)" in js
+    assert "env(safe-area-inset-bottom)" in CSS
+    assert "env(safe-area-inset-top)" in CSS
+    assert "env(safe-area-inset-left)" in CSS
+    assert "env(safe-area-inset-right)" in CSS
 
     # Safari may pan the visual viewport instead of leaving it at layout y=0. Every fixed
     # surface must share the same visible origin/height as #app, or the hamburger/sidebar
@@ -198,11 +209,14 @@ def test_mobile_keyboard_and_large_composer_regions_remain_bounded():
     settings_modal = "".join(_blocks(".settings-modal"))
     toast = "".join(_blocks("#toast"))
     assert "var(--app-top" in menu_toggle
+    assert "env(safe-area-inset-top)" in menu_toggle
     for surface in (backdrop, sidebar, model_menu, drop_overlay, settings_modal):
         assert "var(--app-top" in surface
         assert "var(--app-height" in surface
     assert "var(--app-top" in toast and "var(--app-height" in toast
     assert "backdrop-filter: none" in mobile_header
+    assert "height: calc(58px + env(safe-area-inset-top))" in mobile_header
+    assert "padding-block-start: env(safe-area-inset-top)" in sidebar
 
     wrap = "".join(_blocks("#composer-wrap"))
     queue = "".join(_blocks("#queue"))
@@ -304,7 +318,7 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "if (number <= limit)" in citations
     assert "function planClaimCitations(" in citations
     assert "function normalizeReferences(" in citations
-    assert 'job.handle?.replace(job.content)' in js
+    assert "job.handle?.replace(job.content)" in js
     assert 'Object.prototype.hasOwnProperty.call(ev, "replace")' in js
     assert "{ legacyNumeric: true }" in js
     assert "job.terminalEvent = { ...ev" in js
@@ -558,6 +572,53 @@ def test_settings_exposes_persisted_parallel_chat_and_power_switches():
     assert "!allowParallelChats && generationJobs.size" in js
 
 
+def test_host_mode_uses_the_accessible_application_switch_and_exact_sidebar_copy():
+    js = (UI / "app.js").read_text()
+    host_input = re.search(r'<input id="setting-host-enabled"(?P<attrs>[^>]+)>', HTML)
+    assert host_input
+    attrs = host_input.group("attrs")
+    assert 'type="checkbox"' in attrs
+    assert 'role="switch"' in attrs
+    assert 'aria-labelledby="host-mode-title"' in attrs
+    assert 'aria-describedby="host-mode-description"' in attrs
+
+    host_switch = "".join(_blocks(".host-switch"))
+    host_track = "".join(_blocks(".host-switch input"))
+    host_knob = "".join(_blocks(".host-switch input::after"))
+    assert "min-width: 44px" in host_switch and "min-height: 44px" in host_switch
+    assert "var(--switch-track)" in host_track
+    assert "var(--switch-knob)" in host_knob
+    assert ".host-switch input:checked" in CSS
+    assert ".host-settings input:focus-visible" in CSS
+
+    exact = "Muta Host: This device. Running locally."
+    assert f'data-release-i18n="sidebar.hostLocal" hidden>{exact}</span>' in HTML
+    assert f'"sidebar.hostLocal": "{exact}"' in js
+    assert 'document.querySelector("#share-host-local-copy").hidden = !hostIdentity' in js
+    assert 'document.querySelector("#sidebar-runtime").hidden = hostIdentity' in js
+    assert "Muta stays within the operator’s fixed inference-slot and memory limits." not in HTML
+    assert 'class="settings-footnote"' not in HTML
+
+
+def test_host_roster_removal_updates_immediately_and_keeps_errors_at_the_row():
+    js = (UI / "app.js").read_text()
+    lifecycle = (UI / "release-lifecycle.js").read_text()
+    assert "`/v1/share/host/users/${encodeURIComponent(userId)}`" in lifecycle
+    assert 'action === "remove" ? base : `${base}/${action}`' in lifecycle
+    assert "window.MutaReleaseLifecycle.hostUserEndpoint(user.id, action)" in js
+    assert 'candidate.id === user.id ? { ...candidate, status: "deleting" }' in js
+    assert "renderHostStatus({ ...(hostStatus || previous), users })" in js
+    assert "void loadHostStatus({ poll: false })" in js
+    assert 'error.setAttribute("role", "alert")' in js
+    assert 'className = "host-user-error"' in js
+    assert (
+        'row.querySelectorAll("button").forEach((control) => { control.disabled = false; })' in js
+    )
+    assert "if (hostStatus) {" in js and 'hostRosterSignature = ""' in js
+    trust_link = "".join(_blocks(".host-share-card a"))
+    assert "min-height: 44px" in trust_link and "inline-flex" in trust_link
+
+
 def test_model_picker_uses_an_accessible_header_menu_instead_of_a_native_select():
     js = (UI / "app.js").read_text()
     assert 'id="model-trigger"' in HTML
@@ -622,15 +683,15 @@ def test_model_catalog_starts_after_auth_without_blocking_saved_conversations():
     assert "void loadResources({ quiet: true });" in boot
     assert boot.index("void refreshSidebar();") < boot.index("await recoverGenerations();")
     assert "if (!selected) settleStartupRouting();" in boot
-    load = js[js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")]
+    load = js[
+        js.index("async function loadConversation(") : js.index("/** Re-render one in-flight")
+    ]
     assert load.count("settleStartupRouting();") == 2
 
 
 def test_inference_controls_stay_locked_until_catalog_and_initial_routing_are_ready():
     js = (UI / "app.js").read_text()
-    sync = js[
-        js.index("function syncComposerState()") : js.index("async function stopGeneration(")
-    ]
+    sync = js[js.index("function syncComposerState()") : js.index("async function stopGeneration(")]
     assert "let startupRoutingReady = false;" in js
     assert "modelCatalog === null" in sync
     assert 'modelTrigger?.dataset.loadFailed !== "true"' in sync
@@ -665,7 +726,7 @@ def test_pdf_upload_is_a_labelled_composer_control_not_a_settings_action():
     html = (UI / "index.html").read_text()
     js = (UI / "app.js").read_text()
     composer_start = html.index('<div id="composer">')
-    composer = html[composer_start : html.index('</main>', composer_start)]
+    composer = html[composer_start : html.index("</main>", composer_start)]
     settings = html[html.index('<div id="settings-modal"') : html.index('<div id="toast"')]
 
     assert 'id="btn-resource"' in composer
@@ -783,10 +844,10 @@ def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
     versions = re.findall(
-        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|popover-position\.js|image-upload\.js|app\.js|audio\.js)\?v=([^"]+)"',
+        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|popover-position\.js|image-upload\.js|release-lifecycle\.js|app\.js|audio\.js)\?v=([^"]+)"',
         HTML,
     )
-    assert len(versions) == 7
+    assert len(versions) == 8
     assert len(set(versions)) == 1
     assert re.search(r'src="i18n\.js\?v=([^"]+)"', HTML).group(1) == versions[0]
 
@@ -822,6 +883,42 @@ def test_muta_share_tabs_and_revocation_flow_are_keyboard_and_session_safe():
     assert 'sessionStorage.setItem(\n    "muta-share-reauth"' in js
 
 
+def test_partial_failure_and_stop_have_distinct_recoverable_terminal_lifecycles():
+    js = (UI / "app.js").read_text()
+    lifecycle = (UI / "release-lifecycle.js").read_text()
+    assert "job.errorEvidence = {" in js
+    error_branch = js[js.index("} else if (ev.error)") : js.index("} else if (ev.done)")]
+    assert ".fail(" not in error_branch, "an error frame must wait for terminal job evidence"
+    assert "settleFailedGeneration(job)" in js
+    assert "window.MutaReleaseLifecycle.terminalFailure" in js
+    assert 'className = "reply-continue"' in js
+    assert 'releaseT("reply.continuePrompt")' in js
+    assert "failed && partial" in lifecycle
+    assert "message.completion_state" in js
+    assert '["failed", "streaming"].includes(state)' in js
+    assert "decorateHistoricalCompletion(wrap, prose, m, conversationId)" in js
+
+    stop = js[js.index("async function stopGeneration(") : js.index("function renderChips()")]
+    assert "if (job.stopPromise) return job.stopPromise" in stop
+    assert "window.MutaReleaseLifecycle.stopResponse" in stop
+    assert "job.stopConfirmed = true" in stop
+    assert "job.subscriptionController?.abort()" in stop
+    assert "finishGeneration(job," in stop
+    assert "job.handle?.stop()" in stop
+    assert 'releaseT("reply.stopping")' in js
+    assert "if (!drain) job.suppressDrain = true" in stop
+
+    deletion = js[js.index('del.addEventListener("click"') : js.index("item.append(open, del)")]
+    assert deletion.index("discardQueue") < deletion.index("stopGeneration")
+    assert "backgroundJob.pendingRegen = null" in deletion
+    assert "stopGeneration(backgroundJob, { drain: false })" in deletion
+    assert "if (!stopped) return" in deletion
+
+    follow = js[js.index("async function followGeneration") : js.index("async function pumpSse")]
+    assert "res.status === 401 || res.status === 403" in follow
+    assert "await revalidateShareIdentity()" in follow
+
+
 def test_checked_in_dist_entry_assets_are_byte_identical_to_authored_sources():
     dist = UI / "dist"
     if not dist.is_dir():
@@ -840,7 +937,10 @@ def test_checked_in_dist_entry_assets_are_byte_identical_to_authored_sources():
 def _contrast(left: str, right: str) -> float:
     def luminance(value: str) -> float:
         channels = [int(value[index : index + 2], 16) / 255 for index in (1, 3, 5)]
-        linear = [channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4 for channel in channels]
+        linear = [
+            channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+            for channel in channels
+        ]
         return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
 
     high, low = sorted((luminance(left), luminance(right)), reverse=True)
@@ -878,7 +978,10 @@ def test_dark_mode_is_prepaint_persistent_complete_and_accessible():
         ("danger", "bg", 4.5),
         ("power-text", "power-bg", 4.5),
     ):
-        assert _contrast(tokens[foreground], tokens[background]) >= minimum, (foreground, background)
+        assert _contrast(tokens[foreground], tokens[background]) >= minimum, (
+            foreground,
+            background,
+        )
     assert _contrast("#ffffff", tokens["danger-fill"]) >= 3
 
 
@@ -976,8 +1079,8 @@ def test_generation_feedback_replaces_the_blinking_cursor_and_names_visual_work(
     assert 'activity.className = "generation-status"' in js
     assert 'wrap.setAttribute("aria-busy", "true")' in js
     assert 'visualization: "Generating diagram…"' in js
-    assert 'job.handle?.showPhase(ev.phase)' in js
-    assert 'job.handle?.replaceContent(job.content)' in js
+    assert "job.handle?.showPhase(ev.phase)" in js
+    assert "job.handle?.replaceContent(job.content)" in js
     assert ".generation-dots" in css and "@keyframes generation-dot" in css
     assert "prefers-reduced-motion: reduce" in css
     assert ".cursor::after" not in css

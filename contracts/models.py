@@ -631,6 +631,13 @@ class MessageOut(BaseModel):
         )
     )
     created_at: str
+    completion_state: Literal["complete", "streaming", "failed", "stopped"] | None = Field(
+        default=None,
+        description=(
+            "How an assistant row ended. Null is a legacy completed row; streaming means a "
+            "persisted partial whose owning process ended before terminal settlement."
+        ),
+    )
     attachments: list[AttachmentRef] = Field(default_factory=list)
     resource_citations: list[ResourceCitation] = Field(default_factory=list)
 

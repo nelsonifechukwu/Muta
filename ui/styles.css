@@ -113,8 +113,8 @@ body {
 /* Chrome resizes the content viewport for the keyboard (viewport meta); app.js mirrors
    visualViewport.height into --app-height for Safari/iOS and browser-chrome animations. */
 #app {
-  position: fixed; top: var(--app-top, 0px); left: 0; right: 0;
-  display: flex; width: 100%; height: 100vh;
+  position: fixed; top: var(--app-top, 0px); left: var(--app-left, 0px); right: auto;
+  display: flex; width: var(--app-width, 100%); height: 100vh;
   height: var(--app-height, 100dvh); overflow: hidden;
 }
 #app[hidden] { display: none; }
@@ -135,8 +135,9 @@ html[data-muta-access="operator"] #app[hidden] { display: flex; }
 /* Mobile-only hamburger; hidden on desktop where the sidebar is always visible. */
 .menu-toggle {
   display: none;
-  position: fixed; top: calc(var(--app-top, 0px) + 10px); left: 10px; z-index: 45;
-  width: 40px; height: 40px; padding: 8px; border-radius: 9px;
+  position: fixed; top: calc(var(--app-top, 0px) + env(safe-area-inset-top) + 10px);
+  left: calc(var(--app-left, 0px) + max(10px, env(safe-area-inset-left))); z-index: 45;
+  width: 44px; height: 44px; padding: 10px; border-radius: 9px;
   background: var(--card); border: 1px solid var(--border); color: var(--text); cursor: pointer;
 }
 .menu-toggle svg { width: 100%; height: 100%; }
@@ -386,6 +387,17 @@ button.ghost:hover { background: var(--accent-soft); }
   width: fit-content; margin-top: 7px; padding: 5px 9px; border-radius: 8px;
   color: var(--muted); background: var(--accent-soft); font: 0.76rem/1.4 var(--sans);
 }
+.reply-recovery { margin-top: 10px; }
+.reply-recovery[hidden] { display: none; }
+.reply-continue {
+  min-height: 44px; padding: 0 14px; border: 1px solid var(--accent);
+  border-radius: 9px; background: var(--accent-soft); color: var(--accent);
+  font: 650 0.82rem var(--sans); cursor: pointer; touch-action: manipulation;
+}
+.reply-continue:hover { background: color-mix(in srgb, var(--accent-soft) 70%, var(--accent)); }
+.reply-continue:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.reply-continue:disabled { opacity: 0.55; cursor: wait; }
+.reply-stopped { margin-top: 8px; color: var(--muted); font: 600 0.78rem var(--sans); }
 .reply-queued .prose {
   max-width: 34rem; padding: 10px 12px; border-inline-start: 3px solid var(--accent-strong);
   border-start-start-radius: 0; border-end-start-radius: 0;
@@ -486,7 +498,10 @@ button.ghost:hover { background: var(--accent-soft); }
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
   overscroll-behavior-y: contain;
 }
-#chat-column { max-width: 48rem; margin: 0 auto; padding: 14px 20px 8px; }
+#chat-column {
+  max-width: 48rem; margin: 0 auto; padding-block: 14px 8px;
+  padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right));
+}
 #empty-state { text-align: center; margin-top: 14vh; color: var(--muted); }
 #empty-state h1 {
   font-family: var(--serif); font-weight: 500; font-size: 2rem; color: var(--text);
@@ -786,7 +801,9 @@ details.thinking .think-label.shimmer {
 #composer-wrap {
   flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0;
   max-height: min(72%, 36rem, calc(100% - 58px)); overflow: hidden;
-  padding: 0 20px 14px; max-width: 51rem; margin: 0 auto; width: 100%;
+  padding-block: 0 max(14px, env(safe-area-inset-bottom));
+  padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right));
+  max-width: 51rem; margin: 0 auto; width: 100%;
 }
 .telemetry {
   flex: 0 0 auto;
@@ -905,7 +922,8 @@ button.icon.recording { color: var(--on-accent); background: var(--danger-fill);
 @keyframes pulse { 50% { box-shadow: 0 0 0 6px var(--record-pulse); } }
 button.send {
   border: none; cursor: pointer; border-radius: 10px; line-height: 0;
-  background: var(--accent-strong); color: var(--on-accent); padding: 8px 10px;
+  min-width: 44px; min-height: 44px; background: var(--accent-strong);
+  color: var(--on-accent); padding: 8px 10px;
 }
 button.send:disabled { opacity: 0.4; cursor: default; }
 button.send svg { width: 16px; height: 16px; fill: currentColor; }
@@ -955,7 +973,8 @@ button.send.stop { background: var(--danger-fill); }
   padding: 40px 60px; font-family: var(--serif); font-size: 1.3rem; color: var(--accent);
 }
 #toast {
-  position: fixed; top: calc(var(--app-top, 0px) + var(--app-height, 100dvh) - 24px);
+  position: fixed;
+  top: calc(var(--app-top, 0px) + var(--app-height, 100dvh) - max(24px, env(safe-area-inset-bottom)));
   bottom: auto; left: 50%; transform: translate(-50%, -100%); z-index: 50;
   background: var(--toast-bg); color: var(--toast-text); border-radius: 10px;
   padding: 10px 18px; font-size: 0.85rem; max-width: 80vw;
@@ -963,14 +982,18 @@ button.send.stop { background: var(--danger-fill); }
 
 /* --- settings ---------------------------------------------------------------------- */
 .settings-modal {
-  position: fixed; top: var(--app-top, 0px); right: 0; bottom: auto; left: 0;
+  position: fixed; top: var(--app-top, 0px); right: auto; bottom: auto;
+  left: var(--app-left, 0px); width: var(--app-width, 100%);
   height: var(--app-height, 100dvh);
   z-index: 70; display: flex; align-items: center; justify-content: center;
-  padding: 20px; background: var(--modal-scrim); backdrop-filter: blur(2px);
+  padding-block: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-bottom));
+  padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right));
+  background: var(--modal-scrim); backdrop-filter: blur(2px);
 }
 .settings-modal[hidden] { display: none; }
 .settings-panel {
-  width: min(34rem, 100%); max-height: min(42rem, calc(100dvh - 40px)); overflow-y: auto;
+  width: min(34rem, 100%);
+  max-height: min(42rem, calc(var(--app-height, 100dvh) - 40px)); overflow-y: auto;
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   box-shadow: var(--panel-shadow); padding: 18px;
 }
@@ -1081,8 +1104,10 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
      stay reachable on the phones the classroom mode targets (README §7). */
   .menu-toggle { display: block; }
   #sidebar {
-    position: fixed; top: var(--app-top, 0px); left: 0; bottom: auto;
+    position: fixed; top: var(--app-top, 0px); left: var(--app-left, 0px); bottom: auto;
     height: var(--app-height, 100dvh); z-index: 40;
+    padding-block-start: env(safe-area-inset-top);
+    padding-inline-start: env(safe-area-inset-left);
     transform: translateX(-100%);
     transition: transform 0.22s ease;
     box-shadow: var(--popover-shadow);
@@ -1092,33 +1117,57 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
   /* A backdrop filter establishes a containing block for fixed descendants. Disable it here
      so the fixed, phone-width model menu uses the visual-viewport coordinates below exactly
      once instead of adding the header's offset a second time. The 92% opaque header remains. */
-  .chat-header { padding-inline-start: 58px; backdrop-filter: none; }
+  .chat-header {
+    height: calc(58px + env(safe-area-inset-top));
+    padding-block-start: calc(8px + env(safe-area-inset-top));
+    padding-inline-start: max(62px, calc(env(safe-area-inset-left) + 58px));
+    padding-inline-end: max(12px, env(safe-area-inset-right));
+    backdrop-filter: none;
+  }
   .model-selector { flex: 1; }
   .model-trigger { max-width: 100%; }
+  .model-trigger, .mobile-home-link { min-height: 44px; }
   .power-badge-dot,
   #power-badge-level { display: none; }
   .mobile-home-link { display: inline-flex; }
   .model-menu {
-    position: fixed; top: calc(var(--app-top, 0px) + 58px);
-    left: 10px; right: 10px; width: auto; min-width: 0;
+    position: fixed;
+    top: calc(var(--app-top, 0px) + env(safe-area-inset-top) + 58px);
+    left: calc(var(--app-left, 0px) + max(10px, env(safe-area-inset-left)));
+    right: auto;
+    width: calc(var(--app-width, 100%) - max(10px, env(safe-area-inset-left)) - max(10px, env(safe-area-inset-right)));
+    min-width: 0;
     max-height: calc(var(--app-height, 100dvh) - 76px);
   }
 }
 @media (max-width: 720px) {
-  html[dir="rtl"] .menu-toggle { left: auto; right: 10px; }
-  html[dir="rtl"] #sidebar { left: auto; right: 0; transform: translateX(100%); }
+  html[dir="rtl"] .menu-toggle {
+    left: auto; right: max(10px, env(safe-area-inset-right));
+  }
+  html[dir="rtl"] #sidebar {
+    left: auto; right: 0; padding-inline: env(safe-area-inset-right) 0;
+    transform: translateX(100%);
+  }
   html[dir="rtl"] #app.sidebar-open #sidebar { transform: translateX(0); }
 }
 /* When a phone keyboard leaves less than 240 px, preserve the two controls that matter:
    the editable prompt and Send/Stop. Telemetry and fine print can return when the keyboard
    closes; queued turns and attachment chips stay present in their own small scroll regions. */
-.compact-height .chat-header { height: 42px; padding-block: 2px; }
+.compact-height .chat-header {
+  height: calc(42px + env(safe-area-inset-top));
+  padding-block: calc(2px + env(safe-area-inset-top)) 2px;
+}
+@media (max-width: 720px) {
+  .compact-height .model-menu {
+    top: calc(var(--app-top, 0px) + env(safe-area-inset-top) + 42px);
+  }
+}
 .compact-height .model-trigger { min-height: 36px; padding-block: 3px; }
 .compact-height .mobile-home-link { min-height: 32px; padding-block: 4px; }
 .compact-height #composer-wrap {
   /* The header itself is 42px; reserving the desktop header budget leaves a final 16px
      transcript sliver instead of allowing a full queue to reduce the chat pane to zero. */
-  max-height: calc(100% - 58px); padding-bottom: 4px;
+  max-height: calc(100% - 58px); padding-bottom: max(4px, env(safe-area-inset-bottom));
 }
 .compact-height #telemetry,
 .compact-height .fineprint { display: none !important; }
@@ -1197,12 +1246,31 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
 
 .share-account { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
 .share-account > span { min-width: 0; display: grid; }
+.share-account > span[hidden], .sidebar-foot[hidden] { display: none; }
+.share-host-local-copy { color: var(--text); font-size: 0.75rem; line-height: 1.45; font-weight: 650; }
 .share-account strong { overflow: hidden; text-overflow: ellipsis; font-size: 0.77rem; }
 .share-account small { color: var(--muted); font-size: 0.65rem; text-transform: capitalize; }
 .share-account button { min-height: 36px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 0.72rem; cursor: pointer; }
 .share-account button:hover { color: var(--danger); }
 
-.host-switch input { margin: 0; }
+.host-switch {
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+  min-width: 44px; min-height: 44px; cursor: pointer; touch-action: manipulation;
+}
+.host-switch input {
+  appearance: none; margin: 0; width: 40px; height: 22px; border: 0;
+  border-radius: 999px; background: var(--switch-track); cursor: pointer;
+  position: relative; transition: background 0.16s ease;
+}
+.host-switch input::after {
+  content: ""; position: absolute; top: 3px; inset-inline-start: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: var(--switch-knob);
+  transition: transform 0.16s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+}
+.host-switch input:checked { background: var(--accent-strong); }
+.host-switch input:checked::after { transform: translateX(18px); }
+html[dir="rtl"] .host-switch input:checked::after { transform: translateX(-18px); }
+.host-switch input:disabled { opacity: 0.55; cursor: wait; }
 .host-memory-options { margin: 13px 0 0; padding: 0; border: 0; }
 .host-memory-options legend { margin-bottom: 8px; font-size: 0.78rem; font-weight: 650; }
 .host-memory-options > label { display: flex; gap: 10px; align-items: flex-start; padding: 10px; margin-top: 7px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
@@ -1216,11 +1284,14 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
 .host-share-card img { width: 132px; height: 132px; border-radius: 7px; background: var(--qr-bg); }
 .host-share-card > div { min-width: 0; }
 .host-share-card p { color: var(--muted); font-size: 0.7rem; line-height: 1.45; }
-.host-share-card a { color: var(--accent); font-size: 0.75rem; }
+.host-share-card a {
+  display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px;
+  padding-inline: 4px; color: var(--accent); font-size: 0.75rem; touch-action: manipulation;
+}
 .host-share-card code { display: block; margin-top: 9px; max-height: 3.8em; overflow: auto; color: var(--muted); font-size: 0.58rem; overflow-wrap: anywhere; }
 .host-url-row { display: flex; gap: 6px; margin-top: 7px; }
 .host-url-row input { min-width: 0; min-height: 40px; font-size: 0.73rem; }
-.host-url-row button, .host-user-actions button { min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: 600 0.72rem inherit; cursor: pointer; }
+.host-url-row button, .host-user-actions button { min-height: 44px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: 600 0.72rem inherit; cursor: pointer; }
 .host-url-row button { padding: 0 12px; }
 .host-capacity { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 12px; }
 .host-capacity > div { padding: 10px; border: 1px solid var(--border); border-radius: 9px; }
@@ -1232,6 +1303,8 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
 .host-user-row > span { min-width: 0; display: grid; }
 .host-user-row strong { overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; }
 .host-user-row small { color: var(--muted); font-size: 0.67rem; }
+.host-user-row[aria-busy="true"] { opacity: 0.72; }
+.host-user-error { grid-column: 1 / -1; margin: 0; color: var(--danger); font-size: 0.7rem; line-height: 1.45; }
 .host-user-actions { display: flex; gap: 5px; }
 .host-user-actions button { padding: 0 9px; }
 .host-user-actions .danger:hover { color: var(--danger); border-color: var(--danger); }
@@ -1245,5 +1318,9 @@ html[dir="rtl"] .settings-row input:checked::after { transform: translateX(-18px
   .host-capacity { grid-template-columns: 1fr; }
   .host-user-row { grid-template-columns: 1fr; }
   .share-auth-form input { font-size: 16px; }
+}
+@media (max-width: 720px), (pointer: coarse) {
+  button.icon { min-width: 44px; min-height: 44px; padding: 11px; }
+  #composer-buttons .left { gap: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .share-spinner { animation: none; } }

@@ -342,7 +342,9 @@ def test_resource_turn_can_exclude_prior_conversation_history_without_losing_sto
         {"role": "system", "content": "SYSTEM: only the selected scholarship evidence"},
         {"role": "user", "content": "What does the newly selected scholarship PDF say?"},
     ]
-    assert [(row["role"], row["content"]) for row in store.get_messages(result.conversation_id)] == [
+    assert [
+        (row["role"], row["content"]) for row in store.get_messages(result.conversation_id)
+    ] == [
         ("user", "Explain the embedded-systems book"),
         ("assistant", "reply-1"),
         ("user", "What does the newly selected scholarship PDF say?"),
@@ -620,6 +622,7 @@ def test_stream_chat_persists_full_reply_exactly_once_when_drained(store):
     assert "".join(gen) == "Hello"
     msgs = store.get_messages(cid)
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "Hello")]
+    assert store.list_messages(cid)[-1]["completion_state"] == "complete"
 
 
 def test_stream_chat_persists_partial_reply_when_consumer_abandons(store):
@@ -630,6 +633,7 @@ def test_stream_chat_persists_partial_reply_when_consumer_abandons(store):
     gen.close()  # browser Stop button / disconnect
     msgs = store.get_messages(cid)
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "Hello")]
+    assert store.list_messages(cid)[-1]["completion_state"] == "stopped"
 
 
 def test_stream_events_chat_persists_partial_reply_on_midstream_error(store):
@@ -812,6 +816,7 @@ def test_reply_is_readable_from_the_store_mid_stream(store):
 
     assert next(gen) == "alpha "
     assert [m["content"] for m in store.get_messages(cid) if m["role"] == "assistant"] == ["alpha "]
+    assert store.list_messages(cid)[-1]["completion_state"] == "streaming"
     assert next(gen) == "beta "
     assert [m["content"] for m in store.get_messages(cid) if m["role"] == "assistant"] == [
         "alpha beta "
@@ -829,7 +834,7 @@ def test_write_through_keeps_one_row_that_grows_in_place(store):
         rows = [m for m in store.list_messages(cid) if m["role"] == "assistant"]
         ids.append(rows[0]["id"] if rows else None)
 
-    assert len(set(i for i in ids if i is not None)) == 1, "the reply forked into extra rows"
+    assert len({i for i in ids if i is not None}) == 1, "the reply forked into extra rows"
     msgs = store.get_messages(cid)
     assert [(m["role"], m["content"]) for m in msgs] == [("user", "hi"), ("assistant", "abcd")]
 
