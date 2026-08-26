@@ -34,6 +34,9 @@ def test_every_direct_desktop_build_stages_the_verified_ui_export_first() -> Non
     )]
     assert "scripts/build_ui_dist.py" in desktop_test
     assert desktop_test.index("scripts/build_ui_dist.py") < desktop_test.index("cargo test")
+    ui_builder = (ROOT / "scripts" / "build_ui_dist.py").read_text()
+    for required_script in ("startup.js", "syntax.js", "parallel-policy.js"):
+        assert f'"{required_script}"' in ui_builder
 
 
 def test_desktop_progress_is_monotonic_failure_aware_and_retryable() -> None:

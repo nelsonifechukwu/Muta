@@ -82,7 +82,6 @@
       "settings.general": "General",
       "settings.parallel": "Generate in multiple chats",
       "settings.parallelHelp": "Parallel replies share same CPU and RAM. Queue queries to optimize resources.",
-      "settings.limits": "Muta stays within the operator’s fixed inference-slot and memory limits.",
       "settings.saveFailed": "Couldn’t save that setting.",
       "runtime.offlineLocal": "offline · local CPU",
       "model.loading": "Loading models…",
@@ -273,6 +272,7 @@
     "settings.powerSection": "Power",
     "settings.power": "Muta power optimization",
     "settings.powerHelp": "On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.",
+    "settings.analyticsHelp": "Help us improve Muta by sharing your analytics.",
   });
 
   function safeStorageGet(key) {
@@ -485,6 +485,8 @@
   function registerLocale(definition, messages) {
     if (!definition?.tag || !messages) return false;
     const combined = { ...(catalogs[definition.tag] || {}), ...messages };
+    // Retired visible copy must not reappear when older checked-in locale snapshots register.
+    delete combined["settings.limits"];
     const attachmentMessages = multimodalAttachmentMessages(combined);
     const releaseFallbacks = Object.fromEntries(
       ENGLISH_FALLBACK_KEYS

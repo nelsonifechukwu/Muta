@@ -119,6 +119,13 @@ def test_release_copy_is_terse_localized_and_exact():
     disclaimer = "Muta can make mistakes. Check important info."
     assert f'data-i18n="fineprint">{disclaimer}</div>' in HTML
     assert f'"fineprint": "{disclaimer}"' in I18N
+    analytics = "Help us improve Muta by sharing your analytics."
+    assert f'data-i18n="settings.analyticsHelp">{analytics}</strong>' in HTML
+    assert f'"settings.analyticsHelp": "{analytics}"' in I18N
+    assert "Share pseudonymous product activity" not in HTML
+    assert "Send a durable random installation ID" not in HTML
+    assert 'data-i18n="settings.limits"' not in HTML
+    assert '"settings.limits":' not in I18N
     assert '"model.textTutor": "Text tutor"' in I18N
     assert '"model.imageTutor": "Text and image tutor"' in I18N
     assert 'return t(model.supports_images ? "model.imageTutor" : "model.textTutor")' in (

@@ -36,6 +36,7 @@ UI_FILES = (
     "locale-manifest.js",
     "locales.js",
     "math.js",
+    "parallel-policy.js",
     "popover-position.js",
     "product-analytics.js",
     "resource-mentions.js",

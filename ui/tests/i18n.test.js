@@ -93,8 +93,14 @@ test("additive settings copy stays keyed without hiding complete locale packs", 
     "On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.",
   );
   assert.equal(i18n.t("settings.appearance", {}, "en"), "Appearance");
+  assert.equal(
+    i18n.t("settings.analyticsHelp", {}, "fr"),
+    "Help us improve Muta by sharing your analytics.",
+  );
   assert.equal(Object.hasOwn(i18n.catalogs.en, "settings.powerHelp"), false);
   assert.equal(Object.hasOwn(i18n.additiveEnglishCatalog, "settings.powerHelp"), true);
+  assert.equal(Object.hasOwn(i18n.additiveEnglishCatalog, "settings.analyticsHelp"), true);
+  assert.equal(Object.hasOwn(i18n.catalogs.fr, "settings.limits"), false);
   assert.equal(supported.length, 28);
 });
 
