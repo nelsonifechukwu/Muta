@@ -5,6 +5,10 @@
   const stage = document.getElementById("viz-stage");
   const errorEl = document.getElementById("viz-error");
   const replay = document.getElementById("viz-replay");
+  const surfaceControls = document.getElementById("viz-surface-controls");
+  const surfacePlay = document.getElementById("viz-surface-play");
+  const surfacePause = document.getElementById("viz-surface-pause");
+  const surfaceRestart = document.getElementById("viz-surface-restart");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let parentVisible = true;
   const activityListeners = new Set();
@@ -56,6 +60,7 @@
     errorEl.textContent = message || "This visualization could not be drawn.";
     errorEl.hidden = false;
     replay.hidden = true;
+    surfaceControls.hidden = true;
   }
 
   function loadLibrary(name) {
@@ -352,12 +357,124 @@
     return sprite;
   }
 
+  function surfaceObject(object) {
+    const [xCount, yCount] = object.resolution;
+    const [xMin, xMax] = object.x_domain;
+    const [yMin, yMax] = object.y_domain;
+    const [zMin, zMax] = object.z_domain;
+    const xCenter = (xMin + xMax) / 2;
+    const yCenter = (yMin + yMax) / 2;
+    const zCenter = zMin <= 0 && zMax >= 0 ? 0 : (zMin + zMax) / 2;
+    const xScale = 8 / (xMax - xMin);
+    const yScale = 6 / (yMax - yMin);
+    const zScale = 4.8 / Math.max(1e-9, zMax - zMin);
+    const positions = new Float32Array(xCount * yCount * 3);
+    const colors = new Float32Array(xCount * yCount * 3);
+    const indices = [];
+    for (let row = 0; row < yCount - 1; row += 1) {
+      for (let column = 0; column < xCount - 1; column += 1) {
+        const topLeft = row * xCount + column;
+        const bottomLeft = (row + 1) * xCount + column;
+        indices.push(topLeft, bottomLeft, topLeft + 1, bottomLeft, bottomLeft + 1, topLeft + 1);
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setIndex(indices);
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geometry.getAttribute("position").setUsage(THREE.DynamicDrawUsage);
+    const lowColor = new THREE.Color(palette[0]);
+    const middleColor = new THREE.Color(palette[3]);
+    const highColor = new THREE.Color(palette[1]);
+
+    const world = (x, y, z) => [
+      (x - xCenter) * xScale,
+      (z - zCenter) * zScale,
+      (y - yCenter) * yScale,
+    ];
+    const update = (expression, phase = 0) => {
+      for (let row = 0; row < yCount; row += 1) {
+        const y = yMin + (yMax - yMin) * row / (yCount - 1);
+        for (let column = 0; column < xCount; column += 1) {
+          const x = xMin + (xMax - xMin) * column / (xCount - 1);
+          let z;
+          try {
+            z = window.MutaViz.evaluateSurfaceExpression(expression, { x, y, t: phase });
+          } catch {
+            z = zCenter;
+          }
+          z = Math.max(zMin, Math.min(zMax, z));
+          const vertex = row * xCount + column;
+          const coordinate = world(x, y, z);
+          positions[vertex * 3] = coordinate[0];
+          positions[vertex * 3 + 1] = coordinate[1];
+          positions[vertex * 3 + 2] = coordinate[2];
+          const amount = Math.max(0, Math.min(1, (z - zMin) / (zMax - zMin)));
+          const shade = amount < 0.5
+            ? lowColor.clone().lerp(middleColor, amount * 2)
+            : middleColor.clone().lerp(highColor, (amount - 0.5) * 2);
+          colors[vertex * 3] = shade.r;
+          colors[vertex * 3 + 1] = shade.g;
+          colors[vertex * 3 + 2] = shade.b;
+        }
+      }
+      geometry.getAttribute("position").needsUpdate = true;
+      geometry.getAttribute("color").needsUpdate = true;
+      geometry.computeVertexNormals();
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
+    };
+    update(object.expression, 0);
+
+    const material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.58,
+      metalness: 0.03,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.92,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    const wireMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(border), wireframe: true, transparent: true, opacity: 0.2,
+    });
+    const wire = new THREE.Mesh(geometry, wireMaterial);
+    wire.renderOrder = 2;
+
+    const axes = new THREE.Group();
+    const axisMaterial = new THREE.LineBasicMaterial({ color: new THREE.Color(neutral) });
+    const xOrigin = Math.max(yMin, Math.min(yMax, 0));
+    const yOrigin = Math.max(xMin, Math.min(xMax, 0));
+    const zOrigin = Math.max(zMin, Math.min(zMax, 0));
+    const axisSegments = [
+      [world(xMin, xOrigin, zOrigin), world(xMax, xOrigin, zOrigin)],
+      [world(yOrigin, yMin, zOrigin), world(yOrigin, yMax, zOrigin)],
+      [world(yOrigin, xOrigin, zMin), world(yOrigin, xOrigin, zMax)],
+    ];
+    axisSegments.forEach(([from, to]) => {
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(...from), new THREE.Vector3(...to),
+      ]);
+      axes.add(new THREE.Line(lineGeometry, axisMaterial));
+    });
+    [["x", world(xMax, xOrigin, zOrigin)], ["y", world(yOrigin, yMax, zOrigin)], ["z", world(yOrigin, xOrigin, zMax)]]
+      .forEach(([label, position]) => {
+        const sprite = textSprite(label, neutral);
+        sprite.scale.set(0.8, 0.3, 1);
+        sprite.position.set(position[0] + 0.18, position[1] + 0.18, position[2] + 0.18);
+        axes.add(sprite);
+      });
+    return { mesh, wire, axes, geometry, material, wireMaterial, update, world };
+  }
+
   function renderThree(spec) {
     stage.replaceChildren();
+    replay.hidden = true;
+    surfaceControls.hidden = true;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.domElement.tabIndex = 0;
-    renderer.domElement.setAttribute("role", "application");
+    renderer.domElement.setAttribute("role", "img");
     renderer.domElement.setAttribute("aria-label", `${spec.aria_label} Use arrow keys to rotate.`);
     stage.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
@@ -369,10 +486,18 @@
     light.position.set(4, 7, 6);
     scene.add(light);
     const group = new THREE.Group();
-    group.add(new THREE.AxesHelper(3));
     scene.add(group);
     const bounds = new THREE.Box3();
+    const surfaces = [];
     spec.objects.forEach((object, index) => {
+      if (object.type === "surface") {
+        const surface = surfaceObject(object);
+        group.add(surface.mesh, surface.wire, surface.axes);
+        surface.mesh.updateMatrixWorld(true);
+        bounds.expandByObject(surface.mesh);
+        surfaces.push({ object, ...surface });
+        return;
+      }
       const shade = new THREE.Color(color(object.color, index));
       let mesh;
       if (object.type === "vector") {
@@ -402,26 +527,34 @@
         group.add(label);
       }
     });
+    if (!surfaces.length) group.add(new THREE.AxesHelper(3));
     group.updateMatrixWorld(true);
     const center = bounds.getCenter(new THREE.Vector3());
     const extent = Math.max(3, bounds.getSize(new THREE.Vector3()).length());
     camera.near = Math.max(0.01, extent / 1000);
     camera.far = Math.max(100, extent * 12);
-    camera.position.copy(center).add(new THREE.Vector3(1.8, 1.4, 2.2).normalize().multiplyScalar(extent * 2.2));
+    const cameraDistance = surfaces.length ? 1.35 : 2.2;
+    camera.position.copy(center).add(
+      new THREE.Vector3(1.8, 1.4, 2.2).normalize().multiplyScalar(extent * cameraDistance),
+    );
     camera.lookAt(center);
     camera.updateProjectionMatrix();
     let dragging = false;
     let previous = null;
-    renderer.domElement.addEventListener("pointerdown", (event) => { dragging = true; previous = [event.clientX, event.clientY]; renderer.domElement.setPointerCapture(event.pointerId); });
-    renderer.domElement.addEventListener("pointermove", (event) => {
+    const pointerDown = (event) => {
+      dragging = true;
+      previous = [event.clientX, event.clientY];
+      renderer.domElement.setPointerCapture(event.pointerId);
+    };
+    const pointerMove = (event) => {
       if (!dragging || !previous) return;
       group.rotation.y += (event.clientX - previous[0]) * 0.009;
       group.rotation.x += (event.clientY - previous[1]) * 0.009;
       previous = [event.clientX, event.clientY];
       renderer.render(scene, camera);
-    });
-    renderer.domElement.addEventListener("pointerup", () => { dragging = false; previous = null; });
-    renderer.domElement.addEventListener("keydown", (event) => {
+    };
+    const pointerUp = () => { dragging = false; previous = null; };
+    const keyDown = (event) => {
       const directions = { ArrowLeft: [-0.12, 0], ArrowRight: [0.12, 0], ArrowUp: [0, -0.12], ArrowDown: [0, 0.12] };
       const change = directions[event.key];
       if (!change) return;
@@ -429,7 +562,12 @@
       group.rotation.y += change[0];
       group.rotation.x += change[1];
       renderer.render(scene, camera);
-    });
+    };
+    renderer.domElement.addEventListener("pointerdown", pointerDown);
+    renderer.domElement.addEventListener("pointermove", pointerMove);
+    renderer.domElement.addEventListener("pointerup", pointerUp);
+    renderer.domElement.addEventListener("pointercancel", pointerUp);
+    renderer.domElement.addEventListener("keydown", keyDown);
     const hint = document.createElement("span");
     hint.className = "viz-3d-hint";
     hint.textContent = "drag to rotate";
@@ -445,6 +583,22 @@
       });
       stage.appendChild(notes);
     }
+    if (surfaces.length) {
+      const object = surfaces[0].object;
+      const equation = document.createElement("div");
+      equation.className = "viz-surface-equation";
+      const expression = document.createElement("strong");
+      expression.textContent = object.expression_text;
+      const domains = document.createElement("span");
+      const domainValue = (value) => {
+        if (Math.abs(value - Math.PI) < 1e-5) return "π";
+        if (Math.abs(value + Math.PI) < 1e-5) return "−π";
+        return Number(value.toFixed(3)).toString();
+      };
+      domains.textContent = `x: ${domainValue(object.x_domain[0])} to ${domainValue(object.x_domain[1])} · y: ${domainValue(object.y_domain[0])} to ${domainValue(object.y_domain[1])} · z vertical`;
+      equation.append(expression, domains);
+      stage.appendChild(equation);
+    }
     const resize = () => {
       const width = Math.max(1, stage.clientWidth);
       const height = Math.max(1, stage.clientHeight);
@@ -454,13 +608,116 @@
       renderer.render(scene, camera);
     };
     resize();
-    new ResizeObserver(resize).observe(stage);
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(stage);
     // A static scene costs nothing while the learner reads. Pointer, keyboard, and resize
     // handlers render on demand; perpetual auto-spin would heat the scored CPU package forever.
-    onActivity((active) => { if (active) renderer.render(scene, camera); });
-    window.addEventListener("beforeunload", () => {
+    let animationFrame = 0;
+    let playing = false;
+    let elapsed = 0;
+    let startedAt = 0;
+    let lastDraw = 0;
+    const animatedSurface = surfaces.find((surface) => surface.object.animation);
+    const durationMs = (animatedSurface?.object.animation?.duration || 8) * 1000;
+    const drawAnimation = (timestamp) => {
+      animationFrame = 0;
+      if (!playing || !renderActive() || !animatedSurface) return;
+      if (!startedAt) startedAt = timestamp - elapsed;
+      elapsed = Math.min(durationMs, timestamp - startedAt);
+      if (timestamp - lastDraw >= 32 || elapsed >= durationMs) {
+        lastDraw = timestamp;
+        const progress = elapsed / durationMs;
+        const animation = animatedSurface.object.animation;
+        if (animation.mode === "phase") {
+          animatedSurface.update(animation.expression, progress * Math.PI * 2);
+        } else {
+          group.rotation.y = progress * Math.PI * 2;
+        }
+        renderer.render(scene, camera);
+      }
+      if (elapsed >= durationMs) {
+        playing = false;
+        surfacePlay.disabled = false;
+        surfacePause.disabled = true;
+        return;
+      }
+      animationFrame = window.requestAnimationFrame(drawAnimation);
+    };
+    const startAnimation = () => {
+      if (!animatedSurface || reducedMotion || playing) return;
+      if (elapsed >= durationMs) {
+        elapsed = 0;
+        startedAt = 0;
+        animatedSurface.update(animatedSurface.object.expression, 0);
+      }
+      playing = true;
+      surfacePlay.disabled = true;
+      surfacePause.disabled = false;
+      startedAt = performance.now() - elapsed;
+      if (!animationFrame && renderActive()) {
+        animationFrame = window.requestAnimationFrame(drawAnimation);
+      }
+    };
+    const pauseAnimation = () => {
+      if (!playing) return;
+      playing = false;
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      surfacePlay.disabled = false;
+      surfacePause.disabled = true;
+    };
+    const restartAnimation = () => {
+      pauseAnimation();
+      elapsed = 0;
+      startedAt = 0;
+      if (!animatedSurface) return;
+      animatedSurface.update(animatedSurface.object.expression, 0);
+      if (animatedSurface.object.animation.mode === "orbit") group.rotation.y = 0;
+      renderer.render(scene, camera);
+      startAnimation();
+    };
+    if (animatedSurface && !reducedMotion) {
+      surfaceControls.hidden = false;
+      surfacePlay.onclick = startAnimation;
+      surfacePause.onclick = pauseAnimation;
+      surfaceRestart.onclick = restartAnimation;
+      surfacePlay.disabled = true;
+      surfacePause.disabled = false;
+      startAnimation();
+    }
+    const removeActivity = onActivity((active) => {
+      if (!active && animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+      } else if (active && playing && !animationFrame) {
+        startedAt = performance.now() - elapsed;
+        animationFrame = window.requestAnimationFrame(drawAnimation);
+      }
+      if (active) renderer.render(scene, camera);
+    });
+    const cleanup = () => {
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      playing = false;
+      removeActivity();
+      resizeObserver.disconnect();
+      renderer.domElement.removeEventListener("pointerdown", pointerDown);
+      renderer.domElement.removeEventListener("pointermove", pointerMove);
+      renderer.domElement.removeEventListener("pointerup", pointerUp);
+      renderer.domElement.removeEventListener("pointercancel", pointerUp);
+      renderer.domElement.removeEventListener("keydown", keyDown);
+      group.traverse((child) => {
+        child.geometry?.dispose?.();
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.filter(Boolean).forEach((material) => {
+          material.map?.dispose?.();
+          material.dispose?.();
+        });
+      });
       renderer.dispose();
-    }, { once: true });
+      renderer.forceContextLoss?.();
+    };
+    window.addEventListener("beforeunload", cleanup, { once: true });
   }
 
   const SVG_NS = "http://www.w3.org/2000/svg";

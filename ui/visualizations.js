@@ -11,7 +11,7 @@
     motion: new Set(["animation"]),
   });
   const ELEMENT_TYPES = new Set(["circle", "rect", "line", "arrow", "text"]);
-  const OBJECT_TYPES = new Set(["sphere", "box", "point", "line", "vector"]);
+  const OBJECT_TYPES = new Set(["sphere", "box", "point", "line", "vector", "surface"]);
   const DIAGRAM_SHAPES = new Set(["circle", "rounded", "label"]);
   const BOND_TYPES = new Set(["single", "double", "triple", "dashed"]);
   const TRACK_FIELDS = new Set(["x", "y", "scale", "rotate", "opacity"]);
@@ -20,6 +20,13 @@
   const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
   const SAFE_COLOR = /^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([0-9.,%\s-]+\)|black|white|gray|grey|red|green|blue|orange|purple|teal|gold)$/;
   const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+  const SURFACE_FUNCTIONS = new Set([
+    "abs", "acos", "asin", "atan", "cos", "cosh", "exp", "ln", "log", "sin", "sinh",
+    "sqrt", "tan", "tanh",
+  ]);
+  const SURFACE_VARIABLES = new Set(["x", "y", "t"]);
+  const SURFACE_CONSTANTS = new Set(["e", "pi"]);
+  const SURFACE_BINARY = new Set(["+", "-", "*", "/", "^"]);
   const FENCE = /(^|\n)( {0,3})```muta-viz[\t ]*\r?\n([\s\S]*?)\r?\n\2```[\t ]*(?=\r?\n|$)/g;
   // Qwen3-0.6B sometimes obeys the semantic marker but normalizes the unfamiliar fence into
   // display text plus a JSON fence. It is equally safe after strict schema validation, and
@@ -42,6 +49,88 @@
     return Array.isArray(value)
       && value.length === 3
       && value.every((item) => finiteNumber(item, -1000, 1000));
+  }
+
+  function numberPair(value, min = -100, max = 100) {
+    return Array.isArray(value) && value.length === 2
+      && value.every((item) => finiteNumber(item, min, max)) && value[0] < value[1];
+  }
+
+  function validateSurfaceExpression(root) {
+    let nodes = 0;
+    const visit = (node, depth = 0) => {
+      nodes += 1;
+      if (nodes > 128) return "surface expression has too many operations";
+      if (depth > 24) return "surface expression is nested too deeply";
+      if (!node || typeof node !== "object" || Array.isArray(node)) {
+        return "surface expression node is invalid";
+      }
+      if (node.type === "number") {
+        return Object.keys(node).length === 2 && finiteNumber(node.value, -1e9, 1e9)
+          ? "" : "surface number is invalid";
+      }
+      if (node.type === "variable") {
+        return Object.keys(node).length === 2 && SURFACE_VARIABLES.has(node.name)
+          ? "" : "surface variable is invalid";
+      }
+      if (node.type === "constant") {
+        return Object.keys(node).length === 2 && SURFACE_CONSTANTS.has(node.name)
+          ? "" : "surface constant is invalid";
+      }
+      if (node.type === "unary") {
+        if (Object.keys(node).length !== 3 || node.op !== "-") return "surface unary operator is invalid";
+        return visit(node.arg, depth + 1);
+      }
+      if (node.type === "binary") {
+        if (Object.keys(node).length !== 4 || !SURFACE_BINARY.has(node.op)) {
+          return "surface binary operator is invalid";
+        }
+        return visit(node.left, depth + 1) || visit(node.right, depth + 1);
+      }
+      if (node.type === "call") {
+        if (Object.keys(node).length !== 3 || !SURFACE_FUNCTIONS.has(node.name)) {
+          return "surface function is invalid";
+        }
+        return visit(node.arg, depth + 1);
+      }
+      return "surface expression type is invalid";
+    };
+    return visit(root);
+  }
+
+  function evaluateSurfaceExpression(node, variables = {}) {
+    const visit = (current, depth = 0) => {
+      if (depth > 24) throw new Error("surface expression is nested too deeply");
+      let value;
+      if (current.type === "number") value = current.value;
+      else if (current.type === "constant") value = current.name === "e" ? Math.E : Math.PI;
+      else if (current.type === "variable") value = Number(variables[current.name] ?? 0);
+      else if (current.type === "unary") value = -visit(current.arg, depth + 1);
+      else if (current.type === "binary") {
+        const left = visit(current.left, depth + 1);
+        const right = visit(current.right, depth + 1);
+        if (current.op === "+") value = left + right;
+        else if (current.op === "-") value = left - right;
+        else if (current.op === "*") value = left * right;
+        else if (current.op === "/") value = right === 0 ? NaN : left / right;
+        else value = left ** right;
+      } else if (current.type === "call") {
+        const argument = visit(current.arg, depth + 1);
+        const functions = {
+          abs: Math.abs, acos: Math.acos, asin: Math.asin, atan: Math.atan, cos: Math.cos,
+          cosh: Math.cosh, exp: Math.exp, ln: Math.log, log: Math.log, sin: Math.sin,
+          sinh: Math.sinh, sqrt: Math.sqrt, tan: Math.tan, tanh: Math.tanh,
+        };
+        value = functions[current.name](argument);
+      } else {
+        throw new Error("unsupported surface expression node");
+      }
+      if (!Number.isFinite(value) || Math.abs(value) > 1e9) {
+        throw new Error("surface expression result is not finite or is out of range");
+      }
+      return value;
+    };
+    return visit(node);
   }
 
   function validateTree(value) {
@@ -67,6 +156,14 @@
       for (const [key, item] of Object.entries(node)) {
         if (FORBIDDEN_KEYS.has(key)) return `forbidden key: ${key}`;
         if (key.length > 64) return "visualization key is too long";
+        // Surface ASTs have their own stricter node/depth/key validator. Treat the checked tree
+        // as one data leaf here so the generic visualization depth cap does not reject ordinary
+        // operator precedence nested inside an otherwise shallow spec.
+        if (key === "expression" && item && typeof item === "object") {
+          const expressionError = validateSurfaceExpression(item);
+          if (expressionError) return expressionError;
+          continue;
+        }
         if (["color", "fill", "stroke", "background"].includes(key) && !SAFE_COLOR.test(item)) {
           return `unsafe color: ${String(item)}`;
         }
@@ -200,9 +297,43 @@
     )) {
       return "3D scene notes are invalid";
     }
+    let surfaces = 0;
     for (const object of spec.objects) {
       if (!object || !OBJECT_TYPES.has(object.type)) return "unsupported 3D object";
-      if (object.type === "vector") {
+      if (object.type === "surface") {
+        surfaces += 1;
+        if (surfaces > 1) return "3D scenes support one mathematical surface";
+        if (!nonEmptyString(object.label, 120) || !nonEmptyString(object.expression_text, 240)) {
+          return "mathematical surfaces need a concise equation label";
+        }
+        if (!numberPair(object.x_domain) || !numberPair(object.y_domain)) {
+          return "surface x/y domains must be increasing bounded pairs";
+        }
+        if (!numberPair(object.z_domain, -1e9, 1e9)) {
+          return "surface z domain must be an increasing finite pair";
+        }
+        if (!Array.isArray(object.resolution) || object.resolution.length !== 2
+          || !object.resolution.every((item) => Number.isInteger(item) && item >= 17 && item <= 97)
+          || object.resolution[0] * object.resolution[1] > 8192) {
+          return "surface resolution is outside the safe rendering budget";
+        }
+        const expressionError = validateSurfaceExpression(object.expression);
+        if (expressionError) return expressionError;
+        if (object.animation !== undefined) {
+          const animation = object.animation;
+          if (!animation || typeof animation !== "object" || Array.isArray(animation)
+            || !["phase", "orbit"].includes(animation.mode)
+            || !finiteNumber(animation.duration, 2, 30)) {
+            return "surface animation is invalid";
+          }
+          if (animation.mode === "phase") {
+            const animatedError = validateSurfaceExpression(animation.expression);
+            if (animatedError) return animatedError;
+          } else if (animation.expression !== undefined) {
+            return "orbit animation cannot replace the surface equation";
+          }
+        }
+      } else if (object.type === "vector") {
         if (!vector3(object.from) || !vector3(object.to)) return "vectors need from/to triples";
         if (object.from.every((value, index) => value === object.to[index])) {
           return "vectors must have non-zero length";
@@ -310,7 +441,7 @@
     if (!Number.isInteger(candidate.height) || candidate.height < 240 || candidate.height > 600) {
       return { ok: false, error: "height must be an integer from 240 to 600" };
     }
-    for (const label of [candidate.x_label, candidate.y_label]) {
+    for (const label of [candidate.x_label, candidate.y_label, candidate.z_label]) {
       if (label !== undefined && !nonEmptyString(label, 80)) {
         return { ok: false, error: "axis label is invalid" };
       }
@@ -459,6 +590,7 @@
     decodeSpec,
     encodeSpec,
     extract,
+    evaluateSurfaceExpression,
     frameUrl,
     renderAll,
     validateSpec,

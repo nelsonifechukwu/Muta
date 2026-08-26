@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import math
 import threading
 from types import SimpleNamespace
+
+import pytest
 
 from orchestrator.gateway.deps import load_prompt
 from orchestrator.gateway.routes import _sampling_for_request
@@ -16,6 +19,7 @@ from orchestrator.gateway.visualizations import (
     _phase_shift_spec,
     _projectile_spec,
     _satellite_orbit_spec,
+    _surface_spec,
     _vector_addition_spec,
     append_visualization,
     generate_visualization,
@@ -78,6 +82,7 @@ def test_visual_intent_and_renderer_selection_cover_common_requests() -> None:
         "Draw a force network.": ("d3", "force"),
         "Plot a scatter graph.": ("d3", "scatter"),
         "Plot this curve.": ("d3", "line"),
+        r"Plot z=4e^{-\frac{1}{4}y^{2}}\sin(2x).": ("three", "scene3d"),
     }
     for prompt, (library, kind) in expected.items():
         assert select_library(prompt) == library
@@ -285,6 +290,66 @@ def test_canonical_vector_addition_does_not_depend_on_a_second_model_decode() ->
     assert spec["objects"][2]["to"] == [3, 3, 0]
     assert local.calls == []
     assert engine.fit_calls == []
+
+
+def test_exact_surface_and_follow_up_animation_are_deterministic() -> None:
+    request = (
+        'I want a diagram of this equation, "'
+        r"z=4e^{-\frac{1}{4}y^{2}}\sin \left(2x\right)"
+        '"'
+    )
+    static = _surface_spec(request, request)
+    assert static is not None
+    assert (static["library"], static["kind"]) == ("three", "scene3d")
+    assert static["x_label"] == "x" and static["y_label"] == "y" and static["z_label"] == "z"
+    surface = static["objects"][0]
+    assert surface["type"] == "surface"
+    assert surface["expression_text"] == "z = 4·e^(−¼·y²)·sin(2·x)"
+    assert "\\frac" not in static["title"] + static["aria_label"]
+    assert surface["resolution"] == [65, 49]
+    assert surface["x_domain"] == pytest.approx([-math.pi, math.pi], abs=1e-6)
+    assert surface["y_domain"] == [-4.0, 4.0]
+    assert "animation" not in surface
+
+    animated = _surface_spec(request, "animate it")
+    assert animated is not None
+    animated_surface = animated["objects"][0]
+    assert animated_surface["expression"] == surface["expression"]
+    assert animated_surface["animation"]["mode"] == "phase"
+    assert animated_surface["animation"]["duration"] == 8
+
+
+def test_exact_surface_generation_skips_model_for_initial_and_anaphoric_turns() -> None:
+    request = (
+        'I want a diagram of this equation, "'
+        r"z=4e^{-\frac{1}{4}y^{2}}\sin \left(2x\right)"
+        '"'
+    )
+
+    class Store:
+        def get_messages(self, conversation_id, limit=None):
+            assert conversation_id == "surface-chat" and limit == 8
+            return [
+                {"role": "user", "content": request},
+                {"role": "assistant", "content": "The surface is drawn."},
+                {"role": "user", "content": "animate it"},
+                {"role": "assistant", "content": "The application animates it."},
+            ]
+
+    local = _RecordingVisualClient({"this": "must not be used"})
+    engine = _VisualEngine(local)
+    engine.store = Store()
+    initial = generate_visualization(engine, request, "A complete explanation.")
+    follow_up = generate_visualization(
+        engine,
+        "animate it",
+        "The same surface now moves through phase.",
+        conversation_id="surface-chat",
+    )
+    assert initial is not None and initial["objects"][0]["type"] == "surface"
+    assert follow_up is not None and follow_up["objects"][0]["animation"]["mode"] == "phase"
+    assert follow_up["objects"][0]["expression"] == initial["objects"][0]["expression"]
+    assert local.calls == [] and engine.fit_calls == []
 
 
 def test_standard_science_visuals_are_deterministic_and_semantically_exact() -> None:

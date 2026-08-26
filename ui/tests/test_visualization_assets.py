@@ -51,7 +51,7 @@ def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> No
     assert "visualizations.js" in html and "viz-frame.js" in html
     assert 'viz-theme.js?v=20260825-mac-media-2' in html
     assert html.index("viz-theme.js") < html.index("viz-frame.css")
-    assert 'viz-frame.js?v=20260825-mac-media-2' in html
+    assert "viz-frame.js?v=20260826-math-surface-1" in html
     assert "http://" not in html and "https://" not in html
     assert "frame.src = source" in parent
     assert 'frame.loading = "lazy"' not in parent
@@ -67,6 +67,32 @@ def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> No
     assert "applyState(record.group, record.base);" in frame
     assert "renderDiagram(spec)" in frame
     assert 'role="group"' in html
+
+
+def test_math_surface_is_responsive_accessible_and_lifecycle_bounded() -> None:
+    parser = (UI / "visualizations.js").read_text()
+    frame = (UI / "viz-frame.js").read_text()
+    html = (UI / "viz-frame.html").read_text()
+    css = (UI / "viz-frame.css").read_text()
+
+    assert '"surface"' in parser
+    assert "evaluateSurfaceExpression" in parser
+    assert "new Function" not in parser + frame and "eval(" not in parser + frame
+    assert "surfaceObject(object)" in frame
+    assert "(x - xCenter) * xScale" in frame
+    assert "(z - zCenter) * zScale" in frame
+    assert "(y - yCenter) * yScale" in frame
+    assert "window.requestAnimationFrame(drawAnimation)" in frame
+    assert "window.cancelAnimationFrame(animationFrame)" in frame
+    assert "resizeObserver.disconnect()" in frame
+    assert "renderer.forceContextLoss?.()" in frame
+    assert 'id="viz-surface-play"' in html
+    assert 'id="viz-surface-pause"' in html
+    assert 'id="viz-surface-restart"' in html
+    assert "min-width: 44px" in css and "min-height: 44px" in css
+    assert "@media (max-width: 420px)" in css
+    reduced = re.search(r"@media \(prefers-reduced-motion: reduce\)\s*\{(?P<body>.*?)\}", css, re.DOTALL)
+    assert reduced and "#viz-surface-controls" in reduced.group("body")
 
 
 def test_dark_visualization_geometry_keeps_non_text_contrast() -> None:
