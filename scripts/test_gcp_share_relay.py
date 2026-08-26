@@ -59,6 +59,7 @@ def test_gcp_relay_dry_run_binds_operator_locally_and_learners_to_lan(tmp_path: 
     assert "https://192.168.50.20:18443/chat/" in result.stdout
     assert "127.0.0.1:18001:127.0.0.1:8000" in result.stdout
     assert "192.168.50.20:18443:127.0.0.1:18443" in result.stdout
+    assert " -T " in result.stdout
     assert "MUTA_SHARE_HOST=192.168.50.20" in result.stdout
     assert "MUTA_SHARE_PORT=18443" in result.stdout
 

@@ -116,7 +116,7 @@ if [ -n "$FLEET_URL" ]; then
 fi
 command=(gcloud compute ssh "$VM" "--zone=$ZONE")
 [ -z "$PROJECT" ] || command+=("--project=$PROJECT")
-command+=(-- -o BatchMode=yes -o ExitOnForwardFailure=yes -L "$operator_forward" -L "$learner_forward" -- "$remote_command")
+command+=(-- -T -o BatchMode=yes -o ExitOnForwardFailure=yes -L "$operator_forward" -L "$learner_forward" -- "$remote_command")
 
 printf 'Muta operator: http://127.0.0.1:%s/chat/\n' "$OPERATOR_PORT"
 printf 'Learner relay: https://%s:%s/chat/\n' "$LAN_IP" "$SHARE_PORT"
