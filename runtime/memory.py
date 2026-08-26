@@ -117,11 +117,20 @@ _MIGRATION_4_PINNED_CONVERSATIONS = """
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE;
 """
 
+# UI pinning and Host durable completion were developed independently from the same schema
+# version. Version 5 reconciles either preview lineage: a database that already recorded one
+# version-4 migration still receives the other column, while fresh installs receive both.
+_MIGRATION_5_RELEASE_SCHEMA_RECONCILIATION = """
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS completion_state TEXT;
+"""
+
 _MIGRATIONS: list[tuple[int, str]] = [
     (1, _MIGRATION_1_BASE),
     (2, _MIGRATION_2_ATTACHMENT_OWNER),
     (3, _MIGRATION_3_LEARNING_RESOURCES),
     (4, _MIGRATION_4_PINNED_CONVERSATIONS),
+    (5, _MIGRATION_5_RELEASE_SCHEMA_RECONCILIATION),
 ]
 
 
@@ -282,13 +291,23 @@ class ConversationStore:
 
     # --- messages ---------------------------------------------------------------------
 
-    def add_message(self, conversation_id: str, role: str, content: str) -> int:
+    def add_message(
+        self,
+        conversation_id: str,
+        role: str,
+        content: str,
+        *,
+        completion_state: str | None = None,
+    ) -> int:
         ts = _now()
+        if completion_state not in {None, "complete", "streaming", "failed", "stopped"}:
+            raise ValueError(f"unsupported message completion state: {completion_state}")
         with self._pool.connection() as conn, conn.transaction():
             row = conn.execute(
-                "INSERT INTO messages (conversation_id, role, content, created_at) "
-                "VALUES (%s, %s, %s, %s) RETURNING id",
-                (conversation_id, role, content, ts),
+                "INSERT INTO messages "
+                "(conversation_id, role, content, created_at, completion_state) "
+                "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (conversation_id, role, content, ts, completion_state),
             ).fetchone()
             conn.execute(
                 "UPDATE conversations SET updated_at = %s WHERE id = %s",
@@ -361,6 +380,16 @@ class ConversationStore:
                     (ts, row["conversation_id"]),
                 )
 
+    def set_message_completion(self, message_id: int, state: str) -> None:
+        """Persist how an assistant row ended so history can render recovery honestly."""
+        if state not in {"complete", "streaming", "failed", "stopped"}:
+            raise ValueError(f"unsupported message completion state: {state}")
+        with self._pool.connection() as conn, conn.transaction():
+            conn.execute(
+                "UPDATE messages SET completion_state = %s WHERE id = %s AND role = 'assistant'",
+                (state, message_id),
+            )
+
     def get_messages(self, conversation_id: str, limit: int | None = None) -> list[dict]:
         """Messages in chronological order. With ``limit``, the most recent ``limit``."""
         with self._pool.connection() as conn:
@@ -393,7 +422,7 @@ class ConversationStore:
         """Full history for a UI: message ids plus linked attachment refs (no blob bytes)."""
         with self._pool.connection() as conn:
             msgs = conn.execute(
-                "SELECT id, role, content, created_at FROM messages "
+                "SELECT id, role, content, created_at, completion_state FROM messages "
                 "WHERE conversation_id = %s ORDER BY id ASC",
                 (conversation_id,),
             ).fetchall()

@@ -39,6 +39,7 @@ UI_FILES = (
     "parallel-policy.js",
     "popover-position.js",
     "product-analytics.js",
+    "release-lifecycle.js",
     "resource-mentions.js",
     "startup.js",
     "styles.css",

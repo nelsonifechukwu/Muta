@@ -332,10 +332,34 @@ class _ReplyWriter:
         if len(text) == self._flushed_len:
             return
         if self.message_id is None:
-            self.message_id = self.store.add_message(self.cid, "assistant", text)
+            try:
+                self.message_id = self.store.add_message(
+                    self.cid,
+                    "assistant",
+                    text,
+                    completion_state="streaming",
+                )
+            except TypeError as exc:
+                # Lightweight test/extension stores may still expose the original three-arg
+                # contract. Keep them compatible; production stores persist this atomically.
+                if "completion_state" not in str(exc):
+                    raise
+                self.message_id = self.store.add_message(self.cid, "assistant", text)
+                setter = getattr(self.store, "set_message_completion", None)
+                if callable(setter):
+                    setter(self.message_id, "streaming")
         else:
             self.store.update_message(self.message_id, text)
         self._flushed_len = len(text)
+
+    def set_completion(self, state: str) -> None:
+        """Flush first, then durably label the exact assistant row this writer owns."""
+        self.flush()
+        if self.message_id is None:
+            return
+        setter = getattr(self.store, "set_message_completion", None)
+        if callable(setter):
+            setter(self.message_id, state)
 
 
 class _ReplyEventStream(Iterator[tuple[str, str]]):
@@ -363,6 +387,9 @@ class _ReplyEventStream(Iterator[tuple[str, str]]):
         close = getattr(self._iterator, "close", None)
         if callable(close):
             close()
+
+    def set_completion(self, state: str) -> None:
+        self._writer.set_completion(state)
 
 
 class _ResumeDeduplicator:
@@ -1053,14 +1080,19 @@ class ChatEngine:
                 ):
                     if kind == "content":
                         writer.add(text)
+            except Exception:
+                writer.set_completion("stopped" if cancel_event.is_set() else "failed")
+                raise
             finally:
                 writer.flush()
             if cancel_event.is_set():
+                writer.set_completion("stopped")
                 raise InferenceStreamError(
                     "generation was cancelled",
                     retryable=False,
                     partial_text=writer.text,
                 )
+            writer.set_completion("complete")
             return ChatResult(
                 conversation_id=cid,
                 reply=writer.text,
@@ -1071,9 +1103,15 @@ class ChatEngine:
             generation = self._chat_with_length_recovery(messages, request_params)
         except InferenceStreamError as exc:
             if exc.partial_text:
-                self.store.add_message(cid, "assistant", exc.partial_text)
+                message_id = self.store.add_message(cid, "assistant", exc.partial_text)
+                setter = getattr(self.store, "set_message_completion", None)
+                if callable(setter):
+                    setter(message_id, "failed")
             raise
         assistant_message_id = self.store.add_message(cid, "assistant", generation.text)
+        setter = getattr(self.store, "set_message_completion", None)
+        if callable(setter):
+            setter(assistant_message_id, "complete")
         return ChatResult(
             conversation_id=cid,
             reply=generation.text,
@@ -1129,6 +1167,7 @@ class ChatEngine:
 
         def _gen() -> Iterator[str]:
             writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
+            completion = "complete"
             try:
                 for kind, text in self._events_with_recovery(messages, request_params, writer):
                     if kind != "content":
@@ -1138,8 +1177,14 @@ class ChatEngine:
                     # gives no reliable chance to save it afterwards.
                     writer.add(text)
                     yield text
+            except GeneratorExit:
+                completion = "stopped"
+                raise
+            except Exception:
+                completion = "failed"
+                raise
             finally:
-                writer.flush()
+                writer.set_completion(completion)
 
         return cid, user_message_id, _gen()
 

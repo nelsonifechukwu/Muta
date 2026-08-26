@@ -66,9 +66,62 @@ def test_migrates_original_sqlite_database_in_place(tmp_path):
         assert "pinned" in {
             row[1] for row in store._conn.execute("PRAGMA table_info(conversations)").fetchall()
         }
+        assert "completion_state" in {
+            row[1] for row in store._conn.execute("PRAGMA table_info(messages)").fetchall()
+        }
         legacy = store.create_conversation("alice", title="migrated")
         assert store.set_conversation_pinned(legacy, owner_id="alice", pinned=True)
         assert bool(store.get_conversation(legacy)["pinned"])
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("preview_column", ["pinned", "completion_state"])
+def test_migration_five_reconciles_colliding_preview_version_four(tmp_path, preview_column):
+    path = tmp_path / f"preview-{preview_column}.sqlite3"
+    connection = sqlite3.connect(path)
+    connection.executescript(
+        """
+        CREATE TABLE conversations (
+            id TEXT PRIMARY KEY, student_id TEXT NOT NULL, mode TEXT, persona TEXT,
+            subject TEXT, language TEXT, title TEXT, created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+            role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
+        INSERT INTO schema_migrations VALUES (1, 'preview');
+        INSERT INTO schema_migrations VALUES (2, 'preview');
+        INSERT INTO schema_migrations VALUES (3, 'preview');
+        INSERT INTO schema_migrations VALUES (4, 'preview');
+        """
+    )
+    if preview_column == "pinned":
+        connection.execute(
+            "ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0"
+        )
+    else:
+        connection.execute("ALTER TABLE messages ADD COLUMN completion_state TEXT")
+    connection.commit()
+    connection.close()
+
+    store = ConversationStore(f"sqlite:///{path}")
+    try:
+        conversation_columns = {
+            row[1] for row in store._conn.execute("PRAGMA table_info(conversations)").fetchall()
+        }
+        message_columns = {
+            row[1] for row in store._conn.execute("PRAGMA table_info(messages)").fetchall()
+        }
+        assert "pinned" in conversation_columns
+        assert "completion_state" in message_columns
+        versions = store._conn.execute(
+            "SELECT version FROM schema_migrations ORDER BY version"
+        ).fetchall()
+        assert [row[0] for row in versions] == list(range(1, _LATEST_SCHEMA_VERSION + 1))
     finally:
         store.close()
 
@@ -116,6 +169,9 @@ test_delete_conversation_cascades = contract.test_delete_conversation_cascades
 test_attachment_round_trip_and_linking = contract.test_attachment_round_trip_and_linking
 test_list_messages_includes_ids_and_attachment_refs = (
     contract.test_list_messages_includes_ids_and_attachment_refs
+)
+test_assistant_completion_state_is_durable_and_legacy_rows_remain_complete = (
+    contract.test_assistant_completion_state_is_durable_and_legacy_rows_remain_complete
 )
 test_set_title_only_when_unset = contract.test_set_title_only_when_unset
 test_settings_round_trip = contract.test_settings_round_trip

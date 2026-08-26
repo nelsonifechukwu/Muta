@@ -33,6 +33,23 @@ def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
 
+def stream_completion_callback(event_stream: object) -> Callable[[str], None]:
+    """Map a GenerationJob terminal state onto a durable ChatEngine reply stream."""
+
+    def persist(job_state: str) -> None:
+        setter = getattr(event_stream, "set_completion", None)
+        if callable(setter):
+            setter(
+                {
+                    "completed": "complete",
+                    "failed": "failed",
+                    "stopped": "stopped",
+                }[job_state]
+            )
+
+    return persist
+
+
 @dataclass(frozen=True)
 class GenerationSnapshot:
     job_id: str
@@ -51,6 +68,7 @@ class _Reservation:
     client_request_id: str | None
     created_at: float
     cancelled: bool = False
+    cancel_reason: str | None = None
     done: threading.Event = field(default_factory=threading.Event)
 
 
@@ -66,6 +84,7 @@ class GenerationJob:
         job_id: str | None = None,
         client_request_id: str | None = None,
         on_terminal: Callable[[GenerationJob], None] | None = None,
+        on_completion_state: Callable[[str], None] | None = None,
         queued_cleanup: Callable[[], None] | None = None,
         before_start: Callable[[], bool] | None = None,
         cancel_event: threading.Event | None = None,
@@ -79,6 +98,7 @@ class GenerationJob:
         self.state = "queued"
         self._producer = producer
         self._on_terminal = on_terminal
+        self._on_completion_state = on_completion_state
         self._queued_cleanup = queued_cleanup
         self._before_start = before_start
         self._cancel_event = cancel_event or threading.Event()
@@ -128,6 +148,7 @@ class GenerationJob:
                 self.completed_at = time.monotonic()
                 cleanup = self._queued_cleanup
                 self._queued_cleanup = None
+                self._persist_completion_state(self.state)
                 self._condition.notify_all()
             if cleanup is not None:
                 cleanup()
@@ -202,6 +223,7 @@ class GenerationJob:
             self.completed_at = time.monotonic()
             cleanup = self._queued_cleanup
             self._queued_cleanup = None
+            self._persist_completion_state(self.state)
             self._condition.notify_all()
         if cleanup is not None:
             try:
@@ -252,6 +274,7 @@ class GenerationJob:
                 self.completed_at = time.monotonic()
                 queued_cleanup = self._queued_cleanup
                 self._queued_cleanup = None
+                self._persist_completion_state(self.state)
             else:
                 queued_cleanup = None
             self._condition.notify_all()
@@ -293,17 +316,39 @@ class GenerationJob:
             self._events.append(frame)
             self._condition.notify_all()
 
+    def _persist_completion_state(self, state: str) -> None:
+        """Persist the state selected by this job's terminal-state arbiter.
+
+        This runs only after ``self.state`` is assigned and while the condition lock prevents
+        waiters from treating the job as drained before its durable assistant label settles.
+        A late Stop therefore cannot be overwritten by producer-side optimistic completion.
+        """
+        if self._on_completion_state is None:
+            return
+        try:
+            self._on_completion_state(state)
+        except Exception:
+            # Persistence failure must not strand the physical lane or replay subscribers.
+            log.exception("generation job %s could not persist terminal state %s", self.id, state)
+
     def _run(self) -> None:
-        terminal_seen = False
+        terminal_frame: str | None = None
         failed = False
+        partial_answer = False
         try:
             for frame in self._producer:
                 with self._condition:
                     should_stop = self._stop_requested
                 if should_stop:
                     break
-                terminal_seen = terminal_seen or _DONE_MARKER in frame
                 failed = failed or _ERROR_MARKER in frame
+                partial_answer = partial_answer or '"delta"' in frame or '"replace"' in frame
+                if _DONE_MARKER in frame:
+                    # Hold the producer's optimistic done frame until Stop and completion can
+                    # be arbitrated atomically under the condition lock. Otherwise Stop could
+                    # be accepted after subscribers saw done but before the job became terminal.
+                    terminal_frame = frame
+                    break
                 self._publish(frame)
         except Exception:  # protect persistence/slot cleanup at this thread boundary
             failed = True
@@ -314,9 +359,12 @@ class GenerationJob:
                         "job_id": self.id,
                         "conversation_id": self.conversation_id,
                         "error": (
-                            "The tutor could not resume automatically. "
-                            "Your partial answer is saved."
+                            "The tutor could not resume automatically."
+                            + (" Your partial answer is saved." if partial_answer else "")
                         ),
+                        "terminal": True,
+                        "partial_saved": partial_answer,
+                        "recoverable": partial_answer,
                     }
                 )
             )
@@ -331,32 +379,33 @@ class GenerationJob:
 
             with self._condition:
                 stopped = self._stop_requested
-            if stopped and not terminal_seen:
-                self._publish(
-                    _sse(
-                        {
-                            "done": True,
-                            "stopped": True,
-                            "job_id": self.id,
-                            "conversation_id": self.conversation_id,
-                        }
-                    )
-                )
-            elif failed and not terminal_seen:
-                self._publish(
-                    _sse(
-                        {
-                            "done": True,
-                            "failed": True,
-                            "job_id": self.id,
-                            "conversation_id": self.conversation_id,
-                        }
-                    )
-                )
-
-            with self._condition:
                 self.state = "stopped" if stopped else "failed" if failed else "completed"
                 self.completed_at = time.monotonic()
+                self._persist_completion_state(self.state)
+                if stopped:
+                    self._events.append(
+                        _sse(
+                            {
+                                "done": True,
+                                "stopped": True,
+                                "job_id": self.id,
+                                "conversation_id": self.conversation_id,
+                            }
+                        )
+                    )
+                elif failed:
+                    self._events.append(
+                        _sse(
+                            {
+                                "done": True,
+                                "failed": True,
+                                "job_id": self.id,
+                                "conversation_id": self.conversation_id,
+                            }
+                        )
+                    )
+                elif terminal_frame is not None:
+                    self._events.append(terminal_frame)
                 self._condition.notify_all()
             if self._on_terminal is not None:
                 self._on_terminal(self)
@@ -386,6 +435,7 @@ class GenerationManager:
         self._reservations: dict[str, _Reservation] = {}
         self._queue: list[str] = []
         self._blocked_students: set[str] = set()
+        self._deleting_conversations: set[tuple[str, str]] = set()
         self._shutting_down = False
         self._promotion_retry_pending = False
 
@@ -404,6 +454,15 @@ class GenerationManager:
                 raise GenerationCapacityError("generation service is shutting down")
             if student_id in self._blocked_students:
                 raise GenerationCapacityError("this learner's access was removed")
+            if (
+                conversation_id is not None
+                and (
+                    student_id,
+                    conversation_id,
+                )
+                in self._deleting_conversations
+            ):
+                raise GenerationCapacityError("this conversation is being deleted")
             live = sum(job.state in {"queued", "running"} for job in self._jobs.values())
             occupied = live + len(self._reservations)
             if self.max_active is not None and occupied >= self.max_active + self.max_queued:
@@ -474,6 +533,7 @@ class GenerationManager:
         queued_cleanup: Callable[[], None] | None = None,
         before_start: Callable[[], bool] | None = None,
         cancel_event: threading.Event | None = None,
+        on_completion_state: Callable[[str], None] | None = None,
     ) -> GenerationJob:
         if reservation_id is None:
             reservation_id = self.reserve(
@@ -488,6 +548,7 @@ class GenerationManager:
             producer=producer,
             client_request_id=client_request_id,
             on_terminal=self._job_terminal,
+            on_completion_state=on_completion_state,
             queued_cleanup=queued_cleanup,
             before_start=before_start,
             cancel_event=cancel_event,
@@ -502,9 +563,15 @@ class GenerationManager:
             if reserved.cancelled:
                 self._reservations.pop(reservation_id, None)
                 reserved.done.set()
-                raise GenerationCapacityError("this learner's access was removed")
+                raise GenerationCapacityError(
+                    reserved.cancel_reason or "this generation reservation was cancelled"
+                )
             if reserved.client_request_id != client_request_id:
                 raise GenerationCapacityError("generation reservation does not match this request")
+            if (student_id, conversation_id) in self._deleting_conversations:
+                self._reservations.pop(reservation_id, None)
+                reserved.done.set()
+                raise GenerationCapacityError("this conversation is being deleted")
             if any(
                 existing.student_id == student_id
                 and existing.conversation_id == conversation_id
@@ -653,6 +720,7 @@ class GenerationManager:
             ]
             for reservation in reservations:
                 reservation.cancelled = True
+                reservation.cancel_reason = "this learner's access was removed"
         for job in jobs:
             job.request_stop()
         deadline = time.monotonic() + max(0.0, timeout_s)
@@ -666,6 +734,64 @@ class GenerationManager:
         ):
             raise GenerationCapacityError("learner work did not drain before the erase deadline")
         return len(jobs) + len(reservations)
+
+    def run_after_conversation_drained(
+        self,
+        student_id: str,
+        conversation_id: str,
+        operation: Callable[[], object],
+        *,
+        timeout_s: float = 5.0,
+    ) -> object:
+        """Block admission, stop all work for one owned conversation, then mutate storage.
+
+        The barrier is keyed by owner as well as conversation id so an untrusted caller cannot
+        interfere with another learner's work. Existing reservations are cancelled, queued and
+        running jobs are cooperatively stopped, and the storage operation runs only after every
+        affected request has acknowledged cancellation. The barrier remains installed while the
+        operation executes, closing the start/delete race between separate browser clients.
+        """
+        key = (student_id, conversation_id)
+        with self._lock:
+            self._prune_locked()
+            if key in self._deleting_conversations:
+                raise GenerationCapacityError("this conversation is already being deleted")
+            self._deleting_conversations.add(key)
+            jobs = [
+                job
+                for job in self._jobs.values()
+                if job.student_id == student_id
+                and job.conversation_id == conversation_id
+                and job.state in {"queued", "running"}
+            ]
+            reservations = [
+                row
+                for row in self._reservations.values()
+                if row.student_id == student_id and row.conversation_id in {None, conversation_id}
+            ]
+            for reservation in reservations:
+                reservation.cancelled = True
+                reservation.cancel_reason = "this conversation is being deleted"
+        try:
+            for job in jobs:
+                job.request_stop()
+            deadline = time.monotonic() + max(0.0, timeout_s)
+            for job in jobs:
+                try:
+                    job.wait(timeout_s=max(0.0, deadline - time.monotonic()))
+                except TimeoutError as exc:
+                    raise GenerationCapacityError(
+                        "the active reply did not stop before the delete deadline"
+                    ) from exc
+            for reservation in reservations:
+                if not reservation.done.wait(timeout=max(0.0, deadline - time.monotonic())):
+                    raise GenerationCapacityError(
+                        "a pending reply did not stop before the delete deadline"
+                    )
+            return operation()
+        finally:
+            with self._lock:
+                self._deleting_conversations.discard(key)
 
     def run_when_idle(self, operation: Callable[[], object]) -> object:
         """Run a model lifecycle transition atomically against generation admission."""

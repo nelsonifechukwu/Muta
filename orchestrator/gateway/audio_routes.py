@@ -59,7 +59,11 @@ from orchestrator.gateway.deps import (
     get_sessions,
     load_prompt,
 )
-from orchestrator.gateway.generations import GenerationCapacityError, GenerationJob
+from orchestrator.gateway.generations import (
+    GenerationCapacityError,
+    GenerationJob,
+    stream_completion_callback,
+)
 from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
 from orchestrator.gateway.sampling import params_for_mode
 from orchestrator.gateway.sessions import Admission
@@ -534,6 +538,7 @@ async def audio_voice(ws: WebSocket) -> None:
                 queued_cleanup=_queued_cleanup,
                 before_start=_claim_session,
                 cancel_event=turn_cancel,
+                on_completion_state=stream_completion_callback(events),
             )
         except Exception:
             _queued_cleanup()

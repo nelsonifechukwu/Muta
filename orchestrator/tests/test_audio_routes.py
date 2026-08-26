@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-import orchestrator.gateway.audio_routes as audio_routes
 from orchestrator.audio.config import AudioConfig
 from orchestrator.audio.engines import NullAsr, NullTts
+from orchestrator.gateway import audio_routes
 from orchestrator.gateway.audio_routes import (
     AudioStack,
     _preferred_language,
@@ -77,9 +78,43 @@ class _RecordingVoiceEngine:
 class _RecoveringVoiceEngine(_RecordingVoiceEngine):
     def stream_events_chat(self, **kwargs):
         self.calls.append(kwargs)
-        return "voice-conversation", 1, iter(
-            [("recovering", "retrying"), ("content", "A projectile moves under gravity.")]
+        return (
+            "voice-conversation",
+            1,
+            iter([("recovering", "retrying"), ("content", "A projectile moves under gravity.")]),
         )
+
+
+class _TrackedVoiceEvents:
+    def __init__(self, iterator) -> None:
+        self._iterator = iter(iterator)
+        self.completion_states: list[str] = []
+        self.settled = threading.Event()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._iterator)
+
+    def close(self) -> None:
+        close = getattr(self._iterator, "close", None)
+        if callable(close):
+            close()
+
+    def set_completion(self, state: str) -> None:
+        self.completion_states.append(state)
+        self.settled.set()
+
+
+class _TrackedVoiceEngine(_RecordingVoiceEngine):
+    def __init__(self, events: _TrackedVoiceEvents) -> None:
+        super().__init__()
+        self.events = events
+
+    def stream_events_chat(self, **kwargs):
+        self.calls.append(kwargs)
+        return "voice-conversation", 1, self.events
 
 
 def test_an_unavailable_audio_stack_is_retried_not_latched(monkeypatch):
@@ -270,6 +305,69 @@ def test_voice_ws_relays_automatic_answer_recovery(monkeypatch):
         "delta",
         "done",
     ]
+
+
+def test_voice_stream_durably_settles_complete_and_failed_replies(monkeypatch):
+    stack = AudioStack(config=AudioConfig.load(), asr=_StubAsr(), tts=NullTts())
+    monkeypatch.setattr(audio_routes, "get_audio", lambda: stack)
+    monkeypatch.setattr(audio_routes, "SileroVad", _NoVad)
+
+    complete = _TrackedVoiceEvents(iter([("content", "Complete answer.")]))
+    monkeypatch.setattr(audio_routes, "get_engine", lambda: _TrackedVoiceEngine(complete))
+    with client.websocket_connect("/v1/audio/voice") as ws:
+        ws.send_json({"type": "start", "student_id": "voice-complete"})
+        ws.send_bytes(b"\x01\x00" * 320)
+        ws.send_json({"type": "stop"})
+        messages = []
+        while not messages or messages[-1]["type"] != "done":
+            messages.append(ws.receive_json())
+    assert complete.settled.wait(0.5)
+    assert complete.completion_states == ["complete"]
+
+    def interrupted():
+        yield "content", "Valid partial."
+        raise RuntimeError("relay ended")
+
+    failed = _TrackedVoiceEvents(interrupted())
+    monkeypatch.setattr(audio_routes, "get_engine", lambda: _TrackedVoiceEngine(failed))
+    with client.websocket_connect("/v1/audio/voice") as ws:
+        ws.send_json({"type": "start", "student_id": "voice-failed"})
+        ws.send_bytes(b"\x01\x00" * 320)
+        ws.send_json({"type": "stop"})
+        messages = [ws.receive_json(), ws.receive_json(), ws.receive_json()]
+    assert [message["type"] for message in messages] == ["transcript", "delta", "error"]
+    assert failed.settled.wait(0.5)
+    assert failed.completion_states == ["failed"]
+
+
+def test_voice_stream_durably_settles_a_barged_reply_as_stopped(monkeypatch):
+    stack = AudioStack(config=AudioConfig.load(), asr=_StubAsr(), tts=NullTts())
+    monkeypatch.setattr(audio_routes, "get_audio", lambda: stack)
+    monkeypatch.setattr(audio_routes, "SileroVad", _NoVad)
+    cancel_event: threading.Event | None = None
+
+    def blocked():
+        yield "content", "Valid partial."
+        assert cancel_event is not None and cancel_event.wait(2.0)
+
+    stopped = _TrackedVoiceEvents(blocked())
+
+    class StoppableEngine(_TrackedVoiceEngine):
+        def stream_events_chat(self, **kwargs):
+            nonlocal cancel_event
+            cancel_event = kwargs["cancel_event"]
+            return super().stream_events_chat(**kwargs)
+
+    monkeypatch.setattr(audio_routes, "get_engine", lambda: StoppableEngine(stopped))
+    with client.websocket_connect("/v1/audio/voice") as ws:
+        ws.send_json({"type": "start", "student_id": "voice-stopped"})
+        ws.send_bytes(b"\x01\x00" * 320)
+        ws.send_json({"type": "stop"})
+        assert ws.receive_json()["type"] == "transcript"
+        assert ws.receive_json()["type"] == "delta"
+        ws.send_json({"type": "barge"})
+        assert stopped.settled.wait(1.0)
+    assert stopped.completion_states == ["stopped"]
 
 
 def test_voice_receive_heartbeat_catches_the_python_310_asyncio_timeout():

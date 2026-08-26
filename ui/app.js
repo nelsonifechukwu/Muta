@@ -62,11 +62,84 @@ const POWER_COPY = Object.freeze({
   action_pause_tts: "speech playback paused",
   openSettings: "Open power settings",
 });
+// Release-workstream strings are keyed independently of the generated locale pack. `releaseT`
+// first asks the ordinary catalog, so a reviewed translation can land without touching this
+// feature; until then every locale gets the explicit English fallback instead of a raw key.
+const RELEASE_COPY = Object.freeze({
+  "sidebar.hostLocal": "Muta Host: This device. Running locally.",
+  "account.host": "Host",
+  "account.member": "Member",
+  "account.logout": "Log out",
+  "host.title": "Host mode",
+  "host.description": "Share this Muta privately with people on the same network.",
+  "host.enable": "Enable Host mode",
+  "host.memoryLimit": "Memory limit",
+  "host.competition": "ADTC competition",
+  "host.competitionHelp": "Stay inside the 7 GB competition budget. Extra chats wait in line.",
+  "host.system": "Use this system",
+  "host.systemHelp": "Detect usable RAM and CPU, then run as many safe chats as this laptop supports.",
+  "host.shareAddress": "Share this address",
+  "host.joinUrl": "Muta join URL",
+  "host.copy": "Copy",
+  "host.certificateHelp": "Learners must be on this network. On first use, install Muta’s local certificate, then compare its fingerprint with the host.",
+  "host.downloadCertificate": "Download trust certificate",
+  "host.people": "People",
+  "host.waiting": "Waiting for approval",
+  "host.removing": "Removing data…",
+  "host.approvedSignedIn": "Approved · has signed in",
+  "host.approved": "Approved",
+  "host.accept": "Accept",
+  "host.decline": "Decline",
+  "host.remove": "Remove",
+  "host.removeConfirm": "Remove {name}? Their account, conversations, files and learning profile will be deleted.",
+  "host.removePending": "Revoking access and removing {name}…",
+  "host.approveFailed": "Could not approve that account.",
+  "host.rejectFailed": "Could not decline that account.",
+  "host.removeFailed": "Could not remove that account.",
+  "host.readFailed": "Could not read Host mode settings.",
+  "host.apply": "Applying the safe chat capacity…",
+  "host.updateFailed": "Could not update Host mode.",
+  "host.on": "Host mode is on. New replies are queued when all slots are busy.",
+  "host.off": "Host mode is off.",
+  "host.noFingerprint": "Certificate fingerprint unavailable",
+  "host.simultaneousChats": "simultaneous chats",
+  "host.tokensPerChat": "tokens per chat",
+  "host.ramCeiling": "RAM ceiling",
+  "host.accountCount": "{count} account",
+  "host.accountCountMany": "{count} accounts",
+  "host.empty": "No one has asked to join yet.",
+  "host.copied": "Join address copied.",
+  "host.copyFallback": "Address selected — copy it from the field.",
+  "reply.partialSaved": "Reply interrupted — the partial answer is saved.",
+  "reply.continue": "Continue reply",
+  "reply.continuePrompt": "Continue the previous incomplete reply from exactly where it stopped. Do not repeat completed parts.",
+  "reply.stopping": "Stopping…",
+});
 const powerText = (key, variables = {}) => (POWER_COPY[key] || key).replace(
   /\{([a-zA-Z][\w]*)\}/g,
   (match, name) => Object.hasOwn(variables, name) ? String(variables[name]) : match,
 );
 const t = (key, variables) => window.MutaI18n.t(key, variables);
+const releaseT = (key, variables = {}) => {
+  const localized = t(key, variables);
+  const value = localized === key ? (RELEASE_COPY[key] || key) : localized;
+  return value.replace(/\{([a-zA-Z][\w]*)\}/g, (match, name) =>
+    Object.hasOwn(variables, name) ? String(variables[name]) : match
+  );
+};
+function applyReleaseCopy(doc = document) {
+  for (const element of doc.querySelectorAll("[data-release-i18n]")) {
+    element.textContent = releaseT(element.dataset.releaseI18n);
+  }
+  for (const attribute of ["aria-label", "title"]) {
+    const dataName = `data-release-i18n-${attribute}`;
+    for (const element of doc.querySelectorAll(`[${dataName}]`)) {
+      element.setAttribute(attribute, releaseT(element.getAttribute(dataName)));
+    }
+  }
+}
+applyReleaseCopy();
+document.addEventListener("muta:localechange", () => applyReleaseCopy());
 const featureT = (key, variables = {}) => {
   const value = RESOURCE_RAG_COPY[key] || key;
   return value.replace(/\{([a-zA-Z][\w]*)\}/g, (match, name) =>
@@ -125,6 +198,18 @@ const attachmentUrl = (id) => `/v1/attachments/${id}`;
 const resourcePageUrl = (id, page) =>
   `/v1/resources/${encodeURIComponent(id)}/content#page=${Math.max(1, Number(page) || 1)}`;
 
+function syncIdentityCopy() {
+  const hostIdentity = authRole === "host";
+  document.querySelector("#share-account-identity").hidden = hostIdentity;
+  document.querySelector("#share-host-local-copy").hidden = !hostIdentity;
+  document.querySelector("#sidebar-runtime").hidden = hostIdentity;
+  document.querySelector("#share-account-name").textContent = authUsername || "";
+  document.querySelector("#share-account-role").textContent = releaseT(
+    hostIdentity ? "account.host" : "account.member",
+  );
+  document.querySelector("#share-logout").hidden = hostIdentity;
+}
+
 function activateIdentity({ userId, role, username = null, token = "", csrf = null }) {
   studentId = userId;
   authRole = role;
@@ -143,9 +228,8 @@ function activateIdentity({ userId, role, username = null, token = "", csrf = nu
   );
   const account = document.querySelector("#share-account");
   account.hidden = false;
-  document.querySelector("#share-account-name").textContent = username || "Muta host";
-  document.querySelector("#share-account-role").textContent = role === "host" ? "Host" : "Member";
-  document.querySelector("#share-logout").hidden = role === "host";
+  syncIdentityCopy();
+  const hostIdentity = role === "host";
   document.querySelector("#host-settings").hidden = role !== "host";
   document.querySelector(".model-selector").hidden = role === "member";
   if (shareAuthWake) {
@@ -671,16 +755,22 @@ let conversationRetryTarget = null;
 // unlocking body/document scrolling.
 function applyAppViewportMetrics() {
   const viewport = window.visualViewport;
-  const height = viewport?.height || window.innerHeight;
-  if (height <= 0) return;
+  const metrics = window.MutaReleaseLifecycle.viewportMetrics({
+    visualViewport: viewport,
+    innerHeight: window.innerHeight,
+    innerWidth: window.innerWidth,
+  });
+  if (metrics.height <= 0) return;
   const root = document.documentElement;
-  root.style.setProperty("--app-height", `${height}px`);
-  root.style.setProperty("--app-top", `${viewport?.offsetTop || 0}px`);
+  root.style.setProperty("--app-height", `${metrics.height}px`);
+  root.style.setProperty("--app-top", `${metrics.top}px`);
+  root.style.setProperty("--app-left", `${metrics.left}px`);
+  root.style.setProperty("--app-width", `${metrics.width}px`);
+  root.style.setProperty("--visual-bottom-gap", `${metrics.bottomGap}px`);
   // Queue rows and attachment chips share a small, height-aware budget. At keyboard height
   // each keeps one usable row and scrolls internally, leaving the input and send controls visible.
-  const regionHeight = Math.max(40, Math.min(112, height * 0.14));
-  root.style.setProperty("--composer-region-max", `${regionHeight}px`);
-  root.classList.toggle("compact-height", height < 240);
+  root.style.setProperty("--composer-region-max", `${metrics.composerRegionMax}px`);
+  root.classList.toggle("compact-height", metrics.compact);
 }
 
 // A virtual-keyboard or browser-chrome resize can reduce scrollTop without student input as the
@@ -770,8 +860,7 @@ function safeHttpUrl(url) {
 }
 
 function nearChatBottom() {
-  return chatScroller.scrollHeight - chatScroller.scrollTop - chatScroller.clientHeight <=
-    AUTO_FOLLOW_THRESHOLD_PX;
+  return window.MutaReleaseLifecycle.isNearBottom(chatScroller, AUTO_FOLLOW_THRESHOLD_PX);
 }
 
 function scrollToBottom({ force = false } = {}) {
@@ -1126,8 +1215,12 @@ function beginAssistantMessage(onAnswerNow) {
   recovering.className = "reply-recovering";
   recovering.hidden = true;
 
+  const recovery = document.createElement("div");
+  recovery.className = "reply-recovery";
+  recovery.hidden = true;
+
   wrap.setAttribute("aria-busy", "true");
-  wrap.append(thinking, preamble, prose, activity, recovering);
+  wrap.append(thinking, preamble, prose, activity, recovering, recovery);
   messagesEl.appendChild(wrap);
   scrollToBottom();
 
@@ -1231,6 +1324,11 @@ function beginAssistantMessage(onAnswerNow) {
   const clearRecovering = () => {
     recovering.hidden = true;
     recovering.textContent = "";
+  };
+
+  const clearRecovery = () => {
+    recovery.hidden = true;
+    recovery.replaceChildren();
   };
 
   return {
@@ -1339,18 +1437,20 @@ function beginAssistantMessage(onAnswerNow) {
       cancelRender();
       if (full.trim()) renderCompletedReply(wrap, prose, full);
       finishActivity();
+      clearRecovery();
       scrollToBottom();
     },
     remove() {
       cancelRender();
       wrap.remove();
     },
-    fail(message, translationKey = null, variables = {}) {
+    fail(message, translationKey = null, variables = {}, { onContinue = null } = {}) {
       wrap.classList.remove("reply-queued");
       queuedNotice = false;
       delete prose.dataset.i18n;
       prose.removeAttribute("data-i18n-vars");
       clearRecovering();
+      clearRecovery();
       settleThinking();
       cancelRender();
       finishActivity();
@@ -1373,7 +1473,38 @@ function beginAssistantMessage(onAnswerNow) {
         }
         warn.textContent = message || t("reply.connectionLost");
         prose.appendChild(warn);
+        if (onContinue) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "reply-continue";
+          button.textContent = releaseT("reply.continue");
+          button.addEventListener("click", () => {
+            button.disabled = true;
+            onContinue();
+          }, { once: true });
+          recovery.appendChild(button);
+          recovery.hidden = false;
+        }
       }
+      scrollToBottom();
+    },
+    stop() {
+      wrap.classList.remove("reply-queued");
+      queuedNotice = false;
+      clearRecovering();
+      clearRecovery();
+      clearPreamble();
+      settleThinking();
+      cancelRender();
+      finishActivity();
+      if (full.trim()) renderMarkdown(prose, full);
+      const stopped = document.createElement("div");
+      stopped.className = "reply-stopped";
+      stopped.dataset.i18n = "reply.stopped";
+      stopped.textContent = t("reply.stopped");
+      if (full.trim()) prose.appendChild(stopped);
+      else prose.replaceChildren(stopped);
+      scrollToBottom();
     },
   };
 }
@@ -1676,8 +1807,38 @@ function renderHistoryMessage(m) {
       : { text: m.content, records: m.resource_citations };
     renderCompletedReply(wrap, prose, grounded.text);
     renderResourceSources(wrap, grounded.records);
+    decorateHistoricalCompletion(wrap, prose, m, conversationId);
     messagesEl.appendChild(wrap);
   }
+}
+
+function decorateHistoricalCompletion(wrap, prose, message, cid) {
+  const state = message.completion_state;
+  if (state === "stopped") {
+    const stopped = document.createElement("div");
+    stopped.className = "reply-stopped";
+    stopped.dataset.i18n = "reply.stopped";
+    stopped.textContent = t("reply.stopped");
+    prose.appendChild(stopped);
+    return;
+  }
+  if (!["failed", "streaming"].includes(state) || !String(message.content || "").trim()) return;
+  const warning = document.createElement("div");
+  warning.className = "reply-incomplete";
+  warning.textContent = releaseT("reply.partialSaved");
+  prose.appendChild(warning);
+  const recovery = document.createElement("div");
+  recovery.className = "reply-recovery";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "reply-continue";
+  button.textContent = releaseT("reply.continue");
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    continueIncompleteReply({ cid });
+  }, { once: true });
+  recovery.appendChild(button);
+  wrap.appendChild(recovery);
 }
 
 // ---------------------------------------------------------------------------
@@ -1813,8 +1974,15 @@ deleteChatConfirm.addEventListener("click", async () => {
   dialog?.focus();
   try {
     const activeJob = jobForConversation(pending.conversation.id);
-    if (activeJob) await stopGeneration(activeJob);
+    // Remove every client-side successor before Stop can settle the current job. Otherwise
+    // finishGeneration could dispatch a queued follow-up while the server deletion barrier is
+    // waiting, recreating work for a conversation the user just confirmed should be erased.
     discardQueue(pending.conversation.id, { announce: false });
+    if (activeJob) {
+      activeJob.pendingRegen = null;
+      const stopped = await stopGeneration(activeJob, { drain: false });
+      if (!stopped) throw new Error("generation stop failed");
+    }
     const response = await fetch(`/v1/conversations/${pending.conversation.id}`, {
       method: "DELETE",
       headers: authHeaders(),
@@ -2088,11 +2256,47 @@ function reattachJob(job) {
   // Replay can finish while the history request is still in flight. In that ordering the
   // terminal event had no view handle to settle, so settle the freshly attached bubble now.
   if (job.terminal) {
-    if (job.failed) handle.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
+    if (job.terminalEvent?.stopped || job.stopConfirmed) handle.stop();
+    else if (job.failed) settleFailedGeneration(job, handle);
     else handle.finalize();
     decorateCompletedReply(job, job.terminalEvent || { source: job.source });
   } else if (job.source) {
     decorateCompletedReply(job, { source: job.source });
+  }
+}
+
+function continueIncompleteReply(job) {
+  if (!job?.cid || jobForConversation(job.cid)) return;
+  dispatch(
+    {
+      typed: releaseT("reply.continuePrompt"),
+      attachments: [],
+      ragResources: [],
+      useWeb: false,
+    },
+    {
+      thinking: "off",
+      conversationOverride: job.cid,
+      viewOverride: conversationId === job.cid ? currentViewId : newViewId(),
+    },
+  );
+}
+
+function settleFailedGeneration(job, handle = job.handle) {
+  if (!handle) return;
+  const failure = window.MutaReleaseLifecycle.terminalFailure(
+    { ...(job.terminalEvent || job.errorEvidence || {}), failed: Boolean(job.failed) },
+    job.content,
+  );
+  if (failure.recoverable) {
+    handle.fail(
+      releaseT("reply.partialSaved"),
+      null,
+      {},
+      { onContinue: () => continueIncompleteReply(job) },
+    );
+  } else {
+    handle.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
   }
 }
 
@@ -2155,6 +2359,7 @@ function viewingLiveStream() {
 function syncComposerState() {
   const busy = uploadingAnImage();
   const streaming = viewingLiveStream();
+  const stopping = Boolean(streaming?.stopping);
   const modelTrigger = $("#model-trigger");
   const switchingModel = modelTrigger?.dataset.switching === "true";
   const modelCatalogLoading = modelCatalog === null &&
@@ -2178,10 +2383,16 @@ function syncComposerState() {
     (!streaming && inferenceUnavailable) ||
     busy ||
     voiceModeActive ||
-    startingConversations.has(startKeyFor(conversationId));
+    startingConversations.has(startKeyFor(conversationId)) ||
+    stopping;
   sendBtn.classList.toggle("stop", Boolean(streaming));
-  sendBtn.title = streaming ? t("composer.stop") : t("composer.send");
-  sendBtn.setAttribute("aria-label", streaming ? t("composer.stop") : t("composer.sendMessage"));
+  sendBtn.title = stopping
+    ? releaseT("reply.stopping")
+    : streaming ? t("composer.stop") : t("composer.send");
+  sendBtn.setAttribute(
+    "aria-label",
+    stopping ? releaseT("reply.stopping") : streaming ? t("composer.stop") : t("composer.sendMessage"),
+  );
   if (modelTrigger) {
     const inspectable = modelCatalog !== null || modelTrigger.dataset.loadFailed === "true";
     modelTrigger.disabled = !inspectable;
@@ -2196,21 +2407,55 @@ function syncComposerState() {
   }
 }
 
-async function stopGeneration(job = viewingLiveStream()) {
-  if (!job || job.stopping) return;
+async function stopGeneration(job = viewingLiveStream(), { drain = true } = {}) {
+  if (!job) return false;
+  if (!drain) job.suppressDrain = true;
+  if (job.stopPromise) return job.stopPromise;
   job.stopping = true;
   syncComposerState();
-  try {
-    const response = await fetch(`/v1/chat/generations/${job.id}`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    });
-    if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
-  } catch {
-    job.stopping = false;
-    syncComposerState();
-    toast(t("reply.stopFailed"));
-  }
+  job.stopPromise = (async () => {
+    try {
+      const response = await fetch(`/v1/chat/generations/${job.id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
+      const payload = response.ok ? await response.json().catch(() => ({})) : {};
+      const outcome = window.MutaReleaseLifecycle.stopResponse(response.status, payload);
+      if (outcome === "already-terminal") {
+        // The retained job already reached terminal state (or the gateway restarted). Its
+        // write-through transcript, not our stale bubble, is authoritative.
+        job.terminal = true;
+        job.subscriptionController?.abort();
+        if (generationJobs.get(job.id) === job) generationJobs.delete(job.id);
+        if (conversationId === job.cid) await loadConversation(job.cid, { historyMode: "none" });
+        syncComposerState();
+        return true;
+      }
+      if (outcome !== "accepted") throw new Error(`HTTP ${response.status}`);
+      // The owned server job accepted cancellation. Settle the mobile UI immediately; the
+      // replayed stopped frame is now reconciliation, not a prerequisite for restoring input.
+      job.stopConfirmed = true;
+      job.terminal = true;
+      job.state = "stopped";
+      job.terminalEvent = { done: true, stopped: true };
+      if (job.pendingRegen) job.handle?.remove();
+      else job.handle?.stop();
+      job.subscriptionController?.abort();
+      if (generationJobs.get(job.id) === job) {
+        finishGeneration(job, { drain: !job.suppressDrain });
+      }
+      announce(t("reply.stopped"));
+      return true;
+    } catch {
+      job.stopping = false;
+      job.stopPromise = null;
+      syncComposerState();
+      toast(t("reply.stopFailed"));
+      return false;
+    }
+  })();
+  return job.stopPromise;
 }
 
 function renderChips() {
@@ -2907,10 +3152,12 @@ async function dispatch(item, opts = {}) {
 async function followGeneration(job) {
   let reconnectNoticeShown = false;
   while (!job.terminal && generationJobs.get(job.id) === job) {
+    const subscription = new AbortController();
+    job.subscriptionController = subscription;
     try {
       const res = await fetch(
         `/v1/chat/generations/${job.id}/stream?after=${job.framesSeen}`,
-        { headers: authHeaders() },
+        { headers: authHeaders(), signal: subscription.signal },
       );
       if (res.status === 404) {
         // A gateway restart loses the live replay buffer, never the write-through transcript.
@@ -2919,17 +3166,29 @@ async function followGeneration(job) {
         if (conversationId === job.cid) await loadConversation(job.cid);
         break;
       }
+      if (res.status === 401 || res.status === 403) {
+        // Removal revokes the member session before erasure. Retrying an SSE subscription with
+        // that known-dead authority only leaves a phone saying “reconnecting” until the coarse
+        // identity poll runs; revalidate now and let the share gate take over immediately.
+        job.terminal = true;
+        generationJobs.delete(job.id);
+        await revalidateShareIdentity();
+        break;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       reconnectNoticeShown = false;
       await pumpSse(res, job);
       if (!job.terminal) throw new Error("stream ended before the job finished");
-    } catch {
+    } catch (error) {
       if (job.terminal) break;
+      if (error?.name === "AbortError" && job.stopConfirmed) break;
       if (!reconnectNoticeShown && conversationId === job.cid) {
         toast(t("reply.reconnecting"));
         reconnectNoticeShown = true;
       }
       await new Promise((resolve) => setTimeout(resolve, 750));
+    } finally {
+      if (job.subscriptionController === subscription) job.subscriptionController = null;
     }
   }
   if (job.terminal && generationJobs.get(job.id) === job) finishGeneration(job);
@@ -2995,13 +3254,19 @@ async function pumpSse(res, job) {
         } else if (ev.error) {
           job.failed = true;
           job.error = true;
-          job.handle?.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
+          job.errorEvidence = {
+            message: String(ev.error),
+            partialSaved: ev.partial_saved === true,
+            recoverable: ev.recoverable === true,
+          };
         } else if (ev.done) {
           job.terminal = true;
           job.terminalEvent = { ...ev, source: ev.source || job.source };
+          if (ev.failed) job.failed = true;
           if (ev.stopped && job.pendingRegen) job.handle?.remove();
-          else if (ev.stopped) job.handle?.fail(t("reply.stopped"), "reply.stopped");
-          else if (!job.failed) job.handle?.finalize();
+          else if (ev.stopped) job.handle?.stop();
+          else if (job.failed) settleFailedGeneration(job);
+          else job.handle?.finalize();
           decorateCompletedReply(job, job.terminalEvent);
           if (conversationId === job.cid) announce(t("reply.tutorReplied"));
         }
@@ -3082,11 +3347,12 @@ function decorateCompletedReply(job, ev) {
   }
 }
 
-function finishGeneration(job) {
+function finishGeneration(job, { drain = true } = {}) {
   generationJobs.delete(job.id);
   if (conversationId === job.cid) closeTelemetry();
   refreshSidebar();
   syncComposerState();
+  if (!drain) return;
   if (job.pendingRegen) {
     const again = job.pendingRegen;
     dispatch(again, {
@@ -3743,6 +4009,14 @@ let hostStatus = null;
 let hostPollTimer = null;
 let hostRosterSignature = "";
 
+document.addEventListener("muta:localechange", () => {
+  if (identityReady) syncIdentityCopy();
+  if (hostStatus) {
+    hostRosterSignature = "";
+    renderHostStatus(hostStatus);
+  }
+});
+
 function syncThemeSetting() {
   themeSelect.value = globalThis.MutaTheme?.preference || "system";
 }
@@ -3776,21 +4050,22 @@ function formatHostRam(bytes) {
 function hostUserRow(user) {
   const row = document.createElement("div");
   row.className = "host-user-row";
+  row.dataset.userId = user.id;
   const identity = document.createElement("span");
   const name = document.createElement("strong");
   name.textContent = user.username;
   const detail = document.createElement("small");
-  detail.textContent = user.status === "pending" ? "Waiting for approval" :
-    user.status === "deleting" ? "Removing data…" :
-    user.last_login_at ? "Approved · has signed in" : "Approved";
+  detail.textContent = user.status === "pending" ? releaseT("host.waiting") :
+    user.status === "deleting" ? releaseT("host.removing") :
+    user.last_login_at ? releaseT("host.approvedSignedIn") : releaseT("host.approved");
   identity.append(name, detail);
   const actions = document.createElement("div");
   actions.className = "host-user-actions";
   if (user.status === "pending") {
-    for (const [label, action, danger] of [["Accept", "approve", false], ["Decline", "reject", true]]) {
+    for (const [key, action, danger] of [["host.accept", "approve", false], ["host.decline", "reject", true]]) {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = label;
+      button.textContent = releaseT(key);
       if (danger) button.className = "danger";
       button.addEventListener("click", () => void hostUserAction(user, action, button));
       actions.append(button);
@@ -3799,7 +4074,7 @@ function hostUserRow(user) {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "danger";
-    remove.textContent = "Remove";
+    remove.textContent = releaseT("host.remove");
     remove.addEventListener("click", () => void hostUserAction(user, "remove", remove));
     actions.append(remove);
   }
@@ -3819,16 +4094,16 @@ function renderHostStatus(status) {
   if (!shareCard.hidden) {
     $("#host-join-url").value = primaryUrl;
     $("#host-qr").src = `/v1/share/host/qr.png?v=${encodeURIComponent(status.updated_at)}`;
-    $("#host-cert-fingerprint").textContent = status.certificate_fingerprint || "Certificate fingerprint unavailable";
+    $("#host-cert-fingerprint").textContent = status.certificate_fingerprint || releaseT("host.noFingerprint");
   }
   const capacity = status.capacity || {};
   const capacityEl = $("#host-capacity");
   capacityEl.hidden = !Object.keys(capacity).length;
   capacityEl.replaceChildren();
   for (const [value, label] of [
-    [capacity.n_parallel ?? "—", "simultaneous chats"],
-    [capacity.context_per_chat ?? "—", "tokens per chat"],
-    [formatHostRam(capacity.memory_ceiling_bytes), "RAM ceiling"],
+    [capacity.n_parallel ?? "—", releaseT("host.simultaneousChats")],
+    [capacity.context_per_chat ?? "—", releaseT("host.tokensPerChat")],
+    [formatHostRam(capacity.memory_ceiling_bytes), releaseT("host.ramCeiling")],
   ]) {
     const card = document.createElement("div");
     const strong = document.createElement("strong");
@@ -3840,7 +4115,10 @@ function renderHostStatus(status) {
   }
   const users = status.users || [];
   $("#host-roster").hidden = !status.enabled && users.length === 0;
-  $("#host-roster-count").textContent = `${users.length} account${users.length === 1 ? "" : "s"}`;
+  $("#host-roster-count").textContent = releaseT(
+    users.length === 1 ? "host.accountCount" : "host.accountCountMany",
+    { count: users.length },
+  );
   const rosterSignature = JSON.stringify(users);
   if (rosterSignature !== hostRosterSignature) {
     hostRosterSignature = rosterSignature;
@@ -3849,14 +4127,14 @@ function renderHostStatus(status) {
     if (!users.length) {
       const empty = document.createElement("p");
       empty.className = "host-roster-empty";
-      empty.textContent = "No one has asked to join yet.";
+      empty.textContent = releaseT("host.empty");
       list.append(empty);
     } else {
       users.forEach((user) => list.append(hostUserRow(user)));
     }
   }
   $("#host-save-state").textContent = status.warning ||
-    (status.enabled ? "Host mode is on. New replies are queued when all slots are busy." : "Host mode is off.");
+    releaseT(status.enabled ? "host.on" : "host.off");
 }
 
 async function loadHostStatus({ poll = true } = {}) {
@@ -3866,7 +4144,7 @@ async function loadHostStatus({ poll = true } = {}) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     renderHostStatus(await response.json());
   } catch {
-    $("#host-save-state").textContent = "Could not read Host mode settings.";
+    $("#host-save-state").textContent = releaseT("host.readFailed");
   }
   if (poll && !settingsModal.hidden) {
     if (hostPollTimer) window.clearTimeout(hostPollTimer);
@@ -3879,7 +4157,7 @@ async function saveHostSettings() {
   const memory = document.querySelector('input[name="host-memory"]:checked')?.value || "competition";
   hostEnabledToggle.disabled = true;
   document.querySelectorAll('input[name="host-memory"]').forEach((input) => { input.disabled = true; });
-  $("#host-save-state").textContent = "Applying the safe chat capacity…";
+  $("#host-save-state").textContent = releaseT("host.apply");
   try {
     const response = await fetch("/v1/share/host", {
       method: "PUT",
@@ -3887,39 +4165,85 @@ async function saveHostSettings() {
       body: JSON.stringify({ enabled: hostEnabledToggle.checked, memory_mode: memory }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(shareDetail(payload, "Could not update Host mode."));
+    if (!response.ok) throw new Error(shareDetail(payload, releaseT("host.updateFailed")));
     renderHostStatus(payload);
     // Applying a memory policy may atomically replace the serving model. Refresh capability
     // badges before the learner can attach/send an image against a stale catalog snapshot.
     await refreshModelCatalog();
   } catch (error) {
     if (previous) renderHostStatus(previous);
-    $("#host-save-state").textContent = error.message || "Could not update Host mode.";
+    $("#host-save-state").textContent = error.message || releaseT("host.updateFailed");
   } finally {
     hostEnabledToggle.disabled = false;
     document.querySelectorAll('input[name="host-memory"]').forEach((input) => { input.disabled = false; });
   }
 }
 
+function hostUserActionPreview(user, action) {
+  if (!hostStatus) return;
+  if (action === "remove") {
+    const users = (hostStatus.users || []).map((candidate) =>
+      candidate.id === user.id ? { ...candidate, status: "deleting" } : candidate
+    );
+    renderHostStatus({ ...hostStatus, users });
+    $("#host-save-state").textContent = releaseT("host.removePending", { name: user.username });
+    return;
+  }
+  const row = document.querySelector(`.host-user-row[data-user-id="${CSS.escape(user.id)}"]`);
+  row?.setAttribute("aria-busy", "true");
+  row?.querySelectorAll("button").forEach((control) => { control.disabled = true; });
+}
+
+function showHostUserError(userId, message) {
+  const row = document.querySelector(`.host-user-row[data-user-id="${CSS.escape(userId)}"]`);
+  if (!row) {
+    $("#host-save-state").textContent = message;
+    return;
+  }
+  row.removeAttribute("aria-busy");
+  row.querySelectorAll("button").forEach((control) => { control.disabled = false; });
+  const error = document.createElement("p");
+  error.className = "host-user-error";
+  error.setAttribute("role", "alert");
+  error.textContent = message;
+  row.append(error);
+}
+
 async function hostUserAction(user, action, button) {
   if (action === "remove" && !window.confirm(
-    `Remove ${user.username}? Their account, conversations, files and learning profile will be deleted.`
+    releaseT("host.removeConfirm", { name: user.username })
   )) return;
+  const previous = hostStatus;
   button.disabled = true;
+  hostUserActionPreview(user, action);
   const method = action === "remove" ? "DELETE" : "POST";
-  const suffix = action === "remove" ? "" : `/${action}`;
   try {
-    const response = await fetch(`/v1/share/host/users/${encodeURIComponent(user.id)}${suffix}`, {
+    const response = await fetch(window.MutaReleaseLifecycle.hostUserEndpoint(user.id, action), {
       method,
       headers: authHeaders(),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(shareDetail(payload, `Could not ${action} that account.`));
-    await loadHostStatus({ poll: false });
+    if (!response.ok) throw new Error(shareDetail(
+      payload,
+      releaseT(`host.${action}Failed`),
+    ));
+    const users = (hostStatus?.users || previous?.users || []).flatMap((candidate) => {
+      if (candidate.id !== user.id) return [candidate];
+      if (action === "remove" || action === "reject") return [];
+      return [{ ...candidate, status: payload.status || "approved", approved_at: new Date().toISOString() }];
+    });
+    renderHostStatus({ ...(hostStatus || previous), users });
+    // The mutation response is authoritative for immediate feedback. A quiet refetch then
+    // reconciles persistence/capacity details without making the row wait for another poll.
+    void loadHostStatus({ poll: false });
   } catch (error) {
-    $("#host-save-state").textContent = error.message || "Could not update that account.";
+    if (previous) renderHostStatus(previous);
+    showHostUserError(
+      user.id,
+      error.message || releaseT(`host.${action}Failed`),
+    );
   } finally {
-    button.disabled = false;
+    if (button.isConnected) button.disabled = false;
   }
 }
 
@@ -3931,10 +4255,10 @@ $("#host-copy-url").addEventListener("click", async () => {
   const value = $("#host-join-url").value;
   try {
     await navigator.clipboard.writeText(value);
-    $("#host-save-state").textContent = "Join address copied.";
+    $("#host-save-state").textContent = releaseT("host.copied");
   } catch {
     $("#host-join-url").select();
-    $("#host-save-state").textContent = "Address selected — copy it from the field.";
+    $("#host-save-state").textContent = releaseT("host.copyFallback");
   }
 });
 

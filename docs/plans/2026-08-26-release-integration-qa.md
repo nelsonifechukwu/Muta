@@ -27,6 +27,7 @@ deliverable. Packaging and publication remain out of scope.
 - Power/parallel policy: `504485b820580fa25ff993e4d2c391d40d9ea06f`
 - Deterministic visualization: `b28f24ee9bccb771639789451969157ece70015f`
 - UI polish: `534939cdb637937d6e365c9887ac422c5efd3eb4`
+- Host/mobile lifecycle: `dfcc2908fa7f1ba9858796e4f0b0178d5ecb4f08`
 - Independent fleet deliverable:
   `084d4c48a6fa035eb9548c3d3193ba9850ba0f59`
 

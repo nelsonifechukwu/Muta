@@ -5,7 +5,7 @@
   <!-- Muta owns interface localization. Prevent browser translation from overwriting the
        persisted language choice after the pre-paint bootstrap restores it. -->
   <meta name="google" content="notranslate">
-  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#faf9f5">
   <title>Muta</title>
   <script src="theme.js?v=20260826-release-ui-polish-1"></script>
@@ -16,7 +16,7 @@
   <script src="locale-manifest.js?v=20260826-release-ui-polish-1"></script>
   <script src="locale-bootstrap.js?v=20260826-release-ui-polish-1"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260826-release-ui-polish-1">
+  <link rel="stylesheet" href="styles.css?v=20260826-release-integration-2">
 </head>
 <body>
   <main id="share-auth" class="share-auth" aria-labelledby="share-auth-title">
@@ -85,10 +85,11 @@
         <span data-i18n="settings.title">Settings</span>
       </button>
       <div id="share-account" class="share-account" hidden>
-        <span><strong id="share-account-name">Muta host</strong><small id="share-account-role">Host</small></span>
-        <button id="share-logout" type="button">Log out</button>
+        <span id="share-account-identity"><strong id="share-account-name"></strong><small id="share-account-role"></small></span>
+        <span id="share-host-local-copy" class="share-host-local-copy" data-release-i18n="sidebar.hostLocal" hidden>Muta Host: This device. Running locally.</span>
+        <button id="share-logout" type="button" data-release-i18n="account.logout">Log out</button>
       </div>
-      <div class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label" data-i18n="runtime.offlineLocal">offline · local CPU</span></div>
+      <div id="sidebar-runtime" class="sidebar-foot"><span id="net-dot" class="net-dot" hidden></span><span id="runtime-label" data-i18n="runtime.offlineLocal">offline · local CPU</span></div>
     </aside>
 
     <main id="main">
@@ -262,36 +263,37 @@
           <p id="power-status-actions" class="power-status-actions" hidden></p>
         </div>
       </div>
-      <div id="host-settings" class="settings-section host-settings" lang="en" hidden>
+      <div id="host-settings" class="settings-section host-settings" hidden>
         <div class="settings-section-heading">
           <div>
-            <h3>Host mode</h3>
-            <p>Share this Muta privately with people on the same network.</p>
+            <h3 id="host-mode-title" data-release-i18n="host.title">Host mode</h3>
+            <p id="host-mode-description" data-release-i18n="host.description">Share this Muta privately with people on the same network.</p>
           </div>
           <label class="host-switch" for="setting-host-enabled">
-            <span class="sr-only">Enable Host mode</span>
-            <input id="setting-host-enabled" type="checkbox" role="switch">
+            <span class="sr-only" data-release-i18n="host.enable">Enable Host mode</span>
+            <input id="setting-host-enabled" type="checkbox" role="switch"
+              aria-labelledby="host-mode-title" aria-describedby="host-mode-description">
           </label>
         </div>
         <fieldset id="host-memory-options" class="host-memory-options">
-          <legend>Memory limit</legend>
-          <label><input type="radio" name="host-memory" value="competition" checked><span><strong>ADTC competition</strong><small>Stay inside the 7 GB competition budget. Extra chats wait in line.</small></span></label>
-          <label><input type="radio" name="host-memory" value="system"><span><strong>Use this system</strong><small>Detect usable RAM and CPU, then run as many safe chats as this laptop supports.</small></span></label>
+          <legend data-release-i18n="host.memoryLimit">Memory limit</legend>
+          <label><input type="radio" name="host-memory" value="competition" checked><span><strong data-release-i18n="host.competition">ADTC competition</strong><small data-release-i18n="host.competitionHelp">Stay inside the 7 GB competition budget. Extra chats wait in line.</small></span></label>
+          <label><input type="radio" name="host-memory" value="system"><span><strong data-release-i18n="host.system">Use this system</strong><small data-release-i18n="host.systemHelp">Detect usable RAM and CPU, then run as many safe chats as this laptop supports.</small></span></label>
         </fieldset>
         <p id="host-save-state" class="host-save-state" role="status" aria-live="polite"></p>
         <div id="host-share-card" class="host-share-card" hidden>
           <img id="host-qr" alt="QR code for the secure Muta join URL" width="168" height="168">
           <div>
-            <strong>Share this address</strong>
-            <div class="host-url-row"><input id="host-join-url" type="url" readonly aria-label="Muta join URL"><button id="host-copy-url" type="button">Copy</button></div>
-            <p>Learners must be on this network. On first use, install Muta’s local certificate, then compare its fingerprint with the host.</p>
-            <a id="host-ca-download" href="/v1/share/host/ca.pem" download>Download trust certificate</a>
+            <strong data-release-i18n="host.shareAddress">Share this address</strong>
+            <div class="host-url-row"><input id="host-join-url" type="url" readonly aria-label="Muta join URL" data-release-i18n-aria-label="host.joinUrl"><button id="host-copy-url" type="button" data-release-i18n="host.copy">Copy</button></div>
+            <p data-release-i18n="host.certificateHelp">Learners must be on this network. On first use, install Muta’s local certificate, then compare its fingerprint with the host.</p>
+            <a id="host-ca-download" href="/v1/share/host/ca.pem" download data-release-i18n="host.downloadCertificate">Download trust certificate</a>
             <code id="host-cert-fingerprint"></code>
           </div>
         </div>
         <div id="host-capacity" class="host-capacity" hidden></div>
         <div id="host-roster" class="host-roster" hidden>
-          <div class="host-roster-heading"><strong>People</strong><span id="host-roster-count"></span></div>
+          <div class="host-roster-heading"><strong data-release-i18n="host.people">People</strong><span id="host-roster-count"></span></div>
           <div id="host-user-list" aria-live="polite"></div>
         </div>
       </div>
@@ -362,21 +364,22 @@
   <script src="vendor/katex/katex.min.js"></script>
   <script src="vendor/marked.min.js"></script>
   <script src="vendor/purify.min.js"></script>
-  <script src="i18n.js?v=20260826-release-ui-polish-1"></script>
-  <script src="locale-fr.js?v=20260826-release-ui-polish-1"></script>
-  <script src="locale-generated.js?v=20260826-release-ui-polish-1"></script>
-  <script src="locales.js?v=20260826-release-ui-polish-1"></script>
-  <script src="math.js?v=20260826-release-ui-polish-1"></script>
-  <script src="syntax.js?v=20260826-release-ui-polish-1"></script>
-  <script src="visualizations.js?v=20260826-release-ui-polish-1"></script>
-  <script src="citations.js?v=20260826-release-ui-polish-1"></script>
-  <script src="resource-mentions.js?v=20260826-release-ui-polish-1"></script>
-  <script src="startup.js?v=20260826-release-ui-polish-1"></script>
-  <script src="parallel-policy.js?v=20260826-release-integration-1"></script>
-  <script src="popover-position.js?v=20260826-release-ui-polish-1"></script>
-  <script src="image-upload.js?v=20260826-release-ui-polish-1"></script>
-  <script src="app.js?v=20260826-release-ui-polish-1"></script>
-  <script src="product-analytics.js?v=20260826-release-ui-polish-1"></script>
-  <script src="audio.js?v=20260826-release-ui-polish-1"></script>
+  <script src="i18n.js?v=20260826-release-integration-2"></script>
+  <script src="locale-fr.js?v=20260826-release-integration-2"></script>
+  <script src="locale-generated.js?v=20260826-release-integration-2"></script>
+  <script src="locales.js?v=20260826-release-integration-2"></script>
+  <script src="math.js?v=20260826-release-integration-2"></script>
+  <script src="syntax.js?v=20260826-release-integration-2"></script>
+  <script src="visualizations.js?v=20260826-release-integration-2"></script>
+  <script src="citations.js?v=20260826-release-integration-2"></script>
+  <script src="resource-mentions.js?v=20260826-release-integration-2"></script>
+  <script src="startup.js?v=20260826-release-integration-2"></script>
+  <script src="parallel-policy.js?v=20260826-release-integration-2"></script>
+  <script src="popover-position.js?v=20260826-release-integration-2"></script>
+  <script src="image-upload.js?v=20260826-release-integration-2"></script>
+  <script src="release-lifecycle.js?v=20260826-release-integration-2"></script>
+  <script src="app.js?v=20260826-release-integration-2"></script>
+  <script src="product-analytics.js?v=20260826-release-integration-2"></script>
+  <script src="audio.js?v=20260826-release-integration-2"></script>
 </body>
 </html>

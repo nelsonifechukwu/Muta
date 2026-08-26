@@ -196,6 +196,28 @@ class FakeSettingsStore:
         return message_id
 
 
+class _TrackedReplyEvents:
+    def __init__(self, iterator) -> None:
+        self._iterator = iter(iterator)
+        self.completion_states: list[str] = []
+        self.settled = threading.Event()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._iterator)
+
+    def close(self) -> None:
+        close = getattr(self._iterator, "close", None)
+        if callable(close):
+            close()
+
+    def set_completion(self, state: str) -> None:
+        self.completion_states.append(state)
+        self.settled.set()
+
+
 @pytest.fixture
 def wired():
     """Override the gateway's singletons; hand the test the objects it may poke."""
@@ -530,6 +552,68 @@ def test_streaming_turn_emits_reasoning_then_deltas_then_done(wired):
     assert '"done": true' in events[-1] and '"ttft_s"' in events[-1]
 
 
+def test_legacy_tutor_stream_durably_settles_complete_and_failed_replies(wired):
+    engine, *_ = wired
+
+    complete = _TrackedReplyEvents(iter([("content", "finished")]))
+    engine.stream_events_chat = lambda **_kwargs: ("legacy-complete", 1, complete)
+    response = client.post("/v1/tutor/chat/stream", json=turn("legacy-complete"))
+    assert response.status_code == 200 and '"done": true' in response.text
+    assert complete.completion_states == ["complete"]
+
+    def interrupted():
+        yield "content", "valid partial"
+        raise InferenceStreamError("relay ended", partial_text="valid partial")
+
+    failed = _TrackedReplyEvents(interrupted())
+    engine.stream_events_chat = lambda **_kwargs: ("legacy-failed", 1, failed)
+    response = client.post("/v1/tutor/chat/stream", json=turn("legacy-failed"))
+    assert response.status_code == 200 and '"error"' in response.text
+    assert failed.completion_states == ["failed"]
+
+
+def test_strict_tutor_stream_durably_settles_a_stopped_reply(wired, monkeypatch):
+    engine, *_ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    stream_entered = threading.Event()
+    allow_exit = threading.Event()
+
+    def blocking_events():
+        stream_entered.set()
+        yield "content", "valid partial"
+        assert allow_exit.wait(2.0)
+
+    events = _TrackedReplyEvents(blocking_events())
+    engine.stream_events_chat = lambda **_kwargs: ("strict-stop", 1, events)
+    monkeypatch.setattr(routes, "strict_share_security", lambda: True)
+    strict_client = TestClient(app)
+    result: dict[str, object] = {}
+
+    def request_stream() -> None:
+        result["response"] = strict_client.post(
+            "/v1/tutor/chat/stream",
+            headers={"Authorization": "Bearer s1"},
+            json=turn("strict-stop"),
+        )
+
+    request = threading.Thread(target=request_stream, daemon=True)
+    try:
+        request.start()
+        assert stream_entered.wait(0.5)
+        active = generations.active("s1")
+        assert len(active) == 1
+        job = generations.get(active[0].job_id, student_id="s1")
+        assert job is not None and job.request_stop() is True
+        allow_exit.set()
+        request.join(timeout=1.0)
+        assert not request.is_alive()
+        assert result["response"].status_code == 200
+        assert events.completion_states == ["stopped"]
+    finally:
+        allow_exit.set()
+        strict_client.close()
+
+
 def test_visual_json_chat_appends_and_updates_its_exact_assistant_row(wired, monkeypatch):
     engine, *_ = wired
     engine.chat = lambda **_kwargs: ChatResult(
@@ -826,6 +910,91 @@ def test_generation_start_hides_another_students_conversation(wired):
         json={"student_id": "s2", "conversation_id": "private", "message": "peek"},
     )
     assert response.status_code == 404
+
+
+def test_second_client_cannot_start_while_conversation_delete_drains_and_erases(wired):
+    engine, *_ = wired
+    generations = app.dependency_overrides[deps.get_generation_manager]()
+    conversation_id = "conv-delete-race"
+    engine.store.conversations[conversation_id] = {
+        "id": conversation_id,
+        "student_id": "s1",
+    }
+    stream_entered = threading.Event()
+    delete_entered = threading.Event()
+    allow_delete = threading.Event()
+
+    def cancellable_stream(**kwargs):
+        engine.calls.append(kwargs)
+        cancel_event = kwargs["cancel_event"]
+
+        def events():
+            stream_entered.set()
+            yield "content", "valid partial"
+            assert cancel_event.wait(2.0)
+
+        return conversation_id, 1, events()
+
+    def blocking_delete(selected: str, *, owner_id: str | None = None) -> bool:
+        assert selected == conversation_id and owner_id == "s1"
+        delete_entered.set()
+        assert allow_delete.wait(2.0)
+        return engine.store.conversations.pop(selected, None) is not None
+
+    engine.stream_events_chat = cancellable_stream
+    engine.store.delete_conversation = blocking_delete
+    headers = {"Authorization": "Bearer s1"}
+
+    first_client = TestClient(app)
+    second_client = TestClient(app)
+    try:
+        started = first_client.post(
+            "/v1/chat/generations",
+            headers=headers,
+            json={
+                "student_id": "s1",
+                "conversation_id": conversation_id,
+                "message": "start on my phone",
+            },
+        )
+        assert started.status_code == 202
+        assert stream_entered.wait(0.5)
+        result: dict[str, object] = {}
+
+        def delete_from_second_client() -> None:
+            result["response"] = second_client.delete(
+                f"/v1/conversations/{conversation_id}", headers=headers
+            )
+
+        deleting = threading.Thread(target=delete_from_second_client, daemon=True)
+        deleting.start()
+        assert delete_entered.wait(1.0)
+
+        raced_start = first_client.post(
+            "/v1/chat/generations",
+            headers=headers,
+            json={
+                "student_id": "s1",
+                "conversation_id": conversation_id,
+                "message": "race the delete",
+            },
+        )
+        assert raced_start.status_code == 409
+        assert "being deleted" in raced_start.json()["detail"]
+
+        allow_delete.set()
+        deleting.join(timeout=1.0)
+        assert not deleting.is_alive()
+        response = result["response"]
+        assert response.status_code == 200
+        job = generations.get(started.json()["job_id"], student_id="s1")
+        assert job is not None and job.snapshot().state == "stopped"
+        assert conversation_id not in engine.store.conversations
+        assert len(engine.calls) == 1
+    finally:
+        allow_delete.set()
+        first_client.close()
+        second_client.close()
 
 
 def test_disabled_parallel_setting_is_enforced_by_the_server(wired):

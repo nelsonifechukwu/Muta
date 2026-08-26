@@ -106,6 +106,90 @@ def test_stop_signals_the_producers_interruptible_retry_wait():
     assert job.snapshot().state == "stopped"
 
 
+def test_stop_before_first_token_settles_and_allows_the_next_turn():
+    cancel = threading.Event()
+    entered = threading.Event()
+
+    def silent_until_cancelled():
+        entered.set()
+        assert cancel.wait(1.0)
+        if False:  # keep this a generator while proving that no content escaped
+            yield 'data: {"delta": "unreachable"}\n\n'
+
+    manager = GenerationManager(max_active=1, max_queued=1)
+    first = manager.start(
+        student_id="ada",
+        conversation_id="same-chat",
+        producer=silent_until_cancelled(),
+        cancel_event=cancel,
+    )
+    assert entered.wait(0.2)
+    assert first.request_stop() is True
+    assert first.request_stop() is True  # repeated Stop while draining is idempotent
+    assert first.wait(timeout_s=0.5) == "stopped"
+    replay = list(first.subscribe())
+    assert any('"stopped": true' in frame for frame in replay)
+    assert not any("unreachable" in frame for frame in replay)
+
+    next_turn = manager.start(
+        student_id="ada",
+        conversation_id="same-chat",
+        producer=iter(['data: {"delta": "next"}\n\n', 'data: {"done": true}\n\n']),
+    )
+    assert next_turn.wait(timeout_s=0.5) == "completed"
+    assert any("next" in frame for frame in next_turn.subscribe())
+
+
+def test_late_stop_persists_the_terminal_state_chosen_by_the_job():
+    done_buffered = threading.Event()
+    allow_close = threading.Event()
+    persisted: list[str] = []
+
+    def producer():
+        try:
+            yield 'data: {"delta": "valid partial"}\n\n'
+            yield 'data: {"done": true}\n\n'
+        finally:
+            # GenerationJob has consumed and buffered done, but has not chosen its state.
+            done_buffered.set()
+            assert allow_close.wait(1.0)
+
+    job = GenerationManager().start(
+        student_id="ada",
+        conversation_id="late-stop",
+        producer=producer(),
+        on_completion_state=lambda state: persisted.append(state),
+    )
+    assert done_buffered.wait(0.5)
+
+    assert job.request_stop() is True
+    allow_close.set()
+
+    assert job.wait(timeout_s=0.5) == "stopped"
+    assert persisted == ["stopped"]
+    assert not any(
+        '"done": true' in frame and '"stopped"' not in frame for frame in job.subscribe()
+    )
+
+
+def test_terminal_worker_failure_preserves_partial_and_marks_recovery_evidence():
+    def fails_after_partial():
+        yield 'data: {"delta": "valid partial"}\n\n'
+        raise RuntimeError("relay upstream ended")
+
+    job = GenerationManager().start(
+        student_id="ada",
+        conversation_id="interrupted",
+        producer=fails_after_partial(),
+    )
+    assert job.wait(timeout_s=0.5) == "failed"
+    replay = list(job.subscribe())
+
+    assert any("valid partial" in frame for frame in replay)
+    assert any('"terminal": true' in frame and '"recoverable": true' in frame for frame in replay)
+    assert any('"done": true' in frame and '"failed": true' in frame for frame in replay)
+
+
 def test_registry_never_exposes_another_students_job():
     manager = GenerationManager()
     private = manager.start(

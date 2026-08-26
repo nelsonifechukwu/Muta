@@ -863,7 +863,12 @@ paths:
       description: 'Delete one of the caller''s own threads. 404 (not a false success) when the caller
         does
 
-        not own it or it does not exist — a client cannot destroy another student''s history.'
+        not own it or it does not exist — a client cannot destroy another student''s history.
+
+
+        Deletion is also a server-side generation barrier: another tab/device cannot keep a reply
+
+        running, or start a new one, while the durable conversation rows are being removed.'
       operationId: conversation_delete_v1_conversations__conversation_id__delete
       parameters:
       - name: conversation_id
@@ -2993,6 +2998,18 @@ components:
         created_at:
           type: string
           title: Created At
+        completion_state:
+          anyOf:
+          - type: string
+            enum:
+            - complete
+            - streaming
+            - failed
+            - stopped
+          - type: 'null'
+          title: Completion State
+          description: How an assistant row ended. Null is a legacy completed row; streaming means a persisted
+            partial whose owning process ended before terminal settlement.
         attachments:
           items:
             $ref: '#/components/schemas/AttachmentRef'

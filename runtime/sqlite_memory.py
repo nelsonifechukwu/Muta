@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS messages (
     conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     role            TEXT NOT NULL,
     content         TEXT NOT NULL,
-    created_at      TEXT NOT NULL
+    created_at      TEXT NOT NULL,
+    completion_state TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, id);
 CREATE INDEX IF NOT EXISTS idx_conversations_student
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS message_sources (
 CREATE INDEX IF NOT EXISTS idx_message_sources_message ON message_sources(message_id, id);
 """
 
-_LATEST_SCHEMA_VERSION = 4
+_LATEST_SCHEMA_VERSION = 5
 
 
 def _now() -> str:
@@ -148,6 +149,20 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
             conn.execute("ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
         conn.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)", (4, _now())
+        )
+    if 5 not in applied:
+        conversation_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(conversations)").fetchall()
+        }
+        if "pinned" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+        message_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(messages)").fetchall()
+        }
+        if "completion_state" not in message_columns:
+            conn.execute("ALTER TABLE messages ADD COLUMN completion_state TEXT")
+        conn.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)", (5, _now())
         )
     conn.commit()
 
@@ -244,13 +259,23 @@ class SQLiteConversationStore:
                 (title, conversation_id),
             )
 
-    def add_message(self, conversation_id: str, role: str, content: str) -> int:
+    def add_message(
+        self,
+        conversation_id: str,
+        role: str,
+        content: str,
+        *,
+        completion_state: str | None = None,
+    ) -> int:
         ts = _now()
+        if completion_state not in {None, "complete", "streaming", "failed", "stopped"}:
+            raise ValueError(f"unsupported message completion state: {completion_state}")
         with self._lock, self._conn:
             cur = self._conn.execute(
-                "INSERT INTO messages (conversation_id, role, content, created_at) "
-                "VALUES (?, ?, ?, ?)",
-                (conversation_id, role, content, ts),
+                "INSERT INTO messages "
+                "(conversation_id, role, content, created_at, completion_state) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (conversation_id, role, content, ts, completion_state),
             )
             self._conn.execute(
                 "UPDATE conversations SET updated_at = ? WHERE id = ?", (ts, conversation_id)
@@ -318,6 +343,15 @@ class SQLiteConversationStore:
                 (ts, row["conversation_id"]),
             )
 
+    def set_message_completion(self, message_id: int, state: str) -> None:
+        if state not in {"complete", "streaming", "failed", "stopped"}:
+            raise ValueError(f"unsupported message completion state: {state}")
+        with self._lock, self._conn:
+            self._conn.execute(
+                "UPDATE messages SET completion_state = ? WHERE id = ? AND role = 'assistant'",
+                (state, message_id),
+            )
+
     def get_messages(self, conversation_id: str, limit: int | None = None) -> list[dict]:
         with self._lock:
             if limit is None:
@@ -347,7 +381,7 @@ class SQLiteConversationStore:
     def list_messages(self, conversation_id: str) -> list[dict]:
         with self._lock:
             messages = self._conn.execute(
-                "SELECT id, role, content, created_at FROM messages "
+                "SELECT id, role, content, created_at, completion_state FROM messages "
                 "WHERE conversation_id = ? ORDER BY id ASC",
                 (conversation_id,),
             ).fetchall()

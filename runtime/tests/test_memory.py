@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from runtime.memory import ConversationStore
+from runtime.memory import _MIGRATIONS, ConversationStore
+
+
+def test_release_schema_reconciliation_covers_both_version_four_lineages():
+    version, sql = _MIGRATIONS[-1]
+    assert version == 5
+    assert "conversations ADD COLUMN IF NOT EXISTS pinned" in sql
+    assert "messages ADD COLUMN IF NOT EXISTS completion_state" in sql
 
 
 def test_messages_round_trip_in_order(store: ConversationStore):
@@ -126,6 +133,22 @@ def test_list_messages_includes_ids_and_attachment_refs(store: ConversationStore
     assert msgs[0]["id"] == m1
     assert msgs[0]["attachments"] == [{"id": aid, "kind": "image", "mime": "image/jpeg"}]
     assert msgs[1]["attachments"] == []
+
+
+def test_assistant_completion_state_is_durable_and_legacy_rows_remain_complete(store):
+    cid = store.create_conversation("s1")
+    legacy = store.add_message(cid, "assistant", "already complete")
+    partial = store.add_message(
+        cid,
+        "assistant",
+        "saved partial",
+        completion_state="streaming",
+    )
+    store.set_message_completion(partial, "failed")
+
+    messages = store.list_messages(cid)
+    assert messages[0]["id"] == legacy and messages[0]["completion_state"] is None
+    assert messages[1]["id"] == partial and messages[1]["completion_state"] == "failed"
 
 
 def test_set_title_only_when_unset(store: ConversationStore):
