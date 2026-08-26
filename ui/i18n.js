@@ -47,7 +47,7 @@
       "settings.languageHelp": "Sets Muta’s response language. Complete interface translations change the menus too. Auto follows your browser for the interface and your latest message for each reply.",
       "settings.general": "General",
       "settings.parallel": "Generate in multiple chats",
-      "settings.parallelHelp": "Keep one reply running while you start another. Parallel replies share the local CPU and may each run more slowly.",
+      "settings.parallelHelp": "Parallel replies share same CPU and RAM. Queue queries to optimize resources.",
       "settings.limits": "Muta stays within the operator’s fixed inference-slot and memory limits.",
       "settings.saveFailed": "Couldn’t save that setting.",
       "runtime.offlineLocal": "offline · local CPU",
@@ -198,6 +198,19 @@
     },
   };
 
+  // New English source strings live outside the completeness-checked catalogs until the
+  // translation pass updates every supported pack. They are still addressed exclusively by
+  // i18n keys, while existing complete locale packs remain available and fall back to English.
+  const additiveEnglishCatalog = Object.freeze({
+    "settings.appearance": "Appearance",
+    "settings.themeSystem": "System",
+    "settings.themeLight": "Light",
+    "settings.themeDark": "Dark",
+    "settings.powerSection": "Power",
+    "settings.power": "Muta power optimization",
+    "settings.powerHelp": "On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.",
+  });
+
   function safeStorageGet(key) {
     try {
       return globalThis.localStorage?.getItem(key) || null;
@@ -281,7 +294,10 @@
 
   function t(key, variables = {}, locale = currentLocale) {
     const normalized = normalizeLocale(locale) || DEFAULT_LOCALE;
-    const value = catalogs[normalized]?.[key] ?? catalogs[DEFAULT_LOCALE][key] ?? key;
+    const value = catalogs[normalized]?.[key]
+      ?? catalogs[DEFAULT_LOCALE][key]
+      ?? additiveEnglishCatalog[key]
+      ?? key;
     return interpolate(value, variables);
   }
 
@@ -431,6 +447,7 @@
     DEFAULT_LOCALE,
     AUTO_LANGUAGE,
     catalogs,
+    additiveEnglishCatalog,
     localeDefinitions,
     africaRegistry,
     interfaceLocaleManifest,

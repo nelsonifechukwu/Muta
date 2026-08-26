@@ -214,13 +214,12 @@
         </label>
         <label class="settings-row" for="setting-theme" lang="en">
           <span>
-            <strong>Appearance</strong>
-            <small>Use your device setting, or keep Muta in light or dark mode.</small>
+            <strong data-i18n="settings.appearance">Appearance</strong>
           </span>
-          <select id="setting-theme" aria-label="Appearance">
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
+          <select id="setting-theme" aria-label="Appearance" data-i18n-aria-label="settings.appearance">
+            <option value="system" data-i18n="settings.themeSystem">System</option>
+            <option value="light" data-i18n="settings.themeLight">Light</option>
+            <option value="dark" data-i18n="settings.themeDark">Dark</option>
           </select>
         </label>
       </div>
@@ -229,21 +228,21 @@
         <label class="settings-row" for="setting-parallel-chats">
           <span>
             <strong data-i18n="settings.parallel">Generate in multiple chats</strong>
-            <small data-i18n="settings.parallelHelp">Keep one reply running while you start another. Parallel replies share the local CPU and may each run more slowly.</small>
+            <small data-i18n="settings.parallelHelp">Parallel replies share same CPU and RAM. Queue queries to optimize resources.</small>
           </span>
           <input id="setting-parallel-chats" type="checkbox" role="switch" checked>
         </label>
       </div>
-      <div class="settings-section power-settings" lang="en">
-        <h3>Power</h3>
-        <label class="settings-row" for="setting-power-optimization">
+      <div class="settings-section power-settings">
+        <h3 data-i18n="settings.powerSection" lang="en">Power</h3>
+        <label class="settings-row" for="setting-power-optimization" lang="en">
           <span>
-            <strong>Muta power optimization</strong>
-            <small>On battery, Muta uses bounded automatic reasoning and shorter replies. Explicit Extended reasoning and assessed work keep their full budget.</small>
+            <strong data-i18n="settings.power">Muta power optimization</strong>
+            <small data-i18n="settings.powerHelp">On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.</small>
           </span>
           <input id="setting-power-optimization" type="checkbox" role="switch" checked>
         </label>
-        <div id="power-status" class="power-status" aria-live="polite">
+        <div id="power-status" class="power-status" aria-live="polite" lang="en">
           <div class="power-status-heading">
             <span id="power-status-dot" class="power-status-dot"></span>
             <strong id="power-status-mode">Checking host power…</strong>
@@ -349,6 +348,7 @@
   <script src="visualizations.js?v=20260826-reasoning-menu-1"></script>
   <script src="citations.js?v=20260826-reasoning-menu-1"></script>
   <script src="resource-mentions.js?v=20260826-reasoning-menu-1"></script>
+  <script src="parallel-policy.js?v=20260826-release-power-copy-1"></script>
   <script src="popover-position.js?v=20260826-reasoning-menu-1"></script>
   <script src="image-upload.js?v=20260826-reasoning-menu-1"></script>
   <script src="app.js?v=20260826-reasoning-menu-1"></script>
