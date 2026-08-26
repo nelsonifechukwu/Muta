@@ -391,7 +391,9 @@ def _vector_addition_animation_spec(
     first_delta = (first_xy[0] - origin_xy[0], first_xy[1] - origin_xy[1])
     second_delta = (total_xy[0] - first_xy[0], total_xy[1] - first_xy[1])
     total_delta = (total_xy[0] - origin_xy[0], total_xy[1] - origin_xy[1])
-    midpoint = lambda left, right: round((left + right) / 2, 3)
+    def midpoint(left: float, right: float) -> float:
+        return round((left + right) / 2, 3)
+
     repeat = _animation_repeat(request)
     return {
         "version": 1,
