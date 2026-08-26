@@ -46,6 +46,14 @@ def test_exact_latex_surface_is_normalized_without_losing_precedence() -> None:
     )
 
 
+def test_exact_unicode_surface_with_a_presentation_suffix_stays_deterministic() -> None:
+    source = extract_surface_expression("Plot z=4e^{−y²/4}sin(2x) as a 3D surface.")
+    assert source == "4e^{−y²/4}sin(2x)"
+    tree = parse_surface_expression(source)
+    assert format_surface_expression(tree) == "4·e^(−y²/4)·sin(2·x)"
+    assert evaluate_surface_expression(tree, x=math.pi / 4, y=0) == pytest.approx(4)
+
+
 @pytest.mark.parametrize(
     "prompt_text",
     [

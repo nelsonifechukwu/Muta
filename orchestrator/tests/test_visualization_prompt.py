@@ -364,6 +364,22 @@ def test_exact_surface_generation_skips_model_for_initial_and_anaphoric_turns() 
     assert local.calls == [] and engine.fit_calls == []
 
 
+def test_exact_unicode_surface_prompt_skips_the_model_pass() -> None:
+    local = _RecordingVisualClient({"objects": [{"type": "sphere"}]})
+    engine = _VisualEngine(local)
+
+    spec = generate_visualization(
+        engine,
+        "Plot z=4e^{−y²/4}sin(2x) as a 3D surface.",
+        "The requested surface combines oscillation and exponential decay.",
+    )
+
+    assert spec is not None
+    assert spec["objects"][0]["type"] == "surface"
+    assert spec["objects"][0]["expression_text"] == "z = 4·e^(−y²/4)·sin(2·x)"
+    assert local.calls == [] and engine.fit_calls == []
+
+
 def test_standard_science_visuals_are_deterministic_and_semantically_exact() -> None:
     phase = _phase_shift_spec("Show a sine wave shifted by 180 degrees.")
     assert len(phase["series"]) == 2

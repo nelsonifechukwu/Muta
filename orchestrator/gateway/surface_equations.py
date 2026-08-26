@@ -59,6 +59,15 @@ def extract_surface_expression(text: str) -> str | None:
         return None
     tail = value[match.end() :]
     tail = tail.split("\n\nFOLLOW-UP VISUAL REQUEST:", 1)[0]
+    # Natural-language prompt suffixes describe the requested presentation, not the equation.
+    # Keep this deliberately narrow so ordinary expression names are never guessed away.
+    tail = re.split(
+        r"\s+(?=(?:as\s+(?:an?\s+)?)?(?:interactive\s+)?"
+        r"(?:(?:3d|three[- ]dimensional)\s+)?(?:surface|plot|graph|diagram)\b)",
+        tail,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0]
     quote_positions = [position for quote in ('"', "'", "`") if (position := tail.find(quote)) >= 0]
     if quote_positions:
         tail = tail[: min(quote_positions)]
