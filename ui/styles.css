@@ -649,7 +649,7 @@ details.thinking {
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  details.thinking, details.thinking .think-dot { animation: none; }
+  details.thinking, details.thinking .think-dot, .think-menu { animation: none; }
 }
 details.thinking summary {
   cursor: pointer; user-select: none; list-style: none;
@@ -707,9 +707,11 @@ details.thinking .thought {
 .think-btn .think-current { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
 .think-btn svg { width: 17px; height: 17px; }
 .think-menu {
-  position: absolute; bottom: calc(100% + 8px); inset-inline-start: 0; z-index: 30;
+  position: fixed; inset: auto; z-index: 65;
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: var(--popover-shadow); padding: 5px; min-width: 15rem;
+  max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px);
+  overflow-y: auto; overscroll-behavior: contain;
   animation: think-appear 0.16s ease both;
 }
 .think-menu button {

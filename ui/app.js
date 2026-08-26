@@ -2232,7 +2232,11 @@ window.addEventListener("keydown", (e) => {
       return;
     }
     const menu = $("#think-menu");
-    if (menu && !menu.hidden) return openThinkMenu(false); // close the menu before stopping
+    if (menu && !menu.hidden) {
+      openThinkMenu(false); // close the menu before stopping
+      $("#btn-think")?.focus();
+      return;
+    }
     stopGeneration(); // no-op unless a chat stream is running
   }
 });
@@ -4059,6 +4063,7 @@ window.addEventListener("popstate", () => {
 const thinkBtn = $("#btn-think");
 const thinkMenu = $("#think-menu");
 const thinkCurrent = $("#think-current");
+const positionAnchoredPopover = window.MutaPopoverPosition?.anchoredPopoverPosition;
 const thinkingLabel = (level) => t(`reason.${level === "off" || level === "extended" ? level : "auto"}`);
 function applyThinkingLabel() {
   thinkCurrent.textContent = thinkingLabel(thinkingLevel);
@@ -4067,13 +4072,50 @@ function applyThinkingLabel() {
     b.classList.toggle("active", b.dataset.level === thinkingLevel);
   });
 }
-function openThinkMenu(open) {
+function positionThinkMenu() {
+  if (thinkMenu.hidden || !positionAnchoredPopover) return;
+  const viewport = window.visualViewport;
+  const box = {
+    left: viewport?.offsetLeft || 0,
+    top: viewport?.offsetTop || 0,
+    width: viewport?.width || window.innerWidth,
+    height: viewport?.height || window.innerHeight,
+  };
+  const position = positionAnchoredPopover(
+    thinkBtn.getBoundingClientRect(),
+    thinkMenu.getBoundingClientRect(),
+    box,
+    { direction: getComputedStyle(thinkBtn).direction },
+  );
+  thinkMenu.style.left = `${position.left}px`;
+  thinkMenu.style.top = `${position.top}px`;
+  thinkMenu.dataset.placement = position.placement;
+}
+function openThinkMenu(open, { focus = null } = {}) {
   thinkMenu.hidden = !open;
   thinkBtn.setAttribute("aria-expanded", String(open));
+  if (!open) return;
+  positionThinkMenu();
+  const options = [...thinkMenu.querySelectorAll("[data-level]")];
+  if (focus) options[focus === "last" ? options.length - 1 : 0]?.focus();
 }
-thinkBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  openThinkMenu(thinkMenu.hidden);
+thinkBtn.addEventListener("click", (event) => {
+  event.stopPropagation();
+  // Native keyboard activation emits a zero-detail click. Pointer users keep focus on the
+  // trigger; keyboard users enter the document-level menu instead of tabbing past it.
+  openThinkMenu(thinkMenu.hidden, { focus: event.detail === 0 ? "first" : null });
+});
+thinkBtn.addEventListener("keydown", (event) => {
+  const opensMenu = event.key === "ArrowDown"
+    || event.key === "ArrowUp"
+    || event.key === "Enter"
+    || event.key === " ";
+  if (!opensMenu) return;
+  event.preventDefault();
+  const toggle = event.key === "Enter" || event.key === " ";
+  openThinkMenu(toggle ? thinkMenu.hidden : true, {
+    focus: event.key === "ArrowUp" ? "last" : "first",
+  });
 });
 thinkMenu.querySelectorAll("[data-level]").forEach((b) => {
   b.addEventListener("click", () => {
@@ -4081,12 +4123,34 @@ thinkMenu.querySelectorAll("[data-level]").forEach((b) => {
     localStorage.setItem("muta-thinking", thinkingLevel);
     applyThinkingLabel();
     openThinkMenu(false);
+    thinkBtn.focus();
     toast(t("reason.changed", { level: thinkingLabel(thinkingLevel) }), 2000);
   });
 });
-document.addEventListener("click", (e) => {
-  if (!thinkMenu.hidden && !e.target.closest(".think-select")) openThinkMenu(false);
+thinkMenu.addEventListener("keydown", (e) => {
+  const options = [...thinkMenu.querySelectorAll("[data-level]")];
+  const current = options.indexOf(document.activeElement);
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    openThinkMenu(false);
+    thinkBtn.focus();
+  } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+    e.preventDefault();
+    const next = e.key === "Home" ? 0
+      : e.key === "End" ? options.length - 1
+      : (current + (e.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
+    options[next]?.focus();
+  }
 });
+document.addEventListener("click", (e) => {
+  if (!thinkMenu.hidden && !thinkMenu.contains(e.target) && !thinkBtn.contains(e.target)) {
+    openThinkMenu(false);
+  }
+});
+window.addEventListener("resize", positionThinkMenu);
+window.visualViewport?.addEventListener("resize", positionThinkMenu);
+window.visualViewport?.addEventListener("scroll", positionThinkMenu);
 applyThinkingLabel();
 
 // --- web grounding toggle ---------------------------------------------------------------

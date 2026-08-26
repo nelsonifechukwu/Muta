@@ -222,6 +222,41 @@ def test_mobile_keyboard_and_large_composer_regions_remain_bounded():
     assert re.search(r"min-height\s*:\s*4\.6rem", compact_composer)
 
 
+def test_reasoning_menu_escapes_the_clipped_composer_and_tracks_its_trigger():
+    composer_start = HTML.index('<div id="composer-wrap">')
+    composer_end = HTML.index("</main>", composer_start)
+    composer_markup = HTML[composer_start:composer_end]
+    assert 'id="think-menu"' not in composer_markup
+    assert 'id="btn-think"' in composer_markup
+    assert 'aria-controls="think-menu"' in composer_markup
+
+    menu = "".join(_blocks(".think-menu"))
+    assert re.search(r"position\s*:\s*fixed", menu)
+    assert re.search(r"z-index\s*:\s*65", menu)
+    assert re.search(r"max-height\s*:", menu)
+    assert re.search(r"overflow-y\s*:\s*auto", menu)
+
+    js = (UI / "app.js").read_text()
+    assert "window.MutaPopoverPosition?.anchoredPopoverPosition" in js
+    assert "thinkBtn.getBoundingClientRect()" in js
+    assert "thinkMenu.getBoundingClientRect()" in js
+    assert 'window.visualViewport?.addEventListener("resize", positionThinkMenu)' in js
+    assert 'window.visualViewport?.addEventListener("scroll", positionThinkMenu)' in js
+    assert 'if (e.key === "Escape")' in js
+    assert 'event.detail === 0 ? "first" : null' in js
+    assert 'event.key === "Enter"' in js
+    assert 'event.key === " "' in js
+    assert 'focus: event.key === "ArrowUp" ? "last" : "first"' in js
+    escape_start = js.index('window.addEventListener("keydown"')
+    escape_end = js.index('window.addEventListener("drop"', escape_start)
+    escape_handler = js[escape_start:escape_end]
+    assert escape_handler.index('const menu = $("#think-menu")') < escape_handler.index(
+        "stopGeneration()"
+    )
+    assert '$("#btn-think")?.focus()' in escape_handler
+    assert "e.stopPropagation()" in js[js.index('thinkMenu.addEventListener("keydown"') :]
+
+
 def test_chat_generation_is_server_owned_and_recovered_after_reload():
     js = (UI / "app.js").read_text()
     assert 'fetch("/v1/chat/generations"' in js, "UI must start a durable gateway job"
@@ -748,10 +783,10 @@ def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
     versions = re.findall(
-        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|image-upload\.js|app\.js|audio\.js)\?v=([^"]+)"',
+        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|popover-position\.js|image-upload\.js|app\.js|audio\.js)\?v=([^"]+)"',
         HTML,
     )
-    assert len(versions) == 6
+    assert len(versions) == 7
     assert len(set(versions)) == 1
     assert re.search(r'src="i18n\.js\?v=([^"]+)"', HTML).group(1) == versions[0]
 
