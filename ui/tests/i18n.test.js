@@ -16,8 +16,8 @@ require("../africa-languages.js");
 require("../locale-manifest.js");
 require("../i18n.js");
 require("../locale-fr.js");
-require("../locale-generated.js");
 require("../locales.js");
+require("../locale-generated.js");
 
 const i18n = globalThis.MutaI18n;
 const generatedMetadata = require("../locale-generated.meta.json");
@@ -64,7 +64,7 @@ function fakeDocument(elementsBySelector = {}) {
 test("only complete packs localize the interface", () => {
   const required = Object.keys(i18n.catalogs.en).sort();
   const supported = i18n.supportedDefinitions();
-  assert.equal(supported.length, 28);
+  assert.equal(supported.length, 27);
   assert.deepEqual(
     supported.map((locale) => ({ tag: locale.tag, direction: locale.direction })),
     i18n.interfaceLocaleManifest,
@@ -86,59 +86,42 @@ test("only complete packs localize the interface", () => {
   }
 });
 
-test("additive settings copy stays keyed without hiding complete locale packs", () => {
+test("release settings copy is canonical and translated in complete locale packs", () => {
   const supported = i18n.supportedDefinitions().map((locale) => locale.tag);
-  assert.equal(
-    i18n.t("settings.powerHelp", {}, "fr"),
-    "On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.",
-  );
+  assert.notEqual(i18n.t("settings.powerHelp", {}, "fr"), i18n.catalogs.en["settings.powerHelp"]);
   assert.equal(i18n.t("settings.appearance", {}, "en"), "Appearance");
-  assert.equal(
+  assert.notEqual(
     i18n.t("settings.analyticsHelp", {}, "fr"),
-    "Help us improve Muta by sharing your analytics.",
+    i18n.catalogs.en["settings.analyticsHelp"],
   );
-  assert.equal(Object.hasOwn(i18n.catalogs.en, "settings.powerHelp"), false);
-  assert.equal(Object.hasOwn(i18n.additiveEnglishCatalog, "settings.powerHelp"), true);
-  assert.equal(Object.hasOwn(i18n.additiveEnglishCatalog, "settings.analyticsHelp"), true);
+  assert.equal(Object.hasOwn(i18n.catalogs.en, "settings.powerHelp"), true);
+  assert.deepEqual(i18n.additiveEnglishCatalog, {});
   assert.equal(Object.hasOwn(i18n.catalogs.fr, "settings.limits"), false);
-  assert.equal(supported.length, 28);
+  assert.equal(supported.length, 27);
 });
 
-test("release-only English fallbacks are explicit, narrow, and placeholder safe", () => {
-  const expected = [
-    "startup.tagline", "startup.opening", "startup.verifying", "startup.packReady",
-    "startup.starting", "startup.retrying", "startup.connecting", "startup.openingData",
-    "startup.loadingTutor", "startup.finishing", "startup.ready", "startup.failed",
-    "startup.retry", "startup.progress", "conversation.pin", "conversation.unpin",
-    "conversation.pinned", "conversation.chats", "conversation.deleteTitle",
-    "conversation.deleteBody", "conversation.cancel", "conversation.confirmDelete",
-    "conversation.deleteFailed", "conversation.pinFailed", "code.copy", "code.copied",
-    "code.copyFailed", "code.plain",
-  ].sort();
-  assert.deepEqual([...i18n.ENGLISH_FALLBACK_KEYS].sort(), expected);
-  for (const locale of i18n.supportedDefinitions()) {
-    if (locale.tag === "en") continue;
-    for (const key of expected) {
-      assert.equal(i18n.catalogs[locale.tag][key], i18n.catalogs.en[key], `${locale.tag}:${key}`);
-    }
-  }
+test("release catalogs expose no English fallback allow-list", () => {
+  assert.deepEqual([...i18n.ENGLISH_FALLBACK_KEYS], []);
 });
 
 test("machine-assisted packs retain provenance and hide every rejected registry tag", () => {
   const generatedTags = Object.keys(generatedMetadata.generated);
   const hiddenTags = Object.keys(generatedMetadata.hidden);
-  assert.equal(generatedTags.length, 22);
-  assert.equal(hiddenTags.length, 58);
+  assert.equal(generatedTags.length, 21);
+  assert.equal(hiddenTags.length, 59);
   assert.equal(new Set([...generatedTags, ...hiddenTags]).size, 80);
   for (const tag of generatedTags) {
     const record = generatedMetadata.generated[tag];
     assert.match(record.provenance, /^(google-web(?:\+nllb:.*)?|nllb:)/);
-    assert.equal(record.review, "machine-assisted-unreviewed");
+    assert.equal(record.review, "machine-assisted-spot-reviewed");
     assert.equal(record.target.split("_", 1)[0], tag.split("-", 1)[0]);
     assert.ok(i18n.supportedDefinitions().some((locale) => locale.tag === tag));
     const catalog = i18n.catalogs[tag];
     for (const [key, value] of Object.entries(catalog)) {
-      assert.doesNotMatch(value, /ZXQMUTA|86\d{8}|Translating\.\.\.|Translation results/);
+      assert.doesNotMatch(
+        value,
+        /ZXQMUTA|86\d{8}|Translating\.\.\.|Translation results|\bstar_border\b/i,
+      );
       assert.doesNotMatch(value, /(?:^|\s)\d{3,4}\s*[:፡]/u, `${tag}:${key} merged row`);
       assert.doesNotMatch(
         value,
@@ -168,6 +151,9 @@ test("machine-assisted packs retain provenance and hide every rejected registry 
     }
     assert.notEqual(catalog["model.readyNew"].trim(), catalog["model.ready"].trim());
     assert.notEqual(catalog["settings.saveFailed"].trim(), catalog["voice.didNotCatch"].trim());
+  }
+  for (const record of Object.values(generatedMetadata.overlays)) {
+    assert.equal(record.review, "machine-assisted-spot-reviewed");
   }
   for (const tag of hiddenTags) {
     assert.ok(i18n.normalizeKnownLocale(tag), `${tag} must remain registered internally`);
@@ -407,17 +393,17 @@ test("every translation key used by authored markup exists and localization load
   assert.ok(keys.length > 30);
   for (const key of keys) {
     assert.ok(
-      Object.hasOwn(i18n.catalogs.en, key)
-        || Object.hasOwn(i18n.additiveEnglishCatalog, key),
+      Object.hasOwn(i18n.catalogs.en, key),
       `missing ${key}`,
     );
   }
   const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((match) => match[1]);
-  assert.ok(scripts[0].startsWith("theme.js"));
-  assert.ok(scripts[1].startsWith("access-bootstrap.js"));
-  assert.ok(scripts[2].startsWith("africa-languages.js"));
-  assert.ok(scripts[3].startsWith("locale-manifest.js"));
-  assert.ok(scripts[4].startsWith("locale-bootstrap.js"));
+  assert.ok(scripts[0].startsWith("release-english.js"));
+  assert.ok(scripts[1].startsWith("theme.js"));
+  assert.ok(scripts[2].startsWith("access-bootstrap.js"));
+  assert.ok(scripts[3].startsWith("africa-languages.js"));
+  assert.ok(scripts[4].startsWith("locale-manifest.js"));
+  assert.ok(scripts[5].startsWith("locale-bootstrap.js"));
   const africaIndex = scripts.findIndex((source) => source.startsWith("africa-languages.js"));
   const manifestIndex = scripts.findIndex((source) => source.startsWith("locale-manifest.js"));
   const bootstrapIndex = scripts.findIndex((source) => source.startsWith("locale-bootstrap.js"));
@@ -442,7 +428,7 @@ test("every translation key used by authored markup exists and localization load
   assert.ok(i18nIndex < frenchIndex);
   assert.ok(frenchIndex < localesIndex);
   assert.ok(frenchIndex < generatedIndex);
-  assert.ok(generatedIndex < localesIndex);
+  assert.ok(localesIndex < generatedIndex);
   assert.ok(i18nIndex < localesIndex);
   assert.ok(localesIndex < appIndex);
 });

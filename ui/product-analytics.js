@@ -11,18 +11,21 @@
   const decline = document.querySelector("#product-consent-decline");
   const error = document.querySelector("#product-consent-error");
   const app = document.querySelector("#app");
+  const t = (key, variables) => window.MutaI18n.t(key, variables);
   let lastFocus = null;
   let current = null;
 
   function statusText(status) {
-    if (status.deletion_pending) return "Deletion is queued and will complete when this laptop is online.";
+    if (status.deletion_pending) return t("privacy.deletionQueued");
     if (status.consent === "granted") {
       return status.last_synced_at
-        ? `Sharing is on · last synced ${new Date(status.last_synced_at).toLocaleString()}`
-        : "Sharing is on · waiting for the next internet connection.";
+        ? t("privacy.synced", {
+          date: new Date(status.last_synced_at).toLocaleString(window.MutaI18n.locale),
+        })
+        : t("privacy.waitingOnline");
     }
-    if (status.consent === "declined") return "Sharing is off. Muta stays fully offline-capable.";
-    return "No choice has been saved yet.";
+    if (status.consent === "declined") return t("privacy.offline");
+    return t("privacy.noChoice");
   }
 
   function render(status) {
@@ -74,8 +77,8 @@
       render(await response.json());
       closeModal();
     } catch {
-      if (!modal.hidden) error.textContent = "Muta could not save that choice. Please try again.";
-      else state.textContent = "Muta could not save that privacy setting. Please try again.";
+      if (!modal.hidden) error.textContent = t("privacy.saveChoiceFailed");
+      else state.textContent = t("privacy.saveSettingFailed");
       toggle.checked = current?.consent === "granted";
     } finally {
       allow.disabled = false;
@@ -87,6 +90,9 @@
   allow.addEventListener("click", () => void save(true));
   decline.addEventListener("click", () => void save(false));
   toggle.addEventListener("change", () => void save(toggle.checked));
+  document.addEventListener("muta:localechange", () => {
+    if (current) render(current);
+  });
   modal.addEventListener("keydown", (event) => {
     if (event.key !== "Tab") return;
     const focusable = [decline, allow].filter((button) => !button.disabled);

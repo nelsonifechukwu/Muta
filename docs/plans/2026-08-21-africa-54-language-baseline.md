@@ -27,8 +27,9 @@ basis/source and regional review.
   tags with complete accepted UI catalogs; those visible choices also set response language.
 - Keep country coverage and review status in project documentation rather than adding planning
   information to the learner-facing Settings panel.
-- Record community-review status independently. Machine-generated or unreviewed copy must never
-  be labelled complete.
+- Record community-review status independently. Unreviewed machine output must never be labelled
+  complete; machine-assisted copy may become interface-ready only after structural validation,
+  residue/script checks, and a documented spot review. Native review remains a separate status.
 
 ## Implementation
 

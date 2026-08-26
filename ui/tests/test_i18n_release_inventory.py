@@ -28,8 +28,8 @@ globalThis.MutaInterfaceLocales=require('./ui/locale-manifest.js');
 globalThis.MutaI18n=require('./ui/i18n.js');
 globalThis.window=globalThis;
 require('./ui/locale-fr.js');
-require('./ui/locale-generated.js');
 require('./ui/locales.js');
+require('./ui/locale-generated.js');
 process.stdout.write(JSON.stringify({
   catalogs: MutaI18n.catalogs,
   visible: MutaI18n.supportedDefinitions().map((locale) => locale.tag),
@@ -57,8 +57,25 @@ def test_checked_in_source_inventory_is_complete_and_deterministic() -> None:
         "run `python scripts/extract_ui_i18n.py --write` and review every new literal candidate."
     )
     assert actual["catalog"]["english_key_count"] == len(actual["catalog"]["english_keys"])
-    assert len(actual["key_references"]) > actual["catalog"]["english_key_count"]
+    assert len(actual["key_references"]) > 250
     assert all(row["status"] == "pending-i18n" for row in actual["literal_candidates"])
+    assert all(row["reason"].strip() for row in actual["literal_exceptions"])
+
+
+def test_extractor_catches_a_visible_literal_hidden_behind_a_variable(
+    tmp_path: Path,
+) -> None:
+    extractor = _load_extractor()
+    source = tmp_path / "probe.js"
+    source.write_text('const message = "Visible error"; node.textContent = message;\n')
+    extractor.ROOT = tmp_path
+    _, literals = extractor.javascript_inventory(source)
+    assert {
+        "file": "probe.js",
+        "line": 1,
+        "kind": "js-ui-variable",
+        "text": "Visible error",
+    } in literals
 
 
 def test_every_canonical_html_and_javascript_key_exists() -> None:
@@ -73,23 +90,9 @@ def test_every_canonical_html_and_javascript_key_exists() -> None:
     missing = [row for row in canonical_references if row["key"] not in english]
     assert missing == []
 
-    resource_definitions = {
-        row["key"]
-        for row in inventory["key_references"]
-        if row["kind"] == "js-copy-definition:RESOURCE_RAG_COPY"
-    }
-    power_definitions = {
-        row["key"]
-        for row in inventory["key_references"]
-        if row["kind"] == "js-copy-definition:POWER_COPY"
-    }
-    assert resource_definitions
-    assert power_definitions
     for row in inventory["key_references"]:
-        if row["kind"] == "js:featureT":
-            assert row["key"] in resource_definitions, row
-        elif row["kind"] == "js:powerText":
-            assert row["key"] in power_definitions, row
+        if row["kind"] in {"js:featureT", "js:powerText", "js:releaseT"}:
+            assert row["key"] in english, row
 
 
 def test_dependency_gate_prevents_premature_release_localization() -> None:

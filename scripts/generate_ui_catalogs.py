@@ -23,6 +23,12 @@ NLLB_CACHE = Path("/tmp/muta-nllb-translations.json")
 MODEL_NAME = "facebook/nllb-200-distilled-600M"
 
 EXISTING_READY = {"ar", "de", "en", "fr", "sw", "yo"}
+HAND_RELEASE_OVERRIDE_KEYS = {
+    "composer.placeholder",
+    "fineprint",
+    "settings.languageHelp",
+    "voice.listening",
+}
 NLLB_TARGETS = {
     "kab": "kab_Latn",
     "kbp": "kbp_Latn",
@@ -76,10 +82,28 @@ ENGLISH_FRAGMENT_RE = re.compile(
 # catalog is translated. These corrections were checked in context and remain here so rebuilding
 # from a translation checkpoint cannot reintroduce the learner-visible fallback.
 CATALOG_CORRECTIONS = {
+    "am": {
+        "conversation.cancel": "ተወው",
+        "conversation.confirmDelete": "ስረዛን አረጋግጥ",
+        "conversation.pinned": "ተያይዟል",
+        "power.rate": "{watts} ዋት",
+        "power.plugged": "ከኃይል ጋር ተገናኝቷል",
+        "resources.delete": "ሰርዝ",
+        "startup.progress": "ደረጃ {stage}፣ {percent}%",
+        "voice.listening": "በማዳመጥ ላይ… ሲጨርሱ ማይክራፎኑን ጠቅ ያድርጉ።",
+    },
+    "ar": {
+        "composer.placeholder": "اسأل أي شيء",
+        "resources.empty": "لا توجد موارد تعليمية بعد.",
+        "resources.processing": "جارٍ التحضير…",
+        "rag.pickerClosed": "أُغلق منتقي المستندات.",
+        "rag.sourcePage": "{title}، صفحة PDF {page}",
+        "sidebar.hostLocal": "مضيف Muta: هذا الجهاز. يعمل محليًا.",
+        "account.host": "المضيف",
+        "host.off": "وضع المضيف متوقف.",
+        "host.noFingerprint": "بصمة الشهادة غير متاحة",
+    },
     "ak": {
-        "settings.limits": (
-            "Muta ntra akwan a hwɛfo no de ato hɔ wɔ mmuae ne nkae ho no so."
-        ),
         "model.operatorOnly": (
             "Laptop no sohwɛfo nko ara na obetumi asesa ɔkyerɛkyerɛfo nhwɛso a "
             "obiara de di dwuma no."
@@ -106,6 +130,19 @@ CATALOG_CORRECTIONS = {
         "web.title": (
             "Jaabawol lesdi e geese so aɗa e laylaytol (ko daaƴaaɗo e fuɗɗoode)"
         ),
+    },
+    "es": {
+        "account.host": "Anfitrión",
+    },
+    "de": {
+        "composer.placeholder": "Frag etwas",
+        "voice.listening": "Hört zu… Klicke auf das Mikrofon, wenn du fertig bist.",
+    },
+    "fr": {
+        "composer.placeholder": "Posez votre question",
+        "resources.processing": "Préparation…",
+        "rag.pickerClosed": "Sélecteur de documents fermé.",
+        "voice.listening": "Écoute… Cliquez sur le microphone quand vous avez terminé.",
     },
     "lg": {
         "web.title": (
@@ -135,9 +172,41 @@ CATALOG_CORRECTIONS = {
     "ny": {
         "country.southAfrica": "Afrika ya Kumwera",
     },
+    "rn": {
+        "conversation.cancel": "Kureka",
+        "conversation.confirmDelete": "Emeza gusiba",
+        "resources.delete": "Siba",
+    },
+    "rw": {
+        "startup.finishing": "Birarangira…",
+        "startup.ready": "Muta iriteguye",
+        "resources.ready": "Igikoresho kiriteguye",
+    },
     "sn": {
         "country.southAfrica": "Chamhembe kweAfrica",
+        "settings.interface": "Chimiro",
         "settings.general": "Zvakajairika",
+        "startup.progress": "{stage}, {percent}%",
+        "telemetry.peak": "yepamusoro",
+        "telemetry.throttle": "kuderedza kumhanya",
+        "conversation.pin": "Pina chat",
+        "conversation.chats": "Machati",
+        "conversation.cancel": "Kanzura",
+        "conversation.confirmDelete": "Dzima",
+        "network.offline": "kunze kweindaneti",
+        "rag.previewLabel": "Chirevo {number}",
+        "power.eco": "Maitiro eEco",
+        "power.critical": "Maitiro ebhatiri rakaderera zvikuru",
+        "power.actions": "Zviri kushanda: {actions}",
+        "power.action_limit_response_length": "mhinduro pfupi",
+        "power.action_direct_responses": "mhinduro dzakananga",
+        "power.openSettings": "Vhura marongero emagetsi",
+        "account.host": "Muridzi",
+        "host.title": "Maitiro emuridzi",
+        "host.joinUrl": "Kero yekupinda muMuta",
+        "host.accountCount": "{count} akaundi",
+        "host.accountCountMany": "{count} maakaundi",
+        "access.password": "Pasiwedhi",
         "web.title": "Mhinduro dzepasi pawebhu paunenge uri paIndaneti (zvisingaiti)",
         "web.off": "Kutsigirwa newebhu kwakadzimwa.",
         "badge.verified": "✓ matanho akaongororwa",
@@ -146,15 +215,38 @@ CATALOG_CORRECTIONS = {
         "nav.home": "Bogga hore ee Muta",
     },
     "st": {
+        "conversation.cancel": "Khansela",
+        "conversation.confirmDelete": "Netefatsa ho hlakola",
         "telemetry.throttleTitle": "Ho fokotsa lebelo ka lebaka la mocheso",
     },
-    "ts": {
-        "settings.limits": (
-            "Muta yi landzela swipimelo leswi vekiweke swa nkarhi wo endla tinhlamulo "
-            "ni memori."
-        ),
+    "sw": {
+        "composer.placeholder": "Uliza chochote",
+    },
+    "tn": {
+        "conversation.pinned": "E kokotetswe",
+        "power.plugged": "E gokagantswe le motlakase",
+    },
+    "xh": {
+        "composer.placeholder": "Buza nantoni na",
+    },
+    "yo": {
+        "composer.placeholder": "Béèrè ohunkóhun",
+        "resources.uploadFailed": "Ìrùsókè kùnà. Gbìyànjú lẹ́ẹ̀kan sí i.",
+        "resources.loadFailed": "A kò lè ṣàkójọ àwọn ohun èlò ìkẹ́kọ̀ọ́.",
+    },
+    "zu": {
+        "composer.placeholder": "Buza noma yini",
     },
 }
+SEMANTICALLY_DISTINCT_KEY_PAIRS = (
+    ("model.readyNew", "model.ready"),
+    ("settings.saveFailed", "voice.didNotCatch"),
+    ("conversation.cancel", "conversation.confirmDelete"),
+    ("conversation.cancel", "resources.delete"),
+    ("conversation.pinned", "power.plugged"),
+    ("startup.finishing", "startup.ready"),
+    ("resources.uploadFailed", "resources.loadFailed"),
+)
 SHORT_UI_KEYS_REQUIRING_TRANSLATION = {
     "country.southAfrica",
     "nav.aboutMuta",
@@ -257,6 +349,7 @@ globalThis.MutaI18n = {
   registerLocale(definition, messages) {
     captured[definition.tag] = messages;
   },
+  initialize() {},
 };
 require('./ui/locale-generated.js');
 process.stdout.write(JSON.stringify(captured));
@@ -281,11 +374,22 @@ process.stdout.write(JSON.stringify(captured));
     }
 
 
-def emitted_hidden_reasons() -> dict[str, list[str]]:
+def emitted_hidden_reasons(valid_keys: set[str]) -> dict[str, list[str]]:
     path = ROOT / "ui/locale-generated.meta.json"
     if not path.exists():
         return {}
-    return json.loads(path.read_text()).get("hidden", {})
+    hidden = json.loads(path.read_text()).get("hidden", {})
+    result: dict[str, list[str]] = {}
+    for tag, reasons in hidden.items():
+        current: list[str] = []
+        for reason in reasons:
+            referenced = set(re.findall(r"[a-z][\w]*(?:\.[\w]+)+", reason))
+            if referenced and not referenced.issubset(valid_keys):
+                continue
+            current.append(reason)
+        if current:
+            result[tag] = current
+    return result
 
 
 def placeholders(value: str) -> list[str]:
@@ -530,7 +634,11 @@ def validate_catalog(
             errors.append(f"merged-row:{key}")
         if ENGLISH_FRAGMENT_RE.search(value):
             errors.append(f"english-fragment:{key}")
-        if "Translating..." in value or "Translation results" in value:
+        if (
+            "Translating..." in value
+            or "Translation results" in value
+            or re.search(r"\bstar_border\b", value, re.IGNORECASE)
+        ):
             errors.append(f"browser-residue:{key}")
         if len(source) > 24 and len(value) < max(6, len(source) * 0.18):
             errors.append(f"too-short:{key}")
@@ -566,10 +674,9 @@ def validate_catalog(
     # with a large cluster of English-identical labels, however, is a partial translation.
     if len(unchanged) > 12:
         errors.append(f"excessive-untranslated-labels:{len(unchanged)}")
-    if messages["model.readyNew"].strip() == messages["model.ready"].strip():
-        errors.append("semantic-collapse:model.readyNew=model.ready")
-    if messages["settings.saveFailed"].strip() == messages["voice.didNotCatch"].strip():
-        errors.append("semantic-collapse:settings.saveFailed=voice.didNotCatch")
+    for left, right in SEMANTICALLY_DISTINCT_KEY_PAIRS:
+        if messages[left].strip() == messages[right].strip():
+            errors.append(f"semantic-collapse:{left}={right}")
     if tag in {"am", "ti"}:
         ethiopic = len(re.findall(r"[\u1200-\u137f]", joined))
         if ethiopic < 500:
@@ -636,12 +743,19 @@ def repair_english_voice_suffix(messages: dict[str, str]) -> None:
     ).strip()
 
 
+def repair_browser_ui_residue(messages: dict[str, str]) -> None:
+    """Remove Google Translate controls accidentally copied after translated text."""
+
+    for key, value in messages.items():
+        messages[key] = re.sub(r"(?:\s|\n)*star_border(?:\s|\n)*$", "", value).strip()
+
+
 def emit_assets() -> None:
     english = english_catalog()
     registry = registry_languages()
     registry_by_tag = {item["tag"]: item for item in registry}
     authored = hand_catalogs()
-    prior_hidden = emitted_hidden_reasons()
+    prior_hidden = emitted_hidden_reasons(set(english))
     caches: list[dict[str, Any]] = [emitted_candidates()]
     for path in (GOOGLE_CACHE, NLLB_CACHE):
         if path.exists():
@@ -667,11 +781,16 @@ def emit_assets() -> None:
         overlay_messages: dict[str, str] | None = None
         if tag in EXISTING_READY:
             base = authored.get(tag, {})
-            overlay_messages = {key: value for key, value in messages.items() if key not in base}
+            overlay_messages = {
+                key: value
+                for key, value in messages.items()
+                if key not in base or key in HAND_RELEASE_OVERRIDE_KEYS
+            }
             messages = {**base, **overlay_messages}
         repair_dropped_placeholders(messages, english)
         repair_english_loading_prefix(messages, english)
         repair_english_voice_suffix(messages)
+        repair_browser_ui_residue(messages)
         if overlay_messages is not None:
             overlay_messages = {key: messages[key] for key in overlay_messages}
         result = {**result, "messages": messages}
@@ -731,7 +850,7 @@ def emit_assets() -> None:
             tag: {
                 "provenance": accepted[tag]["provenance"],
                 "target": accepted[tag]["target"],
-                "review": "machine-assisted-unreviewed",
+                "review": "machine-assisted-spot-reviewed",
             }
             for tag in ordered_tags
         },
@@ -739,7 +858,7 @@ def emit_assets() -> None:
             tag: {
                 "provenance": accepted_overlays[tag]["provenance"],
                 "target": accepted_overlays[tag]["target"],
-                "review": "machine-assisted-unreviewed",
+                "review": "machine-assisted-spot-reviewed",
             }
             for tag in overlay_tags
         },
@@ -764,6 +883,7 @@ def emit_assets() -> None:
   for (const [tag, messages] of Object.entries(packs)) {
     i18n.registerLocale(definitions[tag], messages);
   }
+  i18n.initialize();
   globalThis.MutaGeneratedLocaleMetadata = __METADATA__;
 })();
 """

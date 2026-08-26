@@ -34,6 +34,10 @@ function browserTheme({ stored = null, systemDark = false } = {}) {
   const storageListeners = [];
   const window = {
     document,
+    MutaReleaseEnglish: {
+      "theme.switchDark": "Switch to dark mode",
+      "theme.switchLight": "Switch to light mode",
+    },
     localStorage: {
       getItem: (key) => storageValues.get(key) ?? null,
       setItem: (key, value) => storageValues.set(key, value),

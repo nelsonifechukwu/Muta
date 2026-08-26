@@ -1,0 +1,86 @@
+[
+  {
+    "file": "ui/app.js",
+    "kind": "js-ui-assignment",
+    "text": "PDF",
+    "reason": "International file-format acronym shown as metadata, not prose."
+  },
+  {
+    "file": "ui/app.js",
+    "kind": "js-ui-assignment",
+    "text": "RAM",
+    "reason": "International hardware acronym paired with a localized telemetry title."
+  },
+  {
+    "file": "ui/app.js",
+    "kind": "js-ui-assignment",
+    "text": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
+    "reason": "Decorative aria-hidden SVG markup contains no learner-visible text."
+  },
+  {
+    "file": "ui/app.js",
+    "kind": "js-ui-assignment",
+    "text": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6Zm4 11v7\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
+    "reason": "Decorative aria-hidden SVG markup contains no learner-visible text."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "Muta",
+    "reason": "Product brand name is intentionally invariant."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-attribute:aria-label",
+    "text": "Muta",
+    "reason": "Accessible product brand name is intentionally invariant."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "M",
+    "reason": "Aria-hidden fragment of the invariant Muta wordmark."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "ta.",
+    "reason": "Aria-hidden fragment of the invariant Muta wordmark."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "RAM —",
+    "reason": "Hidden telemetry skeleton is replaced by localized runtime copy before display."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "peak —",
+    "reason": "Hidden telemetry skeleton is replaced by localized runtime copy before display."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "— °C",
+    "reason": "Locale-neutral hidden telemetry skeleton is replaced before display."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "throttle —",
+    "reason": "Hidden telemetry skeleton is replaced by localized runtime copy before display."
+  },
+  {
+    "file": "ui/index.html",
+    "kind": "html-text",
+    "text": "— tok/s",
+    "reason": "Locale-neutral hidden telemetry skeleton is replaced before display."
+  },
+  {
+    "file": "ui/visualizations.js",
+    "kind": "js-ui-assignment",
+    "text": "3D",
+    "reason": "International technical renderer badge, not interface prose."
+  }
+]

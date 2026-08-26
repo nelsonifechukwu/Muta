@@ -20,6 +20,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 UI_ROOT = ROOT / "ui"
 OUTPUT = UI_ROOT / "i18n-source-inventory.json"
+GATE = UI_ROOT / "i18n-release-gate.json"
+EXCEPTIONS = UI_ROOT / "i18n-literal-exceptions.json"
 
 EXCLUDED_SOURCE_PARTS = {"dist", "tests", "vendor"}
 
@@ -90,7 +92,9 @@ COPY_ENTRY_RE = re.compile(
 )
 JS_STRING_RE = re.compile(r"(?P<quote>[\"'`])(?P<value>(?:\\.|(?!\1).)*?)\1", re.DOTALL)
 CANONICAL_KEY_RE = re.compile(r"\bt\(\s*([\"'])(?P<key>[^\"']+)\1")
-LOCAL_KEY_RE = re.compile(r"\b(?P<helper>featureT|powerText)\(\s*([\"'])(?P<key>[^\"']+)\2")
+LOCAL_KEY_RE = re.compile(
+    r"\b(?P<helper>featureT|powerText|releaseT)\(\s*([\"'])(?P<key>[^\"']+)\2"
+)
 
 
 def relative(path: Path) -> str:
@@ -179,10 +183,16 @@ class UIHTMLParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr_map = {name: value or "" for name, value in attrs}
         parent_translated = bool(self.stack and self.stack[-1]["translated"])
-        translated = parent_translated or bool(attr_map.get("data-i18n"))
+        translated = parent_translated or bool(
+            attr_map.get("data-i18n") or attr_map.get("data-release-i18n")
+        )
         line, _ = self.getpos()
         for name, value in attrs:
-            if not value or not name.startswith("data-i18n") or name.endswith("-vars"):
+            if (
+                not value
+                or not name.startswith(("data-i18n", "data-release-i18n"))
+                or name.endswith("-vars")
+            ):
                 continue
             self.keys.append(
                 {"file": relative(self.path), "line": line, "kind": f"html:{name}", "key": value}
@@ -191,8 +201,11 @@ class UIHTMLParser(HTMLParser):
             value = attr_map.get(attribute, "")
             if not value:
                 continue
-            i18n_attribute = f"data-i18n-{attribute}"
-            if i18n_attribute in attr_map:
+            i18n_attributes = {
+                f"data-i18n-{attribute}",
+                f"data-release-i18n-{attribute}",
+            }
+            if i18n_attributes.intersection(attr_map):
                 continue
             self.literals.append(
                 {
@@ -266,12 +279,15 @@ def javascript_inventory(path: Path) -> tuple[list[dict[str, Any]], list[dict[st
         for match in CANONICAL_KEY_RE.finditer(code)
     ]
     for match in LOCAL_KEY_RE.finditer(code):
+        key = match.group("key")
+        if match.group("helper") == "powerText":
+            key = f"power.{key}"
         keys.append(
             {
                 "file": relative(path),
                 "line": line_at(source, match.start()),
                 "kind": f"js:{match.group('helper')}",
-                "key": match.group("key"),
+                "key": key,
             }
         )
 
@@ -325,13 +341,11 @@ def javascript_inventory(path: Path) -> tuple[list[dict[str, Any]], list[dict[st
             ),
         ),
         (
-            "js-ui-return",
-            re.compile(r"\breturn\s+(?P<expr>[^;]+);", re.DOTALL),
-        ),
-        (
             "js-ui-variable",
             re.compile(
-                r"\b(?:const|let)\s+(?:action|copy|description|detail|help|label|message|statusText|title)\s*=\s*(?P<expr>[^;]+);",
+                r"\b(?:const|let)\s+"
+                r"(?:action|copy|description|detail|help|label|message|statusText|title)"
+                r"\s*=\s*(?P<expr>[^;]+);",
                 re.DOTALL,
             ),
         ),
@@ -357,8 +371,8 @@ globalThis.MutaInterfaceLocales=require('./ui/locale-manifest.js');
 globalThis.MutaI18n=require('./ui/i18n.js');
 globalThis.window=globalThis;
 require('./ui/locale-fr.js');
-require('./ui/locale-generated.js');
 require('./ui/locales.js');
+require('./ui/locale-generated.js');
 const en=MutaI18n.catalogs.en;
 const visible=MutaI18n.supportedDefinitions();
 process.stdout.write(JSON.stringify({
@@ -414,6 +428,7 @@ def build_inventory() -> dict[str, Any]:
         if row["kind"].startswith("js-copy-map:")
         or (
             row["text"] not in known_keys
+            and f"power.{row['text']}" not in known_keys
             and row["text"] not in HTML_TAG_NAMES
             and not any(
                 helper in row["text"]
@@ -424,11 +439,23 @@ def build_inventory() -> dict[str, Any]:
             and not re.fullmatch(r"(?:\$\{[^}]+\}|[\d.])+\s*(?:%|GB|[hms])?", row["text"])
         )
     ]
+    exception_rows = json.loads(EXCEPTIONS.read_text()) if EXCEPTIONS.exists() else []
+    exception_keys = {
+        (row["file"], row["kind"], row["text"])
+        for row in exception_rows
+        if row.get("reason", "").strip()
+    }
+    literal_candidates = [
+        row
+        for row in literal_candidates
+        if (row["file"], row["kind"], row["text"]) not in exception_keys
+    ]
     for row in literal_candidates:
         row["status"] = "pending-i18n"
+    phase = json.loads(GATE.read_text()).get("phase", "awaiting-dependencies")
     return {
         "schema_version": 1,
-        "phase": "awaiting-dependencies",
+        "phase": phase,
         "sources": {
             "html": [relative(path) for path in HTML_FILES],
             "javascript": [relative(path) for path in JS_FILES],
@@ -440,6 +467,7 @@ def build_inventory() -> dict[str, Any]:
             "visible_locales": catalog["visible"],
         },
         "key_references": unique_rows(key_references),
+        "literal_exceptions": exception_rows,
         "literal_candidates": unique_rows(literal_candidates),
     }
 

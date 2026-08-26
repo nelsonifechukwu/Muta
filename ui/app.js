@@ -1,132 +1,10 @@
 /* Muta chat client. Same-origin /v1 (nginx proxies to the backend). No framework. */
 "use strict";
 
-// Resource-RAG ships while the larger interface catalog is being regenerated independently.
-// Keep its English fallback local so this branch does not invalidate complete locale packs.
-const RESOURCE_RAG_COPY = Object.freeze({
-  "resources.empty": "No learning resources yet.",
-  "resources.processing": "Preparing…",
-  "resources.ready": "Ready",
-  "resources.failed": "Failed",
-  "resources.pages": "{count} PDF pages",
-  "resources.retry": "Retry",
-  "resources.delete": "Delete",
-  "resources.uploading": "Uploading {name}…",
-  "resources.uploaded": "{name} is being prepared. You can keep chatting.",
-  "resources.uploadFailed": "Couldn’t upload that PDF.",
-  "resources.loadFailed": "Couldn’t load files.",
-  "resources.deleteFailed": "Couldn’t delete that file.",
-  "rag.noFiles": "No files found",
-  "rag.loadingFiles": "Loading files…",
-  "rag.loadFailed": "Couldn’t load files — retrying…",
-  "rag.remove": "Remove {name}",
-  "rag.document": "Document: {name}",
-  "rag.openDocument": "Open document {name}",
-  "rag.maxFiles": "You can use up to {count} documents in one message.",
-  "rag.pickerResults": "{count} ready documents available. Use Up and Down arrows, then Enter.",
-  "rag.pickerEmpty": "No ready documents match.",
-  "rag.pickerClosed": "Document picker closed.",
-  "rag.sourcePage": "{title}, PDF page {page}",
-  "rag.openPage": "Open {title} at PDF page {page}",
-  "rag.sources": "Sources",
-  "rag.sourceCount": "{count} sources",
-  "rag.sourceCountOne": "1 source",
-  "rag.sourceMeta": "PDF · page {page}",
-  "rag.citation": "Citation {number}: {title}, PDF page {page}",
-  "rag.previewLabel": "Citation {number}",
-  "rag.showSources": "Show {count} sources",
-  "rag.hideSources": "Hide {count} sources",
-});
-// Power ships independently of the bulk locale-generation pass, as resource RAG does above.
-// Dynamic copy falls back to English without marking the existing complete locale packs partial.
-const POWER_COPY = Object.freeze({
-  checking: "Checking host power…",
-  checkingHelp: "Reading the battery of the laptop serving Muta.",
-  unavailable: "Power information unavailable",
-  unavailableHelp: "This device does not expose a battery sensor. Muta still keeps its fixed memory and thermal safeguards.",
-  sensorGrace: "Battery sensor temporarily unavailable; Critical reserve remains active.",
-  off: "Power optimization off",
-  normal: "Balanced",
-  eco: "Eco mode",
-  critical: "Critical battery mode",
-  plugged: "Plugged in",
-  connectedDraining: "Power connected; battery still draining",
-  battery: "Host battery {percentage}%",
-  remaining: "about {time} remaining",
-  rate: "{watts} W",
-  actions: "Active: {actions}",
-  action_limit_auto_reasoning: "bounded automatic reasoning",
-  action_limit_response_length: "shorter replies",
-  action_direct_responses: "direct responses",
-  action_pause_vision: "new image reading paused",
-  action_pause_tts: "speech playback paused",
-  openSettings: "Open power settings",
-});
-// Release-workstream strings are keyed independently of the generated locale pack. `releaseT`
-// first asks the ordinary catalog, so a reviewed translation can land without touching this
-// feature; until then every locale gets the explicit English fallback instead of a raw key.
-const RELEASE_COPY = Object.freeze({
-  "sidebar.hostLocal": "Muta Host: This device. Running locally.",
-  "account.host": "Host",
-  "account.member": "Member",
-  "account.logout": "Log out",
-  "host.title": "Host mode",
-  "host.description": "Share this Muta privately with people on the same network.",
-  "host.enable": "Enable Host mode",
-  "host.memoryLimit": "Memory limit",
-  "host.competition": "ADTC competition",
-  "host.competitionHelp": "Stay inside the 7 GB competition budget. Extra chats wait in line.",
-  "host.system": "Use this system",
-  "host.systemHelp": "Detect usable RAM and CPU, then run as many safe chats as this laptop supports.",
-  "host.shareAddress": "Share this address",
-  "host.joinUrl": "Muta join URL",
-  "host.copy": "Copy",
-  "host.certificateHelp": "Learners must be on this network. On first use, install Muta’s local certificate, then compare its fingerprint with the host.",
-  "host.downloadCertificate": "Download trust certificate",
-  "host.people": "People",
-  "host.waiting": "Waiting for approval",
-  "host.removing": "Removing data…",
-  "host.approvedSignedIn": "Approved · has signed in",
-  "host.approved": "Approved",
-  "host.accept": "Accept",
-  "host.decline": "Decline",
-  "host.remove": "Remove",
-  "host.removeConfirm": "Remove {name}? Their account, conversations, files and learning profile will be deleted.",
-  "host.removePending": "Revoking access and removing {name}…",
-  "host.approveFailed": "Could not approve that account.",
-  "host.rejectFailed": "Could not decline that account.",
-  "host.removeFailed": "Could not remove that account.",
-  "host.readFailed": "Could not read Host mode settings.",
-  "host.apply": "Applying the safe chat capacity…",
-  "host.updateFailed": "Could not update Host mode.",
-  "host.on": "Host mode is on. New replies are queued when all slots are busy.",
-  "host.off": "Host mode is off.",
-  "host.noFingerprint": "Certificate fingerprint unavailable",
-  "host.simultaneousChats": "simultaneous chats",
-  "host.tokensPerChat": "tokens per chat",
-  "host.ramCeiling": "RAM ceiling",
-  "host.accountCount": "{count} account",
-  "host.accountCountMany": "{count} accounts",
-  "host.empty": "No one has asked to join yet.",
-  "host.copied": "Join address copied.",
-  "host.copyFallback": "Address selected — copy it from the field.",
-  "reply.partialSaved": "Reply interrupted — the partial answer is saved.",
-  "reply.continue": "Continue reply",
-  "reply.continuePrompt": "Continue the previous incomplete reply from exactly where it stopped. Do not repeat completed parts.",
-  "reply.stopping": "Stopping…",
-});
-const powerText = (key, variables = {}) => (POWER_COPY[key] || key).replace(
-  /\{([a-zA-Z][\w]*)\}/g,
-  (match, name) => Object.hasOwn(variables, name) ? String(variables[name]) : match,
-);
 const t = (key, variables) => window.MutaI18n.t(key, variables);
-const releaseT = (key, variables = {}) => {
-  const localized = t(key, variables);
-  const value = localized === key ? (RELEASE_COPY[key] || key) : localized;
-  return value.replace(/\{([a-zA-Z][\w]*)\}/g, (match, name) =>
-    Object.hasOwn(variables, name) ? String(variables[name]) : match
-  );
-};
+const releaseT = t;
+const featureT = t;
+const powerText = (key, variables = {}) => t(`power.${key}`, variables);
 function applyReleaseCopy(doc = document) {
   for (const element of doc.querySelectorAll("[data-release-i18n]")) {
     element.textContent = releaseT(element.dataset.releaseI18n);
@@ -140,12 +18,6 @@ function applyReleaseCopy(doc = document) {
 }
 applyReleaseCopy();
 document.addEventListener("muta:localechange", () => applyReleaseCopy());
-const featureT = (key, variables = {}) => {
-  const value = RESOURCE_RAG_COPY[key] || key;
-  return value.replace(/\{([a-zA-Z][\w]*)\}/g, (match, name) =>
-    Object.hasOwn(variables, name) ? String(variables[name]) : match
-  );
-};
 
 // ---------------------------------------------------------------------------
 // State
@@ -254,7 +126,7 @@ function showShareAuth(status = {}) {
   const reauthMessage = sessionStorage.getItem("muta-share-reauth");
   if (reauthMessage) sessionStorage.removeItem("muta-share-reauth");
   document.querySelector("#share-auth-message").textContent = reauthMessage || status.message ||
-    (status.enabled ? "Sign in to open your private tutor." : "This laptop is not sharing Muta right now.");
+    t(status.enabled ? "access.signInPrivate" : "access.notSharing");
   const secureLink = document.querySelector("#share-secure-link");
   secureLink.hidden = !status.join_url || status.secure !== false;
   if (!secureLink.hidden) secureLink.href = status.join_url;
@@ -299,7 +171,7 @@ async function ensureAuth() {
     }
     showShareAuth(status);
   } catch {
-    showShareAuth({ message: "Could not reach this Muta. Check the network and try again." });
+    showShareAuth({ message: t("access.unreachable") });
   }
   return false;
 }
@@ -1236,11 +1108,11 @@ function beginAssistantMessage(onAnswerNow) {
     activity.hidden = false;
     activity.dataset.phase = phase;
     activityLabel.textContent = {
-      preparing: "Preparing response…",
+      preparing: t("reply.preparing"),
       thinking: `${t("thinking.label")}…`,
-      writing: "Writing response…",
-      visualization: "Generating diagram…",
-    }[phase] || "Working…";
+      writing: t("reply.writing"),
+      visualization: t("reply.diagram"),
+    }[phase] || t("reply.working");
   };
   const hideActivity = () => { activity.hidden = true; };
   const finishActivity = () => {

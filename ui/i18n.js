@@ -8,40 +8,9 @@
   const STORAGE_KEY = "muta-ui-locale-v1";
   const DEFAULT_LOCALE = "en";
   const AUTO_LANGUAGE = "auto";
-  // These keys were introduced by the release-polish workstream after the checked-in offline
-  // translation snapshot was reviewed.  Keep every existing interface locale available and use
-  // the canonical English copy for only these new controls until the next catalog translation
-  // pass.  The allow-list is exported and tested so fallback cannot spread silently.
-  const ENGLISH_FALLBACK_KEYS = Object.freeze([
-    "startup.tagline",
-    "startup.opening",
-    "startup.verifying",
-    "startup.packReady",
-    "startup.starting",
-    "startup.retrying",
-    "startup.connecting",
-    "startup.openingData",
-    "startup.loadingTutor",
-    "startup.finishing",
-    "startup.ready",
-    "startup.failed",
-    "startup.retry",
-    "startup.progress",
-    "conversation.pin",
-    "conversation.unpin",
-    "conversation.pinned",
-    "conversation.chats",
-    "conversation.deleteTitle",
-    "conversation.deleteBody",
-    "conversation.cancel",
-    "conversation.confirmDelete",
-    "conversation.deleteFailed",
-    "conversation.pinFailed",
-    "code.copy",
-    "code.copied",
-    "code.copyFailed",
-    "code.plain",
-  ]);
+  // Kept as a compatibility export for older clients. Release catalogs may not rely on any
+  // English fallback: every visible locale must provide every canonical key.
+  const ENGLISH_FALLBACK_KEYS = Object.freeze([]);
   const listeners = new Set();
   const africaRegistry = globalThis.MutaAfricaLanguages
     || (typeof require === "function" ? require("./africa-languages.js") : null);
@@ -261,19 +230,10 @@
     },
   };
 
-  // New English source strings live outside the completeness-checked catalogs until the
-  // translation pass updates every supported pack. They are still addressed exclusively by
-  // i18n keys, while existing complete locale packs remain available and fall back to English.
-  const additiveEnglishCatalog = Object.freeze({
-    "settings.appearance": "Appearance",
-    "settings.themeSystem": "System",
-    "settings.themeLight": "Light",
-    "settings.themeDark": "Dark",
-    "settings.powerSection": "Power",
-    "settings.power": "Muta power optimization",
-    "settings.powerHelp": "On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.",
-    "settings.analyticsHelp": "Help us improve Muta by sharing your analytics.",
-  });
+  const releaseEnglish = globalThis.MutaReleaseEnglish
+    || (typeof require === "function" ? require("./release-english.js") : {});
+  Object.assign(catalogs[DEFAULT_LOCALE], releaseEnglish);
+  const additiveEnglishCatalog = Object.freeze({});
 
   function safeStorageGet(key) {
     try {
@@ -360,12 +320,11 @@
     const normalized = normalizeLocale(locale) || DEFAULT_LOCALE;
     const value = catalogs[normalized]?.[key]
       ?? catalogs[DEFAULT_LOCALE][key]
-      ?? additiveEnglishCatalog[key]
       ?? key;
     return interpolate(value, variables);
   }
 
-  const translatableAttributes = ["title", "aria-label", "placeholder", "data-placeholder"];
+  const translatableAttributes = ["title", "aria-label", "alt", "placeholder", "data-placeholder"];
 
   function variablesFor(element, suffix = "") {
     const raw = element.getAttribute(`data-i18n${suffix}-vars`);
@@ -488,13 +447,7 @@
     // Retired visible copy must not reappear when older checked-in locale snapshots register.
     delete combined["settings.limits"];
     const attachmentMessages = multimodalAttachmentMessages(combined);
-    const releaseFallbacks = Object.fromEntries(
-      ENGLISH_FALLBACK_KEYS
-        .filter((key) => !Object.hasOwn(combined, key))
-        .map((key) => [key, catalogs[DEFAULT_LOCALE][key]]),
-    );
     catalogs[definition.tag] = {
-      ...releaseFallbacks,
       ...attachmentMessages,
       ...combined,
     };

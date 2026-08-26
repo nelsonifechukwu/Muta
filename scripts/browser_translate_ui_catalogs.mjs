@@ -34,7 +34,12 @@ function maskEntry(text, indexBase) {
 function loadCatalog(repoRoot) {
   const sandbox = { module: { exports: {} }, console };
   sandbox.globalThis = sandbox;
-  for (const relative of ["ui/africa-languages.js", "ui/locale-manifest.js", "ui/i18n.js"]) {
+  for (const relative of [
+    "ui/africa-languages.js",
+    "ui/locale-manifest.js",
+    "ui/release-english.js",
+    "ui/i18n.js",
+  ]) {
     vm.runInNewContext(fs.readFileSync(`${repoRoot}/${relative}`, "utf8"), sandbox);
   }
   return sandbox.MutaI18n.catalogs.en;

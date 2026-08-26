@@ -1,118 +1,288 @@
 {
   "generated": {
-    "aa": {
-      "provenance": "google-web",
-      "target": "aa",
-      "review": "machine-assisted-unreviewed"
-    },
     "af": {
       "provenance": "google-web",
       "target": "af",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "am": {
       "provenance": "google-web+nllb:facebook/nllb-200-distilled-600M",
       "target": "am",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "bem": {
       "provenance": "google-web",
       "target": "bem",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "din": {
       "provenance": "google-web",
       "target": "din",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "ff": {
       "provenance": "google-web",
       "target": "ff",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "ha": {
       "provenance": "google-web",
       "target": "ha",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "ig": {
       "provenance": "google-web",
       "target": "ig",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "kg": {
       "provenance": "google-web",
       "target": "kg",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "mg": {
       "provenance": "google-web",
       "target": "mg",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "ny": {
       "provenance": "google-web",
       "target": "ny",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "rn": {
       "provenance": "google-web",
       "target": "rn",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "rw": {
       "provenance": "google-web",
       "target": "rw",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "sn": {
       "provenance": "google-web",
       "target": "sn",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "so": {
       "provenance": "google-web",
       "target": "so",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "ss": {
       "provenance": "google-web",
       "target": "ss",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "st": {
       "provenance": "google-web",
       "target": "st",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "tn": {
       "provenance": "google-web",
       "target": "tn",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "xh": {
       "provenance": "google-web",
       "target": "xh",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "zu": {
       "provenance": "google-web",
       "target": "zu",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "es": {
       "provenance": "google-web",
       "target": "es",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     },
     "pt": {
       "provenance": "google-web",
       "target": "pt",
-      "review": "machine-assisted-unreviewed"
+      "review": "machine-assisted-spot-reviewed"
     }
   },
-  "overlays": {},
+  "overlays": {
+    "ar": {
+      "provenance": "google-web",
+      "target": "ar",
+      "review": "machine-assisted-spot-reviewed"
+    },
+    "sw": {
+      "provenance": "google-web",
+      "target": "sw",
+      "review": "machine-assisted-spot-reviewed"
+    },
+    "yo": {
+      "provenance": "google-web",
+      "target": "yo",
+      "review": "machine-assisted-spot-reviewed"
+    },
+    "fr": {
+      "provenance": "google-web",
+      "target": "fr",
+      "review": "machine-assisted-spot-reviewed"
+    },
+    "de": {
+      "provenance": "google-web",
+      "target": "de",
+      "review": "machine-assisted-spot-reviewed"
+    }
+  },
   "hidden": {
+    "aa": [
+      "empty:account.host",
+      "empty:account.logout",
+      "empty:account.member",
+      "empty:code.copied",
+      "empty:code.copy",
+      "empty:code.copyFailed",
+      "empty:code.plain",
+      "empty:conversation.cancel",
+      "empty:conversation.chats",
+      "empty:conversation.confirmDelete",
+      "empty:conversation.deleteBody",
+      "empty:conversation.deleteFailed",
+      "empty:conversation.deleteTitle",
+      "empty:conversation.pin",
+      "empty:conversation.pinFailed",
+      "empty:conversation.pinned",
+      "empty:conversation.unpin",
+      "empty:fineprint",
+      "empty:host.accept",
+      "empty:host.accountCount",
+      "empty:host.accountCountMany",
+      "empty:host.apply",
+      "empty:host.approveFailed",
+      "empty:host.approved",
+      "empty:host.approvedSignedIn",
+      "empty:host.certificateHelp",
+      "empty:host.competition",
+      "empty:host.competitionHelp",
+      "empty:host.copied",
+      "empty:host.copy",
+      "empty:host.decline",
+      "empty:host.description",
+      "empty:host.downloadCertificate",
+      "empty:host.empty",
+      "empty:host.enable",
+      "empty:host.joinUrl",
+      "empty:host.memoryLimit",
+      "empty:host.noFingerprint",
+      "empty:host.off",
+      "empty:host.on",
+      "empty:host.people",
+      "empty:host.qrAlt",
+      "empty:host.ramCeiling",
+      "empty:host.readFailed",
+      "empty:host.rejectFailed",
+      "empty:host.remove",
+      "empty:host.removeConfirm",
+      "empty:host.removeFailed",
+      "empty:host.removePending",
+      "empty:host.removing",
+      "empty:host.shareAddress",
+      "empty:host.simultaneousChats",
+      "empty:host.system",
+      "empty:host.systemHelp",
+      "empty:host.title",
+      "empty:host.tokensPerChat",
+      "empty:host.updateFailed",
+      "empty:host.waiting",
+      "empty:model.imageTutor",
+      "empty:model.textTutor",
+      "empty:power.action_direct_responses",
+      "empty:power.action_limit_auto_reasoning",
+      "empty:power.action_limit_response_length",
+      "empty:power.action_pause_tts",
+      "empty:power.action_pause_vision",
+      "empty:power.actions",
+      "empty:power.battery",
+      "empty:power.checking",
+      "empty:power.checkingHelp",
+      "empty:power.connectedDraining",
+      "empty:power.critical",
+      "empty:power.eco",
+      "empty:power.normal",
+      "empty:power.off",
+      "empty:power.openSettings",
+      "empty:power.plugged",
+      "empty:power.rate",
+      "empty:power.remaining",
+      "empty:power.sensorGrace",
+      "empty:power.unavailable",
+      "empty:power.unavailableHelp",
+      "empty:rag.citation",
+      "empty:rag.document",
+      "empty:rag.hideSources",
+      "empty:rag.loadFailed",
+      "empty:rag.loadingFiles",
+      "empty:rag.maxFiles",
+      "empty:rag.noFiles",
+      "empty:rag.openDocument",
+      "empty:rag.openPage",
+      "empty:rag.pickerClosed",
+      "empty:rag.pickerEmpty",
+      "empty:rag.pickerResults",
+      "empty:rag.previewLabel",
+      "empty:rag.remove",
+      "empty:rag.showSources",
+      "empty:rag.sourceCount",
+      "empty:rag.sourceCountOne",
+      "empty:rag.sourceMeta",
+      "empty:rag.sourcePage",
+      "empty:rag.sources",
+      "empty:resources.attachPdf",
+      "empty:resources.delete",
+      "empty:resources.deleteFailed",
+      "empty:resources.empty",
+      "empty:resources.failed",
+      "empty:resources.heading",
+      "empty:resources.learningResources",
+      "empty:resources.loadFailed",
+      "empty:resources.manageHelp",
+      "empty:resources.pages",
+      "empty:resources.processing",
+      "empty:resources.ready",
+      "empty:resources.retry",
+      "empty:resources.uploadFailed",
+      "empty:resources.uploaded",
+      "empty:resources.uploading",
+      "empty:runtime.eco",
+      "empty:settings.analyticsHelp",
+      "empty:settings.appearance",
+      "empty:settings.languageHelp",
+      "empty:settings.power",
+      "empty:settings.powerHelp",
+      "empty:settings.powerSection",
+      "empty:settings.themeDark",
+      "empty:settings.themeLight",
+      "empty:settings.themeSystem",
+      "empty:sidebar.hostLocal",
+      "empty:startup.connecting",
+      "empty:startup.failed",
+      "empty:startup.finishing",
+      "empty:startup.loadingTutor",
+      "empty:startup.opening",
+      "empty:startup.openingData",
+      "empty:startup.packReady",
+      "empty:startup.progress",
+      "empty:startup.ready",
+      "empty:startup.retry",
+      "empty:startup.retrying",
+      "empty:startup.starting",
+      "empty:startup.tagline",
+      "empty:startup.verifying",
+      "semantic-collapse:conversation.cancel=conversation.confirmDelete",
+      "semantic-collapse:conversation.cancel=resources.delete",
+      "semantic-collapse:conversation.pinned=power.plugged",
+      "semantic-collapse:resources.uploadFailed=resources.loadFailed",
+      "semantic-collapse:startup.finishing=startup.ready"
+    ],
     "ak": [
       "native-review:untranslated-english"
     ],
@@ -174,8 +344,7 @@
     ],
     "kmb": [
       "degenerate-repetition:model.defaultRecommended",
-      "degenerate-repetition:model.switchUncertain",
-      "degenerate-repetition:settings.limits"
+      "degenerate-repetition:model.switchUncertain"
     ],
     "kpe": [
       "unsupported-by-translation-sources"

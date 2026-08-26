@@ -8,6 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#faf9f5">
   <title>Muta</title>
+  <script src="release-english.js?v=20260826-release-integration-2"></script>
   <script src="theme.js?v=20260826-release-ui-polish-1"></script>
   <!-- Blocking and tiny by design: decide local-host vs shared-client first paint before the
        body can flash the wrong access surface. Backend authorization remains authoritative. -->
@@ -24,37 +25,37 @@
         <a class="share-auth-brand" href="/" aria-label="Muta"><span class="muta-wordmark" role="img" aria-label="Muta"><span aria-hidden="true">M<span class="muta-wordmark-u">u<i></i></span>ta.</span></span></a>
       <div id="share-auth-loading" class="share-auth-loading" role="status">
         <span class="share-spinner" aria-hidden="true"></span>
-        <p>Connecting to this Muta…</p>
+        <p data-i18n="access.connecting">Connecting to this Muta…</p>
       </div>
       <div id="share-auth-panel" hidden>
-        <p class="share-eyebrow">Shared from a nearby laptop</p>
-        <h1 id="share-auth-title">Welcome to Muta</h1>
-        <p id="share-auth-message" class="share-auth-message">Sign in to open your private tutor.</p>
-        <a id="share-secure-link" class="share-primary-link" href="#" hidden>Open secure Muta</a>
-        <div id="share-auth-tabs" class="share-auth-tabs" role="tablist" aria-label="Account access">
-          <button id="share-login-tab" type="button" role="tab" tabindex="0" aria-selected="true" aria-controls="share-login-form">Log in</button>
-          <button id="share-signup-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="share-signup-form">Sign up</button>
+        <p class="share-eyebrow" data-i18n="access.sharedNearby">Shared from a nearby laptop</p>
+        <h1 id="share-auth-title" data-i18n="access.welcome">Welcome to Muta</h1>
+        <p id="share-auth-message" class="share-auth-message" data-i18n="access.signInPrivate">Sign in to open your private tutor.</p>
+        <a id="share-secure-link" class="share-primary-link" href="#" data-i18n="access.openSecure" hidden>Open secure Muta</a>
+        <div id="share-auth-tabs" class="share-auth-tabs" role="tablist" aria-label="Account access" data-i18n-aria-label="access.dialog">
+          <button id="share-login-tab" type="button" role="tab" tabindex="0" aria-selected="true" aria-controls="share-login-form" data-i18n="access.login">Log in</button>
+          <button id="share-signup-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="share-signup-form" data-i18n="access.signup">Sign up</button>
         </div>
         <form id="share-login-form" class="share-auth-form" role="tabpanel" aria-labelledby="share-login-tab" autocomplete="on">
-          <label for="share-login-username">Username</label>
+          <label for="share-login-username" data-i18n="access.username">Username</label>
           <input id="share-login-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" required>
-          <label for="share-login-password">Password</label>
+          <label for="share-login-password" data-i18n="access.password">Password</label>
           <input id="share-login-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="256" required>
-          <button class="share-primary" type="submit">Log in</button>
+          <button class="share-primary" type="submit" data-i18n="access.login">Log in</button>
         </form>
         <form id="share-signup-form" class="share-auth-form" role="tabpanel" aria-labelledby="share-signup-tab" autocomplete="on" hidden>
-          <label for="share-signup-username">Choose a username</label>
+          <label for="share-signup-username" data-i18n="access.chooseUsername">Choose a username</label>
           <input id="share-signup-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" pattern="[^._-].*[^._-]|[^._-]" required>
-          <small>3–32 letters or numbers; dots, dashes and underscores are allowed inside.</small>
-          <label for="share-signup-password">Choose a password</label>
+          <small data-i18n="access.usernameRules">3–32 letters or numbers; dots, dashes and underscores are allowed inside.</small>
+          <label for="share-signup-password" data-i18n="access.choosePassword">Choose a password</label>
           <input id="share-signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="256" required>
-          <button class="share-primary" type="submit">Ask to join</button>
+          <button class="share-primary" type="submit" data-i18n="access.requestJoin">Ask to join</button>
         </form>
         <div id="share-pending" class="share-pending" hidden>
           <span class="share-pending-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          <h2 id="share-pending-title" tabindex="-1">Request sent</h2>
-          <p>Ask the person hosting Muta to approve you. This page will open automatically.</p>
-          <button id="share-pending-cancel" type="button" class="share-link-button">Use another account</button>
+          <h2 id="share-pending-title" tabindex="-1" data-i18n="access.requestSent">Request sent</h2>
+          <p data-i18n="access.awaitApproval">Ask the person hosting Muta to approve you. This page will open automatically.</p>
+          <button id="share-pending-cancel" type="button" class="share-link-button" data-i18n="access.otherAccount">Use another account</button>
         </div>
         <p id="share-auth-error" class="share-auth-error" role="alert" aria-live="assertive"></p>
       </div>
@@ -118,9 +119,9 @@
           <span id="startup-stage" data-i18n="startup.opening">Opening Muta</span>
           <button id="startup-retry" type="button" data-i18n="startup.retry" hidden>Retry</button>
         </div>
-        <button id="power-badge" class="power-badge" type="button" lang="en" hidden
-          aria-label="Open power settings">
-          <span id="power-badge-mode">Eco</span>
+        <button id="power-badge" class="power-badge" type="button" hidden
+          aria-label="Open power settings" data-i18n-aria-label="power.openSettings">
+          <span id="power-badge-mode" data-i18n="runtime.eco">Eco</span>
           <span class="power-badge-dot">·</span>
           <span id="power-badge-level">—</span>
         </button>
@@ -157,7 +158,7 @@
 
         <div id="composer">
           <div id="attachment-chips"></div>
-          <div id="resource-mention-menu" class="resource-mention-menu" role="listbox" aria-label="Learning resources" hidden></div>
+          <div id="resource-mention-menu" class="resource-mention-menu" role="listbox" aria-label="Learning resources" data-i18n-aria-label="resources.learningResources" hidden></div>
           <div id="resource-mention-status" class="sr-only" role="status" aria-live="polite"></div>
           <div id="input" class="composer-input" contenteditable="true" role="textbox"
             aria-multiline="true" dir="auto" aria-autocomplete="list"
@@ -168,7 +169,7 @@
             data-empty="true" spellcheck="true"></div>
           <div id="composer-buttons">
             <div class="left">
-              <button id="btn-resource" class="icon" type="button" title="Attach a PDF" aria-label="Attach a PDF">
+              <button id="btn-resource" class="icon" type="button" title="Attach a PDF" aria-label="Attach a PDF" data-i18n-title="resources.attachPdf" data-i18n-aria-label="resources.attachPdf">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l4 4v16H6V2Zm8 2.8V7h2.2L14 4.8ZM8.5 11v2h7v-2h-7Zm0 4v2h7v-2h-7Z"/></svg>
               </button>
               <button id="btn-image" class="icon" title="Attach an image (or drag one in)" aria-label="Attach an image" data-i18n-title="composer.attachImageTitle" data-i18n-aria-label="composer.attachImage">
@@ -220,11 +221,11 @@
         <label class="settings-row language-row" for="setting-language">
           <span>
             <strong data-i18n="settings.language">Language</strong>
-            <small data-i18n="settings.languageHelp">Sets Muta’s response language. Complete interface translations change the menus too. Auto follows your browser for the interface and your latest message for each reply.</small>
+            <small data-i18n="settings.languageHelp">Auto mode detects your language and replies in it.</small>
           </span>
           <select id="setting-language"></select>
         </label>
-        <label class="settings-row" for="setting-theme" lang="en">
+        <label class="settings-row" for="setting-theme">
           <span>
             <strong data-i18n="settings.appearance">Appearance</strong>
           </span>
@@ -246,20 +247,20 @@
         </label>
       </div>
       <div class="settings-section power-settings">
-        <h3 data-i18n="settings.powerSection" lang="en">Power</h3>
-        <label class="settings-row" for="setting-power-optimization" lang="en">
+        <h3 data-i18n="settings.powerSection">Power</h3>
+        <label class="settings-row" for="setting-power-optimization">
           <span>
             <strong data-i18n="settings.power">Muta power optimization</strong>
             <small data-i18n="settings.powerHelp">On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.</small>
           </span>
           <input id="setting-power-optimization" type="checkbox" role="switch" checked>
         </label>
-        <div id="power-status" class="power-status" aria-live="polite" lang="en">
+        <div id="power-status" class="power-status" aria-live="polite">
           <div class="power-status-heading">
             <span id="power-status-dot" class="power-status-dot"></span>
-            <strong id="power-status-mode">Checking host power…</strong>
+            <strong id="power-status-mode" data-i18n="power.checking">Checking host power…</strong>
           </div>
-          <p id="power-status-detail">Reading the battery of the laptop serving Muta.</p>
+          <p id="power-status-detail" data-i18n="power.checkingHelp">Reading the battery of the laptop serving Muta.</p>
           <p id="power-status-actions" class="power-status-actions" hidden></p>
         </div>
       </div>
@@ -282,7 +283,7 @@
         </fieldset>
         <p id="host-save-state" class="host-save-state" role="status" aria-live="polite"></p>
         <div id="host-share-card" class="host-share-card" hidden>
-          <img id="host-qr" alt="QR code for the secure Muta join URL" width="168" height="168">
+          <img id="host-qr" alt="QR code for the secure Muta join URL" data-i18n-alt="host.qrAlt" width="168" height="168">
           <div>
             <strong data-release-i18n="host.shareAddress">Share this address</strong>
             <div class="host-url-row"><input id="host-join-url" type="url" readonly aria-label="Muta join URL" data-release-i18n-aria-label="host.joinUrl"><button id="host-copy-url" type="button" data-release-i18n="host.copy">Copy</button></div>
@@ -297,8 +298,8 @@
           <div id="host-user-list" aria-live="polite"></div>
         </div>
       </div>
-      <div id="product-analytics-settings" class="settings-section" lang="en" hidden>
-        <h3>Privacy</h3>
+      <div id="product-analytics-settings" class="settings-section" hidden>
+        <h3 data-i18n="privacy.heading">Privacy</h3>
         <label class="settings-row" for="setting-product-analytics">
           <span>
             <strong data-i18n="settings.analyticsHelp">Help us improve Muta by sharing your analytics.</strong>
@@ -310,8 +311,8 @@
       <div class="settings-section resource-settings">
         <div class="settings-section-heading">
           <div>
-            <h3>Files</h3>
-            <p>Review and manage textbooks and notes used for private, page-cited chat.</p>
+            <h3 data-i18n="resources.heading">Files</h3>
+            <p data-i18n="resources.manageHelp">Review and manage textbooks and notes used for private, page-cited chat.</p>
           </div>
         </div>
         <div id="resource-list" class="resource-list" aria-live="polite"></div>
@@ -323,7 +324,7 @@
     <section class="confirm-card" role="dialog" aria-modal="true" tabindex="-1"
       aria-labelledby="delete-chat-title" aria-describedby="delete-chat-copy">
       <h2 id="delete-chat-title" data-i18n="conversation.deleteTitle">Delete chat?</h2>
-      <p id="delete-chat-copy">This will delete this chat.</p>
+      <p id="delete-chat-copy" data-i18n="conversation.deleteDefaultBody">This will delete this chat.</p>
       <p id="delete-chat-error" class="confirm-error" role="alert"></p>
       <div class="confirm-actions">
         <button id="delete-chat-cancel" class="confirm-cancel" type="button" data-i18n="conversation.cancel">Cancel</button>
@@ -334,19 +335,19 @@
 
   <div id="product-consent-modal" class="product-consent-modal" hidden>
     <section class="product-consent-card" role="dialog" aria-modal="true"
-      aria-labelledby="product-consent-title" aria-describedby="product-consent-copy" lang="en">
-      <p class="product-consent-eyebrow">Your privacy, your choice</p>
-      <h2 id="product-consent-title">Help us see where Muta is useful.</h2>
-      <p id="product-consent-copy">When this laptop gets online, Muta can share pseudonymous product activity and an approximate city-level location derived from its network. This helps us count active installations and map Muta’s reach.</p>
+      aria-labelledby="product-consent-title" aria-describedby="product-consent-copy">
+      <p class="product-consent-eyebrow" data-i18n="privacy.eyebrow">Your privacy, your choice</p>
+      <h2 id="product-consent-title" data-i18n="privacy.title">Help us see where Muta is useful.</h2>
+      <p id="product-consent-copy" data-i18n="privacy.description">When this laptop gets online, Muta can share pseudonymous product activity and an approximate city-level location derived from its network. This helps us count active installations and map Muta’s reach.</p>
       <ul>
-        <li>Sends a durable random installation ID, app version/build, operating-system and processor family, recent-use time, and active/registered local-user counts.</li>
-        <li>Never sends conversations, questions, files, voice, usernames, email, GPS, or the laptop name.</li>
-        <li>Your choice is saved on this laptop, so Muta will not keep asking.</li>
-        <li>You can change this in Settings. Turning it off also asks the server to delete this installation’s history.</li>
+        <li data-i18n="privacy.sends">Sends a durable random installation ID, app version/build, operating-system and processor family, recent-use time, and active/registered local-user counts.</li>
+        <li data-i18n="privacy.neverSends">Never sends conversations, questions, files, voice, usernames, email, GPS, or the laptop name.</li>
+        <li data-i18n="privacy.saved">Your choice is saved on this laptop, so Muta will not keep asking.</li>
+        <li data-i18n="privacy.change">You can change this in Settings. Turning it off also asks the server to delete this installation’s history.</li>
       </ul>
       <div class="product-consent-actions">
-        <button id="product-consent-decline" class="product-consent-secondary" type="button">Keep private</button>
-        <button id="product-consent-allow" class="product-consent-primary" type="button">Share product activity</button>
+        <button id="product-consent-decline" class="product-consent-secondary" type="button" data-i18n="privacy.keepPrivate">Keep private</button>
+        <button id="product-consent-allow" class="product-consent-primary" type="button" data-i18n="privacy.shareActivity">Share product activity</button>
       </div>
       <p id="product-consent-error" class="product-consent-error" role="alert"></p>
     </section>
@@ -366,8 +367,8 @@
   <script src="vendor/purify.min.js"></script>
   <script src="i18n.js?v=20260826-release-integration-2"></script>
   <script src="locale-fr.js?v=20260826-release-integration-2"></script>
-  <script src="locale-generated.js?v=20260826-release-integration-2"></script>
   <script src="locales.js?v=20260826-release-integration-2"></script>
+  <script src="locale-generated.js?v=20260826-release-integration-2"></script>
   <script src="math.js?v=20260826-release-integration-2"></script>
   <script src="syntax.js?v=20260826-release-integration-2"></script>
   <script src="visualizations.js?v=20260826-release-integration-2"></script>

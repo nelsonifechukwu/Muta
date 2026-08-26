@@ -1,82 +1,160 @@
 {
   "af": {
-    "country.zimbabwe": "Proper country name is conventionally identical."
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   },
   "de": {
-    "network.offline": "The international technical status word is conventional German UI copy."
+    "code.plain": "Code is the ordinary German technical loan.",
+    "code.text": "Text is the ordinary German spelling.",
+    "conversation.chats": "Chats is an established German UI loan.",
+    "network.offline": "Offline is an established German technical status.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact German mode label.",
+    "settings.themeSystem": "System is the ordinary German spelling.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral.",
+    "visualization.pause": "Pause is the ordinary German spelling."
+  },
+  "din": {
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   },
   "es": {
     "attachment.audio": "Audio is the ordinary Spanish spelling.",
+    "conversation.chats": "Chats is an established Spanish UI loan.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact Spanish mode label.",
     "settings.general": "General is the ordinary Spanish spelling.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral.",
     "telemetry.no": "No is the ordinary Spanish spelling."
+  },
+  "ff": {
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral."
   },
   "fr": {
     "attachment.audio": "Audio is the ordinary French spelling.",
     "chat.conversation": "Conversation is the ordinary French spelling.",
+    "code.plain": "Code is the ordinary French spelling.",
     "country.zimbabwe": "Proper country name is conventionally identical.",
     "nav.conversations": "Conversations is the ordinary French spelling.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "rag.previewLabel": "Citation is the ordinary French spelling; the number is a placeholder.",
+    "rag.sourceCountOne": "Source is the ordinary French spelling.",
+    "rag.sourceMeta": "PDF and page are conventional French technical terms.",
+    "rag.sources": "Sources is the ordinary French spelling.",
     "settings.interface": "Interface is the ordinary French spelling."
   },
   "ha": {
     "country.zimbabwe": "Proper country name is conventionally identical.",
     "network.offline": "International technical status token retained intentionally.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
     "settings.interface": "International technical loan retained intentionally.",
     "settings.languageAuto": "Auto is an established compact control label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral.",
     "telemetry.peak": "International telemetry token retained intentionally."
   },
   "ig": {
     "country.zimbabwe": "Proper country name is conventionally identical.",
     "network.offline": "International technical status token retained intentionally.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
     "settings.interface": "International technical loan retained intentionally.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral.",
     "telemetry.throttle": "International telemetry token retained intentionally."
   },
+  "kg": {
+    "runtime.eco": "Eco is an established compact mode label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
+  },
   "mg": {
-    "settings.interface": "International technical loan retained intentionally."
+    "conversation.chats": "Chats is an established compact UI loan in this pack.",
+    "conversation.pin": "Pin chat is an established compact UI loan in this pack.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
+    "settings.interface": "International technical loan retained intentionally.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   },
   "ny": {
+    "conversation.pin": "Pin chat is an established compact UI loan in this pack.",
     "country.zimbabwe": "Proper country name is conventionally identical.",
+    "power.eco": "Eco mode is an established compact technical label.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
     "settings.languageAuto": "Auto is an established compact control label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral.",
     "telemetry.peak": "International telemetry token retained intentionally.",
     "telemetry.throttle": "International telemetry token retained intentionally."
   },
   "pt": {
-    "network.offline": "International technical status token retained intentionally.",
-    "settings.interface": "Interface is the ordinary Portuguese spelling."
+    "network.offline": "Offline is an established Portuguese technical status.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "settings.interface": "Interface is the ordinary Portuguese spelling.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   },
   "rn": {
     "country.zimbabwe": "Proper country name is conventionally identical."
   },
   "rw": {
+    "account.host": "Host is an established technical role label in this pack.",
     "country.zimbabwe": "Proper country name is conventionally identical.",
+    "power.eco": "Eco mode is an established compact technical label.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
     "settings.interface": "International technical loan retained intentionally.",
     "settings.languageAuto": "Auto is an established compact control label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral.",
     "telemetry.peak": "International telemetry token retained intentionally.",
     "telemetry.throttle": "International telemetry token retained intentionally."
   },
   "sn": {
     "country.zimbabwe": "Proper country name is conventionally identical.",
-    "network.offline": "International technical status token retained intentionally.",
-    "settings.interface": "International technical loan retained intentionally.",
-    "telemetry.peak": "International telemetry token retained intentionally.",
-    "telemetry.throttle": "International telemetry token retained intentionally."
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   },
   "so": {
+    "conversation.chats": "Chats is an established compact UI loan in this pack.",
+    "conversation.pin": "Pin chat is an established compact UI loan in this pack.",
+    "conversation.pinned": "Pinned is an established compact UI loan in this pack.",
     "country.zimbabwe": "Proper country name is conventionally identical.",
     "network.offline": "International technical status token retained intentionally.",
-    "settings.languageAuto": "Auto is an established compact control label."
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "settings.languageAuto": "Auto is an established compact control label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
+  },
+  "ss": {
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral."
   },
   "st": {
     "country.zimbabwe": "Proper country name is conventionally identical.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral.",
     "telemetry.peak": "International telemetry token retained intentionally.",
     "telemetry.throttle": "International telemetry token retained intentionally."
   },
   "sw": {
-    "country.zimbabwe": "Proper country name is conventionally identical."
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
+  },
+  "tn": {
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   },
   "xh": {
-    "reason.off": "Instant is an established compact mode label in this pack."
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "reason.off": "Instant is an established compact mode label in this pack.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   },
   "yo": {
-    "country.zimbabwe": "Proper country name is conventionally identical."
+    "country.zimbabwe": "Proper country name is conventionally identical.",
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "runtime.eco": "Eco is an established compact mode label.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
+  },
+  "zu": {
+    "power.rate": "Placeholder plus international watt symbol is locale-neutral.",
+    "startup.progress": "Placeholder-only percentage template is locale-neutral."
   }
 }

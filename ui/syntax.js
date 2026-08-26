@@ -109,20 +109,21 @@
       toolbar.className = "code-toolbar";
       const languageLabel = root.document.createElement("span");
       languageLabel.className = "code-language";
-      languageLabel.textContent = language || labels.plainLabel || "Text";
+      const localized = (key) => root.MutaI18n?.t?.(key) || key;
+      languageLabel.textContent = language || labels.plainLabel || localized("code.text");
       const copy = root.document.createElement("button");
       copy.type = "button";
       copy.className = "code-copy";
       copy.dataset.i18n = "code.copy";
-      copy.textContent = labels.copyLabel || "Copy";
+      copy.textContent = labels.copyLabel || localized("code.copy");
       copy.addEventListener("click", async () => {
         try {
           await copyText(source);
-          copy.textContent = labels.copiedLabel || "Copied";
+          copy.textContent = labels.copiedLabel || localized("code.copied");
         } catch (_) {
-          copy.textContent = labels.failedLabel || "Copy failed";
+          copy.textContent = labels.failedLabel || localized("code.copyFailed");
         }
-        root.setTimeout(() => { copy.textContent = labels.copyLabel || "Copy"; }, 1600);
+        root.setTimeout(() => { copy.textContent = labels.copyLabel || localized("code.copy"); }, 1600);
       });
       toolbar.append(languageLabel, copy);
       code.replaceChildren();

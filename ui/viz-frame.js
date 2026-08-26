@@ -9,6 +9,7 @@
   const surfacePlay = document.getElementById("viz-surface-play");
   const surfacePause = document.getElementById("viz-surface-pause");
   const surfaceRestart = document.getElementById("viz-surface-restart");
+  const t = (key, variables) => window.MutaI18n.t(key, variables);
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let parentVisible = true;
   const activityListeners = new Set();
@@ -57,7 +58,7 @@
 
   function fail(message) {
     stage.replaceChildren();
-    errorEl.textContent = message || "This visualization could not be drawn.";
+    errorEl.textContent = message || t("visualization.failed");
     errorEl.hidden = false;
     replay.hidden = true;
     surfaceControls.hidden = true;
@@ -475,7 +476,7 @@
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.domElement.tabIndex = 0;
     renderer.domElement.setAttribute("role", "img");
-    renderer.domElement.setAttribute("aria-label", `${spec.aria_label} Use arrow keys to rotate.`);
+    renderer.domElement.setAttribute("aria-label", `${spec.aria_label} ${t("visualization.rotateHint")}`);
     stage.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
@@ -570,12 +571,12 @@
     renderer.domElement.addEventListener("keydown", keyDown);
     const hint = document.createElement("span");
     hint.className = "viz-3d-hint";
-    hint.textContent = "drag to rotate";
+    hint.textContent = t("visualization.dragRotate");
     stage.appendChild(hint);
     if (spec.notes?.length) {
       const notes = document.createElement("div");
       notes.className = "viz-3d-notes";
-      notes.setAttribute("aria-label", "Orbital relationships");
+      notes.setAttribute("aria-label", t("visualization.orbitalRelationships"));
       spec.notes.forEach((value) => {
         const line = document.createElement("span");
         line.textContent = value;
@@ -595,7 +596,12 @@
         if (Math.abs(value + Math.PI) < 1e-5) return "−π";
         return Number(value.toFixed(3)).toString();
       };
-      domains.textContent = `x: ${domainValue(object.x_domain[0])} to ${domainValue(object.x_domain[1])} · y: ${domainValue(object.y_domain[0])} to ${domainValue(object.y_domain[1])} · z vertical`;
+      domains.textContent = t("visualization.axisDomains", {
+        x0: domainValue(object.x_domain[0]),
+        x1: domainValue(object.x_domain[1]),
+        y0: domainValue(object.y_domain[0]),
+        y1: domainValue(object.y_domain[1]),
+      });
       equation.append(expression, domains);
       stage.appendChild(equation);
     }
@@ -850,12 +856,12 @@
     try {
       parsed = window.MutaViz.decodeSpec(window.location.hash.slice(1));
     } catch {
-      fail("The visualization data was incomplete.");
+      fail(t("visualization.incomplete"));
       return;
     }
     const checked = window.MutaViz.validateSpec(parsed);
     if (!checked.ok) {
-      fail("The visualization data was not valid.");
+      fail(t("visualization.invalid"));
       return;
     }
     const spec = checked.spec;
@@ -867,7 +873,8 @@
       else if (spec.library === "three") renderThree(spec);
       else renderAnimation(spec);
     } catch (error) {
-      fail(error && error.message ? error.message : "This visualization could not be drawn.");
+      console.warn("Visualization rendering failed", error);
+      fail(t("visualization.failed"));
     }
   }
 

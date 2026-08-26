@@ -3,15 +3,14 @@
 ## Isolation and dependency gate
 
 - Branch: `codex/release-i18n-completeness`
-- Base: `origin/main` at `ff0207aa3aa6ee40e5b56b0bceaba3802548d913`
+- Frozen integrated base: `b9909fe9d84ee3e3959e5ccd6580eb7604537da1`
 - Worktree: isolated from the shared checkout; this branch does not modify `main`, packages, or
   releases.
-- Translation is deliberately gated on the committed UI, Host-mode, and power SHAs. Merge or
-  cherry-pick those commits here before changing the canonical English catalog or any locale.
+- The dependency gate is satisfied by the integrated UI, Host-mode, and power SHAs recorded in
+  `ui/i18n-release-gate.json`; the frozen base already contains them.
 
-The first checkpoint contains only the source inventory, extraction rules, and automated
-completeness tests. It must be safe to re-run after each dependency lands and must make newly
-introduced untranslated UI copy visible as a test failure.
+The foundation checkpoint contained only the source inventory, extraction rules, and automated
+completeness tests. The final release pass below runs those gates against the integrated product.
 
 ## Inventory boundary
 
@@ -45,7 +44,7 @@ phase; final localization removes every translatable exception or hides the affe
 
 ## Dependency integration and final copy
 
-After the three SHAs arrive:
+After the three SHAs arrived:
 
 1. Merge/cherry-pick them into this branch and regenerate the inventory.
 2. Add keys for startup/progress, delete/pin, Host/mobile errors, model descriptions, disclaimer,
@@ -61,7 +60,22 @@ After the three SHAs arrive:
    reasonable spot review while retaining its backend registration.
 6. Verify desktop/mobile runtime switching plus representative long, RTL, and multibyte locales.
 
+## Release result
+
+- The canonical runtime contains 366 keys and covers chat, startup, Host/mobile, power, resources,
+  syntax, privacy/analytics, access, theme, and visualization copy.
+- Twenty-seven interface locales are visible and pass exact key/placeholder parity, browser-residue,
+  script, repetition, semantic-collapse, and reviewed-English-equivalence gates. The remaining 59
+  registered locales stay in backend metadata but are hidden until a defensible complete catalog is
+  available; Afar was removed from the visible selector because its integrated release delta was
+  incomplete.
+- Generated packs are recorded as machine-assisted and spot-reviewed, never native-reviewed. The
+  validator strips and rejects browser UI contamination and the checked-in inventory rejects
+  unlocalized visible literals.
+- The authored shell and visualization frame both opt out of browser translation while retaining
+  runtime `lang` and `dir` switching.
+
 ## Delivery boundary
 
-Commit and push only this branch. Do not merge to `main`, create packages, publish releases, or
-deploy. Report the foundation SHA, then wait for the dependency SHAs.
+Commit only this branch. Do not merge to `main`, create packages, publish releases, deploy, or push
+over the network. Report the final local SHA and isolated worktree path for integration.

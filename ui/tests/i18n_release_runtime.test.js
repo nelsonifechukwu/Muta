@@ -11,8 +11,8 @@ require("../africa-languages.js");
 require("../locale-manifest.js");
 require("../i18n.js");
 require("../locale-fr.js");
-require("../locale-generated.js");
 require("../locales.js");
+require("../locale-generated.js");
 
 const i18n = globalThis.MutaI18n;
 
@@ -49,7 +49,7 @@ function documentProfile(width) {
   const heading = new FakeElement("h1");
   heading.dataset.i18n = "empty.title";
   const helper = new FakeElement("small");
-  helper.dataset.i18n = "settings.languageHelp";
+  helper.dataset.i18n = "settings.parallelHelp";
   const composer = new FakeElement("div");
   composer.setAttribute("data-i18n-aria-label", "composer.placeholder");
   const select = new FakeElement("select");
@@ -86,7 +86,7 @@ for (const [profile, width] of [["mobile", 390], ["desktop", 1440]]) {
     assert.equal(document.documentElement.lang, "ar");
     assert.equal(document.documentElement.dir, "rtl");
     assert.equal(heading.textContent, i18n.catalogs.ar["empty.title"]);
-    assert.equal(helper.textContent, i18n.catalogs.ar["settings.languageHelp"]);
+    assert.equal(helper.textContent, i18n.catalogs.ar["settings.parallelHelp"]);
     assert.equal(composer.getAttribute("aria-label"), i18n.catalogs.ar["composer.placeholder"]);
     assert.equal(select.value, "ar");
 
@@ -94,13 +94,13 @@ for (const [profile, width] of [["mobile", 390], ["desktop", 1440]]) {
     assert.equal(document.documentElement.lang, "am");
     assert.equal(document.documentElement.dir, "ltr");
     assert.match(heading.textContent, /[\u1200-\u137f]/u);
-    assert.equal(helper.textContent, i18n.catalogs.am["settings.languageHelp"]);
+    assert.equal(helper.textContent, i18n.catalogs.am["settings.parallelHelp"]);
     assert.equal(select.value, "am");
 
     assert.equal(i18n.setLocale("de", { persist: false, doc: document }), true);
     assert.equal(document.documentElement.lang, "de");
     assert.equal(document.documentElement.dir, "ltr");
-    assert.equal(helper.textContent, i18n.catalogs.de["settings.languageHelp"]);
+    assert.equal(helper.textContent, i18n.catalogs.de["settings.parallelHelp"]);
     assert.ok(helper.textContent.length > 80, "long translated helper must remain intact");
     assert.equal(select.value, "de");
     assert.equal(select.children[0].value, "auto");
@@ -114,4 +114,10 @@ test("authored mobile composer and generated prose retain automatic bidi isolati
   assert.match(html, /id="input"[^>]*\bdir="auto"/s);
   assert.match(app, /prose\.dir\s*=\s*"auto"/);
   assert.match(app, /thought\.dir\s*=\s*"auto"/);
+});
+
+test("localized visualization frame opts out of browser translation", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "viz-frame.html"), "utf8");
+  assert.match(html, /<html[^>]*translate="no"[^>]*class="notranslate"/);
+  assert.match(html, /<meta name="google" content="notranslate">/);
 });

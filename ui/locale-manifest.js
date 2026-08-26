@@ -4,7 +4,6 @@
 
 (() => {
   const locales = Object.freeze([
-    Object.freeze({ tag: "aa", direction: "ltr" }),
     Object.freeze({ tag: "af", direction: "ltr" }),
     Object.freeze({ tag: "am", direction: "ltr" }),
     Object.freeze({ tag: "ar", direction: "rtl" }),

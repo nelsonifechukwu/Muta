@@ -23,7 +23,6 @@
     "settings.general": "Général",
     "settings.parallel": "Générer dans plusieurs discussions",
     "settings.parallelHelp": "Laissez une réponse continuer pendant que vous en lancez une autre. Les réponses parallèles partagent le processeur local et peuvent être plus lentes.",
-    "settings.limits": "Muta respecte les limites de mémoire et d’emplacements d’inférence fixées par l’opérateur.",
     "settings.saveFailed": "Impossible d’enregistrer ce paramètre.",
     "runtime.offlineLocal": "hors ligne · processeur local",
     "model.loading": "Chargement des modèles…",

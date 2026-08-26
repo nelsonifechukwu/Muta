@@ -61,9 +61,10 @@
   function bindToggle(toggle) {
     if (!toggle || !global.document) return () => {};
     const sync = () => {
-      const action = global.document.documentElement.dataset.theme === "dark"
-        ? "Switch to light mode"
-        : "Switch to dark mode";
+      const key = global.document.documentElement.dataset.theme === "dark"
+        ? "theme.switchLight"
+        : "theme.switchDark";
+      const action = global.MutaI18n?.t?.(key) || global.MutaReleaseEnglish?.[key] || key;
       toggle.setAttribute("aria-label", action);
       toggle.title = action;
     };
@@ -74,10 +75,12 @@
     };
     toggle.addEventListener("click", onClick);
     global.document.addEventListener?.("muta:themechange", sync);
+    global.document.addEventListener?.("muta:localechange", sync);
     sync();
     return () => {
       toggle.removeEventListener?.("click", onClick);
       global.document.removeEventListener?.("muta:themechange", sync);
+      global.document.removeEventListener?.("muta:localechange", sync);
     };
   }
 

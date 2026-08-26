@@ -1,10 +1,10 @@
 {
-  "phase": "awaiting-dependencies",
-  "base": "ff0207aa3aa6ee40e5b56b0bceaba3802548d913",
+  "phase": "release",
+  "base": "b9909fe9d84ee3e3959e5ccd6580eb7604537da1",
   "dependencies": {
-    "ui": null,
-    "host_mode": null,
-    "power": null
+    "ui": "534939cdb637937d6e365c9887ac422c5efd3eb4",
+    "host_mode": "dfcc2908fa7f1ba9858796e4f0b0178d5ecb4f08",
+    "power": "504485b820580fa25ff993e4d2c391d40d9ea06f"
   },
   "policy": "Literal candidates are inventoried as pending during the dependency gate. After all dependency SHAs are recorded, release tests require every translatable literal to move behind canonical i18n and every visible locale to be complete."
 }

@@ -14,6 +14,7 @@ UI = Path(__file__).resolve().parents[1]
 HTML = (UI / "index.html").read_text()
 CSS = (UI / "styles.css").read_text()
 I18N = (UI / "i18n.js").read_text()
+RELEASE_ENGLISH = (UI / "release-english.js").read_text()
 NGINX = (UI.parent / "docker" / "nginx.conf.template").read_text()
 ACCESS_BOOTSTRAP = (UI / "access-bootstrap.js").read_text()
 
@@ -121,16 +122,25 @@ def test_release_copy_is_terse_localized_and_exact():
     assert f'"fineprint": "{disclaimer}"' in I18N
     analytics = "Help us improve Muta by sharing your analytics."
     assert f'data-i18n="settings.analyticsHelp">{analytics}</strong>' in HTML
-    assert f'"settings.analyticsHelp": "{analytics}"' in I18N
+    assert f'"settings.analyticsHelp": "{analytics}"' in RELEASE_ENGLISH
     assert "Share pseudonymous product activity" not in HTML
     assert "Send a durable random installation ID" not in HTML
     assert 'data-i18n="settings.limits"' not in HTML
     assert '"settings.limits":' not in I18N
+    assert '"settings.limits":' not in (UI / "locales.js").read_text()
+    assert '"settings.limits":' not in (UI / "locale-fr.js").read_text()
+    assert '"settings.limits":' not in (UI.parent / "scripts" / "generate_ui_catalogs.py").read_text()
+    assert "settings.limits" not in (UI / "locale-generated.meta.json").read_text()
     assert '"model.textTutor": "Text tutor"' in I18N
     assert '"model.imageTutor": "Text and image tutor"' in I18N
     assert 'return t(model.supports_images ? "model.imageTutor" : "model.textTutor")' in (
         UI / "app.js"
     ).read_text()
+
+
+def test_offline_dist_includes_the_release_english_catalog():
+    builder = (UI.parent / "scripts" / "build_ui_dist.py").read_text()
+    assert '"release-english.js"' in builder
 
 
 def test_wordmark_uses_a_crisp_css_square_below_the_u_on_every_app_surface():
@@ -587,7 +597,8 @@ def test_resource_retrieval_is_inferred_from_inline_mentions_without_a_mode_togg
     assert 'featureT("rag.chooseFile")' not in send
     assert "if (!useRag)" not in trigger
     assert "empty.textContent = featureT(emptyKey)" in js
-    assert '"rag.noFiles": "No files found"' in js
+    assert '"rag.noFiles": "No files found"' in RELEASE_ENGLISH
+    assert '"rag.noFiles"' in js
     assert "use_rag: (item.ragResources || []).length > 0" in js
     assert "useRag:" not in js
     assert "resolveResources(" in js
@@ -719,7 +730,11 @@ def test_settings_exposes_persisted_parallel_chat_and_power_switches():
     assert "allow_parallel_chats: enabled" in js
     assert "power_optimization_enabled: enabled" in js
     assert 'setAttribute("aria-label", badgeLabel)' in js
-    assert "Battery sensor temporarily unavailable; Critical reserve remains active." in js
+    assert (
+        '"power.sensorGrace": '
+        '"Battery sensor temporarily unavailable; Critical reserve remains active."'
+    ) in RELEASE_ENGLISH
+    assert 'powerText("sensorGrace")' in js
     assert 'hostMode === "critical"' in js
     assert "Parallel replies share same CPU and RAM. Queue queries to optimize resources." in HTML
     assert 'data-i18n="settings.parallelHelp"' in HTML
@@ -759,7 +774,8 @@ def test_host_mode_uses_the_accessible_application_switch_and_exact_sidebar_copy
 
     exact = "Muta Host: This device. Running locally."
     assert f'data-release-i18n="sidebar.hostLocal" hidden>{exact}</span>' in HTML
-    assert f'"sidebar.hostLocal": "{exact}"' in js
+    assert f'"sidebar.hostLocal": "{exact}"' in RELEASE_ENGLISH
+    assert "applyReleaseCopy" in js
     assert 'document.querySelector("#share-host-local-copy").hidden = !hostIdentity' in js
     assert 'document.querySelector("#sidebar-runtime").hidden = hostIdentity' in js
     assert "Muta stays within the operator’s fixed inference-slot and memory limits." not in HTML
@@ -1033,7 +1049,8 @@ def test_muta_share_gate_is_labeled_persistent_and_role_scoped():
     assert 'document.querySelector("#host-settings").hidden = role !== "host"' in js
     assert 'document.querySelector(".model-selector").hidden = role === "member"' in js
     assert 'method: "POST"' in js and "/v1/share/enrollments/" in js
-    assert "window.confirm(" in js and "conversations, files and learning profile" in js
+    assert "window.confirm(" in js and 'releaseT("host.removeConfirm"' in js
+    assert "conversations, files and learning profile" in RELEASE_ENGLISH
     assert "?token=" not in js
 
 
@@ -1133,7 +1150,8 @@ def test_dark_mode_is_prepaint_persistent_complete_and_accessible():
     assert all(f'<option value="{value}" data-i18n=' in HTML for value in ("system", "light", "dark"))
     assert 'data-i18n="settings.appearance"' in HTML
     assert 'data-i18n-aria-label="settings.appearance"' in HTML
-    assert 'for="setting-theme" lang="en"' in HTML
+    assert 'for="setting-theme"' in HTML
+    assert 'for="setting-theme" lang="en"' not in HTML
     assert "Use your device setting, or keep Muta in light or dark mode." not in HTML
     assert "MutaTheme?.applyPreference(themeSelect.value, { persist: true })" in js
     assert 'document.addEventListener("muta:themechange", syncThemeSetting)' in js
@@ -1252,7 +1270,8 @@ def test_generation_feedback_replaces_the_blinking_cursor_and_names_visual_work(
     css = (UI / "styles.css").read_text()
     assert 'activity.className = "generation-status"' in js
     assert 'wrap.setAttribute("aria-busy", "true")' in js
-    assert 'visualization: "Generating diagram…"' in js
+    assert 'visualization: t("reply.diagram")' in js
+    assert '"reply.diagram": "Generating diagram…"' in RELEASE_ENGLISH
     assert "job.handle?.showPhase(ev.phase)" in js
     assert "job.handle?.replaceContent(job.content)" in js
     assert ".generation-dots" in css and "@keyframes generation-dot" in css
