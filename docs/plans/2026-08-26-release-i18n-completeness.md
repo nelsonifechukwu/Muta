@@ -62,7 +62,7 @@ After the three SHAs arrived:
 
 ## Release result
 
-- The canonical runtime contains 366 keys and covers chat, startup, Host/mobile, power, resources,
+- The canonical runtime contains 367 keys and covers chat, startup, Host/mobile, power, resources,
   syntax, privacy/analytics, access, theme, and visualization copy.
 - Twenty-seven interface locales are visible and pass exact key/placeholder parity, browser-residue,
   script, repetition, semantic-collapse, and reviewed-English-equivalence gates. The remaining 59
