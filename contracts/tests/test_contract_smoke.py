@@ -27,11 +27,13 @@ class _FakeStore:
                 "student_id": "s1",
                 "title": "hello",
                 "mode": "socratic",
+                "pinned": False,
                 "created_at": "2026-07-25T00:00:00+00:00",
                 "updated_at": "2026-07-25T00:00:00+00:00",
             }
         }
         self.deleted: list[str] = []
+        self.pinned: list[tuple[str, bool]] = []
 
     def list_conversations(self, student_id):
         return [c for c in self.conversations.values() if c["student_id"] == student_id]
@@ -45,6 +47,14 @@ class _FakeStore:
             return False
         self.deleted.append(cid)
         self.conversations.pop(cid, None)
+        return True
+
+    def set_conversation_pinned(self, cid, *, owner_id, pinned):
+        convo = self.conversations.get(cid)
+        if convo is None or convo["student_id"] != owner_id:
+            return False
+        convo["pinned"] = pinned
+        self.pinned.append((cid, pinned))
         return True
 
     def list_messages(self, cid):
@@ -99,6 +109,7 @@ PUBLIC_PATHS = [
     "/v1/power/status",
     "/v1/conversations",
     "/v1/conversations/{conversation_id}/messages",
+    "/v1/conversations/{conversation_id}/pin",
     "/v1/conversations/{conversation_id}",
     "/v1/attachments/{attachment_id}",
     "/v1/diagnose",
@@ -217,6 +228,7 @@ def test_conversations_lists_a_students_threads(override_engine):
     body = r.json()
     assert body["conversations"][0]["id"] == "conv-123"
     assert body["conversations"][0]["title"] == "hello"
+    assert body["conversations"][0]["pinned"] is False
 
 
 def test_conversations_requires_auth(override_engine):
@@ -272,6 +284,33 @@ def test_conversation_delete_by_non_owner_is_404_not_a_silent_success(override_e
     r = client.delete("/v1/conversations/conv-123", headers={"Authorization": "Bearer mallory"})
     assert r.status_code == 404
     assert engine.store.deleted == []  # nothing was destroyed
+
+
+def test_conversation_pin_is_persisted_for_owner(override_engine):
+    engine = _FakeEngine()
+    override_engine(engine)
+
+    response = client.put(
+        "/v1/conversations/conv-123/pin",
+        json={"pinned": True},
+        headers=_AUTH_S1,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"id": "conv-123", "pinned": True}
+    assert engine.store.pinned == [("conv-123", True)]
+
+
+def test_conversation_pin_is_owner_scoped(override_engine):
+    engine = _FakeEngine()
+    override_engine(engine)
+    response = client.put(
+        "/v1/conversations/conv-123/pin",
+        json={"pinned": True},
+        headers={"Authorization": "Bearer mallory"},
+    )
+    assert response.status_code == 404
+    assert engine.store.pinned == []
 
 
 def test_attachment_requires_auth(override_engine):

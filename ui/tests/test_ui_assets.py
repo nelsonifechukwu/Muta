@@ -63,12 +63,13 @@ def test_loopback_host_opens_the_local_shell_without_the_shared_connection_gate(
     Detection happens in the blocking head so the wrong full-screen gate cannot flash before
     app.js starts. This is only first-paint routing; backend authorization remains mandatory.
     """
-    bootstrap_tag = '<script src="access-bootstrap.js?v=20260822-local-host-1"></script>'
+    bootstrap_tag = '<script src="access-bootstrap.js?v=20260826-release-ui-polish-1"></script>'
     assert bootstrap_tag in HTML
     assert HTML.index(bootstrap_tag) < HTML.index('<link rel="stylesheet"')
     assert 'hostname === "localhost"' in ACCESS_BOOTSTRAP
     assert 'hostname === "::1"' in ACCESS_BOOTSTRAP
     assert 'hostname.startsWith("127.")' in ACCESS_BOOTSTRAP
+    assert 'window.location.protocol === "file:"' in ACCESS_BOOTSTRAP
     assert 'localOperator ? "operator" : "shared"' in ACCESS_BOOTSTRAP
     assert "window.MutaAccess = Object.freeze({ localOperator })" in ACCESS_BOOTSTRAP
     assert 'html[data-muta-access="operator"] #share-auth { display: none; }' in CSS
@@ -77,9 +78,152 @@ def test_loopback_host_opens_the_local_shell_without_the_shared_connection_gate(
     js = (UI / "app.js").read_text()
     assert "const localOperatorPage = Boolean(window.MutaAccess?.localOperator)" in js
     assert 'app.removeAttribute("inert")' in js
-    assert 'app.setAttribute("aria-busy", "false")' in js
+    assert 'String(document.documentElement.dataset.mutaReady !== "true")' in js
     assert "if (localOperatorPage)" in js
     assert "A loopback page is the operator's own Muta" in js
+
+
+def test_release_startup_is_truthful_accessible_and_non_blocking():
+    startup = (UI / "startup.js").read_text()
+    config = (UI.parent / "desktop" / "src-tauri" / "tauri.conf.json").read_text()
+    splash = (UI.parent / "desktop" / "splash" / "index.html").read_text()
+
+    assert '"frontendDist": "../../ui/dist"' in config
+    assert 'id="startup-progress" class="startup-progress" role="progressbar"' in HTML
+    assert 'aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"' in HTML
+    assert 'class="startup-readiness" role="status" aria-live="polite" aria-busy="true"' in HTML
+    assert 'data-i18n="startup.tagline"' in HTML
+    exact = "the personal education companion for every student at every level. powered by AI."
+    assert exact in HTML and exact in splash and f'"startup.tagline": "{exact}"' in I18N
+    assert "Math.random" not in startup
+    assert "Math.min(99, requested)" in startup
+    assert 'body?.ready === true' in startup
+    assert "failures >= 3" in startup
+    assert 'stage: "startup.failed", failed: true, retryable: true' in startup
+    assert '"aria-valuetext"' in startup
+    assert 'new CustomEvent("muta:startupchange"' in startup
+    js = (UI / "app.js").read_text()
+    assert 'document.documentElement.dataset.mutaReady !== "true"' in js
+    assert 'document.addEventListener("muta:startupchange", syncComposerState)' in js
+    send = js[js.index("function send(") : js.index("async function dispatch(")]
+    assert 'return toast(t("startup.loadingTutor"))' in send
+    assert "prefers-reduced-motion: reduce" in CSS
+    assert "Verifying packaged model files" not in splash
+    assert "Starting secure local services" not in splash
+
+
+def test_release_copy_is_terse_localized_and_exact():
+    assert 'data-i18n-aria-label="composer.placeholder"' in HTML
+    assert 'data-placeholder="Ask anything"' in HTML
+    assert '"composer.placeholder": "Ask anything"' in I18N
+    disclaimer = "Muta can make mistakes. Check important info."
+    assert f'data-i18n="fineprint">{disclaimer}</div>' in HTML
+    assert f'"fineprint": "{disclaimer}"' in I18N
+    assert '"model.textTutor": "Text tutor"' in I18N
+    assert '"model.imageTutor": "Text and image tutor"' in I18N
+    assert 'return t(model.supports_images ? "model.imageTutor" : "model.textTutor")' in (
+        UI / "app.js"
+    ).read_text()
+
+
+def test_wordmark_uses_a_crisp_css_square_below_the_u_on_every_app_surface():
+    assert HTML.count('class="muta-wordmark" role="img" aria-label="Muta"') >= 3
+    assert 'class="muta-wordmark startup-wordmark" role="img" aria-label="Muta"' in HTML
+    assert 'class="muta-wordmark-u">u<i></i></span>' in HTML
+    mark = "".join(_blocks(".muta-wordmark-u > i"))
+    assert "position: absolute" in mark
+    assert "bottom: -0.22em" in mark
+    assert "width: 0.16em" in mark and "height: 0.16em" in mark
+    assert "background: var(--accent)" in mark
+    assert "<img" not in re.search(r'<a class="brand".*?</a>', HTML, re.DOTALL).group()
+
+
+def test_sidebar_delete_is_confirmation_only_with_keyboard_focus_management():
+    js = (UI / "app.js").read_text()
+    row = js[js.index("function renderConversationRow(") : js.index("async function refreshSidebar(")]
+    delete_request = row[row.index('del.addEventListener("click"') : row.index("actions.append(")]
+    confirm = js[
+        js.index('deleteChatConfirm.addEventListener("click"') : js.index(
+            "function conversationGroupLabel("
+        )
+    ]
+    assert 'id="delete-chat-modal" class="confirm-modal" hidden' in HTML
+    assert 'role="dialog" aria-modal="true"' in HTML
+    assert 'data-i18n="conversation.deleteTitle">Delete chat?</h2>' in HTML
+    assert '"conversation.deleteBody": "This will delete {title}."' in I18N
+    assert "setDeleteChatOpen(true" in delete_request
+    assert "fetch(" not in delete_request
+    assert "stopGeneration(" not in delete_request and "discardQueue(" not in delete_request
+    assert 'method: "DELETE"' in confirm
+    assert "jobForConversation(pending.conversation.id)" in confirm
+    assert "stopGeneration(activeJob)" in confirm
+    assert "discardQueue(pending.conversation.id" in confirm
+    assert 'event.key === "Escape"' in js
+    assert "if (!deleteChatPending) setDeleteChatOpen(false)" in js
+    assert 'event.key !== "Tab"' in js
+    assert "last.focus()" in js and "first.focus()" in js
+    assert 'dialog?.setAttribute("aria-busy", "true")' in js
+    assert 'dialog?.setAttribute("aria-busy", "false")' in js
+    assert js.count("deleteChatCancel.disabled = false") >= 3
+    assert js.count("deleteChatConfirm.disabled = false") >= 3
+    assert "deleteChatConfirm.disabled = false" in js
+    assert "deleteChatConfirm.focus()" in js
+    assert "opener?.isConnected" in js
+    assert "min-width: 44px" in CSS or "min-height: 44px" in CSS
+
+
+def test_pinned_conversations_render_first_and_remain_accessible_on_touch():
+    js = (UI / "app.js").read_text()
+    refresh = js[js.index("async function refreshSidebar(") : js.index(
+        "function scheduleConversationRetry("
+    )]
+    assert '"conversation.pinned": "Pinned"' in I18N
+    assert '"conversation.pin": "Pin chat"' in I18N
+    assert 'pin.setAttribute("aria-pressed", String(Boolean(c.pinned)))' in js
+    assert 'method: "PUT"' in js and '/pin`' in js
+    assert 'if (!await refreshSidebar()) throw new Error("sidebar refresh failed")' in js
+    assert "replacement?.focus()" in js
+    assert "if (pinned.length)" in refresh
+    assert refresh.index('conversationGroupLabel("conversation.pinned")') < refresh.index(
+        "for (const conversation of chats)"
+    )
+    coarse = re.search(r"@media \(hover: none\), \(pointer: coarse\)\s*\{(?P<body>.*?)\}", CSS, re.DOTALL)
+    assert coarse and ".conv-pin, .conv-del" in coarse.group("body")
+    assert "width: 44px" in coarse.group("body") and "height: 44px" in coarse.group("body")
+
+
+def test_fenced_code_highlighting_is_local_safe_and_theme_aware():
+    syntax = (UI / "syntax.js").read_text()
+    js = (UI / "app.js").read_text()
+    assert '<script src="syntax.js?v=20260826-release-ui-polish-1"></script>' in HTML
+    assert HTML.index('src="math.js') < HTML.index('src="syntax.js') < HTML.index('src="app.js')
+    renderer = js[js.index("function renderMarkdown(") : js.index("function renderCompletedReply(")]
+    assert renderer.index("MutaMath.render") < renderer.index("MutaSyntax?.decorate")
+    assert "createTextNode(part.value)" in syntax
+    assert "span.textContent = part.value" in syntax
+    assert "innerHTML" not in syntax and "http://" not in syntax and "https://" not in syntax
+    assert 'code.replaceChildren()' in syntax
+    assert 'copyText(source)' in syntax
+    for token in (
+        "--syntax-comment", "--syntax-keyword", "--syntax-string", "--syntax-number",
+        "--syntax-function", "--syntax-operator", "--syntax-tag",
+    ):
+        assert CSS.count(token) >= 3
+
+
+def test_release_polish_stays_bounded_on_phone_landscape_and_reduced_motion():
+    assert "@media (max-width: 720px)" in CSS
+    assert "@media (max-width: 420px)" in CSS
+    assert "@media (hover: none), (pointer: coarse)" in CSS
+    assert "@media (prefers-reduced-motion: reduce)" in CSS
+    assert ".startup-readiness > span { display: none; }" in CSS
+    assert ".startup-progress { width: 32px; height: 32px; flex-basis: 32px; }" in CSS
+    assert ".startup-progress { transition: none; }" in CSS
+    modal = "".join(_blocks(".confirm-card"))
+    assert "width: min(28rem, 100%)" in modal
+    assert "overflow-wrap: anywhere" in CSS
+    assert "max-width: 100%" in "".join(_blocks(".prose .code-block"))
+    assert "overflow-x: auto" in "".join(_blocks(".prose pre"))
 
 
 def test_closed_mobile_drawer_does_not_expose_offscreen_navigation_to_the_keyboard():
@@ -585,7 +729,7 @@ def test_model_switch_transport_failure_stays_locked_until_authoritative_recover
     assert "scheduleModelCatalogRecovery()" in js
     assert 'modelTrigger.dataset.switching = "true"' in js
     assert 't("model.switchUncertain")' in js
-    assert "The switch may still be completing" in I18N
+    assert '"model.switchUncertain": "Checking the model switch…"' in I18N
     assert "error.definitive = response.status >= 400" in js
     assert "if (!error.definitive)" in js
     assert 't("model.connectionDropped")' in js
@@ -658,7 +802,7 @@ def test_model_menu_remains_inspectable_when_selection_is_not_permitted():
     assert "option.dataset.selectable = String(selectionEnabled && model.available)" in js
     assert "!catalog.selection_enabled" in js
     assert 't("model.operatorOnly")' in js
-    assert "Only the laptop operator can change the shared tutor model." in I18N
+    assert '"model.operatorOnly": "Only the host can change the model."' in I18N
 
 
 def test_pdf_upload_is_a_labelled_composer_control_not_a_settings_action():
@@ -754,8 +898,8 @@ def test_conversation_titles_render_resource_mentions_without_transport_syntax()
     assert "label.textContent = part.name" in renderer
     assert 'resourcePdfIcon("conv-resource-mention-icon")' in renderer
     assert "title.textContent = displayTitle" not in sidebar
-    assert "renderConversationTitle(title, displayTitle)" in sidebar
-    assert "title: readableTitle" in sidebar
+    assert "renderConversationTitle(title, displayTitle)" in js
+    assert "title: readableTitle" in js
     assert "const MENTION = /@\\{([^{}\\n]+)\\}" in mentions
     assert "Array.from(source).length !== Math.max(0, Number(legacyLimit) || 0)" in mentions
     assert 'const opener = source.lastIndexOf("@{")' in mentions

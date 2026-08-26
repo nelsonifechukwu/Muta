@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS message_sources (
 CREATE INDEX IF NOT EXISTS idx_message_sources_message ON message_sources(message_id, id);
 """
 
-_LATEST_SCHEMA_VERSION = 3
+_LATEST_SCHEMA_VERSION = 4
 
 
 def _now() -> str:
@@ -141,6 +141,13 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
         conn.executescript(_SCHEMA)
         conn.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)", (3, _now())
+        )
+    if 4 not in applied:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(conversations)").fetchall()}
+        if "pinned" not in columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+        conn.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)", (4, _now())
         )
     conn.commit()
 
@@ -201,7 +208,8 @@ class SQLiteConversationStore:
     def list_conversations(self, student_id: str) -> list[dict]:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT * FROM conversations WHERE student_id = ? ORDER BY updated_at DESC",
+                "SELECT * FROM conversations WHERE student_id = ? "
+                "ORDER BY pinned DESC, updated_at DESC",
                 (student_id,),
             ).fetchall()
         return [dict(row) for row in rows]
@@ -217,6 +225,16 @@ class SQLiteConversationStore:
                     "DELETE FROM conversations WHERE id = ? AND student_id = ?",
                     (conversation_id, owner_id),
                 )
+        return cur.rowcount > 0
+
+    def set_conversation_pinned(
+        self, conversation_id: str, *, owner_id: str, pinned: bool
+    ) -> bool:
+        with self._lock, self._conn:
+            cur = self._conn.execute(
+                "UPDATE conversations SET pinned = ? WHERE id = ? AND student_id = ?",
+                (int(pinned), conversation_id, owner_id),
+            )
         return cur.rowcount > 0
 
     def set_title(self, conversation_id: str, title: str) -> None:

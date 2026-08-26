@@ -108,6 +108,7 @@ def build(args: argparse.Namespace) -> None:
     run(stage_command)
 
     if not args.no_tauri:
+        run([sys.executable, str(REPO_ROOT / "scripts" / "build_ui_dist.py")])
         run([npm, "ci"], cwd=DESKTOP)
     if args.release:
         if not os.environ.get("TAURI_SIGNING_PRIVATE_KEY"):

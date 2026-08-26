@@ -137,7 +137,10 @@ function activateIdentity({ userId, role, username = null, token = "", csrf = nu
   const app = document.querySelector("#app");
   app.hidden = false;
   app.removeAttribute("inert");
-  app.setAttribute("aria-busy", "false");
+  app.setAttribute(
+    "aria-busy",
+    String(document.documentElement.dataset.mutaReady !== "true"),
+  );
   const account = document.querySelector("#share-account");
   account.hidden = false;
   document.querySelector("#share-account-name").textContent = username || "Muta host";
@@ -857,6 +860,12 @@ inputEl.addEventListener("input", autoGrow);
 
 function renderMarkdown(el, text) {
   MutaMath.render(el, text);
+  window.MutaSyntax?.decorate(el, {
+    copyLabel: t("code.copy"),
+    copiedLabel: t("code.copied"),
+    failedLabel: t("code.copyFailed"),
+    plainLabel: t("code.plain"),
+  });
 }
 
 /** A complete assistant turn may contain one declarative visualization fence. Streaming keeps
@@ -1722,61 +1731,222 @@ function closeTelemetry(afterMs = 4000) {
 // ---------------------------------------------------------------------------
 // Conversations sidebar
 // ---------------------------------------------------------------------------
+const deleteChatModal = $("#delete-chat-modal");
+const deleteChatCancel = $("#delete-chat-cancel");
+const deleteChatConfirm = $("#delete-chat-confirm");
+let pendingDeleteChat = null;
+let deleteChatPending = false;
+
+function setDeleteChatOpen(open, pending = null, { restoreFocus = true } = {}) {
+  const app = $("#app");
+  if (open) {
+    deleteChatPending = false;
+    deleteChatModal.querySelector(".confirm-card")?.setAttribute("aria-busy", "false");
+    deleteChatCancel.disabled = false;
+    deleteChatConfirm.disabled = false;
+    pendingDeleteChat = pending;
+    $("#delete-chat-copy").textContent = t("conversation.deleteBody", {
+      title: pending.title,
+    });
+    $("#delete-chat-error").textContent = "";
+    deleteChatModal.hidden = false;
+    app.setAttribute("inert", "");
+    requestAnimationFrame(() => deleteChatCancel.focus());
+    return;
+  }
+  const opener = pendingDeleteChat?.opener;
+  deleteChatPending = false;
+  deleteChatModal.querySelector(".confirm-card")?.setAttribute("aria-busy", "false");
+  deleteChatCancel.disabled = false;
+  deleteChatConfirm.disabled = false;
+  pendingDeleteChat = null;
+  deleteChatModal.hidden = true;
+  app.removeAttribute("inert");
+  if (restoreFocus) {
+    if (opener?.isConnected) opener.focus();
+    else $("#new-chat")?.focus();
+  }
+}
+
+deleteChatCancel.addEventListener("click", () => setDeleteChatOpen(false));
+deleteChatModal.addEventListener("click", (event) => {
+  if (!deleteChatPending && event.target === deleteChatModal) setDeleteChatOpen(false);
+});
+deleteChatModal.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    if (!deleteChatPending) setDeleteChatOpen(false);
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const controls = [deleteChatCancel, deleteChatConfirm].filter((control) => !control.disabled);
+  const first = controls[0];
+  const last = controls[controls.length - 1];
+  if (!first) {
+    event.preventDefault();
+    deleteChatModal.querySelector(".confirm-card")?.focus();
+    return;
+  }
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+document.addEventListener("muta:localechange", () => {
+  if (!pendingDeleteChat) return;
+  $("#delete-chat-copy").textContent = t("conversation.deleteBody", {
+    title: pendingDeleteChat.title,
+  });
+});
+
+deleteChatConfirm.addEventListener("click", async () => {
+  const pending = pendingDeleteChat;
+  if (!pending) return;
+  deleteChatPending = true;
+  const dialog = deleteChatModal.querySelector(".confirm-card");
+  dialog?.setAttribute("aria-busy", "true");
+  deleteChatCancel.disabled = true;
+  deleteChatConfirm.disabled = true;
+  dialog?.focus();
+  try {
+    const activeJob = jobForConversation(pending.conversation.id);
+    if (activeJob) await stopGeneration(activeJob);
+    discardQueue(pending.conversation.id, { announce: false });
+    const response = await fetch(`/v1/conversations/${pending.conversation.id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const wasCurrent = pending.conversation.id === conversationId;
+    setDeleteChatOpen(false, null, { restoreFocus: false });
+    if (wasCurrent) newChat();
+    await refreshSidebar();
+    $("#new-chat")?.focus();
+  } catch {
+    deleteChatPending = false;
+    dialog?.setAttribute("aria-busy", "false");
+    deleteChatCancel.disabled = false;
+    deleteChatConfirm.disabled = false;
+    $("#delete-chat-error").textContent = t("conversation.deleteFailed");
+    deleteChatConfirm.focus();
+  } finally {
+    if (!deleteChatModal.hidden) {
+      deleteChatPending = false;
+      dialog?.setAttribute("aria-busy", "false");
+      deleteChatCancel.disabled = false;
+      deleteChatConfirm.disabled = false;
+    }
+  }
+});
+
+function conversationGroupLabel(key) {
+  const label = document.createElement("div");
+  label.className = "conv-group-label";
+  label.setAttribute("role", "heading");
+  label.setAttribute("aria-level", "2");
+  label.textContent = t(key);
+  return label;
+}
+
+function renderConversationRow(c) {
+  const item = document.createElement("div");
+  item.dataset.conversationId = c.id;
+  const backgroundJob = jobForConversation(c.id);
+  item.className = "conv-item" +
+    (c.id === conversationId ? " active" : "") +
+    (backgroundJob ? " generating" : "") +
+    (c.pinned ? " pinned" : "");
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = "conv-open";
+  const title = document.createElement("span");
+  title.className = "conv-title";
+  const displayTitle = c.title || t("conversation.untitled");
+  const readableTitle = renderConversationTitle(title, displayTitle);
+  open.setAttribute("aria-label", t("conversation.open", { title: readableTitle }));
+  if (c.id === conversationId) open.setAttribute("aria-current", "page");
+  if (backgroundJob) {
+    const dot = document.createElement("span");
+    dot.className = "conv-generating" + (backgroundJob.state === "queued" ? " queued" : "");
+    dot.title = backgroundJob.state === "queued"
+      ? t("queue.waitingSlot", {
+        position: backgroundJob.queuePosition ? ` #${backgroundJob.queuePosition}` : "",
+      })
+      : t("conversation.background");
+    open.appendChild(dot);
+  }
+  open.appendChild(title);
+  open.addEventListener("click", () => loadConversation(c.id));
+
+  const actions = document.createElement("div");
+  actions.className = "conv-actions";
+  const pin = document.createElement("button");
+  pin.type = "button";
+  pin.className = "conv-pin";
+  pin.title = t(c.pinned ? "conversation.unpin" : "conversation.pin");
+  pin.setAttribute("aria-label", pin.title);
+  pin.setAttribute("aria-pressed", String(Boolean(c.pinned)));
+  pin.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6Zm4 11v7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  pin.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    pin.disabled = true;
+    try {
+      const response = await fetch(`/v1/conversations/${c.id}/pin`, {
+        method: "PUT",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ pinned: !c.pinned }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!await refreshSidebar()) throw new Error("sidebar refresh failed");
+      const replacement = [...document.querySelectorAll(".conv-item")]
+        .find((row) => row.dataset.conversationId === c.id)
+        ?.querySelector(".conv-pin");
+      replacement?.focus();
+    } catch {
+      pin.disabled = false;
+      toast(t("conversation.pinFailed"));
+    }
+  });
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "conv-del";
+  del.title = t("conversation.delete");
+  del.setAttribute("aria-label", t("conversation.delete"));
+  del.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  del.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setDeleteChatOpen(true, { conversation: c, opener: del, title: readableTitle });
+  });
+  actions.append(pin, del);
+  item.append(open, actions);
+  return item;
+}
+
 async function refreshSidebar() {
   try {
     const r = await fetch(`/v1/conversations?student_id=${encodeURIComponent(studentId)}`, {
       headers: authHeaders(),
     });
-    if (!r.ok) return;
+    if (!r.ok) return false;
     const body = await r.json();
     const list = $("#conversation-list");
     list.innerHTML = "";
-    for (const c of body.conversations) {
-      const item = document.createElement("div");
-      const backgroundJob = jobForConversation(c.id);
-      item.className = "conv-item" +
-        (c.id === conversationId ? " active" : "") +
-        (backgroundJob ? " generating" : "");
-      const open = document.createElement("button");
-      open.type = "button";
-      open.className = "conv-open";
-      const title = document.createElement("span");
-      title.className = "conv-title";
-      const displayTitle = c.title || t("conversation.untitled");
-      const readableTitle = renderConversationTitle(title, displayTitle);
-      open.setAttribute("aria-label", t("conversation.open", { title: readableTitle }));
-      if (c.id === conversationId) open.setAttribute("aria-current", "page");
-      if (backgroundJob) {
-        const dot = document.createElement("span");
-        dot.className = "conv-generating" + (backgroundJob.state === "queued" ? " queued" : "");
-        dot.title = backgroundJob.state === "queued"
-          ? t("queue.waitingSlot", {
-            position: backgroundJob.queuePosition ? ` #${backgroundJob.queuePosition}` : "",
-          })
-          : t("conversation.background");
-        open.appendChild(dot);
-      }
-      open.appendChild(title);
-      open.addEventListener("click", () => loadConversation(c.id));
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "conv-del";
-      del.textContent = "✕";
-      del.title = t("conversation.delete");
-      del.setAttribute("aria-label", t("conversation.delete"));
-      del.addEventListener("click", async (ev) => {
-        ev.stopPropagation();
-        if (backgroundJob) await stopGeneration(backgroundJob);
-        discardQueue(c.id, { announce: false });
-        await fetch(`/v1/conversations/${c.id}`, { method: "DELETE", headers: authHeaders() });
-        if (c.id === conversationId) newChat();
-        refreshSidebar();
-      });
-      item.append(open, del);
-      list.appendChild(item);
+    const pinned = body.conversations.filter((conversation) => conversation.pinned);
+    const chats = body.conversations.filter((conversation) => !conversation.pinned);
+    if (pinned.length) {
+      list.appendChild(conversationGroupLabel("conversation.pinned"));
+      for (const conversation of pinned) list.appendChild(renderConversationRow(conversation));
+      if (chats.length) list.appendChild(conversationGroupLabel("conversation.chats"));
     }
+    for (const conversation of chats) list.appendChild(renderConversationRow(conversation));
+    return true;
   } catch {
     /* sidebar is a convenience; the chat keeps working without it */
+    return false;
   }
 }
 
@@ -1989,7 +2159,8 @@ function syncComposerState() {
   const switchingModel = modelTrigger?.dataset.switching === "true";
   const modelCatalogLoading = modelCatalog === null &&
     modelTrigger?.dataset.loadFailed !== "true";
-  const inferenceUnavailable = !identityReady ||
+  const inferenceUnavailable = document.documentElement.dataset.mutaReady !== "true" ||
+    !identityReady ||
     !startupRoutingReady ||
     modelCatalogLoading ||
     switchingModel;
@@ -2438,6 +2609,9 @@ function restoreDraft(item) {
 
 function send(steer = false) {
   if (!identityReady) return toast(t("reply.openingChats"));
+  if (document.documentElement.dataset.mutaReady !== "true") {
+    return toast(t("startup.loadingTutor"));
+  }
   if (voiceModeActive) return toast(t("reply.voiceTyped"));
   if ($("#model-trigger")?.dataset.switching === "true") {
     return toast(t("reply.modelLoading"));
@@ -3976,7 +4150,9 @@ if (menuToggle) {
   menuToggle.addEventListener("click", () => setDrawer(!appEl.classList.contains("sidebar-open")));
   $("#sidebar-backdrop").addEventListener("click", () => setDrawer(false));
   // Close the drawer after picking a thread or starting a new one (mobile only).
-  $("#conversation-list").addEventListener("click", () => setDrawer(false));
+  $("#conversation-list").addEventListener("click", (event) => {
+    if (event.target.closest(".conv-open")) setDrawer(false);
+  });
   $("#new-chat").addEventListener("click", () => setDrawer(false));
 }
 mobileSidebar.addEventListener?.("change", () => setDrawer(false));
@@ -4188,13 +4364,7 @@ const modelOptions = $("#model-options");
 const modelNote = $("#model-note");
 
 function modelSummary(model) {
-  const metrics = [];
-  if (model.arc_easy != null) metrics.push(`ARC-Easy ${(100 * model.arc_easy).toFixed(0)}%`);
-  if (model.audit_proxy_tps != null) {
-    metrics.push(`audit proxy ${model.audit_proxy_tps.toFixed(1)} tok/s`);
-  }
-  const description = window.MutaI18n.locale === "en" ? model.description : "";
-  return [description, metrics.join(" · ")].filter(Boolean).join(" ");
+  return t(model.supports_images ? "model.imageTutor" : "model.textTutor");
 }
 
 function setModelMenuOpen(open, { focus = false, restoreFocus = false } = {}) {
@@ -4453,3 +4623,4 @@ window.MutaI18n.subscribe(() => {
   localizeModelCatalog();
   void refreshNetDot();
 });
+document.addEventListener("muta:startupchange", syncComposerState);

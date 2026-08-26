@@ -20,7 +20,7 @@ def test_outside_catalog_engine_gets_an_honest_selectable_placeholder():
     assert "const active = models.find((model) => model.id === catalog.active_id);" in script
     assert 'catalog.active_id ? t("model.currentLocal") : t("model.choose")' in script
     assert 't("model.outsideRegistry")' in script
-    assert "The current engine is outside this registry" in i18n
+    assert '"model.outsideRegistry": "Choose an installed model."' in i18n
 
 
 def test_loopback_session_can_replace_the_port_scoped_browser_identity():

@@ -5,7 +5,7 @@
   "identifier": "com.muta.tutor",
   "mainBinaryName": "Muta",
   "build": {
-    "frontendDist": "../splash"
+    "frontendDist": "../../ui/dist"
   },
   "app": {
     "withGlobalTauri": true,
