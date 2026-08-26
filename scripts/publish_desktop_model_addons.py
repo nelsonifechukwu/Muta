@@ -10,7 +10,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-BASE_MODEL_ID = "muta-tutor-qwen3.5-0.8b-q4_0"
+CORE_MODEL_IDS = {
+    "qwen2.5-1.5b-instruct-q4_k_m",
+    "muta-tutor-qwen3.5-0.8b-q4_0",
+}
 
 
 class AddonError(RuntimeError):
@@ -57,7 +60,7 @@ def publish(
     catalog = json.loads((catalog_root / "runtime/model-catalog.json").read_text(encoding="utf-8"))
     published = []
     for entry in catalog.get("models", []):
-        if entry.get("kind") != "local" or entry.get("id") == BASE_MODEL_ID:
+        if entry.get("kind") != "local" or entry.get("id") in CORE_MODEL_IDS:
             continue
         relative = Path(str(entry.get("path", "")))
         if not relative.parts or relative.is_absolute() or ".." in relative.parts:
@@ -100,7 +103,7 @@ def publish(
     manifest = {
         "schema": 1,
         "git_commit": commit,
-        "base_model_excluded": BASE_MODEL_ID,
+        "core_models_excluded": sorted(CORE_MODEL_IDS),
         "models": published,
     }
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as handle:

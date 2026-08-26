@@ -33,6 +33,10 @@ def test_lifespan_autostart_off_never_touches_the_engine(monkeypatch):
 def test_lifespan_autostart_on_starts_engine_and_creates_dirs(monkeypatch, tmp_path):
     monkeypatch.setenv("MUTA_RT_AUTOSTART", "1")
     monkeypatch.setenv("TUTOR_ROOT", str(tmp_path))
+    # Desktop-entry tests intentionally exercise direct environment configuration. Pin the
+    # higher-precedence packaged roots so this lifespan test is independent of module order.
+    monkeypatch.setenv("MUTA_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setenv("MUTA_MODEL_ROOT", str(tmp_path))
     started: list = []
     stopped: list = []
 
@@ -79,25 +83,58 @@ def test_persisted_competition_host_selects_safe_model_before_engine_start(monke
             return SimpleNamespace(fits=fits, n_parallel=2, n_ctx=2048)
 
     class Manager:
-        def __init__(self, cfg, **_kwargs):
-            assert cfg.model_file == "large.gguf"
-
         def candidate_config(self, model_id):
-            assert model_id == "qwen3.5-0.8b-q4_k_m"
+            assert model_id == "muta-tutor-qwen3.5-0.8b-q4_0"
             return small
 
     monkeypatch.setattr(main_mod, "CapacityPlanner", Planner)
-    monkeypatch.setattr(main_mod, "ModelManager", Manager)
+    manager = Manager()
 
     cfg, profile = main_mod._persisted_share_runtime(
         large,
         {"enabled": True, "memory_mode": "competition"},
         root=tmp_path,
         log_file=tmp_path / "engine.log",
+        manager=manager,
     )
 
     assert profile.fits is True
     assert cfg.model_file == "small.gguf"
+
+
+def test_host_capacity_plans_the_already_resolved_persisted_model(monkeypatch, tmp_path):
+    selected = RuntimeConfig(
+        model_dir=tmp_path,
+        model_file="persisted-qwen35.gguf",
+        autostart=True,
+        auto_download=False,
+        _env_file=None,
+    )
+    planned: list[str] = []
+
+    class Planner:
+        def plan(self, mode, cfg):
+            assert mode == "system"
+            planned.append(cfg.model_file)
+            return SimpleNamespace(fits=True, n_parallel=1, n_ctx=4096)
+
+    class Manager:
+        def candidate_config(self, _model_id):
+            raise AssertionError("a fitting persisted selection must not be replaced")
+
+    monkeypatch.setattr(main_mod, "CapacityPlanner", Planner)
+
+    cfg, profile = main_mod._persisted_share_runtime(
+        selected,
+        {"enabled": True, "memory_mode": "system"},
+        root=tmp_path,
+        log_file=tmp_path / "engine.log",
+        manager=Manager(),
+    )
+
+    assert planned == ["persisted-qwen35.gguf"]
+    assert cfg.model_file == "persisted-qwen35.gguf"
+    assert cfg.n_parallel == profile.n_parallel == 1
 
 
 def test_ready_reports_db_check_and_stays_200_when_down(monkeypatch):

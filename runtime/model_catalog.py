@@ -98,6 +98,7 @@ class ModelManager:
         root: Path,
         log_file: Path,
         catalog_path: Path | None = None,
+        selection_path: Path | None = None,
         server_factory: Callable[[RuntimeConfig], LlamaServer] = LlamaServer,
     ) -> None:
         self.root = root.resolve()
@@ -115,13 +116,63 @@ class ModelManager:
         self._planned_exits: set[int] = set()
         self._hash_cache: dict[tuple[Path, int, int, int], str] = {}
         self._custom_spec_cache: dict[tuple[Path, int, int, int], ModelSpec] = {}
+        configured_selection = os.environ.get("MUTA_MODEL_SELECTION_PATH")
+        self._selection_path = (
+            (selection_path or Path(configured_selection)).expanduser().resolve()
+            if selection_path is not None or configured_selection
+            else None
+        )
         self._refresh_custom_models_locked()
         self._active_id = self._match_config(cfg)
+        preferred_id = self._load_preferred_model_id()
+        if preferred_id is not None:
+            preferred = self._by_id.get(preferred_id)
+            if preferred is None or preferred.kind != "local":
+                log.warning("ignoring unavailable persisted model selection: %s", preferred_id)
+            else:
+                try:
+                    cfg = self._config_for(
+                        cfg,
+                        self._verified_path(preferred),
+                        self._verified_projector_or_none(preferred),
+                    )
+                except ModelSwitchError as error:
+                    log.warning("ignoring invalid persisted model selection %s: %s", preferred_id, error)
+                else:
+                    self._active_id = preferred_id
         # A native launcher supplies the active text GGUF through RuntimeConfig. Recover the
         # projector from the catalog before the first server instance is constructed, so a
         # capable default is actually launched as multimodal rather than merely labelled so.
         self.cfg = self._with_verified_projector(cfg, self._active_id)
         self._server = server_factory(self.cfg)
+
+    def _load_preferred_model_id(self) -> str | None:
+        path = self._selection_path
+        if path is None or not path.is_file() or path.is_symlink():
+            return None
+        try:
+            body = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            log.warning("ignoring unreadable persisted model selection %s: %s", path, error)
+            return None
+        model_id = body.get("model_id") if body.get("schema") == 1 else None
+        return model_id if isinstance(model_id, str) and model_id else None
+
+    def _persist_preferred_model_id(self, model_id: str | None) -> None:
+        path = self._selection_path
+        if path is None or model_id is None:
+            return
+        temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary.write_text(
+                json.dumps({"schema": 1, "model_id": model_id}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            os.replace(temporary, path)
+        except OSError as error:
+            temporary.unlink(missing_ok=True)
+            log.warning("could not persist model selection %s: %s", path, error)
 
     @property
     def process(self):
@@ -164,6 +215,27 @@ class ModelManager:
             if proc is not None:
                 self._planned_exits.add(id(proc))
             self._server.stop()
+
+    def prepare_startup(self, cfg: RuntimeConfig) -> RuntimeConfig:
+        """Install an authoritative pre-launch model/capacity profile without re-reading prefs.
+
+        Desktop startup first resolves the operator's saved model through this manager, then
+        Host-mode planning may choose safer slot limits or a smaller core model. Applying that
+        result to the same not-yet-started manager prevents the saved preference from racing or
+        undoing the RAM-safety decision.
+        """
+        with self._switch_lock, self._lock:
+            if self._server.process is not None or self._server.is_up():
+                raise ModelSwitchError("startup profile cannot change after the engine starts")
+            active_id = self._match_config(cfg)
+            if active_id is not None:
+                spec = self._by_id[active_id]
+                self._verified_path(spec)
+                cfg = self._with_verified_projector(cfg, active_id)
+            self.cfg = cfg
+            self._active_id = active_id
+            self._server = self._server_factory(cfg)
+            return cfg
 
     def consume_planned_exit(self, proc: object) -> bool:
         with self._lock:
@@ -336,6 +408,7 @@ class ModelManager:
         *,
         n_parallel: int | None = None,
         n_ctx: int | None = None,
+        persist_selection: bool = True,
     ) -> dict[str, Any]:
         if not self._switch_lock.acquire(blocking=False):
             raise ModelSwitchError("another model switch is already in progress")
@@ -408,6 +481,8 @@ class ModelManager:
                 self._server = new_server
                 self.cfg = new_cfg
                 self._active_id = model_id
+            if persist_selection:
+                self._persist_preferred_model_id(model_id)
             log.info("active model switched to %s", model_id)
         finally:
             if marked_switching:

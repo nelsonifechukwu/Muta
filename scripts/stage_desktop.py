@@ -21,6 +21,8 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHUNK_SIZE = 8 * 1024 * 1024
 FORBIDDEN_PARTS = {".git", "bench", "muta-iq", "model-development", "__pycache__"}
+DEFAULT_MODEL_ID = "qwen2.5-1.5b-instruct-q4_k_m"
+SECONDARY_CORE_MODEL_ID = "muta-tutor-qwen3.5-0.8b-q4_0"
 
 
 class StageError(RuntimeError):
@@ -95,24 +97,31 @@ def _read_catalog(path: Path) -> dict[str, dict[str, Any]]:
     return {str(item["id"]): item for item in body.get("models", [])}
 
 
-def _model_spec(args: argparse.Namespace) -> tuple[dict[str, Any], Path, Path | None]:
+def _model_spec(
+    args: argparse.Namespace, model_id: str | None = None
+) -> tuple[dict[str, Any], Path, Path | None]:
+    selected_id = model_id or args.model_id
     catalog = _read_catalog(REPO_ROOT / "runtime" / "model-catalog.json")
-    source_spec = catalog.get(args.model_id, {})
-    model_source = Path(args.model_file) if args.model_file else Path(source_spec.get("path", ""))
-    if not model_source:
-        raise StageError(f"unknown model id and no --model-file supplied: {args.model_id}")
+    source_spec = catalog.get(selected_id, {})
+    use_overrides = selected_id == args.model_id
+    model_override = getattr(args, "model_file", None) if use_overrides else None
+    projector_override = getattr(args, "mmproj_file", None) if use_overrides else None
+    model_value = model_override or source_spec.get("path")
+    if not model_value:
+        raise StageError(f"unknown model id and no --model-file supplied: {selected_id}")
+    model_source = Path(model_value)
     if not model_source.is_absolute():
         model_source = REPO_ROOT / model_source
     _assert_regular_source(model_source)
     actual_model_size = model_source.stat().st_size
     actual_model_hash = sha256_file(model_source)
     if source_spec.get("sha256") and actual_model_hash != source_spec["sha256"]:
-        raise StageError(f"{args.model_id} does not match the catalog SHA-256")
+        raise StageError(f"{selected_id} does not match the catalog SHA-256")
     if source_spec.get("size_bytes") and actual_model_size != source_spec["size_bytes"]:
-        raise StageError(f"{args.model_id} does not match the catalog byte size")
+        raise StageError(f"{selected_id} does not match the catalog byte size")
 
     projector_source: Path | None = None
-    projector_value = args.mmproj_file or source_spec.get("mmproj_path")
+    projector_value = projector_override or source_spec.get("mmproj_path")
     if projector_value:
         projector_source = Path(projector_value)
         if not projector_source.is_absolute():
@@ -124,23 +133,23 @@ def _model_spec(args: argparse.Namespace) -> tuple[dict[str, Any], Path, Path | 
             source_spec.get("mmproj_sha256")
             and actual_projector_hash != source_spec["mmproj_sha256"]
         ):
-            raise StageError(f"{args.model_id} projector does not match the catalog SHA-256")
+            raise StageError(f"{selected_id} projector does not match the catalog SHA-256")
         if (
             source_spec.get("mmproj_size_bytes")
             and actual_projector_size != source_spec["mmproj_size_bytes"]
         ):
-            raise StageError(f"{args.model_id} projector does not match the catalog byte size")
+            raise StageError(f"{selected_id} projector does not match the catalog byte size")
 
     destination = f"models/core/{model_source.name}"
     spec: dict[str, Any] = {
-        "id": args.model_id,
-        "label": source_spec.get("label") or args.model_id,
+        "id": selected_id,
+        "label": source_spec.get("label") or selected_id,
         "kind": "local",
         "path": destination,
         "sha256": actual_model_hash,
         "size_bytes": actual_model_size,
         "description": source_spec.get("description") or "Packaged offline Muta model.",
-        "recommended": True,
+        "recommended": bool(source_spec.get("recommended", selected_id == args.model_id)),
     }
     for key in ("arc_easy", "audit_proxy_tps"):
         if source_spec.get(key) is not None:
@@ -192,10 +201,16 @@ def stage(args: argparse.Namespace) -> None:
             shutil.rmtree(output)
         output.mkdir(parents=True)
 
-    spec, model_source, projector_source = _model_spec(args)
-    _copy_file(model_source, model_root / spec["path"])
-    if projector_source is not None:
-        _copy_file(projector_source, model_root / spec["mmproj_path"])
+    model_ids = (args.model_id, *args.bundled_model_id)
+    if len(model_ids) != len(set(model_ids)):
+        raise StageError("desktop core model ids must be unique")
+    staged_models = [_model_spec(args, model_id) for model_id in model_ids]
+    specs = [item[0] for item in staged_models]
+    for spec, model_source, projector_source in staged_models:
+        _copy_file(model_source, model_root / spec["path"])
+        if projector_source is not None:
+            _copy_file(projector_source, model_root / spec["mmproj_path"])
+    spec = specs[0]
 
     custom_model_guide = model_root / "models" / "custom" / "ADD GGUF MODELS HERE.txt"
     custom_model_guide.parent.mkdir(parents=True, exist_ok=True)
@@ -215,7 +230,7 @@ def stage(args: argparse.Namespace) -> None:
     # draft and training-candidate notices whose names would incorrectly imply those models
     # are part of the desktop release.
     license_names = {"core.Apache-2.0.txt"}
-    if projector_source is not None:
+    if any(projector is not None for _, _, projector in staged_models):
         license_names.add("mmproj.Apache-2.0.txt")
     if args.include_optional_models:
         license_names.update({"asr.MIT.txt", "vad.MIT.txt", "tts.CC0-1.0.txt", "embed.MIT.txt"})
@@ -232,7 +247,7 @@ def stage(args: argparse.Namespace) -> None:
     _stage_engine(args.engine_dir.resolve(), app_root, args.target_os)
     _stage_ffmpeg(args.ffmpeg_bin, app_root, args.target_os)
 
-    catalog = {"schema_version": 1, "models": [spec]}
+    catalog = {"schema_version": 1, "models": specs}
     catalog_path = app_root / "runtime" / "model-catalog.json"
     catalog_path.parent.mkdir(parents=True, exist_ok=True)
     catalog_path.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
@@ -324,7 +339,10 @@ def _parser() -> argparse.ArgumentParser:
     stage_parser.add_argument("--model-output", type=Path, required=True)
     stage_parser.add_argument("--engine-dir", type=Path, required=True)
     stage_parser.add_argument("--ffmpeg-bin", type=Path)
-    stage_parser.add_argument("--model-id", default="muta-tutor-qwen3.5-0.8b-q4_0")
+    stage_parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
+    stage_parser.add_argument(
+        "--bundled-model-id", action="append", default=[SECONDARY_CORE_MODEL_ID]
+    )
     stage_parser.add_argument("--model-file")
     stage_parser.add_argument("--mmproj-file")
     stage_parser.add_argument("--model-pack-id", required=True)

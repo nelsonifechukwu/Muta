@@ -27,6 +27,7 @@ MODEL_INPUTS = {
     "models/pins.lock.json",
     "runtime/model-catalog.json",
     "muta-iq/download_model.sh",
+    "muta-iq/fetch_qwen25.sh",
 }
 UI_INPUTS = {"scripts/build_ui_dist.py", "ui/VISUALIZATION-LICENSES.txt"}
 GATEWAY_INPUTS = {

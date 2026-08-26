@@ -42,6 +42,8 @@ def test_model_recipe_hashes_and_winner_metadata_match_catalog():
 
     assert qwen25["sha256"] in qwen25_recipe
     assert str(qwen25["size_bytes"]) in qwen25_recipe
+    assert qwen25["path"].endswith("Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf")
+    assert "Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf" in qwen25_recipe
     assert "timiiowolabi/Muta-Tutor-Qwen2.5-1.5B-ADTC-GGUF" in qwen25_recipe
     assert qwen25["sha256"] == artifact_by_id[
         "qwen25-bf16-r16-licensed-mcq-lr2e5-500"
@@ -52,6 +54,8 @@ def test_model_recipe_hashes_and_winner_metadata_match_catalog():
     assert qwen25["audit_proxy_tps"] == pytest.approx(
         summary_by_id["qwen25"]["scalar"]["candidate_tps"]
     )
+    assert qwen25["recommended"] is True
+    assert qwen35["recommended"] is False
     assert models["qwen3-0.6b-math-expert-q4_k_m"]["sha256"] in math_expert_recipe
     assert str(models["qwen3-0.6b-math-expert-q4_k_m"]["size_bytes"]) in math_expert_recipe
     assert models["bitcpm4-8b-tq2_0-envocab"]["sha256"] in bitcpm_recipe

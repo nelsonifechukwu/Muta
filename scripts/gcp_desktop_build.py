@@ -195,6 +195,7 @@ def make_archives(worktree: Path, cache_root: Path, commit: str) -> tuple[Path, 
         temporary = model_archive.with_suffix(".tmp")
         temporary.unlink(missing_ok=True)
         model_paths = [
+            "muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf",
             "muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf",
             "models/mmproj",
             "models/asr",

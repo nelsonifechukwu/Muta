@@ -4,7 +4,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODEL_DIR="$HERE/model"
-FINAL="$MODEL_DIR/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+FINAL="$MODEL_DIR/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf"
 FINAL_SHA="a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb"
 FINAL_BYTES=986048128
 HF_REPO="timiiowolabi/Muta-Tutor-Qwen2.5-1.5B-ADTC-GGUF"

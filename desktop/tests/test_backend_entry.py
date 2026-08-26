@@ -71,6 +71,7 @@ def test_configure_forces_offline_absolute_desktop_paths(tmp_path):
     assert values["MUTA_RT_AUTO_DOWNLOAD"] == "0"
     assert values["MUTA_RT_MODEL_DIR"] == str(model.parent)
     assert values["MUTA_MODEL_ROOT"] == str(model_root)
+    assert values["MUTA_MODEL_SELECTION_PATH"] == str(state / "model-selection.json")
     assert values["MUTA_RT_DB_URL"].endswith("/state/muta.sqlite3")
     assert values["MUTA_LLAMA_SERVER_URL"] == "http://127.0.0.1:19080"
     assert environment == values
@@ -189,6 +190,10 @@ def test_windows_uses_native_job_instead_of_posix_parent_watchdog():
 def test_packaged_heartbeat_overrides_inherited_fleet_and_printing_redacts_key(
     tmp_path, monkeypatch, capsys
 ):
+    # main() deliberately exports into the real process environment for the subsequently
+    # imported gateway. Give it a per-test copy so those launcher variables cannot leak into
+    # later lifespan/configuration tests in the same pytest process.
+    monkeypatch.setattr(backend_entry.os, "environ", dict(backend_entry.os.environ))
     resource, model_root, _model, engine = _bundle(tmp_path)
     manifest_path = resource / "desktop-product.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

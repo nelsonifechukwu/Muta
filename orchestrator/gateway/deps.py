@@ -221,6 +221,7 @@ class RuntimeCapacityController:
                     target_model_id,
                     n_parallel=profile.n_parallel,
                     n_ctx=profile.n_ctx,
+                    persist_selection=False,
                 )
                 refresh_engine_dependencies(profile)
                 return

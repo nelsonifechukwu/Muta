@@ -134,6 +134,7 @@ def test_measured_resident_floor_can_reject_a_file_size_only_fit(monkeypatch, tm
     cfg = RuntimeConfig(
         model_dir=tmp_path,
         model_file="missing.gguf",
+        mmproj_path=None,
         n_parallel=2,
         n_ctx=2048,
         cache_ram_mib=64,
@@ -248,14 +249,24 @@ def test_default_8gb_docker_profile_no_longer_reserves_a_second_vision_model(mon
     class Manager:
         cfg = active
         switched: tuple[str, int, int] | None = None
+        persisted = None
+
+        def local_model_ids_by_size(self):
+            return ("qwen3.5-0.8b-q4_k_m",)
 
         def candidate_config(self, model_id):
             assert model_id == "qwen3.5-0.8b-q4_k_m"
             return self.cfg.model_copy(update={"model_dir": tmp_path, "model_file": small.name})
 
-        def switch(self, model_id, *, n_parallel, n_ctx):
+        def switch(self, model_id, *, n_parallel, n_ctx, persist_selection=True):
             self.switched = (model_id, n_parallel, n_ctx)
+            self.persisted = persist_selection
             self.cfg = self.candidate_config(model_id).model_copy(
+                update={"n_parallel": n_parallel, "n_ctx": n_ctx}
+            )
+
+        def reconfigure_capacity(self, *, n_parallel, n_ctx):
+            self.cfg = self.cfg.model_copy(
                 update={"n_parallel": n_parallel, "n_ctx": n_ctx}
             )
 
@@ -309,6 +320,7 @@ def test_competition_fallback_uses_smallest_installed_release_model(monkeypatch,
     class Manager:
         cfg = active
         switched = None
+        persisted = None
 
         def local_model_ids_by_size(self):
             return ("release-base",)
@@ -317,8 +329,9 @@ def test_competition_fallback_uses_smallest_installed_release_model(monkeypatch,
             assert model_id == "release-base"
             return self.cfg.model_copy(update={"model_dir": tmp_path, "model_file": small.name})
 
-        def switch(self, model_id, *, n_parallel, n_ctx):
+        def switch(self, model_id, *, n_parallel, n_ctx, persist_selection=True):
             self.switched = model_id
+            self.persisted = persist_selection
             self.cfg = self.candidate_config(model_id).model_copy(
                 update={"n_parallel": n_parallel, "n_ctx": n_ctx}
             )
@@ -346,6 +359,7 @@ def test_competition_fallback_uses_smallest_installed_release_model(monkeypatch,
     status = controller.apply("competition")
 
     assert manager.switched == "release-base"
+    assert manager.persisted is False
     assert status["fits"] is True
 
 

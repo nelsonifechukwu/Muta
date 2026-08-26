@@ -163,15 +163,20 @@ def _persisted_share_runtime(
     *,
     root: Path,
     log_file: Path,
+    manager: ModelManager | None = None,
 ) -> tuple[RuntimeConfig, CapacityProfile]:
     """Resolve the persisted Host policy, including its verified competition-safe model."""
     planner = CapacityPlanner()
     mode = settings["memory_mode"]
     profile = planner.plan(mode, cfg)
     if mode == "competition" and not profile.fits and cfg.autostart:
-        probe = ModelManager(cfg, root=root, log_file=log_file, server_factory=LlamaServer)
+        probe = manager or ModelManager(
+            cfg, root=root, log_file=log_file, server_factory=LlamaServer
+        )
         candidate = probe.candidate_config(
-            os.environ.get("MUTA_SHARE_COMPETITION_MODEL_ID", "qwen3.5-0.8b-q4_k_m")
+            os.environ.get(
+                "MUTA_SHARE_COMPETITION_MODEL_ID", "muta-tutor-qwen3.5-0.8b-q4_0"
+            )
         )
         profile = planner.plan(mode, candidate)
         cfg = candidate
@@ -198,6 +203,11 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     clobber the running instance's pidfile and then delete it on the way out. Failure to
     write is never fatal.
     """
+    runtime_cfg = RuntimeConfig()
+    root = model_root()
+    mutable = data_root()
+    engine_log = mutable / "logs" / "llama-server.log"
+
     with contextlib.suppress(OSError):
         PIDFILE.parent.mkdir(parents=True, exist_ok=True)
         PIDFILE.write_text(f"{os.getpid()}\n")
@@ -218,6 +228,19 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     from orchestrator.gateway.connectivity import get_connectivity
 
     get_connectivity().start()  # ~1/min online/offline verdict for /v1/ready and the UI
+
+    engine_server: ModelManager | None = None
+    if runtime_cfg.autostart:
+        # Resolve a saved explicit model before Host-mode capacity planning. The same manager is
+        # then prepared with the authoritative safe profile below, so persistence can never
+        # override a competition fallback after it has been priced.
+        engine_server = ModelManager(
+            runtime_cfg,
+            root=root,
+            log_file=engine_log,
+            server_factory=LlamaServer,
+        )
+        runtime_cfg = engine_server.cfg
 
     share_settings = get_sharing_service().settings() if strict_share_security() else None
     share_listener_requested = bool(share_settings and share_settings["enabled"])
@@ -242,39 +265,32 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
 
         get_resource_service()
 
-    cfg = RuntimeConfig()
-    root = model_root()
-    mutable = data_root()
-    engine_log = mutable / "logs" / "llama-server.log"
     startup_profile: CapacityProfile | None = None
     if share_listener_requested and share_settings is not None:
         try:
-            cfg, startup_profile = _persisted_share_runtime(
-                cfg,
+            runtime_cfg, startup_profile = _persisted_share_runtime(
+                runtime_cfg,
                 share_settings,
                 root=root,
                 log_file=engine_log,
+                manager=engine_server,
             )
+            if engine_server is not None:
+                runtime_cfg = engine_server.prepare_startup(runtime_cfg)
         except Exception as exc:  # fail closed: do not advertise an unapplied RAM profile
             share_listener_requested = False
             log.exception("persisted Host memory profile could not be applied")
             from orchestrator.gateway.lan import get_lan_manager
 
             get_lan_manager().last_error = str(exc)
-    engine_server: ModelManager | None = None
     engine_stop: threading.Event | None = None
     reaper_task: asyncio.Task | None = None
-    if cfg.autostart:
+    if runtime_cfg.autostart:
         for sub in ("logs", "kv-slots"):
             # CORE-VISION's --log-file dies at startup if data/logs is missing.
             with contextlib.suppress(OSError):
                 (mutable / sub).mkdir(parents=True, exist_ok=True)
-        engine_server = ModelManager(
-            cfg,
-            root=root,
-            log_file=engine_log,
-            server_factory=LlamaServer,
-        )
+        assert engine_server is not None
         set_model_manager(engine_server)
         _, engine_stop = _start_engine_thread(engine_server, engine_log)
         reaper_task = asyncio.create_task(_vision_reaper())
@@ -322,7 +338,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
             reaper_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await reaper_task
-        if cfg.autostart:
+        if runtime_cfg.autostart:
             with contextlib.suppress(Exception):
                 get_vision().stop()
         if engine_server is not None:

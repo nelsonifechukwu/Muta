@@ -12,6 +12,22 @@ from pathlib import Path
 from stage_desktop import StageError, verify_root
 
 FORBIDDEN = {"bench", "muta-iq", "model-development", ".git", "tests", "__pycache__"}
+DEFAULT_MODEL_ID = "qwen2.5-1.5b-instruct-q4_k_m"
+CORE_MODELS = {
+    DEFAULT_MODEL_ID: {
+        "path": "models/core/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf",
+        "size_bytes": 986_048_128,
+        "sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb",
+    },
+    "muta-tutor-qwen3.5-0.8b-q4_0": {
+        "path": "models/core/muta-tutor-qwen3.5-0.8b-q4_0.gguf",
+        "size_bytes": 512_977_376,
+        "sha256": "552de22f7ea6f161a458985900e2c961d7578baa1ea9c23018ae27151623ff26",
+        "mmproj_path": "models/core/Qwen3.5-0.8B-mmproj-F16.gguf",
+        "mmproj_size_bytes": 204_987_232,
+        "mmproj_sha256": "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453",
+    },
+}
 
 
 def fail(message: str) -> None:
@@ -31,6 +47,53 @@ def verify_required_heartbeat(product: dict) -> None:
         fail("release heartbeat URL is missing or is not HTTPS")
     if not str(heartbeat.get("ingest_key", "")).strip():
         fail("release heartbeat ingest key is missing")
+
+
+def verify_core_models(product: dict, catalog: dict, pack: dict) -> None:
+    active = product.get("active_model") or {}
+    if active.get("id") != DEFAULT_MODEL_ID or pack.get("active_model_id") != DEFAULT_MODEL_ID:
+        fail("Qwen2.5 is not the packaged clean-start model")
+    expected_active = {"id": DEFAULT_MODEL_ID, **CORE_MODELS[DEFAULT_MODEL_ID]}
+    if active != expected_active:
+        fail("packaged Qwen2.5 active-model metadata is not the pinned release artifact")
+    catalog_by_id = {str(item.get("id")): item for item in catalog.get("models", [])}
+    files_by_path = {str(item.get("path")): item for item in pack.get("files", [])}
+    for model_id, expected in CORE_MODELS.items():
+        expected_path = expected["path"]
+        model = catalog_by_id.get(model_id)
+        if model is None or model.get("kind") != "local":
+            fail(f"required core model is absent from the packaged catalog: {model_id}")
+        if model.get("path") != expected_path:
+            fail(f"required core model has the wrong packaged path: {model_id}")
+        entry = files_by_path.get(expected_path)
+        if entry is None:
+            fail(f"required core GGUF is absent from the model-pack manifest: {expected_path}")
+        for key in ("size_bytes", "sha256"):
+            if entry.get(key) != expected[key] or model.get(key) != expected[key]:
+                fail(f"core model {key} is not the pinned release artifact: {model_id}")
+        expected_projector = expected.get("mmproj_path")
+        if expected_projector is None:
+            if any(
+                model.get(key) is not None
+                for key in ("mmproj_path", "mmproj_size_bytes", "mmproj_sha256")
+            ):
+                fail(f"text-only core model unexpectedly declares a projector: {model_id}")
+            continue
+        projector_entry = files_by_path.get(expected_projector)
+        if projector_entry is None:
+            fail(f"required image projector is absent: {model_id}")
+        for key in ("mmproj_path", "mmproj_size_bytes", "mmproj_sha256"):
+            if model.get(key) != expected[key]:
+                fail(f"core projector {key} is not the pinned release artifact: {model_id}")
+        if projector_entry.get("size_bytes") != expected["mmproj_size_bytes"]:
+            fail(f"core projector size is not the pinned release artifact: {model_id}")
+        if projector_entry.get("sha256") != expected["mmproj_sha256"]:
+            fail(f"core projector hash is not the pinned release artifact: {model_id}")
+    recommended = [
+        item.get("id") for item in catalog.get("models", []) if item.get("recommended") is True
+    ]
+    if recommended != [DEFAULT_MODEL_ID]:
+        fail("the packaged catalog must recommend only the Qwen2.5 clean-start model")
 
 
 def inspect(args: argparse.Namespace) -> None:
@@ -69,11 +132,13 @@ def inspect(args: argparse.Namespace) -> None:
         fail("llama.cpp provenance pin is absent")
 
     product = json.loads((app / "desktop-product.json").read_text(encoding="utf-8"))
+    catalog = json.loads((app / "runtime" / "model-catalog.json").read_text(encoding="utf-8"))
     pack = json.loads((models / "model-pack.json").read_text(encoding="utf-8"))
     if product["target"] != {"os": args.target_os, "arch": args.target_arch}:
         fail("product target does not match the requested inspector target")
     if product["model_pack_id"] != pack["pack_id"]:
         fail("application and model-pack identities differ")
+    verify_core_models(product, catalog, pack)
     if args.require_heartbeat:
         verify_required_heartbeat(product)
     if args.release and not (models / "model-pack.json.sig").is_file():

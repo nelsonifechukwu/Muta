@@ -24,7 +24,7 @@
       "description": "Fine-tuned scalar finalist: 70.2% ARC-Easy over 500 questions and 13.60 decode tok/s on the matched GCP proxy.",
       "arc_easy": 0.702,
       "audit_proxy_tps": 13.597127,
-      "recommended": true,
+      "recommended": false,
       "mmproj_path": "models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf",
       "mmproj_sha256": "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453",
       "mmproj_size_bytes": 204987232
@@ -33,13 +33,13 @@
       "id": "qwen2.5-1.5b-instruct-q4_k_m",
       "label": "Muta Tutor · Qwen2.5 1.5B · fine-tuned",
       "kind": "local",
-      "path": "muta-iq/model/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "path": "muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf",
       "sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb",
       "size_bytes": 986048128,
       "description": "Fine-tuned vector finalist: 77.8% ARC-Easy over 500 questions and 17.44 vector decode tok/s on the matched GCP proxy.",
       "arc_easy": 0.778,
       "audit_proxy_tps": 5.632127,
-      "recommended": false
+      "recommended": true
     },
     {
       "id": "qwen3.5-0.8b-q4_k_m",

@@ -5,9 +5,13 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
-# Produces the selected 0.8B tutor deterministically from the pinned upstream GGUF. CI may
+# Produces the bundled 0.8B secondary tutor deterministically from its pinned GGUF. CI may
 # provide MODEL_URL for a faster trusted mirror, but the final SHA-256 is identical either way.
 bash muta-iq/download_model.sh
+
+# The larger fine-tuned finalist is the clean-install desktop default. Its private Hub recipe
+# verifies the campaign's exact size and SHA-256 before it can enter the model cache.
+bash muta-iq/fetch_qwen25.sh
 
 # Voice and retrieval are product features, so their small offline models belong in the pack.
 # The 4B bake-off model, draft model and other development candidates are intentionally omitted.
@@ -34,12 +38,15 @@ for artifact in asr vad tts embed; do
 done
 
 test "$(wc -c < muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf | tr -d ' ')" = "512977376"
+test "$(wc -c < muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf | tr -d ' ')" = "986048128"
 test "$(wc -c < models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf | tr -d ' ')" = "204987232"
 checksum_manifest="$(mktemp)"
 trap 'rm -f "$checksum_manifest"' EXIT
 printf '%s  %s\n' \
   "552de22f7ea6f161a458985900e2c961d7578baa1ea9c23018ae27151623ff26" \
   "muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf" \
+  "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb" \
+  "muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf" \
   "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453" \
   "models/mmproj/Qwen3.5-0.8B-mmproj-F16.gguf" \
   > "$checksum_manifest"

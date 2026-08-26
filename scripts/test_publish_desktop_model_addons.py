@@ -6,13 +6,15 @@ import json
 import publish_desktop_model_addons as addons
 
 
-def test_publishes_optional_models_but_not_the_base_archive_model(tmp_path, monkeypatch):
+def test_publishes_optional_models_but_not_the_two_archive_core_models(tmp_path, monkeypatch):
     root = tmp_path / "source"
     (root / "runtime").mkdir(parents=True)
     (root / "models").mkdir()
     base = root / "models/base.gguf"
+    secondary = root / "models/secondary.gguf"
     extra = root / "models/extra.gguf"
     base.write_bytes(b"base")
+    secondary.write_bytes(b"secondary")
     extra.write_bytes(b"extra")
     digest = hashlib.sha256(extra.read_bytes()).hexdigest()
     (root / "runtime/model-catalog.json").write_text(
@@ -20,9 +22,14 @@ def test_publishes_optional_models_but_not_the_base_archive_model(tmp_path, monk
             {
                 "models": [
                     {
-                        "id": addons.BASE_MODEL_ID,
+                        "id": "qwen2.5-1.5b-instruct-q4_k_m",
                         "kind": "local",
                         "path": "models/base.gguf",
+                    },
+                    {
+                        "id": "muta-tutor-qwen3.5-0.8b-q4_0",
+                        "kind": "local",
+                        "path": "models/secondary.gguf",
                     },
                     {
                         "id": "extra",
@@ -45,6 +52,7 @@ def test_publishes_optional_models_but_not_the_base_archive_model(tmp_path, monk
     manifest = addons.publish(root, "bucket", "a" * 40)
 
     assert [item["id"] for item in manifest["models"]] == ["extra"]
+    assert manifest["core_models_excluded"] == sorted(addons.CORE_MODEL_IDS)
     assert manifest["models"][0]["install_path"] == "model-pack/models/custom/extra.gguf"
     expected_object = f"gs://bucket/model-addons/v1/extra/{digest}/extra.gguf"
     assert manifest["models"][0]["gcs_uri"] == expected_object

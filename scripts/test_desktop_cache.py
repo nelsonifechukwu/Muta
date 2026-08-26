@@ -28,14 +28,21 @@ def test_model_cache_verifier_checks_product_and_optional_inputs(
 ) -> None:
     monkeypatch.setattr(models, "REPO_ROOT", tmp_path)
     product = _write(tmp_path, "muta-iq/model/product.gguf", b"product")
+    secondary = _write(tmp_path, "muta-iq/model/secondary.gguf", b"secondary")
     projector = _write(tmp_path, "models/mmproj/projector.gguf", b"projector")
     catalog = {
         "models": [
             {
-                "id": models.PRODUCT_MODEL_ID,
+                "id": models.PRODUCT_MODEL_IDS[0],
                 "path": product["path"],
                 "size_bytes": product["bytes"],
                 "sha256": product["sha256"],
+            },
+            {
+                "id": models.PRODUCT_MODEL_IDS[1],
+                "path": secondary["path"],
+                "size_bytes": secondary["bytes"],
+                "sha256": secondary["sha256"],
                 "mmproj_path": projector["path"],
                 "mmproj_size_bytes": projector["bytes"],
                 "mmproj_sha256": projector["sha256"],
@@ -79,8 +86,23 @@ def test_cache_change_classifier_keeps_layers_independent() -> None:
     assert python == {"models": False, "ui": False, "native": False, "gateway": True}
     catalog = desktop_cache_changes.classify(["runtime/model-catalog.json"])
     assert catalog == {"models": True, "ui": False, "native": False, "gateway": True}
+    recipe = desktop_cache_changes.classify(["muta-iq/fetch_qwen25.sh"])
+    assert recipe == {"models": True, "ui": False, "native": False, "gateway": False}
     workflow = desktop_cache_changes.classify([".github/workflows/desktop-cache.yml"])
     assert all(workflow.values())
+
+
+def test_workflows_cache_and_transfer_both_core_models() -> None:
+    root = desktop_cache_key.REPO_ROOT
+    qwen25 = "muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf"
+    recipe = "muta-iq/fetch_qwen25.sh"
+    for name in ("desktop-packages.yml", "desktop-release.yml", "desktop-cache.yml"):
+        body = (root / ".github/workflows" / name).read_text(encoding="utf-8")
+        assert qwen25 in body
+        assert recipe in body
+    for name in ("desktop-packages.yml", "desktop-release.yml"):
+        body = (root / ".github/workflows" / name).read_text(encoding="utf-8")
+        assert body.count(qwen25) >= 2, f"{name} does not transfer Qwen2.5 to build jobs"
 
 
 def test_macos_native_build_maps_aarch64_to_apple_arm64() -> None:

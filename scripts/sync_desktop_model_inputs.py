@@ -10,7 +10,10 @@ import shutil
 import sys
 from pathlib import Path
 
-PRODUCT_MODEL_ID = "muta-tutor-qwen3.5-0.8b-q4_0"
+PRODUCT_MODEL_IDS = (
+    "qwen2.5-1.5b-instruct-q4_k_m",
+    "muta-tutor-qwen3.5-0.8b-q4_0",
+)
 MODEL_DIRECTORIES = ("models/asr", "models/tts", "models/embed", "models/LICENSES")
 MODEL_FILES = ("models/MANIFEST.json", "models/pins.lock.json")
 
@@ -47,17 +50,22 @@ def sync(source_root: Path, destination_root: Path) -> None:
     destination_root = destination_root.resolve()
     catalog_path = source_root / "runtime" / "model-catalog.json"
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    product = next(
-        (entry for entry in catalog.get("models", []) if entry.get("id") == PRODUCT_MODEL_ID),
-        None,
-    )
-    if product is None:
-        raise SyncError(f"model catalog does not contain {PRODUCT_MODEL_ID}")
-    for key in ("path", "mmproj_path"):
-        relative = Path(product[key])
-        if relative.is_absolute() or ".." in relative.parts:
-            raise SyncError(f"unsafe catalog model path: {relative}")
-        copy_file(source_root / relative, destination_root / relative)
+    catalog_by_id = {str(entry.get("id")): entry for entry in catalog.get("models", [])}
+    copied: set[Path] = set()
+    for model_id in PRODUCT_MODEL_IDS:
+        product = catalog_by_id.get(model_id)
+        if product is None:
+            raise SyncError(f"model catalog does not contain {model_id}")
+        for key in ("path", "mmproj_path"):
+            value = product.get(key)
+            if not value:
+                continue
+            relative = Path(value)
+            if relative.is_absolute() or ".." in relative.parts:
+                raise SyncError(f"unsafe catalog model path: {relative}")
+            if relative not in copied:
+                copy_file(source_root / relative, destination_root / relative)
+                copied.add(relative)
     for relative in MODEL_DIRECTORIES:
         copy_tree(source_root / relative, destination_root / relative)
     for relative in MODEL_FILES:

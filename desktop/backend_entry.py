@@ -148,6 +148,7 @@ def configure(
         "MUTA_MODEL_ROOT": str(models),
         "MUTA_DATA_ROOT": str(data),
         "MUTA_CACHE_ROOT": str(cache),
+        "MUTA_MODEL_SELECTION_PATH": str(data / "model-selection.json"),
         # Compatibility for modules that still use the historical read-only root.
         "TUTOR_ROOT": str(resource),
         "MUTA_OFFLINE": "1",

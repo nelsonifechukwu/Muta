@@ -270,7 +270,7 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="build_desktop.py")
     result.add_argument("--engine-dir", type=Path, default=BUILD / "native")
     result.add_argument("--ffmpeg-bin", type=Path)
-    result.add_argument("--model-id", default="muta-tutor-qwen3.5-0.8b-q4_0")
+    result.add_argument("--model-id", default="qwen2.5-1.5b-instruct-q4_k_m")
     result.add_argument("--model-file")
     result.add_argument("--mmproj-file")
     result.add_argument("--model-pack-id", default="muta-models-2026.08")

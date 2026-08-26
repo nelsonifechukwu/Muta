@@ -8,7 +8,10 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PRODUCT_MODEL_ID = "muta-tutor-qwen3.5-0.8b-q4_0"
+PRODUCT_MODEL_IDS = (
+    "qwen2.5-1.5b-instruct-q4_k_m",
+    "muta-tutor-qwen3.5-0.8b-q4_0",
+)
 OPTIONAL_ARTIFACTS = {"asr", "vad", "tts", "embed"}
 REQUIRED_LICENSES = {
     "core.Apache-2.0.txt",
@@ -48,13 +51,18 @@ def verify_file(relative: str, expected_size: int, expected_sha256: str) -> None
 
 def verify() -> None:
     catalog = json.loads((REPO_ROOT / "runtime" / "model-catalog.json").read_text())
-    product = next(
-        (entry for entry in catalog["models"] if entry.get("id") == PRODUCT_MODEL_ID), None
-    )
-    if product is None:
-        raise VerificationError(f"product model is absent from the catalog: {PRODUCT_MODEL_ID}")
-    verify_file(product["path"], product["size_bytes"], product["sha256"])
-    verify_file(product["mmproj_path"], product["mmproj_size_bytes"], product["mmproj_sha256"])
+    catalog_by_id = {str(entry.get("id")): entry for entry in catalog["models"]}
+    for model_id in PRODUCT_MODEL_IDS:
+        product = catalog_by_id.get(model_id)
+        if product is None:
+            raise VerificationError(f"product model is absent from the catalog: {model_id}")
+        verify_file(product["path"], product["size_bytes"], product["sha256"])
+        if product.get("mmproj_path"):
+            verify_file(
+                product["mmproj_path"],
+                product["mmproj_size_bytes"],
+                product["mmproj_sha256"],
+            )
 
     manifest = json.loads((REPO_ROOT / "models" / "MANIFEST.json").read_text())
     artifacts = {entry.get("name"): entry for entry in manifest.get("artifacts", [])}

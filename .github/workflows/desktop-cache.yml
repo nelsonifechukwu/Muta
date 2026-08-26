@@ -23,6 +23,7 @@ on:
       - "models/pins.lock.json"
       - "runtime/model-catalog.json"
       - "muta-iq/download_model.sh"
+      - "muta-iq/fetch_qwen25.sh"
       - "muta-iq/opt/scripts/**"
       - "muta-iq/opt/eval/system_prompt.txt"
       - "ui/*.html"
@@ -93,6 +94,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf
             muta-iq/model/muta-tutor-qwen3.5-0.8b-q4_0.gguf
             models/mmproj/
             models/asr/
@@ -104,10 +106,12 @@ jobs:
             desktop-models-v2-${{ hashFiles('scripts/prepare_desktop_models.sh',
             'scripts/verify_desktop_models.py', 'scripts/fetch_models.sh',
             'scripts/fetch_models.py', 'scripts/model_specs.py', 'models/pins.lock.json',
-            'runtime/model-catalog.json', 'muta-iq/download_model.sh',
+            'runtime/model-catalog.json', 'muta-iq/download_model.sh', 'muta-iq/fetch_qwen25.sh',
             'muta-iq/opt/scripts/**', 'muta-iq/opt/eval/system_prompt.txt') }}
       - name: Provision product models on cache miss
         if: steps.model-cache.outputs.cache-hit != 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: bash scripts/prepare_desktop_models.sh
       - name: Verify cached product models
         run: python scripts/verify_desktop_models.py

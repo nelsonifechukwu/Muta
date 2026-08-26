@@ -91,6 +91,7 @@ def _manager(
     corrupt_two: bool = False,
     corrupt_projector: bool = False,
     start: bool = True,
+    selection_path: Path | None = None,
 ) -> ModelManager:
     _Server.instances = []
     _Server.block_model = None
@@ -162,6 +163,7 @@ def _manager(
         root=tmp_path,
         log_file=tmp_path / "engine.log",
         catalog_path=catalog,
+        selection_path=selection_path,
         server_factory=_Server,
     )
     if start:
@@ -184,6 +186,70 @@ def test_switches_one_local_engine_and_reports_tradeoffs(tmp_path):
     active = next(model for model in result["models"] if model["id"] == "two")
     assert active["supports_images"] is False
     assert "text only" in active["image_input_reason"]
+
+
+def test_explicit_model_selection_persists_but_fresh_state_uses_packaged_default(tmp_path):
+    preference = tmp_path / "state/model-selection.json"
+    fresh = _manager(tmp_path, selection_path=preference)
+    assert fresh.status()["active_id"] == "one"
+
+    fresh.switch("two")
+    assert json.loads(preference.read_text()) == {"schema": 1, "model_id": "two"}
+
+    restarted = _manager(tmp_path, selection_path=preference)
+    assert restarted.status()["active_id"] == "two"
+    assert restarted.cfg.model_file == "two.gguf"
+    assert _Server.instances[0].cfg.model_file == "two.gguf"
+
+
+def test_automatic_model_fallback_does_not_replace_explicit_preference(tmp_path):
+    preference = tmp_path / "state/model-selection.json"
+    manager = _manager(tmp_path, selection_path=preference)
+    manager.switch("two")
+    assert json.loads(preference.read_text())["model_id"] == "two"
+
+    manager.switch("one", persist_selection=False)
+    assert manager.status()["active_id"] == "one"
+    assert json.loads(preference.read_text())["model_id"] == "two"
+
+    restarted = _manager(tmp_path, selection_path=preference)
+    assert restarted.status()["active_id"] == "two"
+
+
+def test_stale_persisted_model_selection_falls_back_to_packaged_default(tmp_path):
+    preference = tmp_path / "state/model-selection.json"
+    preference.parent.mkdir(parents=True)
+    preference.write_text(json.dumps({"schema": 1, "model_id": "missing"}))
+
+    manager = _manager(tmp_path, selection_path=preference)
+
+    assert manager.status()["active_id"] == "one"
+    assert manager.cfg.model_file == "one.gguf"
+
+
+def test_authoritative_startup_fallback_cannot_be_undone_by_saved_selection(tmp_path):
+    preference = tmp_path / "state/model-selection.json"
+    preference.parent.mkdir(parents=True)
+    preference.write_text(json.dumps({"schema": 1, "model_id": "two"}))
+    manager = _manager(tmp_path, start=False, selection_path=preference)
+    assert manager.cfg.model_file == "two.gguf"
+    safe = manager.cfg.model_copy(update={"model_file": "one.gguf", "n_parallel": 1})
+
+    manager.prepare_startup(safe)
+    manager.ensure()
+
+    assert manager.status()["active_id"] == "one"
+    assert manager.cfg.model_file == "one.gguf"
+    assert manager.cfg.n_parallel == 1
+    assert _Server.instances[-1].cfg.model_file == "one.gguf"
+    assert json.loads(preference.read_text())["model_id"] == "two"
+
+
+def test_startup_profile_cannot_change_after_engine_start(tmp_path):
+    manager = _manager(tmp_path)
+
+    with pytest.raises(ModelSwitchError, match="after the engine starts"):
+        manager.prepare_startup(manager.cfg.model_copy(update={"n_parallel": 1}))
 
 
 def test_verified_projector_is_loaded_for_the_matching_default(tmp_path):
@@ -243,6 +309,20 @@ def test_runtime_snapshot_restores_arbitrary_previous_model_and_capacity(tmp_pat
     assert manager.cfg.n_parallel == snapshot[0].n_parallel
     assert manager.cfg.n_ctx == snapshot[0].n_ctx
     assert sum(server.is_up() for server in _Server.instances) == 1
+
+
+def test_saga_runtime_restore_does_not_persist_an_automatic_fallback(tmp_path):
+    preference = tmp_path / "state/model-selection.json"
+    manager = _manager(tmp_path, selection_path=preference)
+    manager.switch("two")
+    manager.switch("one", persist_selection=False)
+    snapshot = manager.runtime_snapshot()
+    manager.switch("two", persist_selection=False)
+
+    manager.restore_runtime(snapshot)
+
+    assert manager.status()["active_id"] == "one"
+    assert json.loads(preference.read_text())["model_id"] == "two"
 
 
 def test_failed_model_and_capacity_switch_restores_both(tmp_path):

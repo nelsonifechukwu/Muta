@@ -26,6 +26,7 @@ struct ProductManifest {
 #[derive(Debug, Deserialize)]
 struct ModelPackManifest {
     pack_id: String,
+    active_model_id: String,
     files: Vec<FileEntry>,
 }
 
@@ -196,6 +197,9 @@ fn verify_model_pack(root: &Path, required_id: &str) -> Result<ModelPackManifest
             "model pack {} does not match required pack {required_id}",
             manifest.pack_id
         ));
+    }
+    if manifest.active_model_id.trim().is_empty() {
+        return Err("model pack has no clean-start active model id".to_string());
     }
     for entry in &manifest.files {
         let relative = safe_relative(&entry.path)?;
@@ -427,6 +431,20 @@ fn install_model_pack(
                 return Err(format!("installing repaired model pack: {error}"));
             }
             fs::remove_dir_all(&backup).map_err(|error| error.to_string())?;
+        }
+        // A rollback/reinstall may reactivate an already verified content-addressed pack.
+        // Carry forward custom GGUFs added to the currently active *different* pack before
+        // moving the pointer, just as the new-destination branch does.
+        let pointer_path = store.join("active.json");
+        if let Ok(previous) = read_json::<ActivePointer>(&pointer_path) {
+            if previous.pack_id == required_id {
+                if let Ok(relative) = safe_relative(&previous.path) {
+                    let previous_root = store.join(relative);
+                    if previous_root != destination {
+                        sync_custom_models(&previous_root, &destination)?;
+                    }
+                }
+            }
         }
         sync_custom_models(source, &destination)?;
     }
@@ -889,6 +907,84 @@ mod tests {
         assert!(second.join("models/custom/teacher.gguf").is_file());
         let pointer: ActivePointer = read_json(&data_root.join("model-packs/active.json")).unwrap();
         assert_eq!(data_root.join("model-packs").join(pointer.path), second);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn model_pack_rollback_to_existing_destination_preserves_newer_custom_models() {
+        let root = std::env::temp_dir().join(format!(
+            "muta-pack-rollback-custom-test-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let data_root = root.join("data");
+        let first_source = root.join("first");
+        let second_source = root.join("second");
+        write_test_pack(&first_source, b"first model bytes");
+        write_test_pack(&second_source, b"second model bytes");
+
+        let first = install_model_pack(&first_source, &data_root, "test-pack").unwrap();
+        let second = install_model_pack(&second_source, &data_root, "test-pack").unwrap();
+        let custom = second.join("models/custom/newer-teacher.gguf");
+        fs::create_dir_all(custom.parent().unwrap()).unwrap();
+        fs::write(&custom, [b'G', b'G', b'U', b'F', 3, 0, 0, 0]).unwrap();
+
+        let reactivated = install_model_pack(&first_source, &data_root, "test-pack").unwrap();
+
+        assert_eq!(reactivated, first);
+        assert!(reactivated
+            .join("models/custom/newer-teacher.gguf")
+            .is_file());
+        let pointer: ActivePointer = read_json(&data_root.join("model-packs/active.json")).unwrap();
+        assert_eq!(
+            data_root.join("model-packs").join(pointer.path),
+            reactivated
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn model_pack_install_keeps_bundled_models_in_core() {
+        let root =
+            std::env::temp_dir().join(format!("muta-two-core-pack-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let source = root.join("source");
+        let core = source.join("models/core");
+        fs::create_dir_all(&core).unwrap();
+        let qwen25 = core.join("Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf");
+        let qwen35 = core.join("muta-tutor-qwen3.5-0.8b-q4_0.gguf");
+        fs::write(&qwen25, b"qwen25 core").unwrap();
+        fs::write(&qwen35, b"qwen35 core").unwrap();
+        let files = [&qwen25, &qwen35]
+            .iter()
+            .map(|path| {
+                serde_json::json!({
+                    "path": path.strip_prefix(&source).unwrap().to_string_lossy().replace('\\', "/"),
+                    "size_bytes": path.metadata().unwrap().len(),
+                    "sha256": hash_file(path).unwrap(),
+                })
+            })
+            .collect::<Vec<_>>();
+        fs::write(
+            source.join("model-pack.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema": 1,
+                "pack_id": "test-pack",
+                "active_model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+                "files": files,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let installed = install_model_pack(&source, &root.join("data"), "test-pack").unwrap();
+        assert!(installed
+            .join(qwen25.strip_prefix(&source).unwrap())
+            .is_file());
+        assert!(installed
+            .join(qwen35.strip_prefix(&source).unwrap())
+            .is_file());
+        assert!(!installed.join("models/custom").exists());
         fs::remove_dir_all(root).unwrap();
     }
 

@@ -85,6 +85,7 @@ def test_model_sync_copies_only_declared_product_inputs(tmp_path: Path) -> None:
     source = tmp_path / "source"
     destination = tmp_path / "destination"
     product = "muta-iq/model/product.gguf"
+    secondary = "muta-iq/model/secondary.gguf"
     projector = "models/mmproj/projector.gguf"
     (source / "runtime").mkdir(parents=True)
     (source / "runtime/model-catalog.json").write_text(
@@ -92,8 +93,12 @@ def test_model_sync_copies_only_declared_product_inputs(tmp_path: Path) -> None:
             {
                 "models": [
                     {
-                        "id": model_sync.PRODUCT_MODEL_ID,
+                        "id": model_sync.PRODUCT_MODEL_IDS[0],
                         "path": product,
+                    },
+                    {
+                        "id": model_sync.PRODUCT_MODEL_IDS[1],
+                        "path": secondary,
                         "mmproj_path": projector,
                     }
                 ]
@@ -101,7 +106,7 @@ def test_model_sync_copies_only_declared_product_inputs(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    for relative in (product, projector, *model_sync.MODEL_FILES):
+    for relative in (product, secondary, projector, *model_sync.MODEL_FILES):
         path = source / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(relative, encoding="utf-8")
@@ -113,6 +118,7 @@ def test_model_sync_copies_only_declared_product_inputs(tmp_path: Path) -> None:
     model_sync.sync(source, destination)
 
     assert (destination / product).read_text(encoding="utf-8") == product
+    assert (destination / secondary).read_text(encoding="utf-8") == secondary
     assert (destination / projector).read_text(encoding="utf-8") == projector
     assert not (destination / "runtime/model-catalog.json").exists()
 
