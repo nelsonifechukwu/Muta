@@ -17,6 +17,8 @@
   const TRACK_FIELDS = new Set(["x", "y", "scale", "rotate", "opacity"]);
   const MAX_SPEC_CHARS = 48 * 1024;
   const MAX_TREE_NODES = 2500;
+  const MAX_STATIC_SURFACE_WORK = 500_000;
+  const MAX_ANIMATED_SURFACE_WORK = 200_000;
   const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
   const SAFE_COLOR = /^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([0-9.,%\s-]+\)|black|white|gray|grey|red|green|blue|orange|purple|teal|gold)$/;
   const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
@@ -96,6 +98,18 @@
       return "surface expression type is invalid";
     };
     return visit(root);
+  }
+
+  function surfaceExpressionNodeCount(root) {
+    let nodes = 0;
+    const pending = [root];
+    while (pending.length) {
+      const node = pending.pop();
+      nodes += 1;
+      if (node.type === "binary") pending.push(node.left, node.right);
+      else if (node.type === "unary" || node.type === "call") pending.push(node.arg);
+    }
+    return nodes;
   }
 
   function evaluateSurfaceExpression(node, variables = {}) {
@@ -319,6 +333,10 @@
         }
         const expressionError = validateSurfaceExpression(object.expression);
         if (expressionError) return expressionError;
+        const sampleCount = object.resolution[0] * object.resolution[1];
+        if (sampleCount * surfaceExpressionNodeCount(object.expression) > MAX_STATIC_SURFACE_WORK) {
+          return "surface expression and resolution exceed the safe rendering budget";
+        }
         if (object.animation !== undefined) {
           const animation = object.animation;
           if (!animation || typeof animation !== "object" || Array.isArray(animation)
@@ -329,6 +347,12 @@
           if (animation.mode === "phase") {
             const animatedError = validateSurfaceExpression(animation.expression);
             if (animatedError) return animatedError;
+            if (
+              sampleCount * surfaceExpressionNodeCount(animation.expression)
+              > MAX_ANIMATED_SURFACE_WORK
+            ) {
+              return "animated surface exceeds the safe per-frame rendering budget";
+            }
           } else if (animation.expression !== undefined) {
             return "orbit animation cannot replace the surface equation";
           }

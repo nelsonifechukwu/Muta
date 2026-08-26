@@ -217,6 +217,20 @@ test("accepts a bounded typed phase animation and rejects unsafe surface data", 
 
   const unboundedAnimation = surfaceSpec({ mode: "phase", duration: 300, expression: animatedExpression });
   assert.equal(viz.validateSpec(unboundedAnimation).ok, false);
+
+  const fullTree = (depth) => (
+    depth === 0 ? number(1) : binary("+", fullTree(depth - 1), fullTree(depth - 1))
+  );
+  const expensiveStatic = surfaceSpec();
+  expensiveStatic.objects[0].resolution = [97, 84];
+  expensiveStatic.objects[0].expression = fullTree(5);
+  assert.match(viz.validateSpec(expensiveStatic).error, /safe rendering budget/);
+
+  const expensiveAnimated = surfaceSpec({
+    mode: "phase", duration: 8, expression: fullTree(4),
+  });
+  expensiveAnimated.objects[0].resolution = [97, 84];
+  assert.match(viz.validateSpec(expensiveAnimated).error, /per-frame rendering budget/);
 });
 
 test("rejects unsafe keys, oversized arrays, bad links, and animation fields", () => {

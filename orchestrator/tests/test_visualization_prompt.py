@@ -112,6 +112,9 @@ def test_anaphoric_visual_follow_up_recovers_only_the_previous_learner_topic() -
     resolved_missing = resolve_visualization_request(engine, "Where is the diagram?", "vector-chat")
     assert resolved_missing.startswith("Explain vector addition with a diagram.")
     assert resolved_missing.endswith("FOLLOW-UP VISUAL REQUEST: Where is the diagram?")
+    resolved_bare_animate = resolve_visualization_request(engine, "animate", "vector-chat")
+    assert resolved_bare_animate.startswith("Explain vector addition with a diagram.")
+    assert resolved_bare_animate.endswith("FOLLOW-UP VISUAL REQUEST: animate")
     assert resolve_visualization_request(engine, "Plot y = x².", "vector-chat") == "Plot y = x²."
 
 
@@ -346,9 +349,18 @@ def test_exact_surface_generation_skips_model_for_initial_and_anaphoric_turns() 
         "The same surface now moves through phase.",
         conversation_id="surface-chat",
     )
+    bare_follow_up = generate_visualization(
+        engine,
+        "animate",
+        "The same surface now moves through phase.",
+        conversation_id="surface-chat",
+    )
     assert initial is not None and initial["objects"][0]["type"] == "surface"
     assert follow_up is not None and follow_up["objects"][0]["animation"]["mode"] == "phase"
     assert follow_up["objects"][0]["expression"] == initial["objects"][0]["expression"]
+    assert bare_follow_up is not None
+    assert bare_follow_up["objects"][0]["animation"]["mode"] == "phase"
+    assert bare_follow_up["objects"][0]["expression"] == initial["objects"][0]["expression"]
     assert local.calls == [] and engine.fit_calls == []
 
 

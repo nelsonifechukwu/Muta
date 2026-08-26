@@ -64,6 +64,22 @@ def extract_surface_expression(text: str) -> str | None:
         tail = tail[: min(quote_positions)]
     tail = re.split(r"\n{2,}", tail, maxsplit=1)[0]
     tail = tail.strip().rstrip(";,.").strip()
+    # The opening math delimiter commonly sits before ``z =`` and therefore outside the
+    # extracted right-hand side. Remove a closing delimiter only when its matching opener is
+    # present either immediately before ``z`` or at the start of the right-hand side. This is
+    # deliberately balanced: an arbitrary trailing dollar/backslash is never discarded.
+    prefix = value[: match.start()].rstrip()
+    for opener, closer in ((r"\[", r"\]"), (r"\(", r"\)"), ("$$", "$$"), ("$", "$")):
+        if (
+            tail.startswith(opener)
+            and tail.endswith(closer)
+            and len(tail) > len(opener) + len(closer)
+        ):
+            tail = tail[len(opener) : -len(closer)].strip()
+            break
+        if prefix.endswith(opener) and tail.endswith(closer):
+            tail = tail[: -len(closer)].strip()
+            break
     if not tail or len(tail) > MAX_EXPRESSION_CHARS:
         return None
     return tail
@@ -86,12 +102,24 @@ def _group(text: str, start: int) -> tuple[str, int]:
 
 
 def _expand_fractions(text: str) -> str:
+    def argument(start: int) -> tuple[str, int]:
+        while start < len(text) and text[start].isspace():
+            start += 1
+        if start < len(text) and text[start] == "{":
+            return _group(text, start)
+        # TeX permits a single token without braces (for example ``\frac14``). Accept only one
+        # numeric digit here: it is unambiguous, bounded, and covers the common fraction shorthand
+        # without widening the grammar to arbitrary commands or names.
+        if start < len(text) and text[start].isdigit():
+            return text[start], start + 1
+        raise SurfaceExpressionError("LaTeX fraction needs braced arguments or single digits")
+
     output: list[str] = []
     cursor = 0
     while cursor < len(text):
         if text.startswith(r"\frac", cursor):
-            numerator, after_numerator = _group(text, cursor + len(r"\frac"))
-            denominator, after_denominator = _group(text, after_numerator)
+            numerator, after_numerator = argument(cursor + len(r"\frac"))
+            denominator, after_denominator = argument(after_numerator)
             output.append(f"(({_expand_fractions(numerator)})/({_expand_fractions(denominator)}))")
             cursor = after_denominator
             continue

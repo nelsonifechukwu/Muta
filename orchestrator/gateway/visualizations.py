@@ -68,7 +68,8 @@ _VECTOR_ADDITION_TERM = re.compile(
 )
 _ANAPHORIC_VISUAL = re.compile(
     r"(?:\b(?:it|this|that|same|again)\b|"
-    r"\bwhere\s+(?:is|was)\s+(?:the\s+)?(?:diagram|visual|image|animation)\b)",
+    r"\bwhere\s+(?:is|was)\s+(?:the\s+)?(?:diagram|visual|image|animation)\b|"
+    r"^\s*(?:please\s+)?animate(?:\s+(?:please|now))?[.!?]*\s*$)",
     re.IGNORECASE,
 )
 _ANIMATION_REQUEST = re.compile(

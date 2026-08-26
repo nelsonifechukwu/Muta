@@ -46,6 +46,29 @@ def test_exact_latex_surface_is_normalized_without_losing_precedence() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "prompt_text",
+    [
+        r"Plot $z=4e^{-\frac{1}{4}y^{2}}\sin(2x)$.",
+        r"Plot \(z=4e^{-\frac{1}{4}y^{2}}\sin(2x)\).",
+        r"Plot \[z=4e^{-\frac{1}{4}y^{2}}\sin(2x)\].",
+        r"Plot z=$4e^{-\frac{1}{4}y^{2}}\sin(2x)$.",
+    ],
+)
+def test_balanced_math_delimiters_are_removed_from_the_extracted_rhs(prompt_text: str) -> None:
+    source = extract_surface_expression(prompt_text)
+    tree = parse_surface_expression(source)
+    assert evaluate_surface_expression(tree, x=math.pi / 4, y=0) == pytest.approx(4)
+
+
+def test_unbraced_single_digit_tex_fraction_is_safe_and_unambiguous() -> None:
+    tree = parse_surface_expression(r"4e^{-\frac14 y^2}\sin(2x)")
+    assert evaluate_surface_expression(tree, x=math.pi / 4, y=0) == pytest.approx(4)
+    assert evaluate_surface_expression(tree, x=math.pi / 4, y=2) == pytest.approx(4 / math.e)
+    with pytest.raises(SurfaceExpressionError):
+        parse_surface_expression(r"\frac xy")
+
+
 def test_power_binds_more_tightly_than_unary_minus() -> None:
     negative_square = parse_surface_expression("-y^2")
     parenthesized = parse_surface_expression("(-y)^2")
