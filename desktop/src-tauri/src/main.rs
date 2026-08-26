@@ -1,10 +1,11 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Component, Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -95,6 +96,77 @@ impl Drop for BackendProcess {
 }
 
 struct ProcessState(Mutex<Option<BackendProcess>>);
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StartupSnapshot {
+    percent: u8,
+    stage: String,
+    ready: bool,
+    failed: bool,
+    retryable: bool,
+}
+
+impl Default for StartupSnapshot {
+    fn default() -> Self {
+        Self {
+            percent: 5,
+            stage: "startup.opening".to_string(),
+            ready: false,
+            failed: false,
+            retryable: false,
+        }
+    }
+}
+
+struct StartupStatus(Mutex<StartupSnapshot>);
+struct LaunchState(AtomicBool);
+
+fn update_startup(
+    app: &tauri::AppHandle,
+    percent: u8,
+    stage: &str,
+    ready: bool,
+    failed: bool,
+    retryable: bool,
+) -> Result<(), String> {
+    let status = app.state::<StartupStatus>();
+    let mut guard = status.0.lock().map_err(|_| "startup state lock poisoned")?;
+    let next = StartupSnapshot {
+        percent: guard.percent.max(percent.min(100)),
+        stage: stage.to_string(),
+        ready,
+        failed,
+        retryable,
+    };
+    if guard.percent == next.percent
+        && guard.stage == next.stage
+        && guard.ready == next.ready
+        && guard.failed == next.failed
+        && guard.retryable == next.retryable
+    {
+        return Ok(());
+    }
+    *guard = next.clone();
+    drop(guard);
+    app.emit("startup-status", next)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn startup_snapshot(status: tauri::State<'_, StartupStatus>) -> StartupSnapshot {
+    status
+        .0
+        .lock()
+        .map(|guard| guard.clone())
+        .unwrap_or_else(|_| StartupSnapshot {
+            percent: 5,
+            stage: "startup.failed".to_string(),
+            ready: false,
+            failed: true,
+            retryable: true,
+        })
+}
 
 fn available_port() -> Result<u16, String> {
     let listener = TcpListener::bind(("127.0.0.1", 0)).map_err(|error| error.to_string())?;
@@ -523,24 +595,40 @@ fn resolve_model_root(data_root: &Path, required_id: &str) -> Result<PathBuf, St
     ))
 }
 
-fn parse_ready_response(response: &[u8]) -> bool {
+#[derive(Clone, Debug, Default)]
+struct GatewayReadiness {
+    ready: bool,
+    db: bool,
+    inference: bool,
+}
+
+fn parse_ready_response(response: &[u8]) -> Option<GatewayReadiness> {
     let Some(split) = response.windows(4).position(|window| window == b"\r\n\r\n") else {
-        return false;
+        return None;
     };
     let headers = String::from_utf8_lossy(&response[..split]);
     if !headers.starts_with("HTTP/1.1 200") && !headers.starts_with("HTTP/1.0 200") {
-        return false;
+        return None;
     }
-    serde_json::from_slice::<serde_json::Value>(&response[split + 4..])
-        .ok()
-        .and_then(|body| body.get("ready").and_then(|value| value.as_bool()))
-        == Some(true)
+    let body = serde_json::from_slice::<serde_json::Value>(&response[split + 4..]).ok()?;
+    let checks = body.get("checks");
+    Some(GatewayReadiness {
+        ready: body.get("ready").and_then(|value| value.as_bool()) == Some(true),
+        db: checks
+            .and_then(|value| value.get("db"))
+            .and_then(|value| value.as_bool())
+            == Some(true),
+        inference: checks
+            .and_then(|value| value.get("inference"))
+            .and_then(|value| value.as_bool())
+            == Some(true),
+    })
 }
 
-fn backend_ready(port: u16) -> bool {
+fn backend_readiness(port: u16) -> Option<GatewayReadiness> {
     let address = SocketAddr::from(([127, 0, 0, 1], port));
     let Ok(mut stream) = TcpStream::connect_timeout(&address, Duration::from_millis(250)) else {
-        return false;
+        return None;
     };
     let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
     if write!(
@@ -549,10 +637,13 @@ fn backend_ready(port: u16) -> bool {
     )
     .is_err()
     {
-        return false;
+        return None;
     }
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).is_ok() && parse_ready_response(&response)
+    if stream.read_to_end(&mut response).is_err() {
+        return None;
+    }
+    parse_ready_response(&response)
 }
 
 #[cfg(windows)]
@@ -686,8 +777,7 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
     fs::create_dir_all(&cache_root).map_err(|error| error.to_string())?;
     let product: ProductManifest = read_json(&resources.join("desktop-product.json"))?;
 
-    app.emit("backend-status", "Verifying the offline model pack…")
-        .map_err(|error| error.to_string())?;
+    update_startup(&app, 14, "startup.verifying", false, false, false)?;
     let install_argument = std::env::args_os()
         .collect::<Vec<_>>()
         .windows(2)
@@ -707,6 +797,7 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
             resolved
         }
     };
+    update_startup(&app, 38, "startup.packReady", false, false, false)?;
 
     for attempt in 1..=5 {
         let gateway_port = available_port()?;
@@ -714,11 +805,18 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
         while engine_port == gateway_port {
             engine_port = available_port()?;
         }
-        app.emit(
-            "backend-status",
-            format!("Loading the local model… (attempt {attempt}/5)"),
-        )
-        .map_err(|error| error.to_string())?;
+        update_startup(
+            &app,
+            52,
+            if attempt == 1 {
+                "startup.starting"
+            } else {
+                "startup.retrying"
+            },
+            false,
+            false,
+            false,
+        )?;
         let mut backend = spawn_backend(
             &gateway,
             &resources,
@@ -728,6 +826,7 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
             gateway_port,
             engine_port,
         )?;
+        update_startup(&app, 64, "startup.connecting", false, false, false)?;
         let deadline = Instant::now() + STARTUP_TIMEOUT;
         while Instant::now() < deadline {
             if let Some(status) = backend
@@ -743,15 +842,30 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
                 }
                 break;
             }
-            if backend_ready(gateway_port) {
-                let state = app.state::<ProcessState>();
-                *state.0.lock().map_err(|_| "backend state lock poisoned")? = Some(backend);
+            if let Some(readiness) = backend_readiness(gateway_port) {
+                let (percent, stage) = if readiness.ready {
+                    (100, "startup.ready")
+                } else if readiness.inference {
+                    (92, "startup.finishing")
+                } else if readiness.db {
+                    (82, "startup.loadingTutor")
+                } else {
+                    (72, "startup.openingData")
+                };
+                update_startup(&app, percent, stage, readiness.ready, false, false)?;
+                if !readiness.ready {
+                    thread::sleep(READY_POLL_INTERVAL);
+                    continue;
+                }
                 let url = tauri::Url::parse(&format!("http://127.0.0.1:{gateway_port}/chat/"))
                     .map_err(|error| error.to_string())?;
+                let state = app.state::<ProcessState>();
+                let mut process = state.0.lock().map_err(|_| "backend state lock poisoned")?;
                 app.get_webview_window("main")
                     .ok_or("main window is missing")?
                     .navigate(url)
                     .map_err(|error| error.to_string())?;
+                *process = Some(backend);
                 return Ok(());
             }
             thread::sleep(READY_POLL_INTERVAL);
@@ -759,6 +873,40 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
         backend.shutdown();
     }
     Err("Muta could not reserve local ports after five attempts".to_string())
+}
+
+fn start_launch(app: tauri::AppHandle) -> bool {
+    let launch_state = app.state::<LaunchState>();
+    if launch_state
+        .0
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return false;
+    }
+    thread::spawn(move || {
+        if let Err(error) = launch(app.clone()) {
+            let _ = update_startup(&app, 0, "startup.failed", false, true, true);
+            let _ = app.emit("backend-error", error);
+        }
+        app.state::<LaunchState>().0.store(false, Ordering::SeqCst);
+    });
+    true
+}
+
+#[tauri::command]
+fn retry_startup(app: tauri::AppHandle) -> bool {
+    let ready = app
+        .state::<StartupStatus>()
+        .0
+        .lock()
+        .map(|snapshot| snapshot.ready)
+        .unwrap_or(false);
+    if ready {
+        return false;
+    }
+    let _ = update_startup(&app, 0, "startup.retrying", false, false, false);
+    start_launch(app)
 }
 
 fn shutdown(app: &tauri::AppHandle) {
@@ -786,13 +934,11 @@ fn main() {
     }
     let app = builder
         .manage(ProcessState(Mutex::new(None)))
+        .manage(StartupStatus(Mutex::new(StartupSnapshot::default())))
+        .manage(LaunchState(AtomicBool::new(false)))
+        .invoke_handler(tauri::generate_handler![startup_snapshot, retry_startup])
         .setup(|app| {
-            let handle = app.handle().clone();
-            thread::spawn(move || {
-                if let Err(error) = launch(handle.clone()) {
-                    let _ = handle.emit("backend-error", error);
-                }
-            });
+            start_launch(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -811,12 +957,29 @@ mod tests {
 
     #[test]
     fn readiness_requires_json_true_not_only_http_200() {
-        assert!(!parse_ready_response(
-            b"HTTP/1.1 200 OK\r\ncontent-length: 15\r\n\r\n{\"ready\":false}"
-        ));
-        assert!(parse_ready_response(
-            b"HTTP/1.1 200 OK\r\ncontent-length: 14\r\n\r\n{\"ready\":true}"
-        ));
+        assert!(
+            !parse_ready_response(
+                b"HTTP/1.1 200 OK\r\ncontent-length: 15\r\n\r\n{\"ready\":false}"
+            )
+            .unwrap()
+            .ready
+        );
+        assert!(
+            parse_ready_response(b"HTTP/1.1 200 OK\r\ncontent-length: 14\r\n\r\n{\"ready\":true}")
+                .unwrap()
+                .ready
+        );
+    }
+
+    #[test]
+    fn readiness_exposes_truthful_dependency_milestones() {
+        let parsed = parse_ready_response(
+            b"HTTP/1.1 200 OK\r\n\r\n{\"ready\":false,\"checks\":{\"gateway\":true,\"db\":true,\"inference\":false}}",
+        )
+        .unwrap();
+        assert!(!parsed.ready);
+        assert!(parsed.db);
+        assert!(!parsed.inference);
     }
 
     #[test]

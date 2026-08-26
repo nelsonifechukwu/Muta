@@ -45,6 +45,22 @@ def test_conversations_scoped_to_student(store: ConversationStore):
     assert [c["id"] for c in store.list_conversations("alice")] == [a]
 
 
+def test_pinned_conversations_persist_sort_first_and_remain_owner_scoped(
+    store: ConversationStore,
+):
+    older = store.create_conversation("alice", title="older")
+    newer = store.create_conversation("alice", title="newer")
+    foreign = store.create_conversation("bob", title="private")
+
+    assert store.set_conversation_pinned(older, owner_id="alice", pinned=True)
+    assert not store.set_conversation_pinned(foreign, owner_id="alice", pinned=True)
+    assert [row["id"] for row in store.list_conversations("alice")] == [older, newer]
+    assert bool(store.get_conversation(older)["pinned"]) is True
+
+    assert store.set_conversation_pinned(older, owner_id="alice", pinned=False)
+    assert bool(store.get_conversation(older)["pinned"]) is False
+
+
 def test_persists_across_reconnect(store: ConversationStore):
     cid = store.create_conversation("s1", title="t")
     store.add_message(cid, "user", "remember me")

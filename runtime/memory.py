@@ -113,10 +113,15 @@ CREATE TABLE IF NOT EXISTS message_sources (
 CREATE INDEX IF NOT EXISTS idx_message_sources_message ON message_sources(message_id, id);
 """
 
+_MIGRATION_4_PINNED_CONVERSATIONS = """
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE;
+"""
+
 _MIGRATIONS: list[tuple[int, str]] = [
     (1, _MIGRATION_1_BASE),
     (2, _MIGRATION_2_ATTACHMENT_OWNER),
     (3, _MIGRATION_3_LEARNING_RESOURCES),
+    (4, _MIGRATION_4_PINNED_CONVERSATIONS),
 ]
 
 
@@ -236,7 +241,8 @@ class ConversationStore:
     def list_conversations(self, student_id: str) -> list[dict]:
         with self._pool.connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM conversations WHERE student_id = %s ORDER BY updated_at DESC",
+                "SELECT * FROM conversations WHERE student_id = %s "
+                "ORDER BY pinned DESC, updated_at DESC",
                 (student_id,),
             ).fetchall()
         return [dict(r) for r in rows]
@@ -254,6 +260,16 @@ class ConversationStore:
                     "DELETE FROM conversations WHERE id = %s AND student_id = %s",
                     (conversation_id, owner_id),
                 )
+            return cur.rowcount > 0
+
+    def set_conversation_pinned(
+        self, conversation_id: str, *, owner_id: str, pinned: bool
+    ) -> bool:
+        with self._pool.connection() as conn:
+            cur = conn.execute(
+                "UPDATE conversations SET pinned = %s WHERE id = %s AND student_id = %s",
+                (pinned, conversation_id, owner_id),
+            )
             return cur.rowcount > 0
 
     def set_title(self, conversation_id: str, title: str) -> None:

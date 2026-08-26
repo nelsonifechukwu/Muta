@@ -8,20 +8,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
   <meta name="theme-color" content="#faf9f5">
   <title>Muta</title>
-  <script src="theme.js?v=20260823-home-theme-1"></script>
+  <script src="theme.js?v=20260826-release-ui-polish-1"></script>
   <!-- Blocking and tiny by design: decide local-host vs shared-client first paint before the
        body can flash the wrong access surface. Backend authorization remains authoritative. -->
-  <script src="access-bootstrap.js?v=20260822-local-host-1"></script>
-  <script src="africa-languages.js?v=20260821-ui-locales-2"></script>
-  <script src="locale-manifest.js?v=20260821-ui-locales-2"></script>
-  <script src="locale-bootstrap.js?v=20260821-ui-locales-2"></script>
+  <script src="access-bootstrap.js?v=20260826-release-ui-polish-1"></script>
+  <script src="africa-languages.js?v=20260826-release-ui-polish-1"></script>
+  <script src="locale-manifest.js?v=20260826-release-ui-polish-1"></script>
+  <script src="locale-bootstrap.js?v=20260826-release-ui-polish-1"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260826-reasoning-menu-1">
+  <link rel="stylesheet" href="styles.css?v=20260826-release-ui-polish-1">
 </head>
 <body>
   <main id="share-auth" class="share-auth" aria-labelledby="share-auth-title">
     <section class="share-auth-card">
-      <a class="share-auth-brand" href="/">Muta.</a>
+        <a class="share-auth-brand" href="/" aria-label="Muta"><span class="muta-wordmark" role="img" aria-label="Muta"><span aria-hidden="true">M<span class="muta-wordmark-u">u<i></i></span>ta.</span></span></a>
       <div id="share-auth-loading" class="share-auth-loading" role="status">
         <span class="share-spinner" aria-hidden="true"></span>
         <p>Connecting to this Muta…</p>
@@ -68,7 +68,7 @@
     <div id="sidebar-backdrop" hidden></div>
     <aside id="sidebar">
       <div class="sidebar-head">
-        <a class="brand" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home">Muta.</a>
+        <a class="brand" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home"><span class="muta-wordmark" role="img" aria-label="Muta"><span aria-hidden="true">M<span class="muta-wordmark-u">u<i></i></span>ta.</span></span></a>
         <button id="new-chat" class="ghost" title="New chat" data-i18n="nav.newChat" data-i18n-title="nav.newChat">+ New chat</button>
       </div>
       <nav id="conversation-list" aria-label="Conversations" data-i18n-aria-label="nav.conversations"></nav>
@@ -110,16 +110,27 @@
             <p id="model-note" role="status" data-i18n="model.defaultRecommended">The recommended model is selected by default.</p>
           </div>
         </div>
+        <div id="startup-readiness" class="startup-readiness" role="status" aria-live="polite" aria-busy="true" hidden>
+          <div id="startup-progress" class="startup-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5">
+            <span id="startup-percent" aria-hidden="true">5%</span>
+          </div>
+          <span id="startup-stage" data-i18n="startup.opening">Opening Muta</span>
+          <button id="startup-retry" type="button" data-i18n="startup.retry" hidden>Retry</button>
+        </div>
         <button id="power-badge" class="power-badge" type="button" lang="en" hidden
           aria-label="Open power settings">
           <span id="power-badge-mode">Eco</span>
           <span class="power-badge-dot">·</span>
           <span id="power-badge-level">—</span>
         </button>
-        <a class="mobile-home-link" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home">Muta.</a>
+        <a class="mobile-home-link" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home"><span class="muta-wordmark" role="img" aria-label="Muta"><span aria-hidden="true">M<span class="muta-wordmark-u">u<i></i></span>ta.</span></span></a>
       </header>
       <div id="chat-scroll">
         <div id="chat-column">
+          <div id="startup-welcome" class="startup-welcome" hidden>
+            <span class="muta-wordmark startup-wordmark" role="img" aria-label="Muta"><span aria-hidden="true">M<span class="muta-wordmark-u">u<i></i></span>ta.</span></span>
+            <p data-i18n="startup.tagline">the personal education companion for every student at every level. powered by AI.</p>
+          </div>
           <div id="empty-state">
             <h1 data-i18n="empty.title">What are we working on?</h1>
             <p data-i18n="empty.body">Ask about any subject, drop in a photo of your work, or hold the mic and just say it.</p>
@@ -152,7 +163,7 @@
             aria-controls="resource-mention-menu" aria-haspopup="listbox"
             aria-label="Ask anything" data-i18n-aria-label="composer.placeholder"
             data-i18n-data-placeholder="composer.placeholder"
-            data-placeholder="Ask anything — Enter to send (queues while replying), Ctrl+Enter to interrupt &amp; send"
+            data-placeholder="Ask anything"
             data-empty="true" spellcheck="true"></div>
           <div id="composer-buttons">
             <div class="left">
@@ -184,7 +195,7 @@
             </button>
           </div>
         </div>
-        <div class="fineprint" data-i18n="fineprint">Muta runs entirely on this machine. Answers can be wrong — check the working.</div>
+        <div class="fineprint" data-i18n="fineprint">Muta can make mistakes. Check important info.</div>
       </div>
     </main>
   </div>
@@ -308,6 +319,19 @@
     </section>
   </div>
 
+  <div id="delete-chat-modal" class="confirm-modal" hidden>
+    <section class="confirm-card" role="dialog" aria-modal="true" tabindex="-1"
+      aria-labelledby="delete-chat-title" aria-describedby="delete-chat-copy">
+      <h2 id="delete-chat-title" data-i18n="conversation.deleteTitle">Delete chat?</h2>
+      <p id="delete-chat-copy">This will delete this chat.</p>
+      <p id="delete-chat-error" class="confirm-error" role="alert"></p>
+      <div class="confirm-actions">
+        <button id="delete-chat-cancel" class="confirm-cancel" type="button" data-i18n="conversation.cancel">Cancel</button>
+        <button id="delete-chat-confirm" class="confirm-delete" type="button" data-i18n="conversation.confirmDelete">Delete</button>
+      </div>
+    </section>
+  </div>
+
   <div id="product-consent-modal" class="product-consent-modal" hidden>
     <section class="product-consent-card" role="dialog" aria-modal="true"
       aria-labelledby="product-consent-title" aria-describedby="product-consent-copy" lang="en">
@@ -340,19 +364,21 @@
   <script src="vendor/katex/katex.min.js"></script>
   <script src="vendor/marked.min.js"></script>
   <script src="vendor/purify.min.js"></script>
-  <script src="i18n.js?v=20260826-reasoning-menu-1"></script>
-  <script src="locale-fr.js?v=20260821-ui-locales-2"></script>
-  <script src="locale-generated.js?v=20260821-ui-locales-2"></script>
-  <script src="locales.js?v=20260821-ui-locales-2"></script>
-  <script src="math.js?v=20260826-reasoning-menu-1"></script>
-  <script src="visualizations.js?v=20260826-math-surface-1"></script>
-  <script src="citations.js?v=20260826-reasoning-menu-1"></script>
-  <script src="resource-mentions.js?v=20260826-reasoning-menu-1"></script>
-  <script src="parallel-policy.js?v=20260826-release-power-copy-1"></script>
-  <script src="popover-position.js?v=20260826-reasoning-menu-1"></script>
-  <script src="image-upload.js?v=20260826-reasoning-menu-1"></script>
-  <script src="app.js?v=20260826-reasoning-menu-1"></script>
-  <script src="product-analytics.js?v=20260823-fleet-1"></script>
-  <script src="audio.js?v=20260826-reasoning-menu-1"></script>
+  <script src="i18n.js?v=20260826-release-ui-polish-1"></script>
+  <script src="locale-fr.js?v=20260826-release-ui-polish-1"></script>
+  <script src="locale-generated.js?v=20260826-release-ui-polish-1"></script>
+  <script src="locales.js?v=20260826-release-ui-polish-1"></script>
+  <script src="math.js?v=20260826-release-ui-polish-1"></script>
+  <script src="syntax.js?v=20260826-release-ui-polish-1"></script>
+  <script src="visualizations.js?v=20260826-release-ui-polish-1"></script>
+  <script src="citations.js?v=20260826-release-ui-polish-1"></script>
+  <script src="resource-mentions.js?v=20260826-release-ui-polish-1"></script>
+  <script src="startup.js?v=20260826-release-ui-polish-1"></script>
+  <script src="parallel-policy.js?v=20260826-release-integration-1"></script>
+  <script src="popover-position.js?v=20260826-release-ui-polish-1"></script>
+  <script src="image-upload.js?v=20260826-release-ui-polish-1"></script>
+  <script src="app.js?v=20260826-release-ui-polish-1"></script>
+  <script src="product-analytics.js?v=20260826-release-ui-polish-1"></script>
+  <script src="audio.js?v=20260826-release-ui-polish-1"></script>
 </body>
 </html>

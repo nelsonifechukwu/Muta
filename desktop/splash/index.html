@@ -8,23 +8,19 @@
   <style>
     :root { color-scheme: light dark; font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f1e7; color: #1d251f; }
-    main { width: min(440px, calc(100vw - 48px)); text-align: center; }
-    .mark { margin: auto; width: 76px; height: 76px; display: grid; place-items: center; border-radius: 22px; background: #1d251f; color: #f5f1e7; font-size: 34px; font-weight: 800; }
-    h1 { margin: 24px 0 8px; font-size: 25px; }
-    p { margin: 0; color: #5f665f; }
-    .bar { height: 5px; margin: 28px auto 0; overflow: hidden; border-radius: 99px; background: #d8d2c5; }
-    .bar::after { content: ""; display: block; width: 42%; height: 100%; border-radius: inherit; background: #e7a75d; animation: load 1.2s ease-in-out infinite alternate; }
+    main { width: min(520px, calc(100vw - 48px)); text-align: center; }
+    .wordmark { display: inline-block; color: currentColor; font: 600 64px/1 Georgia, serif; letter-spacing: -.05em; }
+    .wordmark-u { position: relative; display: inline-block; }
+    .wordmark-u i { position: absolute; left: 50%; bottom: -.2em; width: .16em; height: .16em; transform: translateX(-50%); background: #ad4f31; }
+    p { max-width: 480px; margin: 28px auto 0; color: #5f665f; }
     #error { margin-top: 18px; padding: 12px; border-radius: 12px; color: #8b241c; background: #f7d8d4; text-align: left; white-space: pre-wrap; }
-    @keyframes load { from { transform: translateX(-100%); } to { transform: translateX(240%); } }
-    @media (prefers-color-scheme: dark) { body { background:#172019; color:#f5f1e7; } p { color:#b9c0b9; } .bar { background:#344038; } }
+    @media (prefers-color-scheme: dark) { body { background:#172019; color:#f5f1e7; } p { color:#b9c0b9; } }
   </style>
 </head>
 <body>
   <main>
-    <div class="mark" aria-hidden="true">M</div>
-    <h1>Starting your offline tutor…</h1>
-    <p id="status" role="status">Checking the model pack and warming the local engine.</p>
-    <div class="bar" aria-hidden="true"></div>
+    <div class="wordmark" role="img" aria-label="Muta"><span aria-hidden="true">M<span class="wordmark-u">u<i></i></span>ta.</span></div>
+    <p id="status" role="status">the personal education companion for every student at every level. powered by AI.</p>
     <div id="error" role="alert" hidden></div>
   </main>
   <script src="splash.js"></script>

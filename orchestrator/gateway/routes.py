@@ -39,6 +39,8 @@ from contracts.models import (
     ConversationDeleted,
     ConversationList,
     ConversationOut,
+    ConversationPinned,
+    ConversationPinRequest,
     DiagnoseRequest,
     DiagnoseResponse,
     ExamAnswerRequest,
@@ -1650,6 +1652,7 @@ def conversations(
                 student_id=r["student_id"],
                 title=_listed_conversation_title(r, engine.store),
                 mode=r.get("mode"),
+                pinned=bool(r.get("pinned", False)),
                 created_at=r["created_at"],
                 updated_at=r["updated_at"],
             )
@@ -1754,6 +1757,26 @@ def conversation_delete(
     if not engine.store.delete_conversation(conversation_id, owner_id=caller):
         raise HTTPException(status_code=404, detail="unknown conversation")
     return ConversationDeleted(id=conversation_id)
+
+
+@router.put(
+    "/conversations/{conversation_id}/pin",
+    response_model=ConversationPinned,
+    tags=["conversations"],
+)
+def conversation_pin(
+    conversation_id: str,
+    request: ConversationPinRequest,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> ConversationPinned:
+    """Pin or unpin one of the caller's own threads without exposing whether another
+    learner's identifier exists."""
+    if not engine.store.set_conversation_pinned(
+        conversation_id, owner_id=caller, pinned=request.pinned
+    ):
+        raise HTTPException(status_code=404, detail="unknown conversation")
+    return ConversationPinned(id=conversation_id, pinned=request.pinned)
 
 
 @router.get(

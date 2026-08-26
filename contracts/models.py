@@ -640,6 +640,7 @@ class ConversationOut(BaseModel):
     student_id: str
     title: str | None = None
     mode: str | None = None
+    pinned: bool = False
     created_at: str
     updated_at: str
 
@@ -656,6 +657,15 @@ class MessageList(BaseModel):
 class ConversationDeleted(BaseModel):
     id: str
     deleted: bool = True
+
+
+class ConversationPinRequest(BaseModel):
+    pinned: bool
+
+
+class ConversationPinned(BaseModel):
+    id: str
+    pinned: bool
 
 
 # --- auth & data-subject rights (additive) ---------------------------------------------

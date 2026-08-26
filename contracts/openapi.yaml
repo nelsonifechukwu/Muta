@@ -901,6 +901,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/conversations/{conversation_id}/pin:
+    put:
+      tags:
+      - conversations
+      summary: Conversation Pin
+      description: 'Pin or unpin one of the caller''s own threads without exposing whether another
+
+        learner''s identifier exists.'
+      operationId: conversation_pin_v1_conversations__conversation_id__pin_put
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Conversation Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationPinRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationPinned'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/attachments/{attachment_id}:
     get:
       tags:
@@ -2493,6 +2544,10 @@ components:
           - type: string
           - type: 'null'
           title: Mode
+        pinned:
+          type: boolean
+          title: Pinned
+          default: false
         created_at:
           type: string
           title: Created At
@@ -2506,6 +2561,28 @@ components:
       - created_at
       - updated_at
       title: ConversationOut
+    ConversationPinRequest:
+      properties:
+        pinned:
+          type: boolean
+          title: Pinned
+      type: object
+      required:
+      - pinned
+      title: ConversationPinRequest
+    ConversationPinned:
+      properties:
+        id:
+          type: string
+          title: Id
+        pinned:
+          type: boolean
+          title: Pinned
+      type: object
+      required:
+      - id
+      - pinned
+      title: ConversationPinned
     DiagnoseRequest:
       properties:
         student_id:

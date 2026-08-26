@@ -40,6 +40,8 @@ def test_ui_source_inventory_discovers_every_authored_browser_asset(tmp_path):
         "i18n.js",
         "locale-fr.js",
         "locales.js",
+        "startup.js",
+        "syntax.js",
     }.issubset(export.UI_SOURCE_FILES)
 
 

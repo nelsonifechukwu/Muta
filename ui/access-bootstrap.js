@@ -12,7 +12,9 @@
     : rawHostname;
   const localOperator = hostname === "localhost"
     || hostname === "::1"
-    || hostname.startsWith("127.");
+    || hostname.startsWith("127.")
+    || window.location.protocol === "file:"
+    || Boolean(window.__TAURI__);
 
   document.documentElement.dataset.mutaAccess = localOperator ? "operator" : "shared";
   window.MutaAccess = Object.freeze({ localOperator });

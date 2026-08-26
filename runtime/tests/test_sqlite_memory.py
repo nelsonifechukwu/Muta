@@ -63,6 +63,12 @@ def test_migrates_original_sqlite_database_in_place(tmp_path):
             "SELECT version FROM schema_migrations ORDER BY version"
         ).fetchall()
         assert [row[0] for row in versions] == list(range(1, _LATEST_SCHEMA_VERSION + 1))
+        assert "pinned" in {
+            row[1] for row in store._conn.execute("PRAGMA table_info(conversations)").fetchall()
+        }
+        legacy = store.create_conversation("alice", title="migrated")
+        assert store.set_conversation_pinned(legacy, owner_id="alice", pinned=True)
+        assert bool(store.get_conversation(legacy)["pinned"])
     finally:
         store.close()
 
@@ -99,6 +105,9 @@ test_first_user_message_reads_only_the_opening_user_turn = (
     contract.test_first_user_message_reads_only_the_opening_user_turn
 )
 test_conversations_scoped_to_student = contract.test_conversations_scoped_to_student
+test_pinned_conversations_persist_sort_first_and_remain_owner_scoped = (
+    contract.test_pinned_conversations_persist_sort_first_and_remain_owner_scoped
+)
 test_persists_across_reconnect = contract.test_persists_across_reconnect
 test_add_message_returns_monotonic_ids_and_bumps_updated_at = (
     contract.test_add_message_returns_monotonic_ids_and_bumps_updated_at

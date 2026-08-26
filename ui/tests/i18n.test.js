@@ -98,6 +98,26 @@ test("additive settings copy stays keyed without hiding complete locale packs", 
   assert.equal(supported.length, 28);
 });
 
+test("release-only English fallbacks are explicit, narrow, and placeholder safe", () => {
+  const expected = [
+    "startup.tagline", "startup.opening", "startup.verifying", "startup.packReady",
+    "startup.starting", "startup.retrying", "startup.connecting", "startup.openingData",
+    "startup.loadingTutor", "startup.finishing", "startup.ready", "startup.failed",
+    "startup.retry", "startup.progress", "conversation.pin", "conversation.unpin",
+    "conversation.pinned", "conversation.chats", "conversation.deleteTitle",
+    "conversation.deleteBody", "conversation.cancel", "conversation.confirmDelete",
+    "conversation.deleteFailed", "conversation.pinFailed", "code.copy", "code.copied",
+    "code.copyFailed", "code.plain",
+  ].sort();
+  assert.deepEqual([...i18n.ENGLISH_FALLBACK_KEYS].sort(), expected);
+  for (const locale of i18n.supportedDefinitions()) {
+    if (locale.tag === "en") continue;
+    for (const key of expected) {
+      assert.equal(i18n.catalogs[locale.tag][key], i18n.catalogs.en[key], `${locale.tag}:${key}`);
+    }
+  }
+});
+
 test("machine-assisted packs retain provenance and hide every rejected registry tag", () => {
   const generatedTags = Object.keys(generatedMetadata.generated);
   const hiddenTags = Object.keys(generatedMetadata.hidden);
@@ -119,7 +139,7 @@ test("machine-assisted packs retain provenance and hide every rejected registry 
         /Couldn[’']t (?:start|stop)|Show more|Select the local tutor model|Web grounding (?:on|off)|sources will cited|I[’']m still listening|operator[’']s fixed inference-slot|shared tutor model|Enter to send|Ctrl\+Enter to interrupt|Ground answers|off by default|Tokens per second|Loading \{model\}|offline · local CPU|backend process tree|\(voice loop\)/i,
         `${tag}:${key} English/browser fragment`,
       );
-      if (i18n.catalogs.en[key].length > 24) {
+      if (i18n.catalogs.en[key].length > 24 && !i18n.ENGLISH_FALLBACK_KEYS.includes(key)) {
         assert.notEqual(value.trim(), i18n.catalogs.en[key].trim(), `${tag}:${key} untranslated`);
       }
     }
