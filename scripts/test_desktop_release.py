@@ -117,7 +117,9 @@ def test_unsigned_package_collector_creates_linux_offline_archive(tmp_path: Path
         assert b'chmod +x "$app"' in script.read()
 
 
-def test_unsigned_package_collector_adds_macos_private_test_launcher(tmp_path: Path):
+def test_unsigned_package_collector_adds_macos_private_test_launcher(
+    tmp_path: Path, monkeypatch
+):
     bundle = tmp_path / "bundle"
     app = bundle / "macos/Muta.app"
     app.mkdir(parents=True)
@@ -133,7 +135,12 @@ def test_unsigned_package_collector_adds_macos_private_test_launcher(tmp_path: P
         output=tmp_path / "output",
     )
 
+    sealed: list[Path] = []
+    monkeypatch.setattr(package, "_adhoc_sign_macos_app", sealed.append)
+
     archive = package.collect(args)
+
+    assert sealed == [args.output / "Muta_1.2.3_darwin-aarch64_offline/Muta.app"]
 
     with tarfile.open(archive, "r:gz") as package_archive:
         root = "Muta_1.2.3_darwin-aarch64_offline"
@@ -151,6 +158,42 @@ def test_unsigned_package_collector_adds_macos_private_test_launcher(tmp_path: P
         instructions = guide.read()
         assert b"/bin/zsh " in instructions
         assert b"Double-click Muta.command" not in instructions
+
+
+def test_macos_private_test_seal_signs_then_strictly_verifies(tmp_path: Path, monkeypatch):
+    app = tmp_path / "Muta.app"
+    app.mkdir()
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(package.sys, "platform", "darwin")
+    monkeypatch.setattr(package.shutil, "which", lambda command: f"/usr/bin/{command}")
+    monkeypatch.setattr(
+        package.subprocess,
+        "run",
+        lambda command, check: calls.append(command),
+    )
+
+    package._adhoc_sign_macos_app(app)
+
+    assert calls == [
+        [
+            "/usr/bin/codesign",
+            "--force",
+            "--deep",
+            "--sign",
+            "-",
+            "--timestamp=none",
+            str(app),
+        ],
+        [
+            "/usr/bin/codesign",
+            "--verify",
+            "--deep",
+            "--strict",
+            "--verbose=2",
+            str(app),
+        ],
+    ]
 
 
 def test_unsigned_package_collector_names_windows_install_guide(tmp_path: Path):

@@ -7,6 +7,8 @@ import argparse
 import hashlib
 import shutil
 import stat
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -39,6 +41,26 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _adhoc_sign_macos_app(app: Path) -> None:
+    """Seal the completely assembled private-test bundle after all resources are present."""
+    if sys.platform != "darwin":
+        raise PackageError("macOS packages must be collected and sealed on macOS")
+    codesign = shutil.which("codesign")
+    if not codesign:
+        raise PackageError("codesign is required to seal a macOS private-test package")
+    try:
+        subprocess.run(
+            [codesign, "--force", "--deep", "--sign", "-", "--timestamp=none", str(app)],
+            check=True,
+        )
+        subprocess.run(
+            [codesign, "--verify", "--deep", "--strict", "--verbose=2", str(app)],
+            check=True,
+        )
+    except subprocess.CalledProcessError as error:
+        raise PackageError(f"could not seal macOS application: {app}") from error
+
+
 def collect(args: argparse.Namespace) -> Path:
     bundle = args.bundle_root.resolve()
     source_kit = args.offline_kit.resolve()
@@ -58,6 +80,7 @@ def collect(args: argparse.Namespace) -> Path:
     if args.platform in {"darwin-aarch64", "darwin-x86_64"}:
         app = _one(bundle, "macos/*.app", "macOS application")
         shutil.copytree(app, staging / "Muta.app", symlinks=True)
+        _adhoc_sign_macos_app(staging / "Muta.app")
         _copy_executable(PACKAGE_ASSETS / "macos/Muta.command", staging / "Muta.command")
         shutil.copy2(PACKAGE_ASSETS / f"macos/{INSTALL_GUIDE}", staging / INSTALL_GUIDE)
         archive = Path(
