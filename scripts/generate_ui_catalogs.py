@@ -21,14 +21,13 @@ ROOT = Path(__file__).resolve().parents[1]
 GOOGLE_CACHE = Path("/tmp/muta-google-translations.json")
 NLLB_CACHE = Path("/tmp/muta-nllb-translations.json")
 MODEL_NAME = "facebook/nllb-200-distilled-600M"
+SEMANTIC_CHANGES = json.loads((ROOT / "ui/i18n-semantic-changes.json").read_text())
+SEMANTIC_CHANGE_KEYS = frozenset(SEMANTIC_CHANGES)
+SEMANTIC_OVERRIDES = json.loads((ROOT / "ui/locale-semantic-overrides.json").read_text())
 
 EXISTING_READY = {"ar", "de", "en", "fr", "sw", "yo"}
-HAND_RELEASE_OVERRIDE_KEYS = {
-    "composer.placeholder",
-    "fineprint",
-    "settings.languageHelp",
-    "voice.listening",
-}
+HAND_RELEASE_OVERRIDE_KEYS = SEMANTIC_CHANGE_KEYS
+HAND_REPAIR_OVERRIDE_KEYS = frozenset({"voice.listening"})
 NLLB_TARGETS = {
     "kab": "kab_Latn",
     "kbp": "kbp_Latn",
@@ -778,13 +777,16 @@ def emit_assets() -> None:
             if key in english
         }
         messages.update(CATALOG_CORRECTIONS.get(tag, {}))
+        messages.update(SEMANTIC_OVERRIDES.get(tag, {}))
         overlay_messages: dict[str, str] | None = None
         if tag in EXISTING_READY:
             base = authored.get(tag, {})
             overlay_messages = {
                 key: value
                 for key, value in messages.items()
-                if key not in base or key in HAND_RELEASE_OVERRIDE_KEYS
+                if key not in base
+                or key in HAND_RELEASE_OVERRIDE_KEYS
+                or key in HAND_REPAIR_OVERRIDE_KEYS
             }
             messages = {**base, **overlay_messages}
         repair_dropped_placeholders(messages, english)
@@ -830,6 +832,21 @@ def emit_assets() -> None:
 
     ordered_tags = [item["tag"] for item in registry if item["tag"] in accepted]
     overlay_tags = [tag for tag in ("ar", "sw", "yo", "fr", "de") if tag in accepted_overlays]
+    visible_translated_tags = set(ordered_tags) | set(overlay_tags)
+    if set(SEMANTIC_OVERRIDES) != visible_translated_tags:
+        missing = sorted(visible_translated_tags - set(SEMANTIC_OVERRIDES))
+        extra = sorted(set(SEMANTIC_OVERRIDES) - visible_translated_tags)
+        diagnostics = {tag: rejected.get(tag) for tag in sorted(set(SEMANTIC_OVERRIDES) - visible_translated_tags)}
+        raise SystemExit(
+            f"semantic override locale drift: missing={missing} extra={extra} rejected={diagnostics}"
+        )
+    for tag, rows in SEMANTIC_OVERRIDES.items():
+        if set(rows) != SEMANTIC_CHANGE_KEYS:
+            missing = sorted(SEMANTIC_CHANGE_KEYS - set(rows))
+            extra = sorted(set(rows) - SEMANTIC_CHANGE_KEYS)
+            raise SystemExit(
+                f"semantic override key drift for {tag}: missing={missing} extra={extra}"
+            )
     packs = {tag: accepted[tag]["messages"] for tag in ordered_tags}
     packs.update({tag: accepted_overlays[tag]["messages"] for tag in overlay_tags})
     definitions = {

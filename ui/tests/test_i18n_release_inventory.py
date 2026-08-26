@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 INVENTORY_PATH = ROOT / "ui/i18n-source-inventory.json"
 GATE_PATH = ROOT / "ui/i18n-release-gate.json"
 EQUIVALENTS_PATH = ROOT / "ui/i18n-english-equivalents.json"
+SEMANTIC_CHANGES_PATH = ROOT / "ui/i18n-semantic-changes.json"
+SEMANTIC_OVERRIDES_PATH = ROOT / "ui/locale-semantic-overrides.json"
 
 
 def _load_extractor():
@@ -149,6 +151,36 @@ def test_visible_locales_have_no_unreviewed_exact_english_fallbacks() -> None:
             actual[tag] = identical
     assert actual == allowed
     assert all(reason.strip() for entries in allowed.values() for reason in entries.values())
+
+
+def test_every_changed_english_meaning_has_a_durable_visible_locale_override() -> None:
+    runtime = _runtime_catalogs()
+    changes = json.loads(SEMANTIC_CHANGES_PATH.read_text())
+    overrides = json.loads(SEMANTIC_OVERRIDES_PATH.read_text())
+    english = runtime["catalogs"]["en"]
+    visible = set(runtime["visible"]) - {"en"}
+
+    assert len(changes) == 9
+    assert set(overrides) == visible
+    for key, change in changes.items():
+        assert english[key] == change["after"]
+        assert change["before"] != change["after"]
+    for tag, rows in overrides.items():
+        assert set(rows) == set(changes), tag
+        composer = rows["composer.placeholder"]
+        assert "Enter" not in composer and "Ctrl" not in composer, (
+            f"{tag}:composer.placeholder retains the retired keyboard instructions"
+        )
+        assert len(composer) <= 60, f"{tag}:composer.placeholder is not the compact prompt"
+        for key, value in rows.items():
+            assert runtime["catalogs"][tag][key] == value, f"{tag}:{key} override"
+            assert value not in {changes[key]["before"], changes[key]["after"]}, (
+                f"{tag}:{key} silent English semantic fallback"
+            )
+
+    generator = (ROOT / "scripts/generate_ui_catalogs.py").read_text()
+    assert "HAND_RELEASE_OVERRIDE_KEYS = SEMANTIC_CHANGE_KEYS" in generator
+    assert "messages.update(SEMANTIC_OVERRIDES.get(tag, {}))" in generator
 
 
 def test_release_phase_enforces_exact_copy_and_removed_helpers() -> None:

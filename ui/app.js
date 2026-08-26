@@ -1301,6 +1301,10 @@ function beginAssistantMessage(onAnswerNow) {
       setActivity(phase === "visualization" ? "visualization" : "preparing");
       scrollToBottom();
     },
+    relocalize() {
+      if (!activity.isConnected || activity.hidden) return;
+      setActivity(activityPhase || "preparing");
+    },
     finalize() {
       clearQueuedNotice();
       clearRecovering();
@@ -1625,10 +1629,53 @@ function renderResourceSources(container, sources) {
     onActive: setActive,
   }) || [];
   const firstMarker = markers[0];
-  resourceSourcesOwners.set(box, { container, marker: firstMarker || null });
+  resourceSourcesOwners.set(box, { container, marker: firstMarker || null, records });
   syncResourceSourcesLayout(box);
 }
 renderResourceSources.sequence = 0;
+
+function localizeResourceSources() {
+  for (const box of document.querySelectorAll(".resource-sources")) {
+    const owner = resourceSourcesOwners.get(box);
+    const records = owner?.records || [];
+    const count = records.length;
+    box.setAttribute("aria-label", featureT("rag.sources"));
+    const heading = box.querySelector(".resource-sources-heading");
+    if (heading) heading.textContent = featureT("rag.sources");
+    const countLabel = box.querySelector(".resource-sources-count");
+    if (countLabel) {
+      countLabel.textContent = featureT(count === 1 ? "rag.sourceCountOne" : "rag.sourceCount", {
+        count,
+      });
+    }
+    const trigger = box.querySelector(".resource-sources-trigger");
+    if (trigger) {
+      const expanded = trigger.getAttribute("aria-expanded") === "true";
+      trigger.setAttribute(
+        "aria-label",
+        featureT(expanded ? "rag.hideSources" : "rag.showSources", { count }),
+      );
+    }
+    records.forEach((source, index) => {
+      const number = index + 1;
+      const variables = { title: source.title, page: source.page };
+      const item = box.querySelector(`.resource-source-item[data-resource-citation="${number}"]`);
+      item?.querySelector("a")?.setAttribute("aria-label", featureT("rag.openPage", variables));
+      const meta = item?.querySelector(".resource-source-meta");
+      if (meta) meta.textContent = featureT("rag.sourceMeta", { page: source.page });
+      for (const marker of owner.container.querySelectorAll(
+        `.resource-citation-marker[data-resource-citation="${number}"]`,
+      )) {
+        marker.setAttribute("aria-label", featureT("rag.citation", { number, ...variables }));
+        const preview = marker.querySelector(".resource-citation-preview-label");
+        if (preview) preview.textContent = featureT("rag.previewLabel", { number });
+        const previewMeta = marker.querySelector(".resource-citation-preview span:not([class])");
+        if (previewMeta) previewMeta.textContent = featureT("rag.sourceMeta", { page: source.page });
+      }
+    });
+  }
+  syncResourceSourcesLayout(document.querySelector(".resource-sources"));
+}
 
 const resourceCitationRail = window.matchMedia("(min-width: 1580px)");
 resourceCitationRail.addEventListener?.("change", ({ matches }) => {
@@ -3880,14 +3927,9 @@ const hostEnabledToggle = $("#setting-host-enabled");
 let hostStatus = null;
 let hostPollTimer = null;
 let hostRosterSignature = "";
-
-document.addEventListener("muta:localechange", () => {
-  if (identityReady) syncIdentityCopy();
-  if (hostStatus) {
-    hostRosterSignature = "";
-    renderHostStatus(hostStatus);
-  }
-});
+let hostReadFailed = false;
+let hostSettingsSaving = false;
+const pendingHostUserActions = new Set();
 
 function syncThemeSetting() {
   themeSelect.value = globalThis.MutaTheme?.preference || "system";
@@ -3954,7 +3996,8 @@ function hostUserRow(user) {
   return row;
 }
 
-function renderHostStatus(status) {
+function renderHostStatus(status, { clearReadFailure = true } = {}) {
+  if (clearReadFailure) hostReadFailed = false;
   hostStatus = status;
   hostEnabledToggle.checked = Boolean(status.enabled);
   for (const input of document.querySelectorAll('input[name="host-memory"]')) {
@@ -4005,8 +4048,9 @@ function renderHostStatus(status) {
       users.forEach((user) => list.append(hostUserRow(user)));
     }
   }
-  $("#host-save-state").textContent = status.warning ||
-    releaseT(status.enabled ? "host.on" : "host.off");
+  $("#host-save-state").textContent = hostReadFailed
+    ? releaseT("host.readFailed")
+    : status.warning || releaseT(status.enabled ? "host.on" : "host.off");
 }
 
 async function loadHostStatus({ poll = true } = {}) {
@@ -4016,6 +4060,7 @@ async function loadHostStatus({ poll = true } = {}) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     renderHostStatus(await response.json());
   } catch {
+    hostReadFailed = true;
     $("#host-save-state").textContent = releaseT("host.readFailed");
   }
   if (poll && !settingsModal.hidden) {
@@ -4026,7 +4071,10 @@ async function loadHostStatus({ poll = true } = {}) {
 
 async function saveHostSettings() {
   const previous = hostStatus;
+  const startedLocale = window.MutaI18n.locale;
+  let failureMessage = "";
   const memory = document.querySelector('input[name="host-memory"]:checked')?.value || "competition";
+  hostSettingsSaving = true;
   hostEnabledToggle.disabled = true;
   document.querySelectorAll('input[name="host-memory"]').forEach((input) => { input.disabled = true; });
   $("#host-save-state").textContent = releaseT("host.apply");
@@ -4044,8 +4092,15 @@ async function saveHostSettings() {
     await refreshModelCatalog();
   } catch (error) {
     if (previous) renderHostStatus(previous);
-    $("#host-save-state").textContent = error.message || releaseT("host.updateFailed");
+    failureMessage = error.message || releaseT("host.updateFailed");
+    $("#host-save-state").textContent = failureMessage;
   } finally {
+    hostSettingsSaving = false;
+    if (hostStatus && window.MutaI18n.locale !== startedLocale) {
+      hostRosterSignature = "";
+      renderHostStatus(hostStatus);
+      if (failureMessage) $("#host-save-state").textContent = failureMessage;
+    }
     hostEnabledToggle.disabled = false;
     document.querySelectorAll('input[name="host-memory"]').forEach((input) => { input.disabled = false; });
   }
@@ -4086,6 +4141,7 @@ async function hostUserAction(user, action, button) {
     releaseT("host.removeConfirm", { name: user.username })
   )) return;
   const previous = hostStatus;
+  pendingHostUserActions.add(user.id);
   button.disabled = true;
   hostUserActionPreview(user, action);
   const method = action === "remove" ? "DELETE" : "POST";
@@ -4115,6 +4171,7 @@ async function hostUserAction(user, action, button) {
       error.message || releaseT(`host.${action}Failed`),
     );
   } finally {
+    pendingHostUserActions.delete(user.id);
     if (button.isConnected) button.disabled = false;
   }
 }
@@ -4825,6 +4882,16 @@ document.addEventListener("click", (event) => {
 });
 
 function localizeModelCatalog() {
+  if (modelTrigger.dataset.loadFailed === "true") {
+    const switching = modelTrigger.dataset.switching === "true";
+    const active = modelCatalog?.models?.find((model) => model.id === modelCatalog.active_id);
+    modelTriggerLabel.textContent = switching
+      ? t("model.checking")
+      : active?.label || t("model.localTutor");
+    modelNote.textContent = t(switching ? "model.switchUncertain" : "model.registryFailed");
+    syncComposerState();
+    return;
+  }
   if (!modelCatalog) return;
   // A locale change must never replay a stale pre-switch catalog through renderModelCatalog:
   // that would overwrite dataset.switching and unlock controls while /models/select is still
@@ -4839,15 +4906,43 @@ function localizeModelCatalog() {
   renderModelCatalog(modelCatalog);
 }
 
+const rerenderDynamicLocalization = window.MutaDynamicLocalization.create({
+  resources() {
+    renderResourceList();
+    if (!mentionMenu.hidden) renderMentionMenu();
+    if (selectedRagResources.length) renderRagChips();
+    localizeResourceSources();
+  },
+  host() {
+    if (identityReady) syncIdentityCopy();
+    if (!hostStatus) {
+      if (hostReadFailed) $("#host-save-state").textContent = releaseT("host.readFailed");
+      return;
+    }
+    // Rebuilding Host controls from the last server snapshot during a mutation can re-enable
+    // duplicate actions or overwrite unsaved toggle/radio state. The authoritative response
+    // renders in the newly selected locale as soon as the in-flight operation completes.
+    if (hostSettingsSaving || pendingHostUserActions.size) return;
+    hostRosterSignature = "";
+    renderHostStatus(hostStatus, { clearReadFailure: false });
+  },
+  power() {
+    if (latestPowerStatus) updatePowerStatus(latestPowerStatus);
+  },
+  model: localizeModelCatalog,
+  status() {
+    if (latestTelemetry) updateTelemetry(latestTelemetry);
+    for (const job of generationJobs.values()) job.handle?.relocalize?.();
+  },
+});
+
 window.MutaI18n.subscribe(() => {
   applyThinkingLabel();
   renderChips();
   renderQueue();
   refreshSidebar();
   syncComposerState();
-  if (latestTelemetry) updateTelemetry(latestTelemetry);
-  if (latestPowerStatus) updatePowerStatus(latestPowerStatus);
-  localizeModelCatalog();
+  rerenderDynamicLocalization();
   void refreshNetDot();
 });
 document.addEventListener("muta:startupchange", syncComposerState);

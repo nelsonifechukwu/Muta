@@ -1,0 +1,38 @@
+{
+  "composer.placeholder": {
+    "before": "Ask anything — Enter to send (queues while replying), Ctrl+Enter to interrupt & send",
+    "after": "Ask anything"
+  },
+  "empty.body": {
+    "before": "Ask about any subject, drop in a photo of your work, or hold the mic and just say it.",
+    "after": "Ask a question, add a photo, or use the mic."
+  },
+  "fineprint": {
+    "before": "Muta runs entirely on this machine. Answers can be wrong — check the working.",
+    "after": "Muta can make mistakes. Check important info."
+  },
+  "model.defaultRecommended": {
+    "before": "The recommended model is selected by default.",
+    "after": "Best fit is selected."
+  },
+  "model.operatorOnly": {
+    "before": "Only the laptop operator can change the shared tutor model.",
+    "after": "Only the host can change the model."
+  },
+  "model.outsideRegistry": {
+    "before": "The current engine is outside this registry. Choose an installed tutor model.",
+    "after": "Choose an installed model."
+  },
+  "model.switchUncertain": {
+    "before": "The switch may still be completing. Choices stay locked until Muta reconnects.",
+    "after": "Checking the model switch…"
+  },
+  "settings.languageHelp": {
+    "before": "Sets Muta’s response language. Complete interface translations change the menus too. Auto follows your browser for the interface and your latest message for each reply.",
+    "after": "Auto mode detects your language and replies in it."
+  },
+  "settings.parallelHelp": {
+    "before": "Keep one reply running while you start another. Parallel replies share the local CPU and may each run more slowly.",
+    "after": "Parallel replies share same CPU and RAM. Queue queries to optimize resources."
+  }
+}

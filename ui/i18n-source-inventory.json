@@ -11,6 +11,7 @@
       "ui/app.js",
       "ui/audio.js",
       "ui/citations.js",
+      "ui/dynamic-localization.js",
       "ui/image-upload.js",
       "ui/math.js",
       "ui/parallel-policy.js",
@@ -1046,105 +1047,105 @@
     },
     {
       "file": "ui/app.js",
-      "line": 1346,
+      "line": 1350,
       "kind": "js:t",
       "key": "reply.connectionLost"
     },
     {
       "file": "ui/app.js",
-      "line": 1352,
+      "line": 1356,
       "kind": "js:releaseT",
       "key": "reply.continue"
     },
     {
       "file": "ui/app.js",
-      "line": 1376,
+      "line": 1380,
       "kind": "js:t",
       "key": "reply.stopped"
     },
     {
       "file": "ui/app.js",
-      "line": 1502,
+      "line": 1506,
       "kind": "js:featureT",
       "key": "rag.sources"
     },
     {
       "file": "ui/app.js",
-      "line": 1519,
+      "line": 1523,
       "kind": "js:featureT",
       "key": "rag.sources"
     },
     {
       "file": "ui/app.js",
-      "line": 1552,
+      "line": 1556,
       "kind": "js:featureT",
       "key": "rag.openPage"
     },
     {
       "file": "ui/app.js",
-      "line": 1564,
+      "line": 1568,
       "kind": "js:featureT",
       "key": "rag.sourceMeta"
     },
     {
       "file": "ui/app.js",
-      "line": 1616,
+      "line": 1620,
       "kind": "js:featureT",
       "key": "rag.citation"
     },
     {
       "file": "ui/app.js",
-      "line": 1622,
+      "line": 1626,
       "kind": "js:featureT",
       "key": "rag.previewLabel"
     },
     {
       "file": "ui/app.js",
-      "line": 1623,
+      "line": 1627,
       "kind": "js:featureT",
       "key": "rag.sourceMeta"
     },
     {
       "file": "ui/app.js",
-      "line": 1693,
-      "kind": "js:t",
-      "key": "reply.stopped"
+      "line": 1642,
+      "kind": "js:featureT",
+      "key": "rag.sources"
     },
     {
       "file": "ui/app.js",
-      "line": 1700,
-      "kind": "js:releaseT",
-      "key": "reply.partialSaved"
+      "line": 1644,
+      "kind": "js:featureT",
+      "key": "rag.sources"
     },
     {
       "file": "ui/app.js",
-      "line": 1707,
-      "kind": "js:releaseT",
-      "key": "reply.continue"
+      "line": 1663,
+      "kind": "js:featureT",
+      "key": "rag.openPage"
     },
     {
       "file": "ui/app.js",
-      "line": 1722,
-      "kind": "js:t",
-      "key": "telemetry.no"
+      "line": 1665,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
     },
     {
       "file": "ui/app.js",
-      "line": 1722,
-      "kind": "js:t",
-      "key": "telemetry.yes"
+      "line": 1669,
+      "kind": "js:featureT",
+      "key": "rag.citation"
     },
     {
       "file": "ui/app.js",
-      "line": 1732,
-      "kind": "js:t",
-      "key": "telemetry.peak"
+      "line": 1671,
+      "kind": "js:featureT",
+      "key": "rag.previewLabel"
     },
     {
       "file": "ui/app.js",
-      "line": 1735,
-      "kind": "js:t",
-      "key": "telemetry.throttle"
+      "line": 1673,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
     },
     {
       "file": "ui/app.js",
@@ -1154,453 +1155,483 @@
     },
     {
       "file": "ui/app.js",
-      "line": 1781,
-      "kind": "js:t",
-      "key": "conversation.deleteBody"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1833,
-      "kind": "js:t",
-      "key": "conversation.deleteBody"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1873,
-      "kind": "js:t",
-      "key": "conversation.deleteFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1907,
-      "kind": "js:t",
-      "key": "conversation.untitled"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1909,
-      "kind": "js:t",
-      "key": "conversation.open"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1915,
-      "kind": "js:t",
-      "key": "queue.waitingSlot"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1918,
-      "kind": "js:t",
-      "key": "conversation.background"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1950,
-      "kind": "js:t",
-      "key": "conversation.pinFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1957,
-      "kind": "js:t",
-      "key": "conversation.delete"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1958,
-      "kind": "js:t",
-      "key": "conversation.delete"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2030,
-      "kind": "js:t",
-      "key": "conversation.voiceChanging"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2063,
-      "kind": "js:t",
-      "key": "conversation.unavailable"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2071,
-      "kind": "js:t",
-      "key": "conversation.notFound"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2144,
-      "kind": "js:releaseT",
-      "key": "reply.continuePrompt"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2165,
-      "kind": "js:releaseT",
-      "key": "reply.partialSaved"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2171,
-      "kind": "js:t",
-      "key": "reply.couldNotFinish"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2181,
-      "kind": "js:t",
-      "key": "conversation.voiceChanging"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2219,
-      "kind": "js:t",
-      "key": "model.loading"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2222,
-      "kind": "js:t",
-      "key": "attachment.chooseImageModel"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2247,
-      "kind": "js:t",
-      "key": "composer.attachImageTitle"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2262,
-      "kind": "js:releaseT",
-      "key": "reply.stopping"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2263,
-      "kind": "js:t",
-      "key": "composer.send"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2263,
-      "kind": "js:t",
-      "key": "composer.stop"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2266,
-      "kind": "js:releaseT",
-      "key": "reply.stopping"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2266,
-      "kind": "js:t",
-      "key": "composer.sendMessage"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2266,
-      "kind": "js:t",
-      "key": "composer.stop"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2320,
+      "line": 1740,
       "kind": "js:t",
       "key": "reply.stopped"
     },
     {
       "file": "ui/app.js",
-      "line": 2326,
+      "line": 1747,
+      "kind": "js:releaseT",
+      "key": "reply.partialSaved"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1754,
+      "kind": "js:releaseT",
+      "key": "reply.continue"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1769,
+      "kind": "js:t",
+      "key": "telemetry.no"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1769,
+      "kind": "js:t",
+      "key": "telemetry.yes"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1779,
+      "kind": "js:t",
+      "key": "telemetry.peak"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1782,
+      "kind": "js:t",
+      "key": "telemetry.throttle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1828,
+      "kind": "js:t",
+      "key": "conversation.deleteBody"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1880,
+      "kind": "js:t",
+      "key": "conversation.deleteBody"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1920,
+      "kind": "js:t",
+      "key": "conversation.deleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1954,
+      "kind": "js:t",
+      "key": "conversation.untitled"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1956,
+      "kind": "js:t",
+      "key": "conversation.open"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1962,
+      "kind": "js:t",
+      "key": "queue.waitingSlot"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1965,
+      "kind": "js:t",
+      "key": "conversation.background"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1997,
+      "kind": "js:t",
+      "key": "conversation.pinFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2004,
+      "kind": "js:t",
+      "key": "conversation.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2005,
+      "kind": "js:t",
+      "key": "conversation.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2077,
+      "kind": "js:t",
+      "key": "conversation.voiceChanging"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2110,
+      "kind": "js:t",
+      "key": "conversation.unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2118,
+      "kind": "js:t",
+      "key": "conversation.notFound"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2191,
+      "kind": "js:releaseT",
+      "key": "reply.continuePrompt"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2212,
+      "kind": "js:releaseT",
+      "key": "reply.partialSaved"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2218,
+      "kind": "js:t",
+      "key": "reply.couldNotFinish"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2228,
+      "kind": "js:t",
+      "key": "conversation.voiceChanging"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2266,
+      "kind": "js:t",
+      "key": "model.loading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2269,
+      "kind": "js:t",
+      "key": "attachment.chooseImageModel"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2294,
+      "kind": "js:t",
+      "key": "composer.attachImageTitle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2309,
+      "kind": "js:releaseT",
+      "key": "reply.stopping"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2310,
+      "kind": "js:t",
+      "key": "composer.send"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2310,
+      "kind": "js:t",
+      "key": "composer.stop"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2313,
+      "kind": "js:releaseT",
+      "key": "reply.stopping"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2313,
+      "kind": "js:t",
+      "key": "composer.sendMessage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2313,
+      "kind": "js:t",
+      "key": "composer.stop"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2367,
+      "kind": "js:t",
+      "key": "reply.stopped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2373,
       "kind": "js:t",
       "key": "reply.stopFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 2342,
+      "line": 2389,
       "kind": "js:t",
       "key": "attachment.preview"
     },
     {
       "file": "ui/app.js",
-      "line": 2342,
+      "line": 2389,
       "kind": "js:t",
       "key": "attachment.previewNamed"
     },
     {
       "file": "ui/app.js",
-      "line": 2345,
+      "line": 2392,
       "kind": "js:t",
       "key": "attachment.audio"
     },
     {
       "file": "ui/app.js",
-      "line": 2345,
+      "line": 2392,
       "kind": "js:t",
       "key": "attachment.file"
     },
     {
       "file": "ui/app.js",
-      "line": 2350,
+      "line": 2397,
       "kind": "js:t",
       "key": "attachment.imageUploadFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 2351,
+      "line": 2398,
       "kind": "js:t",
       "key": "attachment.uploading"
     },
     {
       "file": "ui/app.js",
-      "line": 2359,
+      "line": 2406,
       "kind": "js:t",
       "key": "attachment.remove"
     },
     {
       "file": "ui/app.js",
-      "line": 2360,
+      "line": 2407,
       "kind": "js:t",
       "key": "attachment.remove"
     },
     {
       "file": "ui/app.js",
-      "line": 2376,
+      "line": 2423,
       "kind": "js:t",
       "key": "attachment.oneImage"
     },
     {
       "file": "ui/app.js",
-      "line": 2412,
+      "line": 2459,
       "kind": "js:t",
       "key": "attachment.imageAttached"
     },
     {
       "file": "ui/app.js",
-      "line": 2421,
+      "line": 2468,
       "kind": "js:t",
       "key": "attachment.transcribing"
     },
     {
       "file": "ui/app.js",
-      "line": 2435,
+      "line": 2482,
       "kind": "js:t",
       "key": "attachment.speechUnavailable"
     },
     {
       "file": "ui/app.js",
-      "line": 2438,
+      "line": 2485,
       "kind": "js:t",
       "key": "attachment.audioUploadFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 2441,
+      "line": 2488,
       "kind": "js:t",
       "key": "attachment.audioUploadFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 2452,
+      "line": 2499,
       "kind": "js:t",
       "key": "attachment.heardNothing"
     },
     {
       "file": "ui/app.js",
-      "line": 2540,
+      "line": 2587,
       "kind": "js:t",
       "key": "attachment.unknownFile"
     },
     {
       "file": "ui/app.js",
-      "line": 2639,
+      "line": 2686,
       "kind": "js:featureT",
       "key": "rag.document"
     },
     {
       "file": "ui/app.js",
-      "line": 2640,
+      "line": 2687,
       "kind": "js:t",
       "key": "queue.fromImage"
     },
     {
       "file": "ui/app.js",
-      "line": 2646,
+      "line": 2693,
       "kind": "js:t",
       "key": "queue.dontSend"
     },
     {
       "file": "ui/app.js",
-      "line": 2647,
+      "line": 2694,
       "kind": "js:t",
       "key": "queue.dontSend"
     },
     {
       "file": "ui/app.js",
-      "line": 2746,
+      "line": 2793,
       "kind": "js:t",
       "key": "reply.openingChats"
     },
     {
       "file": "ui/app.js",
-      "line": 2748,
+      "line": 2795,
       "kind": "js:t",
       "key": "startup.loadingTutor"
     },
     {
       "file": "ui/app.js",
-      "line": 2750,
+      "line": 2797,
       "kind": "js:t",
       "key": "reply.voiceTyped"
     },
     {
       "file": "ui/app.js",
-      "line": 2752,
+      "line": 2799,
       "kind": "js:t",
       "key": "reply.modelLoading"
     },
     {
       "file": "ui/app.js",
-      "line": 2755,
+      "line": 2802,
       "kind": "js:t",
       "key": "reply.imageUploading"
     },
     {
       "file": "ui/app.js",
-      "line": 2776,
+      "line": 2823,
       "kind": "js:t",
       "key": "reply.previousStarting"
     },
     {
       "file": "ui/app.js",
-      "line": 2780,
+      "line": 2827,
       "kind": "js:featureT",
       "key": "rag.maxFiles"
     },
     {
       "file": "ui/app.js",
-      "line": 2824,
+      "line": 2871,
       "kind": "js:t",
       "key": "reply.parallelDisabled"
     },
     {
       "file": "ui/app.js",
-      "line": 2851,
+      "line": 2898,
       "kind": "js:t",
       "key": "queue.fromImage"
     },
     {
       "file": "ui/app.js",
-      "line": 2926,
+      "line": 2973,
       "kind": "js:t",
       "key": "reply.earlierRunning"
     },
     {
       "file": "ui/app.js",
-      "line": 2943,
+      "line": 2990,
       "kind": "js:t",
       "key": "reply.earlierFinishing"
     },
     {
       "file": "ui/app.js",
-      "line": 2955,
+      "line": 3002,
       "kind": "js:t",
       "key": "reply.httpAnswerFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 2997,
+      "line": 3044,
       "kind": "js:t",
       "key": "queue.automatic"
     },
     {
       "file": "ui/app.js",
-      "line": 3011,
+      "line": 3058,
       "kind": "js:t",
       "key": "reply.startFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 3058,
+      "line": 3105,
       "kind": "js:t",
       "key": "reply.reconnecting"
     },
     {
       "file": "ui/app.js",
-      "line": 3143,
+      "line": 3190,
       "kind": "js:t",
       "key": "reply.tutorReplied"
     },
     {
       "file": "ui/app.js",
-      "line": 3181,
+      "line": 3228,
       "kind": "js:t",
       "key": "badge.sources"
     },
     {
       "file": "ui/app.js",
-      "line": 3202,
+      "line": 3249,
       "kind": "js:t",
       "key": "badge.cloud"
     },
     {
       "file": "ui/app.js",
-      "line": 3209,
+      "line": 3256,
       "kind": "js:t",
       "key": "badge.checkFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 3216,
+      "line": 3263,
       "kind": "js:t",
       "key": "badge.verified"
     },
     {
       "file": "ui/app.js",
-      "line": 3217,
+      "line": 3264,
       "kind": "js:t",
       "key": "badge.verifiedTitle"
     },
     {
       "file": "ui/app.js",
-      "line": 3356,
+      "line": 3403,
       "kind": "js:t",
       "key": "reply.didNotStart"
     },
     {
       "file": "ui/app.js",
-      "line": 3558,
+      "line": 3605,
       "kind": "js:featureT",
       "key": "rag.pickerClosed"
     },
     {
       "file": "ui/app.js",
-      "line": 3579,
+      "line": 3626,
       "kind": "js:featureT",
       "key": "rag.maxFiles"
     },
     {
       "file": "ui/app.js",
-      "line": 3599,
+      "line": 3646,
       "kind": "js:featureT",
       "key": "rag.maxFiles"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3665,
-      "kind": "js:featureT",
-      "key": "resources.pages"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3680,
-      "kind": "js:featureT",
-      "key": "rag.pickerResults"
     },
     {
       "file": "ui/app.js",
@@ -1610,447 +1641,483 @@
     },
     {
       "file": "ui/app.js",
-      "line": 3720,
+      "line": 3712,
       "kind": "js:featureT",
       "key": "resources.pages"
     },
     {
       "file": "ui/app.js",
-      "line": 3728,
+      "line": 3727,
+      "kind": "js:featureT",
+      "key": "rag.pickerResults"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3767,
+      "kind": "js:featureT",
+      "key": "resources.pages"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3775,
       "kind": "js:featureT",
       "key": "resources.retry"
     },
     {
       "file": "ui/app.js",
-      "line": 3735,
+      "line": 3782,
       "kind": "js:featureT",
       "key": "resources.delete"
     },
     {
       "file": "ui/app.js",
-      "line": 3790,
+      "line": 3837,
       "kind": "js:featureT",
       "key": "resources.loadFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 3805,
+      "line": 3852,
       "kind": "js:featureT",
       "key": "resources.uploading"
     },
     {
       "file": "ui/app.js",
-      "line": 3822,
+      "line": 3869,
       "kind": "js:featureT",
       "key": "resources.uploaded"
     },
     {
       "file": "ui/app.js",
-      "line": 3826,
+      "line": 3873,
       "kind": "js:featureT",
       "key": "resources.uploadFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 3835,
+      "line": 3882,
       "kind": "js:featureT",
       "key": "resources.uploadFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 3844,
+      "line": 3891,
       "kind": "js:featureT",
       "key": "resources.deleteFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 3930,
+      "line": 3972,
       "kind": "js:releaseT",
       "key": "host.waiting"
     },
     {
       "file": "ui/app.js",
-      "line": 3931,
+      "line": 3973,
       "kind": "js:releaseT",
       "key": "host.removing"
     },
     {
       "file": "ui/app.js",
-      "line": 3932,
+      "line": 3974,
       "kind": "js:releaseT",
       "key": "host.approved"
     },
     {
       "file": "ui/app.js",
-      "line": 3932,
+      "line": 3974,
       "kind": "js:releaseT",
       "key": "host.approvedSignedIn"
     },
     {
       "file": "ui/app.js",
-      "line": 3949,
+      "line": 3991,
       "kind": "js:releaseT",
       "key": "host.remove"
     },
     {
       "file": "ui/app.js",
-      "line": 3969,
+      "line": 4012,
       "kind": "js:releaseT",
       "key": "host.noFingerprint"
     },
     {
       "file": "ui/app.js",
-      "line": 3976,
+      "line": 4019,
       "kind": "js:releaseT",
       "key": "host.simultaneousChats"
     },
     {
       "file": "ui/app.js",
-      "line": 3977,
+      "line": 4020,
       "kind": "js:releaseT",
       "key": "host.tokensPerChat"
     },
     {
       "file": "ui/app.js",
-      "line": 3978,
+      "line": 4021,
       "kind": "js:releaseT",
       "key": "host.ramCeiling"
     },
     {
       "file": "ui/app.js",
-      "line": 4002,
+      "line": 4045,
       "kind": "js:releaseT",
       "key": "host.empty"
     },
     {
       "file": "ui/app.js",
-      "line": 4019,
+      "line": 4052,
       "kind": "js:releaseT",
       "key": "host.readFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 4032,
+      "line": 4064,
+      "kind": "js:releaseT",
+      "key": "host.readFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4080,
       "kind": "js:releaseT",
       "key": "host.apply"
     },
     {
       "file": "ui/app.js",
-      "line": 4040,
+      "line": 4088,
       "kind": "js:releaseT",
       "key": "host.updateFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 4047,
+      "line": 4095,
       "kind": "js:releaseT",
       "key": "host.updateFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 4061,
+      "line": 4116,
       "kind": "js:releaseT",
       "key": "host.removePending"
     },
     {
       "file": "ui/app.js",
-      "line": 4086,
+      "line": 4141,
       "kind": "js:releaseT",
       "key": "host.removeConfirm"
     },
     {
       "file": "ui/app.js",
-      "line": 4130,
+      "line": 4187,
       "kind": "js:releaseT",
       "key": "host.copied"
     },
     {
       "file": "ui/app.js",
-      "line": 4133,
+      "line": 4190,
       "kind": "js:releaseT",
       "key": "host.copyFallback"
     },
     {
       "file": "ui/app.js",
-      "line": 4181,
+      "line": 4238,
       "kind": "js:t",
       "key": "settings.saveFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 4210,
+      "line": 4267,
       "kind": "js:powerText",
       "key": "power.critical"
     },
     {
       "file": "ui/app.js",
-      "line": 4211,
+      "line": 4268,
       "kind": "js:powerText",
       "key": "power.sensorGrace"
     },
     {
       "file": "ui/app.js",
-      "line": 4217,
+      "line": 4274,
       "kind": "js:powerText",
       "key": "power.actions"
     },
     {
       "file": "ui/app.js",
-      "line": 4221,
+      "line": 4278,
       "kind": "js:powerText",
       "key": "power.critical"
     },
     {
       "file": "ui/app.js",
-      "line": 4225,
+      "line": 4282,
       "kind": "js:powerText",
       "key": "power.critical"
     },
     {
       "file": "ui/app.js",
-      "line": 4225,
+      "line": 4282,
       "kind": "js:powerText",
       "key": "power.openSettings"
     },
     {
       "file": "ui/app.js",
-      "line": 4225,
+      "line": 4282,
       "kind": "js:powerText",
       "key": "power.sensorGrace"
     },
     {
       "file": "ui/app.js",
-      "line": 4229,
+      "line": 4286,
       "kind": "js:powerText",
       "key": "power.unavailable"
     },
     {
       "file": "ui/app.js",
-      "line": 4230,
+      "line": 4287,
       "kind": "js:powerText",
       "key": "power.unavailableHelp"
     },
     {
       "file": "ui/app.js",
-      "line": 4240,
+      "line": 4297,
       "kind": "js:powerText",
       "key": "power.connectedDraining"
     },
     {
       "file": "ui/app.js",
-      "line": 4242,
+      "line": 4299,
       "kind": "js:powerText",
       "key": "power.plugged"
     },
     {
       "file": "ui/app.js",
-      "line": 4245,
+      "line": 4302,
       "kind": "js:powerText",
       "key": "power.battery"
     },
     {
       "file": "ui/app.js",
-      "line": 4249,
+      "line": 4306,
       "kind": "js:powerText",
       "key": "power.remaining"
     },
     {
       "file": "ui/app.js",
-      "line": 4252,
+      "line": 4309,
       "kind": "js:powerText",
       "key": "power.rate"
     },
     {
       "file": "ui/app.js",
-      "line": 4254,
+      "line": 4311,
       "kind": "js:powerText",
       "key": "power.checkingHelp"
     },
     {
       "file": "ui/app.js",
-      "line": 4261,
+      "line": 4318,
       "kind": "js:powerText",
       "key": "power.actions"
     },
     {
       "file": "ui/app.js",
-      "line": 4279,
+      "line": 4336,
       "kind": "js:powerText",
       "key": "power.battery"
     },
     {
       "file": "ui/app.js",
-      "line": 4280,
+      "line": 4337,
       "kind": "js:powerText",
       "key": "power.openSettings"
     },
     {
       "file": "ui/app.js",
-      "line": 4316,
+      "line": 4373,
       "kind": "js:t",
       "key": "settings.saveFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 4530,
+      "line": 4587,
       "kind": "js:t",
       "key": "reason.changed"
     },
     {
       "file": "ui/app.js",
-      "line": 4629,
+      "line": 4686,
       "kind": "js:t",
       "key": "model.recommended"
     },
     {
       "file": "ui/app.js",
-      "line": 4635,
+      "line": 4692,
       "kind": "js:t",
       "key": "model.imageInput"
     },
     {
       "file": "ui/app.js",
-      "line": 4643,
+      "line": 4700,
       "kind": "js:t",
       "key": "model.unavailable"
     },
     {
       "file": "ui/app.js",
-      "line": 4644,
+      "line": 4701,
       "kind": "js:t",
       "key": "model.localTutor"
     },
     {
       "file": "ui/app.js",
-      "line": 4663,
+      "line": 4720,
       "kind": "js:t",
       "key": "model.switching"
     },
     {
       "file": "ui/app.js",
-      "line": 4664,
+      "line": 4721,
       "kind": "js:t",
       "key": "model.choose"
     },
     {
       "file": "ui/app.js",
-      "line": 4664,
+      "line": 4721,
       "kind": "js:t",
       "key": "model.currentLocal"
     },
     {
       "file": "ui/app.js",
-      "line": 4665,
+      "line": 4722,
       "kind": "js:t",
       "key": "model.chooseLocal"
     },
     {
       "file": "ui/app.js",
-      "line": 4667,
+      "line": 4724,
       "kind": "js:t",
       "key": "model.operatorOnly"
     },
     {
       "file": "ui/app.js",
-      "line": 4671,
+      "line": 4728,
       "kind": "js:t",
       "key": "model.outsideRegistry"
     },
     {
       "file": "ui/app.js",
-      "line": 4672,
+      "line": 4729,
       "kind": "js:t",
       "key": "model.noneInstalled"
     },
     {
       "file": "ui/app.js",
-      "line": 4709,
+      "line": 4766,
       "kind": "js:t",
       "key": "model.checking"
     },
     {
       "file": "ui/app.js",
-      "line": 4710,
+      "line": 4767,
       "kind": "js:t",
       "key": "model.switchUncertain"
     },
     {
       "file": "ui/app.js",
-      "line": 4715,
+      "line": 4772,
       "kind": "js:t",
       "key": "model.localTutor"
     },
     {
       "file": "ui/app.js",
-      "line": 4716,
+      "line": 4773,
       "kind": "js:t",
       "key": "model.registryFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 4730,
+      "line": 4787,
       "kind": "js:t",
       "key": "model.stopBeforeChange"
     },
     {
       "file": "ui/app.js",
-      "line": 4738,
+      "line": 4795,
       "kind": "js:t",
       "key": "model.loadingNamed"
     },
     {
       "file": "ui/app.js",
-      "line": 4740,
+      "line": 4797,
       "kind": "js:t",
       "key": "model.loadingNote"
     },
     {
       "file": "ui/app.js",
-      "line": 4741,
+      "line": 4798,
       "kind": "js:t",
       "key": "model.switchingNamed"
     },
     {
       "file": "ui/app.js",
-      "line": 4758,
+      "line": 4815,
       "kind": "js:t",
       "key": "model.readyNew"
     },
     {
       "file": "ui/app.js",
-      "line": 4759,
+      "line": 4816,
       "kind": "js:t",
       "key": "model.ready"
     },
     {
       "file": "ui/app.js",
-      "line": 4763,
+      "line": 4820,
       "kind": "js:t",
       "key": "model.checking"
     },
     {
       "file": "ui/app.js",
-      "line": 4764,
+      "line": 4821,
       "kind": "js:t",
       "key": "model.switchUncertain"
     },
     {
       "file": "ui/app.js",
-      "line": 4765,
+      "line": 4822,
       "kind": "js:t",
       "key": "model.connectionDropped"
     },
     {
       "file": "ui/app.js",
-      "line": 4771,
+      "line": 4828,
       "kind": "js:t",
       "key": "model.switchFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 4835,
+      "line": 4889,
+      "kind": "js:t",
+      "key": "model.checking"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4890,
+      "kind": "js:t",
+      "key": "model.localTutor"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4902,
       "kind": "js:t",
       "key": "model.switchUncertain"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4919,
+      "kind": "js:releaseT",
+      "key": "host.readFailed"
     },
     {
       "file": "ui/app.js",

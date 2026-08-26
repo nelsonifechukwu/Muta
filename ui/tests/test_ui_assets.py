@@ -64,9 +64,9 @@ def test_loopback_host_opens_the_local_shell_without_the_shared_connection_gate(
     Detection happens in the blocking head so the wrong full-screen gate cannot flash before
     app.js starts. This is only first-paint routing; backend authorization remains mandatory.
     """
-    bootstrap_tag = '<script src="access-bootstrap.js?v=20260826-release-ui-polish-1"></script>'
-    assert bootstrap_tag in HTML
-    assert HTML.index(bootstrap_tag) < HTML.index('<link rel="stylesheet"')
+    bootstrap_tag = re.search(r'<script src="access-bootstrap\.js\?v=[^"]+"></script>', HTML)
+    assert bootstrap_tag
+    assert bootstrap_tag.start() < HTML.index('<link rel="stylesheet"')
     assert 'hostname === "localhost"' in ACCESS_BOOTSTRAP
     assert 'hostname === "::1"' in ACCESS_BOOTSTRAP
     assert 'hostname.startsWith("127.")' in ACCESS_BOOTSTRAP
@@ -213,7 +213,7 @@ def test_pinned_conversations_render_first_and_remain_accessible_on_touch():
 def test_fenced_code_highlighting_is_local_safe_and_theme_aware():
     syntax = (UI / "syntax.js").read_text()
     js = (UI / "app.js").read_text()
-    assert '<script src="syntax.js?v=20260826-release-integration-2"></script>' in HTML
+    assert re.search(r'<script src="syntax\.js\?v=[^"]+"></script>', HTML)
     assert HTML.index('src="math.js') < HTML.index('src="syntax.js') < HTML.index('src="app.js')
     renderer = js[js.index("function renderMarkdown(") : js.index("function renderCompletedReply(")]
     assert renderer.index("MutaMath.render") < renderer.index("MutaSyntax?.decorate")
@@ -813,7 +813,7 @@ def test_host_roster_removal_updates_immediately_and_keeps_errors_at_the_row():
     assert (
         'row.querySelectorAll("button").forEach((control) => { control.disabled = false; })' in js
     )
-    assert "if (hostStatus) {" in js and 'hostRosterSignature = ""' in js
+    assert "if (!hostStatus) return;" in js and 'hostRosterSignature = ""' in js
     trust_link = "".join(_blocks(".host-share-card a"))
     assert "min-height: 44px" in trust_link and "inline-flex" in trust_link
 
@@ -864,10 +864,84 @@ def test_locale_change_cannot_unlock_a_model_switch_in_flight():
     assert "renderModelCatalog(modelCatalog)" in helper
     switching = helper[: helper.index("renderModelCatalog(modelCatalog)")]
     assert "return;" in switching
+    coordinator = js[
+        js.index("const rerenderDynamicLocalization") : js.index("window.MutaI18n.subscribe")
+    ]
+    assert "model: localizeModelCatalog" in coordinator
     subscriber_start = js.index("window.MutaI18n.subscribe")
     subscriber = js[subscriber_start:]
-    assert "localizeModelCatalog()" in subscriber
+    assert "rerenderDynamicLocalization()" in subscriber
     assert "renderModelCatalog(modelCatalog)" not in subscriber
+
+
+def test_locale_change_relocalizes_model_failure_without_replaying_stale_catalog():
+    js = (UI / "app.js").read_text()
+    helper = js[
+        js.index("function localizeModelCatalog()") : js.index(
+            "const rerenderDynamicLocalization", js.index("function localizeModelCatalog()")
+        )
+    ]
+    assert 'modelTrigger.dataset.loadFailed === "true"' in helper
+    assert 'active?.label || t("model.localTutor")' in helper
+    assert 't(switching ? "model.switchUncertain" : "model.registryFailed")' in helper
+    assert helper.index('modelTrigger.dataset.loadFailed === "true"') < helper.index(
+        "if (!modelCatalog) return;"
+    )
+    failure_branch = helper[: helper.index("if (!modelCatalog) return;")]
+    assert "return;" in failure_branch
+    assert "renderModelCatalog(modelCatalog)" not in failure_branch
+
+
+def test_locale_change_rerenders_every_dynamic_live_state_surface():
+    js = (UI / "app.js").read_text()
+    coordinator = js[
+        js.index("const rerenderDynamicLocalization") : js.index("window.MutaI18n.subscribe")
+    ]
+    for required in (
+        "renderResourceList()",
+        "renderMentionMenu()",
+        "renderRagChips()",
+        "localizeResourceSources()",
+        "renderHostStatus(hostStatus, { clearReadFailure: false })",
+        "updatePowerStatus(latestPowerStatus)",
+        "model: localizeModelCatalog",
+        "job.handle?.relocalize?.()",
+    ):
+        assert required in coordinator
+    assert 'src="dynamic-localization.js?v=' in HTML
+    assert HTML.index('src="dynamic-localization.js?v=') < HTML.index('src="app.js?v=')
+    builder = (UI.parent / "scripts" / "build_ui_dist.py").read_text()
+    assert '"dynamic-localization.js"' in builder
+
+
+def test_locale_change_preserves_pending_host_mutation_locks():
+    js = (UI / "app.js").read_text()
+    coordinator = js[
+        js.index("const rerenderDynamicLocalization") : js.index("window.MutaI18n.subscribe")
+    ]
+    assert "let hostSettingsSaving = false" in js
+    assert "const pendingHostUserActions = new Set()" in js
+    assert "hostSettingsSaving = true" in js
+    assert "hostSettingsSaving = false" in js
+    assert "const startedLocale = window.MutaI18n.locale" in js
+    assert "window.MutaI18n.locale !== startedLocale" in js
+    assert "pendingHostUserActions.add(user.id)" in js
+    assert "pendingHostUserActions.delete(user.id)" in js
+    assert "if (hostSettingsSaving || pendingHostUserActions.size) return;" in coordinator
+    assert coordinator.index("pendingHostUserActions.size") < coordinator.index(
+        "renderHostStatus(hostStatus, { clearReadFailure: false })"
+    )
+
+
+def test_locale_change_relocalizes_initial_host_read_failure():
+    js = (UI / "app.js").read_text()
+    coordinator = js[
+        js.index("const rerenderDynamicLocalization") : js.index("window.MutaI18n.subscribe")
+    ]
+    assert "let hostReadFailed = false" in js
+    assert "hostReadFailed = true" in js
+    assert 'if (hostReadFailed) $("#host-save-state").textContent = releaseT("host.readFailed")' in coordinator
+    assert "renderHostStatus(hostStatus, { clearReadFailure: false })" in coordinator
 
 
 def test_model_catalog_starts_after_auth_without_blocking_saved_conversations():

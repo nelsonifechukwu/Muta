@@ -75,6 +75,21 @@ After the three SHAs arrived:
 - The authored shell and visualization frame both opt out of browser translation while retaining
   runtime `lang` and `dir` switching.
 
+## Integration browser-QA follow-up
+
+The integrated browser pass found two boundaries that structural key parity alone could not catch:
+
+- Nine pre-existing English keys had changed meaning since the translation baseline. Their old
+  translations were structurally complete but semantically stale. `ui/i18n-semantic-changes.json`
+  now records the exact before/after English contract, while `ui/locale-semantic-overrides.json`
+  provides a reviewed value for every changed key in every visible non-English locale. The
+  generator applies these overrides after browser/model caches and requires complete locale/key
+  parity, including the hand-authored Arabic, German, French, Swahili, and Yoruba packs.
+- Authored `data-i18n` nodes switched immediately, but resource and other live-state renderers did
+  not. `ui/dynamic-localization.js` now coordinates resources, Host, power, model, and active status
+  rerenders from their authoritative in-memory state. The runtime regression switches an already
+  rendered Igbo surface to English and requires all five dynamic surface classes to update.
+
 ## Delivery boundary
 
 Commit only this branch. Do not merge to `main`, create packages, publish releases, deploy, or push
