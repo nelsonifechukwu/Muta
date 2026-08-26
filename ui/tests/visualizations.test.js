@@ -21,6 +21,57 @@ function fenced(spec) {
   return `Before the visual.\n\n\`\`\`muta-viz\n${JSON.stringify(spec)}\n\`\`\`\n\nAfter it.`;
 }
 
+const number = (value) => ({ type: "number", value });
+const variable = (name) => ({ type: "variable", name });
+const constant = (name) => ({ type: "constant", name });
+const binary = (op, left, right) => ({ type: "binary", op, left, right });
+const call = (name, arg) => ({ type: "call", name, arg });
+const unary = (op, arg) => ({ type: "unary", op, arg });
+
+const exactSurfaceExpression = binary(
+  "*",
+  binary(
+    "*",
+    number(4),
+    binary(
+      "^",
+      constant("e"),
+      binary(
+        "*",
+        unary("-", binary("/", number(1), number(4))),
+        binary("^", variable("y"), number(2)),
+      ),
+    ),
+  ),
+  call("sin", binary("*", number(2), variable("x"))),
+);
+
+function surfaceSpec(animation) {
+  const object = {
+    type: "surface",
+    label: "z = 4e^(-y²/4) sin(2x)",
+    expression_text: "z = 4e^(-y²/4) sin(2x)",
+    expression: exactSurfaceExpression,
+    x_domain: [-Math.PI, Math.PI],
+    y_domain: [-4, 4],
+    z_domain: [-4, 4],
+    resolution: [65, 49],
+  };
+  if (animation) object.animation = animation;
+  return {
+    version: 1,
+    library: "three",
+    kind: "scene3d",
+    title: "Gaussian-windowed sine surface",
+    aria_label: "A three-dimensional Gaussian-windowed sine surface with z vertical.",
+    height: 460,
+    x_label: "x",
+    y_label: "y",
+    z_label: "z",
+    objects: [object],
+  };
+}
+
 test("extracts one valid visualization and leaves the teaching prose", () => {
   const result = viz.extract(fenced(line));
   assert.equal(result.visualizations.length, 1);
@@ -125,6 +176,61 @@ test("accepts deterministic vector-addition diagrams and replayable animations",
     };
     assert.equal(viz.validateSpec(animation).ok, true, library);
   }
+});
+
+test("validates and evaluates the exact deterministic mathematical surface", () => {
+  const spec = surfaceSpec();
+  const checked = viz.validateSpec(spec);
+  assert.equal(checked.ok, true, checked.error);
+  const at = (x, y, t = 0, expression = exactSurfaceExpression) => (
+    viz.evaluateSurfaceExpression(expression, { x, y, t })
+  );
+  for (const y of [-4, -1, 0, 2, 4]) assert.ok(Math.abs(at(0, y)) < 1e-12);
+  assert.ok(Math.abs(at(Math.PI / 4, 0) - 4) < 1e-12);
+  assert.ok(Math.abs(at(-Math.PI / 4, 0) + 4) < 1e-12);
+  assert.ok(Math.abs(at(Math.PI / 4, 0)) > Math.abs(at(Math.PI / 4, 2)));
+  assert.ok(Math.abs(at(Math.PI / 4, 2)) > Math.abs(at(Math.PI / 4, 4)));
+});
+
+test("accepts a bounded typed phase animation and rejects unsafe surface data", () => {
+  const animatedExpression = structuredClone(exactSurfaceExpression);
+  animatedExpression.right.arg = binary("-", animatedExpression.right.arg, variable("t"));
+  const animated = surfaceSpec({ mode: "phase", duration: 8, expression: animatedExpression });
+  const checked = viz.validateSpec(animated);
+  assert.equal(checked.ok, true, checked.error);
+  assert.equal(
+    viz.evaluateSurfaceExpression(animatedExpression, { x: Math.PI / 4, y: 0, t: Math.PI / 2 }),
+    0,
+  );
+
+  const unsafeFunction = surfaceSpec();
+  unsafeFunction.objects[0].expression = call("constructor", variable("x"));
+  assert.equal(viz.validateSpec(unsafeFunction).ok, false);
+
+  const excessiveResolution = surfaceSpec();
+  excessiveResolution.objects[0].resolution = [97, 97];
+  assert.equal(viz.validateSpec(excessiveResolution).ok, false);
+
+  const backwardsDomain = surfaceSpec();
+  backwardsDomain.objects[0].x_domain = [2, -2];
+  assert.equal(viz.validateSpec(backwardsDomain).ok, false);
+
+  const unboundedAnimation = surfaceSpec({ mode: "phase", duration: 300, expression: animatedExpression });
+  assert.equal(viz.validateSpec(unboundedAnimation).ok, false);
+
+  const fullTree = (depth) => (
+    depth === 0 ? number(1) : binary("+", fullTree(depth - 1), fullTree(depth - 1))
+  );
+  const expensiveStatic = surfaceSpec();
+  expensiveStatic.objects[0].resolution = [97, 84];
+  expensiveStatic.objects[0].expression = fullTree(5);
+  assert.match(viz.validateSpec(expensiveStatic).error, /safe rendering budget/);
+
+  const expensiveAnimated = surfaceSpec({
+    mode: "phase", duration: 8, expression: fullTree(4),
+  });
+  expensiveAnimated.objects[0].resolution = [97, 84];
+  assert.match(viz.validateSpec(expensiveAnimated).error, /per-frame rendering budget/);
 });
 
 test("rejects unsafe keys, oversized arrays, bad links, and animation fields", () => {

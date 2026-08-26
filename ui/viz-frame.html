@@ -6,15 +6,20 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; child-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Muta visualization</title>
   <script src="viz-theme.js?v=20260825-mac-media-2"></script>
-  <link rel="stylesheet" href="viz-frame.css?v=20260825-mac-media-2">
+  <link rel="stylesheet" href="viz-frame.css?v=20260826-math-surface-1">
 </head>
 <body>
   <main id="viz-shell">
     <div id="viz-stage" role="group"></div>
     <button id="viz-replay" type="button" hidden>Replay</button>
+    <div id="viz-surface-controls" class="viz-surface-controls" role="group" aria-label="Surface animation controls" hidden>
+      <button id="viz-surface-play" type="button">Play</button>
+      <button id="viz-surface-pause" type="button">Pause</button>
+      <button id="viz-surface-restart" type="button">Restart</button>
+    </div>
     <p id="viz-error" role="status" hidden>This visualization could not be drawn.</p>
   </main>
-  <script src="visualizations.js?v=20260825-mac-media-2"></script>
-  <script src="viz-frame.js?v=20260825-mac-media-2"></script>
+  <script src="visualizations.js?v=20260826-math-surface-1"></script>
+  <script src="viz-frame.js?v=20260826-math-surface-1"></script>
 </body>
 </html>

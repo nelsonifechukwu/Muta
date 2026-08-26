@@ -16,6 +16,14 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from orchestrator.gateway.surface_equations import (
+    SurfaceExpressionError,
+    evaluate_surface_expression,
+    extract_surface_expression,
+    format_surface_expression,
+    parse_surface_expression,
+    phase_animation_expression,
+)
 from runtime.chat import ChatEngine
 from runtime.client import Generation
 
@@ -60,7 +68,8 @@ _VECTOR_ADDITION_TERM = re.compile(
 )
 _ANAPHORIC_VISUAL = re.compile(
     r"(?:\b(?:it|this|that|same|again)\b|"
-    r"\bwhere\s+(?:is|was)\s+(?:the\s+)?(?:diagram|visual|image|animation)\b)",
+    r"\bwhere\s+(?:is|was)\s+(?:the\s+)?(?:diagram|visual|image|animation)\b|"
+    r"^\s*(?:please\s+)?animate(?:\s+(?:please|now))?[.!?]*\s*$)",
     re.IGNORECASE,
 )
 _ANIMATION_REQUEST = re.compile(
@@ -112,6 +121,8 @@ def wants_live_visual(text: str) -> bool:
 def select_library(text: str) -> str:
     """Choose one adapter from explicit wording; generic plots use D3."""
     value = str(text or "").lower()
+    if extract_surface_expression(value) is not None:
+        return "three"
     if "three.js" in value or re.search(r"\b(?:3d|three[- ]dimensional)\b", value):
         return "three"
     if re.search(r"\bgsap\b", value):
@@ -446,6 +457,96 @@ def _vector_addition_spec(request: str, current_request: str) -> dict[str, Any]:
         if library in {"gsap", "anime", "motion"}:
             return _vector_addition_animation_spec(request, library)
     return _vector_addition_three_spec(request)
+
+
+def _surface_domains(request: str) -> tuple[list[float], list[float]]:
+    """Use explicit bounded axis ranges when present; otherwise choose a legible default."""
+    domains: dict[str, list[float]] = {
+        "x": [-math.pi, math.pi],
+        "y": [-4.0, 4.0],
+    }
+    for axis in ("x", "y"):
+        match = re.search(
+            rf"\b{axis}\s+(?:from|between)\s*({_NUMBER})\s+(?:to|and)\s*({_NUMBER})",
+            request,
+            re.IGNORECASE,
+        )
+        if not match:
+            continue
+        low, high = float(match.group(1)), float(match.group(2))
+        if low > high:
+            low, high = high, low
+        if -100 <= low < high <= 100 and high - low >= 0.01:
+            domains[axis] = [low, high]
+    return domains["x"], domains["y"]
+
+
+def _surface_spec(request: str, current_request: str) -> dict[str, Any] | None:
+    source = extract_surface_expression(request)
+    if source is None:
+        return None
+    try:
+        expression = parse_surface_expression(source)
+        x_domain, y_domain = _surface_domains(request)
+        sampled: list[float] = []
+        for x_index in range(17):
+            x = x_domain[0] + (x_domain[1] - x_domain[0]) * x_index / 16
+            for y_index in range(17):
+                y = y_domain[0] + (y_domain[1] - y_domain[0]) * y_index / 16
+                try:
+                    sampled.append(evaluate_surface_expression(expression, x=x, y=y))
+                except (SurfaceExpressionError, OverflowError, ValueError):
+                    continue
+        if len(sampled) < 145:
+            return None
+    except (SurfaceExpressionError, OverflowError, ValueError):
+        log.info("surface equation is outside the safe deterministic grammar", exc_info=True)
+        return None
+
+    low_z, high_z = min(sampled), max(sampled)
+    if math.isclose(low_z, high_z, rel_tol=1e-9, abs_tol=1e-9):
+        padding = max(1.0, abs(low_z) * 0.15)
+        low_z -= padding
+        high_z += padding
+    animation: dict[str, Any] | None = None
+    if _ANIMATION_REQUEST.search(current_request):
+        animated_expression = phase_animation_expression(expression)
+        animation = {
+            "mode": "phase" if animated_expression is not None else "orbit",
+            "duration": 8,
+        }
+        if animated_expression is not None:
+            animation["expression"] = animated_expression
+    display = format_surface_expression(expression)
+    surface: dict[str, Any] = {
+        "type": "surface",
+        "label": f"z = {display}"[:120],
+        "expression_text": f"z = {display}"[:240],
+        "expression": expression,
+        "x_domain": [round(value, 6) for value in x_domain],
+        "y_domain": [round(value, 6) for value in y_domain],
+        "z_domain": [round(low_z, 6), round(high_z, 6)],
+        "resolution": [65, 49],
+    }
+    if animation is not None:
+        surface["animation"] = animation
+    return {
+        "version": 1,
+        "library": "three",
+        "kind": "scene3d",
+        "title": f"Surface: z = {display}"[:120],
+        "aria_label": (
+            f"Interactive three-dimensional surface for z equals {display}. "
+            f"The x-axis runs from {x_domain[0]:.3g} to {x_domain[1]:.3g}; "
+            f"the y-axis runs from {y_domain[0]:.3g} to {y_domain[1]:.3g}; z is vertical. "
+            "Drag or use arrow keys to rotate."
+        )[:300],
+        "height": 460,
+        "x_label": "x",
+        "y_label": "y",
+        "z_label": "z",
+        "objects": [surface],
+    }
 
 
 def _phase_shift_spec(request: str) -> dict[str, Any]:
@@ -895,6 +996,9 @@ def _fallback_diagram(request: str) -> dict[str, Any]:
 
 
 def _semantic_visualization(request: str, current_request: str) -> dict[str, Any] | None:
+    surface = _surface_spec(request, current_request)
+    if surface is not None:
+        return surface
     if _is_vector_addition(request):
         return _vector_addition_spec(request, current_request)
     if _PHASE_SHIFT_TOPIC.search(request):

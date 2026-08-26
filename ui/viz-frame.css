@@ -105,6 +105,34 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 
 .viz-3d-notes span { display: block; }
 
+.viz-surface-equation {
+  position: absolute; inset: 9px auto auto 10px; z-index: 4; pointer-events: none;
+  display: grid; gap: 3px; max-width: calc(100% - 20px); padding: 7px 9px;
+  border: 1px solid var(--viz-border); border-radius: 8px;
+  background: color-mix(in srgb, var(--viz-bg) 91%, transparent);
+  color: var(--viz-text); font-size: 12px; line-height: 1.35;
+}
+
+.viz-surface-equation strong { font-size: 13px; overflow-wrap: anywhere; }
+.viz-surface-equation span { color: var(--viz-muted); }
+
+.viz-surface-controls {
+  position: absolute; inset: auto auto 8px 8px; z-index: 7;
+  display: flex; gap: 6px; padding: 4px; border: 1px solid var(--viz-border);
+  border-radius: 10px; background: color-mix(in srgb, var(--viz-bg) 94%, transparent);
+}
+
+.viz-surface-controls button {
+  min-width: 44px; min-height: 44px; padding: 7px 10px;
+  border: 1px solid var(--viz-border); border-radius: 8px;
+  background: var(--viz-panel); color: var(--viz-text); font: inherit; font-size: 12px;
+  cursor: pointer;
+}
+
+.viz-surface-controls button:hover:not(:disabled) { border-color: var(--viz-1); }
+.viz-surface-controls button:focus-visible { outline: 2px solid var(--viz-1); outline-offset: 2px; }
+.viz-surface-controls button:disabled { cursor: default; opacity: 0.5; }
+
 #viz-replay {
   position: absolute; inset: auto 9px 8px auto; z-index: 6;
   min-height: 32px; padding: 5px 10px; border: 1px solid var(--viz-border); border-radius: 8px;
@@ -123,5 +151,13 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 [hidden] { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
-  #viz-replay { display: none !important; }
+  #viz-replay,
+  #viz-surface-controls { display: none !important; }
+}
+
+@media (max-width: 420px) {
+  .viz-3d-hint { inset: auto 7px 7px auto; }
+  .viz-surface-equation { max-width: calc(100% - 14px); inset: 7px auto auto 7px; }
+  .viz-surface-controls { right: 7px; justify-content: center; }
+  .viz-surface-controls button { flex: 1 1 0; }
 }
