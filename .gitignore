@@ -9,6 +9,7 @@ __pycache__/
 # claude
 .claude
 papers/
+media/
 
 # Local agent/test scratch output
 tmp/
