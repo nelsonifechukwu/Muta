@@ -555,7 +555,21 @@ def test_settings_exposes_persisted_parallel_chat_and_power_switches():
     assert 'setAttribute("aria-label", badgeLabel)' in js
     assert "Battery sensor temporarily unavailable; Critical reserve remains active." in js
     assert 'hostMode === "critical"' in js
-    assert "!allowParallelChats && generationJobs.size" in js
+    assert "Parallel replies share same CPU and RAM. Queue queries to optimize resources." in HTML
+    assert 'data-i18n="settings.parallelHelp"' in HTML
+    assert (
+        "On battery, Muta shortens its reasoning and replies. "
+        "Explicit Extended reasoning keeps its full result."
+    ) in HTML
+    assert 'data-i18n="settings.powerHelp"' in HTML
+    assert 'parallelAction === "queue"' in js
+    assert "startingJobs: startingConversations.size" in js
+    assert "queuedConversationIds(messageQueue)" in js
+    assert "!previousAllowParallel && allowParallelChats" in js
+    assert "if (enabled) drainQueuedConversations();" in js
+    assert 'src="parallel-policy.js?v=' in HTML
+    assert HTML.index('src="parallel-policy.js?v=') < HTML.index('src="app.js?v=')
+    assert "restoreDraft(item);\n    return toast(t(\"reply.parallelDisabled\"));" not in js
 
 
 def test_model_picker_uses_an_accessible_header_menu_instead_of_a_native_select():
@@ -860,7 +874,11 @@ def test_dark_mode_is_prepaint_persistent_complete_and_accessible():
 
     assert HTML.index('src="theme.js') < HTML.index('rel="stylesheet" href="styles.css')
     assert 'id="setting-theme"' in HTML
-    assert all(f'<option value="{value}">' in HTML for value in ("system", "light", "dark"))
+    assert all(f'<option value="{value}" data-i18n=' in HTML for value in ("system", "light", "dark"))
+    assert 'data-i18n="settings.appearance"' in HTML
+    assert 'data-i18n-aria-label="settings.appearance"' in HTML
+    assert 'for="setting-theme" lang="en"' in HTML
+    assert "Use your device setting, or keep Muta in light or dark mode." not in HTML
     assert "MutaTheme?.applyPreference(themeSelect.value, { persist: true })" in js
     assert 'document.addEventListener("muta:themechange", syncThemeSetting)' in js
     assert 'global.addEventListener?.("storage"' in theme

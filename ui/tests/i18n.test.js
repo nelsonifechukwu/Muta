@@ -86,6 +86,18 @@ test("only complete packs localize the interface", () => {
   }
 });
 
+test("additive settings copy stays keyed without hiding complete locale packs", () => {
+  const supported = i18n.supportedDefinitions().map((locale) => locale.tag);
+  assert.equal(
+    i18n.t("settings.powerHelp", {}, "fr"),
+    "On battery, Muta shortens its reasoning and replies. Explicit Extended reasoning keeps its full result.",
+  );
+  assert.equal(i18n.t("settings.appearance", {}, "en"), "Appearance");
+  assert.equal(Object.hasOwn(i18n.catalogs.en, "settings.powerHelp"), false);
+  assert.equal(Object.hasOwn(i18n.additiveEnglishCatalog, "settings.powerHelp"), true);
+  assert.equal(supported.length, 28);
+});
+
 test("machine-assisted packs retain provenance and hide every rejected registry tag", () => {
   const generatedTags = Object.keys(generatedMetadata.generated);
   const hiddenTags = Object.keys(generatedMetadata.hidden);
@@ -367,7 +379,13 @@ test("every translation key used by authored markup exists and localization load
   assert.doesNotMatch(html, /language-review-note|africa-coverage-note|language-coverage-list/);
   const keys = [...html.matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(keys.length > 30);
-  for (const key of keys) assert.ok(Object.hasOwn(i18n.catalogs.en, key), `missing ${key}`);
+  for (const key of keys) {
+    assert.ok(
+      Object.hasOwn(i18n.catalogs.en, key)
+        || Object.hasOwn(i18n.additiveEnglishCatalog, key),
+      `missing ${key}`,
+    );
+  }
   const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(scripts[0].startsWith("theme.js"));
   assert.ok(scripts[1].startsWith("access-bootstrap.js"));

@@ -2403,7 +2403,25 @@ function reconcileQueuedResources() {
   renderQueue();
 }
 
+function parallelPolicyState() {
+  return {
+    allowParallelChats,
+    activeJobs: generationJobs.size,
+    startingJobs: startingConversations.size,
+  };
+}
+
+function drainQueuedConversations() {
+  window.MutaParallelPolicy.queuedConversationIds(messageQueue).forEach((cid) => {
+    setTimeout(() => drainQueue(cid), 0);
+  });
+}
+
 function drainQueue(cid = conversationId) {
+  if (!window.MutaParallelPolicy.canDrain(parallelPolicyState())) return;
+  if (!messageQueue.some((item) => item.cid === cid) && !allowParallelChats) {
+    cid = messageQueue[0]?.cid;
+  }
   if (!cid || voiceGenerating || jobForConversation(cid) || startingConversations.has(startKeyFor(cid))) {
     return;
   }
@@ -2502,9 +2520,18 @@ function send(steer = false) {
     else restoreDraft(item);
     return;
   }
-  if (!allowParallelChats && generationJobs.size) {
+  const parallelAction = window.MutaParallelPolicy.sendAction({
+    ...parallelPolicyState(),
+    hasConversation: Boolean(conversationId),
+  });
+  if (parallelAction === "queue") {
+    queueMessage(item, conversationId);
+    return;
+  }
+  if (parallelAction === "restore") {
     restoreDraft(item);
-    return toast(t("reply.parallelDisabled"));
+    toast(t("reply.parallelDisabled"));
+    return;
   }
   dispatch(item);
 }
@@ -2699,6 +2726,7 @@ async function dispatch(item, opts = {}) {
     }
     startingConversations.delete(startKey);
     syncComposerState();
+    if (!allowParallelChats && messageQueue.length) setTimeout(() => drainQueue(startedIn), 0);
   }
 }
 
@@ -3749,12 +3777,14 @@ async function loadSettings() {
     const response = await fetch("/v1/settings", { headers: authHeaders() });
     if (!response.ok) return;
     const settings = await response.json();
+    const previousAllowParallel = allowParallelChats;
     allowParallelChats = settings.allow_parallel_chats !== false;
     powerOptimizationEnabled = settings.power_optimization_enabled !== false;
     parallelChatsToggle.checked = allowParallelChats;
     powerOptimizationToggle.checked = powerOptimizationEnabled;
     localStorage.setItem("muta-parallel-chats", String(allowParallelChats));
     localStorage.setItem("muta-power-optimization", String(powerOptimizationEnabled));
+    if (!previousAllowParallel && allowParallelChats) drainQueuedConversations();
   } catch {
     /* keep the local fallback */
   }
@@ -3773,6 +3803,7 @@ async function saveParallelChats(enabled) {
       body: JSON.stringify({ allow_parallel_chats: enabled }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (enabled) drainQueuedConversations();
   } catch {
     allowParallelChats = previous;
     parallelChatsToggle.checked = previous;
