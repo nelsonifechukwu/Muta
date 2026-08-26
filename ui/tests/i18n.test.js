@@ -164,6 +164,10 @@ test("machine-assisted packs retain provenance and hide every rejected registry 
   assert.ok((joinedAmharic.match(/[\u1200-\u137f]/g) || []).length > 500);
   assert.ok(generatedMetadata.hidden.ti.includes("native-review:untranslated-english"));
   assert.ok(generatedMetadata.hidden.zgh.some((reason) => reason.startsWith("target-mismatch:")));
+  assert.ok(generatedMetadata.hidden.aa.length > 100, "Afar audit reasons must not collapse");
+  assert.ok(generatedMetadata.hidden.aa.includes(
+    "key-parity:missing=['host.capacityInsufficient']:extra=[]",
+  ));
 });
 
 test("the selector puts Auto first and exposes only complete interface languages", () => {

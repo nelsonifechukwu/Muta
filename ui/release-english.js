@@ -108,6 +108,7 @@
     "host.readFailed": "Could not read Host mode settings.",
     "host.apply": "Applying the safe chat capacity…",
     "host.updateFailed": "Could not update Host mode.",
+    "host.capacityInsufficient": "Muta cannot fit one Host-mode chat in the RAM currently available; close other applications or install a smaller model",
     "host.on": "Host mode is on. New replies are queued when all slots are busy.",
     "host.off": "Host mode is off.",
     "host.noFingerprint": "Certificate fingerprint unavailable",

@@ -7,6 +7,7 @@ how a full-screen drop hint ended up covering the whole app on page load.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
@@ -942,6 +943,28 @@ def test_locale_change_relocalizes_initial_host_read_failure():
     assert "hostReadFailed = true" in js
     assert 'if (hostReadFailed) $("#host-save-state").textContent = releaseT("host.readFailed")' in coordinator
     assert "renderHostStatus(hostStatus, { clearReadFailure: false })" in coordinator
+
+
+def test_host_capacity_warning_is_shown_only_through_the_canonical_mapping():
+    js = (UI / "app.js").read_text()
+    dynamic = (UI / "dynamic-localization.js").read_text()
+    backend = (UI.parent / "orchestrator" / "main.py").read_text()
+    exact = (
+        "Muta cannot fit one Host-mode chat in the RAM currently available; "
+        "close other applications or install a smaller model"
+    )
+    assert f'"host.capacityInsufficient": "{exact}"' in RELEASE_ENGLISH
+    backend_strings = {
+        node.value
+        for node in ast.walk(ast.parse(backend))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    assert exact in backend_strings
+    assert exact in dynamic
+    assert 'warning === HOST_CAPACITY_WARNING ? "host.capacityInsufficient" : null' in dynamic
+    assert "window.MutaDynamicLocalization.hostWarningKey(status.warning)" in js
+    assert "warningKey ? releaseT(warningKey) : status.warning" in js
+    assert "mappedWarning || releaseT(status.enabled ? \"host.on\" : \"host.off\")" in js
 
 
 def test_model_catalog_starts_after_auth_without_blocking_saved_conversations():

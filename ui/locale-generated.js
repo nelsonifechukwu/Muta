@@ -477,7 +477,8 @@
     "visualization.rotateHint": "Gebruik pyltjiesleutels om te roteer.",
     "visualization.orbitalRelationships": "Orbitale verhoudings",
     "visualization.dragRotate": "sleep om te roteer",
-    "visualization.axisDomains": "x: {x0} tot {x1} · y: {y0} tot {y1} · z vertikaal"
+    "visualization.axisDomains": "x: {x0} tot {x1} · y: {y0} tot {y1} · z vertikaal",
+    "host.capacityInsufficient": "Muta kan nie een gasheermodus-klets in die RAM wat tans beskikbaar is, pas nie; maak ander toepassings toe of installeer 'n kleiner model."
   },
   "am": {
     "model.imageInput": "ምስል ያያይዙ",
@@ -845,7 +846,8 @@
     "visualization.rotateHint": "ለማዞር የቀስት ቁልፎችን ይጠቀሙ።",
     "visualization.orbitalRelationships": "የምህዋር ግንኙነቶች",
     "visualization.dragRotate": "ለማዞር ይጎትቱ",
-    "visualization.axisDomains": "x: {x0} ወደ {x1} · y: {y0} ወደ {y1} · z ቋሚ"
+    "visualization.axisDomains": "x: {x0} ወደ {x1} · y: {y0} ወደ {y1} · z ቋሚ",
+    "host.capacityInsufficient": "ሙታ በአሁኑ ጊዜ ባለው ራም ውስጥ አንድ የአስተናጋጅ ሁነታ ውይይት ሊገጥም አይችልም፤ ሌሎች መተግበሪያዎችን ይዝጉ ወይም አነስተኛ ሞዴል ይጫኑ"
   },
   "bem": {
     "model.imageInput": "Bikeni icikope",
@@ -1213,7 +1215,8 @@
     "visualization.rotateHint": "Bomfyeni amakii ya mipeto ku kupilibula.",
     "visualization.orbitalRelationships": "Ubucibusa bwa mu kati",
     "visualization.dragRotate": "kokeleni ukupilibula",
-    "visualization.axisDomains": "x: {x0} ukufika kuli {x1} · y: {y0} ukufika kuli {y1} · z iyaiminina"
+    "visualization.axisDomains": "x: {x0} ukufika kuli {x1} · y: {y0} ukufika kuli {y1} · z iyaiminina",
+    "host.capacityInsufficient": "Muta te kuti afikepo ukulanshanya kumo ukwa musango wa Mutandashi mu RAM iilipo pali ino nshita; isaleni ifibombelo fimbi nangula ukubikamo icilangililo icinono"
   },
   "din": {
     "model.imageInput": "Tääu ë thura thïn",
@@ -1581,7 +1584,8 @@
     "visualization.rotateHint": "Luɔ̈ɔ̈i ë thäät ë thäät ë thäät.",
     "visualization.orbitalRelationships": "Määth de piny",
     "visualization.dragRotate": "thɛ̈ny bï rot wïïc",
-    "visualization.axisDomains": "x: {x0} agut cï {x1} · y: {y0} agut cï {y1} · z cɔ̈k"
+    "visualization.axisDomains": "x: {x0} agut cï {x1} · y: {y0} agut cï {y1} · z cɔ̈k",
+    "host.capacityInsufficient": "Muta acïï lëu bï thöŋ ke jam tök de Host-mode në RAM tɔ̈u ëmɛɛn; thiök kä kɔ̈k ke luɔi wala tääu kë thiin koor"
   },
   "ff": {
     "model.imageInput": "Jokkondira e natal",
@@ -1949,7 +1953,8 @@
     "visualization.rotateHint": "Huutoro jokkorgal ngam yirlaade.",
     "visualization.orbitalRelationships": "Jokkondiral orbital",
     "visualization.dragRotate": "jolnude ngam yirlaade",
-    "visualization.axisDomains": "x: {x0} haa {x1} · y: {y0} haa {y1} · z tikkere"
+    "visualization.axisDomains": "x: {x0} haa {x1} · y: {y0} haa {y1} · z tikkere",
+    "host.capacityInsufficient": "Muta waawaa jogaade yeewtere Host-mode wootere e nder RAM mo woodi jooni oo; uddu kuutorɗe goɗɗe walla sosde model ɓurɗo famɗude"
   },
   "ha": {
     "model.imageInput": "Haɗa hoto",
@@ -2317,7 +2322,8 @@
     "visualization.rotateHint": "Yi amfani da maɓallan kibiya don juyawa.",
     "visualization.orbitalRelationships": "Alamomin kewaye",
     "visualization.dragRotate": "ja don juyawa",
-    "visualization.axisDomains": "x: {x0} zuwa {x1} · y: {y0} zuwa {y1} · z tsaye"
+    "visualization.axisDomains": "x: {x0} zuwa {x1} · y: {y0} zuwa {y1} · z tsaye",
+    "host.capacityInsufficient": "Muta ba zai iya dacewa da hira ɗaya ta yanayin Host a cikin RAM ɗin da ake da shi a yanzu ba; rufe wasu aikace-aikace ko shigar da ƙaramin samfuri"
   },
   "ig": {
     "model.imageInput": "Tinye onyonyo",
@@ -2685,7 +2691,8 @@
     "visualization.rotateHint": "Jiri igodo akụ tụgharịa.",
     "visualization.orbitalRelationships": "Mmekọrịta gburugburu",
     "visualization.dragRotate": "dọrọ ka ịtụgharị",
-    "visualization.axisDomains": "x: {x0} gaa na {x1} · y: {y0} gaa na {y1} · z kwụ ọtọ"
+    "visualization.axisDomains": "x: {x0} gaa na {x1} · y: {y0} gaa na {y1} · z kwụ ọtọ",
+    "host.capacityInsufficient": "Muta enweghị ike itinye otu nkata ụdị Host-mode na RAM dị ugbu a; mechie ngwa ndị ọzọ ma ọ bụ wụnye obere ụdị"
   },
   "kg": {
     "model.imageInput": "Kangisa kifwanisu",
@@ -3053,7 +3060,8 @@
     "visualization.rotateHint": "Sadila nsinga ya tolo-tolo sambu na kubaluka.",
     "visualization.orbitalRelationships": "Bangwisana ya orbite .",
     "visualization.dragRotate": "benda sambu na kubalula",
-    "visualization.axisDomains": "x: {x0} tii na {x1} · y: {y0} tii na {y1} · z ya kutelama"
+    "visualization.axisDomains": "x: {x0} tii na {x1} · y: {y0} tii na {y1} · z ya kutelama",
+    "host.capacityInsufficient": "Muta lenda fwana ve na chat mosi ya Host-mode na RAM yina kele ntangu yai; kanga ba application ya nkaka to tula modele ya fioti"
   },
   "mg": {
     "model.imageInput": "Ampidiro sary",
@@ -3421,7 +3429,8 @@
     "visualization.rotateHint": "Ampiasao ny bokotra zana-tsipìka mba hihodinana.",
     "visualization.orbitalRelationships": "Fifandraisana orbital",
     "visualization.dragRotate": "tariho mba hihodinana",
-    "visualization.axisDomains": "x: {x0} hatramin'ny {x1} · y: {y0} hatramin'ny {y1} · z mitsangana"
+    "visualization.axisDomains": "x: {x0} hatramin'ny {x1} · y: {y0} hatramin'ny {y1} · z mitsangana",
+    "host.capacityInsufficient": "Tsy afaka mampiditra chat Host-mode iray ao amin'ny RAM misy amin'izao fotoana izao ny Muta; akatony ny fampiharana hafa na apetraho ny modely kely kokoa."
   },
   "ny": {
     "model.imageInput": "Ikani chithunzi",
@@ -3789,7 +3798,8 @@
     "visualization.rotateHint": "Gwiritsani ntchito makiyi a mivi kuti muzungulire.",
     "visualization.orbitalRelationships": "Maubwenzi a Orbital",
     "visualization.dragRotate": "kukoka kuti muzungulire",
-    "visualization.axisDomains": "x: {x0} mpaka {x1} · y: {y0} mpaka {y1} · z vertical"
+    "visualization.axisDomains": "x: {x0} mpaka {x1} · y: {y0} mpaka {y1} · z vertical",
+    "host.capacityInsufficient": "Muta singathe kuyika macheza amodzi a Host-mode mu RAM yomwe ilipo pakadali pano; tsekani mapulogalamu ena kapena ikani chitsanzo chaching'ono"
   },
   "rn": {
     "model.imageInput": "Fatanya ishusho",
@@ -4157,7 +4167,8 @@
     "visualization.rotateHint": "Koresha imfunguruzo z'umwampi kugira ngo uhindure.",
     "visualization.orbitalRelationships": "Imigenderanire y'inzira",
     "visualization.dragRotate": "gukurura kugira ngo uhindure",
-    "visualization.axisDomains": "x: {x0} gushika kuri {x1} · y: {y0} gushika kuri {y1} · z ihagaze"
+    "visualization.axisDomains": "x: {x0} gushika kuri {x1} · y: {y0} gushika kuri {y1} · z ihagaze",
+    "host.capacityInsufficient": "Muta ntishobora gushiramwo ikiganiro kimwe c’uburyo bw’umushitsi muri RAM iriho ubu; funga izindi porogaramu canke ushireho ikigereranyo gitoyi"
   },
   "rw": {
     "model.imageInput": "Shyiraho ishusho",
@@ -4525,7 +4536,8 @@
     "visualization.rotateHint": "Koresha utubuto tw'utwambi kugira ngo uzunguruke.",
     "visualization.orbitalRelationships": "Isano rya Orbital",
     "visualization.dragRotate": "gukurura kugira ngo uzunguruke",
-    "visualization.axisDomains": "x: {x0} kugeza {x1} · y: {y0} kugeza {y1} · z iburyo"
+    "visualization.axisDomains": "x: {x0} kugeza {x1} · y: {y0} kugeza {y1} · z iburyo",
+    "host.capacityInsufficient": "Muta ntishobora gushyiramo ikiganiro kimwe cya Host-mode muri RAM iboneka ubu; funga izindi porogaramu cyangwa ushyiremo moderi ntoya."
   },
   "sn": {
     "model.imageInput": "Batanidza mufananidzo",
@@ -4893,7 +4905,8 @@
     "visualization.rotateHint": "Shandisa makiyi emiseve kutenderera.",
     "visualization.orbitalRelationships": "Hukama hweOrbital",
     "visualization.dragRotate": "kudhonza kuti uchitenderedze",
-    "visualization.axisDomains": "x: {x0} kusvika {x1} · y: {y0} kusvika {y1} · z vertical"
+    "visualization.axisDomains": "x: {x0} kusvika {x1} · y: {y0} kusvika {y1} · z vertical",
+    "host.capacityInsufficient": "Muta haigone kuisa Host-mode chat imwe chete muRAM iripo parizvino; vhara mamwe maapplication kana kuisa modhi diki"
   },
   "so": {
     "model.imageInput": "Ku lifaaq sawir",
@@ -5261,7 +5274,8 @@
     "visualization.rotateHint": "Isticmaal furaha fallaarta si aad u wareejiso.",
     "visualization.orbitalRelationships": "Xiriirka wareegga",
     "visualization.dragRotate": "jiid si aad u wareegto",
-    "visualization.axisDomains": "x: {x0} ilaa {x1} · y: {y0} ilaa {y1} · z toosan"
+    "visualization.axisDomains": "x: {x0} ilaa {x1} · y: {y0} ilaa {y1} · z toosan",
+    "host.capacityInsufficient": "Muta kuma habboona hal sheeko oo qaab marti-gelin ah oo ku jirta RAM-ka hadda jira; xidh barnaamijyada kale ama rakib qaab yar"
   },
   "ss": {
     "model.imageInput": "Namatsisela sitfombe",
@@ -5629,7 +5643,8 @@
     "visualization.rotateHint": "Sebentisa imicibisholo kute ujikelete.",
     "visualization.orbitalRelationships": "Budlelwane lobujikeletako",
     "visualization.dragRotate": "dvonsa kute ujikelete",
-    "visualization.axisDomains": "x: {x0} kuya ku-{x1} · y: {y0} kuya ku-{y1} · z lemile"
+    "visualization.axisDomains": "x: {x0} kuya ku-{x1} · y: {y0} kuya ku-{y1} · z lemile",
+    "host.capacityInsufficient": "Muta akakhoni kulingana ingcoco yinye ye-Host-mode ku-RAM lekhonako nyalo; vala letinye tinhlelo tekusebenta nobe ufake imodeli lencane"
   },
   "st": {
     "model.imageInput": "Hokela setshwantsho",
@@ -5997,7 +6012,8 @@
     "visualization.rotateHint": "Sebelisa dikonopo tsa motsu ho potoloha.",
     "visualization.orbitalRelationships": "Dikamano tsa orbital",
     "visualization.dragRotate": "hula ho potoloha",
-    "visualization.axisDomains": "x: {x0} ho isa ho {x1} · y: {y0} ho isa ho {y1} · z vertical"
+    "visualization.axisDomains": "x: {x0} ho isa ho {x1} · y: {y0} ho isa ho {y1} · z vertical",
+    "host.capacityInsufficient": "Muta e ke ke ea kenya moqoqo o le mong oa Host-mode ho RAM e fumanehang hajoale; koala lits'ebetso tse ling kapa kenya mohlala o monyane."
   },
   "tn": {
     "model.imageInput": "Gokelela setshwantsho",
@@ -6365,7 +6381,8 @@
     "visualization.rotateHint": "Dirisa dikonopo tsa motsu go dikolosa.",
     "visualization.orbitalRelationships": "Dikamano tsa modikologo",
     "visualization.dragRotate": "goga go dikolosa",
-    "visualization.axisDomains": "x: {x0} go ya go {x1} · y: {y0} go ya go {y1} · z tsepameng"
+    "visualization.axisDomains": "x: {x0} go ya go {x1} · y: {y0} go ya go {y1} · z tsepameng",
+    "host.capacityInsufficient": "Muta ga e kgone go tsenya puisano e le nngwe ya Host-mode mo RAM e e leng teng ga jaana; tswala ditiriso tse dingwe kgotsa tsenya mmotlolo o monnye"
   },
   "xh": {
     "model.imageInput": "Ncamathisela umfanekiso",
@@ -6733,7 +6750,8 @@
     "visualization.orbitalRelationships": "Ubudlelwane be-Orbital",
     "visualization.dragRotate": "tsala ukujikeleza",
     "visualization.axisDomains": "x: {x0} ukuya ku-{x1} · y: {y0} ukuya ku-{y1} · z vertical",
-    "composer.placeholder": "Buza nantoni na"
+    "composer.placeholder": "Buza nantoni na",
+    "host.capacityInsufficient": "I-Muta ayinakufaka incoko enye ye-Host-mode kwi-RAM ekhoyo ngoku; vala ezinye ii-applications okanye ufake imodeli encinci"
   },
   "zu": {
     "model.imageInput": "Namathisela isithombe",
@@ -7101,7 +7119,8 @@
     "visualization.rotateHint": "Sebenzisa okhiye bemicibisholo ukuze ujikeleze.",
     "visualization.orbitalRelationships": "Ubudlelwano be-Orbital",
     "visualization.dragRotate": "donsa ukuze ujikeleze",
-    "visualization.axisDomains": "x: {x0} kuya ku-{x1} · y: {y0} kuya ku-{y1} · z vertical"
+    "visualization.axisDomains": "x: {x0} kuya ku-{x1} · y: {y0} kuya ku-{y1} · z vertical",
+    "host.capacityInsufficient": "I-Muta ayikwazi ukufaka ingxoxo eyodwa yemodi ye-Host ku-RAM etholakalayo njengamanje; vala ezinye izinhlelo zokusebenza noma ufake imodeli encane"
   },
   "es": {
     "model.imageInput": "Adjuntar una imagen",
@@ -7469,7 +7488,8 @@
     "visualization.orbitalRelationships": "Relaciones orbitales",
     "visualization.dragRotate": "arrastra para rotar",
     "visualization.axisDomains": "x: {x0} a {x1} · y: {y0} a {y1} · z vertical",
-    "account.host": "Anfitrión"
+    "account.host": "Anfitrión",
+    "host.capacityInsufficient": "Muta no puede alojar una sesión de chat en modo anfitrión en la memoria RAM actualmente disponible; cierre otras aplicaciones o instale un modelo más pequeño."
   },
   "pt": {
     "model.imageInput": "Anexar uma imagem",
@@ -7837,7 +7857,8 @@
     "visualization.rotateHint": "Use as teclas de seta para girar.",
     "visualization.orbitalRelationships": "Relações orbitais",
     "visualization.dragRotate": "arraste para girar",
-    "visualization.axisDomains": "x: {x0} a {x1} · y: {y0} a {y1} · z vertical"
+    "visualization.axisDomains": "x: {x0} a {x1} · y: {y0} a {y1} · z vertical",
+    "host.capacityInsufficient": "O Muta não consegue carregar uma sessão de chat em modo Host na memória RAM atualmente disponível; feche outros aplicativos ou instale um modelo menor."
   },
   "ar": {
     "settings.parallelHelp": "تتشارك الردود المتزامنة في موارد المعالج (CPU) والذاكرة (RAM) نفسها؛ لذا قم بوضع الاستعلامات في قائمة انتظار لتحسين استخدام الموارد.",
@@ -8049,7 +8070,8 @@
     "sidebar.hostLocal": "مضيف Muta: هذا الجهاز. يعمل محليًا.",
     "account.host": "المضيف",
     "host.off": "وضع المضيف متوقف.",
-    "host.noFingerprint": "بصمة الشهادة غير متاحة"
+    "host.noFingerprint": "بصمة الشهادة غير متاحة",
+    "host.capacityInsufficient": "لا يمكن لنموذج Muta استيعاب محادثة واحدة بوضع المضيف (Host-mode) ضمن ذاكرة الوصول العشوائي (RAM) المتاحة حالياً؛ لذا يرجى إغلاق التطبيقات الأخرى أو تثبيت نموذج أصغر حجماً."
   },
   "sw": {
     "settings.parallelHelp": "Majibu sambamba yanashiriki CPU na RAM sawa. Maswali ya foleni ili kuboresha rasilimali.",
@@ -8261,7 +8283,8 @@
     "visualization.rotateHint": "Tumia vitufe vya mshale kuzungusha.",
     "visualization.orbitalRelationships": "Mahusiano ya obiti",
     "visualization.dragRotate": "buruta ili kuzungusha",
-    "visualization.axisDomains": "x: {x0} hadi {x1} · y: {y0} hadi {y1} · z wima"
+    "visualization.axisDomains": "x: {x0} hadi {x1} · y: {y0} hadi {y1} · z wima",
+    "host.capacityInsufficient": "Muta haiwezi kutoshea gumzo moja la hali ya mwenyeji kwenye RAM inayopatikana kwa sasa; funga programu zingine au sakinisha modeli ndogo"
   },
   "yo": {
     "settings.parallelHelp": "Àwọn ìdáhùn tó ń lọ pọ̀ máa pín CPU àti RAM kan náà. To àwọn ìbéèrè sí ìlà láti lo àwọn ohun èlò dáadáa.",
@@ -8473,7 +8496,8 @@
     "visualization.rotateHint": "Lo àwọn bọ́tìnnì ọfà láti yípo.",
     "visualization.orbitalRelationships": "Àwọn ìbáṣepọ̀ ìyípo",
     "visualization.dragRotate": "fa láti yípo",
-    "visualization.axisDomains": "x: {x0} sí {x1} · y: {y0} sí {y1} · z inaro"
+    "visualization.axisDomains": "x: {x0} sí {x1} · y: {y0} sí {y1} · z inaro",
+    "host.capacityInsufficient": "Muta kò le gba ìjíròrò ipo-Host kan ninu RAM ti o wa lọwọlọwọ; pa awọn ohun elo miiran tabi fi awoṣe kekere sii"
   },
   "fr": {
     "settings.parallelHelp": "Les réponses simultanées partagent les mêmes ressources CPU et RAM. Mettez les requêtes en file d'attente pour optimiser les ressources.",
@@ -8685,7 +8709,8 @@
     "visualization.dragRotate": "faites glisser pour faire pivoter",
     "visualization.axisDomains": "x : {x0} à {x1} · y : {y0} à {y1} · z vertical",
     "resources.processing": "Préparation…",
-    "rag.pickerClosed": "Sélecteur de documents fermé."
+    "rag.pickerClosed": "Sélecteur de documents fermé.",
+    "host.capacityInsufficient": "Muta ne peut pas charger une session de chat en mode « Host » dans la mémoire vive actuellement disponible ; fermez d'autres applications ou installez un modèle plus léger."
   },
   "de": {
     "settings.parallelHelp": "Parallele Antworten teilen sich CPU und RAM. Reihe Anfragen in eine Warteschlange ein, um die Ressourcen zu optimieren.",
@@ -8897,7 +8922,8 @@
     "visualization.rotateHint": "Zum Drehen die Pfeiltasten verwenden.",
     "visualization.orbitalRelationships": "Orbitalbeziehungen",
     "visualization.dragRotate": "zum Drehen ziehen",
-    "visualization.axisDomains": "x: {x0} bis {x1} · y: {y0} bis {y1} · z vertikal"
+    "visualization.axisDomains": "x: {x0} bis {x1} · y: {y0} bis {y1} · z vertikal",
+    "host.capacityInsufficient": "Muta kann keinen Chat im Host-Modus in den aktuell verfügbaren Arbeitsspeicher laden; schließen Sie andere Anwendungen oder installieren Sie ein kleineres Modell."
   }
 };
   for (const [tag, messages] of Object.entries(packs)) {
@@ -9183,6 +9209,7 @@
       "empty:startup.starting",
       "empty:startup.tagline",
       "empty:startup.verifying",
+      "key-parity:missing=['host.capacityInsufficient']:extra=[]",
       "semantic-collapse:conversation.cancel=conversation.confirmDelete",
       "semantic-collapse:conversation.cancel=resources.delete",
       "semantic-collapse:conversation.pinned=power.plugged",

@@ -12,6 +12,7 @@ GATE_PATH = ROOT / "ui/i18n-release-gate.json"
 EQUIVALENTS_PATH = ROOT / "ui/i18n-english-equivalents.json"
 SEMANTIC_CHANGES_PATH = ROOT / "ui/i18n-semantic-changes.json"
 SEMANTIC_OVERRIDES_PATH = ROOT / "ui/locale-semantic-overrides.json"
+HOST_CAPACITY_WARNING_OVERRIDES_PATH = ROOT / "ui/locale-host-capacity-warning.json"
 
 
 def _load_extractor():
@@ -181,6 +182,29 @@ def test_every_changed_english_meaning_has_a_durable_visible_locale_override() -
     generator = (ROOT / "scripts/generate_ui_catalogs.py").read_text()
     assert "HAND_RELEASE_OVERRIDE_KEYS = SEMANTIC_CHANGE_KEYS" in generator
     assert "messages.update(SEMANTIC_OVERRIDES.get(tag, {}))" in generator
+
+
+def test_host_capacity_warning_is_actionable_and_translated_in_every_visible_locale() -> None:
+    runtime = _runtime_catalogs()
+    overrides = json.loads(HOST_CAPACITY_WARNING_OVERRIDES_PATH.read_text())
+    english = runtime["catalogs"]["en"]["host.capacityInsufficient"]
+    visible = set(runtime["visible"]) - {"en"}
+
+    assert english == (
+        "Muta cannot fit one Host-mode chat in the RAM currently available; "
+        "close other applications or install a smaller model"
+    )
+    assert set(overrides) == visible
+    for tag, value in overrides.items():
+        assert value.strip() == value and "\n" not in value, tag
+        assert value != english, f"{tag}: silent English Host warning fallback"
+        assert any(name in value for name in ("Muta", "I-Muta", "ሙታ")), tag
+        assert len(value) >= 55, f"{tag}: warning lost actionability"
+        assert runtime["catalogs"][tag]["host.capacityInsufficient"] == value
+
+    generator = (ROOT / "scripts/generate_ui_catalogs.py").read_text()
+    assert 'HOST_CAPACITY_WARNING_KEY = "host.capacityInsufficient"' in generator
+    assert "messages[HOST_CAPACITY_WARNING_KEY] = HOST_CAPACITY_WARNING_OVERRIDES[tag]" in generator
 
 
 def test_release_phase_enforces_exact_copy_and_removed_helpers() -> None:

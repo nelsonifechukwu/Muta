@@ -24,6 +24,10 @@ MODEL_NAME = "facebook/nllb-200-distilled-600M"
 SEMANTIC_CHANGES = json.loads((ROOT / "ui/i18n-semantic-changes.json").read_text())
 SEMANTIC_CHANGE_KEYS = frozenset(SEMANTIC_CHANGES)
 SEMANTIC_OVERRIDES = json.loads((ROOT / "ui/locale-semantic-overrides.json").read_text())
+HOST_CAPACITY_WARNING_KEY = "host.capacityInsufficient"
+HOST_CAPACITY_WARNING_OVERRIDES = json.loads(
+    (ROOT / "ui/locale-host-capacity-warning.json").read_text()
+)
 
 EXISTING_READY = {"ar", "de", "en", "fr", "sw", "yo"}
 HAND_RELEASE_OVERRIDE_KEYS = SEMANTIC_CHANGE_KEYS
@@ -778,6 +782,8 @@ def emit_assets() -> None:
         }
         messages.update(CATALOG_CORRECTIONS.get(tag, {}))
         messages.update(SEMANTIC_OVERRIDES.get(tag, {}))
+        if tag in HOST_CAPACITY_WARNING_OVERRIDES:
+            messages[HOST_CAPACITY_WARNING_KEY] = HOST_CAPACITY_WARNING_OVERRIDES[tag]
         overlay_messages: dict[str, str] | None = None
         if tag in EXISTING_READY:
             base = authored.get(tag, {})
@@ -811,6 +817,11 @@ def emit_assets() -> None:
             errors.append("native-review:untranslated-english")
         errors = sorted(set(errors))
         if errors:
+            # A newly added canonical key makes parity fail before the validator can re-report
+            # older per-key defects. Keep those still-valid reasons so hidden-pack metadata does
+            # not become less informative merely because the interface grew by one key.
+            if any(error.startswith("key-parity:") for error in errors):
+                errors = sorted(set(errors) | set(prior_hidden.get(tag, [])))
             rejected[tag] = errors
         elif overlay_messages is not None:
             if overlay_messages:
@@ -833,6 +844,12 @@ def emit_assets() -> None:
     ordered_tags = [item["tag"] for item in registry if item["tag"] in accepted]
     overlay_tags = [tag for tag in ("ar", "sw", "yo", "fr", "de") if tag in accepted_overlays]
     visible_translated_tags = set(ordered_tags) | set(overlay_tags)
+    if set(HOST_CAPACITY_WARNING_OVERRIDES) != visible_translated_tags:
+        missing = sorted(visible_translated_tags - set(HOST_CAPACITY_WARNING_OVERRIDES))
+        extra = sorted(set(HOST_CAPACITY_WARNING_OVERRIDES) - visible_translated_tags)
+        raise SystemExit(
+            f"Host capacity warning locale drift: missing={missing} extra={extra}"
+        )
     if set(SEMANTIC_OVERRIDES) != visible_translated_tags:
         missing = sorted(visible_translated_tags - set(SEMANTIC_OVERRIDES))
         extra = sorted(set(SEMANTIC_OVERRIDES) - visible_translated_tags)

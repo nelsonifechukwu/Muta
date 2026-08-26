@@ -5,6 +5,11 @@
 
 ((global) => {
   const SURFACES = Object.freeze(["resources", "host", "power", "model", "status"]);
+  const HOST_CAPACITY_WARNING = "Muta cannot fit one Host-mode chat in the RAM currently available; close other applications or install a smaller model";
+
+  function hostWarningKey(warning) {
+    return warning === HOST_CAPACITY_WARNING ? "host.capacityInsufficient" : null;
+  }
 
   function create(renderers = {}) {
     return function rerenderDynamicLocalization() {
@@ -14,7 +19,7 @@
     };
   }
 
-  const api = Object.freeze({ SURFACES, create });
+  const api = Object.freeze({ SURFACES, HOST_CAPACITY_WARNING, hostWarningKey, create });
   global.MutaDynamicLocalization = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

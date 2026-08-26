@@ -89,6 +89,9 @@ The integrated browser pass found two boundaries that structural key parity alon
   not. `ui/dynamic-localization.js` now coordinates resources, Host, power, model, and active status
   rerenders from their authoritative in-memory state. The runtime regression switches an already
   rendered Igbo surface to English and requires all five dynamic surface classes to update.
+- The Host capacity planner's one known actionable warning is mapped by exact API value to a
+  canonical key translated in every visible locale. Other unexpected API warnings remain visible
+  verbatim until they receive their own reviewed canonical mapping, preserving safety detail.
 
 ## Delivery boundary
 

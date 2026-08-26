@@ -4048,9 +4048,11 @@ function renderHostStatus(status, { clearReadFailure = true } = {}) {
       users.forEach((user) => list.append(hostUserRow(user)));
     }
   }
+  const warningKey = window.MutaDynamicLocalization.hostWarningKey(status.warning);
+  const mappedWarning = warningKey ? releaseT(warningKey) : status.warning;
   $("#host-save-state").textContent = hostReadFailed
     ? releaseT("host.readFailed")
-    : status.warning || releaseT(status.enabled ? "host.on" : "host.off");
+    : mappedWarning || releaseT(status.enabled ? "host.on" : "host.off");
 }
 
 async function loadHostStatus({ poll = true } = {}) {
