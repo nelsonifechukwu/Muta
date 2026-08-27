@@ -337,6 +337,35 @@ def test_semantic_oracle_requires_distinct_connected_entity_nodes() -> None:
     assert {error["code"] for error in errors} == {"relationship_not_grounded"}
 
 
+def test_semantic_oracle_requires_every_term_of_each_multiword_entity() -> None:
+    partial = _food_web_spec()
+    labels = {
+        "algae": "Green producer",
+        "crab": "Crab consumer",
+        "heron": "Great predator",
+    }
+    for layer in partial["scene"]["layers"]:
+        if layer["type"] == "node":
+            layer["label"] = labels[layer["id"]]
+    request = "Draw a food web showing green algae, blue crab, and great blue heron."
+
+    assert {error["code"] for error in _plan_errors(partial, request)} == {
+        "topic_not_grounded",
+        "relationship_not_grounded",
+    }
+
+    complete = _food_web_spec()
+    labels = {
+        "algae": "Green algae producer",
+        "crab": "Blue crab consumer",
+        "heron": "Great blue heron predator",
+    }
+    for layer in complete["scene"]["layers"]:
+        if layer["type"] == "node":
+            layer["label"] = labels[layer["id"]]
+    assert _plan_errors(complete, request) == []
+
+
 def test_semantic_oracle_requires_requested_directional_paths() -> None:
     reversed_web = _food_web_spec()
     for layer in reversed_web["scene"]["layers"]:
@@ -356,6 +385,25 @@ def test_semantic_oracle_requires_requested_directional_paths() -> None:
         )
         == []
     )
+
+
+def test_semantic_oracle_preserves_repeated_entities_in_directional_cycles() -> None:
+    request = "Draw a food cycle showing energy flow from algae to crab to algae."
+    incomplete = _food_web_spec()
+    incomplete["scene"]["layers"] = [
+        layer
+        for layer in incomplete["scene"]["layers"]
+        if not (layer["type"] == "link" and layer["from"] == "crab")
+    ]
+    assert {error["code"] for error in _plan_errors(incomplete, request)} == {
+        "relationship_not_grounded"
+    }
+
+    complete = _food_web_spec()
+    for layer in complete["scene"]["layers"]:
+        if layer["type"] == "link" and layer["from"] == "crab":
+            layer["to"] = "algae"
+    assert _plan_errors(complete, request) == []
 
 
 def test_planner_rejects_family_specific_controls_without_inert_bindings() -> None:

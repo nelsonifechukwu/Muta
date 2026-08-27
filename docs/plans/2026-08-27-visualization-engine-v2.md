@@ -89,14 +89,16 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   the runtime independently rejects HTML, JavaScript, CSS, shader text, URLs, event handlers,
   prototype keys, unknown fields, and every expression outside the typed AST.
 - Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: concrete
-  request terms and explicit entity phrases must map one-to-one to unambiguous labelled nodes;
-  graph/process requests require those nodes to be connected, and an explicit from-to chain must
-  have directed reachability in the requested order. Duplicate catch-all labels and isolated
-  requested entities are invalid. Every transport ID is reserved for a button, must appear as the
-  complete Play/Pause/Restart set, and is valid only when the scene has animation. Every other
-  control must be a numeric control carrying a typed binding to one unique compatible labelled
-  layer. The deterministic renderer owns the allow-listed translation, scale, and radius effects
-  inside a stable, unbound coordinate frame, so auto-fitting cannot cancel a visible change. An
+  request terms and every meaningful token in an explicit entity phrase must map one-to-one to
+  unambiguous labelled nodes; graph/process requests require those nodes to be connected, and an
+  explicit from-to chain must preserve repeated entities and have directed reachability for every
+  ordered step. Partial phrase labels, duplicate catch-all labels, isolated requested entities,
+  and one-way paths masquerading as cycles are invalid. Every transport ID is reserved for a
+  button, must appear as the complete Play/Pause/Restart set, and is valid only when the scene has
+  animation. Every other control must be a numeric control carrying a typed binding to one unique
+  compatible labelled layer. The deterministic renderer owns the allow-listed translation, scale,
+  and radius effects inside a stable, unbound coordinate frame, so auto-fitting cannot cancel a
+  visible change. An
   inert or renderer-incompatible control is invalid. On failure, return
   a structured list of validation codes to one repair attempt. The repair sees only the original
   learner request, the allow-list catalogue, and those codes—not rejected source text. It never

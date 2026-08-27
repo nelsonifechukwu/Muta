@@ -82,6 +82,10 @@ _RELATIONSHIP_TERMS = frozenset(
         "energy",
         "flow",
         "flows",
+        "label",
+        "labeled",
+        "labelled",
+        "labels",
         "link",
         "links",
         "path",
@@ -392,14 +396,12 @@ def _topic_terms(request: str) -> set[str]:
 
 
 def _entity_groups(value: str) -> list[frozenset[str]]:
-    """Split a bounded natural-language entity list while retaining multi-word names."""
+    """Split an ordered bounded entity list, retaining multi-word names and repeated steps."""
     groups: list[frozenset[str]] = []
     for part in _ENTITY_SEPARATOR.split(value):
         terms = _topic_terms(part).difference(_RELATIONSHIP_TERMS)
         if terms:
-            group = frozenset(terms)
-            if group not in groups:
-                groups.append(group)
+            groups.append(frozenset(terms))
     return groups
 
 
@@ -413,10 +415,10 @@ def _directional_entity_groups(request: str) -> list[frozenset[str]]:
 
 
 def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
-    """Extract concrete entity phrases, preferring an explicit ordered chain when present."""
+    """Extract the unique concrete phrases that each need their own labelled node."""
     directional = _directional_entity_groups(request)
     if directional:
-        return directional
+        return list(dict.fromkeys(directional))
     groups: list[frozenset[str]] = []
     for match in _EXPLICIT_ENTITY_CLAUSE.finditer(request):
         for group in _entity_groups(match.group("entities")):
@@ -437,8 +439,9 @@ def _map_entity_nodes(
     top_candidates: dict[frozenset[str], list[str]] = {}
     for entity in entity_groups:
         scores = {
-            node_id: len(entity.intersection(tokens))
+            node_id: len(entity)
             for node_id, tokens in node_tokens.items()
+            if entity.issubset(tokens)
         }
         best = max(scores.values(), default=0)
         top_candidates[entity] = [
