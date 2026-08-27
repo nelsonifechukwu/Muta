@@ -16,7 +16,7 @@
         "height": 480
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 45421869,
+      "used_js_heap_bytes": 48722994,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -242,355 +242,13 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.02477499999999999
+              "__animation_progress": 0.02936250000000001
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.02477499999999999,
-            "observed_frame_interval_ms": 33.399999999999864,
-            "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 2%"
-          }
-        },
-        {
-          "id": "followup-damped-sine",
-          "renderer": "three",
-          "rendered": true,
-          "responsive": true,
-          "controls_fully_visible": true,
-          "focus_visible": true,
-          "keyboard_handler_changed": true,
-          "synthetic_pointer_handler_changed": true,
-          "native_touch_ready": true,
-          "touch_target_ready": true,
-          "control_bounds": [
-            {
-              "id": "viz-v2-orbit",
-              "width": 139,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-reset_view",
-              "width": 139,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-play",
-              "width": 139,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-pause",
-              "width": 139,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-restart",
-              "width": 139,
-              "height": 44
-            }
-          ],
-          "hidden_paused": true,
-          "resumed": true,
-          "accessible_description": true,
-          "overflow": false,
-          "evidence": {
-            "rendered": true,
-            "renderer": "three",
-            "nonzero_pixel_samples": 576,
-            "draw_calls": 2,
-            "gpu_calls": 17,
-            "gpu_triangles": 4632,
-            "gpu_lines": 7011,
-            "gpu_points": 0,
-            "gl_error": 0,
-            "triangles": 4608,
-            "topology": {
-              "components": 1,
-              "vertices": 2401,
-              "edges": 7008,
-              "faces": 4608,
-              "euler": 1,
-              "boundary_edges": 192,
-              "nonmanifold_edges": 0,
-              "periodic_boundary_edges": 192,
-              "periodic_matched_edges": 96,
-              "periodic_unmatched_edges": 96,
-              "periodic_components": 1,
-              "periodic_function_max_delta": 9.237386
-            },
-            "surface_diagnostics": {
-              "rejected_discontinuity_cells": 0,
-              "rejected_undefined_cells": 0,
-              "finite_triangles": 4608
-            },
-            "family": "explicit_surface",
-            "control_revision": 1,
-            "control_values": {
-              "orbit": 0,
-              "reset_view": 0,
-              "play": 1,
-              "pause": 0,
-              "restart": 0
-            },
-            "geometry_signature": 201858,
-            "visual_state_signature": 201858,
-            "animation_state": "playing",
-            "animation_progress": 0.025012749999999983,
-            "observed_frame_interval_ms": 33.399999999999864,
-            "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
-          }
-        }
-      ],
-      "passed": true
-    },
-    {
-      "schema_version": 1,
-      "count": 5,
-      "theme": "dark",
-      "viewport": {
-        "width": 1280,
-        "height": 900
-      },
-      "reduced_motion": false,
-      "target_container": {
-        "width": 980,
-        "height": 480
-      },
-      "simultaneous_frames": 5,
-      "used_js_heap_bytes": 55489738,
-      "page_errors": [],
-      "page_horizontal_overflow": false,
-      "cases": [
-        {
-          "id": "stem-001",
-          "renderer": "svg",
-          "rendered": true,
-          "responsive": true,
-          "controls_fully_visible": true,
-          "focus_visible": true,
-          "keyboard_handler_changed": true,
-          "synthetic_pointer_handler_changed": false,
-          "native_touch_ready": true,
-          "touch_target_ready": true,
-          "control_bounds": [
-            {
-              "id": "viz-v2-a",
-              "width": 135,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-b",
-              "width": 135,
-              "height": 44
-            }
-          ],
-          "hidden_paused": true,
-          "resumed": true,
-          "accessible_description": true,
-          "overflow": false,
-          "evidence": {
-            "rendered": true,
-            "renderer": "svg",
-            "primitive_count": 31,
-            "controls": 2,
-            "family": "pythagoras",
-            "control_revision": 1,
-            "control_values": {
-              "a": 3.1,
-              "b": 4
-            },
-            "geometry_signature": 650123,
-            "visual_state_signature": 650123,
-            "animation_state": "static",
-            "animation_progress": 1,
-            "observed_frame_interval_ms": 0,
-            "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c²."
-          }
-        },
-        {
-          "id": "stem-048",
-          "renderer": "canvas",
-          "rendered": true,
-          "responsive": true,
-          "controls_fully_visible": true,
-          "focus_visible": true,
-          "keyboard_handler_changed": true,
-          "synthetic_pointer_handler_changed": false,
-          "native_touch_ready": true,
-          "touch_target_ready": true,
-          "control_bounds": [
-            {
-              "id": "viz-v2-signal_frequency",
-              "width": 135,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-sample_frequency",
-              "width": 135,
-              "height": 44
-            }
-          ],
-          "hidden_paused": true,
-          "resumed": true,
-          "accessible_description": true,
-          "overflow": false,
-          "evidence": {
-            "rendered": true,
-            "renderer": "canvas",
-            "nontransparent_samples": 990,
-            "controls": 2,
-            "family": "sampling_aliasing",
-            "panel_count": 1,
-            "panel_titles": [
-              "Sampling Aliasing"
-            ],
-            "control_revision": 1,
-            "control_values": {
-              "signal_frequency": 4.5,
-              "sample_frequency": 12
-            },
-            "geometry_signature": 404426850,
-            "visual_state_signature": 404426850,
-            "animation_state": "static",
-            "animation_progress": 1,
-            "observed_frame_interval_ms": 0,
-            "state_description": "Nyquist condition satisfied: sampling rate is at least twice the signal frequency."
-          }
-        },
-        {
-          "id": "math-062",
-          "renderer": "three",
-          "rendered": true,
-          "responsive": true,
-          "controls_fully_visible": true,
-          "focus_visible": true,
-          "keyboard_handler_changed": true,
-          "synthetic_pointer_handler_changed": true,
-          "native_touch_ready": true,
-          "touch_target_ready": true,
-          "control_bounds": [
-            {
-              "id": "viz-v2-orbit",
-              "width": 139,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-reset_view",
-              "width": 139,
-              "height": 44
-            }
-          ],
-          "hidden_paused": true,
-          "resumed": true,
-          "accessible_description": true,
-          "overflow": false,
-          "evidence": {
-            "rendered": true,
-            "renderer": "three",
-            "nonzero_pixel_samples": 576,
-            "draw_calls": 2,
-            "gpu_calls": 17,
-            "gpu_triangles": 4164,
-            "gpu_lines": 6393,
-            "gpu_points": 0,
-            "gl_error": 0,
-            "triangles": 4140,
-            "topology": {
-              "components": 2,
-              "vertices": 2252,
-              "edges": 6390,
-              "faces": 4140,
-              "euler": 2,
-              "boundary_edges": 360,
-              "nonmanifold_edges": 0,
-              "periodic_boundary_edges": 180,
-              "periodic_matched_edges": 0,
-              "periodic_unmatched_edges": 360,
-              "periodic_components": 2,
-              "periodic_function_max_delta": null
-            },
-            "surface_diagnostics": {
-              "rejected_discontinuity_cells": 0,
-              "rejected_undefined_cells": 186,
-              "finite_triangles": 4140
-            },
-            "family": "explicit_surface",
-            "control_revision": 0,
-            "control_values": {
-              "orbit": 0,
-              "reset_view": 0
-            },
-            "geometry_signature": 174512,
-            "visual_state_signature": 174512,
-            "animation_state": "paused",
-            "animation_progress": 0,
-            "observed_frame_interval_ms": 0,
-            "state_description": "orbit = 0; reset view = 0"
-          }
-        },
-        {
-          "id": "followup-pythagoras",
-          "renderer": "svg",
-          "rendered": true,
-          "responsive": true,
-          "controls_fully_visible": true,
-          "focus_visible": true,
-          "keyboard_handler_changed": true,
-          "synthetic_pointer_handler_changed": false,
-          "native_touch_ready": true,
-          "touch_target_ready": true,
-          "control_bounds": [
-            {
-              "id": "viz-v2-a",
-              "width": 135,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-b",
-              "width": 135,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-play",
-              "width": 139,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-pause",
-              "width": 139,
-              "height": 44
-            },
-            {
-              "id": "viz-v2-restart",
-              "width": 139,
-              "height": 44
-            }
-          ],
-          "hidden_paused": true,
-          "resumed": true,
-          "accessible_description": true,
-          "overflow": false,
-          "evidence": {
-            "rendered": true,
-            "renderer": "svg",
-            "primitive_count": 31,
-            "controls": 5,
-            "family": "pythagoras",
-            "control_revision": 2,
-            "control_values": {
-              "a": 3.1,
-              "b": 4,
-              "play": 1,
-              "pause": 0,
-              "restart": 0,
-              "__animation_progress": 0.02907499999999999
-            },
-            "geometry_signature": 145178,
-            "visual_state_signature": 145178,
-            "animation_state": "playing",
-            "animation_progress": 0.02907499999999999,
-            "observed_frame_interval_ms": 35,
+            "animation_progress": 0.02936250000000001,
+            "observed_frame_interval_ms": 33.40000000000009,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
         },
@@ -675,11 +333,353 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 203733,
-            "visual_state_signature": 203733,
+            "geometry_signature": 205995,
+            "visual_state_signature": 205995,
             "animation_state": "playing",
-            "animation_progress": 0.026887499999999988,
-            "observed_frame_interval_ms": 48.59999999999991,
+            "animation_progress": 0.029150000000000006,
+            "observed_frame_interval_ms": 35.200000000000045,
+            "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "schema_version": 1,
+      "count": 5,
+      "theme": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "reduced_motion": false,
+      "target_container": {
+        "width": 980,
+        "height": 480
+      },
+      "simultaneous_frames": 5,
+      "used_js_heap_bytes": 54308413,
+      "page_errors": [],
+      "page_horizontal_overflow": false,
+      "cases": [
+        {
+          "id": "stem-001",
+          "renderer": "svg",
+          "rendered": true,
+          "responsive": true,
+          "controls_fully_visible": true,
+          "focus_visible": true,
+          "keyboard_handler_changed": true,
+          "synthetic_pointer_handler_changed": false,
+          "native_touch_ready": true,
+          "touch_target_ready": true,
+          "control_bounds": [
+            {
+              "id": "viz-v2-a",
+              "width": 135,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-b",
+              "width": 135,
+              "height": 44
+            }
+          ],
+          "hidden_paused": true,
+          "resumed": true,
+          "accessible_description": true,
+          "overflow": false,
+          "evidence": {
+            "rendered": true,
+            "renderer": "svg",
+            "primitive_count": 31,
+            "controls": 2,
+            "family": "pythagoras",
+            "control_revision": 1,
+            "control_values": {
+              "a": 3.1,
+              "b": 4
+            },
+            "geometry_signature": 650123,
+            "visual_state_signature": 650123,
+            "animation_state": "static",
+            "animation_progress": 1,
+            "observed_frame_interval_ms": 0,
+            "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c²."
+          }
+        },
+        {
+          "id": "stem-048",
+          "renderer": "canvas",
+          "rendered": true,
+          "responsive": true,
+          "controls_fully_visible": true,
+          "focus_visible": true,
+          "keyboard_handler_changed": true,
+          "synthetic_pointer_handler_changed": false,
+          "native_touch_ready": true,
+          "touch_target_ready": true,
+          "control_bounds": [
+            {
+              "id": "viz-v2-signal_frequency",
+              "width": 135,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-sample_frequency",
+              "width": 135,
+              "height": 44
+            }
+          ],
+          "hidden_paused": true,
+          "resumed": true,
+          "accessible_description": true,
+          "overflow": false,
+          "evidence": {
+            "rendered": true,
+            "renderer": "canvas",
+            "nontransparent_samples": 990,
+            "controls": 2,
+            "family": "sampling_aliasing",
+            "panel_count": 1,
+            "panel_titles": [
+              "Sampling Aliasing"
+            ],
+            "control_revision": 1,
+            "control_values": {
+              "signal_frequency": 4.5,
+              "sample_frequency": 12
+            },
+            "geometry_signature": 404426850,
+            "visual_state_signature": 404426850,
+            "animation_state": "static",
+            "animation_progress": 1,
+            "observed_frame_interval_ms": 0,
+            "state_description": "Nyquist condition satisfied: sampling rate is at least twice the signal frequency."
+          }
+        },
+        {
+          "id": "math-062",
+          "renderer": "three",
+          "rendered": true,
+          "responsive": true,
+          "controls_fully_visible": true,
+          "focus_visible": true,
+          "keyboard_handler_changed": true,
+          "synthetic_pointer_handler_changed": true,
+          "native_touch_ready": true,
+          "touch_target_ready": true,
+          "control_bounds": [
+            {
+              "id": "viz-v2-orbit",
+              "width": 139,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-reset_view",
+              "width": 139,
+              "height": 44
+            }
+          ],
+          "hidden_paused": true,
+          "resumed": true,
+          "accessible_description": true,
+          "overflow": false,
+          "evidence": {
+            "rendered": true,
+            "renderer": "three",
+            "nonzero_pixel_samples": 576,
+            "draw_calls": 2,
+            "gpu_calls": 17,
+            "gpu_triangles": 4164,
+            "gpu_lines": 6393,
+            "gpu_points": 0,
+            "gl_error": 0,
+            "triangles": 4140,
+            "topology": {
+              "components": 2,
+              "vertices": 2252,
+              "edges": 6390,
+              "faces": 4140,
+              "euler": 2,
+              "boundary_edges": 360,
+              "nonmanifold_edges": 0,
+              "periodic_boundary_edges": 180,
+              "periodic_matched_edges": 0,
+              "periodic_unmatched_edges": 360,
+              "periodic_components": 2,
+              "periodic_function_max_delta": null
+            },
+            "surface_diagnostics": {
+              "rejected_discontinuity_cells": 0,
+              "rejected_undefined_cells": 186,
+              "finite_triangles": 4140
+            },
+            "family": "explicit_surface",
+            "control_revision": 0,
+            "control_values": {
+              "orbit": 0,
+              "reset_view": 0
+            },
+            "geometry_signature": 174512,
+            "visual_state_signature": 174512,
+            "animation_state": "paused",
+            "animation_progress": 0,
+            "observed_frame_interval_ms": 0,
+            "state_description": "orbit = 0; reset view = 0"
+          }
+        },
+        {
+          "id": "followup-pythagoras",
+          "renderer": "svg",
+          "rendered": true,
+          "responsive": true,
+          "controls_fully_visible": true,
+          "focus_visible": true,
+          "keyboard_handler_changed": true,
+          "synthetic_pointer_handler_changed": false,
+          "native_touch_ready": true,
+          "touch_target_ready": true,
+          "control_bounds": [
+            {
+              "id": "viz-v2-a",
+              "width": 135,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-b",
+              "width": 135,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-play",
+              "width": 139,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-pause",
+              "width": 139,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-restart",
+              "width": 139,
+              "height": 44
+            }
+          ],
+          "hidden_paused": true,
+          "resumed": true,
+          "accessible_description": true,
+          "overflow": false,
+          "evidence": {
+            "rendered": true,
+            "renderer": "svg",
+            "primitive_count": 31,
+            "controls": 5,
+            "family": "pythagoras",
+            "control_revision": 2,
+            "control_values": {
+              "a": 3.1,
+              "b": 4,
+              "play": 1,
+              "pause": 0,
+              "restart": 0,
+              "__animation_progress": 0.031249999999999986
+            },
+            "geometry_signature": 145178,
+            "visual_state_signature": 145178,
+            "animation_state": "playing",
+            "animation_progress": 0.031249999999999986,
+            "observed_frame_interval_ms": 49.90000000000009,
+            "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
+          }
+        },
+        {
+          "id": "followup-damped-sine",
+          "renderer": "three",
+          "rendered": true,
+          "responsive": true,
+          "controls_fully_visible": true,
+          "focus_visible": true,
+          "keyboard_handler_changed": true,
+          "synthetic_pointer_handler_changed": true,
+          "native_touch_ready": true,
+          "touch_target_ready": true,
+          "control_bounds": [
+            {
+              "id": "viz-v2-orbit",
+              "width": 139,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-reset_view",
+              "width": 139,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-play",
+              "width": 139,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-pause",
+              "width": 139,
+              "height": 44
+            },
+            {
+              "id": "viz-v2-restart",
+              "width": 139,
+              "height": 44
+            }
+          ],
+          "hidden_paused": true,
+          "resumed": true,
+          "accessible_description": true,
+          "overflow": false,
+          "evidence": {
+            "rendered": true,
+            "renderer": "three",
+            "nonzero_pixel_samples": 576,
+            "draw_calls": 2,
+            "gpu_calls": 17,
+            "gpu_triangles": 4632,
+            "gpu_lines": 7011,
+            "gpu_points": 0,
+            "gl_error": 0,
+            "triangles": 4608,
+            "topology": {
+              "components": 1,
+              "vertices": 2401,
+              "edges": 7008,
+              "faces": 4608,
+              "euler": 1,
+              "boundary_edges": 192,
+              "nonmanifold_edges": 0,
+              "periodic_boundary_edges": 192,
+              "periodic_matched_edges": 96,
+              "periodic_unmatched_edges": 96,
+              "periodic_components": 1,
+              "periodic_function_max_delta": 9.237386
+            },
+            "surface_diagnostics": {
+              "rejected_discontinuity_cells": 0,
+              "rejected_undefined_cells": 0,
+              "finite_triangles": 4608
+            },
+            "family": "explicit_surface",
+            "control_revision": 1,
+            "control_values": {
+              "orbit": 0,
+              "reset_view": 0,
+              "play": 1,
+              "pause": 0,
+              "restart": 0
+            },
+            "geometry_signature": 206020,
+            "visual_state_signature": 206020,
+            "animation_state": "playing",
+            "animation_progress": 0.02917500000000001,
+            "observed_frame_interval_ms": 50,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
@@ -700,7 +700,7 @@
         "height": 480
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 54100332,
+      "used_js_heap_bytes": 55269143,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -926,13 +926,13 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.02692924999999998
+              "__animation_progress": 0.025299999999999996
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.02692924999999998,
-            "observed_frame_interval_ms": 49.899999999999864,
+            "animation_progress": 0.025299999999999996,
+            "observed_frame_interval_ms": 50,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
         },
@@ -1017,10 +1017,10 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 201845,
-            "visual_state_signature": 201845,
+            "geometry_signature": 204045,
+            "visual_state_signature": 204045,
             "animation_state": "playing",
-            "animation_progress": 0.025,
+            "animation_progress": 0.027200000000000016,
             "observed_frame_interval_ms": 50,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
@@ -1042,7 +1042,7 @@
         "height": 520
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 55375144,
+      "used_js_heap_bytes": 45516975,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -1268,13 +1268,13 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.029299999999999982
+              "__animation_progress": 0.02916275
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.029299999999999982,
-            "observed_frame_interval_ms": 34,
+            "animation_progress": 0.02916275,
+            "observed_frame_interval_ms": 50.09999999999991,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
         },
@@ -1359,11 +1359,11 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 203820,
-            "visual_state_signature": 203820,
+            "geometry_signature": 202058,
+            "visual_state_signature": 202058,
             "animation_state": "playing",
-            "animation_progress": 0.026975000000000023,
-            "observed_frame_interval_ms": 50.100000000000136,
+            "animation_progress": 0.025212500000000006,
+            "observed_frame_interval_ms": 33.40000000000009,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
@@ -1384,7 +1384,7 @@
         "height": 375
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 55166528,
+      "used_js_heap_bytes": 47512254,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -1610,12 +1610,12 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.027099999999999996
+              "__animation_progress": 0.02701275
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.027099999999999996,
+            "animation_progress": 0.02701275,
             "observed_frame_interval_ms": 50,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
@@ -1701,12 +1701,12 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 201708,
-            "visual_state_signature": 201708,
+            "geometry_signature": 203695,
+            "visual_state_signature": 203695,
             "animation_state": "playing",
-            "animation_progress": 0.024862500000000013,
-            "observed_frame_interval_ms": 50,
-            "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 2%"
+            "animation_progress": 0.026849999999999995,
+            "observed_frame_interval_ms": 34.700000000000045,
+            "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
       ],
@@ -1726,7 +1726,7 @@
         "height": 480
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 29694580,
+      "used_js_heap_bytes": 36856973,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
