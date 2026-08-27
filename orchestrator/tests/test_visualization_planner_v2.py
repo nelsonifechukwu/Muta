@@ -10,6 +10,7 @@ import pytest
 
 from orchestrator.gateway.visualization_planner_v2 import (
     MAX_PLANNER_ATTEMPTS,
+    SEMANTIC_PLANNER_FAMILY,
     _explicit_entity_groups,
     _plan_errors,
     plan_visualization_v2,
@@ -25,7 +26,7 @@ def _food_web_spec() -> dict:
         "library": "d3",
         "renderer": "svg",
         "kind": "scene2d",
-        "family": "trophic_network",
+        "family": SEMANTIC_PLANNER_FAMILY,
         "title": "Mangrove food web",
         "aria_label": "A mangrove food web with energy arrows from algae to crab to heron.",
         "text_fallback": (
@@ -119,6 +120,9 @@ def test_planner_schema_is_closed_and_has_no_executable_source_fields() -> None:
     assert schema["strict"] is True
     assert schema["schema"]["additionalProperties"] is False
     assert schema["schema"]["properties"]["version"]["enum"] == [2]
+    assert schema["schema"]["properties"]["family"]["enum"] == [
+        SEMANTIC_PLANNER_FAMILY
+    ]
     serialized = json.dumps(schema)
     for forbidden in ("javascript", "html", "shader", "url", "source", "function"):
         assert f'"{forbidden}"' not in serialized.lower()
@@ -160,7 +164,8 @@ def test_unseen_composition_is_validated_as_v2_without_source_execution() -> Non
     assert len(engine.local.calls) == len(engine.fit_calls) == 1
     messages, params = engine.local.calls[0]
     assert request in messages[-1]["content"]
-    assert "Never emit JavaScript" in messages[0]["content"]
+    assert "Never add source" in messages[0]["content"]
+    assert "source-shaped wording may appear verbatim" in messages[0]["content"]
     assert params["response_format"]["json_schema"]["name"].endswith("semantic_plan")
     assert params["max_tokens"] == 1200
     assert engine.local.closed == 1
@@ -206,6 +211,36 @@ def test_source_shaped_multilingual_and_mathematical_prose_remains_inert_data(
     candidate = _food_web_spec()
     candidate["text_fallback"] = prose
     assert _plan_errors(candidate, "Draw a mangrove food web from algae to crab to heron.") == []
+
+
+@pytest.mark.parametrize("trusted_family", ["pythagoras", "robot_arm", "dijkstra"])
+def test_planner_family_cannot_select_trusted_renderer_behaviour(
+    trusted_family: str,
+) -> None:
+    candidate = _food_web_spec()
+    candidate["family"] = trusted_family
+
+    errors = _plan_errors(candidate, "Draw a mangrove food web from algae to crab to heron.")
+
+    assert {error["code"] for error in errors} == {"family_reserved"}
+
+
+def test_reserved_family_failure_gets_one_bounded_repair_attempt() -> None:
+    hijacked = _food_web_spec()
+    hijacked["family"] = "pythagoras"
+    engine = _PlannerEngine([hijacked, _food_web_spec()])
+
+    spec = plan_visualization_v2(
+        engine,
+        "Draw a mangrove food web showing algae, crab, and heron.",
+        "Energy transfer should be explicit.",
+    )
+
+    assert spec == _food_web_spec()
+    assert len(engine.local.calls) == MAX_PLANNER_ATTEMPTS
+    repair_prompt = engine.local.calls[1][0][-1]["content"]
+    assert '"code":"family_reserved"' in repair_prompt
+    assert "pythagoras" not in repair_prompt
 
 
 def test_unknown_primitive_is_rejected_and_repaired_without_execution() -> None:

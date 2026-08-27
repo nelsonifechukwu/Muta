@@ -93,6 +93,11 @@ math are typed AST/enums/numbers, while prose stays inert text data throughout t
   text attributes. No proposal-controlled string reaches markup parsing, URL/CSS attributes,
   `eval`, `new Function`, dynamic import, or a worker/network API. The frame's no-network CSP is
   defense in depth rather than a substitute for this sink ownership.
+  Every model-planned scene also uses the single reserved `semantic_composition` family. The model
+  cannot select deterministic-family names such as `pythagoras`, `robot_arm`, or `dijkstra`, which
+  are trusted renderer behavior dispatch keys rather than inert labels. The planning prompt forbids
+  executable/source fields while explicitly allowing learner-requested code and function notation
+  in inert descriptive fields.
 - Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: concrete
   request terms and every meaningful token in an explicit entity phrase must map one-to-one to
   unambiguous labelled nodes; graph/process requests require those nodes to be connected, and an

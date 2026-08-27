@@ -9,7 +9,7 @@
         "library": "d3",
         "renderer": "svg",
         "kind": "scene2d",
-        "family": "trophic_network",
+        "family": "semantic_composition",
         "title": "Mangrove food web",
         "aria_label": "A mangrove food web with adjustable crab height.",
         "text_fallback": "Energy flows from algae to crab to heron; the crab height control moves the crab and its links.",
@@ -31,6 +31,18 @@
           {
             "id": "play",
             "label": "Play",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "pause",
+            "label": "Pause",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "restart",
+            "label": "Restart",
             "type": "button",
             "value": 0
           }

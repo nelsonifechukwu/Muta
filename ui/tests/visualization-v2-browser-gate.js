@@ -77,6 +77,10 @@
     if (spec.family === "spring_mass" && Object.hasOwn(values, "displacement")) {
       return description.includes("F=−kx=") && description.includes("opposite the displacement");
     }
+    if (spec.family === "semantic_composition") {
+      return !description.includes("a² + b² = c²") && !description.includes("Two-link IK")
+        && !description.includes("Shortest ");
+    }
     if (spec.family === "gradient_linked") return description.includes("both views") && description.includes("∇f=");
     if (spec.family === "gradient_descent") {
       const match = description.match(/loss x²\+2y²=([0-9.]+)/);

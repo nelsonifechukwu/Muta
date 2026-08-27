@@ -30,6 +30,7 @@ log = logging.getLogger("muta.gateway.visualization_planner_v2")
 MAX_PLANNER_ATTEMPTS = 2
 MAX_PLANNER_LAYERS = 24
 MAX_PLANNER_POINTS = 512
+SEMANTIC_PLANNER_FAMILY = "semantic_composition"
 
 _COMPOSITION_SIGNAL = re.compile(
     r"\b(?:diagram|draw|sketch|illustrate|picture|visuali[sz]e|map|model|simulate|"
@@ -565,7 +566,7 @@ def planner_schema_v2() -> dict[str, Any]:
                 "kind": {"type": "string", "enum": ["scene2d", "simulation2d", "scene3d"]},
                 "family": {
                     "type": "string",
-                    "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                    "enum": [SEMANTIC_PLANNER_FAMILY],
                 },
                 "title": {"type": "string", "minLength": 1, "maxLength": 120},
                 "aria_label": {"type": "string", "minLength": 1, "maxLength": 400},
@@ -973,8 +974,16 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
         return [{"code": "schema_invalid", "detail": str(exc)[:200]}]
 
     errors: list[dict[str, str]] = []
-    if not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", spec["family"]):
-        errors.append({"code": "family_invalid", "detail": "Use a safe lower_snake_case family."})
+    if spec["family"] != SEMANTIC_PLANNER_FAMILY:
+        errors.append(
+            {
+                "code": "family_reserved",
+                "detail": (
+                    f"Model-planned scenes must use the reserved {SEMANTIC_PLANNER_FAMILY} "
+                    "family so they cannot select trusted family-specific renderer behavior."
+                ),
+            }
+        )
 
     layers = spec["scene"]["layers"]
     meaningful = [layer for layer in layers if layer.get("type") not in {"axes", "text", "panel"}]
@@ -1290,8 +1299,10 @@ def plan_visualization_v2(
     system = (
         "Plan one educational visualization as V2 JSON data only. Use only the schema's "
         "allow-listed primitives, controls, renderer hint, relationships, and optional "
-        "guided_reveal animation. Never emit JavaScript, HTML, CSS, SVG markup, shaders, URLs, "
-        "library source, or executable syntax. Preserve the learner's subject and directions. "
+        "guided_reveal animation. Never add source, markup, URL, style, event-handler, shader, "
+        "import, worker, or executable-behavior fields. Learner-requested code, function notation, "
+        "and source-shaped wording may appear verbatim only in inert title, label, ARIA, or text "
+        "fallback fields. Preserve the learner's subject and directions. "
         "Every control needs an accessible label; every visual needs a useful text fallback."
     )
     base_user = (
