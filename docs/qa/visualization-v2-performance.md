@@ -7,7 +7,7 @@ Compared with base revision `238b95ff4e0cd38f2636c25d08e6e1c9eb53ded1` on the lo
 | Measurement | Before | After | Delta |
 |---|---:|---:|---:|
 | Synchronous chat UI source | 74628 B | 107271 B | +32643 B |
-| Median Node parse time for synchronous JS | 0.5579 ms | 0.7113 ms | +0.1534 ms |
+| Median Node parse time for synchronous JS | 0.6231 ms | 0.8992 ms | +0.2761 ms |
 | Lazy V2 renderer source | 0 B | 222614 B | +222614 B |
 | Existing vendored visualization libraries | 1102856 B | 1102856 B | 0 B |
 
@@ -20,9 +20,9 @@ All 105 Three.js cases stayed within their declared GPU triangle budgets; the la
 
 | Renderer | Cases | Mean first render | p95 | Maximum |
 |---|---:|---:|---:|---:|
-| svg | 74 | 114.15 ms | 264.20 ms | 358.30 ms |
-| canvas | 21 | 172.99 ms | 336.70 ms | 342.70 ms |
-| three | 105 | 313.33 ms | 416.60 ms | 726.30 ms |
+| svg | 74 | 113.91 ms | 264.70 ms | 354.40 ms |
+| canvas | 21 | 171.25 ms | 321.10 ms | 332.90 ms |
+| three | 105 | 305.12 ms | 421.20 ms | 713.70 ms |
 
 ## Browser screenshots
 
