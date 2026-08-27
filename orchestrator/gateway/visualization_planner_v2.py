@@ -55,26 +55,31 @@ _ANIMATION_SIGNAL = re.compile(
 )
 _STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
     r"\b(?:web|network|flow|cycle|process|path|loop|pipeline|hierarchy|tree|graph|"
-    r"architecture|relationship)\b|\bfrom\b.{0,100}\bto\b",
+    r"architecture|relationship)\b|\bfrom\b.{0,100}\b(?:to|through|into|towards?)\b",
     re.IGNORECASE | re.DOTALL,
 )
 _EXPLICIT_ENTITY_CLAUSE = re.compile(
-    r"\b(?:showing|linking|connecting|between)\b(?P<entities>[^.!?;]{1,220})",
+    r"\b(?P<introducer>showing|linking|connecting|between|including|containing|"
+    r"composed\s+of|with)\b(?P<entities>[^.!?;]{1,220})",
     re.IGNORECASE,
 )
 _DIRECTIONAL_CHAIN = re.compile(
     r"\bfrom\b(?P<entities>[^.!?;]{1,220})",
     re.IGNORECASE,
 )
+_PERSPECTIVE_FROM = re.compile(r"\b(?:viewed|seen|looking)\s*$", re.IGNORECASE)
 _DIRECTIONAL_TAIL = re.compile(
     r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
+    r"with\s+(?:(?:clear|named|accessible)\s+)?(?:labels?|annotations?)\b|"
     r"with\s+(?:an?\s+)?(?:adjustable|interactive)\b|where\s+(?:i|we|the\s+user)\b)",
     re.IGNORECASE,
 )
+_DIRECTION_STEP = re.compile(r"\b(?:to|through|into|towards?)\b|->|→", re.IGNORECASE)
 _ENTITY_SEPARATOR = re.compile(
-    r"\s*(?:,|\band\b|\bto\b|\bthrough\b|\binto\b|\bthen\b|->|→)\s*",
+    r"\s*(?:,|\band\b|\bto\b|\bthrough\b|\binto\b|\btowards?\b|\bthen\b|->|→)\s*",
     re.IGNORECASE,
 )
+_SEMANTIC_TOKEN = re.compile(r"[A-Za-z](?:/[A-Za-z])+|[A-Za-z][A-Za-z0-9_-]*")
 _RELATIONSHIP_TERMS = frozenset(
     {
         "connection",
@@ -109,22 +114,45 @@ _TOPIC_STOPWORDS = frozenset(
         "about",
         "adjust",
         "adjustable",
+        "above",
+        "an",
+        "and",
         "animate",
         "animation",
+        "are",
+        "as",
+        "at",
+        "be",
+        "below",
+        "between",
         "build",
+        "by",
         "change",
         "chart",
+        "composed",
+        "connecting",
         "control",
+        "containing",
         "create",
         "diagram",
         "draw",
+        "for",
         "explain",
         "from",
         "graph",
+        "in",
+        "including",
         "illustrate",
         "interactive",
+        "is",
+        "it",
+        "linking",
         "make",
+        "me",
         "model",
+        "of",
+        "on",
+        "or",
         "picture",
         "please",
         "plot",
@@ -134,16 +162,25 @@ _TOPIC_STOPWORDS = frozenset(
         "simulate",
         "sketch",
         "that",
+        "the",
         "their",
         "these",
         "this",
         "through",
+        "to",
         "unfamiliar",
+        "us",
+        "via",
+        "view",
+        "viewed",
         "visualise",
         "visualize",
+        "we",
         "where",
         "which",
         "with",
+        "you",
+        "your",
     }
 )
 
@@ -388,18 +425,39 @@ def planner_schema_v2() -> dict[str, Any]:
 
 
 def _topic_terms(request: str) -> set[str]:
-    return {
-        token
-        for token in re.findall(r"[A-Za-z][A-Za-z0-9_-]{3,}", request.lower())
-        if token not in _TOPIC_STOPWORDS
-    }
+    terms: set[str] = set()
+    for match in _SEMANTIC_TOKEN.finditer(request):
+        raw = match.group(0)
+        token = raw.lower()
+        is_short_symbol = (
+            "/" in raw
+            or (
+                2 <= len(raw) <= 3
+                and (raw.isupper() or not raw.islower() and not raw.isupper())
+            )
+        )
+        if token not in _TOPIC_STOPWORDS and (len(token) >= 4 or is_short_symbol):
+            terms.add(token)
+    return terms
+
+
+def _entity_terms(value: str) -> set[str]:
+    """Return concrete phrase tokens, including short acronyms and slash notation."""
+    terms: set[str] = set()
+    for match in _SEMANTIC_TOKEN.finditer(value):
+        raw = match.group(0)
+        token = raw.lower()
+        uppercase_single = len(raw) == 1 and raw.isupper() and raw != "I"
+        if (token not in _TOPIC_STOPWORDS or uppercase_single) and token not in _RELATIONSHIP_TERMS:
+            terms.add(token)
+    return terms
 
 
 def _entity_groups(value: str) -> list[frozenset[str]]:
     """Split an ordered bounded entity list, retaining multi-word names and repeated steps."""
     groups: list[frozenset[str]] = []
     for part in _ENTITY_SEPARATOR.split(value):
-        terms = _topic_terms(part).difference(_RELATIONSHIP_TERMS)
+        terms = _entity_terms(part)
         if terms:
             groups.append(frozenset(terms))
     return groups
@@ -410,7 +468,12 @@ def _directional_entity_groups(request: str) -> list[frozenset[str]]:
     match = _DIRECTIONAL_CHAIN.search(request)
     if not match:
         return []
+    prefix = request[max(0, match.start() - 24) : match.start()]
+    if _PERSPECTIVE_FROM.search(prefix):
+        return []
     chain = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
+    if not _DIRECTION_STEP.search(chain):
+        return []
     return _entity_groups(chain)
 
 
@@ -421,7 +484,11 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
         return list(dict.fromkeys(directional))
     groups: list[frozenset[str]] = []
     for match in _EXPLICIT_ENTITY_CLAUSE.finditer(request):
-        for group in _entity_groups(match.group("entities")):
+        clause = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
+        extracted = _entity_groups(clause)
+        if match.group("introducer").lower() == "with" and len(extracted) < 2:
+            continue
+        for group in extracted:
             if group not in groups:
                 groups.append(group)
     return groups
@@ -432,7 +499,7 @@ def _map_entity_nodes(
 ) -> dict[frozenset[str], str]:
     """Map each entity phrase to one unambiguous, entity-specific labelled node."""
     node_tokens = {
-        str(layer["id"]): _topic_terms(str(layer.get("label", "")))
+        str(layer["id"]): _entity_terms(str(layer.get("label", "")))
         for layer in layers
         if layer.get("type") == "node"
     }
@@ -463,18 +530,24 @@ def _map_entity_nodes(
     return mapping
 
 
-def _has_path(adjacency: dict[str, set[str]], start: str, target: str) -> bool:
+def _has_path(
+    adjacency: dict[str, set[str]], start: str, target: str, *, require_edge: bool = False
+) -> bool:
     """Return whether a bounded directed graph contains a path from start to target."""
+    if start == target and not require_edge:
+        return True
     pending = [start]
     visited: set[str] = set()
     while pending:
         node = pending.pop()
-        if node == target:
-            return True
         if node in visited:
             continue
         visited.add(node)
-        pending.extend(adjacency.get(node, set()).difference(visited))
+        for next_node in adjacency.get(node, set()):
+            if next_node == target:
+                return True
+            if next_node not in visited:
+                pending.append(next_node)
     return False
 
 
@@ -592,7 +665,12 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
             for link in links:
                 directed.setdefault(str(link["from"]), set()).add(str(link["to"]))
             relationship_grounded = all(
-                _has_path(directed, entity_nodes[start], entity_nodes[target])
+                _has_path(
+                    directed,
+                    entity_nodes[start],
+                    entity_nodes[target],
+                    require_edge=True,
+                )
                 for start, target in pairwise(directional_groups)
             )
         if not relationship_grounded:

@@ -366,6 +366,77 @@ def test_semantic_oracle_requires_every_term_of_each_multiword_entity() -> None:
     assert _plan_errors(complete, request) == []
 
 
+@pytest.mark.parametrize(
+    "introducer",
+    ("with", "including", "containing", "composed of"),
+)
+def test_semantic_oracle_recognizes_common_entity_list_introducers(introducer: str) -> None:
+    missing_fish = _food_web_spec()
+    request = f"Draw a food web {introducer} algae, crab, fish, and heron."
+
+    assert {error["code"] for error in _plan_errors(missing_fish, request)} == {
+        "topic_not_grounded",
+        "relationship_not_grounded",
+    }
+    assert (
+        _plan_errors(
+            _food_web_spec(),
+            f"Draw a food web {introducer} algae, crab, and heron.",
+        )
+        == []
+    )
+
+
+def test_semantic_oracle_preserves_short_scientific_entities_and_slash_notation() -> None:
+    pathway = _food_web_spec()
+    for layer, label in zip(
+        (layer for layer in pathway["scene"]["layers"] if layer["type"] == "node"),
+        ("DNA", "RNA", "ATP"),
+        strict=True,
+    ):
+        layer["label"] = label
+    assert _plan_errors(pathway, "Draw a pathway showing DNA, RNA, and ATP.") == []
+
+    generic = _food_web_spec()
+    for layer in generic["scene"]["layers"]:
+        if layer["type"] == "node":
+            layer["label"] = "Pathway"
+    assert {
+        error["code"]
+        for error in _plan_errors(generic, "Draw a pathway showing DNA, RNA, and ATP.")
+    } == {"topic_not_grounded"}
+
+    architecture = _food_web_spec()
+    for layer, label in zip(
+        (layer for layer in architecture["scene"]["layers"] if layer["type"] == "node"),
+        ("CPU", "ALU", "RAM"),
+        strict=True,
+    ):
+        layer["label"] = label
+    architecture["scene"]["layers"].extend(
+        [
+            {
+                "type": "node",
+                "id": "io",
+                "x": 650,
+                "y": 100,
+                "width": 100,
+                "height": 50,
+                "label": "I/O",
+                "color": "purple",
+            },
+            {"type": "link", "from": "heron", "to": "io", "arrow": True, "label": "data"},
+        ]
+    )
+    assert (
+        _plan_errors(
+            architecture,
+            "Draw a computer architecture containing CPU, ALU, RAM, and I/O.",
+        )
+        == []
+    )
+
+
 def test_semantic_oracle_requires_requested_directional_paths() -> None:
     reversed_web = _food_web_spec()
     for layer in reversed_web["scene"]["layers"]:
@@ -404,6 +475,52 @@ def test_semantic_oracle_preserves_repeated_entities_in_directional_cycles() -> 
         if layer["type"] == "link" and layer["from"] == "crab":
             layer["to"] = "algae"
     assert _plan_errors(complete, request) == []
+
+    self_cycle_request = "Draw a food cycle showing energy from algae to algae. Include crab."
+    assert {error["code"] for error in _plan_errors(_food_web_spec(), self_cycle_request)} == {
+        "relationship_not_grounded"
+    }
+    assert _plan_errors(complete, self_cycle_request) == []
+
+
+def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps() -> None:
+    assert (
+        _plan_errors(
+            _food_web_spec(),
+            "Draw a mangrove food web viewed from above and drawn to scale showing algae, crab, "
+            "and heron.",
+        )
+        == []
+    )
+
+    interactive = _food_web_spec()
+    interactive["controls"] = [
+        {
+            "id": "heron_height",
+            "label": "Heron height",
+            "type": "range",
+            "value": 0,
+            "min": -40,
+            "max": 40,
+            "step": 10,
+            "binding": {"target_label": "Heron", "effect": "translate_y"},
+        }
+    ]
+    assert (
+        _plan_errors(
+            interactive,
+            "Draw a food web showing energy from algae to crab to heron with labels and an "
+            "adjustable heron height.",
+        )
+        == []
+    )
+    assert (
+        _plan_errors(
+            _food_web_spec(),
+            "Draw a food web showing energy from algae toward crab and then heron.",
+        )
+        == []
+    )
 
 
 def test_planner_rejects_family_specific_controls_without_inert_bindings() -> None:

@@ -93,10 +93,13 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   unambiguous labelled nodes; graph/process requests require those nodes to be connected, and an
   explicit from-to chain must preserve repeated entities and have directed reachability for every
   ordered step. Partial phrase labels, duplicate catch-all labels, isolated requested entities,
-  and one-way paths masquerading as cycles are invalid. Every transport ID is reserved for a
-  button, must appear as the complete Play/Pause/Restart set, and is valid only when the scene has
-  animation. Every other control must be a numeric control carrying a typed binding to one unique
-  compatible labelled layer. The deterministic renderer owns the allow-listed translation, scale,
+  and one-way paths masquerading as cycles are invalid. List introducers include showing, with,
+  including, containing, and composed-of forms; acronym, mixed-case symbol, and slash-notation
+  entities remain significant. A `from` phrase becomes a directed chain only when it contains a
+  direction step and is not perspective prose. Every transport ID is reserved for a button, must
+  appear as the complete Play/Pause/Restart set, and is valid only when the scene has animation.
+  Every other control must be a numeric control carrying a typed binding to one unique compatible
+  labelled layer. The deterministic renderer owns the allow-listed translation, scale,
   and radius effects inside a stable, unbound coordinate frame, so auto-fitting cannot cancel a
   visible change. An
   inert or renderer-incompatible control is invalid. On failure, return
