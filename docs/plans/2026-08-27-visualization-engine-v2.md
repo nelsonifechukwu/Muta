@@ -132,8 +132,11 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   injects markup, accepts a network/file/data resource token, or imports QA prompt fixtures.
   Source-shaped text rejection includes HTML tags, CSS rule bodies, JavaScript declarations and
   browser/global calls/imports/loops, and shader declarations in addition to schema-level
-  executable fields. URI checks recognize actual schemes without rejecting ordinary prose such as
-  `Data: ...`.
+  executable fields. Inspect authored string values before JSON serialization so escaping cannot
+  hide tabs, destructuring, bracket properties, constructors, or brace-less loops. URI checks
+  recognize actual schemes without rejecting ordinary prose such as `Data: ...`.
+  Keep server and browser schema decisions identical for safe family IDs and JSON numeric types;
+  booleans are never accepted as numbers merely because Python treats `bool` as an `int` subtype.
 
 ### 4. Geometry and sampling
 

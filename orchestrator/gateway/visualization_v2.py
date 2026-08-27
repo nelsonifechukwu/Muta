@@ -63,6 +63,7 @@ _THREE_SURFACE_LABEL_TRIANGLES = 24
 _THREE_PARAMETRIC_MARKER_TRIANGLES = 352
 
 _SAFE_ID = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,63}\Z")
+_SAFE_FAMILY = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 _SAFE_COLOR = re.compile(
     r"(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([0-9.,%\s-]+\)|"
     r"black|white|gray|grey|red|green|blue|orange|purple|teal|gold)\Z"
@@ -7150,6 +7151,7 @@ def _count_ast(node: dict[str, Any], depth: int = 0) -> int:
         if (
             keys != {"type", "value"}
             or not isinstance(node["value"], (int, float))
+            or isinstance(node["value"], bool)
             or not math.isfinite(node["value"])
         ):
             raise VisualizationV2Error("invalid numeric expression node")
@@ -7194,7 +7196,10 @@ def _validate_points(points: Any, dimensions: int, limit: int = MAX_POINTS) -> i
             not isinstance(point, list)
             or len(point) != dimensions
             or not all(
-                isinstance(value, (int, float)) and math.isfinite(value) and abs(value) <= 1e6
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and math.isfinite(value)
+                and abs(value) <= 1e6
                 for value in point
             )
         ):
@@ -7248,8 +7253,9 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         or (spec.get("library"), spec.get("kind")) != compatible[spec["renderer"]]
     ):
         raise VisualizationV2Error("renderer/library/kind are incompatible")
+    if not isinstance(spec.get("family"), str) or not _SAFE_FAMILY.fullmatch(spec["family"]):
+        raise VisualizationV2Error("family is invalid")
     for field, limit in (
-        ("family", 64),
         ("title", 120),
         ("aria_label", 400),
         ("text_fallback", 1000),
@@ -7260,7 +7266,11 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             or len(spec[field]) > limit
         ):
             raise VisualizationV2Error(f"{field} is invalid")
-    if not isinstance(spec.get("height"), int) or not 240 <= spec["height"] <= 600:
+    if (
+        not isinstance(spec.get("height"), int)
+        or isinstance(spec["height"], bool)
+        or not 240 <= spec["height"] <= 600
+    ):
         raise VisualizationV2Error("height is outside the responsive frame budget")
     controls = spec.get("controls")
     if not isinstance(controls, list) or len(controls) > MAX_CONTROLS:
@@ -7458,7 +7468,10 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             if (
                 not isinstance(resolution, list)
                 or len(resolution) != expected_dimensions
-                or not all(isinstance(item, int) and 9 <= item <= 65 for item in resolution)
+                or not all(
+                    isinstance(item, int) and not isinstance(item, bool) and 9 <= item <= 65
+                    for item in resolution
+                )
             ):
                 raise VisualizationV2Error("surface resolution is invalid")
             work = math.prod(resolution)
@@ -7498,7 +7511,10 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             if (
                 not isinstance(resolution, list)
                 or len(resolution) != 2
-                or not all(isinstance(item, int) and 9 <= item <= 65 for item in resolution)
+                or not all(
+                    isinstance(item, int) and not isinstance(item, bool) and 9 <= item <= 65
+                    for item in resolution
+                )
                 or math.prod(resolution) > 4096
             ):
                 raise VisualizationV2Error("unsupported or oversized parametric surface")
@@ -7620,7 +7636,9 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             values = layer.get("values")
             if (
                 not isinstance(rows, int)
+                or isinstance(rows, bool)
                 or not isinstance(columns, int)
+                or isinstance(columns, bool)
                 or rows < 1
                 or columns < 1
                 or rows * columns > MAX_HEATMAP_CELLS

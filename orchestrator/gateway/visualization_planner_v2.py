@@ -12,7 +12,7 @@ import json
 import logging
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from itertools import pairwise
 from typing import Any
 
@@ -75,15 +75,16 @@ _PERSPECTIVE_CHAIN_HEAD = re.compile(
     r"^\s*(?:directly\s+)?(?:above|below|overhead|front|behind|the\s+(?:front|back|side)|"
     r"(?:(?:an?|the)\s+)?(?:top(?:[-‐‑‒–—―−－\s]?down)?|"
     r"bottom(?:[-‐‑‒–—―−－\s]?up)?|(?:left|right)[-‐‑‒–—―−－\s]?side|"
-    r"side|front|rear|isometric|bird(?:['’]?s)?[-‐‑‒–—―−－\s]?eye)\s+"
-    r"(?:view|perspective|angle)|"
+    r"side|front|rear|overhead|isometric|bird(?:['’]?s)?[-‐‑‒–—―−－\s]?eye)\s+"
+    r"(?:view|viewpoint|perspective|angle)|"
     r"(?:(?:an?|the)\s+)?(?:\d{1,3}(?:\.\d+)?\s*(?:degree|degrees|°)\s+)?"
-    r"(?:view|viewing\s+angle|perspective)\b)",
+    r"(?:view|viewpoint|viewing\s+angle|perspective|elevation)\b)",
     re.IGNORECASE,
 )
 _DIRECTIONAL_TAIL = re.compile(
     r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
     r"(?:an?\s+)?(?:adjustable|interactive)\b|"
+    r"(?:an?\s+)?(?:directed|undirected|non[-\s]?directional)\b|"
     r"including\b|containing\b|composed(?:\s+|\s*[-‐‑‒–—―−－]\s*)of\b|"
     r"with\b|where\s+(?:i|we|the\s+user)\b)",
     re.IGNORECASE,
@@ -107,15 +108,23 @@ _WITH_PRESENTATION_CLAUSE = re.compile(
     re.IGNORECASE,
 )
 _REQUESTED_CONTROL_CLAUSE = re.compile(
-    r"\b(?:an?\s+)?(?:sliders?|controls?|inputs?)\s+"
-    r"(?:for|named|to\s+(?:adjust|vary|change))\s+"
+    r"\b(?:an?\s+)?(?:(?:range|numeric|number)\s+)?"
+    r"(?:sliders?|controls?|inputs?)\s+"
+    r"(?:for|named|called|labelled|labeled|to\s+(?:adjust|vary|change))\s+"
     r"(?P<controls>[^.!?;]{1,160})",
     re.IGNORECASE,
 )
 _UNDIRECTED_SIGNAL = re.compile(r"\b(?:undirected|non[-\s]?directional)\b", re.IGNORECASE)
 _UNDIRECTED_ENTITY_CLAUSE = re.compile(
-    r"\bundirected\b\s*(?:network|graph|component|link|edge|connection|path)?\s*"
-    r"(?:between|connecting|linking|containing|with)?\s*(?P<entities>[^.!?;]{1,220})",
+    r"\b(?:undirected|non[-\s]?directional)\b\s*"
+    r"(?:network|graph|component|link|edge|connection|path)?\s*"
+    r"(?:between|connecting|linking|containing|with)?\s*"
+    r"(?P<entities>[^.!?;]{1,220}?)(?="
+    r"(?:,\s*|\s+)(?:and\s+|plus\s+)?(?:an?\s+)?directed\b|[.!?;]|$)",
+    re.IGNORECASE,
+)
+_RELATIONSHIP_COMPONENT_BOUNDARY = re.compile(
+    r"\b(?:and|plus)\s+(?:an?\s+)?(?:directed|undirected|non[-\s]?directional)\b",
     re.IGNORECASE,
 )
 _PRESENTATION_TERMS = frozenset(
@@ -182,22 +191,35 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*[A-Za-z][^>]{0,200}>|"
     r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\bnew\s+Function\b|"
     r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\(|"
-    r"\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=|"
-    r"\bimport\s+(?:[A-Za-z_$][\w$]*|\*|\{)[^;]{0,160}\bfrom\b|"
+    r"\b(?:const|let|var)\s+(?:[A-Za-z_$][\w$]*|\{[^}\r\n]{1,160}\}|"
+    r"\[[^\]\r\n]{1,160}\])\s*=|"
+    r"\bimport\s+(?:['\"]|(?:[A-Za-z_$][\w$]*|\*|\{)[^;]{0,160}\bfrom\b)|"
+    r"(?:^|[\r\n])\s*import\s+[A-Za-z_][\w.]*"
+    r"(?:\s+as\s+[A-Za-z_]\w*)?\s*(?:$|[\r\n;])|"
+    r"(?:^|[\r\n])\s*from\s+[A-Za-z_][\w.]*\s+import\b|"
+    r"(?:^|[\r\n])\s*(?:async\s+)?def\s+[A-Za-z_]\w*\s*\(|"
     r"\bclass\s+[A-Za-z_$][\w$]*\s*\{|"
     r"\b(?:require|importScripts|setTimeout|setInterval|requestAnimationFrame|"
     r"cancelAnimationFrame|fetch)\s*\(|"
-    r"\b(?:while|for)\s*\([^)]{0,160}\)\s*\{|"
+    r"\bimport\s*\(|\bnew\s+[A-Za-z_$][\w$]*\s*\(|"
+    r"\b(?:WebSocket|Worker|SharedWorker|XMLHttpRequest|EventSource)\s*\(|"
+    r"\b(?:d3|THREE|gsap|motion)\s*(?:\.|\[)|\banime\s*\(|"
+    r"\b(?:module\s*\.\s*exports|exports\s*\.|process\s*\.|Deno\s*\.|__import__\s*\()|"
+    r"\bwhile\s*\([^)]{0,160}\)\s*(?:\{|[A-Za-z_$][\w$]*\s*\()|"
+    r"\bfor\s*\([^)]{0,160}(?:;|\+\+|--)[^)]{0,160}\)\s*|"
+    r"\bfor\s*\([^)]{0,160}\b(?:in|of)\b[^)]{0,160}\)\s*|"
     r"\b(?:console|Math|JSON|Object|Array|Promise)\s*\.\s*[A-Za-z_$][\w$]*\s*\(|"
-    r"=>|```|\bgl_FragColor\b|#version\s+\d+|"
+    r"=>|```|\b(?:gl_FragColor|gl_Position|gl_PointSize|texture2D)\b|"
+    r"#version\s+\d+|"
     r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
     r"\bprecision\s+(?:lowp|mediump|highp)\s+(?:float|int)\s*;|"
     r"\b(?:uniform|varying|attribute|vec[234]|mat[234]|sampler2D)\s+[A-Za-z_]\w*|"
-    r"\b(?:document|window|globalThis|location|history|navigator)\s*\.|"
+    r"\b(?:document|window|globalThis|location|history|navigator)\s*"
+    r"(?:\.|\[\s*['\"])|"
     r"(?:[#.][-\w]+|\b[A-Za-z][-\w]*(?:\s+[A-Za-z][-\w]*)?)\s*"
     r"\{\s*-?[-\w]+\s*:|"
     r"https?\s*:|\bdata\s*:[A-Za-z][^,\s]{0,100},|\bfile\s*://|"
-    r"\burl\s*\(|@import\b|[\"\s]//[A-Za-z0-9])",
+    r"\burl\s*\(|@import\b|(?:^|[\"\s])//[A-Za-z0-9])",
     re.IGNORECASE,
 )
 _TOPIC_STOPWORDS = frozenset(
@@ -622,10 +644,15 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
     for introducer, raw_clause in _explicit_entity_clauses(request):
         # A clause such as "showing flow from A to B" is represented by the ordered chain
         # above. Keep any concrete prefix, then let later introducers be parsed separately.
-        from_match = re.search(r"\bfrom\b", raw_clause, re.IGNORECASE)
-        clause = raw_clause
-        if from_match and _DIRECTION_STEP.search(raw_clause[from_match.end() :]):
-            clause = raw_clause[: from_match.start()]
+        component_boundary = _RELATIONSHIP_COMPONENT_BOUNDARY.search(raw_clause)
+        clause = (
+            raw_clause[: component_boundary.start()]
+            if component_boundary is not None
+            else raw_clause
+        )
+        from_match = re.search(r"\bfrom\b", clause, re.IGNORECASE)
+        if from_match and _DIRECTION_STEP.search(clause[from_match.end() :]):
+            clause = clause[: from_match.start()]
         clause = _DIRECTIONAL_TAIL.split(clause, maxsplit=1)[0]
         if introducer == "with" and _WITH_PRESENTATION_CLAUSE.search(clause):
             continue
@@ -760,6 +787,18 @@ def _has_path(
     return False
 
 
+def _text_values(value: object) -> Iterator[str]:
+    """Yield authored strings directly so JSON escaping cannot hide source syntax."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for child in value.values():
+            yield from _text_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _text_values(child)
+
+
 def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
     """Return stable machine-readable validation and semantic-oracle failures."""
     try:
@@ -768,8 +807,7 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
         return [{"code": "schema_invalid", "detail": str(exc)[:200]}]
 
     errors: list[dict[str, str]] = []
-    serialized = json.dumps(spec, ensure_ascii=False, separators=(",", ":"))
-    if _FORBIDDEN_AUTHORED_SOURCE.search(serialized):
+    if any(_FORBIDDEN_AUTHORED_SOURCE.search(value) for value in _text_values(spec)):
         errors.append(
             {
                 "code": "authored_source_forbidden",

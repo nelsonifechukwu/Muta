@@ -234,6 +234,15 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
         "precision highp float; float brightness = 1.0;",
         "while (ready) { step(); }",
         "location.assign('/next')",
+        "const {x} = payload; draw(x);",
+        "while (ready) step();",
+        "new WebSocket('/socket')",
+        "var\tx=window['document'];",
+        "import 'side-effect-module';",
+        "import os",
+        "for (const item of items) draw(item);",
+        "d3.select('body').append('svg')",
+        "def draw_scene():\n    return None",
     ),
 )
 def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
@@ -601,6 +610,47 @@ def test_semantic_oracle_accepts_mixed_directed_and_undirected_components() -> N
     }
 
 
+def test_mixed_relationship_clauses_do_not_consume_each_other_without_punctuation() -> None:
+    mixed = _food_web_spec()
+    mixed["scene"]["layers"] = [
+        layer
+        for layer in mixed["scene"]["layers"]
+        if not (layer["type"] == "link" and layer["from"] == "crab")
+    ]
+    mixed["scene"]["layers"].extend(
+        [
+            {
+                "type": "node",
+                "id": "fish",
+                "x": 650,
+                "y": 150,
+                "width": 100,
+                "height": 50,
+                "label": "Fish",
+                "color": "teal",
+            },
+            {
+                "type": "link",
+                "from": "heron",
+                "to": "fish",
+                "arrow": False,
+                "label": "association",
+            },
+        ]
+    )
+
+    assert _plan_errors(
+        mixed,
+        "Draw a mixed graph with a directed flow from algae to crab and an "
+        "undirected link between heron and fish.",
+    ) == []
+    assert _plan_errors(
+        mixed,
+        "Draw a mixed graph with an undirected link between heron and fish plus a "
+        "directed flow from algae to crab.",
+    ) == []
+
+
 def test_semantic_oracle_splits_connecting_with_and_directional_via_phrases() -> None:
     assert (
         _plan_errors(
@@ -705,6 +755,8 @@ def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps()
         "the top view",
         "a left-side view",
         "a 45 degree viewing angle",
+        "a 30° elevation",
+        "an overhead viewpoint",
     ):
         assert (
             _plan_errors(
@@ -832,6 +884,17 @@ def test_named_slider_parameters_require_distinct_matching_bound_controls() -> N
     assert {error["code"] for error in _plan_errors(interactive, named_prompt)} == {
         "interaction_not_grounded"
     }
+
+    for requested in (
+        "a slider called Heron height",
+        "a slider labelled Heron height",
+        "a slider labeled Heron height",
+        "a range control called Heron height",
+    ):
+        prompt = f"Draw a food web from algae to crab to heron with {requested}."
+        assert {error["code"] for error in _plan_errors(interactive, prompt)} == {
+            "interaction_not_grounded"
+        }
 
 
 def test_entity_assignment_handles_overlapping_specific_names() -> None:

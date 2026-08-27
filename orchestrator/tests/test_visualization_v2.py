@@ -932,6 +932,34 @@ def test_schema_rejects_unknown_fields_prototype_keys_and_resource_overruns() ->
         validate_v2_spec(invalid)
 
 
+def test_server_schema_matches_browser_safe_family_and_numeric_types() -> None:
+    spec = compile_visualization_v2("Plot z=x^2+y^2")
+    assert spec is not None
+
+    unsafe_family = json.loads(json.dumps(spec))
+    unsafe_family["family"] = "not safe!"
+    with pytest.raises(VisualizationV2Error, match="family is invalid"):
+        validate_v2_spec(unsafe_family)
+
+    boolean_ast = json.loads(json.dumps(spec))
+    boolean_ast["scene"]["layers"][0]["relationship"]["right"] = {
+        "type": "number",
+        "value": True,
+    }
+    with pytest.raises(VisualizationV2Error, match="invalid numeric expression node"):
+        validate_v2_spec(boolean_ast)
+
+    boolean_resolution = json.loads(json.dumps(spec))
+    boolean_resolution["scene"]["layers"][0]["resolution"][0] = True
+    with pytest.raises(VisualizationV2Error, match="surface resolution is invalid"):
+        validate_v2_spec(boolean_resolution)
+
+    boolean_height = json.loads(json.dumps(spec))
+    boolean_height["height"] = True
+    with pytest.raises(VisualizationV2Error, match="height is outside"):
+        validate_v2_spec(boolean_height)
+
+
 def test_schema_rejects_type_confused_incomplete_or_static_animation_transport() -> None:
     static = compile_visualization_v2("Plot z=x^2+y^2")
     assert static is not None

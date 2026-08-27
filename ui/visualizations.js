@@ -22,6 +22,7 @@
   const V2_SURFACE_LABEL_TRIANGLES = 24;
   const V2_PARAMETRIC_MARKER_TRIANGLES = 352;
   const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+  const SAFE_FAMILY = /^[a-z][a-z0-9_]{0,63}$/;
   const SAFE_COLOR = /^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([0-9.,%\s-]+\)|black|white|gray|grey|red|green|blue|orange|purple|teal|gold)$/;
   const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
   const SURFACE_FUNCTIONS = new Set([
@@ -555,7 +556,7 @@
     if (!compatible || candidate.library !== compatible[0] || candidate.kind !== compatible[1]) {
       return { ok: false, error: "V2 renderer and kind are incompatible" };
     }
-    if (!SAFE_ID.test(candidate.family) || !nonEmptyString(candidate.title, 120)
+    if (!SAFE_FAMILY.test(candidate.family) || !nonEmptyString(candidate.title, 120)
       || !nonEmptyString(candidate.aria_label, 400) || !nonEmptyString(candidate.text_fallback, 1000)) {
       return { ok: false, error: "V2 accessible metadata is invalid" };
     }

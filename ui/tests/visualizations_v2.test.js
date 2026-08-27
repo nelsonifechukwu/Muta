@@ -245,6 +245,16 @@ test("rejects unsafe fields, functions, budgets, topology and prototype keys", (
   assert.equal({}.polluted, undefined);
 });
 
+test("rejects unsafe family names and boolean numeric AST values", () => {
+  const unsafeFamily = surface(); unsafeFamily.family = "not safe!";
+  assert.match(viz.validateSpec(unsafeFamily).error, /metadata/);
+  const nonCanonicalFamily = surface(); nonCanonicalFamily.family = "Not-safe";
+  assert.match(viz.validateSpec(nonCanonicalFamily).error, /metadata/);
+  const booleanAst = surface();
+  booleanAst.scene.layers[0].relationship.right = { type: "number", value: true };
+  assert.match(viz.validateSpec(booleanAst).error, /invalid number node/);
+});
+
 test("round-trips V2 fragments and extracts only a fully validated fence", () => {
   const spec = svgSpec();
   assert.deepEqual(viz.decodeSpec(viz.encodeSpec(spec)), spec);
