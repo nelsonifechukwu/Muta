@@ -69,7 +69,7 @@
           "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=2x+3. slope 2; y-intercept (0,3). two-dimensional plot of y=2x+3. slope 2; y-intercept (0,3).    y=2x+3   y-intercept (0,3)   slope rise/run = 2/1  "
         }
       },
-      "compile_ms": 8.343,
+      "compile_ms": 8.516,
       "browser_ms": 49.4,
       "python_passed": true,
       "browser_evaluated": true,
@@ -138,7 +138,7 @@
           "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=x^2-4x+3. vertex (2,-1); axis x=2. two-dimensional plot of y=x^2-4x+3. vertex (2,-1); axis x=2.    y=x^2-4x+3   vertex (2,-1); roots 1, 3   axis of symmetry x=2  "
         }
       },
-      "compile_ms": 2.599,
+      "compile_ms": 2.646,
       "browser_ms": 56.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -207,7 +207,7 @@
           "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=sin(x). amplitude about 1 and wavelength about 6.28. two-dimensional plot of y=sin(x). amplitude about 1 and wavelength about 6.28.    y=sin(x)   amplitude≈1; wavelength≈6.28; extrema and zero crossings  "
         }
       },
-      "compile_ms": 2.985,
+      "compile_ms": 2.813,
       "browser_ms": 42.8,
       "python_passed": true,
       "browser_evaluated": true,
@@ -276,7 +276,7 @@
           "point_count": 117
         }
       },
-      "compile_ms": 7.893,
+      "compile_ms": 7.726,
       "browser_ms": 98.4,
       "python_passed": true,
       "browser_evaluated": true,
@@ -349,7 +349,7 @@
           "clipped": false
         }
       },
-      "compile_ms": 152.692,
+      "compile_ms": 136.076,
       "browser_ms": 437.3,
       "python_passed": true,
       "browser_evaluated": true,
@@ -483,7 +483,7 @@
           ]
         }
       },
-      "compile_ms": 0.334,
+      "compile_ms": 0.297,
       "browser_ms": 30.9,
       "python_passed": true,
       "browser_evaluated": true,
@@ -562,7 +562,7 @@
           }
         }
       },
-      "compile_ms": 1.871,
+      "compile_ms": 1.76,
       "browser_ms": 57.3,
       "python_passed": true,
       "browser_evaluated": true,
@@ -668,7 +668,7 @@
           }
         }
       },
-      "compile_ms": 0.461,
+      "compile_ms": 0.417,
       "browser_ms": 102.0,
       "python_passed": true,
       "browser_evaluated": true,
@@ -769,7 +769,7 @@
           }
         }
       },
-      "compile_ms": 0.393,
+      "compile_ms": 0.36,
       "browser_ms": 90.5,
       "python_passed": true,
       "browser_evaluated": true,
@@ -875,7 +875,7 @@
           "node_count": 5
         }
       },
-      "compile_ms": 0.305,
+      "compile_ms": 0.292,
       "browser_ms": 25.8,
       "python_passed": true,
       "browser_evaluated": true,
@@ -986,7 +986,7 @@
           }
         }
       },
-      "compile_ms": 0.794,
+      "compile_ms": 0.75,
       "browser_ms": 91.9,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1109,7 +1109,7 @@
           }
         }
       },
-      "compile_ms": 1.068,
+      "compile_ms": 0.801,
       "browser_ms": 48.3,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1198,7 +1198,7 @@
           ]
         }
       },
-      "compile_ms": 2.373,
+      "compile_ms": 2.104,
       "browser_ms": 289.0,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1324,7 +1324,7 @@
           ]
         }
       },
-      "compile_ms": 3.015,
+      "compile_ms": 2.779,
       "browser_ms": 301.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1533,7 +1533,7 @@
           }
         }
       },
-      "compile_ms": 0.817,
+      "compile_ms": 0.744,
       "browser_ms": 75.0,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1640,7 +1640,7 @@
           }
         }
       },
-      "compile_ms": 0.42,
+      "compile_ms": 0.376,
       "browser_ms": 48.6,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1725,7 +1725,7 @@
           "initial_restoring_force": -12
         }
       },
-      "compile_ms": 0.587,
+      "compile_ms": 0.468,
       "browser_ms": 69.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1838,7 +1838,7 @@
           }
         }
       },
-      "compile_ms": 0.599,
+      "compile_ms": 0.504,
       "browser_ms": 89.5,
       "python_passed": true,
       "browser_evaluated": true,
@@ -1968,7 +1968,7 @@
           }
         }
       },
-      "compile_ms": 0.42,
+      "compile_ms": 0.383,
       "browser_ms": 69.3,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2080,7 +2080,7 @@
           }
         }
       },
-      "compile_ms": 0.609,
+      "compile_ms": 0.483,
       "browser_ms": 156.9,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2181,7 +2181,7 @@
           }
         }
       },
-      "compile_ms": 1.051,
+      "compile_ms": 0.937,
       "browser_ms": 51.0,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2274,7 +2274,7 @@
           }
         }
       },
-      "compile_ms": 0.841,
+      "compile_ms": 0.741,
       "browser_ms": 47.0,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2362,7 +2362,7 @@
           ]
         }
       },
-      "compile_ms": 3.427,
+      "compile_ms": 3.016,
       "browser_ms": 79.6,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2472,7 +2472,7 @@
           }
         }
       },
-      "compile_ms": 0.678,
+      "compile_ms": 0.574,
       "browser_ms": 48.6,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2570,7 +2570,7 @@
           }
         }
       },
-      "compile_ms": 0.563,
+      "compile_ms": 0.452,
       "browser_ms": 47.1,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2677,7 +2677,7 @@
           }
         }
       },
-      "compile_ms": 0.83,
+      "compile_ms": 0.72,
       "browser_ms": 297.5,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2858,7 +2858,7 @@
           }
         }
       },
-      "compile_ms": 1.14,
+      "compile_ms": 1.037,
       "browser_ms": 272.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -3008,7 +3008,7 @@
           }
         }
       },
-      "compile_ms": 0.415,
+      "compile_ms": 0.385,
       "browser_ms": 114.6,
       "python_passed": true,
       "browser_evaluated": true,
@@ -3139,7 +3139,7 @@
           }
         }
       },
-      "compile_ms": 2.384,
+      "compile_ms": 1.747,
       "browser_ms": 152.3,
       "python_passed": true,
       "browser_evaluated": true,
@@ -3277,7 +3277,7 @@
           }
         }
       },
-      "compile_ms": 1.348,
+      "compile_ms": 1.194,
       "browser_ms": 355.8,
       "python_passed": true,
       "browser_evaluated": true,
@@ -3497,7 +3497,7 @@
           }
         }
       },
-      "compile_ms": 0.672,
+      "compile_ms": 0.595,
       "browser_ms": 263.6,
       "python_passed": true,
       "browser_evaluated": true,
@@ -3767,7 +3767,7 @@
           }
         }
       },
-      "compile_ms": 1.046,
+      "compile_ms": 1.001,
       "browser_ms": 96.3,
       "python_passed": true,
       "browser_evaluated": true,
@@ -3898,7 +3898,7 @@
           }
         }
       },
-      "compile_ms": 0.432,
+      "compile_ms": 0.416,
       "browser_ms": 261.1,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4105,7 +4105,7 @@
           }
         }
       },
-      "compile_ms": 0.49,
+      "compile_ms": 0.476,
       "browser_ms": 291.0,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4297,7 +4297,7 @@
           "output_consistent": true
         }
       },
-      "compile_ms": 0.581,
+      "compile_ms": 0.557,
       "browser_ms": 75.6,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4397,7 +4397,7 @@
           ]
         }
       },
-      "compile_ms": 3.18,
+      "compile_ms": 3.137,
       "browser_ms": 120.8,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4503,7 +4503,7 @@
           }
         }
       },
-      "compile_ms": 0.933,
+      "compile_ms": 0.816,
       "browser_ms": 103.0,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4606,7 +4606,7 @@
           "links": 3
         }
       },
-      "compile_ms": 0.379,
+      "compile_ms": 0.249,
       "browser_ms": 90.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4732,7 +4732,7 @@
           }
         }
       },
-      "compile_ms": 2.277,
+      "compile_ms": 1.946,
       "browser_ms": 97.4,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4883,7 +4883,7 @@
           }
         }
       },
-      "compile_ms": 2.457,
+      "compile_ms": 2.18,
       "browser_ms": 85.5,
       "python_passed": true,
       "browser_evaluated": true,
@@ -4970,7 +4970,7 @@
           "direction_error": 1.9229626863835638e-16
         }
       },
-      "compile_ms": 0.785,
+      "compile_ms": 0.631,
       "browser_ms": 404.1,
       "python_passed": true,
       "browser_evaluated": true,
@@ -5102,7 +5102,7 @@
           }
         }
       },
-      "compile_ms": 3.269,
+      "compile_ms": 2.973,
       "browser_ms": 352.4,
       "python_passed": true,
       "browser_evaluated": true,
@@ -5248,7 +5248,7 @@
           ]
         }
       },
-      "compile_ms": 4.454,
+      "compile_ms": 3.863,
       "browser_ms": 749.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -5405,7 +5405,7 @@
           "clipped": true
         }
       },
-      "compile_ms": 1.066,
+      "compile_ms": 0.942,
       "browser_ms": 666.3,
       "python_passed": true,
       "browser_evaluated": true,
@@ -5539,7 +5539,7 @@
           "orthogonal": true
         }
       },
-      "compile_ms": 1.905,
+      "compile_ms": 1.719,
       "browser_ms": 544.1,
       "python_passed": true,
       "browser_evaluated": true,
@@ -5692,7 +5692,7 @@
           }
         }
       },
-      "compile_ms": 1.16,
+      "compile_ms": 0.981,
       "browser_ms": 102.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -5799,7 +5799,7 @@
           }
         }
       },
-      "compile_ms": 1.35,
+      "compile_ms": 1.187,
       "browser_ms": 287.2,
       "python_passed": true,
       "browser_evaluated": true,
@@ -5981,7 +5981,7 @@
           }
         }
       },
-      "compile_ms": 0.506,
+      "compile_ms": 0.426,
       "browser_ms": 260.7,
       "python_passed": true,
       "browser_evaluated": true,
@@ -6117,7 +6117,7 @@
           "estimate_mean_error": 0.07829636945331428
         }
       },
-      "compile_ms": 2.18,
+      "compile_ms": 1.879,
       "browser_ms": 221.9,
       "python_passed": true,
       "browser_evaluated": true,
@@ -6293,7 +6293,7 @@
           }
         }
       },
-      "compile_ms": 2.407,
+      "compile_ms": 2.075,
       "browser_ms": 309.8,
       "python_passed": true,
       "browser_evaluated": true,

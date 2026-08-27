@@ -203,6 +203,36 @@ def test_triangulation_normalizes_inverse_baseline_relations(
     assert "10.00 km from A and 10.00 km from B" in spec["text_fallback"]
 
 
+@pytest.mark.parametrize("craft", ["fishing boat", "yacht", "ferry"])
+def test_interception_keeps_common_target_craft_distinct_from_rescuer(craft: str) -> None:
+    spec = compile_bearing_navigation_v2(
+        f"Draw the intercept. A rescue boat travels at 12 km/h. A {craft} is 20 km from H "
+        "on bearing 070°, moving on bearing 135° at 4 km/h."
+    )
+    assert spec is not None
+    assert "2.052 h on bearing 088°" in spec["text_fallback"]
+
+
+@pytest.mark.parametrize(
+    ("relation", "first", "second"),
+    [
+        ("B is north of A", "060", "120"),
+        ("B is south of A", "120", "060"),
+        ("B is east of A", "030", "330"),
+        ("B is west of A", "330", "030"),
+    ],
+)
+def test_triangulation_accepts_compass_baselines_without_due(
+    relation: str, first: str, second: str
+) -> None:
+    spec = compile_bearing_navigation_v2(
+        f"Draw the triangulation: A and B are 10 km apart and {relation}; "
+        f"the target is on bearing {first}° from A and {second}° from B."
+    )
+    assert spec is not None
+    assert "10.00 km from A and 10.00 km from B" in spec["text_fallback"]
+
+
 def test_non_visual_or_non_navigation_requests_do_not_trigger() -> None:
     assert not is_bearing_navigation_request(
         "Show the proof that reverse bearings differ by 180 degrees in text only"

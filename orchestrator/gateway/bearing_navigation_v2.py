@@ -402,12 +402,12 @@ def _ray_intersection_solution(text: str) -> NavigationSolution | None:
     baseline = float(baseline_match.group(1))
     first, second = bearings[:2]
     baseline_direction = re.search(
-        r"\bB\b.{0,48}?\bdue\s+(north|south|east|west)\s+of\s+\bA\b",
+        r"\bB\b.{0,48}?\b(?:due\s+)?(north|south|east|west)\s+of\s+\bA\b",
         text,
         re.IGNORECASE,
     )
     inverse_baseline_direction = re.search(
-        r"\bA\b.{0,48}?\bdue\s+(north|south|east|west)\s+of\s+\bB\b",
+        r"\bA\b.{0,48}?\b(?:due\s+)?(north|south|east|west)\s+of\s+\bB\b",
         text,
         re.IGNORECASE,
     )
@@ -485,7 +485,8 @@ def _role_speed(
 
 def _respectively_speeds(text: str) -> tuple[tuple[float, int], tuple[float, int]] | None:
     role = (
-        r"ship|vessel|target|aircraft|vehicle|rescuer|rescue\s+(?:boat|vessel|craft)|"
+        r"ship|vessel|target|aircraft|vehicle|boat|yacht|sailboat|motorboat|ferry|trawler|"
+        r"craft|rescuer|rescue\s+(?:boat|vessel|craft)|"
         r"lifeboat|patrol\s+boat|helicopter|pursuer"
     )
     match = re.search(
@@ -585,12 +586,17 @@ def _interception_solution(text: str) -> NavigationSolution | None:
         )
         target = _role_speed(
             text,
-            r"ship|vessel|target|aircraft|vehicle",
+            r"ship|vessel|target|aircraft|vehicle|boat|yacht|sailboat|motorboat|ferry|trawler|craft",
             excluded_starts={rescuer[1]} if rescuer else None,
         )
     fallback_speeds = list(re.finditer(r"(\d+(?:\.\d+)?)\s*km/h", text, re.IGNORECASE))
     if target is None and fallback_speeds:
-        target = (float(fallback_speeds[0].group(1)), fallback_speeds[0].start())
+        fallback = next(
+            (match for match in fallback_speeds if rescuer is None or match.start() != rescuer[1]),
+            None,
+        )
+        if fallback is not None:
+            target = (float(fallback.group(1)), fallback.start())
     if rescuer is None and len(fallback_speeds) >= 2:
         fallback = next(
             (match for match in fallback_speeds if target is None or match.start() != target[1]),
