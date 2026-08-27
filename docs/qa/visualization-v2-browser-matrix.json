@@ -16,7 +16,7 @@
         "height": 480
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 47084166,
+      "used_js_heap_bytes": 60603205,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -242,13 +242,13 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.02705000000000001
+              "__animation_progress": 0.029275000000000006
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.02705000000000001,
-            "observed_frame_interval_ms": 49.90000000000009,
+            "animation_progress": 0.029275000000000006,
+            "observed_frame_interval_ms": 33.5,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
         },
@@ -333,11 +333,11 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 206008,
-            "visual_state_signature": 206008,
+            "geometry_signature": 206045,
+            "visual_state_signature": 206045,
             "animation_state": "playing",
-            "animation_progress": 0.029162500000000022,
-            "observed_frame_interval_ms": 50,
+            "animation_progress": 0.02919999999999999,
+            "observed_frame_interval_ms": 48.799999999999955,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
@@ -358,7 +358,7 @@
         "height": 480
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 53494077,
+      "used_js_heap_bytes": 54673827,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -584,13 +584,13 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.02708750000000002
+              "__animation_progress": 0.025012499999999976
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.02708750000000002,
-            "observed_frame_interval_ms": 33.40000000000009,
+            "animation_progress": 0.025012499999999976,
+            "observed_frame_interval_ms": 50,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
         },
@@ -675,10 +675,10 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 203670,
-            "visual_state_signature": 203670,
+            "geometry_signature": 201845,
+            "visual_state_signature": 201845,
             "animation_state": "playing",
-            "animation_progress": 0.026824999999999988,
+            "animation_progress": 0.025,
             "observed_frame_interval_ms": 50,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
@@ -700,7 +700,7 @@
         "height": 520
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 62159372,
+      "used_js_heap_bytes": 55418536,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -926,14 +926,14 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.024987499999999996
+              "__animation_progress": 0.029149999999999978
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.024987499999999996,
-            "observed_frame_interval_ms": 33.40000000000009,
-            "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 2%"
+            "animation_progress": 0.029149999999999978,
+            "observed_frame_interval_ms": 49.899999999999864,
+            "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
         },
         {
@@ -1017,11 +1017,11 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 210171,
-            "visual_state_signature": 210171,
+            "geometry_signature": 206195,
+            "visual_state_signature": 206195,
             "animation_state": "playing",
-            "animation_progress": 0.033325250000000015,
-            "observed_frame_interval_ms": 34.299999999999955,
+            "animation_progress": 0.029350249999999987,
+            "observed_frame_interval_ms": 50,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
@@ -1042,7 +1042,7 @@
         "height": 520
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 60011756,
+      "used_js_heap_bytes": 65612232,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -1268,13 +1268,13 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.03126249999999998
+              "__animation_progress": 0.02710000000000001
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.03126249999999998,
-            "observed_frame_interval_ms": 33.399999999999864,
+            "animation_progress": 0.02710000000000001,
+            "observed_frame_interval_ms": 49.90000000000009,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 3%"
           }
         },
@@ -1359,11 +1359,11 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 205920,
-            "visual_state_signature": 205920,
+            "geometry_signature": 206020,
+            "visual_state_signature": 206020,
             "animation_state": "playing",
-            "animation_progress": 0.02907499999999999,
-            "observed_frame_interval_ms": 35.299999999999955,
+            "animation_progress": 0.02917500000000001,
+            "observed_frame_interval_ms": 33.40000000000009,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
@@ -1384,7 +1384,7 @@
         "height": 360
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 56422367,
+      "used_js_heap_bytes": 66148477,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -1610,13 +1610,13 @@
               "play": 1,
               "pause": 0,
               "restart": 0,
-              "__animation_progress": 0.022937500000000027
+              "__animation_progress": 0.024724999999999994
             },
             "geometry_signature": 145178,
             "visual_state_signature": 145178,
             "animation_state": "playing",
-            "animation_progress": 0.022937500000000027,
-            "observed_frame_interval_ms": 33.40000000000009,
+            "animation_progress": 0.024724999999999994,
+            "observed_frame_interval_ms": 34,
             "state_description": "a = 3.1, b = 4.0, c = 5.06; a² + b² = c². · ▶ 2%"
           }
         },
@@ -1701,11 +1701,11 @@
               "pause": 0,
               "restart": 0
             },
-            "geometry_signature": 206145,
-            "visual_state_signature": 206145,
+            "geometry_signature": 210184,
+            "visual_state_signature": 210184,
             "animation_state": "playing",
-            "animation_progress": 0.029299999999999982,
-            "observed_frame_interval_ms": 50,
+            "animation_progress": 0.03333775000000003,
+            "observed_frame_interval_ms": 33.40000000000009,
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
@@ -1726,7 +1726,7 @@
         "height": 480
       },
       "simultaneous_frames": 5,
-      "used_js_heap_bytes": 31091704,
+      "used_js_heap_bytes": 28749349,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
