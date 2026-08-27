@@ -23,6 +23,7 @@ MAX_LAYERS = 96
 MAX_POINTS = 4096
 MAX_PARAMETER_CONTROLS = 8
 TRANSPORT_CONTROL_IDS = frozenset({"play", "pause", "restart"})
+TRANSPORT_CONTROL_LABELS = {"play": "Play", "pause": "Pause", "restart": "Restart"}
 MAX_CONTROLS = MAX_PARAMETER_CONTROLS + len(TRANSPORT_CONTROL_IDS)
 MAX_STATES = 12
 MAX_IMPLICIT_CELLS = 32_768
@@ -7304,6 +7305,11 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         control_type = control["type"]
         if control_id in TRANSPORT_CONTROL_IDS and control_type != "button":
             raise VisualizationV2Error("animation transport controls must be buttons")
+        if control_id in TRANSPORT_CONTROL_IDS and (
+            control["label"].strip().casefold()
+            != TRANSPORT_CONTROL_LABELS[control_id].casefold()
+        ):
+            raise VisualizationV2Error("animation transport labels must match their action")
         if control_type in {"range", "step"}:
             numeric_fields = {"id", "label", "type", "value", "min", "max", "step"}
             if set(control) not in (numeric_fields, numeric_fields | {"binding"}):

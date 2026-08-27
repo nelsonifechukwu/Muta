@@ -46,7 +46,8 @@ _EXPLICIT_EQUATION_PLOT = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _INTERACTION_SIGNAL = re.compile(
-    r"\b(?:interactive|adjust|adjustable|slider|control|change|vary|step\s+through|toggle)\b",
+    r"\b(?:interactive|adjust|adjustable|sliders?|controls?|change|vary|"
+    r"step\s+through|toggles?)\b",
     re.IGNORECASE,
 )
 _ANIMATION_SIGNAL = re.compile(
@@ -61,22 +62,26 @@ _STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
 )
 _ENTITY_INTRODUCER = re.compile(
     r"\b(?P<introducer>showing|linking|connecting|between|including|containing|"
-    r"composed(?:\s+|-)of|with)\b",
+    r"composed(?:\s+|\s*[-‐‑‒–—]\s*)of|with)\b",
     re.IGNORECASE,
 )
 _DIRECTIONAL_CHAIN = re.compile(
-    r"\bfrom\b(?P<entities>[^.!?;]{1,220})",
+    r"\bfrom\b(?P<entities>[^.!?;]{1,220}?)(?="
+    r"(?:,\s*)?(?:and|then)\s+from\b|,\s*from\b|[.!?;]|$)",
     re.IGNORECASE,
 )
 _PERSPECTIVE_FROM = re.compile(r"\b(?:view|viewed|seen|looking)\s*$", re.IGNORECASE)
 _PERSPECTIVE_CHAIN_HEAD = re.compile(
-    r"^\s*(?:directly\s+)?(?:above|below|overhead|front|behind|the\s+(?:front|back|side))\b",
+    r"^\s*(?:directly\s+)?(?:above|below|overhead|front|behind|the\s+(?:front|back|side)|"
+    r"(?:an?\s+)?(?:top[-‐‑‒–—\s]?down|bottom[-‐‑‒–—\s]?up|side|front|rear|"
+    r"isometric|bird(?:['’]?s)?[-‐‑‒–—\s]?eye)\s+(?:view|perspective|angle)|"
+    r"(?:an?\s+)?(?:view|perspective)\b)",
     re.IGNORECASE,
 )
 _DIRECTIONAL_TAIL = re.compile(
     r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
     r"(?:an?\s+)?(?:adjustable|interactive)\b|"
-    r"including\b|containing\b|composed(?:\s+|-)of\b|"
+    r"including\b|containing\b|composed(?:\s+|\s*[-‐‑‒–—]\s*)of\b|"
     r"with\b|where\s+(?:i|we|the\s+user)\b)",
     re.IGNORECASE,
 )
@@ -90,12 +95,19 @@ _ENTITY_SEPARATOR = re.compile(
 )
 _SEMANTIC_TOKEN = re.compile(r"[A-Za-z](?:/[A-Za-z])+|[A-Za-z][A-Za-z0-9_-]*")
 _WITH_PRESENTATION_CLAUSE = re.compile(
-    r"^\s*(?:(?:clear|named|accessible)\s+)?(?:labels?|annotations?|measurements?|"
+    r"^\s*(?:(?:clear|named|accessible|descriptive|colou?r[-\s]?coded)\s+)*"
+    r"(?:labels?|annotations?|measurements?|"
     r"dimensions?|legends?|titles?|captions?)\b|"
     r"^\s*(?:high\s+contrast|(?:dark|light)(?:\s+and\s+(?:dark|light))?\s+themes?|"
-    r"large\s+(?:text|type|fonts?))\b",
+    r"large\s+(?:text|type|fonts?)|(?:an?\s+)?(?:sliders?|controls?|toggles?|inputs?)\b)",
     re.IGNORECASE,
 )
+_REQUESTED_CONTROL_CLAUSE = re.compile(
+    r"\b(?:sliders?|controls?|inputs?)\s+(?:for|to\s+(?:adjust|vary|change))\s+"
+    r"(?P<controls>[^.!?;]{1,160})",
+    re.IGNORECASE,
+)
+_UNDIRECTED_SIGNAL = re.compile(r"\b(?:undirected|non[-\s]?directional)\b", re.IGNORECASE)
 _PRESENTATION_TERMS = frozenset(
     {
         "accessible",
@@ -104,7 +116,11 @@ _PRESENTATION_TERMS = frozenset(
         "caption",
         "captions",
         "clear",
+        "coded",
+        "color",
+        "colour",
         "contrast",
+        "descriptive",
         "dimension",
         "dimensions",
         "dark",
@@ -150,9 +166,19 @@ _RELATIONSHIP_TERMS = frozenset(
     }
 )
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
-    r"(?:<\s*/?\s*(?:script|iframe|object|embed|svg|canvas|style|link)\b|"
+    r"(?:<\s*/?\s*[A-Za-z][^>]{0,200}>|"
     r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\bnew\s+Function\b|"
-    r"\bfunction\s*\([^)]*\)\s*\{|=>|```|\bgl_FragColor\b|#version\s+\d+|"
+    r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\(|"
+    r"\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=|"
+    r"\bclass\s+[A-Za-z_$][\w$]*\s*\{|"
+    r"\b(?:setTimeout|setInterval|requestAnimationFrame|cancelAnimationFrame|fetch)\s*\(|"
+    r"\b(?:console|Math|JSON|Object|Array|Promise)\s*\.\s*[A-Za-z_$][\w$]*\s*\(|"
+    r"=>|```|\bgl_FragColor\b|#version\s+\d+|"
+    r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
+    r"\b(?:uniform|varying|attribute|vec[234]|mat[234]|sampler2D)\s+[A-Za-z_]\w*|"
+    r"\b(?:document|window|globalThis)\s*\.|"
+    r"(?:[#.][-\w]+|\b[A-Za-z][-\w]*(?:\s+[A-Za-z][-\w]*)?)\s*"
+    r"\{\s*-?[-\w]+\s*:|"
     r"https?\s*:|\bdata\s*:|\bfile\s*:|\burl\s*\(|@import\b|[\"\s]//[A-Za-z0-9])",
     re.IGNORECASE,
 )
@@ -176,13 +202,18 @@ _TOPIC_STOPWORDS = frozenset(
         "by",
         "change",
         "chart",
+        "coded",
+        "color",
+        "colour",
         "composed",
         "connecting",
         "control",
+        "controls",
         "containing",
         "create",
         "diagram",
         "draw",
+        "descriptive",
         "for",
         "explain",
         "from",
@@ -208,6 +239,8 @@ _TOPIC_STOPWORDS = frozenset(
         "showing",
         "simulate",
         "sketch",
+        "slider",
+        "sliders",
         "that",
         "the",
         "their",
@@ -576,40 +609,105 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
     return groups
 
 
+def _requested_control_groups(request: str) -> list[frozenset[str]]:
+    """Extract distinct learner-named parameters from explicit slider/control clauses."""
+    groups: list[frozenset[str]] = []
+    for match in _REQUESTED_CONTROL_CLAUSE.finditer(request):
+        clause = _DIRECTIONAL_TAIL.split(match.group("controls"), maxsplit=1)[0]
+        for group in _entity_groups(clause):
+            if group not in groups:
+                groups.append(group)
+    return groups
+
+
+def _unique_assignment(
+    candidates: dict[frozenset[str], list[str]],
+) -> dict[frozenset[str], str]:
+    """Return the sole perfect bipartite assignment, or fail closed if absent/ambiguous."""
+    groups = sorted(candidates, key=lambda group: (len(candidates[group]), -len(group)))
+
+    def perfect(
+        blocked: tuple[frozenset[str], str] | None = None,
+    ) -> dict[frozenset[str], str] | None:
+        owner: dict[str, frozenset[str]] = {}
+
+        def place(group: frozenset[str], seen: set[str]) -> bool:
+            for target in candidates[group]:
+                if (group, target) == blocked or target in seen:
+                    continue
+                seen.add(target)
+                previous = owner.get(target)
+                if previous is None or place(previous, seen):
+                    owner[target] = group
+                    return True
+            return False
+
+        for group in groups:
+            if not place(group, set()):
+                return None
+        return {group: target for target, group in owner.items()}
+
+    assignment = perfect()
+    if assignment is None:
+        return {}
+    if any(perfect((group, target)) is not None for group, target in assignment.items()):
+        return {}
+    return assignment
+
+
 def _map_entity_nodes(
     entity_groups: list[frozenset[str]], layers: list[dict[str, Any]]
 ) -> dict[frozenset[str], str]:
-    """Map each entity phrase to one unambiguous, entity-specific labelled node."""
+    """Find one unique one-to-one assignment without accepting catch-all labels."""
     node_tokens = {
         str(layer["id"]): _entity_terms(str(layer.get("label", "")))
         for layer in layers
         if layer.get("type") == "node"
     }
-    top_candidates: dict[frozenset[str], list[str]] = {}
-    for entity in entity_groups:
-        scores = {
-            node_id: len(entity)
+
+    def is_catch_all(tokens: set[str]) -> bool:
+        covered = [entity for entity in entity_groups if entity.issubset(tokens)]
+        return any(
+            not left.issubset(right) and not right.issubset(left)
+            for index, left in enumerate(covered)
+            for right in covered[index + 1 :]
+        )
+
+    candidates = {
+        entity: [
+            node_id
             for node_id, tokens in node_tokens.items()
-            if entity.issubset(tokens)
-        }
-        best = max(scores.values(), default=0)
-        top_candidates[entity] = [
-            node_id for node_id, score in scores.items() if best > 0 and score == best
+            if entity.issubset(tokens) and not is_catch_all(tokens)
         ]
+        for entity in entity_groups
+    }
+    return _unique_assignment(candidates)
 
-    # A catch-all label (for example "algae crab heron") is not distinct geometry for any
-    # one entity.  Exclude nodes that are a best match for multiple requested entities.
-    candidate_owners: dict[str, int] = {}
-    for candidates in top_candidates.values():
-        for node_id in candidates:
-            candidate_owners[node_id] = candidate_owners.get(node_id, 0) + 1
 
-    mapping: dict[frozenset[str], str] = {}
-    for entity, candidates in top_candidates.items():
-        specific = [node_id for node_id in candidates if candidate_owners[node_id] == 1]
-        if len(specific) == 1:
-            mapping[entity] = specific[0]
-    return mapping
+def _map_control_groups(
+    requested_groups: list[frozenset[str]], controls: list[dict[str, Any]]
+) -> dict[frozenset[str], str]:
+    """Map each requested parameter phrase to one distinct bound numeric control."""
+    control_tokens = {
+        str(control["id"]): _entity_terms(
+            " ".join(
+                (
+                    str(control.get("label", "")),
+                    str(control.get("binding", {}).get("target_label", "")),
+                )
+            )
+        )
+        for control in controls
+    }
+    candidates = {
+        group: [
+            control_id
+            for control_id, tokens in control_tokens.items()
+            if group.issubset(tokens)
+        ]
+        for group in requested_groups
+    }
+    return _unique_assignment(candidates)
 
 
 def _has_path(
@@ -728,25 +826,52 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
         )
     if _STRUCTURAL_RELATIONSHIP_SIGNAL.search(request):
         links = [layer for layer in meaningful if layer.get("type") == "link"]
-        relationship_grounded = bool(links) and all(layer.get("arrow") for layer in links)
+        directional_chains = _directional_entity_chains(request)
+        undirected_requested = bool(_UNDIRECTED_SIGNAL.search(request))
+        relationship_grounded = bool(links)
+        if relationship_grounded and undirected_requested:
+            relationship_grounded = all(not layer.get("arrow") for layer in links)
+        elif relationship_grounded and not directional_chains:
+            relationship_grounded = all(layer.get("arrow") for layer in links)
         if relationship_grounded and explicit_groups:
             relationship_grounded = len(entity_nodes) == len(explicit_groups)
-        if relationship_grounded and len(explicit_groups) > 1:
-            undirected: dict[str, set[str]] = {}
+        undirected: dict[str, set[str]] = {}
+        if relationship_grounded:
             for link in links:
                 start = str(link["from"])
                 target = str(link["to"])
                 undirected.setdefault(start, set()).add(target)
                 undirected.setdefault(target, set()).add(start)
-            mapped = [entity_nodes[group] for group in explicit_groups]
-            relationship_grounded = all(
-                _has_path(undirected, mapped[0], node_id) for node_id in mapped[1:]
-            )
-        directional_chains = _directional_entity_chains(request)
+        if relationship_grounded and len(explicit_groups) > 1:
+            directional_entities = {
+                group for chain in directional_chains for group in chain
+            }
+            extra_groups = [
+                group for group in explicit_groups if group not in directional_entities
+            ]
+            if not directional_chains:
+                mapped = [entity_nodes[group] for group in explicit_groups]
+                relationship_grounded = all(
+                    _has_path(undirected, mapped[0], node_id) for node_id in mapped[1:]
+                )
+            elif extra_groups:
+                chain_nodes = [
+                    entity_nodes[group]
+                    for chain in directional_chains
+                    for group in chain
+                ]
+                relationship_grounded = all(
+                    any(
+                        _has_path(undirected, entity_nodes[group], chain_node)
+                        for chain_node in chain_nodes
+                    )
+                    for group in extra_groups
+                )
         if relationship_grounded and directional_chains:
             directed: dict[str, set[str]] = {}
             for link in links:
-                directed.setdefault(str(link["from"]), set()).add(str(link["to"]))
+                if link.get("arrow"):
+                    directed.setdefault(str(link["from"]), set()).add(str(link["to"]))
             relationship_grounded = all(
                 all(
                     _has_path(
@@ -764,8 +889,8 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
                 {
                     "code": "relationship_not_grounded",
                     "detail": (
-                        "Graph and process requests require correctly directed paths connecting "
-                        "each distinct requested entity node."
+                        "Graph and process requests require correctly directed or explicitly "
+                        "undirected paths for each distinct requested entity component."
                     ),
                 }
             )
@@ -798,6 +923,18 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
             {
                 "code": "control_unbound",
                 "detail": "Every parameter control must bind to one labelled layer and safe effect.",
+            }
+        )
+    requested_control_groups = _requested_control_groups(request)
+    mapped_control_groups = _map_control_groups(requested_control_groups, parameter_controls)
+    if requested_control_groups and len(mapped_control_groups) != len(requested_control_groups):
+        errors.append(
+            {
+                "code": "interaction_not_grounded",
+                "detail": (
+                    "Each named slider or control parameter needs one distinct bound numeric "
+                    "control with a matching accessible label."
+                ),
             }
         )
     if _INTERACTION_SIGNAL.search(request) and not (

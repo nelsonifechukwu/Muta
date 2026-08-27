@@ -222,6 +222,30 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
     assert "authored_source_forbidden" in {error["code"] for error in errors}
 
 
+@pytest.mark.parametrize(
+    "source_text",
+    (
+        "<b>unsafe markup</b>",
+        "body { color:red }",
+        "alert(document.cookie)",
+        "void main(){ gl_FragColor = vec4(1.0); }",
+    ),
+)
+def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
+    source_text: str,
+) -> None:
+    candidate = _food_web_spec()
+    candidate["text_fallback"] = source_text
+
+    assert "authored_source_forbidden" in {
+        error["code"]
+        for error in _plan_errors(
+            candidate,
+            "Draw a mangrove food web from algae to crab to heron.",
+        )
+    }
+
+
 def test_unknown_primitive_is_rejected_and_repaired_without_execution() -> None:
     invalid = _food_web_spec()
     invalid["scene"]["layers"][0] = {
@@ -369,7 +393,16 @@ def test_semantic_oracle_requires_every_term_of_each_multiword_entity() -> None:
 
 @pytest.mark.parametrize(
     "introducer",
-    ("with", "including", "containing", "composed of", "composed-of"),
+    (
+        "with",
+        "including",
+        "containing",
+        "composed of",
+        "composed-of",
+        "composed - of",
+        "composed–of",
+        "composed — of",
+    ),
 )
 def test_semantic_oracle_recognizes_common_entity_list_introducers(introducer: str) -> None:
     missing_fish = _food_web_spec()
@@ -472,6 +505,45 @@ def test_semantic_oracle_combines_directional_and_later_entity_clauses(prompt: s
     }
 
 
+def test_semantic_oracle_accepts_independent_directional_components() -> None:
+    disconnected = _food_web_spec()
+    disconnected["scene"]["layers"] = [
+        layer
+        for layer in disconnected["scene"]["layers"]
+        if not (layer["type"] == "link" and layer["from"] == "crab")
+    ]
+    disconnected["scene"]["layers"].extend(
+        [
+            {
+                "type": "node",
+                "id": "fish",
+                "x": 650,
+                "y": 150,
+                "width": 100,
+                "height": 50,
+                "label": "Fish",
+                "color": "teal",
+            },
+            {
+                "type": "link",
+                "from": "heron",
+                "to": "fish",
+                "arrow": True,
+                "label": "flow",
+            },
+        ]
+    )
+    prompt = "Draw two flows from algae to crab and from heron to fish."
+
+    assert _plan_errors(disconnected, prompt) == []
+
+    disconnected["scene"]["layers"][-1]["from"] = "fish"
+    disconnected["scene"]["layers"][-1]["to"] = "heron"
+    assert {error["code"] for error in _plan_errors(disconnected, prompt)} == {
+        "relationship_not_grounded"
+    }
+
+
 def test_semantic_oracle_splits_connecting_with_and_directional_via_phrases() -> None:
     assert (
         _plan_errors(
@@ -494,6 +566,8 @@ def test_with_presentation_modifiers_are_not_invented_as_entity_nodes() -> None:
     for request in (
         "Draw a diagram with clear labels and measurements.",
         "Draw a diagram with high contrast and dark theme.",
+        "Draw a diagram with colour-coded labels and descriptive annotations.",
+        "Draw a diagram with sliders for crab height and heron height.",
     ):
         assert _explicit_entity_groups(request) == []
 
@@ -562,6 +636,16 @@ def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps()
                 _food_web_spec(),
                 f"Draw a mangrove food web {perspective} and drawn to scale showing algae, crab, "
                 "and heron.",
+            )
+            == []
+        )
+
+    for perspective in ("a top-down perspective", "a top–down view", "a bird’s-eye perspective"):
+        assert (
+            _plan_errors(
+                _food_web_spec(),
+                f"Draw a mangrove food web from {perspective} and aligned to scale "
+                "showing algae, crab, and heron.",
             )
             == []
         )
@@ -650,6 +734,57 @@ def test_direction_parser_ignores_adjustable_property_tail_but_requires_control(
     assert _plan_errors(interactive, request) == []
     assert {error["code"] for error in _plan_errors(_food_web_spec(), request)} == {
         "interaction_missing"
+    }
+
+
+def test_named_slider_parameters_require_distinct_matching_bound_controls() -> None:
+    interactive = _food_web_spec()
+    interactive["controls"] = [
+        {
+            "id": entity + "_height",
+            "label": entity.title() + " height",
+            "type": "range",
+            "value": 0,
+            "min": -40,
+            "max": 40,
+            "step": 10,
+            "binding": {"target_label": entity.title(), "effect": "translate_y"},
+        }
+        for entity in ("crab", "heron")
+    ]
+    prompt = (
+        "Draw a food web from algae to crab to heron with sliders for crab height and "
+        "heron height."
+    )
+
+    assert _plan_errors(interactive, prompt) == []
+    interactive["controls"].pop()
+    assert {error["code"] for error in _plan_errors(interactive, prompt)} == {
+        "interaction_not_grounded"
+    }
+
+
+def test_entity_assignment_handles_overlapping_specific_names() -> None:
+    overlapping = _food_web_spec()
+    labels = {"algae": "Blue crab", "crab": "Crab", "heron": "Heron"}
+    for layer in overlapping["scene"]["layers"]:
+        if layer["type"] == "node":
+            layer["label"] = labels[layer["id"]]
+    prompt = "Draw a network connecting blue crab, crab, and heron."
+
+    assert _plan_errors(overlapping, prompt) == []
+
+
+def test_semantic_oracle_accepts_explicitly_undirected_networks_only_without_arrows() -> None:
+    undirected = _food_web_spec()
+    for layer in undirected["scene"]["layers"]:
+        if layer["type"] == "link":
+            layer["arrow"] = False
+    prompt = "Draw an undirected network connecting algae, crab, and heron."
+
+    assert _plan_errors(undirected, prompt) == []
+    assert {error["code"] for error in _plan_errors(_food_web_spec(), prompt)} == {
+        "relationship_not_grounded"
     }
 
 

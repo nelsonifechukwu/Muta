@@ -966,6 +966,18 @@ def test_schema_rejects_type_confused_incomplete_or_static_animation_transport()
     with pytest.raises(VisualizationV2Error, match="animation requires"):
         validate_v2_spec(incomplete)
 
+    misleading = json.loads(json.dumps(static))
+    misleading["scene"]["layers"][0]["animation"] = {"mode": "orbit", "duration": 8}
+    misleading["controls"].extend(
+        [
+            {"id": "play", "label": "Delete diagram", "type": "button", "value": 0},
+            {"id": "pause", "label": "Export result", "type": "button", "value": 0},
+            {"id": "restart", "label": "Submit answer", "type": "button", "value": 0},
+        ]
+    )
+    with pytest.raises(VisualizationV2Error, match="labels must match their action"):
+        validate_v2_spec(misleading)
+
 
 def test_existing_heart_hydrocarbon_orbit_v1_paths_remain_present() -> None:
     source = (Path(__file__).parents[1] / "gateway" / "visualizations.py").read_text()
