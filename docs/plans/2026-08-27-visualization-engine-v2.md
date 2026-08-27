@@ -60,7 +60,11 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   fields, contours, meshes, and 3D axes. Define
   higher-level compositions as data templates made from those primitives, not renderer code.
 - Enforce hard budgets for layers, values, samples, contours, implicit grid cells/triangles,
-  particles, animation duration/frame rate, WebGL draw calls, and concurrent active frames.
+  fixed Three.js primitive geometry, particles, animation duration/frame rate, WebGL draw calls,
+  and concurrent active frames. Validators must reject a declared triangle budget below the
+  deterministic geometry cost; implicit meshing consumes only its remaining declared allowance.
+  Surface wireframes are line geometry, and transparent double-sided surfaces render in one pass,
+  so actual GPU triangle submissions remain within the same declared cap.
 
 ### 3. Deterministic planning
 
@@ -84,20 +88,23 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   for the existing versioned specification only. The prompt explicitly forbids source code, and
   the runtime independently rejects HTML, JavaScript, CSS, shader text, URLs, event handlers,
   prototype keys, unknown fields, and every expression outside the typed AST.
-- Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: requested
-  labels must be represented, referenced nodes must exist, controls must affect declared state,
-  and the chosen renderer must be compatible. On failure, return a structured list of validation
-  codes to one repair attempt. The repair sees only the original learner request, the rejected
-  data candidate, the allow-list catalogue, and those codes. It never sees or emits renderer
-  source.
+- Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: multiple
+  concrete request terms must be represented by actual labelled geometry, referenced nodes must
+  exist, and every non-transport control must carry a typed binding to one unique compatible
+  labelled layer. The deterministic renderer owns the allow-listed translation, scale, and radius
+  effects; an inert control is invalid. The chosen renderer must be compatible. On failure, return
+  a structured list of validation codes to one repair attempt. The repair sees only the original
+  learner request, the allow-list catalogue, and those codes—not rejected source text. It never
+  sees or emits renderer source.
 - Revalidate and recheck the repaired candidate. If it still fails, return the deterministic,
   accessible concept fallback and record the planner rejection; never render partially valid data.
   Cap proposal/repair bytes, attempts, timeout, AST work, layer/control counts, and total model
   tokens under the same 8 GB CPU constraints.
-- Test this boundary with previously unseen compositions and paraphrases, malicious code-shaped
-  proposals, unknown primitives, oversized candidates, dangling relationships, and a repairable
-  missing-label case. Prove that no production path calls `eval`, `new Function`, injects markup,
-  accepts a network resource, or imports QA prompt fixtures.
+- Test this boundary with previously unseen compositions and paraphrases, code-shaped proposals,
+  unknown primitives, oversized candidates, dangling relationships, and a repairable missing-label
+  case. Forward cancellation into both blocking constrained-model streams so Stop does not wait
+  for a socket timeout. Prove that no production path dynamically executes authored source,
+  injects markup, accepts a network/file/data resource token, or imports QA prompt fixtures.
 
 ### 4. Geometry and sampling
 

@@ -279,6 +279,50 @@
     return { theta, tangent, normal, planeStart, contact, origin };
   }
 
+  function applyControlBindings(spec, source, values) {
+    const controls = spec.controls.filter((control) => (
+      control.binding && control.binding.target_label === source.label
+    ));
+    if (!controls.length) return source;
+    let layer = {
+      ...source,
+      points: source.points?.map((point) => [...point]),
+      vectors: source.vectors?.map((vector) => [...vector]),
+      from: Array.isArray(source.from) ? [...source.from] : source.from,
+      to: Array.isArray(source.to) ? [...source.to] : source.to,
+    };
+    const translate = (axis, amount) => {
+      if (Number.isFinite(layer[axis])) layer[axis] += amount;
+      const coordinate = axis === "x" ? 0 : 1;
+      if (layer.points) layer.points = layer.points.map((point) => point.map((value, index) => index === coordinate ? value + amount : value));
+      if (layer.vectors) layer.vectors = layer.vectors.map((vector) => vector.map((value, index) => index === coordinate ? value + amount : value));
+      if (Array.isArray(layer.from)) layer.from[coordinate] += amount;
+      if (Array.isArray(layer.to)) layer.to[coordinate] += amount;
+    };
+    controls.forEach((control) => {
+      const value = Number(values[control.id]);
+      if (!Number.isFinite(value)) return;
+      const effect = control.binding.effect;
+      if (effect === "translate_x") translate("x", value);
+      else if (effect === "translate_y") translate("y", value);
+      else if (effect === "radius" && layer.type === "circle") layer.r = value;
+      else if (effect === "scale") {
+        if (Number.isFinite(layer.width)) layer.width *= value;
+        if (Number.isFinite(layer.height)) layer.height *= value;
+        if (Number.isFinite(layer.r)) layer.r *= value;
+        if (layer.points?.length) {
+          const center = [0, 1].map((axis) => layer.points.reduce((sum, point) => sum + point[axis], 0) / layer.points.length);
+          layer.points = layer.points.map((point) => point.map((coordinate, axis) => center[axis] + (coordinate - center[axis]) * value));
+        }
+        if (layer.vectors) layer.vectors = layer.vectors.map(([x, y, dx, dy]) => [x, y, dx * value, dy * value]);
+        if (Array.isArray(layer.from) && Array.isArray(layer.to)) {
+          layer.to = layer.to.map((coordinate, axis) => layer.from[axis] + (coordinate - layer.from[axis]) * value);
+        }
+      }
+    });
+    return layer;
+  }
+
   function controlledPoints(family, layer, index, values) {
     const base = layer.points;
     const xs = base.map((point) => point[0]);
@@ -1854,14 +1898,15 @@
         : stateDescription(spec, latestControlValues);
       [...svg.querySelectorAll(".viz-v2-layer")].forEach((node) => node.remove());
       const fragment = document.createDocumentFragment();
-      const polylineLayers = layers.filter((layer) => layer.type === "polyline");
+      const boundLayers = layers.map((layer) => applyControlBindings(spec, layer, latestControlValues));
+      const polylineLayers = boundLayers.filter((layer) => layer.type === "polyline");
       const controlled = new Map(polylineLayers.map((layer, polylineIndex) => [layer, controlledPoints(spec.family, layer, polylineIndex, latestControlValues)]));
-      const particleLayers = layers.filter((layer) => layer.type === "particles");
+      const particleLayers = boundLayers.filter((layer) => layer.type === "particles");
       const particles = new Map(particleLayers.map((layer) => [layer, controlledParticles(spec.family, layer, latestControlValues)]));
-      const vectorLayers = layers.filter((layer) => layer.type === "vector_field");
+      const vectorLayers = boundLayers.filter((layer) => layer.type === "vector_field");
       const vectors = new Map(vectorLayers.map((layer) => [layer, controlledVectors(spec.family, layer, latestControlValues)]));
       const fieldPoints = vectorLayers.flatMap((layer) => vectors.get(layer).flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]]));
-      const probes = new Map(layers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, latestControlValues)]));
+      const probes = new Map(boundLayers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, latestControlValues)]));
       const plotPoints = [...controlled.values()].flat().concat([...particles.values()].flat(), fieldPoints, [...probes.values()].flat());
       const xDomain = extent(plotPoints.map((point) => point[0]));
       const yDomain = extent(plotPoints.map((point) => point[1]));
@@ -1869,11 +1914,11 @@
       const y = scale(yDomain, [height - 46, 22]);
       const stateControl = spec.controls.find((control) => ["step", "select"].includes(control.type));
       const stateValue = stateControl ? latestControlValues[stateControl.id] : null;
-      const nodes = layers.filter((layer) => layer.type === "node");
+      const nodes = boundLayers.filter((layer) => layer.type === "node");
       const renderedNodes = new Map(nodes.map((layer, nodeIndex) => [layer.id, controlledNode(spec, layer, nodeIndex, latestControlValues, latestChangedId)]));
       const activeNode = typeof stateValue === "number" ? Math.abs(Math.round(stateValue)) % Math.max(1, nodes.length) : stateValue === "alternate" ? Math.max(0, nodes.length - 1) : 0;
       let geometrySignature = 0;
-      layers.forEach((layer, index) => {
+      boundLayers.forEach((layer, index) => {
         const color = paletteValue(context, layer.color, index);
         let node;
         if (layer.type === "axes") {
@@ -2016,13 +2061,14 @@
           geometrySignature += (onPath ? 1009 : 17) + linkLabelSignature + Math.round(linkWidth * 97);
         } else if (layer.type === "circle") {
           node = element("circle", { class: "viz-v2-layer", cx: layer.x, cy: layer.y, r: layer.r, fill: color });
+          geometrySignature += Math.round(layer.x * 11 + layer.y * 13 + layer.r * 101);
         } else if (layer.type === "rect") {
           const displayed = controlledRect(spec, layer, latestControlValues);
           const transform = displayed.rotation_origin
             ? `rotate(${displayed.rotation} ${displayed.rotation_origin[0]} ${displayed.rotation_origin[1]})`
             : "";
           node = element("rect", { class: "viz-v2-layer", x: displayed.x, y: displayed.y, width: displayed.width, height: displayed.height, rx: 6, fill: color, transform });
-          geometrySignature += Math.round(displayed.x * 11 + displayed.y * 13 + displayed.rotation * 17);
+          geometrySignature += Math.round(displayed.x * 11 + displayed.y * 13 + displayed.width * 17 + displayed.height * 19 + displayed.rotation * 23);
         } else if (layer.type === "text") {
           node = element("text", { class: "viz-v2-layer", x: layer.x, y: layer.y, fill: color }, layer.text);
         } else if (layer.type === "arrow") {
@@ -2078,9 +2124,10 @@
     let animationFrameInterval = 0;
     const draw = () => {
       values = animationControlValues(spec, values, animationProgress);
+      const boundLayers = spec.scene.layers.map((layer) => applyControlBindings(spec, layer, values));
       const ratio = Math.min(2, global.devicePixelRatio || 1);
       const width = Math.max(320, drawing.clientWidth || 720);
-      const panelDefinitions = spec.scene.layers.filter((layer) => layer.type === "panel");
+      const panelDefinitions = boundLayers.filter((layer) => layer.type === "panel");
       const stackedPanels = panelDefinitions.length > 1 && width < 700;
       const height = Math.max(240, drawing.clientHeight || spec.height - 110);
       canvas.width = Math.round(width * ratio);
@@ -2090,19 +2137,19 @@
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, width, height);
       let customGeometrySignature = 0;
-      const polylines = spec.scene.layers.filter((layer) => layer.type === "polyline");
+      const polylines = boundLayers.filter((layer) => layer.type === "polyline");
       const complete = polylines.map((layer, index) => controlledPoints(spec.family, layer, index, values));
       const controlled = spec.scene.animation ? complete.map((points) => points.slice(0, Math.max(2, Math.ceil(points.length * animationProgress)))) : complete;
-      const particleLayers = spec.scene.layers.filter((layer) => layer.type === "particles");
+      const particleLayers = boundLayers.filter((layer) => layer.type === "particles");
       const particlePoints = particleLayers.map((layer) => controlledParticles(spec.family, layer, values));
-      const vectorFields = spec.scene.layers.filter((layer) => layer.type === "vector_field");
+      const vectorFields = boundLayers.filter((layer) => layer.type === "vector_field");
       const vectorValues = vectorFields.map((layer) => controlledVectors(spec.family, layer, values));
-      const probes = spec.scene.layers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, values)]);
-      const heatmaps = spec.scene.layers.filter((layer) => layer.type === "heatmap");
-      const defaultAxes = spec.scene.layers.find((layer) => layer.type === "axes") || { x_label: "x", y_label: "y" };
+      const probes = boundLayers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, values)]);
+      const heatmaps = boundLayers.filter((layer) => layer.type === "heatmap");
+      const defaultAxes = boundLayers.find((layer) => layer.type === "axes") || { x_label: "x", y_label: "y" };
       const panels = panelDefinitions.length ? panelDefinitions : [{
         id: "main", title: spec.title, x_label: defaultAxes.x_label, y_label: defaultAxes.y_label,
-        members: spec.scene.layers.map((layer) => layer.label).filter(Boolean),
+        members: boundLayers.map((layer) => layer.label).filter(Boolean),
       }];
       const gap = 14;
       const panelRects = panels.map((_panel, index) => {
@@ -2202,7 +2249,19 @@
     return [a[0] + (b[0] - a[0]) * amount, a[1] + (b[1] - a[1]) * amount, a[2] + (b[2] - a[2]) * amount];
   }
 
-  function implicitTriangles(layer) {
+  function fixedTriangleEstimate(layer) {
+    if (layer.type === "explicit_surface" || layer.type === "parametric_surface") {
+      return 2 * (layer.resolution[0] - 1) * (layer.resolution[1] - 1);
+    }
+    if (layer.type === "sphere" || layer.type === "point") return 720;
+    if (layer.type === "box") return 12;
+    if (layer.type === "plane") return 128;
+    if (layer.type === "vector") return 32;
+    return 0;
+  }
+
+  function implicitTriangles(layer, triangleBudget) {
+    const maximumTriangles = Math.max(1, Math.min(32000, Math.floor(triangleBudget)));
     const [nx, ny, nz] = layer.resolution;
     const domains = [layer.x_domain, layer.y_domain, layer.z_domain];
     const point = (ix, iy, iz) => [
@@ -2253,7 +2312,7 @@
           const p11 = interpolateSurfaceEdge(coordinates[inside[1]], coordinates[outside[1]], values[inside[1]], values[outside[1]]);
           append(p00, p01, p10); append(p10, p01, p11);
         }
-        if (triangles.length / 3 >= 32000) break outer;
+        if (triangles.length / 3 >= maximumTriangles) break outer;
       }
     }
     return triangles;
@@ -2553,6 +2612,8 @@
     scene.add(directional);
     const bounds = new THREE.Box3();
     let triangleCount = 0;
+    let remainingImplicitTriangles = spec.budget.max_triangles
+      - spec.scene.layers.reduce((sum, layer) => sum + fixedTriangleEstimate(layer), 0);
     let drawCalls = 0;
     let topology = null;
     let surfaceDiagnostics = null;
@@ -2573,8 +2634,10 @@
       const shade = new THREE.Color(paletteValue(context, layer.color, index));
       let object;
       if (["explicit_surface", "implicit_surface", "parametric_surface"].includes(layer.type)) {
+        if (layer.type === "implicit_surface" && remainingImplicitTriangles < 1) throw new Error("scene exhausted its declared triangle budget");
         const triangles = layer.type === "explicit_surface" ? explicitTriangles(layer)
-          : layer.type === "implicit_surface" ? implicitTriangles(layer) : parametricTriangles(layer);
+          : layer.type === "implicit_surface" ? implicitTriangles(layer, remainingImplicitTriangles) : parametricTriangles(layer);
+        if (layer.type === "implicit_surface") remainingImplicitTriangles -= Math.floor(triangles.length / 3);
         triangleCount += Math.floor(triangles.length / 3);
         if (triangles.diagnostics) surfaceDiagnostics = triangles.diagnostics;
         if (!triangles.length) throw new Error("surface has no finite triangles inside the selected domain");
@@ -2598,8 +2661,11 @@
         });
         geometry.setAttribute("color", new THREE.BufferAttribute(colours, 3));
         geometry.computeVertexNormals();
-        object = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0.02, side: THREE.DoubleSide, transparent: true, opacity: 0.94, clippingPlanes: clippingPlane ? [clippingPlane] : [] }));
-        const wire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: context.neutral, wireframe: true, transparent: true, opacity: 0.12, clippingPlanes: clippingPlane ? [clippingPlane] : [] }));
+        object = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0.02, side: THREE.DoubleSide, forceSinglePass: true, transparent: true, opacity: 0.94, clippingPlanes: clippingPlane ? [clippingPlane] : [] }));
+        const wire = new THREE.LineSegments(
+          new THREE.WireframeGeometry(geometry),
+          new THREE.LineBasicMaterial({ color: context.neutral, transparent: true, opacity: 0.12, clippingPlanes: clippingPlane ? [clippingPlane] : [] }),
+        );
         wire.renderOrder = 2;
         group.add(wire);
         surfaceRecords.push({ layer, object, wire });
@@ -2799,7 +2865,7 @@
         geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
         geometry.computeVertexNormals();
         record.object.geometry.dispose(); record.object.geometry = geometry;
-        record.wire.geometry = geometry;
+        record.wire.geometry.dispose(); record.wire.geometry = new THREE.WireframeGeometry(geometry);
         topology = meshTopology(triangles, record.layer);
       });
     };

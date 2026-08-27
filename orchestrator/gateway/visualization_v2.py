@@ -30,6 +30,26 @@ MAX_TRIANGLES = 32_000
 MAX_PARTICLES = 800
 MAX_VECTOR_SAMPLES = 800
 MAX_HEATMAP_CELLS = 4_096
+CONTROL_BINDING_EFFECTS = frozenset({"translate_x", "translate_y", "scale", "radius"})
+
+_BINDABLE_LAYER_EFFECTS: dict[str, frozenset[str]] = {
+    "polyline": frozenset({"translate_x", "translate_y", "scale"}),
+    "node": frozenset({"translate_x", "translate_y", "scale"}),
+    "arrow": frozenset({"translate_x", "translate_y", "scale"}),
+    "circle": CONTROL_BINDING_EFFECTS,
+    "rect": frozenset({"translate_x", "translate_y", "scale"}),
+    "particles": frozenset({"translate_x", "translate_y", "scale"}),
+    "vector_field": frozenset({"translate_x", "translate_y", "scale"}),
+}
+
+_THREE_PRIMITIVE_TRIANGLES = {
+    # Keep these estimates synchronized with the fixed renderer geometry in viz-frame-v2.js.
+    "sphere": 720,
+    "point": 720,
+    "box": 12,
+    "plane": 128,
+    "vector": 32,
+}
 
 _SAFE_ID = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,63}\Z")
 _SAFE_COLOR = re.compile(
@@ -7250,7 +7270,17 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             "button",
         }:
             raise VisualizationV2Error("unsupported control")
-        if set(control) - {"id", "label", "type", "value", "min", "max", "step", "options"}:
+        if set(control) - {
+            "id",
+            "label",
+            "type",
+            "value",
+            "min",
+            "max",
+            "step",
+            "options",
+            "binding",
+        }:
             raise VisualizationV2Error("control has unknown fields")
         control_id = control.get("id")
         if (
@@ -7263,7 +7293,8 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             raise VisualizationV2Error("control needs an accessible label")
         control_type = control["type"]
         if control_type in {"range", "step"}:
-            if set(control) != {"id", "label", "type", "value", "min", "max", "step"}:
+            numeric_fields = {"id", "label", "type", "value", "min", "max", "step"}
+            if set(control) not in (numeric_fields, numeric_fields | {"binding"}):
                 raise VisualizationV2Error("numeric control fields are incomplete")
             if not all(
                 _finite_number(control.get(field)) for field in ("value", "min", "max", "step")
@@ -7274,6 +7305,14 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 and 0 < control["step"] <= control["max"] - control["min"]
             ):
                 raise VisualizationV2Error("numeric control range is invalid")
+            binding = control.get("binding")
+            if binding is not None and (
+                not isinstance(binding, dict)
+                or set(binding) != {"target_label", "effect"}
+                or not _safe_text(binding.get("target_label"), 160)
+                or binding.get("effect") not in CONTROL_BINDING_EFFECTS
+            ):
+                raise VisualizationV2Error("control binding is invalid")
         elif control_type == "select":
             if set(control) != {"id", "label", "type", "value", "options"}:
                 raise VisualizationV2Error("select control fields are incomplete")
@@ -7328,6 +7367,7 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(layers, list) or not 1 <= len(layers) <= MAX_LAYERS:
         raise VisualizationV2Error("scene layer count is outside the budget")
     point_count = 0
+    triangle_estimate = 0
     layer_ids = {
         layer.get("id")
         for layer in layers
@@ -7377,6 +7417,7 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             _validate_points([layer.get("from"), layer.get("to")], 3, 2)
             if layer["from"] == layer["to"]:
                 raise VisualizationV2Error("vector must have non-zero length")
+            triangle_estimate += _THREE_PRIMITIVE_TRIANGLES["vector"]
         elif layer_type in {"explicit_surface", "implicit_surface"}:
             if set(layer) not in {
                 _LAYER_KEYS[layer_type] - {"animation"},
@@ -7407,6 +7448,8 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 raise VisualizationV2Error("implicit solver work exceeds the budget")
             if layer_type == "explicit_surface" and work * nodes > 500_000:
                 raise VisualizationV2Error("explicit surface work exceeds the budget")
+            if layer_type == "explicit_surface":
+                triangle_estimate += 2 * (resolution[0] - 1) * (resolution[1] - 1)
             for axis in "xyz":
                 domain = layer.get(f"{axis}_domain")
                 if (
@@ -7443,6 +7486,7 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             )
             if expression_nodes > MAX_AST_NODES:
                 raise VisualizationV2Error("parametric expressions exceed the AST budget")
+            triangle_estimate += 2 * (resolution[0] - 1) * (resolution[1] - 1)
             for axis in ("u", "v"):
                 domain = layer.get(f"{axis}_domain")
                 if (
@@ -7467,6 +7511,7 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 layer.get("constant"), -1000, 1000
             ):
                 raise VisualizationV2Error("plane geometry is invalid")
+            triangle_estimate += _THREE_PRIMITIVE_TRIANGLES["plane"]
         elif layer_type == "link":
             if set(layer) != _LAYER_KEYS[layer_type] or not isinstance(layer.get("arrow"), bool):
                 raise VisualizationV2Error("link fields are invalid")
@@ -7492,6 +7537,7 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             _validate_points([layer.get("position"), [0, 0, 0]], 3, 2)
             if not _finite_number(layer.get("size"), 0.01, 100):
                 raise VisualizationV2Error("3D object size is invalid")
+            triangle_estimate += _THREE_PRIMITIVE_TRIANGLES[layer_type]
         elif layer_type in {"arrow", "circle", "rect", "text", "particles"}:
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error(f"{layer_type} fields are incomplete")
@@ -7596,6 +7642,24 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             assigned_panel_members.update(members)
     if point_count > budget["max_points"]:
         raise VisualizationV2Error("scene points exceed the declared budget")
+    if triangle_estimate > budget["max_triangles"]:
+        raise VisualizationV2Error("scene geometry exceeds the declared triangle budget")
+    for control in parameter_controls:
+        binding = control.get("binding")
+        if binding is None:
+            continue
+        matches = [
+            layer
+            for layer in layers
+            if layer.get("label") == binding["target_label"]
+        ]
+        if len(matches) != 1:
+            raise VisualizationV2Error("control binding target must be one unique labelled layer")
+        target_type = matches[0]["type"]
+        if binding["effect"] not in _BINDABLE_LAYER_EFFECTS.get(target_type, frozenset()):
+            raise VisualizationV2Error("control binding effect is incompatible with its layer")
+        if binding["effect"] in {"scale", "radius"} and control["min"] <= 0:
+            raise VisualizationV2Error("scale and radius bindings require positive control values")
     return json.loads(json.dumps(spec))
 
 

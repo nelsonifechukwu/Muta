@@ -525,6 +525,7 @@ def test_constrained_pass_falls_back_on_invalid_data_and_honours_cancellation() 
         is None
     )
     assert len(cancelled_after_decode.calls) == 1
+    assert cancelled_after_decode.calls[0][1]["_muta_cancel_event"] is cancelled
     assert cancelled_after_decode.closed is True
 
 

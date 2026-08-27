@@ -101,6 +101,7 @@ def _markdown(payload: dict[str, Any]) -> str:
         "## Real-browser acceptance rendering",
         "",
         f"The full gate rendered {browser['case_count']} cases. Peak measured browser JS heap across the responsive matrix was {matrix['peak_used_js_heap_bytes']} bytes.",
+        f"All {browser['gpu_triangle_budget']['three_cases']} Three.js cases stayed within their declared GPU triangle budgets; the largest submitted frame contained {browser['gpu_triangle_budget']['maximum_submitted_triangles']} triangles.",
         "",
         "| Renderer | Cases | Mean first render | p95 | Maximum |",
         "|---|---:|---:|---:|---:|",
@@ -158,6 +159,15 @@ def main() -> int:
     lru = json.loads(args.lru.read_text())
     if browser_payload.get("count") != 200 or len(browser_payload.get("cases", [])) != 200:
         raise SystemExit("browser result must contain exactly 200 cases")
+    if (
+        browser_payload.get("summary", {}).get("passed") != 200
+        or any(case.get("rendered") is not True for case in browser_payload["cases"])
+    ):
+        raise SystemExit("browser result must contain 200 passing real renders")
+    if any(
+        case.get("gpu_budget_respected") is not True for case in browser_payload["cases"]
+    ):
+        raise SystemExit("every browser case must prove its GPU triangle budget was respected")
     if any(matrix.get("count") != 5 or not matrix.get("passed") for matrix in matrices):
         raise SystemExit("every responsive matrix must contain five passing scenes")
     if not (
@@ -194,6 +204,11 @@ def main() -> int:
         for matrix in matrices
         for case in matrix["cases"]
         if float(case.get("evidence", {}).get("observed_frame_interval_ms", 0)) > 0
+    ]
+    three_rows = [
+        case
+        for case in browser_payload["cases"]
+        if case.get("evidence", {}).get("renderer") == "three"
     ]
     matrix_summaries = [
         {
@@ -235,6 +250,20 @@ def main() -> int:
                 ),
                 default=0,
             ),
+            "gpu_triangle_budget": {
+                "three_cases": len(three_rows),
+                "all_respected": all(
+                    case.get("gpu_budget_respected") is True
+                    for case in browser_payload["cases"]
+                ),
+                "maximum_submitted_triangles": max(
+                    (
+                        int(case.get("evidence", {}).get("gpu_triangles", 0))
+                        for case in three_rows
+                    ),
+                    default=0,
+                ),
+            },
             "observed_animation_frame_interval_ms": {
                 "minimum": round(min(intervals), 3) if intervals else None,
                 "median": round(statistics.median(intervals), 3) if intervals else None,

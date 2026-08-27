@@ -609,6 +609,66 @@ def test_resource_budget_validation_is_total_for_wrong_types(bad_value: object) 
             validate_v2_spec(invalid)
 
 
+def test_declared_triangle_budget_covers_fixed_three_geometry_and_surfaces() -> None:
+    surface = compile_visualization_v2("Plot z=sin(x)*cos(y)")
+    assert surface is not None
+    underdeclared_surface = json.loads(json.dumps(surface))
+    underdeclared_surface["budget"]["max_triangles"] = 1
+    with pytest.raises(VisualizationV2Error, match="triangle budget"):
+        validate_v2_spec(underdeclared_surface)
+
+    spheres = json.loads(json.dumps(surface))
+    spheres["controls"] = []
+    spheres["scene"] = {
+        "coordinate_system": "cartesian3d",
+        "layers": [
+            {
+                "type": "sphere",
+                "position": [index % 6, index // 6, 0],
+                "size": 0.2,
+                "label": f"sample {index}",
+                "color": "blue",
+            }
+            for index in range(24)
+        ],
+    }
+    spheres["budget"] = {"max_points": 1, "max_triangles": 1, "max_fps": 20}
+    with pytest.raises(VisualizationV2Error, match="triangle budget"):
+        validate_v2_spec(spheres)
+    spheres["budget"]["max_triangles"] = 24 * 720
+    assert validate_v2_spec(spheres)["budget"]["max_triangles"] == 24 * 720
+
+
+def test_typed_control_binding_targets_one_compatible_labelled_layer() -> None:
+    spec = compile_visualization_v2(
+        "Draw a process diagram showing intake, transform, and output"
+    )
+    assert spec is not None
+    spec["controls"] = [
+        {
+            "id": "process_height",
+            "label": "Process height",
+            "type": "range",
+            "value": 0,
+            "min": -40,
+            "max": 40,
+            "step": 10,
+            "binding": {"target_label": "Concept Process", "effect": "translate_y"},
+        }
+    ]
+    assert validate_v2_spec(spec)["controls"][0]["binding"]["effect"] == "translate_y"
+
+    missing = json.loads(json.dumps(spec))
+    missing["controls"][0]["binding"]["target_label"] = "not present"
+    with pytest.raises(VisualizationV2Error, match="unique labelled layer"):
+        validate_v2_spec(missing)
+
+    incompatible = json.loads(json.dumps(spec))
+    incompatible["controls"][0]["binding"]["effect"] = "radius"
+    with pytest.raises(VisualizationV2Error, match="incompatible"):
+        validate_v2_spec(incompatible)
+
+
 @pytest.mark.parametrize(
     ("prompt", "family"),
     [

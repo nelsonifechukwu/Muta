@@ -12,7 +12,9 @@
   const report = parameters.get("report") === "1";
   const debug = parameters.get("debug") === "1";
   const holdout = parameters.get("holdout") === "1";
-  const fixtureName = holdout
+  const fixtureName = parameters.get("binding") === "1"
+    ? "visualization-v2-planner-binding.json"
+    : holdout
     ? "visualization-v2-user-holdout.json"
     : parameters.get("general") === "1"
     ? "visualization-v2-general-math.json"
@@ -235,10 +237,13 @@
       : item.spec.renderer === "canvas"
         ? evidence?.nontransparent_samples > 10
         : evidence?.triangles > 0 || evidence?.draw_calls > 0;
+    const gpuBudgetRespected = item.spec.renderer !== "three"
+      || (Number.isFinite(evidence?.gpu_triangles)
+        && evidence.gpu_triangles <= item.spec.budget.max_triangles);
     const rendered = Boolean(
       evidence?.rendered && realGeometry && !error?.offsetParent && !overflow
       && controls.length === item.spec.controls.length && namedControls && accessibleCanvas
-      && interactionChanged && visibleSemanticGeometry.passed,
+      && interactionChanged && visibleSemanticGeometry.passed && gpuBudgetRespected,
     );
     results.push({
       id: item.id,
@@ -254,6 +259,7 @@
       geometry_changed: geometryChanged,
       interaction_results: interactionResults,
       visible_semantic_geometry: visibleSemanticGeometry,
+      gpu_budget_respected: gpuBudgetRespected,
       visual_primitive_count: visualPrimitiveCount,
       overflow,
       errors: error?.offsetParent ? [error.textContent.trim(), stage?.dataset.vizError, error.title].filter(Boolean) : [],

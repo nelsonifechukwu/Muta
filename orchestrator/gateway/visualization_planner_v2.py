@@ -15,7 +15,11 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from orchestrator.gateway.visualization_v2 import VisualizationV2Error, validate_v2_spec
+from orchestrator.gateway.visualization_v2 import (
+    CONTROL_BINDING_EFFECTS,
+    VisualizationV2Error,
+    validate_v2_spec,
+)
 from runtime.chat import ChatEngine
 from runtime.client import Generation
 
@@ -50,13 +54,15 @@ _ANIMATION_SIGNAL = re.compile(
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*(?:script|iframe|object|embed|svg|canvas|style|link)\b|"
     r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\bnew\s+Function\b|"
-    r"\bfunction\s*\([^)]*\)\s*\{|=>|```|\bgl_FragColor\b|#version\s+\d+)",
+    r"\bfunction\s*\([^)]*\)\s*\{|=>|```|\bgl_FragColor\b|#version\s+\d+|"
+    r"https?\s*:|\bdata\s*:|\bfile\s*:|\burl\s*\(|@import\b|[\"\s]//[A-Za-z0-9])",
     re.IGNORECASE,
 )
 _TOPIC_STOPWORDS = frozenset(
     {
         "about",
         "adjust",
+        "adjustable",
         "animate",
         "animation",
         "build",
@@ -77,6 +83,7 @@ _TOPIC_STOPWORDS = frozenset(
         "plot",
         "render",
         "show",
+        "showing",
         "simulate",
         "sketch",
         "that",
@@ -84,6 +91,7 @@ _TOPIC_STOPWORDS = frozenset(
         "these",
         "this",
         "through",
+        "unfamiliar",
         "visualise",
         "visualize",
         "where",
@@ -229,6 +237,18 @@ def planner_schema_v2() -> dict[str, Any]:
                 "minItems": 1,
                 "maxItems": 12,
             },
+            "binding": {
+                "type": "object",
+                "properties": {
+                    "target_label": {"type": "string", "minLength": 1, "maxLength": 160},
+                    "effect": {
+                        "type": "string",
+                        "enum": sorted(CONTROL_BINDING_EFFECTS),
+                    },
+                },
+                "required": ["target_label", "effect"],
+                "additionalProperties": False,
+            },
         },
         "required": ["id", "label", "type", "value"],
         "additionalProperties": False,
@@ -260,7 +280,7 @@ def planner_schema_v2() -> dict[str, Any]:
                     "type": "object",
                     "properties": {
                         "max_points": {"type": "integer", "enum": [MAX_PLANNER_POINTS]},
-                        "max_triangles": {"type": "integer", "enum": [1]},
+                        "max_triangles": {"type": "integer", "enum": [4096]},
                         "max_fps": {"type": "integer", "enum": [20]},
                     },
                     "required": ["max_points", "max_triangles", "max_fps"],
@@ -369,16 +389,12 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
         compatible = {
             "axes",
             "polyline",
-            "node",
-            "link",
-            "arrow",
-            "circle",
-            "rect",
-            "text",
             "particles",
             "vector_field",
             "panel",
         }
+        if spec["renderer"] == "svg":
+            compatible.update({"node", "link", "arrow", "circle", "rect", "text"})
         if spec["scene"]["coordinate_system"] == "cartesian3d" or any(
             layer.get("type") not in compatible for layer in layers
         ):
@@ -390,18 +406,38 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
             )
 
     corpus = " ".join(
-        [spec["title"], spec["aria_label"], spec["text_fallback"]]
-        + [str(layer.get(field, "")) for layer in layers for field in ("label", "text", "title")]
+        str(layer.get(field, ""))
+        for layer in meaningful
+        for field in ("label", "text", "title")
     ).lower()
     terms = _topic_terms(request)
-    if terms and not any(term in corpus for term in terms):
+    grounded = {term for term in terms if term in corpus}
+    required_grounding = min(2, len(terms))
+    if len(grounded) < required_grounding:
         errors.append(
             {
                 "code": "topic_not_grounded",
-                "detail": "Name at least one concrete subject term from the learner request.",
+                "detail": (
+                    "Represent at least two concrete learner-request terms in labelled geometry; "
+                    f"matched {len(grounded)} of {required_grounding}."
+                ),
             }
         )
-    if _INTERACTION_SIGNAL.search(request) and not spec["controls"]:
+    parameter_controls = [
+        control
+        for control in spec["controls"]
+        if control["id"] not in {"play", "pause", "restart"}
+    ]
+    if parameter_controls and any(control.get("binding") is None for control in parameter_controls):
+        errors.append(
+            {
+                "code": "control_unbound",
+                "detail": "Every parameter control must bind to one labelled layer and safe effect.",
+            }
+        )
+    if _INTERACTION_SIGNAL.search(request) and not (
+        parameter_controls or "animation" in spec["scene"]
+    ):
         errors.append(
             {
                 "code": "interaction_missing",
@@ -446,7 +482,10 @@ def _decode_candidate(
             messages, params, protected_tail_messages=1
         )
         client = getattr(engine.client, "local", engine.client)
-        stream = client.stream_events(fitted_messages, **fitted_params)
+        stream_params = dict(fitted_params)
+        if cancel_event is not None:
+            stream_params["_muta_cancel_event"] = cancel_event
+        stream = client.stream_events(fitted_messages, **stream_params)
         content: list[str] = []
         for event, text in stream:
             if cancel_event is not None and cancel_event.is_set():
@@ -499,7 +538,9 @@ def plan_visualization_v2(
     )
     base_user = (
         f"LEARNER REQUEST:\n{request}\n\nFINISHED EXPLANATION:\n{prose}\n\n"
-        "Budget: at most 24 layers, 512 points, 1 triangle, and 20 fps."
+        "Budget: at most 24 layers, 512 points, 4096 triangles, and 20 fps. "
+        "Every non-transport parameter control must include a binding to one unique labelled "
+        "layer using only translate_x, translate_y, scale, or radius."
     )
     messages = [{"role": "system", "content": system}, {"role": "user", "content": base_user}]
     errors: list[dict[str, str]] = []

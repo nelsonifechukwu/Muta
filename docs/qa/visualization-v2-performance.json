@@ -4,12 +4,12 @@
   "measurement_host": "macOS development browser; not target x86",
   "source_impact": {
     "sync_before_bytes": 74628,
-    "sync_after_bytes": 100843,
-    "sync_delta_bytes": 26215,
-    "sync_parse_before_ms": 0.751,
-    "sync_parse_after_ms": 0.9531,
-    "sync_parse_delta_ms": 0.2021,
-    "lazy_v2_bytes": 215271,
+    "sync_after_bytes": 103200,
+    "sync_delta_bytes": 28572,
+    "sync_parse_before_ms": 0.5194,
+    "sync_parse_after_ms": 0.688,
+    "sync_parse_delta_ms": 0.1686,
+    "lazy_v2_bytes": 219085,
     "vendor_bytes": 1102856,
     "new_network_dependencies": 0
   },
@@ -23,28 +23,33 @@
     "by_renderer": {
       "svg": {
         "count": 74,
-        "mean_elapsed_ms": 113.543,
-        "p95_elapsed_ms": 265.6,
-        "max_elapsed_ms": 347.8
+        "mean_elapsed_ms": 110.464,
+        "p95_elapsed_ms": 257.5,
+        "max_elapsed_ms": 351.0
       },
       "canvas": {
         "count": 21,
-        "mean_elapsed_ms": 162.195,
-        "p95_elapsed_ms": 348.9,
-        "max_elapsed_ms": 353.7
+        "mean_elapsed_ms": 166.719,
+        "p95_elapsed_ms": 327.6,
+        "max_elapsed_ms": 327.9
       },
       "three": {
         "count": 105,
-        "mean_elapsed_ms": 329.658,
-        "p95_elapsed_ms": 472.3,
-        "max_elapsed_ms": 721.0
+        "mean_elapsed_ms": 301.939,
+        "p95_elapsed_ms": 409.3,
+        "max_elapsed_ms": 699.9
       }
     },
     "maximum_triangles": 26594,
+    "gpu_triangle_budget": {
+      "three_cases": 105,
+      "all_respected": true,
+      "maximum_submitted_triangles": 26618
+    },
     "observed_animation_frame_interval_ms": {
       "minimum": 33.4,
-      "median": 33.5,
-      "maximum": 66.8
+      "median": 41.6,
+      "maximum": 41.7
     }
   },
   "responsive_matrix": {
@@ -62,7 +67,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 37284696,
+        "used_js_heap_bytes": 57626911,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -79,7 +84,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 28817628,
+        "used_js_heap_bytes": 72350813,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -87,8 +92,8 @@
       {
         "theme": "light",
         "viewport": {
-          "width": 1280,
-          "height": 900
+          "width": 375,
+          "height": 812
         },
         "target_container": {
           "width": 375,
@@ -96,7 +101,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 29490962,
+        "used_js_heap_bytes": 67880317,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -104,8 +109,8 @@
       {
         "theme": "dark",
         "viewport": {
-          "width": 1280,
-          "height": 900
+          "width": 430,
+          "height": 932
         },
         "target_container": {
           "width": 430,
@@ -113,7 +118,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 44296374,
+        "used_js_heap_bytes": 68110934,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -121,8 +126,8 @@
       {
         "theme": "light",
         "viewport": {
-          "width": 1280,
-          "height": 900
+          "width": 667,
+          "height": 375
         },
         "target_container": {
           "width": 667,
@@ -130,7 +135,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 31970828,
+        "used_js_heap_bytes": 77505525,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -138,8 +143,8 @@
       {
         "theme": "dark",
         "viewport": {
-          "width": 1280,
-          "height": 900
+          "width": 430,
+          "height": 932
         },
         "target_container": {
           "width": 430,
@@ -147,13 +152,13 @@
         },
         "reduced_motion": true,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 20840197,
+        "used_js_heap_bytes": 41580700,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
       }
     ],
-    "peak_used_js_heap_bytes": 44296374,
+    "peak_used_js_heap_bytes": 77505525,
     "all_passed": true
   },
   "active_frame_lru": {

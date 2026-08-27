@@ -82,6 +82,33 @@ test("accepts each V2 renderer pairing and preserves the serialized data boundar
   }
 });
 
+test("validates typed control bindings and declared Three triangle budgets", () => {
+  const bound = svgSpec();
+  bound.controls[0].binding = { target_label: "a²", effect: "scale" };
+  assert.equal(viz.validateSpec(bound).ok, true);
+
+  const missing = structuredClone(bound);
+  missing.controls[0].binding.target_label = "missing";
+  assert.match(viz.validateSpec(missing).error, /binding target/);
+
+  const incompatible = structuredClone(bound);
+  incompatible.controls[0].binding.effect = "radius";
+  assert.match(viz.validateSpec(incompatible).error, /binding target/);
+
+  const underdeclaredSurface = surface();
+  underdeclaredSurface.budget.max_triangles = 1;
+  assert.match(viz.validateSpec(underdeclaredSurface).error, /triangle budget/);
+
+  const spheres = surface();
+  spheres.controls = [];
+  spheres.budget.max_triangles = 1;
+  spheres.scene.layers = Array.from({ length: 24 }, (_, index) => ({
+    type: "sphere", position: [index % 6, Math.floor(index / 6), 0], size: 0.2,
+    label: `sample ${index}`, color: "blue",
+  }));
+  assert.match(viz.validateSpec(spheres).error, /triangle budget/);
+});
+
 test("evaluates the typed V2 AST without dynamic source execution", () => {
   const rhs = relationship().right;
   const at = (x, y) => viz.evaluateExpressionV2(rhs, { x, y, z: 0 });

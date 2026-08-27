@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -31,7 +32,7 @@ def _food_web_spec() -> dict:
         ),
         "height": 420,
         "controls": [],
-        "budget": {"max_points": 512, "max_triangles": 1, "max_fps": 20},
+        "budget": {"max_points": 512, "max_triangles": 4096, "max_fps": 20},
         "scene": {
             "coordinate_system": "screen",
             "layers": [
@@ -123,6 +124,13 @@ def test_planner_schema_is_closed_and_has_no_executable_source_fields() -> None:
     layers = schema["schema"]["properties"]["scene"]["properties"]["layers"]
     assert layers["maxItems"] == 24
     assert layers["items"]["additionalProperties"] is False
+    assert schema["schema"]["properties"]["budget"]["properties"]["max_triangles"][
+        "enum"
+    ] == [4096]
+    binding = schema["schema"]["properties"]["controls"]["items"]["properties"][
+        "binding"
+    ]
+    assert binding["additionalProperties"] is False
 
 
 @pytest.mark.parametrize(
@@ -157,6 +165,21 @@ def test_unseen_composition_is_validated_as_v2_without_source_execution() -> Non
     assert engine.local.closed == 1
 
 
+def test_planner_forwards_cancellation_to_the_blocking_local_stream() -> None:
+    engine = _PlannerEngine([_food_web_spec()])
+    cancel = threading.Event()
+
+    spec = plan_visualization_v2(
+        engine,
+        "Draw a mangrove food web from algae to crab to heron.",
+        "Energy follows the arrows.",
+        cancel_event=cancel,
+    )
+
+    assert spec == _food_web_spec()
+    assert engine.local.calls[0][1]["_muta_cancel_event"] is cancel
+
+
 def test_invalid_authored_source_gets_one_structured_repair_attempt() -> None:
     unsafe = _food_web_spec()
     unsafe["text_fallback"] = "<script>eval(payload)</script>"
@@ -173,6 +196,29 @@ def test_invalid_authored_source_gets_one_structured_repair_attempt() -> None:
     repair_prompt = engine.local.calls[1][0][-1]["content"]
     assert '"code":"authored_source_forbidden"' in repair_prompt
     assert "<script>" not in repair_prompt
+
+
+@pytest.mark.parametrize(
+    "resource",
+    [
+        "https://example.invalid/payload.js",
+        "//example.invalid/payload.js",
+        "data:text/html,payload",
+        "file:///tmp/payload",
+        "url(external.png)",
+        "@import external.css",
+    ],
+)
+def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) -> None:
+    candidate = _food_web_spec()
+    candidate["text_fallback"] = resource
+
+    errors = _plan_errors(
+        candidate,
+        "Draw a mangrove food web from algae to crab to heron.",
+    )
+
+    assert "authored_source_forbidden" in {error["code"] for error in errors}
 
 
 def test_unknown_primitive_is_rejected_and_repaired_without_execution() -> None:
@@ -232,3 +278,29 @@ def test_semantic_oracles_reject_ungrounded_or_interaction_free_plans() -> None:
         "topic_not_grounded",
         "interaction_missing",
     }
+
+
+def test_parameter_controls_require_a_valid_semantic_geometry_binding() -> None:
+    interactive = _food_web_spec()
+    interactive["controls"] = [
+        {
+            "id": "crab_height",
+            "label": "Crab height",
+            "type": "range",
+            "value": 0,
+            "min": -40,
+            "max": 40,
+            "step": 10,
+            "binding": {"target_label": "Crab", "effect": "translate_y"},
+        }
+    ]
+    request = (
+        "Draw an interactive mangrove food web from algae to crab to heron and let me adjust "
+        "the crab height."
+    )
+
+    assert _plan_errors(interactive, request) == []
+
+    del interactive["controls"][0]["binding"]
+    errors = _plan_errors(interactive, request)
+    assert {error["code"] for error in errors} == {"control_unbound"}

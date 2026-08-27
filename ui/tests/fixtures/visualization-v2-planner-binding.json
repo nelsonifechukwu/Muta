@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "count": 1,
+  "cases": [
+    {
+      "id": "planner-binding-001",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "trophic_network",
+        "title": "Mangrove food web",
+        "aria_label": "A mangrove food web with adjustable crab height.",
+        "text_fallback": "Energy flows from algae to crab to heron; the crab height control moves the crab and its links.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "crab_height",
+            "label": "Crab height",
+            "type": "range",
+            "value": 0,
+            "min": -80,
+            "max": 80,
+            "step": 10,
+            "binding": {
+              "target_label": "Crab",
+              "effect": "translate_y"
+            }
+          },
+          {
+            "id": "play",
+            "label": "Play",
+            "type": "button",
+            "value": 0
+          }
+        ],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 1,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "animation": {
+            "mode": "guided_reveal",
+            "duration": 4
+          },
+          "layers": [
+            {
+              "type": "axes",
+              "x_label": "trophic level",
+              "y_label": "height",
+              "grid": false
+            },
+            {
+              "type": "node",
+              "id": "algae",
+              "x": 120,
+              "y": 300,
+              "width": 110,
+              "height": 54,
+              "label": "Algae",
+              "color": "green"
+            },
+            {
+              "type": "node",
+              "id": "crab",
+              "x": 350,
+              "y": 210,
+              "width": 110,
+              "height": 54,
+              "label": "Crab",
+              "color": "orange"
+            },
+            {
+              "type": "node",
+              "id": "heron",
+              "x": 580,
+              "y": 110,
+              "width": 110,
+              "height": 54,
+              "label": "Heron",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "algae",
+              "to": "crab",
+              "arrow": true,
+              "label": "energy"
+            },
+            {
+              "type": "link",
+              "from": "crab",
+              "to": "heron",
+              "arrow": true,
+              "label": "energy"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

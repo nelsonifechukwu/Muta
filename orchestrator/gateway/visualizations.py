@@ -1565,7 +1565,10 @@ def generate_visualization(
     try:
         messages, params = engine._fit_request(messages, params, protected_tail_messages=1)
         client = getattr(engine.client, "local", engine.client)
-        stream = client.stream_events(messages, **params)
+        stream_params = dict(params)
+        if cancel_event is not None:
+            stream_params["_muta_cancel_event"] = cancel_event
+        stream = client.stream_events(messages, **stream_params)
         content: list[str] = []
         for event, text in stream:
             if cancel_event is not None and cancel_event.is_set():

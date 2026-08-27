@@ -566,22 +566,33 @@
       return { ok: false, error: "V2 has too many parameter controls" };
     }
     const controlIds = new Set();
-    const controlKeys = new Set(["id", "label", "type", "value", "min", "max", "step", "options"]);
+    const controlKeys = new Set(["id", "label", "type", "value", "min", "max", "step", "options", "binding"]);
+    const numericControlKeys = new Set(["id", "label", "type", "value", "min", "max", "step", "binding"]);
+    const bindingEffects = new Set(["translate_x", "translate_y", "scale", "radius"]);
     for (const control of candidate.controls) {
       if (!exactKeys(control, controlKeys) || !SAFE_ID.test(control.id) || controlIds.has(control.id)
         || !nonEmptyString(control.label, 80) || !["range", "select", "step", "button"].includes(control.type)) {
         return { ok: false, error: "V2 control is invalid" };
       }
-      if (control.type === "range" && (!finiteNumber(control.min) || !finiteNumber(control.max)
-        || Object.keys(control).length !== 7 || !finiteNumber(control.value, control.min, control.max)
+      if (control.type === "range" && (!exactKeys(control, numericControlKeys)
+        || !finiteNumber(control.min) || !finiteNumber(control.max)
+        || ![7, 8].includes(Object.keys(control).length) || !finiteNumber(control.value, control.min, control.max)
         || control.min >= control.max || !finiteNumber(control.step, 0.000001, control.max - control.min))) {
         return { ok: false, error: "V2 range control is invalid" };
       }
-      if (control.type === "step" && (Object.keys(control).length !== 7
+      if (control.type === "step" && (!exactKeys(control, numericControlKeys)
+        || ![7, 8].includes(Object.keys(control).length)
         || !finiteNumber(control.min) || !finiteNumber(control.max) || control.min >= control.max
         || !finiteNumber(control.step, 0.000001, control.max - control.min)
         || !finiteNumber(control.value, control.min, control.max))) {
         return { ok: false, error: "V2 step control is invalid" };
+      }
+      if (control.binding !== undefined && ((!exactKeys(control.binding, new Set(["target_label", "effect"])))
+        || Object.keys(control.binding).length !== 2
+        || !nonEmptyString(control.binding.target_label, 160)
+        || !bindingEffects.has(control.binding.effect)
+        || !["range", "step"].includes(control.type))) {
+        return { ok: false, error: "V2 control binding is invalid" };
       }
       if (control.type === "select" && (Object.keys(control).length !== 5
         || !Array.isArray(control.options) || control.options.length < 1 || control.options.length > 12
@@ -618,6 +629,7 @@
       return { ok: false, error: "V2 node IDs must be unique" };
     }
     let points = 0;
+    let triangleEstimate = 0;
     const labelledLayers = new Set(candidate.scene.layers.filter((layer) => layer?.type !== "panel" && nonEmptyString(layer?.label, 160)).map((layer) => layer.label));
     const panelIds = new Set();
     const panelMembers = new Set();
@@ -676,6 +688,7 @@
       }
       if (layer.type === "vector" && (!vector3(layer.from) || !vector3(layer.to))) return { ok: false, error: "V2 vector is invalid" };
       if (layer.type === "vector" && layer.from.every((value, index) => value === layer.to[index])) return { ok: false, error: "V2 vector is zero length" };
+      if (layer.type === "vector") triangleEstimate += 32;
       if (layer.type === "link" && (!nodeIds.has(layer.from) || !nodeIds.has(layer.to))) return { ok: false, error: "V2 link target is missing" };
       if (layer.type === "link" && typeof layer.arrow !== "boolean") return { ok: false, error: "V2 link direction is invalid" };
       if (layer.type === "axes" && (!nonEmptyString(layer.x_label, 80) || !nonEmptyString(layer.y_label, 80) || typeof layer.grid !== "boolean")) {
@@ -690,10 +703,13 @@
         || !finiteNumber(layer.size, 0.01, 100) || !nonEmptyString(layer.label, 160))) {
         return { ok: false, error: "V2 3D object is invalid" };
       }
+      if (layer.type === "sphere" || layer.type === "point") triangleEstimate += 720;
+      if (layer.type === "box") triangleEstimate += 12;
       if (layer.type === "plane" && (!vector3(layer.normal)
         || layer.normal.every((value) => value === 0) || !finiteNumber(layer.constant, -1000, 1000))) {
         return { ok: false, error: "V2 plane is invalid" };
       }
+      if (layer.type === "plane") triangleEstimate += 128;
       if (layer.type === "arrow" && (!point(layer.from) || !point(layer.to))) return { ok: false, error: "V2 arrow is invalid" };
       if (layer.type === "circle" && (!finiteNumber(layer.x) || !finiteNumber(layer.y) || !finiteNumber(layer.r, 0.1, 2000))) return { ok: false, error: "V2 circle is invalid" };
       if (layer.type === "rect" && (!finiteNumber(layer.x) || !finiteNumber(layer.y)
@@ -712,6 +728,9 @@
           || (dimensions === 3 && layer.resolution.reduce((a, b) => a * b, 1) > 32768)) {
           return { ok: false, error: "V2 surface resolution exceeds its budget" };
         }
+        if (layer.type === "explicit_surface") {
+          triangleEstimate += 2 * (layer.resolution[0] - 1) * (layer.resolution[1] - 1);
+        }
         for (const axis of ["x", "y", "z"]) if (!numberPair(layer[`${axis}_domain`], -1000, 1000)) return { ok: false, error: "V2 surface domain is invalid" };
         if (layer.animation !== undefined && (!exactKeys(layer.animation, new Set(["mode", "duration"]))
           || !["orbit", "phase"].includes(layer.animation.mode) || !finiteNumber(layer.animation.duration, 2, 30))) {
@@ -727,8 +746,28 @@
           || !["orbit", "phase"].includes(layer.animation.mode) || !finiteNumber(layer.animation.duration, 2, 30))))) {
         return { ok: false, error: "V2 parametric surface is invalid" };
       }
+      if (layer.type === "parametric_surface") {
+        triangleEstimate += 2 * (layer.resolution[0] - 1) * (layer.resolution[1] - 1);
+      }
     }
     if (points > candidate.budget.max_points) return { ok: false, error: "V2 point budget exceeded" };
+    if (triangleEstimate > candidate.budget.max_triangles) return { ok: false, error: "V2 triangle budget exceeded" };
+    const bindable = {
+      polyline: new Set(["translate_x", "translate_y", "scale"]),
+      node: new Set(["translate_x", "translate_y", "scale"]),
+      arrow: new Set(["translate_x", "translate_y", "scale"]),
+      circle: bindingEffects,
+      rect: new Set(["translate_x", "translate_y", "scale"]),
+      particles: new Set(["translate_x", "translate_y", "scale"]),
+      vector_field: new Set(["translate_x", "translate_y", "scale"]),
+    };
+    for (const control of candidate.controls.filter((item) => item.binding)) {
+      const matches = candidate.scene.layers.filter((layer) => layer.label === control.binding.target_label);
+      if (matches.length !== 1 || !bindable[matches[0].type]?.has(control.binding.effect)
+        || (["scale", "radius"].includes(control.binding.effect) && control.min <= 0)) {
+        return { ok: false, error: "V2 control binding target is invalid" };
+      }
+    }
     return { ok: true, spec: JSON.parse(encoded), error: "" };
   }
 
