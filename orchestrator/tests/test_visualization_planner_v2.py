@@ -310,6 +310,54 @@ def test_semantic_oracle_rejects_catch_all_labels_and_undirected_relationships()
     assert {error["code"] for error in errors} == {"relationship_not_grounded"}
 
 
+def test_semantic_oracle_requires_distinct_connected_entity_nodes() -> None:
+    catch_all = _food_web_spec()
+    for layer in catch_all["scene"]["layers"]:
+        if layer["type"] == "node":
+            layer["label"] = "Algae crab heron"
+    errors = _plan_errors(
+        catch_all,
+        "Draw a mangrove food web showing algae, crab, and heron.",
+    )
+    assert {error["code"] for error in errors} == {
+        "topic_not_grounded",
+        "relationship_not_grounded",
+    }
+
+    isolated = _food_web_spec()
+    isolated["scene"]["layers"] = [
+        layer
+        for layer in isolated["scene"]["layers"]
+        if not (layer["type"] == "link" and layer["from"] == "crab")
+    ]
+    errors = _plan_errors(
+        isolated,
+        "Draw a mangrove food web showing algae, crab, and heron.",
+    )
+    assert {error["code"] for error in errors} == {"relationship_not_grounded"}
+
+
+def test_semantic_oracle_requires_requested_directional_paths() -> None:
+    reversed_web = _food_web_spec()
+    for layer in reversed_web["scene"]["layers"]:
+        if layer["type"] == "link":
+            layer["from"], layer["to"] = layer["to"], layer["from"]
+
+    errors = _plan_errors(
+        reversed_web,
+        "Draw a mangrove food web showing energy from algae to crab to heron.",
+    )
+
+    assert {error["code"] for error in errors} == {"relationship_not_grounded"}
+    assert (
+        _plan_errors(
+            _food_web_spec(),
+            "Draw a mangrove food web showing energy from algae to crab to heron.",
+        )
+        == []
+    )
+
+
 def test_planner_rejects_family_specific_controls_without_inert_bindings() -> None:
     candidate = _food_web_spec()
     candidate["controls"] = [
@@ -355,3 +403,59 @@ def test_parameter_controls_require_a_valid_semantic_geometry_binding() -> None:
     del interactive["controls"][0]["binding"]
     errors = _plan_errors(interactive, request)
     assert {error["code"] for error in errors} == {"control_unbound"}
+
+
+def test_animation_transport_ids_cannot_masquerade_as_parameters_or_static_controls() -> None:
+    numeric_play = _food_web_spec()
+    numeric_play["controls"] = [
+        {
+            "id": "play",
+            "label": "Crab height",
+            "type": "range",
+            "value": 0,
+            "min": -40,
+            "max": 40,
+            "step": 10,
+            "binding": {"target_label": "Crab", "effect": "translate_y"},
+        }
+    ]
+    errors = _plan_errors(
+        numeric_play,
+        "Draw an interactive mangrove food web showing algae, crab, and heron.",
+    )
+    assert {error["code"] for error in errors} == {"schema_invalid"}
+
+    stray_play = _food_web_spec()
+    stray_play["controls"] = [
+        {"id": "play", "label": "Play", "type": "button", "value": False}
+    ]
+    errors = _plan_errors(
+        stray_play,
+        "Draw a mangrove food web showing algae, crab, and heron.",
+    )
+    assert {error["code"] for error in errors} == {"schema_invalid"}
+
+
+def test_animation_requires_and_accepts_one_complete_transport_set() -> None:
+    animated = _food_web_spec()
+    animated["scene"]["animation"] = {"mode": "guided_reveal", "duration": 6}
+    animated["controls"] = [
+        {"id": "play", "label": "Play", "type": "button", "value": False}
+    ]
+    errors = _plan_errors(
+        animated,
+        "Animate a mangrove food web showing algae, crab, and heron.",
+    )
+    assert {error["code"] for error in errors} == {"schema_invalid"}
+
+    animated["controls"] = [
+        {"id": control_id, "label": control_id.title(), "type": "button", "value": False}
+        for control_id in ("play", "pause", "restart")
+    ]
+    assert (
+        _plan_errors(
+            animated,
+            "Animate a mangrove food web showing algae, crab, and heron.",
+        )
+        == []
+    )

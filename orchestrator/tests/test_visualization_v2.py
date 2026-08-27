@@ -932,6 +932,41 @@ def test_schema_rejects_unknown_fields_prototype_keys_and_resource_overruns() ->
         validate_v2_spec(invalid)
 
 
+def test_schema_rejects_type_confused_incomplete_or_static_animation_transport() -> None:
+    static = compile_visualization_v2("Plot z=x^2+y^2")
+    assert static is not None
+
+    numeric_play = json.loads(json.dumps(static))
+    numeric_play["controls"].append(
+        {
+            "id": "play",
+            "label": "Play",
+            "type": "range",
+            "value": 0,
+            "min": 0,
+            "max": 1,
+            "step": 0.1,
+        }
+    )
+    with pytest.raises(VisualizationV2Error, match="transport controls must be buttons"):
+        validate_v2_spec(numeric_play)
+
+    stray_play = json.loads(json.dumps(static))
+    stray_play["controls"].append(
+        {"id": "play", "label": "Play", "type": "button", "value": 0}
+    )
+    with pytest.raises(VisualizationV2Error, match="animation requires"):
+        validate_v2_spec(stray_play)
+
+    incomplete = json.loads(json.dumps(static))
+    incomplete["scene"]["layers"][0]["animation"] = {"mode": "orbit", "duration": 8}
+    incomplete["controls"].append(
+        {"id": "play", "label": "Play", "type": "button", "value": 0}
+    )
+    with pytest.raises(VisualizationV2Error, match="animation requires"):
+        validate_v2_spec(incomplete)
+
+
 def test_existing_heart_hydrocarbon_orbit_v1_paths_remain_present() -> None:
     source = (Path(__file__).parents[1] / "gateway" / "visualizations.py").read_text()
     assert "_heart_spec" in source

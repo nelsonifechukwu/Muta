@@ -13,10 +13,12 @@ import logging
 import re
 import time
 from collections.abc import Callable
+from itertools import pairwise
 from typing import Any
 
 from orchestrator.gateway.visualization_v2 import (
     CONTROL_BINDING_EFFECTS,
+    TRANSPORT_CONTROL_IDS,
     VisualizationV2Error,
     validate_v2_spec,
 )
@@ -59,6 +61,37 @@ _STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
 _EXPLICIT_ENTITY_CLAUSE = re.compile(
     r"\b(?:showing|linking|connecting|between)\b(?P<entities>[^.!?;]{1,220})",
     re.IGNORECASE,
+)
+_DIRECTIONAL_CHAIN = re.compile(
+    r"\bfrom\b(?P<entities>[^.!?;]{1,220})",
+    re.IGNORECASE,
+)
+_DIRECTIONAL_TAIL = re.compile(
+    r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
+    r"with\s+(?:an?\s+)?(?:adjustable|interactive)\b|where\s+(?:i|we|the\s+user)\b)",
+    re.IGNORECASE,
+)
+_ENTITY_SEPARATOR = re.compile(
+    r"\s*(?:,|\band\b|\bto\b|\bthrough\b|\binto\b|\bthen\b|->|→)\s*",
+    re.IGNORECASE,
+)
+_RELATIONSHIP_TERMS = frozenset(
+    {
+        "connection",
+        "connections",
+        "energy",
+        "flow",
+        "flows",
+        "link",
+        "links",
+        "path",
+        "paths",
+        "relationship",
+        "relationships",
+        "signal",
+        "signals",
+        "transfer",
+    }
 )
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*(?:script|iframe|object|embed|svg|canvas|style|link)\b|"
@@ -358,13 +391,88 @@ def _topic_terms(request: str) -> set[str]:
     }
 
 
-def _explicit_entity_terms(request: str) -> set[str]:
-    """Extract concrete list-like entities without pretending to be a full NLP parser."""
-    return {
-        term
-        for match in _EXPLICIT_ENTITY_CLAUSE.finditer(request)
-        for term in _topic_terms(match.group("entities"))
+def _entity_groups(value: str) -> list[frozenset[str]]:
+    """Split a bounded natural-language entity list while retaining multi-word names."""
+    groups: list[frozenset[str]] = []
+    for part in _ENTITY_SEPARATOR.split(value):
+        terms = _topic_terms(part).difference(_RELATIONSHIP_TERMS)
+        if terms:
+            group = frozenset(terms)
+            if group not in groups:
+                groups.append(group)
+    return groups
+
+
+def _directional_entity_groups(request: str) -> list[frozenset[str]]:
+    """Extract the ordered entities in an explicit from-A-to-B chain."""
+    match = _DIRECTIONAL_CHAIN.search(request)
+    if not match:
+        return []
+    chain = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
+    return _entity_groups(chain)
+
+
+def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
+    """Extract concrete entity phrases, preferring an explicit ordered chain when present."""
+    directional = _directional_entity_groups(request)
+    if directional:
+        return directional
+    groups: list[frozenset[str]] = []
+    for match in _EXPLICIT_ENTITY_CLAUSE.finditer(request):
+        for group in _entity_groups(match.group("entities")):
+            if group not in groups:
+                groups.append(group)
+    return groups
+
+
+def _map_entity_nodes(
+    entity_groups: list[frozenset[str]], layers: list[dict[str, Any]]
+) -> dict[frozenset[str], str]:
+    """Map each entity phrase to one unambiguous, entity-specific labelled node."""
+    node_tokens = {
+        str(layer["id"]): _topic_terms(str(layer.get("label", "")))
+        for layer in layers
+        if layer.get("type") == "node"
     }
+    top_candidates: dict[frozenset[str], list[str]] = {}
+    for entity in entity_groups:
+        scores = {
+            node_id: len(entity.intersection(tokens))
+            for node_id, tokens in node_tokens.items()
+        }
+        best = max(scores.values(), default=0)
+        top_candidates[entity] = [
+            node_id for node_id, score in scores.items() if best > 0 and score == best
+        ]
+
+    # A catch-all label (for example "algae crab heron") is not distinct geometry for any
+    # one entity.  Exclude nodes that are a best match for multiple requested entities.
+    candidate_owners: dict[str, int] = {}
+    for candidates in top_candidates.values():
+        for node_id in candidates:
+            candidate_owners[node_id] = candidate_owners.get(node_id, 0) + 1
+
+    mapping: dict[frozenset[str], str] = {}
+    for entity, candidates in top_candidates.items():
+        specific = [node_id for node_id in candidates if candidate_owners[node_id] == 1]
+        if len(specific) == 1:
+            mapping[entity] = specific[0]
+    return mapping
+
+
+def _has_path(adjacency: dict[str, set[str]], start: str, target: str) -> bool:
+    """Return whether a bounded directed graph contains a path from start to target."""
+    pending = [start]
+    visited: set[str] = set()
+    while pending:
+        node = pending.pop()
+        if node == target:
+            return True
+        if node in visited:
+            continue
+        visited.add(node)
+        pending.extend(adjacency.get(node, set()).difference(visited))
+    return False
 
 
 def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
@@ -439,14 +547,14 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
     grounded = (
         set().union(*(matches for _index, matches in layer_matches)) if layer_matches else set()
     )
-    explicit_entities = _explicit_entity_terms(request)
+    explicit_groups = _explicit_entity_groups(request)
+    entity_nodes = _map_entity_nodes(explicit_groups, layers)
     required_grounding = min(3, len(terms))
     required_layers = min(2, required_grounding)
-    missing_entities = explicit_entities.difference(grounded)
     if (
         len(grounded) < required_grounding
         or len(layer_matches) < required_layers
-        or missing_entities
+        or len(entity_nodes) != len(explicit_groups)
     ):
         errors.append(
             {
@@ -455,33 +563,60 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
                     "Represent concrete learner-request entities across distinct labelled geometry; "
                     f"matched {len(grounded)} of {required_grounding}, across "
                     f"{len(layer_matches)} of {required_layers} required layers, with "
-                    f"{len(missing_entities)} explicit entities missing."
+                    f"{len(explicit_groups) - len(entity_nodes)} entity nodes ambiguous or missing."
                 ),
             }
         )
     if _STRUCTURAL_RELATIONSHIP_SIGNAL.search(request):
         links = [layer for layer in meaningful if layer.get("type") == "link"]
-        if not links or any(not layer.get("arrow") for layer in links):
+        relationship_grounded = bool(links) and all(layer.get("arrow") for layer in links)
+        if relationship_grounded and explicit_groups:
+            relationship_grounded = len(entity_nodes) == len(explicit_groups)
+        if relationship_grounded and len(explicit_groups) > 1:
+            undirected: dict[str, set[str]] = {}
+            for link in links:
+                start = str(link["from"])
+                target = str(link["to"])
+                undirected.setdefault(start, set()).add(target)
+                undirected.setdefault(target, set()).add(start)
+            mapped = [entity_nodes[group] for group in explicit_groups]
+            relationship_grounded = all(
+                _has_path(undirected, mapped[0], node_id) for node_id in mapped[1:]
+            )
+        directional_groups = _directional_entity_groups(request)
+        if relationship_grounded and len(directional_groups) > 1:
+            directed: dict[str, set[str]] = {}
+            for link in links:
+                directed.setdefault(str(link["from"]), set()).add(str(link["to"]))
+            relationship_grounded = all(
+                _has_path(directed, entity_nodes[start], entity_nodes[target])
+                for start, target in pairwise(directional_groups)
+            )
+        if not relationship_grounded:
             errors.append(
                 {
                     "code": "relationship_not_grounded",
                     "detail": (
-                        "Graph and process requests require directed links between validated node "
-                        "endpoints."
+                        "Graph and process requests require correctly directed paths connecting "
+                        "each distinct requested entity node."
                     ),
                 }
             )
     parameter_controls = [
         control
         for control in spec["controls"]
-        if control["id"] not in {"play", "pause", "restart"}
+        if control["id"] not in TRANSPORT_CONTROL_IDS
         and control["type"] in {"range", "step"}
     ]
     unsupported_controls = [
         control
         for control in spec["controls"]
-        if control["id"] not in {"play", "pause", "restart"}
-        and control["type"] not in {"range", "step"}
+        if (
+            control["id"] in TRANSPORT_CONTROL_IDS
+            and control["type"] != "button"
+            or control["id"] not in TRANSPORT_CONTROL_IDS
+            and control["type"] not in {"range", "step"}
+        )
     ]
     if unsupported_controls:
         errors.append(
@@ -490,6 +625,7 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
                 "detail": "Generic planner controls must be bound numeric range or step controls.",
             }
         )
+    has_animation = "animation" in spec["scene"]
     if parameter_controls and any(control.get("binding") is None for control in parameter_controls):
         errors.append(
             {
@@ -506,15 +642,13 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
                 "detail": "The request asks for interaction; include at least one bounded named control.",
             }
         )
-    if _ANIMATION_SIGNAL.search(request):
-        transport = {control["id"] for control in spec["controls"]}
-        if "animation" not in spec["scene"] or not {"play", "pause", "restart"} <= transport:
-            errors.append(
-                {
-                    "code": "animation_missing",
-                    "detail": "Use guided_reveal plus accessible Play, Pause, and Restart buttons.",
-                }
-            )
+    if _ANIMATION_SIGNAL.search(request) and not has_animation:
+        errors.append(
+            {
+                "code": "animation_missing",
+                "detail": "Use guided_reveal plus accessible Play, Pause, and Restart buttons.",
+            }
+        )
     return errors
 
 

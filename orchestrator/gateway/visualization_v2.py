@@ -7302,6 +7302,8 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(control.get("label"), str) or not control["label"]:
             raise VisualizationV2Error("control needs an accessible label")
         control_type = control["type"]
+        if control_id in TRANSPORT_CONTROL_IDS and control_type != "button":
+            raise VisualizationV2Error("animation transport controls must be buttons")
         if control_type in {"range", "step"}:
             numeric_fields = {"id", "label", "type", "value", "min", "max", "step"}
             if set(control) not in (numeric_fields, numeric_fields | {"binding"}):
@@ -7676,6 +7678,21 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             raise VisualizationV2Error("control binding effect is incompatible with its layer")
         if binding["effect"] in {"scale", "radius"} and control["min"] <= 0:
             raise VisualizationV2Error("scale and radius bindings require positive control values")
+    transport_controls = [
+        control for control in controls if control.get("id") in TRANSPORT_CONTROL_IDS
+    ]
+    has_animation = "animation" in scene or any("animation" in layer for layer in layers)
+    if transport_controls or has_animation:
+        transport_ids = {control["id"] for control in transport_controls}
+        if (
+            not has_animation
+            or len(transport_controls) != len(TRANSPORT_CONTROL_IDS)
+            or transport_ids != TRANSPORT_CONTROL_IDS
+            or any(control["type"] != "button" for control in transport_controls)
+        ):
+            raise VisualizationV2Error(
+                "animation requires one Play, Pause, and Restart button"
+            )
     return json.loads(json.dumps(spec))
 
 
