@@ -101,7 +101,11 @@ def test_release_startup_is_truthful_accessible_and_non_blocking():
     assert "Math.min(99, requested)" in startup
     assert 'body?.ready === true' in startup
     assert "failures >= 3" in startup
-    assert 'stage: "startup.failed", failed: true, retryable: true' in startup
+    assert 'stage: "startup.connecting", failed: true, retryable: true' in startup
+    assert 'await invoke("startup_snapshot")' in startup
+    assert "onInvokeRejected: () => { tauriFastPath = null; }" in startup
+    assert 'fetch("/v1/ready"' in startup
+    assert "requestController?.abort()" in startup
     assert '"aria-valuetext"' in startup
     assert 'new CustomEvent("muta:startupchange"' in startup
     js = (UI / "app.js").read_text()
@@ -1140,10 +1144,10 @@ def test_model_generated_text_keeps_its_own_direction_inside_an_rtl_interface():
 
 def test_authored_entry_assets_share_one_cache_busting_revision():
     versions = re.findall(
-        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|popover-position\.js|image-upload\.js|release-lifecycle\.js|app\.js|audio\.js)\?v=([^"]+)"',
+        r'(?:href|src)="(?:styles\.css|math\.js|resource-mentions\.js|popover-position\.js|image-upload\.js|release-lifecycle\.js|confirm-dialog\.js|app\.js|audio\.js)\?v=([^"]+)"',
         HTML,
     )
-    assert len(versions) == 8
+    assert len(versions) == 9
     assert len(set(versions)) == 1
     assert re.search(r'src="i18n\.js\?v=([^"]+)"', HTML).group(1) == versions[0]
 
@@ -1163,7 +1167,17 @@ def test_muta_share_gate_is_labeled_persistent_and_role_scoped():
     assert 'document.querySelector("#host-settings").hidden = role !== "host"' in js
     assert 'document.querySelector(".model-selector").hidden = role === "member"' in js
     assert 'method: "POST"' in js and "/v1/share/enrollments/" in js
-    assert "window.confirm(" in js and 'releaseT("host.removeConfirm"' in js
+    assert "window.confirm(" not in js
+    assert 'id="host-remove-modal" class="confirm-modal" hidden' in HTML
+    assert 'aria-labelledby="host-remove-title" aria-describedby="host-remove-copy"' in HTML
+    assert 'releaseT("host.removeConfirm"' in js
+    assert "window.MutaConfirmDialog.create" in js
+    assert 'background: settingsModal' in js
+    assert 'surfaceError: false' in js
+    confirm_dialog = (UI / "confirm-dialog.js").read_text()
+    assert 'background.setAttribute("inert", "")' in confirm_dialog
+    assert 'scheduleFocus(() => cancelButton.focus())' in confirm_dialog
+    assert 'event.key === "Escape"' in confirm_dialog
     assert "conversations, files and learning profile" in RELEASE_ENGLISH
     assert "?token=" not in js
 

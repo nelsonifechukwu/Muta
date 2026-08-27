@@ -3924,6 +3924,9 @@ const powerOptimizationToggle = $("#setting-power-optimization");
 const languageSelect = $("#setting-language");
 const themeSelect = $("#setting-theme");
 const hostEnabledToggle = $("#setting-host-enabled");
+const hostRemoveModal = $("#host-remove-modal");
+const hostRemoveCancel = $("#host-remove-cancel");
+const hostRemoveConfirm = $("#host-remove-confirm");
 let hostStatus = null;
 let hostPollTimer = null;
 let hostRosterSignature = "";
@@ -3989,7 +3992,7 @@ function hostUserRow(user) {
     remove.type = "button";
     remove.className = "danger";
     remove.textContent = releaseT("host.remove");
-    remove.addEventListener("click", () => void hostUserAction(user, "remove", remove));
+    remove.addEventListener("click", () => setHostRemoveOpen(true, { user, opener: remove }));
     actions.append(remove);
   }
   row.append(identity, actions);
@@ -4060,7 +4063,8 @@ async function loadHostStatus({ poll = true } = {}) {
   try {
     const response = await fetch("/v1/share/host", { headers: authHeaders(), cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    renderHostStatus(await response.json());
+    const status = await response.json();
+    if (!pendingHostUserActions.size) renderHostStatus(status);
   } catch {
     hostReadFailed = true;
     $("#host-save-state").textContent = releaseT("host.readFailed");
@@ -4138,10 +4142,13 @@ function showHostUserError(userId, message) {
   row.append(error);
 }
 
-async function hostUserAction(user, action, button) {
-  if (action === "remove" && !window.confirm(
-    releaseT("host.removeConfirm", { name: user.username })
-  )) return;
+function hostUserFailure(action) {
+  if (action === "approve") return releaseT("host.approveFailed");
+  if (action === "reject") return releaseT("host.rejectFailed");
+  return releaseT("host.removeFailed");
+}
+
+async function hostUserAction(user, action, button, { surfaceError = true } = {}) {
   const previous = hostStatus;
   pendingHostUserActions.add(user.id);
   button.disabled = true;
@@ -4155,7 +4162,7 @@ async function hostUserAction(user, action, button) {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(shareDetail(
       payload,
-      releaseT(`host.${action}Failed`),
+      hostUserFailure(action),
     ));
     const users = (hostStatus?.users || previous?.users || []).flatMap((candidate) => {
       if (candidate.id !== user.id) return [candidate];
@@ -4166,17 +4173,38 @@ async function hostUserAction(user, action, button) {
     // The mutation response is authoritative for immediate feedback. A quiet refetch then
     // reconciles persistence/capacity details without making the row wait for another poll.
     void loadHostStatus({ poll: false });
+    return { ok: true };
   } catch (error) {
     if (previous) renderHostStatus(previous);
-    showHostUserError(
-      user.id,
-      error.message || releaseT(`host.${action}Failed`),
-    );
+    const message = error.message || hostUserFailure(action);
+    if (surfaceError) showHostUserError(user.id, message);
+    return { ok: false, error: message };
   } finally {
     pendingHostUserActions.delete(user.id);
     if (button.isConnected) button.disabled = false;
   }
 }
+
+const hostRemoveDialog = window.MutaConfirmDialog.create({
+  modal: hostRemoveModal,
+  background: settingsModal,
+  cancelButton: hostRemoveCancel,
+  confirmButton: hostRemoveConfirm,
+  copyElement: $("#host-remove-copy"),
+  errorElement: $("#host-remove-error"),
+  copyFor: ({ user }) => releaseT("host.removeConfirm", { name: user.username }),
+  onConfirm: ({ user }) => hostUserAction(user, "remove", hostRemoveConfirm, {
+    surfaceError: false,
+  }),
+  successFocus: $("#settings-close"),
+});
+
+function setHostRemoveOpen(open, pending = null, options = {}) {
+  if (open) hostRemoveDialog.open(pending);
+  else hostRemoveDialog.close(options);
+}
+
+document.addEventListener("muta:localechange", () => hostRemoveDialog.refresh());
 
 hostEnabledToggle.addEventListener("change", () => void saveHostSettings());
 document.querySelectorAll('input[name="host-memory"]').forEach((input) => {

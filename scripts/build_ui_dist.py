@@ -27,6 +27,7 @@ UI_FILES = (
     "app.js",
     "audio.js",
     "citations.js",
+    "confirm-dialog.js",
     "dynamic-localization.js",
     "i18n.js",
     "image-upload.js",

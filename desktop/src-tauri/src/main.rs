@@ -121,6 +121,7 @@ impl Default for StartupSnapshot {
 
 struct StartupStatus(Mutex<StartupSnapshot>);
 struct LaunchState(AtomicBool);
+struct ShutdownState(AtomicBool);
 
 fn update_startup(
     app: &tauri::AppHandle,
@@ -132,8 +133,15 @@ fn update_startup(
 ) -> Result<(), String> {
     let status = app.state::<StartupStatus>();
     let mut guard = status.0.lock().map_err(|_| "startup state lock poisoned")?;
+    // A monitored backend exit starts a new lifecycle. Progress stays monotonic
+    // within one launch, but must be allowed to leave the previous ready 100%.
+    let restarting = guard.ready && !ready;
     let next = StartupSnapshot {
-        percent: guard.percent.max(percent.min(100)),
+        percent: if restarting {
+            percent.min(99)
+        } else {
+            guard.percent.max(percent.min(100))
+        },
         stage: stage.to_string(),
         ready,
         failed,
@@ -755,6 +763,10 @@ fn spawn_backend(
 }
 
 fn launch(app: tauri::AppHandle) -> Result<(), String> {
+    if app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+        return Err("Muta is closing".to_string());
+    }
+    update_startup(&app, 14, "startup.verifying", false, false, false)?;
     let resource_dir = app
         .path()
         .resource_dir()
@@ -776,8 +788,6 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
     fs::create_dir_all(&data_root).map_err(|error| error.to_string())?;
     fs::create_dir_all(&cache_root).map_err(|error| error.to_string())?;
     let product: ProductManifest = read_json(&resources.join("desktop-product.json"))?;
-
-    update_startup(&app, 14, "startup.verifying", false, false, false)?;
     let install_argument = std::env::args_os()
         .collect::<Vec<_>>()
         .windows(2)
@@ -799,7 +809,11 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
     };
     update_startup(&app, 38, "startup.packReady", false, false, false)?;
 
+    let mut last_error = "the local gateway did not answer".to_string();
     for attempt in 1..=5 {
+        if app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+            return Err("Muta is closing".to_string());
+        }
         let gateway_port = available_port()?;
         let mut engine_port = available_port()?;
         while engine_port == gateway_port {
@@ -828,21 +842,23 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
         )?;
         update_startup(&app, 64, "startup.connecting", false, false, false)?;
         let deadline = Instant::now() + STARTUP_TIMEOUT;
+        let mut saw_gateway = false;
+        let mut saw_database = false;
         while Instant::now() < deadline {
             if let Some(status) = backend
                 .child
                 .try_wait()
                 .map_err(|error| error.to_string())?
             {
-                if attempt == 5 {
-                    return Err(format!(
-                        "The local backend exited with {status}. See {}.",
-                        data_root.join("logs/desktop-backend.log").display()
-                    ));
-                }
+                last_error = format!(
+                    "The local backend exited with {status}. See {}.",
+                    data_root.join("logs/desktop-backend.log").display()
+                );
                 break;
             }
             if let Some(readiness) = backend_readiness(gateway_port) {
+                saw_gateway = true;
+                saw_database |= readiness.db;
                 let (percent, stage) = if readiness.ready {
                     (100, "startup.ready")
                 } else if readiness.inference {
@@ -865,17 +881,110 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
                     .ok_or("main window is missing")?
                     .navigate(url)
                     .map_err(|error| error.to_string())?;
-                *process = Some(backend);
+                let process_id = backend.child.id();
+                if let Some(mut stale) = process.replace(backend) {
+                    stale.shutdown();
+                }
+                drop(process);
+                monitor_backend(app.clone(), process_id);
                 return Ok(());
             }
             thread::sleep(READY_POLL_INTERVAL);
         }
         backend.shutdown();
+        if Instant::now() >= deadline {
+            last_error = if saw_database {
+                format!(
+                    "The tutor engine did not become ready within {} seconds. See {}.",
+                    STARTUP_TIMEOUT.as_secs(),
+                    data_root.join("logs/desktop-backend.log").display()
+                )
+            } else if saw_gateway {
+                format!(
+                    "The local database did not become ready within {} seconds. See {}.",
+                    STARTUP_TIMEOUT.as_secs(),
+                    data_root.join("logs/desktop-backend.log").display()
+                )
+            } else {
+                format!(
+                    "The local gateway did not become reachable within {} seconds. See {}.",
+                    STARTUP_TIMEOUT.as_secs(),
+                    data_root.join("logs/desktop-backend.log").display()
+                )
+            };
+        }
     }
-    Err("Muta could not reserve local ports after five attempts".to_string())
+    Err(last_error)
+}
+
+fn monitor_backend(app: tauri::AppHandle, process_id: u32) {
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_millis(500));
+        if app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+            return;
+        }
+        let exited = {
+            let state = app.state::<ProcessState>();
+            let Ok(mut guard) = state.0.lock() else {
+                return;
+            };
+            let Some(process) = guard.as_mut() else {
+                return;
+            };
+            if process.child.id() != process_id {
+                return;
+            }
+            let status = process.child.try_wait();
+            match status {
+                Ok(Some(status)) => {
+                    let _ = guard.take();
+                    Some(status.to_string())
+                }
+                Ok(None) => None,
+                Err(error) => {
+                    let _ = guard.take();
+                    Some(format!("status check failed: {error}"))
+                }
+            }
+        };
+        let Some(exit_status) = exited else {
+            continue;
+        };
+
+        let message = format!("The local backend stopped unexpectedly ({exit_status}).");
+        let _ = update_startup(&app, 64, "startup.connecting", false, true, true);
+        let _ = app.emit("backend-error", message);
+        // The localhost origin disappeared with its gateway and may not have Tauri command
+        // access anyway. Return to the bundled origin so the truthful failure/Retry surface
+        // remains operable while the replacement backend starts.
+        let bundled_url = if cfg!(windows) {
+            "http://tauri.localhost/"
+        } else {
+            "tauri://localhost/"
+        };
+        if let (Some(window), Ok(url)) = (
+            app.get_webview_window("main"),
+            tauri::Url::parse(bundled_url),
+        ) {
+            let _ = window.navigate(url);
+        }
+        while app.state::<LaunchState>().0.load(Ordering::SeqCst) {
+            if app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+                return;
+            }
+            thread::sleep(Duration::from_millis(50));
+        }
+        if !app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+            start_launch(app.clone());
+        }
+        return;
+    });
 }
 
 fn start_launch(app: tauri::AppHandle) -> bool {
+    if app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+        return false;
+    }
     let launch_state = app.state::<LaunchState>();
     if launch_state
         .0
@@ -886,8 +995,16 @@ fn start_launch(app: tauri::AppHandle) -> bool {
     }
     thread::spawn(move || {
         if let Err(error) = launch(app.clone()) {
-            let _ = update_startup(&app, 0, "startup.failed", false, true, true);
-            let _ = app.emit("backend-error", error);
+            if !app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+                let stage = app
+                    .state::<StartupStatus>()
+                    .0
+                    .lock()
+                    .map(|snapshot| snapshot.stage.clone())
+                    .unwrap_or_else(|_| "startup.failed".to_string());
+                let _ = update_startup(&app, 0, &stage, false, true, true);
+                let _ = app.emit("backend-error", error);
+            }
         }
         app.state::<LaunchState>().0.store(false, Ordering::SeqCst);
     });
@@ -910,6 +1027,7 @@ fn retry_startup(app: tauri::AppHandle) -> bool {
 }
 
 fn shutdown(app: &tauri::AppHandle) {
+    app.state::<ShutdownState>().0.store(true, Ordering::SeqCst);
     let state = app.state::<ProcessState>();
     if let Ok(mut guard) = state.0.lock() {
         if let Some(mut process) = guard.take() {
@@ -936,6 +1054,7 @@ fn main() {
         .manage(ProcessState(Mutex::new(None)))
         .manage(StartupStatus(Mutex::new(StartupSnapshot::default())))
         .manage(LaunchState(AtomicBool::new(false)))
+        .manage(ShutdownState(AtomicBool::new(false)))
         .invoke_handler(tauri::generate_handler![startup_snapshot, retry_startup])
         .setup(|app| {
             start_launch(app.handle().clone());

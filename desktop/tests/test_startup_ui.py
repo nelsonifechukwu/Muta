@@ -40,19 +40,26 @@ def test_every_direct_desktop_build_stages_the_verified_ui_export_first() -> Non
         "syntax.js",
         "parallel-policy.js",
         "release-lifecycle.js",
+        "confirm-dialog.js",
     ):
         assert f'"{required_script}"' in ui_builder
 
 
 def test_desktop_progress_is_monotonic_failure_aware_and_retryable() -> None:
     rust = (DESKTOP / "src-tauri" / "src" / "main.rs").read_text()
-    assert "percent: guard.percent.max(percent.min(100))" in rust
-    assert 'update_startup(&app, 0, "startup.failed", false, true, true)' in rust
+    assert "guard.percent.max(percent.min(100))" in rust
+    assert "let restarting = guard.ready && !ready" in rust
+    assert 'update_startup(&app, 64, "startup.connecting", false, true, true)' in rust
     assert "fn retry_startup" in rust
     assert "compare_exchange(false, true" in rust
     assert "startup_snapshot, retry_startup" in rust
     assert "body.get(\"ready\")" in rust
     assert "checks" in rust and "inference" in rust and "db" in rust
+    assert "fn monitor_backend" in rust
+    assert '"tauri://localhost/"' in rust
+    assert '"http://tauri.localhost/"' in rust
+    assert "ShutdownState(AtomicBool)" in rust
+    assert "The tutor engine did not become ready" in rust
 
 
 def test_fallback_startup_surface_uses_only_the_brand_message() -> None:

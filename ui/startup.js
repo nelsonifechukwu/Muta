@@ -41,11 +41,52 @@
 
   function failureSnapshot(previous = START, failures = 1) {
     return normalizeSnapshot(failures >= 3
-      ? { percent: previous.percent, stage: "startup.failed", failed: true, retryable: true }
+      ? { percent: previous.percent, stage: "startup.connecting", failed: true, retryable: true }
       : { percent: 64, stage: "startup.connecting" }, previous);
   }
 
-  const api = { START, normalizeSnapshot, browserSnapshot, failureSnapshot };
+  async function resolveStartupSnapshot({
+    invoke,
+    fetchReady,
+    previous = START,
+    onInvokeRejected,
+  } = {}) {
+    let tauriError = null;
+    if (typeof invoke === "function") {
+      try {
+        return {
+          snapshot: normalizeSnapshot(await invoke("startup_snapshot"), previous),
+          transport: "tauri",
+          tauriError,
+        };
+      } catch (error) {
+        // Navigation from the bundled splash to the localhost app can retain
+        // __TAURI__ while command access is unavailable. HTTP is authoritative
+        // for that origin, so command rejection is not a startup failure.
+        tauriError = error instanceof Error ? error : new Error(String(error));
+        onInvokeRejected?.(tauriError);
+      }
+    }
+
+    if (typeof fetchReady !== "function") {
+      throw tauriError || new Error("No startup readiness transport is available");
+    }
+    const response = await fetchReady();
+    if (!response?.ok) throw new Error(`HTTP ${response?.status || "unavailable"}`);
+    return {
+      snapshot: browserSnapshot(await response.json(), previous),
+      transport: "http",
+      tauriError,
+    };
+  }
+
+  const api = {
+    START,
+    normalizeSnapshot,
+    browserSnapshot,
+    failureSnapshot,
+    resolveStartupSnapshot,
+  };
   global.MutaStartup = Object.freeze(api);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (!global.document?.querySelector) return;
@@ -58,9 +99,13 @@
   const welcome = document.querySelector("#startup-welcome");
   const app = document.querySelector("#app");
   const tauriInvoke = global.__TAURI__?.core?.invoke;
+  let tauriFastPath = typeof tauriInvoke === "function" ? tauriInvoke : null;
   let current = START;
   let transportFailures = 0;
   let timer = null;
+  let requestController = null;
+  let sampleGeneration = 0;
+  let disposed = false;
 
   const text = (key, variables) => global.MutaI18n?.t?.(key, variables) || key;
 
@@ -89,27 +134,47 @@
     }));
   }
 
-  async function readSnapshot() {
-    if (typeof tauriInvoke === "function") {
-      return normalizeSnapshot(await tauriInvoke("startup_snapshot"), current);
+  async function fetchReady() {
+    requestController?.abort();
+    requestController = typeof AbortController === "function" ? new AbortController() : null;
+    const controller = requestController;
+    const timeout = global.setTimeout(() => controller?.abort(), 5000);
+    try {
+      return await fetch("/v1/ready", {
+        cache: "no-store",
+        signal: controller?.signal,
+      });
+    } finally {
+      global.clearTimeout(timeout);
+      if (requestController === controller) requestController = null;
     }
-    const response = await fetch("/v1/ready", { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return browserSnapshot(await response.json(), current);
+  }
+
+  async function readSnapshot() {
+    const result = await resolveStartupSnapshot({
+      invoke: tauriFastPath,
+      fetchReady,
+      previous: current,
+      onInvokeRejected: () => { tauriFastPath = null; },
+    });
+    return result.snapshot;
   }
 
   async function sample() {
     clearTimeout(timer);
+    const generation = ++sampleGeneration;
     try {
       const snapshot = await readSnapshot();
+      if (disposed || generation !== sampleGeneration) return;
       transportFailures = 0;
       applySnapshot(snapshot);
     } catch {
+      if (disposed || generation !== sampleGeneration) return;
       transportFailures += 1;
       applySnapshot(failureSnapshot(current, transportFailures));
     }
-    if (!current.ready) {
-      timer = global.setTimeout(sample, typeof tauriInvoke === "function" ? 450 : 1200);
+    if (!disposed && !current.ready) {
+      timer = global.setTimeout(sample, tauriFastPath ? 450 : 1200);
     }
   }
 
@@ -123,7 +188,13 @@
       retryable: false,
     });
     try {
-      if (typeof tauriInvoke === "function") await tauriInvoke("retry_startup");
+      if (tauriFastPath) {
+        try {
+          await tauriFastPath("retry_startup");
+        } catch {
+          tauriFastPath = null;
+        }
+      }
     } finally {
       retry.disabled = false;
       void sample();
@@ -131,6 +202,13 @@
   });
 
   document.addEventListener("muta:localechange", () => applySnapshot(current));
+  global.addEventListener?.("pagehide", () => {
+    disposed = true;
+    sampleGeneration += 1;
+    clearTimeout(timer);
+    requestController?.abort();
+    requestController = null;
+  }, { once: true });
   applySnapshot(START);
   void sample();
 })(globalThis);
