@@ -3364,6 +3364,18 @@ def merge_browser(results: list[dict[str, Any]], browser_path: Path | None) -> N
         result["passed"] = not result["error"] and all(result["checks"].values())
 
 
+def browser_gate_evidence(browser_path: Path | None) -> dict[str, Any]:
+    if browser_path is None:
+        return {"evaluated": False, "inert_string_boundary": None, "passed": False}
+    browser_data = json.loads(browser_path.read_text())
+    boundary = browser_data.get("inert_string_boundary")
+    return {
+        "evaluated": True,
+        "inert_string_boundary": boundary,
+        "passed": bool(isinstance(boundary, dict) and boundary.get("passed") is True),
+    }
+
+
 def markdown_report(payload: dict[str, Any]) -> str:
     summary = payload["summary"]
     lines = [
@@ -3389,6 +3401,23 @@ def markdown_report(payload: dict[str, Any]) -> str:
                 "",
             ]
         )
+    browser_gate = payload.get("browser_gate") or {}
+    boundary = browser_gate.get("inert_string_boundary") or {}
+    lines.extend(
+        [
+            "## Structural renderer boundary",
+            "",
+            (
+                "- Real-browser inert-string sink-flow preflight: "
+                + ("**PASS**" if browser_gate.get("passed") else "**FAIL**")
+            ),
+            f"- Literal source-shaped text fields preserved: {len(boundary.get('literal_text_fields', []))}",
+            f"- Proposal-controlled event/resource/style attributes: {len(boundary.get('event_or_resource_attributes', []))}",
+            f"- Child markup sink created: {bool(boundary.get('child_markup_sink'))}",
+            f"- Frame/parent global mutated: {bool(boundary.get('frame_global_mutated') or boundary.get('parent_global_mutated'))}",
+            "",
+        ]
+    )
     lines.extend(
         [
             "| ID | Domain | Intent / family | Renderer / spec | Controls | Invariants | Browser evidence | Compile | Result |",
@@ -3460,12 +3489,21 @@ def main() -> int:
     cases = load_cases()
     results, specs = compile_cases(cases)
     merge_browser(results, args.browser_results)
+    browser_gate = browser_gate_evidence(args.browser_results)
     passed = sum(row["passed"] for row in results)
+    gate_passed = passed == 200 and browser_gate["passed"]
     payload = {
         "schema_version": 1,
         "revision": args.revision,
         "corpus": {"supplied_stem": 50, "supplied_math": 100, "synthetic_held_out": 50},
-        "summary": {"total": 200, "passed": passed, "failed": 200 - passed, "waived": 0},
+        "summary": {
+            "total": 200,
+            "passed": passed,
+            "failed": 200 - passed,
+            "waived": 0,
+            "gate_passed": gate_passed,
+        },
+        "browser_gate": browser_gate,
         "cases": results,
     }
     if args.pre_holdout_candidate_sha:
@@ -3526,7 +3564,7 @@ def main() -> int:
         JSON_OUTPUT.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
         MARKDOWN_OUTPUT.write_text(markdown_report(payload))
     print(json.dumps(payload["summary"], sort_keys=True))
-    return 0 if passed == 200 else 1
+    return 0 if gate_passed else 1
 
 
 if __name__ == "__main__":

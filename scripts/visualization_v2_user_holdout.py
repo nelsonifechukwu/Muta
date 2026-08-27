@@ -376,6 +376,18 @@ def _browser_by_id(path: Path | None) -> dict[str, dict[str, Any]]:
     return {case["id"]: case for case in payload["cases"]}
 
 
+def _browser_gate_evidence(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        return {"evaluated": False, "inert_string_boundary": None, "passed": False}
+    payload = json.loads(path.read_text())
+    boundary = payload.get("inert_string_boundary")
+    return {
+        "evaluated": True,
+        "inert_string_boundary": boundary,
+        "passed": bool(isinstance(boundary, dict) and boundary.get("passed") is True),
+    }
+
+
 def _markdown(payload: dict[str, Any]) -> str:
     summary = payload["summary"]
     lines = [
@@ -389,6 +401,11 @@ def _markdown(payload: dict[str, Any]) -> str:
         if summary["browser_evaluated"]
         else "- Final browser gate: pending",
         f"- Combined: {summary['passed']}/50; failures {summary['failed']}; waivers 0",
+        (
+            "- Real-browser inert-string sink-flow preflight: **PASS**"
+            if payload["browser_gate"]["passed"]
+            else "- Real-browser inert-string sink-flow preflight: **FAIL**"
+        ),
         "",
         (
             "Reproduce the deterministic compile/oracle pass and merge the separately captured "
@@ -425,6 +442,7 @@ def main() -> int:
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
     browser = _browser_by_id(args.browser_results)
+    browser_gate = _browser_gate_evidence(args.browser_results)
     results: list[dict[str, Any]] = []
     specs: list[dict[str, Any]] = []
     for index, case in enumerate(_load_first_run()):
@@ -509,7 +527,10 @@ def main() -> int:
             "passed": passed,
             "failed": 50 - passed,
             "waived": 0,
+            "gate_passed": python_passed == 50
+            and (not browser_evaluated or passed == 50 and browser_gate["passed"]),
         },
+        "browser_gate": browser_gate,
         "cases": results,
     }
     if args.write:
@@ -524,7 +545,7 @@ def main() -> int:
         JSON_OUTPUT.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
         MARKDOWN_OUTPUT.write_text(_markdown(payload))
     print(json.dumps(payload["summary"], sort_keys=True))
-    return 0 if python_passed == 50 and (not browser_evaluated or passed == 50) else 1
+    return 0 if payload["summary"]["gate_passed"] else 1
 
 
 if __name__ == "__main__":

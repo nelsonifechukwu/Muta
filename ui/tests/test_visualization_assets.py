@@ -58,7 +58,7 @@ def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> No
     assert 'loadTrustedScript("viz-frame-v2.js?v=20260827-v2-54")' in frame
     assert "forceSinglePass: true" in frame_v2
     assert "gpuBudgetRespected" in browser_gate
-    assert "visualization-v2-browser-gate.js?v=20260827-v2-48" in browser_gate_html
+    assert "visualization-v2-browser-gate.js?v=20260827-v2-49" in browser_gate_html
     assert "http://" not in html and "https://" not in html
     assert "frame.src = source" in parent
     assert 'frame.loading = "lazy"' not in parent

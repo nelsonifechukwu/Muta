@@ -1,11 +1,12 @@
 # Visualization Engine V2 — User Holdout Report
 
 - Frozen pre-holdout candidate: `ae3cc2e1572b042a0d53ab5af4fe1143e9cb71cd` at `2026-08-27T12:07:54+01:00`
-- Final revision: `dd50201`
+- Final revision: `2242b5e`
 - Immutable first run: 31/50 Python compile; 31/31 compiled specs rendered
 - Final Python gate: 50/50
 - Final browser gate: 50/50
 - Combined: 50/50; failures 0; waivers 0
+- Real-browser inert-string sink-flow preflight: **PASS**
 
 Reproduce the deterministic compile/oracle pass and merge the separately captured real-browser evidence with:
 
@@ -15,53 +16,53 @@ python -m scripts.visualization_v2_user_holdout --write --browser-results /tmp/m
 
 | ID | Title | Domain | Intent | Family | Renderer | Controls | Compile ms | Browser ms | Oracle | Browser | Pass |
 |---|---|---|---|---|---|---|---:|---:|---:|---:|---:|
-| user-holdout-001 | Linear function | mathematics | interactive visualization | explicit_curve | svg | none | 5.459 | 50.3 | pass | pass | pass |
-| user-holdout-002 | Parabola | mathematics | interactive visualization | explicit_curve | svg | none | 1.912 | 99.8 | pass | pass | pass |
-| user-holdout-003 | Sine wave | mathematics | interactive visualization | explicit_curve | svg | none | 2.014 | 102.7 | pass | pass | pass |
-| user-holdout-004 | Circle | mathematics | interactive visualization | implicit_curve | svg | none | 5.623 | 99.3 | pass | pass | pass |
-| user-holdout-005 | 3D sphere | mathematics | interactive visualization | implicit_surface | three | orbit, reset_view | 97.295 | 380.7 | pass | pass | pass |
-| user-holdout-006 | Vector addition | mathematics | interactive visualization | vector_addition | svg | none | 0.230 | 21.6 | pass | pass | pass |
-| user-holdout-007 | Basic atom | chemistry | interactive visualization | atom | svg | atomic_number | 1.562 | 122.6 | pass | pass | pass |
-| user-holdout-008 | Animal cell | biology | interactive visualization | animal_cell | svg | organelle | 0.277 | 42.9 | pass | pass | pass |
-| user-holdout-009 | Simple electric circuit | physics | interactive visualization | ohms_law_circuit | svg | voltage, resistance, switch | 0.247 | 85.5 | pass | pass | pass |
-| user-holdout-010 | Binary representation | computer science | interactive visualization | binary_representation | svg | none | 0.181 | 22.2 | pass | pass | pass |
-| user-holdout-011 | Interactive parabola | mathematics | interactive visualization | quadratic | svg | a, b, c | 0.527 | 84.6 | pass | pass | pass |
-| user-holdout-012 | Interactive unit circle | mathematics | interactive visualization | unit_circle | svg | angle | 0.536 | 45.3 | pass | pass | pass |
-| user-holdout-013 | 3D Gaussian surface | mathematics | interactive visualization | explicit_surface | three | orbit, reset_view | 1.539 | 275.3 | pass | pass | pass |
-| user-holdout-014 | Damped wave surface | mathematics | interactive visualization | explicit_surface | three | orbit, reset_view | 1.942 | 291.9 | pass | pass | pass |
-| user-holdout-015 | Projectile motion | physics | interactive visualization | projectile | svg | angle, speed | 0.506 | 76.0 | pass | pass | pass |
-| user-holdout-016 | Inclined plane | physics | interactive visualization | inclined_plane | svg | incline | 0.278 | 46.5 | pass | pass | pass |
-| user-holdout-017 | Hooke's law | physics | interactive visualization | spring_mass | svg | spring_constant, displacement | 0.313 | 65.9 | pass | pass | pass |
-| user-holdout-018 | Ohm's law | physics | interactive visualization | ohms_law_circuit | svg | voltage, resistance, switch | 0.299 | 86.4 | pass | pass | pass |
-| user-holdout-019 | Refraction | physics | interactive visualization | refraction | svg | incident_angle, medium | 0.256 | 64.0 | pass | pass | pass |
-| user-holdout-020 | Molecular geometry | chemistry | interactive visualization | molecular_geometry | three | molecule | 0.313 | 141.0 | pass | pass | pass |
-| user-holdout-021 | Derivative visualizer | mathematics | interactive visualization | derivative_tangent | svg | x | 0.620 | 48.3 | pass | pass | pass |
-| user-holdout-022 | Riemann sum | mathematics | interactive visualization | riemann_sum | svg | rectangles | 0.498 | 43.7 | pass | pass | pass |
-| user-holdout-023 | Gradient field | mathematics | interactive visualization | gradient_linked | svg | point_x, point_y | 2.142 | 84.2 | pass | pass | pass |
-| user-holdout-024 | Matrix transformation | mathematics | interactive visualization | linear_transform | svg | matrix | 0.393 | 75.7 | pass | pass | pass |
-| user-holdout-025 | Eigenvector visualization | mathematics | interactive visualization | linear_transform | svg | matrix | 0.311 | 45.1 | pass | pass | pass |
-| user-holdout-026 | Travelling wave | physics | interactive animation | travelling_wave | canvas | amplitude, wavelength, frequency, play, pause, restart | 0.492 | 283.7 | pass | pass | pass |
-| user-holdout-027 | Simple harmonic oscillator | physics | interactive animation | harmonic_motion | canvas | spring_constant, mass, play, pause, restart | 0.757 | 304.0 | pass | pass | pass |
-| user-holdout-028 | Elastic collision | physics | interactive visualization | elastic_collision | svg | mass_1, velocity_1, mass_2, velocity_2 | 0.253 | 113.6 | pass | pass | pass |
-| user-holdout-029 | Electric field | physics | interactive visualization | electric_field_vectors | canvas | positive_charge_x, negative_charge_x, test_x, test_y | 1.196 | 149.8 | pass | pass | pass |
-| user-holdout-030 | RC circuit | physics | interactive animation | rc_circuit | svg | mode, resistance, capacitance, play, pause, restart | 0.828 | 369.8 | pass | pass | pass |
-| user-holdout-031 | Binary search | computer science | interactive animation | binary_search | svg | target, step, play, pause, restart | 0.417 | 261.4 | pass | pass | pass |
-| user-holdout-032 | Sorting algorithm | computer science | interactive visualization | merge_sort | svg | step | 0.703 | 105.5 | pass | pass | pass |
-| user-holdout-033 | Binary search tree | computer science | interactive animation | binary_search_tree | svg | insert, step, play, pause, restart | 0.306 | 305.7 | pass | pass | pass |
-| user-holdout-034 | Dijkstra's algorithm | computer science | interactive animation | dijkstra | svg | source, destination, step, play, pause, restart | 0.324 | 306.2 | pass | pass | pass |
-| user-holdout-035 | Neural network | computer science | interactive visualization | neural_network | svg | weight, step | 0.365 | 72.2 | pass | pass | pass |
-| user-holdout-036 | Gradient descent | mathematics | interactive visualization | gradient_descent | svg | learning_rate, step | 2.193 | 140.0 | pass | pass | pass |
-| user-holdout-037 | Differential-drive robot | robotics | interactive visualization | differential_drive | canvas | left_velocity, right_velocity | 0.575 | 69.9 | pass | pass | pass |
-| user-holdout-038 | Robot arm forward kinematics | robotics | interactive visualization | robot_forward_kinematics | svg | joint_1, joint_2, joint_3 | 0.162 | 89.2 | pass | pass | pass |
-| user-holdout-039 | Sampling and aliasing | signals | interactive visualization | sampling_aliasing | canvas | signal_frequency, sample_frequency | 1.448 | 141.2 | pass | pass | pass |
-| user-holdout-040 | Fourier decomposition | signals | interactive visualization | fourier_series | svg | terms | 1.496 | 70.2 | pass | pass | pass |
-| user-holdout-041 | 3D vector field | mathematics | interactive visualization | vector_field_3d | three | point_x, point_y, point_z | 0.446 | 390.7 | pass | pass | pass |
-| user-holdout-042 | Double pendulum | physics | interactive animation | double_pendulum | canvas | angle_1, angle_2, play, pause, restart | 2.095 | 360.0 | pass | pass | pass |
-| user-holdout-043 | Lorenz attractor | dynamical systems | interactive animation | lorenz_attractor | three | sigma, rho, beta, play, pause, restart | 2.811 | 644.2 | pass | pass | pass |
-| user-holdout-044 | Gyroid | mathematics | interactive visualization | implicit_surface | three | clip_z, orbit, reset_view | 0.749 | 579.0 | pass | pass | pass |
-| user-holdout-045 | Electromagnetic wave | physics | interactive animation | electromagnetic_wave | three | amplitude, wavelength, play, pause, restart | 1.237 | 623.9 | pass | pass | pass |
-| user-holdout-046 | Action potential | biology | interactive visualization | action_potential | svg | time | 0.666 | 111.9 | pass | pass | pass |
-| user-holdout-047 | Chemical titration | chemistry | interactive animation | titration | svg | titrant_volume, play, pause, restart | 0.800 | 286.0 | pass | pass | pass |
-| user-holdout-048 | CPU memory hierarchy | computer science | interactive animation | virtual_memory | svg | address, step, play, pause, restart | 0.272 | 254.7 | pass | pass | pass |
-| user-holdout-049 | Robot localization | robotics | interactive visualization | robot_localization | canvas | odometry_noise, sensor_noise, step | 1.136 | 123.7 | pass | pass | pass |
-| user-holdout-050 | Full Kalman filter visualization | controls | interactive animation | kalman_filter | svg | noise, process_noise, step, play, pause, restart | 1.381 | 386.4 | pass | pass | pass |
+| user-holdout-001 | Linear function | mathematics | interactive visualization | explicit_curve | svg | none | 5.717 | 100.0 | pass | pass | pass |
+| user-holdout-002 | Parabola | mathematics | interactive visualization | explicit_curve | svg | none | 1.891 | 62.7 | pass | pass | pass |
+| user-holdout-003 | Sine wave | mathematics | interactive visualization | explicit_curve | svg | none | 2.297 | 33.7 | pass | pass | pass |
+| user-holdout-004 | Circle | mathematics | interactive visualization | implicit_curve | svg | none | 5.632 | 104.1 | pass | pass | pass |
+| user-holdout-005 | 3D sphere | mathematics | interactive visualization | implicit_surface | three | orbit, reset_view | 99.239 | 299.4 | pass | pass | pass |
+| user-holdout-006 | Vector addition | mathematics | interactive visualization | vector_addition | svg | none | 0.230 | 26.3 | pass | pass | pass |
+| user-holdout-007 | Basic atom | chemistry | interactive visualization | atom | svg | atomic_number | 1.742 | 95.9 | pass | pass | pass |
+| user-holdout-008 | Animal cell | biology | interactive visualization | animal_cell | svg | organelle | 0.381 | 98.9 | pass | pass | pass |
+| user-holdout-009 | Simple electric circuit | physics | interactive visualization | ohms_law_circuit | svg | voltage, resistance, switch | 0.288 | 85.7 | pass | pass | pass |
+| user-holdout-010 | Binary representation | computer science | interactive visualization | binary_representation | svg | none | 0.235 | 22.6 | pass | pass | pass |
+| user-holdout-011 | Interactive parabola | mathematics | interactive visualization | quadratic | svg | a, b, c | 0.681 | 85.2 | pass | pass | pass |
+| user-holdout-012 | Interactive unit circle | mathematics | interactive visualization | unit_circle | svg | angle | 0.513 | 44.4 | pass | pass | pass |
+| user-holdout-013 | 3D Gaussian surface | mathematics | interactive visualization | explicit_surface | three | orbit, reset_view | 1.361 | 257.6 | pass | pass | pass |
+| user-holdout-014 | Damped wave surface | mathematics | interactive visualization | explicit_surface | three | orbit, reset_view | 1.798 | 272.8 | pass | pass | pass |
+| user-holdout-015 | Projectile motion | physics | interactive visualization | projectile | svg | angle, speed | 0.457 | 71.1 | pass | pass | pass |
+| user-holdout-016 | Inclined plane | physics | interactive visualization | inclined_plane | svg | incline | 0.251 | 45.0 | pass | pass | pass |
+| user-holdout-017 | Hooke's law | physics | interactive visualization | spring_mass | svg | spring_constant, displacement | 0.319 | 63.9 | pass | pass | pass |
+| user-holdout-018 | Ohm's law | physics | interactive visualization | ohms_law_circuit | svg | voltage, resistance, switch | 0.282 | 86.1 | pass | pass | pass |
+| user-holdout-019 | Refraction | physics | interactive visualization | refraction | svg | incident_angle, medium | 0.229 | 65.7 | pass | pass | pass |
+| user-holdout-020 | Molecular geometry | chemistry | interactive visualization | molecular_geometry | three | molecule | 0.295 | 137.4 | pass | pass | pass |
+| user-holdout-021 | Derivative visualizer | mathematics | interactive visualization | derivative_tangent | svg | x | 0.587 | 45.3 | pass | pass | pass |
+| user-holdout-022 | Riemann sum | mathematics | interactive visualization | riemann_sum | svg | rectangles | 0.474 | 44.0 | pass | pass | pass |
+| user-holdout-023 | Gradient field | mathematics | interactive visualization | gradient_linked | svg | point_x, point_y | 2.138 | 76.1 | pass | pass | pass |
+| user-holdout-024 | Matrix transformation | mathematics | interactive visualization | linear_transform | svg | matrix | 0.459 | 77.8 | pass | pass | pass |
+| user-holdout-025 | Eigenvector visualization | mathematics | interactive visualization | linear_transform | svg | matrix | 0.340 | 43.2 | pass | pass | pass |
+| user-holdout-026 | Travelling wave | physics | interactive animation | travelling_wave | canvas | amplitude, wavelength, frequency, play, pause, restart | 0.542 | 278.0 | pass | pass | pass |
+| user-holdout-027 | Simple harmonic oscillator | physics | interactive animation | harmonic_motion | canvas | spring_constant, mass, play, pause, restart | 0.783 | 298.3 | pass | pass | pass |
+| user-holdout-028 | Elastic collision | physics | interactive visualization | elastic_collision | svg | mass_1, velocity_1, mass_2, velocity_2 | 0.327 | 116.8 | pass | pass | pass |
+| user-holdout-029 | Electric field | physics | interactive visualization | electric_field_vectors | canvas | positive_charge_x, negative_charge_x, test_x, test_y | 1.504 | 136.3 | pass | pass | pass |
+| user-holdout-030 | RC circuit | physics | interactive animation | rc_circuit | svg | mode, resistance, capacitance, play, pause, restart | 0.906 | 361.6 | pass | pass | pass |
+| user-holdout-031 | Binary search | computer science | interactive animation | binary_search | svg | target, step, play, pause, restart | 0.450 | 260.2 | pass | pass | pass |
+| user-holdout-032 | Sorting algorithm | computer science | interactive visualization | merge_sort | svg | step | 0.872 | 97.2 | pass | pass | pass |
+| user-holdout-033 | Binary search tree | computer science | interactive animation | binary_search_tree | svg | insert, step, play, pause, restart | 0.296 | 265.1 | pass | pass | pass |
+| user-holdout-034 | Dijkstra's algorithm | computer science | interactive animation | dijkstra | svg | source, destination, step, play, pause, restart | 0.303 | 277.6 | pass | pass | pass |
+| user-holdout-035 | Neural network | computer science | interactive visualization | neural_network | svg | weight, step | 0.362 | 95.2 | pass | pass | pass |
+| user-holdout-036 | Gradient descent | mathematics | interactive visualization | gradient_descent | svg | learning_rate, step | 1.993 | 92.2 | pass | pass | pass |
+| user-holdout-037 | Differential-drive robot | robotics | interactive visualization | differential_drive | canvas | left_velocity, right_velocity | 0.609 | 64.4 | pass | pass | pass |
+| user-holdout-038 | Robot arm forward kinematics | robotics | interactive visualization | robot_forward_kinematics | svg | joint_1, joint_2, joint_3 | 0.156 | 83.1 | pass | pass | pass |
+| user-holdout-039 | Sampling and aliasing | signals | interactive visualization | sampling_aliasing | canvas | signal_frequency, sample_frequency | 1.424 | 160.6 | pass | pass | pass |
+| user-holdout-040 | Fourier decomposition | signals | interactive visualization | fourier_series | svg | terms | 1.580 | 71.8 | pass | pass | pass |
+| user-holdout-041 | 3D vector field | mathematics | interactive visualization | vector_field_3d | three | point_x, point_y, point_z | 0.464 | 385.4 | pass | pass | pass |
+| user-holdout-042 | Double pendulum | physics | interactive animation | double_pendulum | canvas | angle_1, angle_2, play, pause, restart | 2.108 | 351.4 | pass | pass | pass |
+| user-holdout-043 | Lorenz attractor | dynamical systems | interactive animation | lorenz_attractor | three | sigma, rho, beta, play, pause, restart | 2.711 | 632.4 | pass | pass | pass |
+| user-holdout-044 | Gyroid | mathematics | interactive visualization | implicit_surface | three | clip_z, orbit, reset_view | 0.663 | 468.2 | pass | pass | pass |
+| user-holdout-045 | Electromagnetic wave | physics | interactive animation | electromagnetic_wave | three | amplitude, wavelength, play, pause, restart | 1.272 | 605.9 | pass | pass | pass |
+| user-holdout-046 | Action potential | biology | interactive visualization | action_potential | svg | time | 0.718 | 159.2 | pass | pass | pass |
+| user-holdout-047 | Chemical titration | chemistry | interactive animation | titration | svg | titrant_volume, play, pause, restart | 0.870 | 278.8 | pass | pass | pass |
+| user-holdout-048 | CPU memory hierarchy | computer science | interactive animation | virtual_memory | svg | address, step, play, pause, restart | 0.301 | 264.6 | pass | pass | pass |
+| user-holdout-049 | Robot localization | robotics | interactive visualization | robot_localization | canvas | odometry_noise, sensor_noise, step | 1.406 | 203.7 | pass | pass | pass |
+| user-holdout-050 | Full Kalman filter visualization | controls | interactive animation | kalman_filter | svg | noise, process_noise, step, play, pause, restart | 1.543 | 386.2 | pass | pass | pass |
