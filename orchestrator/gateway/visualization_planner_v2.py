@@ -344,7 +344,7 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:\(|\?\.|\.|\[)|"
     r"\(\s*(?:document|window|globalThis|location|history|navigator|self|"
     r"d3|THREE|gsap|motion|anime)\s*\)\s*(?:\?\.|\.|\[)|"
-    r"\(\s*\d+\s*,\s*(?:eval|Function|setTimeout|setInterval|fetch)\s*\)\s*\(|"
+    r"\(\s*[^,()\r\n]{1,80},\s*(?:eval|Function|setTimeout|setInterval|fetch)\s*\)|"
     r"\beval\s*(?:\?\.|\[)|"
     r"\b(?:exec|compile)\s*\(|\bopen\s*\(\s*['\"]|"
     r"\bopen\s*\(\s*(?!not\s+closed\b)[A-Za-z_]|"
