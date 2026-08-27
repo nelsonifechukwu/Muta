@@ -1,0 +1,330 @@
+{
+  "schema_version": 1,
+  "count": 2,
+  "cases": [
+    {
+      "id": "followup-pythagoras",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "pythagoras",
+        "title": "Animated: Pythagoras",
+        "aria_label": "Interactive pythagoras visualization with labelled relationships and controls.",
+        "text_fallback": "Pythagoras. Visible layers: right triangle; square on a; square on b; square on c. Adjustable controls: A, B.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "a",
+            "label": "A",
+            "type": "range",
+            "value": 3,
+            "min": 1,
+            "max": 10,
+            "step": 0.1
+          },
+          {
+            "id": "b",
+            "label": "B",
+            "type": "range",
+            "value": 4,
+            "min": 1,
+            "max": 10,
+            "step": 0.1
+          },
+          {
+            "id": "play",
+            "label": "Play",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "pause",
+            "label": "Pause",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "restart",
+            "label": "Restart",
+            "type": "button",
+            "value": 0
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "cartesian2d",
+          "layers": [
+            {
+              "type": "axes",
+              "x_label": "x",
+              "y_label": "y",
+              "grid": true
+            },
+            {
+              "type": "polyline",
+              "label": "right triangle",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  3,
+                  0
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  0,
+                  0
+                ]
+              ],
+              "color": "gold"
+            },
+            {
+              "type": "polyline",
+              "label": "square on a",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  3,
+                  0
+                ],
+                [
+                  3,
+                  -3
+                ],
+                [
+                  0,
+                  -3
+                ],
+                [
+                  0,
+                  0
+                ]
+              ],
+              "color": "teal"
+            },
+            {
+              "type": "polyline",
+              "label": "square on b",
+              "points": [
+                [
+                  3,
+                  0
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  7,
+                  4
+                ],
+                [
+                  7,
+                  0
+                ],
+                [
+                  3,
+                  0
+                ]
+              ],
+              "color": "orange"
+            },
+            {
+              "type": "polyline",
+              "label": "square on c",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  -1,
+                  7
+                ],
+                [
+                  -4,
+                  3
+                ],
+                [
+                  0,
+                  0
+                ]
+              ],
+              "color": "purple"
+            }
+          ],
+          "animation": {
+            "mode": "guided_reveal",
+            "duration": 8
+          }
+        }
+      }
+    },
+    {
+      "id": "followup-damped-sine",
+      "spec": {
+        "version": 2,
+        "library": "three",
+        "renderer": "three",
+        "kind": "scene3d",
+        "family": "explicit_surface",
+        "title": "Animated: Interactive mathematical surface",
+        "aria_label": "Three-dimensional plot of z=4*exp(-y^2/4)*sin(2*x), with x, y, and z axes.",
+        "text_fallback": "Surface z=4*exp(-y^2/4)*sin(2*x). Domains are x -5.0 to 5.0, y -5.0 to 5.0, and z -4.618693 to 4.618693. Undefined samples are left as gaps.",
+        "height": 480,
+        "controls": [
+          {
+            "id": "orbit",
+            "label": "Rotate view",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "reset_view",
+            "label": "Reset view",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "play",
+            "label": "Play",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "pause",
+            "label": "Pause",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "restart",
+            "label": "Restart",
+            "type": "button",
+            "value": 0
+          }
+        ],
+        "budget": {
+          "max_points": 20000,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "cartesian3d",
+          "layers": [
+            {
+              "type": "explicit_surface",
+              "label": "z=4*exp(-y^2/4)*sin(2*x)",
+              "relationship": {
+                "type": "relationship",
+                "op": "=",
+                "left": {
+                  "type": "variable",
+                  "name": "z"
+                },
+                "right": {
+                  "type": "binary",
+                  "op": "*",
+                  "left": {
+                    "type": "binary",
+                    "op": "*",
+                    "left": {
+                      "type": "number",
+                      "value": 4.0
+                    },
+                    "right": {
+                      "type": "call",
+                      "name": "exp",
+                      "args": [
+                        {
+                          "type": "binary",
+                          "op": "/",
+                          "left": {
+                            "type": "unary",
+                            "op": "-",
+                            "arg": {
+                              "type": "binary",
+                              "op": "^",
+                              "left": {
+                                "type": "variable",
+                                "name": "y"
+                              },
+                              "right": {
+                                "type": "number",
+                                "value": 2.0
+                              }
+                            }
+                          },
+                          "right": {
+                            "type": "number",
+                            "value": 4.0
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "right": {
+                    "type": "call",
+                    "name": "sin",
+                    "args": [
+                      {
+                        "type": "binary",
+                        "op": "*",
+                        "left": {
+                          "type": "number",
+                          "value": 2.0
+                        },
+                        "right": {
+                          "type": "variable",
+                          "name": "x"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "x_domain": [
+                -5.0,
+                5.0
+              ],
+              "y_domain": [
+                -5.0,
+                5.0
+              ],
+              "z_domain": [
+                -4.618693,
+                4.618693
+              ],
+              "resolution": [
+                49,
+                49
+              ],
+              "animation": {
+                "mode": "phase",
+                "duration": 8
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

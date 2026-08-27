@@ -38,20 +38,22 @@ def test_chat_loads_visualization_parser_before_the_chat_client() -> None:
 def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> None:
     parent = (UI / "visualizations.js").read_text()
     frame = (UI / "viz-frame.js").read_text()
+    frame_v2 = (UI / "viz-frame-v2.js").read_text()
     html = (UI / "viz-frame.html").read_text()
 
     # WebKit refuses to render the local Three.js/SVG surface in an opaque-origin iframe. The
     # trusted same-origin frame is still isolated from every network and injection sink below.
     assert 'frame.sandbox = "allow-scripts allow-same-origin"' in parent
-    assert "new Function" not in parent + frame
-    assert "eval(" not in parent + frame
+    assert "new Function" not in parent + frame + frame_v2
+    assert "eval(" not in parent + frame + frame_v2
     for network_api in ("fetch(", "XMLHttpRequest", "WebSocket", "EventSource"):
-        assert network_api not in frame
-    assert "innerHTML" not in frame
+        assert network_api not in frame + frame_v2
+    assert "innerHTML" not in frame + frame_v2
     assert "visualizations.js" in html and "viz-frame.js" in html
     assert 'viz-theme.js?v=20260825-mac-media-2' in html
     assert html.index("viz-theme.js") < html.index("viz-frame.css")
-    assert "viz-frame.js?v=20260826-math-surface-1" in html
+    assert "viz-frame.js?v=20260827-v2-45" in html
+    assert 'loadTrustedScript("viz-frame-v2.js?v=20260827-v2-45")' in frame
     assert "http://" not in html and "https://" not in html
     assert "frame.src = source" in parent
     assert 'frame.loading = "lazy"' not in parent
@@ -90,7 +92,8 @@ def test_math_surface_is_responsive_accessible_and_lifecycle_bounded() -> None:
     assert 'id="viz-surface-pause"' in html
     assert 'id="viz-surface-restart"' in html
     assert "min-width: 44px" in css and "min-height: 44px" in css
-    assert "@media (max-width: 420px)" in css
+    assert "@media (max-width: 430px)" in css
+    assert "@media (pointer: coarse), (max-width: 700px) and (max-height: 650px)" in css
     reduced = re.search(r"@media \(prefers-reduced-motion: reduce\)\s*\{(?P<body>.*?)\}", css, re.DOTALL)
     assert reduced and "#viz-surface-controls" in reduced.group("body")
 

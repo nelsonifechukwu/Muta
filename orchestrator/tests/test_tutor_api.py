@@ -22,6 +22,7 @@ from orchestrator.gateway.generations import GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
+from orchestrator.gateway.visualization_v2 import compile_visualization_v2
 from orchestrator.main import app
 from runtime.chat import AttachmentPersistenceError, ChatResult
 from runtime.client import InferenceStreamError
@@ -641,6 +642,28 @@ def test_visual_json_chat_appends_and_updates_its_exact_assistant_row(wired, mon
     reply = response.json()["reply"]
     assert "```muta-viz" in reply and '"kind":"bar"' in reply
     assert engine.store.updated_messages == [(17, reply)]
+
+
+def test_visual_json_chat_persists_a_validated_v2_surface_on_its_owned_row(wired, monkeypatch):
+    engine, *_ = wired
+    engine.chat = lambda **_kwargs: ChatResult(
+        conversation_id="conv-v2-surface",
+        reply="The surface oscillates along x and decays away from y = 0.",
+        assistant_message_id=18,
+    )
+    spec = compile_visualization_v2("Plot z=4*exp(-y^2/4)*sin(2*x)")
+    assert spec is not None and spec["version"] == 2
+    monkeypatch.setattr(routes, "generate_visualization", lambda *_args, **_kwargs: spec)
+
+    response = client.post(
+        "/v1/chat",
+        json={"student_id": "s1", "message": "Plot z=4*exp(-y^2/4)*sin(2*x)."},
+    )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert '"version":2' in reply and '"type":"explicit_surface"' in reply
+    assert engine.store.updated_messages == [(18, reply)]
 
 
 def test_visual_stream_persists_owned_row_and_emits_suffix_before_done(wired, monkeypatch):

@@ -10,7 +10,8 @@
   const surfacePause = document.getElementById("viz-surface-pause");
   const surfaceRestart = document.getElementById("viz-surface-restart");
   const t = (key, variables) => window.MutaI18n.t(key, variables);
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reducedMotion = new URLSearchParams(window.location.search).get("motion") === "reduce"
+    || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let parentVisible = true;
   const activityListeners = new Set();
 
@@ -70,6 +71,16 @@
       script.src = libraryFiles[name];
       script.onload = resolve;
       script.onerror = () => reject(new Error(`${name} is not available in this offline bundle`));
+      document.head.appendChild(script);
+    });
+  }
+
+  function loadTrustedScript(path) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = path;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`${path} is not available in this offline bundle`));
       document.head.appendChild(script);
     });
   }
@@ -855,12 +866,14 @@
     let parsed;
     try {
       parsed = window.MutaViz.decodeSpec(window.location.hash.slice(1));
-    } catch {
+    } catch (error) {
+      stage.dataset.vizError = `decode: ${String(error?.message || error).slice(0, 200)}`;
       fail(t("visualization.incomplete"));
       return;
     }
     const checked = window.MutaViz.validateSpec(parsed);
     if (!checked.ok) {
+      stage.dataset.vizError = `validation: ${checked.error}`;
       fail(t("visualization.invalid"));
       return;
     }
@@ -869,11 +882,26 @@
     document.title = spec.title;
     try {
       await loadLibrary(spec.library);
-      if (spec.library === "d3") renderD3(spec);
+      if (spec.version === 2) {
+        replay.hidden = true;
+        surfaceControls.hidden = true;
+      await loadTrustedScript("viz-frame-v2.js?v=20260827-v2-45");
+        await window.MutaVizV2.render(spec, {
+          stage,
+          palette,
+          neutral,
+          border,
+          t,
+          reducedMotion,
+          renderActive,
+          onActivity,
+        });
+      } else if (spec.library === "d3") renderD3(spec);
       else if (spec.library === "three") renderThree(spec);
       else renderAnimation(spec);
     } catch (error) {
       console.warn("Visualization rendering failed", error);
+      stage.dataset.vizError = String(error?.message || error || "unknown rendering error").slice(0, 240);
       fail(t("visualization.failed"));
     }
   }
