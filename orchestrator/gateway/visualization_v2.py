@@ -41,6 +41,11 @@ _BINDABLE_LAYER_EFFECTS: dict[str, frozenset[str]] = {
     "particles": frozenset({"translate_x", "translate_y", "scale"}),
     "vector_field": frozenset({"translate_x", "translate_y", "scale"}),
 }
+_RENDERER_BINDABLE_TYPES: dict[str, frozenset[str]] = {
+    "svg": frozenset(_BINDABLE_LAYER_EFFECTS),
+    "canvas": frozenset({"polyline", "particles", "vector_field"}),
+    "three": frozenset(),
+}
 
 _THREE_PRIMITIVE_TRIANGLES = {
     # Keep these estimates synchronized with the fixed renderer geometry in viz-frame-v2.js.
@@ -50,6 +55,11 @@ _THREE_PRIMITIVE_TRIANGLES = {
     "plane": 128,
     "vector": 32,
 }
+# Renderer-owned mesh work is part of the same authoritative budget as learner geometry.
+# Explicit/implicit surfaces add at most twelve two-triangle text sprites (axis names/ticks),
+# while the parametric-surface family adds one 16×12 sphere marker.
+_THREE_SURFACE_LABEL_TRIANGLES = 24
+_THREE_PARAMETRIC_MARKER_TRIANGLES = 352
 
 _SAFE_ID = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,63}\Z")
 _SAFE_COLOR = re.compile(
@@ -7450,6 +7460,10 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 raise VisualizationV2Error("explicit surface work exceeds the budget")
             if layer_type == "explicit_surface":
                 triangle_estimate += 2 * (resolution[0] - 1) * (resolution[1] - 1)
+            else:
+                # An accepted implicit surface must leave room for at least one finite triangle;
+                # renderer-owned labels are reserved separately below.
+                triangle_estimate += 1
             for axis in "xyz":
                 domain = layer.get(f"{axis}_domain")
                 if (
@@ -7640,6 +7654,10 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 raise VisualizationV2Error("panel members are invalid or ambiguous")
             panel_ids.add(layer["id"])
             assigned_panel_members.update(members)
+    if any(layer.get("type") in {"explicit_surface", "implicit_surface"} for layer in layers):
+        triangle_estimate += _THREE_SURFACE_LABEL_TRIANGLES
+    if spec["family"] == "parametric_surface":
+        triangle_estimate += _THREE_PARAMETRIC_MARKER_TRIANGLES
     if point_count > budget["max_points"]:
         raise VisualizationV2Error("scene points exceed the declared budget")
     if triangle_estimate > budget["max_triangles"]:
@@ -7648,14 +7666,12 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         binding = control.get("binding")
         if binding is None:
             continue
-        matches = [
-            layer
-            for layer in layers
-            if layer.get("label") == binding["target_label"]
-        ]
+        matches = [layer for layer in layers if layer.get("label") == binding["target_label"]]
         if len(matches) != 1:
             raise VisualizationV2Error("control binding target must be one unique labelled layer")
         target_type = matches[0]["type"]
+        if target_type not in _RENDERER_BINDABLE_TYPES[spec["renderer"]]:
+            raise VisualizationV2Error("control binding target is not rendered by this renderer")
         if binding["effect"] not in _BINDABLE_LAYER_EFFECTS.get(target_type, frozenset()):
             raise VisualizationV2Error("control binding effect is incompatible with its layer")
         if binding["effect"] in {"scale", "radius"} and control["min"] <= 0:

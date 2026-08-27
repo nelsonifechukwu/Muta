@@ -88,11 +88,13 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   for the existing versioned specification only. The prompt explicitly forbids source code, and
   the runtime independently rejects HTML, JavaScript, CSS, shader text, URLs, event handlers,
   prototype keys, unknown fields, and every expression outside the typed AST.
-- Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: multiple
-  concrete request terms must be represented by actual labelled geometry, referenced nodes must
-  exist, and every non-transport control must carry a typed binding to one unique compatible
-  labelled layer. The deterministic renderer owns the allow-listed translation, scale, and radius
-  effects; an inert control is invalid. The chosen renderer must be compatible. On failure, return
+- Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: concrete
+  request terms and explicit entity lists must be represented across distinct labelled geometry;
+  graph/process requests require directed links with validated endpoints; and every non-transport
+  control must be a numeric control carrying a typed binding to one unique compatible labelled
+  layer. The deterministic renderer owns the allow-listed translation, scale, and radius effects
+  inside a stable, unbound coordinate frame, so auto-fitting cannot cancel a visible change. An
+  inert or renderer-incompatible control is invalid. On failure, return
   a structured list of validation codes to one repair attempt. The repair sees only the original
   learner request, the allow-list catalogue, and those codes—not rejected source text. It never
   sees or emits renderer source.
@@ -131,6 +133,9 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   cancel RAF/listeners/observers and dispose buffers, materials, textures, and WebGL contexts on
   unmount.
 - Keep a small active-frame LRU so long conversations do not retain unlimited WebGL/library realms.
+- Count renderer-owned Three.js geometry in the same declared triangle cap as scene geometry.
+  Surface label sprites and parametric path markers are reserved before implicit meshing, and
+  every accepted implicit layer retains room for at least one triangle.
 
 ## Release-gate implementation
 

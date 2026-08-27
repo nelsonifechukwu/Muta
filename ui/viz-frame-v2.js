@@ -3,6 +3,8 @@
 
 ((global) => {
   const SVG_NS = "http://www.w3.org/2000/svg";
+  const SURFACE_LABEL_TRIANGLES = 24;
+  const PARAMETRIC_MARKER_TRIANGLES = 352;
 
   function element(name, attributes = {}, text = "") {
     const node = document.createElementNS(SVG_NS, name);
@@ -299,7 +301,11 @@
       if (Array.isArray(layer.from)) layer.from[coordinate] += amount;
       if (Array.isArray(layer.to)) layer.to[coordinate] += amount;
     };
-    controls.forEach((control) => {
+    // Direct dimensions establish the base before multiplicative scale. This makes combined
+    // radius + scale controls order-independent instead of allowing the later field to erase the
+    // earlier control's visible effect.
+    const bindingOrder = { translate_x: 0, translate_y: 0, radius: 1, scale: 2 };
+    [...controls].sort((left, right) => bindingOrder[left.binding.effect] - bindingOrder[right.binding.effect]).forEach((control) => {
       const value = Number(values[control.id]);
       if (!Number.isFinite(value)) return;
       const effect = control.binding.effect;
@@ -1890,6 +1896,7 @@
     let animationProgress = spec.scene.animation ? 0 : 1;
     let animationStatus = spec.scene.animation ? "paused" : "static";
     let animationFrameInterval = 0;
+    const domainControlValues = Object.fromEntries(spec.controls.map((control) => [control.id, control.value]));
     const redraw = (controlValues = {}, changedId = "") => {
       latestControlValues = animationControlValues(spec, controlValues, animationProgress);
       if (changedId) { controlRevision += 1; latestChangedId = changedId; }
@@ -1905,9 +1912,18 @@
       const particles = new Map(particleLayers.map((layer) => [layer, controlledParticles(spec.family, layer, latestControlValues)]));
       const vectorLayers = boundLayers.filter((layer) => layer.type === "vector_field");
       const vectors = new Map(vectorLayers.map((layer) => [layer, controlledVectors(spec.family, layer, latestControlValues)]));
-      const fieldPoints = vectorLayers.flatMap((layer) => vectors.get(layer).flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]]));
       const probes = new Map(boundLayers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, latestControlValues)]));
-      const plotPoints = [...controlled.values()].flat().concat([...particles.values()].flat(), fieldPoints, [...probes.values()].flat());
+      // A binding acts inside an immutable coordinate frame. Deriving the domain from translated
+      // or scaled output would auto-fit the change away and leave a valid control visibly inert.
+      // Family-specific deterministic controls still contribute through their controlled base
+      // geometry; only generic bindings are excluded from the domain calculation.
+      const basePolylineLayers = layers.filter((layer) => layer.type === "polyline");
+      const baseControlled = basePolylineLayers.map((layer, polylineIndex) => controlledPoints(spec.family, layer, polylineIndex, domainControlValues));
+      const baseParticlePoints = layers.filter((layer) => layer.type === "particles").map((layer) => controlledParticles(spec.family, layer, domainControlValues));
+      const baseVectorValues = layers.filter((layer) => layer.type === "vector_field").map((layer) => controlledVectors(spec.family, layer, domainControlValues));
+      const baseProbes = layers.filter((layer) => layer.type === "probe_vector").map((layer) => evaluatedProbe(layer, domainControlValues));
+      const fieldPoints = baseVectorValues.flatMap((samples) => samples.flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]]));
+      const plotPoints = baseControlled.flat().concat(baseParticlePoints.flat(), fieldPoints, baseProbes.flat());
       const xDomain = extent(plotPoints.map((point) => point[0]));
       const yDomain = extent(plotPoints.map((point) => point[1]));
       const x = scale(xDomain, [62, 695]);
@@ -1940,7 +1956,7 @@
           // mapping here: doing so can turn a correct curve into a visually plausible lie.
           const allPoints = controlled.get(layer) || layer.points;
           const points = spec.scene.animation ? allPoints.slice(0, Math.max(2, Math.ceil(allPoints.length * animationProgress))) : allPoints;
-          points.forEach((point, pointIndex) => { geometrySignature += Math.round((point[0] * 17 + point[1] * 31) * (pointIndex + 1)); });
+          points.forEach((point, pointIndex) => { geometrySignature += Math.round((x(point[0]) * 17 + y(point[1]) * 31) * (pointIndex + 1)); });
           const path = points.map((point, pointIndex) => `${pointIndex ? "L" : "M"}${x(point[0])},${y(point[1])}`).join(" ");
           let displayedCurveLabel = layer.label || "curve";
           if (spec.family === "nyquist" && displayedCurveLabel.includes("Nyquist")) {
@@ -1956,20 +1972,20 @@
           const displayed = particles.get(layer) || layer.points;
           displayed.forEach((point, pointIndex) => {
             node.append(element("circle", { cx: x(point[0]), cy: y(point[1]), r: 4, fill: color, stroke: context.neutral, "stroke-width": 1 }));
-            geometrySignature += Math.round((point[0] * 23 + point[1] * 37) * (pointIndex + 1));
+            geometrySignature += Math.round((x(point[0]) * 23 + y(point[1]) * 37) * (pointIndex + 1));
           });
         } else if (layer.type === "vector_field") {
           node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": layer.label });
           vectors.get(layer).forEach(([vx, vy, dx, dy], vectorIndex) => {
             node.append(element("line", { x1: x(vx), y1: y(vy), x2: x(vx + dx), y2: y(vy + dy), stroke: color, "stroke-width": 1.8, "marker-end": "url(#v2-arrow)" }));
-            geometrySignature += Math.round((vx * 11 + vy * 13 + dx * 17 + dy * 19) * (vectorIndex + 1));
+            geometrySignature += Math.round((x(vx) * 11 + y(vy) * 13 + x(vx + dx) * 17 + y(vy + dy) * 19) * (vectorIndex + 1));
           });
         } else if (layer.type === "probe_vector") {
           const [from, to] = probes.get(layer);
           node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": layer.label });
           node.append(element("line", { x1: x(from[0]), y1: y(from[1]), x2: x(to[0]), y2: y(to[1]), stroke: color, "stroke-width": 4, "marker-end": "url(#v2-arrow)" }));
           node.append(element("circle", { cx: x(from[0]), cy: y(from[1]), r: 5, fill: color }));
-          geometrySignature += Math.round((from[0] * 41 + from[1] * 43 + to[0] * 47 + to[1] * 53) * 100);
+          geometrySignature += Math.round((x(from[0]) * 41 + y(from[1]) * 43 + x(to[0]) * 47 + y(to[1]) * 53) * 100);
         } else if (layer.type === "node") {
           const displayed = renderedNodes.get(layer.id) || layer;
           const displayedColor = paletteValue(context, displayed.color, index);
@@ -2122,6 +2138,7 @@
     let animationProgress = spec.scene.animation ? 0 : 1;
     let animationStatus = spec.scene.animation ? "paused" : "static";
     let animationFrameInterval = 0;
+    const domainControlValues = Object.fromEntries(spec.controls.map((control) => [control.id, control.value]));
     const draw = () => {
       values = animationControlValues(spec, values, animationProgress);
       const boundLayers = spec.scene.layers.map((layer) => applyControlBindings(spec, layer, values));
@@ -2137,6 +2154,7 @@
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, width, height);
       let customGeometrySignature = 0;
+      let screenGeometrySignature = 0;
       const polylines = boundLayers.filter((layer) => layer.type === "polyline");
       const complete = polylines.map((layer, index) => controlledPoints(spec.family, layer, index, values));
       const controlled = spec.scene.animation ? complete.map((points) => points.slice(0, Math.max(2, Math.ceil(points.length * animationProgress)))) : complete;
@@ -2146,6 +2164,13 @@
       const vectorValues = vectorFields.map((layer) => controlledVectors(spec.family, layer, values));
       const probes = boundLayers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, values)]);
       const heatmaps = boundLayers.filter((layer) => layer.type === "heatmap");
+      const basePolylines = spec.scene.layers.filter((layer) => layer.type === "polyline");
+      const baseComplete = basePolylines.map((layer, index) => controlledPoints(spec.family, layer, index, domainControlValues));
+      const baseParticleLayers = spec.scene.layers.filter((layer) => layer.type === "particles");
+      const baseParticlePoints = baseParticleLayers.map((layer) => controlledParticles(spec.family, layer, domainControlValues));
+      const baseVectorFields = spec.scene.layers.filter((layer) => layer.type === "vector_field");
+      const baseVectorValues = baseVectorFields.map((layer) => controlledVectors(spec.family, layer, domainControlValues));
+      const baseProbes = spec.scene.layers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, domainControlValues)]);
       const defaultAxes = boundLayers.find((layer) => layer.type === "axes") || { x_label: "x", y_label: "y" };
       const panels = panelDefinitions.length ? panelDefinitions : [{
         id: "main", title: spec.title, x_label: defaultAxes.x_label, y_label: defaultAxes.y_label,
@@ -2170,10 +2195,10 @@
         const vectorIndices = vectorFields.map((_layer, index) => index).filter((index) => belongs(panel, vectorFields[index]));
         const panelProbes = probes.filter(([layer]) => belongs(panel, layer));
         const panelHeatmaps = heatmaps.filter((layer) => belongs(panel, layer));
-        const domainPoints = lineIndices.flatMap((index) => complete[index])
-          .concat(particleIndices.flatMap((index) => particlePoints[index]))
-          .concat(vectorIndices.flatMap((index) => vectorValues[index].flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]])))
-          .concat(panelProbes.flatMap((record) => record[1]));
+        const domainPoints = lineIndices.flatMap((index) => baseComplete[index])
+          .concat(particleIndices.flatMap((index) => baseParticlePoints[index]))
+          .concat(vectorIndices.flatMap((index) => baseVectorValues[index].flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]])))
+          .concat(baseProbes.filter(([layer]) => belongs(panel, layer)).flatMap((record) => record[1]));
         panelHeatmaps.forEach((layer) => domainPoints.push([layer.x_domain[0], layer.y_domain[0]], [layer.x_domain[1], layer.y_domain[1]]));
         const xDomain = extent(domainPoints.map((point) => point[0]));
         const yDomain = extent(domainPoints.map((point) => point[1]));
@@ -2202,19 +2227,19 @@
         });
         lineIndices.forEach((index, legendIndex) => {
           const layer = polylines[index]; ctx.beginPath();
-          controlled[index].forEach((point, pointIndex) => { if (pointIndex) ctx.lineTo(mapX(point[0]), mapY(point[1])); else ctx.moveTo(mapX(point[0]), mapY(point[1])); });
+          controlled[index].forEach((point, pointIndex) => { const px = mapX(point[0]); const py = mapY(point[1]); if (pointIndex) ctx.lineTo(px, py); else ctx.moveTo(px, py); screenGeometrySignature += Math.round((px * 17 + py * 31) * (pointIndex + 1)); });
           ctx.strokeStyle = paletteValue(context, layer.color, index); ctx.lineWidth = 2.5; ctx.stroke();
           ctx.fillStyle = ctx.strokeStyle; ctx.font = "10px system-ui"; ctx.fillText(layer.label, left + 4, top + 11 + legendIndex * 12);
         });
         particleIndices.forEach((index) => {
           const layer = particleLayers[index]; ctx.fillStyle = paletteValue(context, layer.color, index + polylines.length);
-          particlePoints[index].forEach((point, pointIndex) => { ctx.beginPath(); ctx.arc(mapX(point[0]), mapY(point[1]), 3.5, 0, Math.PI * 2); ctx.fill(); customGeometrySignature += Math.round((point[0] * 23 + point[1] * 37) * (pointIndex + 1)); });
+          particlePoints[index].forEach((point, pointIndex) => { const px = mapX(point[0]); const py = mapY(point[1]); ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill(); screenGeometrySignature += Math.round((px * 23 + py * 37) * (pointIndex + 1)); });
         });
         vectorIndices.forEach((index) => {
           const layer = vectorFields[index]; ctx.strokeStyle = paletteValue(context, layer.color, index + polylines.length + particleLayers.length); ctx.fillStyle = ctx.strokeStyle;
-          vectorValues[index].forEach(([vx, vy, dx, dy], vectorIndex) => { const startX = mapX(vx); const startY = mapY(vy); const endX = mapX(vx + dx); const endY = mapY(vy + dy); ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); const angle = Math.atan2(endY - startY, endX - startX); ctx.beginPath(); ctx.moveTo(endX, endY); ctx.lineTo(endX - 7 * Math.cos(angle - 0.45), endY - 7 * Math.sin(angle - 0.45)); ctx.lineTo(endX - 7 * Math.cos(angle + 0.45), endY - 7 * Math.sin(angle + 0.45)); ctx.closePath(); ctx.fill(); customGeometrySignature += Math.round((vx * 11 + vy * 13 + dx * 17 + dy * 19) * (vectorIndex + 1)); });
+          vectorValues[index].forEach(([vx, vy, dx, dy], vectorIndex) => { const startX = mapX(vx); const startY = mapY(vy); const endX = mapX(vx + dx); const endY = mapY(vy + dy); ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); const angle = Math.atan2(endY - startY, endX - startX); ctx.beginPath(); ctx.moveTo(endX, endY); ctx.lineTo(endX - 7 * Math.cos(angle - 0.45), endY - 7 * Math.sin(angle - 0.45)); ctx.lineTo(endX - 7 * Math.cos(angle + 0.45), endY - 7 * Math.sin(angle + 0.45)); ctx.closePath(); ctx.fill(); screenGeometrySignature += Math.round((startX * 11 + startY * 13 + endX * 17 + endY * 19) * (vectorIndex + 1)); });
         });
-        panelProbes.forEach(([layer, [from, to]], probeIndex) => { ctx.strokeStyle = paletteValue(context, layer.color, probeIndex + polylines.length + particleLayers.length + vectorFields.length); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(mapX(from[0]), mapY(from[1])); ctx.lineTo(mapX(to[0]), mapY(to[1])); ctx.stroke(); ctx.beginPath(); ctx.arc(mapX(from[0]), mapY(from[1]), 5, 0, Math.PI * 2); ctx.fill(); customGeometrySignature += Math.round((from[0] * 41 + from[1] * 43 + to[0] * 47 + to[1] * 53) * 100); });
+        panelProbes.forEach(([layer, [from, to]], probeIndex) => { const startX = mapX(from[0]); const startY = mapY(from[1]); const endX = mapX(to[0]); const endY = mapY(to[1]); ctx.strokeStyle = paletteValue(context, layer.color, probeIndex + polylines.length + particleLayers.length + vectorFields.length); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.beginPath(); ctx.arc(startX, startY, 5, 0, Math.PI * 2); ctx.fill(); screenGeometrySignature += Math.round((startX * 41 + startY * 43 + endX * 47 + endY * 53) * 100); });
         if (spec.family === "fluid_flow") { ctx.beginPath(); ctx.arc(mapX(0), mapY(0), Math.abs(mapX(1) - mapX(0)), 0, Math.PI * 2); ctx.fillStyle = context.border; ctx.fill(); customGeometrySignature += Math.round(stateNumber(values, "speed", 1) * 1000); }
       });
       state.textContent = spec.scene.animation
@@ -2223,7 +2248,7 @@
       const pixels = ctx.getImageData(0, 0, Math.min(canvas.width, 256), Math.min(canvas.height, 128)).data;
       let coloured = 0;
       for (let index = 3; index < pixels.length; index += 16) if (pixels[index] > 0) coloured += 1;
-      const geometrySignature = customGeometrySignature + controlled.flat().reduce((sum, point, index) => sum + Math.round((point[0] * 17 + point[1] * 31) * (index + 1)), 0);
+      const geometrySignature = customGeometrySignature + screenGeometrySignature;
       recordEvidence(stage, { rendered: coloured > 10, renderer: "canvas", nontransparent_samples: coloured, controls: spec.controls.length, family: spec.family, panel_count: panels.length, panel_titles: panels.map((panel) => panel.title), control_revision: controlRevision, control_values: values, geometry_signature: geometrySignature, visual_state_signature: geometrySignature, animation_state: animationStatus, animation_progress: animationProgress, observed_frame_interval_ms: animationFrameInterval, state_description: state.textContent });
     };
     let animationController = null;
@@ -2293,6 +2318,7 @@
       const values = indices.map((index) => cache[index]);
       for (const tetra of tetrahedra) {
         const append = (a, b, c) => {
+          if (triangles.length / 3 >= maximumTriangles) return;
           const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
           const ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
           const cross = [ab[1] * ac[2] - ab[2] * ac[1], ab[2] * ac[0] - ab[0] * ac[2], ab[0] * ac[1] - ab[1] * ac[0]];
@@ -2612,8 +2638,14 @@
     scene.add(directional);
     const bounds = new THREE.Box3();
     let triangleCount = 0;
+    const rendererTriangleOverhead = (
+      spec.scene.layers.some((layer) => ["explicit_surface", "implicit_surface"].includes(layer.type))
+        ? SURFACE_LABEL_TRIANGLES : 0
+    ) + (spec.family === "parametric_surface" ? PARAMETRIC_MARKER_TRIANGLES : 0);
     let remainingImplicitTriangles = spec.budget.max_triangles
+      - rendererTriangleOverhead
       - spec.scene.layers.reduce((sum, layer) => sum + fixedTriangleEstimate(layer), 0);
+    let implicitLayersRemaining = spec.scene.layers.filter((layer) => layer.type === "implicit_surface").length;
     let drawCalls = 0;
     let topology = null;
     let surfaceDiagnostics = null;
@@ -2634,10 +2666,16 @@
       const shade = new THREE.Color(paletteValue(context, layer.color, index));
       let object;
       if (["explicit_surface", "implicit_surface", "parametric_surface"].includes(layer.type)) {
-        if (layer.type === "implicit_surface" && remainingImplicitTriangles < 1) throw new Error("scene exhausted its declared triangle budget");
+        const implicitTriangleBudget = layer.type === "implicit_surface"
+          ? remainingImplicitTriangles - Math.max(0, implicitLayersRemaining - 1)
+          : 0;
+        if (layer.type === "implicit_surface" && implicitTriangleBudget < 1) throw new Error("scene exhausted its declared triangle budget");
         const triangles = layer.type === "explicit_surface" ? explicitTriangles(layer)
-          : layer.type === "implicit_surface" ? implicitTriangles(layer, remainingImplicitTriangles) : parametricTriangles(layer);
-        if (layer.type === "implicit_surface") remainingImplicitTriangles -= Math.floor(triangles.length / 3);
+          : layer.type === "implicit_surface" ? implicitTriangles(layer, implicitTriangleBudget) : parametricTriangles(layer);
+        if (layer.type === "implicit_surface") {
+          remainingImplicitTriangles -= Math.floor(triangles.length / 3);
+          implicitLayersRemaining -= 1;
+        }
         triangleCount += Math.floor(triangles.length / 3);
         if (triangles.diagnostics) surfaceDiagnostics = triangles.diagnostics;
         if (!triangles.length) throw new Error("surface has no finite triangles inside the selected domain");

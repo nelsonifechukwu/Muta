@@ -19,6 +19,8 @@
   const MAX_TREE_NODES = 2500;
   const MAX_STATIC_SURFACE_WORK = 500_000;
   const MAX_ANIMATED_SURFACE_WORK = 200_000;
+  const V2_SURFACE_LABEL_TRIANGLES = 24;
+  const V2_PARAMETRIC_MARKER_TRIANGLES = 352;
   const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
   const SAFE_COLOR = /^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([0-9.,%\s-]+\)|black|white|gray|grey|red|green|blue|orange|purple|teal|gold)$/;
   const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
@@ -730,6 +732,8 @@
         }
         if (layer.type === "explicit_surface") {
           triangleEstimate += 2 * (layer.resolution[0] - 1) * (layer.resolution[1] - 1);
+        } else {
+          triangleEstimate += 1;
         }
         for (const axis of ["x", "y", "z"]) if (!numberPair(layer[`${axis}_domain`], -1000, 1000)) return { ok: false, error: "V2 surface domain is invalid" };
         if (layer.animation !== undefined && (!exactKeys(layer.animation, new Set(["mode", "duration"]))
@@ -750,6 +754,10 @@
         triangleEstimate += 2 * (layer.resolution[0] - 1) * (layer.resolution[1] - 1);
       }
     }
+    if (candidate.scene.layers.some((layer) => ["explicit_surface", "implicit_surface"].includes(layer.type))) {
+      triangleEstimate += V2_SURFACE_LABEL_TRIANGLES;
+    }
+    if (candidate.family === "parametric_surface") triangleEstimate += V2_PARAMETRIC_MARKER_TRIANGLES;
     if (points > candidate.budget.max_points) return { ok: false, error: "V2 point budget exceeded" };
     if (triangleEstimate > candidate.budget.max_triangles) return { ok: false, error: "V2 triangle budget exceeded" };
     const bindable = {
@@ -761,9 +769,15 @@
       particles: new Set(["translate_x", "translate_y", "scale"]),
       vector_field: new Set(["translate_x", "translate_y", "scale"]),
     };
+    const rendererBindable = {
+      svg: new Set(Object.keys(bindable)),
+      canvas: new Set(["polyline", "particles", "vector_field"]),
+      three: new Set(),
+    };
     for (const control of candidate.controls.filter((item) => item.binding)) {
       const matches = candidate.scene.layers.filter((layer) => layer.label === control.binding.target_label);
-      if (matches.length !== 1 || !bindable[matches[0].type]?.has(control.binding.effect)
+      if (matches.length !== 1 || !rendererBindable[candidate.renderer].has(matches[0].type)
+        || !bindable[matches[0].type]?.has(control.binding.effect)
         || (["scale", "radius"].includes(control.binding.effect) && control.min <= 0)) {
         return { ok: false, error: "V2 control binding target is invalid" };
       }

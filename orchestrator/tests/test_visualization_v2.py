@@ -616,6 +616,38 @@ def test_declared_triangle_budget_covers_fixed_three_geometry_and_surfaces() -> 
     underdeclared_surface["budget"]["max_triangles"] = 1
     with pytest.raises(VisualizationV2Error, match="triangle budget"):
         validate_v2_spec(underdeclared_surface)
+    surface_layer = surface["scene"]["layers"][0]
+    surface_mesh_triangles = (
+        2 * (surface_layer["resolution"][0] - 1) * (surface_layer["resolution"][1] - 1)
+    )
+    exact_mesh_only = json.loads(json.dumps(surface))
+    exact_mesh_only["budget"]["max_triangles"] = surface_mesh_triangles
+    with pytest.raises(VisualizationV2Error, match="triangle budget"):
+        validate_v2_spec(exact_mesh_only)
+    exact_mesh_only["budget"]["max_triangles"] = surface_mesh_triangles + 24
+    validate_v2_spec(exact_mesh_only)
+
+    implicit = compile_visualization_v2("Plot implicit surface x^2+y^2+z^2=1")
+    assert implicit is not None
+    implicit["budget"]["max_triangles"] = 24
+    with pytest.raises(VisualizationV2Error, match="triangle budget"):
+        validate_v2_spec(implicit)
+    implicit["budget"]["max_triangles"] = 25
+    validate_v2_spec(implicit)
+
+    parametric = compile_visualization_v2(
+        "Plot parametric surface x(u,v)=cos(u), y(u,v)=sin(u), z(u,v)=v"
+    )
+    assert parametric is not None
+    parametric_layer = parametric["scene"]["layers"][0]
+    parametric_mesh_triangles = (
+        2 * (parametric_layer["resolution"][0] - 1) * (parametric_layer["resolution"][1] - 1)
+    )
+    parametric["budget"]["max_triangles"] = parametric_mesh_triangles
+    with pytest.raises(VisualizationV2Error, match="triangle budget"):
+        validate_v2_spec(parametric)
+    parametric["budget"]["max_triangles"] = parametric_mesh_triangles + 352
+    validate_v2_spec(parametric)
 
     spheres = json.loads(json.dumps(surface))
     spheres["controls"] = []
@@ -640,9 +672,7 @@ def test_declared_triangle_budget_covers_fixed_three_geometry_and_surfaces() -> 
 
 
 def test_typed_control_binding_targets_one_compatible_labelled_layer() -> None:
-    spec = compile_visualization_v2(
-        "Draw a process diagram showing intake, transform, and output"
-    )
+    spec = compile_visualization_v2("Draw a process diagram showing intake, transform, and output")
     assert spec is not None
     spec["controls"] = [
         {
@@ -667,6 +697,12 @@ def test_typed_control_binding_targets_one_compatible_labelled_layer() -> None:
     incompatible["controls"][0]["binding"]["effect"] = "radius"
     with pytest.raises(VisualizationV2Error, match="incompatible"):
         validate_v2_spec(incompatible)
+
+    invisible = json.loads(json.dumps(spec))
+    invisible["renderer"] = "canvas"
+    invisible["kind"] = "simulation2d"
+    with pytest.raises(VisualizationV2Error, match="not rendered"):
+        validate_v2_spec(invisible)
 
 
 @pytest.mark.parametrize(

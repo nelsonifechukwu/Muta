@@ -94,10 +94,37 @@ test("validates typed control bindings and declared Three triangle budgets", () 
   const incompatible = structuredClone(bound);
   incompatible.controls[0].binding.effect = "radius";
   assert.match(viz.validateSpec(incompatible).error, /binding target/);
+  const invisible = structuredClone(bound);
+  invisible.renderer = "canvas"; invisible.kind = "simulation2d";
+  assert.match(viz.validateSpec(invisible).error, /binding target/);
 
   const underdeclaredSurface = surface();
   underdeclaredSurface.budget.max_triangles = 1;
   assert.match(viz.validateSpec(underdeclaredSurface).error, /triangle budget/);
+  const surfaceMeshTriangles = 2 * 48 * 48;
+  underdeclaredSurface.budget.max_triangles = surfaceMeshTriangles;
+  assert.match(viz.validateSpec(underdeclaredSurface).error, /triangle budget/);
+  underdeclaredSurface.budget.max_triangles = surfaceMeshTriangles + 24;
+  assert.equal(viz.validateSpec(underdeclaredSurface).ok, true);
+
+  const implicit = surface("implicit_surface");
+  implicit.budget.max_triangles = 24;
+  assert.match(viz.validateSpec(implicit).error, /triangle budget/);
+  implicit.budget.max_triangles = 25;
+  assert.equal(viz.validateSpec(implicit).ok, true);
+
+  const parametric = surface();
+  parametric.family = "parametric_surface";
+  parametric.scene.layers = [{
+    type: "parametric_surface",
+    x_expression: call("cos", variable("u")), y_expression: call("sin", variable("u")),
+    z_expression: variable("v"), u_domain: [0, 6.28], v_domain: [-1, 1],
+    resolution: [17, 17], label: "cylinder",
+  }];
+  parametric.budget.max_triangles = 512;
+  assert.match(viz.validateSpec(parametric).error, /triangle budget/);
+  parametric.budget.max_triangles = 512 + 352;
+  assert.equal(viz.validateSpec(parametric).ok, true);
 
   const spheres = surface();
   spheres.controls = [];

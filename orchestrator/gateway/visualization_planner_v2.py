@@ -51,6 +51,15 @@ _ANIMATION_SIGNAL = re.compile(
     r"\b(?:animate|animation|make\s+it\s+move|moving|play|motion)\b",
     re.IGNORECASE,
 )
+_STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
+    r"\b(?:web|network|flow|cycle|process|path|loop|pipeline|hierarchy|tree|graph|"
+    r"architecture|relationship)\b|\bfrom\b.{0,100}\bto\b",
+    re.IGNORECASE | re.DOTALL,
+)
+_EXPLICIT_ENTITY_CLAUSE = re.compile(
+    r"\b(?:showing|linking|connecting|between)\b(?P<entities>[^.!?;]{1,220})",
+    re.IGNORECASE,
+)
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*(?:script|iframe|object|embed|svg|canvas|style|link)\b|"
     r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\bnew\s+Function\b|"
@@ -73,6 +82,7 @@ _TOPIC_STOPWORDS = frozenset(
         "diagram",
         "draw",
         "explain",
+        "from",
         "graph",
         "illustrate",
         "interactive",
@@ -226,7 +236,10 @@ def planner_schema_v2() -> dict[str, Any]:
         "properties": {
             "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$"},
             "label": {"type": "string", "minLength": 1, "maxLength": 80},
-            "type": {"type": "string", "enum": ["range", "select", "step", "button"]},
+            # Generic planner controls must either be numeric bindings or the three animation
+            # transport buttons. Select controls need family-specific semantics and therefore
+            # remain on deterministic compiler paths rather than becoming inert model output.
+            "type": {"type": "string", "enum": ["range", "step", "button"]},
             "value": {"type": ["number", "string", "boolean"]},
             "min": {"type": "number", "minimum": -10_000, "maximum": 10_000},
             "max": {"type": "number", "minimum": -10_000, "maximum": 10_000},
@@ -345,6 +358,15 @@ def _topic_terms(request: str) -> set[str]:
     }
 
 
+def _explicit_entity_terms(request: str) -> set[str]:
+    """Extract concrete list-like entities without pretending to be a full NLP parser."""
+    return {
+        term
+        for match in _EXPLICIT_ENTITY_CLAUSE.finditer(request)
+        for term in _topic_terms(match.group("entities"))
+    }
+
+
 def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
     """Return stable machine-readable validation and semantic-oracle failures."""
     try:
@@ -405,29 +427,69 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
                 }
             )
 
-    corpus = " ".join(
-        str(layer.get(field, ""))
-        for layer in meaningful
-        for field in ("label", "text", "title")
-    ).lower()
     terms = _topic_terms(request)
-    grounded = {term for term in terms if term in corpus}
-    required_grounding = min(2, len(terms))
-    if len(grounded) < required_grounding:
+    layer_matches = []
+    for index, layer in enumerate(meaningful):
+        label_tokens = _topic_terms(
+            " ".join(str(layer.get(field, "")) for field in ("label", "text", "title"))
+        )
+        matches = terms.intersection(label_tokens)
+        if matches:
+            layer_matches.append((index, matches))
+    grounded = (
+        set().union(*(matches for _index, matches in layer_matches)) if layer_matches else set()
+    )
+    explicit_entities = _explicit_entity_terms(request)
+    required_grounding = min(3, len(terms))
+    required_layers = min(2, required_grounding)
+    missing_entities = explicit_entities.difference(grounded)
+    if (
+        len(grounded) < required_grounding
+        or len(layer_matches) < required_layers
+        or missing_entities
+    ):
         errors.append(
             {
                 "code": "topic_not_grounded",
                 "detail": (
-                    "Represent at least two concrete learner-request terms in labelled geometry; "
-                    f"matched {len(grounded)} of {required_grounding}."
+                    "Represent concrete learner-request entities across distinct labelled geometry; "
+                    f"matched {len(grounded)} of {required_grounding}, across "
+                    f"{len(layer_matches)} of {required_layers} required layers, with "
+                    f"{len(missing_entities)} explicit entities missing."
                 ),
             }
         )
+    if _STRUCTURAL_RELATIONSHIP_SIGNAL.search(request):
+        links = [layer for layer in meaningful if layer.get("type") == "link"]
+        if not links or any(not layer.get("arrow") for layer in links):
+            errors.append(
+                {
+                    "code": "relationship_not_grounded",
+                    "detail": (
+                        "Graph and process requests require directed links between validated node "
+                        "endpoints."
+                    ),
+                }
+            )
     parameter_controls = [
         control
         for control in spec["controls"]
         if control["id"] not in {"play", "pause", "restart"}
+        and control["type"] in {"range", "step"}
     ]
+    unsupported_controls = [
+        control
+        for control in spec["controls"]
+        if control["id"] not in {"play", "pause", "restart"}
+        and control["type"] not in {"range", "step"}
+    ]
+    if unsupported_controls:
+        errors.append(
+            {
+                "code": "control_unsupported",
+                "detail": "Generic planner controls must be bound numeric range or step controls.",
+            }
+        )
     if parameter_controls and any(control.get("binding") is None for control in parameter_controls):
         errors.append(
             {

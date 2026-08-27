@@ -124,13 +124,13 @@ def test_planner_schema_is_closed_and_has_no_executable_source_fields() -> None:
     layers = schema["schema"]["properties"]["scene"]["properties"]["layers"]
     assert layers["maxItems"] == 24
     assert layers["items"]["additionalProperties"] is False
-    assert schema["schema"]["properties"]["budget"]["properties"]["max_triangles"][
-        "enum"
-    ] == [4096]
-    binding = schema["schema"]["properties"]["controls"]["items"]["properties"][
-        "binding"
-    ]
+    assert schema["schema"]["properties"]["budget"]["properties"]["max_triangles"]["enum"] == [4096]
+    binding = schema["schema"]["properties"]["controls"]["items"]["properties"]["binding"]
     assert binding["additionalProperties"] is False
+    assert (
+        "select"
+        not in schema["schema"]["properties"]["controls"]["items"]["properties"]["type"]["enum"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -276,6 +276,57 @@ def test_semantic_oracles_reject_ungrounded_or_interaction_free_plans() -> None:
 
     assert {error["code"] for error in errors} == {
         "topic_not_grounded",
+        "interaction_missing",
+    }
+
+
+def test_semantic_oracle_rejects_catch_all_labels_and_undirected_relationships() -> None:
+    catch_all = _food_web_spec()
+    catch_all["scene"]["layers"] = [
+        {
+            "type": "rect",
+            "x": 100,
+            "y": 100,
+            "width": 120,
+            "height": 60,
+            "label": "mangrove food",
+            "color": "green",
+        }
+    ]
+    errors = _plan_errors(catch_all, "Draw a mangrove food web showing algae, crab, and heron.")
+    assert {error["code"] for error in errors} == {
+        "topic_not_grounded",
+        "relationship_not_grounded",
+    }
+
+    undirected = _food_web_spec()
+    for layer in undirected["scene"]["layers"]:
+        if layer["type"] == "link":
+            layer["arrow"] = False
+    errors = _plan_errors(
+        undirected,
+        "Draw a mangrove food web showing energy from algae to crab to heron.",
+    )
+    assert {error["code"] for error in errors} == {"relationship_not_grounded"}
+
+
+def test_planner_rejects_family_specific_controls_without_inert_bindings() -> None:
+    candidate = _food_web_spec()
+    candidate["controls"] = [
+        {
+            "id": "mode",
+            "label": "Mode",
+            "type": "select",
+            "value": "one",
+            "options": ["one", "two"],
+        }
+    ]
+    errors = _plan_errors(
+        candidate,
+        "Draw an interactive mangrove food web showing algae, crab, and heron.",
+    )
+    assert {error["code"] for error in errors} == {
+        "control_unsupported",
         "interaction_missing",
     }
 
