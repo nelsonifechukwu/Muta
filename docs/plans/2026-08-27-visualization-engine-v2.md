@@ -12,8 +12,8 @@ accessibility, lifecycle, and resource limits together.
 The V2 goal is a compact general engine, not 200 prompt-specific branches. Supplied prompts are
 versioned QA fixtures only. Production code resolves an intent into parameterized educational
 primitives, validates a typed declarative scene, and renders it deterministically with bundled
-offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, `eval`, or
-`new Function` crosses the boundary.
+offline libraries. The model never controls an executable or resource-loading sink: behavior and
+math are typed AST/enums/numbers, while prose stays inert text data throughout the renderer.
 
 ## Inputs and corpus
 
@@ -85,9 +85,14 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   unseen `concept_process` composition after those routes.
 - Give that planner a closed catalogue of the existing V2 primitives, coordinate systems,
   relationships, layouts, controls, renderer hints, and animation modes. Its output is JSON data
-  for the existing versioned specification only. The prompt explicitly forbids source code, and
-  the runtime independently rejects HTML, JavaScript, CSS, shader text, URLs, event handlers,
-  prototype keys, unknown fields, and every expression outside the typed AST.
+  for the existing versioned specification only. The strict schema has no source, URL, style,
+  event-handler, shader, import, or worker fields; it rejects unknown and prototype keys and every
+  executable relationship outside the typed expression AST. Descriptive strings are not classified
+  as programming languages: code-shaped, multilingual, and mathematical notation remains harmless
+  data because renderers expose it only through `textContent`, Canvas `fillText`, or bounded ARIA
+  text attributes. No proposal-controlled string reaches markup parsing, URL/CSS attributes,
+  `eval`, `new Function`, dynamic import, or a worker/network API. The frame's no-network CSP is
+  defense in depth rather than a substitute for this sink ownership.
 - Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: concrete
   request terms and every meaningful token in an explicit entity phrase must map one-to-one to
   unambiguous labelled nodes; graph/process requests require those nodes to be connected, and an
@@ -128,21 +133,14 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
 - Test this boundary with previously unseen compositions and paraphrases, code-shaped proposals,
   unknown primitives, oversized candidates, dangling relationships, and a repairable missing-label
   case. Forward cancellation into both blocking constrained-model streams so Stop does not wait
-  for a socket timeout. Prove that no production path dynamically executes authored source,
-  injects markup, accepts a network/file/data resource token, or imports QA prompt fixtures.
-  Source-shaped text rejection includes HTML tags, CSS rule bodies, JavaScript declarations and
-  browser/global calls/imports/loops, and shader declarations in addition to schema-level
-  executable fields. Inspect authored string values before JSON serialization so escaping cannot
-  hide tabs, destructuring, bracket/template properties, constructors, parenthesized or indirect
-  call targets, Python lambdas/builtins, or brace-less loops. URI checks
-  recognize actual schemes without rejecting ordinary prose such as `Data: ...`.
-  Treat source detection as a structural, fail-closed planner boundary rather than a callable-name
-  denylist. Planner-authored strings are labels and accessible prose only: calls, member/index
-  access, assignment, declarations, and control flow are rejected independent of identifier name
-  or balanced-parenthesis depth after bounded escape/comment normalization. Mathematical
-  functions and relationships remain available through the separately validated typed expression
-  AST, never as source-shaped strings. Preserve ordinary parenthetical prose and mathematical set
-  notation that has no executable structure.
+  for a socket timeout. Prove that production code has no dynamic execution, markup injection,
+  resource-loading, style/event-handler, or worker sink for proposal data and cannot import QA
+  prompt fixtures. Exercise source-shaped strings—including tags, CSS/PHP/JavaScript-looking text,
+  Unicode identifiers, scientific function notation, and resource-looking prose—to prove they are
+  preserved as visible inert text rather than rejected or interpreted. Mathematical functions and
+  relationships execute only through the separately validated typed expression AST. This
+  structural boundary is smaller and safer than an incomplete lexical denylist and avoids damaging
+  legitimate educational or localized labels.
   Relationship, control, and viewpoint grounding uses bounded spans rather than consuming an
   entire clause: mixed directed/undirected components, postfix edge direction, arrow/no-arrow
   phrasing, reordered slider ranges, sea/eye-level viewpoints, and numeric elevation phrases must

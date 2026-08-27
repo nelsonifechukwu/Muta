@@ -76,6 +76,35 @@ def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> No
     assert 'role="group"' in html
 
 
+def test_v2_proposal_strings_have_only_inert_text_sinks() -> None:
+    parent = (UI / "visualizations.js").read_text()
+    frame = (UI / "viz-frame-v2.js").read_text()
+    html = (UI / "viz-frame.html").read_text()
+    trusted = parent + frame
+
+    for executable_sink in (
+        r"\.innerHTML\s*=",
+        r"\.outerHTML\s*=",
+        r"\.insertAdjacentHTML\s*\(",
+        r"\beval\s*\(",
+        r"\bnew\s+Function\b",
+        r"\bimport\s*\(",
+        r"\bWorker\s*\(",
+    ):
+        assert re.search(executable_sink, trusted) is None
+    for network_sink in ("fetch(", "XMLHttpRequest", "WebSocket", "EventSource"):
+        assert network_sink not in frame
+
+    assert "node.textContent = text" in frame
+    assert 'html("p", "", spec.text_fallback)' in frame
+    assert "title.textContent = spec.title" in parent
+    assert "ctx.fillText(" in frame
+    assert 'connect-src \'none\'' in html
+    assert 'worker-src \'none\'' in html
+    assert 'object-src \'none\'' in html
+    assert 'base-uri \'none\'' in html
+
+
 def test_math_surface_is_responsive_accessible_and_lifecycle_bounded() -> None:
     parser = (UI / "visualizations.js").read_text()
     frame = (UI / "viz-frame.js").read_text()

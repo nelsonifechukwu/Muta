@@ -181,258 +181,31 @@ def test_planner_forwards_cancellation_to_the_blocking_local_stream() -> None:
     assert engine.local.calls[0][1]["_muta_cancel_event"] is cancel
 
 
-def test_invalid_authored_source_gets_one_structured_repair_attempt() -> None:
-    unsafe = _food_web_spec()
-    unsafe["text_fallback"] = "<script>eval(payload)</script>"
-    engine = _PlannerEngine([unsafe, _food_web_spec()])
-
-    spec = plan_visualization_v2(
-        engine,
-        "Draw a mangrove food web showing algae, crab, and heron.",
-        "Energy transfer should be explicit.",
-    )
-
-    assert spec == _food_web_spec()
-    assert len(engine.local.calls) == MAX_PLANNER_ATTEMPTS
-    repair_prompt = engine.local.calls[1][0][-1]["content"]
-    assert '"code":"authored_source_forbidden"' in repair_prompt
-    assert "<script>" not in repair_prompt
-
-
-@pytest.mark.parametrize(
-    "resource",
-    [
-        "https://example.invalid/payload.js",
-        "//example.invalid/payload.js",
-        "data:text/html,payload",
-        "file:///tmp/payload",
-        "url(external.png)",
-        "@import external.css",
-    ],
-)
-def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) -> None:
-    candidate = _food_web_spec()
-    candidate["text_fallback"] = resource
-
-    errors = _plan_errors(
-        candidate,
-        "Draw a mangrove food web from algae to crab to heron.",
-    )
-
-    assert "authored_source_forbidden" in {error["code"] for error in errors}
-
-
-@pytest.mark.parametrize(
-    "source_text",
-    (
-        "<b>unsafe markup</b>",
-        "body { color:red }",
-        "alert(document.cookie)",
-        "void main(){ gl_FragColor = vec4(1.0); }",
-        "require('fs').readFileSync('/etc/passwd')",
-        "import helper from 'module'; helper()",
-        "precision highp float; float brightness = 1.0;",
-        "while (ready) { step(); }",
-        "location.assign('/next')",
-        "const {x} = payload; draw(x);",
-        "while (ready) step();",
-        "new WebSocket('/socket')",
-        "var\tx=window['document'];",
-        "import 'side-effect-module';",
-        "import os",
-        "for (const item of items) draw(item);",
-        "d3.select('body').append('svg')",
-        "def draw_scene():\n    return None",
-        "anime.timeline().add({targets: node, x: 10})",
-        "while (ready) counter++;",
-        "do counter++; while (ready);",
-        "for await (const item of items) draw(item);",
-        "for item in items:\n    draw(item)",
-        "document?.body.append(node)",
-        "module['exports']=payload",
-        "self.postMessage(payload)",
-        "Reflect.construct(Function, ['return 1'])()",
-        "[].constructor.constructor('return 1')()",
-        "(0, eval)('2+2')",
-        "eval?.('2+2')",
-        "fetch /*x*/ ('/x')",
-        "Function('return globalThis')()",
-        "new/*gap*/Function('return 1')()",
-        "ev/**/al('2+2')",
-        "d3/*gap*/.select('body').append('svg')",
-        "setTimeout.call(null, draw, 0)",
-        "fetch.call(null, '/x')",
-        "Reflect['construct'](Function, ['return 1'])()",
-        "Object['constructor']('return 1')()",
-        "this.constructor.constructor('return 1')()",
-        "class Payload extends Base { run(){ return 1; } }",
-        "exec('print(1)')",
-        "open('/etc/passwd').read()",
-        "os.system('id')",
-        "subprocess.run(['id'])",
-        "__builtins__['eval']('2+2')",
-        "getattr(__builtins__, 'eval')('2+2')",
-        "window/*gap*/.location='/x'",
-        "self /*gap*/ .postMessage(payload)",
-        "d3?.select('body').append('svg')",
-        "setTimeout?.call(null, draw, 0)",
-        "Reflect?.construct(Function, ['return 1'])()",
-        "builtins.eval('2+2')",
-        "globals()['__builtins__']['eval']('2+2')",
-        "this['constructor']['constructor']('return 1')()",
-        "[]['constructor']['constructor']('return 1')()",
-        "({})['constructor']['constructor']('return 1')()",
-        "[].filter.constructor('return 1')()",
-        "(Function)('return 1')()",
-        "new (Function)('return 1')",
-        "new/**/(Function)('return 1')",
-        "(0,setTimeout)(fn, 0)",
-        "(0,eval)?.('2+2')",
-        "(0,Function)?.('return 1')()",
-        "(0,setInterval)?.(fn, 0)",
-        "exec?.('id')",
-        "exec.call(null,'id')",
-        "exec['call'](null,'id')",
-        "(x,exec)('id')",
-        "(x,exec)?.('id')",
-        "ex/**/ec?.('id')",
-        "ex/**/ec.call(null,'id')",
-        "(x,ex/**/ec)?.('id')",
-        "compile?.('x', '<model>', 'exec')",
-        "open.call(null, path)",
-        "require?.('fs')",
-        "(x,importScripts)?.('/x.js')",
-        "(requestAnimationFrame).call(null, draw)",
-        "Worker?.('/worker.js')",
-        "exec\\\n('print(1)')",
-        r"e\u0076al('2+2')",
-        r"e\u{76}al('2+2')",
-        r"set\u0054imeout(fn, 0)",
-        "this['ev' + 'al']('2+2')",
-        "this[method](payload)",
-        "(this)['ev' + 'al']('2+2')",
-        "((this))['ev' + 'al']('2+2')",
-        "((globalThis))['eval']('2+2')",
-        "((eval))('2+2')",
-        "(0,(eval))('2+2')",
-        "(0,(eval))?.('2+2')",
-        r"((e\u0076al))('2+2')",
-        r"((e\u{76}al))?.('2+2')",
-        "((ev/**/al)).call(null,'2+2')",
-        "((ev\\\nal))('2+2')",
-        "(0,(ev/**/al))?.('2+2')",
-        r"((set\u0054imeout)).apply(null,[fn,0])",
-        "((this/*x*/))['ev'+'al']('2+2')",
-        r"((global\u0054his))['eval']('2+2')",
-        "((unseenCallable))('payload')",
-        "(0,(unseenCallable))?.('payload')",
-        "unseenObject[method](payload)",
-        "unseenObject.render(payload)",
-        "unseenCallable\n(payload)",
-        "eval\n('2+2')",
-        "if (ready) { state = 1; }",
-        "switch (mode) { case 1: state = 1; break; }",
-        "try { state = 1; } catch (error) { state = 0; } finally { state = 2; }",
-        "with (payload) { state = 1; }",
-        "throw compromised;",
-        "export default compromised;",
-        "export { compromised };",
-        "x ??= compromised;",
-        "x &&= compromised;",
-        "x ||= compromised;",
-        "({x} = payload);",
-        "x++;",
-        "--x;",
-        "delete payload.member;",
-        "typeof payload;",
-        "void payload;",
-        "await payload;",
-        "yield payload;",
-        "return payload;",
-        "break;",
-        "continue;",
-        "debugger;",
-        "export * from 'module';",
-        "x instanceof Payload;",
-        "x in payload;",
-        "x ?? payload",
-        "x && payload",
-        "x || payload",
-        "ready ? active : idle",
-        "@keyframes spin { from { opacity: 0; } to { opacity: 1; } }",
-        "@supports (display: grid) { body { display: grid; } }",
-        "if ready:\n    state = 1\nelse:\n    state = 0",
-        "try:\n    state = 1\nexcept Exception:\n    state = 0",
-        "match state:\n    case 1:\n        state = 0",
-        "open(path)",
-        "lambda x: x + 1",
-        "lambda: 1",
-        "(eval)('2+2')",
-        "(setTimeout).call(null, fn, 0)",
-        "(d3).select('body')",
-        "(window).location = '/x'",
-        "getattr(builtins, 'eval')('2+2')",
-        "self[`postMessage`](payload)",
-    ),
-)
-def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
-    source_text: str,
-) -> None:
-    candidate = _food_web_spec()
-    candidate["text_fallback"] = source_text
-
-    assert "authored_source_forbidden" in {
-        error["code"]
-        for error in _plan_errors(
-            candidate,
-            "Draw a mangrove food web from algae to crab to heron.",
-        )
-    }
-
-
-def test_benign_data_prefix_is_not_treated_as_a_data_url() -> None:
-    candidate = _food_web_spec()
-    candidate["text_fallback"] = "Data: algae transfers energy to crab."
-
-    assert _plan_errors(
-        candidate,
-        "Draw a mangrove food web from algae to crab to heron.",
-    ) == []
-
-
 @pytest.mark.parametrize(
     "prose",
     (
-        "The function is represented by a validated expression tree and shown in blue.",
-        "The domain is the set {x: x is positive}.",
-        "Motion (position over time) is shown in blue.",
-        "The interval is open (not closed) and shown in blue.",
-        "Use the U.S. standard label and compare Fig. A with Fig. B.",
-        "Mass: kg",
-        "Mass (kg)",
-        "Force (N)",
-        "Velocity (m/s)",
-        "Fig. A (left)",
-        "Masse (kg)",
-        "Énergie (J)",
-        "Masa (kg)",
-        "Mwendo (m/s)",
-        "الكتلة (kg)",
-        "质量 (kg)",
+        "<script>globalThis.pwned = true</script>",
+        "selector { color: red }",
+        "<?php echo 1 ?>",
+        "export{x};",
+        "new X",
+        "δelta\n('x')",
+        "개체 P(t)는 시간에 따라 증가합니다.",
+        "ऊँचाई h(t) बनाम समय।",
+        "Population P(t) grows over time.",
+        "Height h(t) versus time.",
+        "Await the next stage before continuing.",
+        "https://example.invalid/payload.js",
+        "Data: algae transfers energy to crab.",
+        "f(x)",
     ),
 )
-def test_benign_math_and_set_prose_is_not_treated_as_authored_source(prose: str) -> None:
+def test_source_shaped_multilingual_and_mathematical_prose_remains_inert_data(
+    prose: str,
+) -> None:
     candidate = _food_web_spec()
     candidate["text_fallback"] = prose
     assert _plan_errors(candidate, "Draw a mangrove food web from algae to crab to heron.") == []
-
-
-def test_planner_prose_cannot_bypass_the_typed_expression_ast() -> None:
-    candidate = _food_web_spec()
-    candidate["text_fallback"] = "f(x)"
-
-    errors = _plan_errors(candidate, "Draw a mangrove food web from algae to crab to heron.")
-    assert {error["code"] for error in errors} == {"authored_source_forbidden"}
 
 
 def test_unknown_primitive_is_rejected_and_repaired_without_execution() -> None:

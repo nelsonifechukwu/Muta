@@ -83,6 +83,31 @@ test("accepts each V2 renderer pairing and preserves the serialized data boundar
   }
 });
 
+test("preserves source-shaped and multilingual prose as inert visualization data", () => {
+  const spec = svgSpec();
+  const strings = {
+    title: "<script>globalThis.pwned=true</script>",
+    aria: "개체 P(t)와 ऊँचाई h(t): Await the next stage.",
+    fallback: "selector { color:red } <?php echo 1 ?> export{x}; new X",
+    node: "δelta\\n('x')",
+    control: "Population P(t) grows over time.",
+  };
+  spec.title = strings.title;
+  spec.aria_label = strings.aria;
+  spec.text_fallback = strings.fallback;
+  spec.scene.layers[0].label = strings.node;
+  spec.controls[0].label = strings.control;
+
+  const checked = viz.validateSpec(spec);
+
+  assert.equal(checked.ok, true, checked.error);
+  assert.equal(checked.spec.title, strings.title);
+  assert.equal(checked.spec.aria_label, strings.aria);
+  assert.equal(checked.spec.text_fallback, strings.fallback);
+  assert.equal(checked.spec.scene.layers[0].label, strings.node);
+  assert.equal(checked.spec.controls[0].label, strings.control);
+});
+
 test("validates typed control bindings and declared Three triangle budgets", () => {
   const bound = svgSpec();
   bound.controls[0].binding = { target_label: "a²", effect: "scale" };

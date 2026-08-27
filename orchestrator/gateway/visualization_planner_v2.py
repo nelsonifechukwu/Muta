@@ -8,12 +8,11 @@ structured repair attempt before the caller falls back to a deterministic safe s
 
 from __future__ import annotations
 
-import ast
 import json
 import logging
 import re
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from itertools import pairwise
 from typing import Any
 
@@ -310,99 +309,6 @@ _RELATIONSHIP_TERMS = frozenset(
         "transfer",
     }
 )
-# Planner-authored strings are labels and accessible prose, never expression source.  Calls,
-# member access, indexing, assignment, and control flow belong in neither surface; mathematical
-# work is represented by the separately validated typed AST.  These structural forms avoid an
-# open-ended list of executable names and remain invariant under balanced parentheses.
-_SOURCE_STRUCTURAL_CHAIN = re.compile(
-    r"\b[A-Za-z_$][\w$]*(?:\(|\?\.|\[)|"
-    r"\b[A-Za-z_$][\w$]*[ \t]*\r?\n[ \t]*\(|"
-    r"[)\]]\s*(?:\(|\?\.|\.(?=\s*[A-Za-z_$])|\[)"
-)
-_SOURCE_PYTHONISH_OPTIONAL_CALL = re.compile(r"\?\.\s*\(")
-_SOURCE_ASSIGNMENT = re.compile(
-    r"(?<![<>=!])(?:\?\?=|&&=|\|\|=|<<=|>>=|\*\*=|//=|:=|[+\-*/%&|^]?=)(?!=)"
-)
-_SOURCE_INCREMENT = re.compile(r"(?:\+\+|--)")
-_SOURCE_JS_BLOCK = re.compile(
-    r"\b(?:if|switch|with|catch)\s*\([^)]{0,200}\)\s*\{|"
-    r"\b(?:else|try|finally)\s*\{|"
-    r"(?:^|[;{}\r\n])\s*(?:case\b[^:\r\n]{0,120}|default)\s*:",
-    re.IGNORECASE,
-)
-_SOURCE_JS_STATEMENT = re.compile(
-    r"(?:^|[;{}\r\n])\s*(?:throw|return|break|continue|debugger)\b[^;\r\n]{0,200};|"
-    r"(?:^|[;{}\r\n])\s*export\s+(?:default\b|\{|\*|const\b|let\b|var\b|"
-    r"function\b|class\b)|"
-    r"(?:^|[;{}\r\n])\s*(?:delete|typeof|void|await|yield)\s+"
-    r"(?:[A-Za-z_$({[]|['\"])",
-    re.IGNORECASE,
-)
-_SOURCE_JS_OPERATOR = re.compile(
-    r"\b[A-Za-z_$][\w$]*\s*(?:\?\?|&&|\|\||\binstanceof\b)\s*"
-    r"[A-Za-z_$({['\"]|"
-    r"^\s*[A-Za-z_$][\w$]*\s+in\s+[A-Za-z_$][\w$]*\s*;?\s*$|"
-    r"\b[A-Za-z_$][\w$]*\s*\?\s*[^?:;\r\n]{1,120}\s*:\s*[^;\r\n]{1,120}",
-    re.IGNORECASE,
-)
-_SOURCE_CSS_AT_RULE = re.compile(
-    r"@(?:keyframes|supports|media|font-face|page|layer|container)\b", re.IGNORECASE
-)
-_PLAIN_PARENTHETICAL_PROSE = re.compile(
-    r"^(?P<head>[\w .\-/]{1,100})[ \t]+\((?P<body>[\w .·/⁰¹²³⁴⁵⁶⁷⁸⁹+\-]{1,40})\)[.!?]?$",
-    re.UNICODE,
-)
-_SOURCE_PYTHON_FORBIDDEN_EXPR = (
-    ast.Attribute,
-    ast.Await,
-    ast.Call,
-    ast.DictComp,
-    ast.GeneratorExp,
-    ast.Lambda,
-    ast.ListComp,
-    ast.NamedExpr,
-    ast.SetComp,
-    ast.Subscript,
-    ast.Yield,
-    ast.YieldFrom,
-)
-_FORBIDDEN_AUTHORED_SOURCE = re.compile(
-    r"(?:<\s*/?\s*[A-Za-z][^>]{0,200}>|"
-    r"\bjavascript\s*:|\bon\w+\s*=|"
-    r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\([^)]{0,160}\)\s*\{|"
-    r"\b(?:const|let|var)\s+(?:[A-Za-z_$][\w$]*|\{[^}\r\n]{1,160}\}|"
-    r"\[[^\]\r\n]{1,160}\])\s*=|"
-    r"\bimport\s+(?:['\"]|(?:[A-Za-z_$][\w$]*|\*|\{)[^;]{0,160}\bfrom\b)|"
-    r"(?:^|[\r\n])\s*import\s+[A-Za-z_][\w.]*"
-    r"(?:\s+as\s+[A-Za-z_]\w*)?\s*(?:$|[\r\n;])|"
-    r"(?:^|[\r\n])\s*from\s+[A-Za-z_][\w.]*\s+import\b|"
-    r"(?:^|[\r\n])\s*(?:async\s+)?def\s+[A-Za-z_]\w*\s*\(|"
-    r"\bclass\s+[A-Za-z_$][\w$]*(?:\s+extends\s+[A-Za-z_$][\w$]*)?\s*\{|"
-    r"\bnew\s+[A-Za-z_$][\w$]*\s*\(|"
-    r"\bwhile\s*\([^)]{0,160}\)\s*(?:\{|[A-Za-z_$][\w$]*\s*(?:\(|\+\+|--|[+*/-]?=))|"
-    r"\bdo\s+(?:\{|[A-Za-z_$][\w$]*\s*(?:\+\+|--|[+*/-]?=))|"
-    r"\bfor\s+await\s*\(|"
-    r"\bfor\s*\([^)]{0,160}(?:;|\+\+|--)[^)]{0,160}\)\s*|"
-    r"\bfor\s*\([^)]{0,160}\b(?:in|of)\b[^)]{0,160}\)\s*|"
-    r"(?:^|[\r\n])\s*(?:async\s+)?for\s+[A-Za-z_]\w*\s+in\s+[^:\r\n]{1,160}:|"
-    r"(?:\.\s*(?:constructor|__proto__)\b|"
-    r"\[\s*['\"](?:constructor|__proto__)['\"]\s*\])|"
-    r"\blambda(?:\s+[A-Za-z_]\w*)?\s*:|"
-    r"=>|`|\b(?:gl_FragColor|gl_Position|gl_PointSize|texture2D)\b|"
-    r"#version\s+\d+|"
-    r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
-    r"\bprecision\s+(?:lowp|mediump|highp)\s+(?:float|int)\s*;|"
-    r"\b(?:uniform|varying|attribute|vec[234]|mat[234]|sampler2D)\s+[A-Za-z_]\w*|"
-    r"(?:[#.][-\w]+|\b(?:body|html|canvas|svg|div|span|button|input|main|section|article)\b"
-    r"(?:\s+[.#][-\w]+)?)\s*\{\s*"
-    r"(?:color|background|display|position|width|height|transform|animation|fill|stroke)\s*:|"
-    r"https?\s*:|\bdata\s*:[A-Za-z][^,\s]{0,100},|\bfile\s*://|"
-    r"\burl\s*\(|@import\b|(?:^|[\"\s])//[A-Za-z0-9])",
-    re.IGNORECASE,
-)
-_SOURCE_COMMENT = re.compile(r"/\*[\s\S]*?\*/|//[^\r\n]*")
-_SOURCE_LINE_CONTINUATION = re.compile(r"\\\r?\n")
-_SOURCE_UNICODE_ESCAPE = re.compile(r"\\u(?:\{(?P<braced>[0-9A-Fa-f]{1,6})\}|(?P<fixed>[0-9A-Fa-f]{4}))")
 _TOPIC_STOPWORDS = frozenset(
     {
         "about",
@@ -1059,83 +965,6 @@ def _has_path(
     return False
 
 
-def _text_values(value: object) -> Iterator[str]:
-    """Yield authored strings directly so JSON escaping cannot hide source syntax."""
-    if isinstance(value, str):
-        yield value
-    elif isinstance(value, dict):
-        for child in value.values():
-            yield from _text_values(child)
-    elif isinstance(value, list):
-        for child in value:
-            yield from _text_values(child)
-
-
-def _contains_authored_source(value: str) -> bool:
-    """Reject source structure; planner prose never carries executable expressions."""
-
-    def decode_identifier_escape(match: re.Match[str]) -> str:
-        codepoint = int(match.group("braced") or match.group("fixed"), 16)
-        if codepoint > 0x10FFFF or 0xD800 <= codepoint <= 0xDFFF:
-            return match.group(0)
-        return chr(codepoint)
-
-    normalized = _SOURCE_LINE_CONTINUATION.sub("", value)
-    normalized = _SOURCE_UNICODE_ESCAPE.sub(decode_identifier_escape, normalized)
-    collapsed = _SOURCE_COMMENT.sub("", normalized)
-    spaced = _SOURCE_COMMENT.sub(" ", normalized)
-
-    for candidate in (value, normalized, collapsed, spaced):
-        if _FORBIDDEN_AUTHORED_SOURCE.search(candidate):
-            return True
-        if any(
-            pattern.search(candidate)
-            for pattern in (
-                _SOURCE_ASSIGNMENT,
-                _SOURCE_INCREMENT,
-                _SOURCE_JS_BLOCK,
-                _SOURCE_JS_STATEMENT,
-                _SOURCE_JS_OPERATOR,
-                _SOURCE_CSS_AT_RULE,
-            )
-        ):
-            return True
-        if _SOURCE_STRUCTURAL_CHAIN.search(candidate):
-            return True
-
-        parenthetical = _PLAIN_PARENTHETICAL_PROSE.fullmatch(candidate.strip())
-        if parenthetical:
-            head = parenthetical.group("head").strip()
-            body = parenthetical.group("body").strip()
-            if (
-                len(head.split()) > 1
-                or len(body.split()) > 1
-                or head[:1].isupper()
-                or any(ord(character) > 127 for character in head)
-            ):
-                continue
-
-        # Python's parser is a bounded, non-executing structural check that also recognizes the
-        # call/assignment shape shared by the JavaScript and Python payloads relevant here.  Make
-        # optional-call punctuation parseable first; strict V2 validation still owns expressions.
-        pythonish = _SOURCE_PYTHONISH_OPTIONAL_CALL.sub("(", candidate).replace("?.", ".")
-        try:
-            tree = ast.parse(pythonish, mode="exec")
-        except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
-            continue
-        if any(
-            (
-                isinstance(node, ast.stmt)
-                and not isinstance(node, (ast.Expr, ast.AnnAssign))
-            )
-            or (isinstance(node, ast.AnnAssign) and node.value is not None)
-            or isinstance(node, _SOURCE_PYTHON_FORBIDDEN_EXPR)
-            for node in ast.walk(tree)
-        ):
-            return True
-    return False
-
-
 def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
     """Return stable machine-readable validation and semantic-oracle failures."""
     try:
@@ -1144,13 +973,6 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
         return [{"code": "schema_invalid", "detail": str(exc)[:200]}]
 
     errors: list[dict[str, str]] = []
-    if any(_contains_authored_source(value) for value in _text_values(spec)):
-        errors.append(
-            {
-                "code": "authored_source_forbidden",
-                "detail": "Use declarative labels and primitives; source/markup/shader syntax is forbidden.",
-            }
-        )
     if not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", spec["family"]):
         errors.append({"code": "family_invalid", "detail": "Use a safe lower_snake_case family."})
 
