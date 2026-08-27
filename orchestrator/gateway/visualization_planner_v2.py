@@ -316,9 +316,42 @@ _RELATIONSHIP_TERMS = frozenset(
 # open-ended list of executable names and remain invariant under balanced parentheses.
 _SOURCE_STRUCTURAL_CHAIN = re.compile(
     r"\b[A-Za-z_$][\w$]*(?:\(|\?\.|\[)|"
+    r"\b[A-Za-z_$][\w$]*[ \t]*\r?\n[ \t]*\(|"
     r"[)\]]\s*(?:\(|\?\.|\.(?=\s*[A-Za-z_$])|\[)"
 )
 _SOURCE_PYTHONISH_OPTIONAL_CALL = re.compile(r"\?\.\s*\(")
+_SOURCE_ASSIGNMENT = re.compile(
+    r"(?<![<>=!])(?:\?\?=|&&=|\|\|=|<<=|>>=|\*\*=|//=|:=|[+\-*/%&|^]?=)(?!=)"
+)
+_SOURCE_INCREMENT = re.compile(r"(?:\+\+|--)")
+_SOURCE_JS_BLOCK = re.compile(
+    r"\b(?:if|switch|with|catch)\s*\([^)]{0,200}\)\s*\{|"
+    r"\b(?:else|try|finally)\s*\{|"
+    r"(?:^|[;{}\r\n])\s*(?:case\b[^:\r\n]{0,120}|default)\s*:",
+    re.IGNORECASE,
+)
+_SOURCE_JS_STATEMENT = re.compile(
+    r"(?:^|[;{}\r\n])\s*(?:throw|return|break|continue|debugger)\b[^;\r\n]{0,200};|"
+    r"(?:^|[;{}\r\n])\s*export\s+(?:default\b|\{|\*|const\b|let\b|var\b|"
+    r"function\b|class\b)|"
+    r"(?:^|[;{}\r\n])\s*(?:delete|typeof|void|await|yield)\s+"
+    r"(?:[A-Za-z_$({[]|['\"])",
+    re.IGNORECASE,
+)
+_SOURCE_JS_OPERATOR = re.compile(
+    r"\b[A-Za-z_$][\w$]*\s*(?:\?\?|&&|\|\||\binstanceof\b)\s*"
+    r"[A-Za-z_$({['\"]|"
+    r"^\s*[A-Za-z_$][\w$]*\s+in\s+[A-Za-z_$][\w$]*\s*;?\s*$|"
+    r"\b[A-Za-z_$][\w$]*\s*\?\s*[^?:;\r\n]{1,120}\s*:\s*[^;\r\n]{1,120}",
+    re.IGNORECASE,
+)
+_SOURCE_CSS_AT_RULE = re.compile(
+    r"@(?:keyframes|supports|media|font-face|page|layer|container)\b", re.IGNORECASE
+)
+_PLAIN_PARENTHETICAL_PROSE = re.compile(
+    r"^(?P<head>[\w .\-/]{1,100})[ \t]+\((?P<body>[\w .·/⁰¹²³⁴⁵⁶⁷⁸⁹+\-]{1,40})\)[.!?]?$",
+    re.UNICODE,
+)
 _SOURCE_PYTHON_FORBIDDEN_EXPR = (
     ast.Attribute,
     ast.Await,
@@ -1055,14 +1088,37 @@ def _contains_authored_source(value: str) -> bool:
     for candidate in (value, normalized, collapsed, spaced):
         if _FORBIDDEN_AUTHORED_SOURCE.search(candidate):
             return True
+        if any(
+            pattern.search(candidate)
+            for pattern in (
+                _SOURCE_ASSIGNMENT,
+                _SOURCE_INCREMENT,
+                _SOURCE_JS_BLOCK,
+                _SOURCE_JS_STATEMENT,
+                _SOURCE_JS_OPERATOR,
+                _SOURCE_CSS_AT_RULE,
+            )
+        ):
+            return True
         if _SOURCE_STRUCTURAL_CHAIN.search(candidate):
             return True
+
+        parenthetical = _PLAIN_PARENTHETICAL_PROSE.fullmatch(candidate.strip())
+        if parenthetical:
+            head = parenthetical.group("head").strip()
+            body = parenthetical.group("body").strip()
+            if (
+                len(head.split()) > 1
+                or len(body.split()) > 1
+                or head[:1].isupper()
+                or any(ord(character) > 127 for character in head)
+            ):
+                continue
 
         # Python's parser is a bounded, non-executing structural check that also recognizes the
         # call/assignment shape shared by the JavaScript and Python payloads relevant here.  Make
         # optional-call punctuation parseable first; strict V2 validation still owns expressions.
         pythonish = _SOURCE_PYTHONISH_OPTIONAL_CALL.sub("(", candidate).replace("?.", ".")
-        pythonish = re.sub(r"\s+", " ", pythonish).strip()
         try:
             tree = ast.parse(pythonish, mode="exec")
         except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
