@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "post-holdout-working-tree",
+  "revision": "e71e2943e6d46b51456ce788911d26cb44be2e4b",
   "corpus": {
     "supplied_stem": 50,
     "supplied_math": 100,
@@ -206,7 +206,7 @@
           "fallback": "Unit Circle. Visible layers: x² + y² = 1; radius to θ; cos θ projection. Adjustable controls: Angle."
         }
       },
-      "compile_ms": 0.934,
+      "compile_ms": 0.926,
       "spec_bytes": 4237,
       "browser": {
         "id": "stem-002",
@@ -390,7 +390,7 @@
           "fallback": "Quadratic. Visible layers: y = x²; axis of symmetry x = 0; vertex; real roots. Adjustable controls: A, B, C."
         }
       },
-      "compile_ms": 3.067,
+      "compile_ms": 3.06,
       "spec_bytes": 3342,
       "browser": {
         "id": "stem-003",
@@ -605,7 +605,7 @@
           "fallback": "Line Intersection. Visible layers: line 1; line 2. Adjustable controls: Slope 1, C1, Slope 2, C2."
         }
       },
-      "compile_ms": 2.097,
+      "compile_ms": 2.254,
       "spec_bytes": 4869,
       "browser": {
         "id": "stem-004",
@@ -823,7 +823,7 @@
           "fallback": "Triangle Angles. Visible layers: vertex A: 60°; vertex B: 60°; vertex C: 60°; A + B + C = 180°; side c; side a; side b. Adjustable controls: Vertex A, Vertex B, Vertex C."
         }
       },
-      "compile_ms": 0.407,
+      "compile_ms": 0.468,
       "spec_bytes": 1547,
       "browser": {
         "id": "stem-005",
@@ -997,7 +997,7 @@
           "fallback": "Derivative Tangent. Visible layers: f(x) = x³ − 3x; tangent at x = 1, slope 0. Adjustable controls: X."
         }
       },
-      "compile_ms": 1.673,
+      "compile_ms": 1.715,
       "spec_bytes": 4380,
       "browser": {
         "id": "stem-006",
@@ -1147,7 +1147,7 @@
           "fallback": "Riemann Sum. Visible layers: y = x²; left Riemann rectangles. Adjustable controls: Rectangles."
         }
       },
-      "compile_ms": 1.176,
+      "compile_ms": 1.201,
       "spec_bytes": 3214,
       "browser": {
         "id": "stem-007",
@@ -1330,7 +1330,7 @@
           "fallback": "Gradient Field. Visible layers: contour r=1; contour r=2; contour r=3; gradient at probe. Adjustable controls: Point X, Point Y."
         }
       },
-      "compile_ms": 2.902,
+      "compile_ms": 2.951,
       "spec_bytes": 10712,
       "browser": {
         "id": "stem-008",
@@ -1490,7 +1490,7 @@
           "fallback": "Plane Intersection. Visible layers: x+y+z=3; x-y+2z=1; intersection. Adjustable controls: Orbit."
         }
       },
-      "compile_ms": 1.534,
+      "compile_ms": 1.586,
       "spec_bytes": 935,
       "browser": {
         "id": "stem-009",
@@ -1669,7 +1669,7 @@
           "fallback": "Linear Transform. Visible layers: vertical x=-3; horizontal y=-3; vertical x=-2; horizontal y=-2; vertical x=-1; horizontal y=-1; vertical x=0; horizontal y=0; vertical x=1; horizontal y=1; vertical x=2; horizontal y=2; vertical x=3; horizontal y=3. Adjustable controls: Matrix."
         }
       },
-      "compile_ms": 0.867,
+      "compile_ms": 0.882,
       "spec_bytes": 2386,
       "browser": {
         "id": "stem-010",
@@ -1864,7 +1864,7 @@
           "fallback": "Projectile. Visible layers: projectile path; maximum height and range; instantaneous velocity. Adjustable controls: Angle, Speed."
         }
       },
-      "compile_ms": 0.89,
+      "compile_ms": 0.897,
       "spec_bytes": 4194,
       "browser": {
         "id": "stem-011",
@@ -2025,7 +2025,7 @@
           "fallback": "Inclined Plane. Visible layers: inclined plane θ=30°; box; weight mg; normal N=mg cosθ; friction μN, μ=0.2; resultant a=3.21 m/s² down plane. Adjustable controls: Incline."
         }
       },
-      "compile_ms": 0.458,
+      "compile_ms": 0.468,
       "spec_bytes": 1536,
       "browser": {
         "id": "stem-012",
@@ -2394,7 +2394,7 @@
           "fallback": "Elastic Collision. Visible layers: cart 1 before; cart 2 before; cart 1 after; cart 2 after; u₁; u₂; v₁; v₂. Adjustable controls: Mass 1, Velocity 1, Mass 2, Velocity 2."
         }
       },
-      "compile_ms": 0.479,
+      "compile_ms": 0.48,
       "spec_bytes": 1703,
       "browser": {
         "id": "stem-014",
@@ -2643,7 +2643,7 @@
           "fallback": "Pendulum. Visible layers: pivot; bob; L = 1.00 m; motion arc ±20°; restoring component mg sinθ; equilibrium. Adjustable controls: Length, Angle."
         }
       },
-      "compile_ms": 0.71,
+      "compile_ms": 0.706,
       "spec_bytes": 3122,
       "browser": {
         "id": "stem-015",
@@ -2879,7 +2879,7 @@
           "fallback": "Travelling Wave. Visible layers: transverse displacement; equilibrium position; wavelength crest-to-crest; crest and trough. Adjustable controls: Amplitude, Wavelength, Frequency."
         }
       },
-      "compile_ms": 1.409,
+      "compile_ms": 1.442,
       "spec_bytes": 3992,
       "browser": {
         "id": "stem-016",
@@ -3056,7 +3056,7 @@
           "fallback": "Wave Interference. Visible layers: wave A; wave B; resultant A + B. Adjustable controls: Phase."
         }
       },
-      "compile_ms": 1.573,
+      "compile_ms": 1.601,
       "spec_bytes": 8530,
       "browser": {
         "id": "stem-017",
@@ -3211,7 +3211,7 @@
           "fallback": "Circular Motion. Visible layers: circular path; position r; velocity v tangent; centripetal acceleration. Adjustable controls: Angular Velocity."
         }
       },
-      "compile_ms": 0.874,
+      "compile_ms": 0.875,
       "spec_bytes": 4209,
       "browser": {
         "id": "stem-018",
@@ -3435,7 +3435,7 @@
           "fallback": "Harmonic Motion. Visible layers: displacement versus time; phase space velocity versus displacement; spring and moving mass; current moving mass. Adjustable controls: Spring Constant, Mass."
         }
       },
-      "compile_ms": 1.379,
+      "compile_ms": 1.373,
       "spec_bytes": 7917,
       "browser": {
         "id": "stem-019",
@@ -3656,7 +3656,7 @@
           "fallback": "Double Pendulum. Visible layers: trajectory A: θ₀=75°; trajectory B: θ₀=75.5°; double-pendulum arms A; double-pendulum arms B. Adjustable controls: Angle 1, Angle 2."
         }
       },
-      "compile_ms": 5.693,
+      "compile_ms": 5.699,
       "spec_bytes": 8060,
       "browser": {
         "id": "stem-020",
@@ -3796,7 +3796,7 @@
           "fallback": "Ohms Law Circuit. Visible layers: battery V; switch; resistor R; ammeter I = V/R; return path. Adjustable controls: Voltage, Resistance, Switch."
         }
       },
-      "compile_ms": 0.567,
+      "compile_ms": 0.575,
       "spec_bytes": 1435,
       "browser": {
         "id": "stem-021",
@@ -4020,7 +4020,7 @@
           "fallback": "Series Parallel Circuit. Visible layers: source 12 V; R₁=1 Ω; R₂=2 Ω; return / meter; series current; same current; voltage drops add; closed circuit. Adjustable controls: R1, R2, Circuit mode."
         }
       },
-      "compile_ms": 0.425,
+      "compile_ms": 0.426,
       "spec_bytes": 1626,
       "browser": {
         "id": "stem-022",
@@ -4217,7 +4217,7 @@
           "fallback": "Electric Field Lines. Visible layers: field line + → −; + and − charges. Adjustable controls: Charge 1, Charge 2."
         }
       },
-      "compile_ms": 5.287,
+      "compile_ms": 5.279,
       "spec_bytes": 29763,
       "browser": {
         "id": "stem-023",
@@ -4398,7 +4398,7 @@
           "fallback": "Electric Field Vectors. Visible layers: net electric field; net force on test charge; source charges + and −. Adjustable controls: Test X, Test Y."
         }
       },
-      "compile_ms": 3.609,
+      "compile_ms": 1.989,
       "spec_bytes": 5362,
       "browser": {
         "id": "stem-024",
@@ -4568,7 +4568,7 @@
           "fallback": "Magnetic Field Wire. Visible layers: magnetic field ring r=0.8; magnetic field ring r=1.5; magnetic field ring r=2.2; direction arrow r=0.8; direction arrow r=1.5; direction arrow r=2.2. Adjustable controls: Current direction."
         }
       },
-      "compile_ms": 2.052,
+      "compile_ms": 1.962,
       "spec_bytes": 11067,
       "browser": {
         "id": "stem-025",
@@ -4760,7 +4760,7 @@
           "fallback": "Rc Circuit. Visible layers: capacitor voltage Vc(t); circuit current I(t); DC source; resistor R; capacitor C; I(t); charge; return. Adjustable controls: RC mode, Resistance, Capacitance."
         }
       },
-      "compile_ms": 2.505,
+      "compile_ms": 1.319,
       "spec_bytes": 5800,
       "browser": {
         "id": "stem-026",
@@ -4978,7 +4978,7 @@
           "fallback": "Rlc Circuit. Visible layers: damped transient; source; R = 1 Ω; L = 2 H; C = 3 F; i(t); series; return. Adjustable controls: Resistance, Inductance, Capacitance."
         }
       },
-      "compile_ms": 1.281,
+      "compile_ms": 0.835,
       "spec_bytes": 3847,
       "browser": {
         "id": "stem-027",
@@ -5155,7 +5155,7 @@
           "fallback": "Ac Phase. Visible layers: voltage v(t); current i(t). Adjustable controls: AC load."
         }
       },
-      "compile_ms": 1.849,
+      "compile_ms": 1.782,
       "spec_bytes": 5841,
       "browser": {
         "id": "stem-028",
@@ -5314,7 +5314,7 @@
           "fallback": "Converging Lens. Visible layers: object; convex lens; F; F′; real inverted image; principal axis; parallel incident ray; refracts through F′; central ray; central ray undeviated. Adjustable controls: Object Distance."
         }
       },
-      "compile_ms": 0.536,
+      "compile_ms": 0.501,
       "spec_bytes": 1756,
       "browser": {
         "id": "stem-029",
@@ -5445,7 +5445,7 @@
           "fallback": "Refraction. Visible layers: incident ray; normal / interface; refracted ray; n₁ sin θ₁ = n₂ sin θ₂; air; glass; Snell's law. Adjustable controls: Incident Angle, Second medium."
         }
       },
-      "compile_ms": 0.449,
+      "compile_ms": 0.43,
       "spec_bytes": 1501,
       "browser": {
         "id": "stem-030",
@@ -5640,7 +5640,7 @@
           "fallback": "Ideal Gas. Visible layers: isotherm PV = nRT; selected pressure; selected volume; consistent state P·V=T. Adjustable controls: Pressure, Volume, Temperature."
         }
       },
-      "compile_ms": 1.438,
+      "compile_ms": 1.372,
       "spec_bytes": 3425,
       "browser": {
         "id": "stem-031",
@@ -5861,7 +5861,7 @@
           "fallback": "Carnot Cycle. Visible layers: isothermal expansion hot; adiabatic expansion; isothermal compression cold; adiabatic compression; current thermodynamic state. Adjustable controls: Playback."
         }
       },
-      "compile_ms": 0.755,
+      "compile_ms": 0.636,
       "spec_bytes": 1407,
       "browser": {
         "id": "stem-032",
@@ -6045,7 +6045,7 @@
           "fallback": "Atom. Visible layers: electron shell 1; electron shell 2; electron shell 3; nuclear protons Z; nuclear neutrons N≈Z; electrons arranged by atomic number. Adjustable controls: Atomic Number."
         }
       },
-      "compile_ms": 2.601,
+      "compile_ms": 2.352,
       "spec_bytes": 12994,
       "browser": {
         "id": "stem-033",
@@ -6209,7 +6209,7 @@
           "fallback": "Ionic Bond. Visible layers: Na: 2,8,1; e⁻ transfer; Cl: 2,8,7; Na⁺ attracts Cl⁻; loses one electron; gains one electron; electrostatic attraction. Adjustable controls: Playback."
         }
       },
-      "compile_ms": 0.637,
+      "compile_ms": 0.423,
       "spec_bytes": 1361,
       "browser": {
         "id": "stem-034",
@@ -6367,7 +6367,7 @@
           "fallback": "Molecular Geometry. Visible layers: central atom; bond; lone pair 1; lone pair 2. Adjustable controls: Molecule."
         }
       },
-      "compile_ms": 0.643,
+      "compile_ms": 0.48,
       "spec_bytes": 1339,
       "browser": {
         "id": "stem-035",
@@ -6527,7 +6527,7 @@
           "fallback": "Reaction Profile. Visible layers: uncatalysed exothermic profile; catalysed lower activation energy. Adjustable controls: Catalyst."
         }
       },
-      "compile_ms": 1.369,
+      "compile_ms": 1.279,
       "spec_bytes": 6077,
       "browser": {
         "id": "stem-036",
@@ -6696,7 +6696,7 @@
           "fallback": "Titration. Visible layers: pH curve; selected titrant volume; burette: titrant; flask: analyte + indicator; measured titrant added. Adjustable controls: Titrant Volume."
         }
       },
-      "compile_ms": 1.662,
+      "compile_ms": 1.467,
       "spec_bytes": 6363,
       "browser": {
         "id": "stem-037",
@@ -6859,7 +6859,7 @@
           "fallback": "Molecular Orbitals. Visible layers: H 1s(A); σ1s bonding: in phase; σ*1s antibonding: node; H 1s(B); constructive overlap; lower energy; destructive overlap; higher energy. Adjustable controls: Molecular orbital."
         }
       },
-      "compile_ms": 0.771,
+      "compile_ms": 0.695,
       "spec_bytes": 1539,
       "browser": {
         "id": "stem-038",
@@ -7027,7 +7027,7 @@
           "fallback": "Animal Cell. Visible layers: cell membrane; nucleus: stores DNA; mitochondrion: makes ATP; ribosome: builds proteins; rough ER: folds proteins; Golgi: sorts cargo; lysosome: digests waste. Adjustable controls: Organelle."
         }
       },
-      "compile_ms": 0.488,
+      "compile_ms": 0.465,
       "spec_bytes": 1572,
       "browser": {
         "id": "stem-039",
@@ -7210,7 +7210,7 @@
           "fallback": "Mitosis. Visible layers: prophase; metaphase; anaphase; telophase; X1; X2; X3; X4; next phase. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.474,
+      "compile_ms": 0.459,
       "spec_bytes": 1724,
       "browser": {
         "id": "stem-040",
@@ -7421,7 +7421,7 @@
           "fallback": "Circulation. Visible layers: body tissues; right heart; lungs; left heart; red blood cell; deoxygenated blood; pulmonary artery; pulmonary veins; oxygenated blood. Adjustable controls: Playback."
         }
       },
-      "compile_ms": 0.519,
+      "compile_ms": 0.507,
       "spec_bytes": 1755,
       "browser": {
         "id": "stem-041",
@@ -7613,7 +7613,7 @@
           "fallback": "Action Potential. Visible layers: membrane voltage; sodium channel conductance opens then closes; potassium channel conductance opens later; time probe. Adjustable controls: Time."
         }
       },
-      "compile_ms": 1.851,
+      "compile_ms": 1.826,
       "spec_bytes": 5481,
       "browser": {
         "id": "stem-042",
@@ -7797,7 +7797,7 @@
           "fallback": "Binary Search. Visible layers: [1,3,5,7,9,11,13]; compare midpoint; discard one half; target result; choose midpoint; compare; shrink range / finish. Adjustable controls: Target value, Step."
         }
       },
-      "compile_ms": 0.758,
+      "compile_ms": 0.734,
       "spec_bytes": 1692,
       "browser": {
         "id": "stem-043",
@@ -8097,7 +8097,7 @@
           "fallback": "Binary Search Tree. Visible layers: 8; 3; 11; 1; 5; 9; 13; insert 6; smaller; larger; new-node placement. Adjustable controls: Insert, Step."
         }
       },
-      "compile_ms": 0.529,
+      "compile_ms": 0.53,
       "spec_bytes": 2251,
       "browser": {
         "id": "stem-044",
@@ -8337,7 +8337,7 @@
           "fallback": "Dijkstra. Visible layers: A; B; C; D; E; F; 4; 2; 1; 5; 8; 10; 6; 3. Adjustable controls: Source node, Destination node, Algorithm step."
         }
       },
-      "compile_ms": 0.614,
+      "compile_ms": 0.612,
       "spec_bytes": 2116,
       "browser": {
         "id": "stem-045",
@@ -8602,7 +8602,7 @@
           "fallback": "Stack Queue. Visible layers: Stack • LIFO; Queue • FIFO; A; B; C; push upward; top / pop first; front / dequeue first; enqueue at rear. Adjustable controls: Operation, Step."
         }
       },
-      "compile_ms": 0.591,
+      "compile_ms": 0.588,
       "spec_bytes": 1900,
       "browser": {
         "id": "stem-046",
@@ -8829,7 +8829,7 @@
           "fallback": "Cpu Memory. Visible layers: CPU request; registers / cache; RAM lookup; SSD storage; load page → retry CPU; cache miss; memory lookup; page fault; page-in; resume. Adjustable controls: Step."
         }
       },
-      "compile_ms": 1.043,
+      "compile_ms": 1.006,
       "spec_bytes": 1775,
       "browser": {
         "id": "stem-047",
@@ -8989,7 +8989,7 @@
           "fallback": "Sampling Aliasing. Visible layers: continuous signal; aliased reconstruction; sample locations. Adjustable controls: Signal Frequency, Sample Frequency."
         }
       },
-      "compile_ms": 2.654,
+      "compile_ms": 2.579,
       "spec_bytes": 12402,
       "browser": {
         "id": "stem-048",
@@ -9121,7 +9121,7 @@
           "fallback": "Differential Drive. Visible layers: robot trajectory; robot body; left wheel; right wheel; instantaneous centre of curvature. Adjustable controls: Left Velocity, Right Velocity."
         }
       },
-      "compile_ms": 1.081,
+      "compile_ms": 1.064,
       "spec_bytes": 4543,
       "browser": {
         "id": "stem-049",
@@ -9293,7 +9293,7 @@
           "fallback": "Neural Network. Visible layers: input x₁=0.6; input x₂=0.4; h₁=ReLU(0.60)=0.60; h₂=ReLU(0.18)=0.18; ŷ=sigmoid(0.464)=0.614; w₁₁ adjustable; w₁₂=0.5; w₂₁=−0.4; w₂₂=0.8; v₁=0.9; v₂=−0.7. Adjustable controls: Weight, Step."
         }
       },
-      "compile_ms": 0.637,
+      "compile_ms": 0.626,
       "spec_bytes": 1900,
       "browser": {
         "id": "stem-050",
@@ -9441,7 +9441,7 @@
           }
         }
       },
-      "compile_ms": 2.266,
+      "compile_ms": 2.141,
       "spec_bytes": 948,
       "browser": {
         "id": "math-001",
@@ -9614,7 +9614,7 @@
           }
         }
       },
-      "compile_ms": 1.833,
+      "compile_ms": 1.789,
       "spec_bytes": 1102,
       "browser": {
         "id": "math-002",
@@ -9787,7 +9787,7 @@
           }
         }
       },
-      "compile_ms": 1.974,
+      "compile_ms": 1.765,
       "spec_bytes": 1104,
       "browser": {
         "id": "math-003",
@@ -9960,7 +9960,7 @@
           }
         }
       },
-      "compile_ms": 2.506,
+      "compile_ms": 2.124,
       "spec_bytes": 1177,
       "browser": {
         "id": "math-004",
@@ -10133,7 +10133,7 @@
           }
         }
       },
-      "compile_ms": 2.428,
+      "compile_ms": 2.458,
       "spec_bytes": 1212,
       "browser": {
         "id": "math-005",
@@ -10306,7 +10306,7 @@
           }
         }
       },
-      "compile_ms": 1.829,
+      "compile_ms": 1.682,
       "spec_bytes": 1052,
       "browser": {
         "id": "math-006",
@@ -10479,7 +10479,7 @@
           }
         }
       },
-      "compile_ms": 2.285,
+      "compile_ms": 2.099,
       "spec_bytes": 1155,
       "browser": {
         "id": "math-007",
@@ -10652,7 +10652,7 @@
           }
         }
       },
-      "compile_ms": 1.925,
+      "compile_ms": 1.765,
       "spec_bytes": 1108,
       "browser": {
         "id": "math-008",
@@ -10825,7 +10825,7 @@
           }
         }
       },
-      "compile_ms": 2.573,
+      "compile_ms": 2.642,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-009",
@@ -10998,7 +10998,7 @@
           }
         }
       },
-      "compile_ms": 2.827,
+      "compile_ms": 2.957,
       "spec_bytes": 1110,
       "browser": {
         "id": "math-010",
@@ -11171,7 +11171,7 @@
           }
         }
       },
-      "compile_ms": 4.8,
+      "compile_ms": 4.794,
       "spec_bytes": 1194,
       "browser": {
         "id": "math-011",
@@ -11357,7 +11357,7 @@
           }
         }
       },
-      "compile_ms": 2.492,
+      "compile_ms": 2.491,
       "spec_bytes": 1239,
       "browser": {
         "id": "math-012",
@@ -11530,7 +11530,7 @@
           }
         }
       },
-      "compile_ms": 2.21,
+      "compile_ms": 2.138,
       "spec_bytes": 1180,
       "browser": {
         "id": "math-013",
@@ -11703,7 +11703,7 @@
           }
         }
       },
-      "compile_ms": 2.232,
+      "compile_ms": 2.194,
       "spec_bytes": 1177,
       "browser": {
         "id": "math-014",
@@ -11876,7 +11876,7 @@
           }
         }
       },
-      "compile_ms": 2.571,
+      "compile_ms": 2.537,
       "spec_bytes": 1257,
       "browser": {
         "id": "math-015",
@@ -12049,7 +12049,7 @@
           }
         }
       },
-      "compile_ms": 0.96,
+      "compile_ms": 0.959,
       "spec_bytes": 945,
       "browser": {
         "id": "math-016",
@@ -12222,7 +12222,7 @@
           }
         }
       },
-      "compile_ms": 1.359,
+      "compile_ms": 1.821,
       "spec_bytes": 1027,
       "browser": {
         "id": "math-017",
@@ -12395,7 +12395,7 @@
           }
         }
       },
-      "compile_ms": 1.371,
+      "compile_ms": 1.491,
       "spec_bytes": 1027,
       "browser": {
         "id": "math-018",
@@ -12568,7 +12568,7 @@
           }
         }
       },
-      "compile_ms": 2.554,
+      "compile_ms": 2.558,
       "spec_bytes": 1260,
       "browser": {
         "id": "math-019",
@@ -12741,7 +12741,7 @@
           }
         }
       },
-      "compile_ms": 2.219,
+      "compile_ms": 2.195,
       "spec_bytes": 1198,
       "browser": {
         "id": "math-020",
@@ -12914,7 +12914,7 @@
           }
         }
       },
-      "compile_ms": 0.947,
+      "compile_ms": 0.943,
       "spec_bytes": 938,
       "browser": {
         "id": "math-021",
@@ -13087,7 +13087,7 @@
           }
         }
       },
-      "compile_ms": 1.702,
+      "compile_ms": 2.186,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-022",
@@ -13260,7 +13260,7 @@
           }
         }
       },
-      "compile_ms": 1.701,
+      "compile_ms": 1.875,
       "spec_bytes": 1067,
       "browser": {
         "id": "math-023",
@@ -13433,7 +13433,7 @@
           }
         }
       },
-      "compile_ms": 1.346,
+      "compile_ms": 1.41,
       "spec_bytes": 1017,
       "browser": {
         "id": "math-024",
@@ -13606,7 +13606,7 @@
           }
         }
       },
-      "compile_ms": 1.342,
+      "compile_ms": 1.331,
       "spec_bytes": 1017,
       "browser": {
         "id": "math-025",
@@ -13779,7 +13779,7 @@
           }
         }
       },
-      "compile_ms": 2.146,
+      "compile_ms": 2.26,
       "spec_bytes": 1173,
       "browser": {
         "id": "math-026",
@@ -13952,7 +13952,7 @@
           }
         }
       },
-      "compile_ms": 2.113,
+      "compile_ms": 2.164,
       "spec_bytes": 1173,
       "browser": {
         "id": "math-027",
@@ -14125,7 +14125,7 @@
           }
         }
       },
-      "compile_ms": 2.493,
+      "compile_ms": 2.557,
       "spec_bytes": 1230,
       "browser": {
         "id": "math-028",
@@ -14311,7 +14311,7 @@
           }
         }
       },
-      "compile_ms": 4.512,
+      "compile_ms": 4.563,
       "spec_bytes": 1619,
       "browser": {
         "id": "math-029",
@@ -14484,7 +14484,7 @@
           }
         }
       },
-      "compile_ms": 2.441,
+      "compile_ms": 2.527,
       "spec_bytes": 1217,
       "browser": {
         "id": "math-030",
@@ -14657,7 +14657,7 @@
           }
         }
       },
-      "compile_ms": 1.733,
+      "compile_ms": 1.803,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-031",
@@ -14830,7 +14830,7 @@
           }
         }
       },
-      "compile_ms": 1.685,
+      "compile_ms": 1.829,
       "spec_bytes": 1067,
       "browser": {
         "id": "math-032",
@@ -15003,7 +15003,7 @@
           }
         }
       },
-      "compile_ms": 1.681,
+      "compile_ms": 1.692,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-033",
@@ -15176,7 +15176,7 @@
           }
         }
       },
-      "compile_ms": 1.37,
+      "compile_ms": 1.384,
       "spec_bytes": 1010,
       "browser": {
         "id": "math-034",
@@ -15349,7 +15349,7 @@
           }
         }
       },
-      "compile_ms": 1.322,
+      "compile_ms": 1.321,
       "spec_bytes": 1014,
       "browser": {
         "id": "math-035",
@@ -15522,7 +15522,7 @@
           }
         }
       },
-      "compile_ms": 2.13,
+      "compile_ms": 2.126,
       "spec_bytes": 1169,
       "browser": {
         "id": "math-036",
@@ -15695,7 +15695,7 @@
           }
         }
       },
-      "compile_ms": 3.175,
+      "compile_ms": 3.128,
       "spec_bytes": 1328,
       "browser": {
         "id": "math-037",
@@ -15868,7 +15868,7 @@
           }
         }
       },
-      "compile_ms": 2.452,
+      "compile_ms": 2.408,
       "spec_bytes": 1220,
       "browser": {
         "id": "math-038",
@@ -16041,7 +16041,7 @@
           }
         }
       },
-      "compile_ms": 3.096,
+      "compile_ms": 3.217,
       "spec_bytes": 1368,
       "browser": {
         "id": "math-039",
@@ -16214,7 +16214,7 @@
           }
         }
       },
-      "compile_ms": 5.774,
+      "compile_ms": 5.816,
       "spec_bytes": 1898,
       "browser": {
         "id": "math-040",
@@ -16387,7 +16387,7 @@
           }
         }
       },
-      "compile_ms": 2.398,
+      "compile_ms": 2.411,
       "spec_bytes": 1230,
       "browser": {
         "id": "math-041",
@@ -16560,7 +16560,7 @@
           }
         }
       },
-      "compile_ms": 3.103,
+      "compile_ms": 3.168,
       "spec_bytes": 1386,
       "browser": {
         "id": "math-042",
@@ -16733,7 +16733,7 @@
           }
         }
       },
-      "compile_ms": 2.979,
+      "compile_ms": 2.973,
       "spec_bytes": 1344,
       "browser": {
         "id": "math-043",
@@ -16906,7 +16906,7 @@
           }
         }
       },
-      "compile_ms": 3.178,
+      "compile_ms": 3.201,
       "spec_bytes": 1408,
       "browser": {
         "id": "math-044",
@@ -17079,7 +17079,7 @@
           }
         }
       },
-      "compile_ms": 6.055,
+      "compile_ms": 6.157,
       "spec_bytes": 2022,
       "browser": {
         "id": "math-045",
@@ -17252,7 +17252,7 @@
           }
         }
       },
-      "compile_ms": 9.152,
+      "compile_ms": 9.155,
       "spec_bytes": 1790,
       "browser": {
         "id": "math-046",
@@ -17425,7 +17425,7 @@
           }
         }
       },
-      "compile_ms": 2.754,
+      "compile_ms": 2.759,
       "spec_bytes": 1306,
       "browser": {
         "id": "math-047",
@@ -17598,7 +17598,7 @@
           }
         }
       },
-      "compile_ms": 2.745,
+      "compile_ms": 2.775,
       "spec_bytes": 1306,
       "browser": {
         "id": "math-048",
@@ -17771,7 +17771,7 @@
           }
         }
       },
-      "compile_ms": 3.156,
+      "compile_ms": 3.176,
       "spec_bytes": 1382,
       "browser": {
         "id": "math-049",
@@ -17944,7 +17944,7 @@
           }
         }
       },
-      "compile_ms": 4.376,
+      "compile_ms": 4.293,
       "spec_bytes": 1547,
       "browser": {
         "id": "math-050",
@@ -18117,7 +18117,7 @@
           }
         }
       },
-      "compile_ms": 2.714,
+      "compile_ms": 2.778,
       "spec_bytes": 1287,
       "browser": {
         "id": "math-051",
@@ -18290,7 +18290,7 @@
           }
         }
       },
-      "compile_ms": 3.521,
+      "compile_ms": 3.556,
       "spec_bytes": 1440,
       "browser": {
         "id": "math-052",
@@ -18463,7 +18463,7 @@
           }
         }
       },
-      "compile_ms": 3.458,
+      "compile_ms": 3.494,
       "spec_bytes": 1440,
       "browser": {
         "id": "math-053",
@@ -18636,7 +18636,7 @@
           }
         }
       },
-      "compile_ms": 5.002,
+      "compile_ms": 5.148,
       "spec_bytes": 1727,
       "browser": {
         "id": "math-054",
@@ -18809,7 +18809,7 @@
           }
         }
       },
-      "compile_ms": 2.252,
+      "compile_ms": 2.31,
       "spec_bytes": 1174,
       "browser": {
         "id": "math-055",
@@ -18982,7 +18982,7 @@
           }
         }
       },
-      "compile_ms": 2.553,
+      "compile_ms": 2.567,
       "spec_bytes": 1278,
       "browser": {
         "id": "math-056",
@@ -19168,7 +19168,7 @@
           }
         }
       },
-      "compile_ms": 2.198,
+      "compile_ms": 2.209,
       "spec_bytes": 1208,
       "browser": {
         "id": "math-057",
@@ -19354,7 +19354,7 @@
           }
         }
       },
-      "compile_ms": 2.237,
+      "compile_ms": 2.187,
       "spec_bytes": 1205,
       "browser": {
         "id": "math-058",
@@ -19540,7 +19540,7 @@
           }
         }
       },
-      "compile_ms": 2.198,
+      "compile_ms": 2.217,
       "spec_bytes": 1205,
       "browser": {
         "id": "math-059",
@@ -19713,7 +19713,7 @@
           }
         }
       },
-      "compile_ms": 2.96,
+      "compile_ms": 2.979,
       "spec_bytes": 1355,
       "browser": {
         "id": "math-060",
@@ -19899,7 +19899,7 @@
           }
         }
       },
-      "compile_ms": 3.442,
+      "compile_ms": 3.417,
       "spec_bytes": 1436,
       "browser": {
         "id": "math-061",
@@ -20085,7 +20085,7 @@
           }
         }
       },
-      "compile_ms": 1.415,
+      "compile_ms": 1.401,
       "spec_bytes": 1048,
       "browser": {
         "id": "math-062",
@@ -20271,7 +20271,7 @@
           }
         }
       },
-      "compile_ms": 2.147,
+      "compile_ms": 2.179,
       "spec_bytes": 1208,
       "browser": {
         "id": "math-063",
@@ -20457,7 +20457,7 @@
           }
         }
       },
-      "compile_ms": 3.732,
+      "compile_ms": 3.81,
       "spec_bytes": 1505,
       "browser": {
         "id": "math-064",
@@ -20643,7 +20643,7 @@
           }
         }
       },
-      "compile_ms": 2.475,
+      "compile_ms": 2.479,
       "spec_bytes": 1238,
       "browser": {
         "id": "math-065",
@@ -20825,7 +20825,7 @@
           }
         }
       },
-      "compile_ms": 141.229,
+      "compile_ms": 140.936,
       "spec_bytes": 1263,
       "browser": {
         "id": "math-066",
@@ -21005,7 +21005,7 @@
           }
         }
       },
-      "compile_ms": 188.763,
+      "compile_ms": 189.026,
       "spec_bytes": 1551,
       "browser": {
         "id": "math-067",
@@ -21182,7 +21182,7 @@
           }
         }
       },
-      "compile_ms": 126.528,
+      "compile_ms": 126.681,
       "spec_bytes": 1181,
       "browser": {
         "id": "math-068",
@@ -21357,7 +21357,7 @@
           }
         }
       },
-      "compile_ms": 159.641,
+      "compile_ms": 160.088,
       "spec_bytes": 1373,
       "browser": {
         "id": "math-069",
@@ -21535,7 +21535,7 @@
           }
         }
       },
-      "compile_ms": 107.716,
+      "compile_ms": 107.254,
       "spec_bytes": 1102,
       "browser": {
         "id": "math-070",
@@ -21714,7 +21714,7 @@
           }
         }
       },
-      "compile_ms": 141.569,
+      "compile_ms": 140.17,
       "spec_bytes": 1294,
       "browser": {
         "id": "math-071",
@@ -21890,7 +21890,7 @@
           }
         }
       },
-      "compile_ms": 110.659,
+      "compile_ms": 110.137,
       "spec_bytes": 1102,
       "browser": {
         "id": "math-072",
@@ -22068,7 +22068,7 @@
           }
         }
       },
-      "compile_ms": 78.584,
+      "compile_ms": 79.272,
       "spec_bytes": 946,
       "browser": {
         "id": "math-073",
@@ -22247,7 +22247,7 @@
           }
         }
       },
-      "compile_ms": 143.114,
+      "compile_ms": 141.297,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-074",
@@ -22426,7 +22426,7 @@
           }
         }
       },
-      "compile_ms": 144.356,
+      "compile_ms": 143.038,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-075",
@@ -22602,7 +22602,7 @@
           }
         }
       },
-      "compile_ms": 107.857,
+      "compile_ms": 108.012,
       "spec_bytes": 1103,
       "browser": {
         "id": "math-076",
@@ -22771,7 +22771,7 @@
           }
         }
       },
-      "compile_ms": 1.856,
+      "compile_ms": 1.91,
       "spec_bytes": 1104,
       "browser": {
         "id": "math-077",
@@ -22953,7 +22953,7 @@
           }
         }
       },
-      "compile_ms": 286.33,
+      "compile_ms": 284.831,
       "spec_bytes": 1979,
       "browser": {
         "id": "math-078",
@@ -23133,7 +23133,7 @@
           }
         }
       },
-      "compile_ms": 140.755,
+      "compile_ms": 138.996,
       "spec_bytes": 1263,
       "browser": {
         "id": "math-079",
@@ -23313,7 +23313,7 @@
           }
         }
       },
-      "compile_ms": 129.126,
+      "compile_ms": 127.727,
       "spec_bytes": 1184,
       "browser": {
         "id": "math-080",
@@ -23494,7 +23494,7 @@
           }
         }
       },
-      "compile_ms": 186.055,
+      "compile_ms": 184.682,
       "spec_bytes": 1478,
       "browser": {
         "id": "math-081",
@@ -23676,7 +23676,7 @@
           }
         }
       },
-      "compile_ms": 241.12,
+      "compile_ms": 237.492,
       "spec_bytes": 1742,
       "browser": {
         "id": "math-082",
@@ -23858,7 +23858,7 @@
           }
         }
       },
-      "compile_ms": 185.944,
+      "compile_ms": 185.35,
       "spec_bytes": 1488,
       "browser": {
         "id": "math-083",
@@ -24040,7 +24040,7 @@
           }
         }
       },
-      "compile_ms": 202.248,
+      "compile_ms": 201.721,
       "spec_bytes": 1553,
       "browser": {
         "id": "math-084",
@@ -24212,7 +24212,7 @@
           }
         }
       },
-      "compile_ms": 6.372,
+      "compile_ms": 6.231,
       "spec_bytes": 1955,
       "browser": {
         "id": "math-085",
@@ -24385,7 +24385,7 @@
           }
         }
       },
-      "compile_ms": 2.602,
+      "compile_ms": 2.573,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-086",
@@ -24564,7 +24564,7 @@
           }
         }
       },
-      "compile_ms": 208.879,
+      "compile_ms": 206.716,
       "spec_bytes": 1565,
       "browser": {
         "id": "math-087",
@@ -24739,7 +24739,7 @@
           }
         }
       },
-      "compile_ms": 110.298,
+      "compile_ms": 109.598,
       "spec_bytes": 1100,
       "browser": {
         "id": "math-088",
@@ -24915,7 +24915,7 @@
           }
         }
       },
-      "compile_ms": 271.951,
+      "compile_ms": 269.851,
       "spec_bytes": 1874,
       "browser": {
         "id": "math-089",
@@ -25093,7 +25093,7 @@
           }
         }
       },
-      "compile_ms": 399.423,
+      "compile_ms": 406.014,
       "spec_bytes": 2389,
       "browser": {
         "id": "math-090",
@@ -25273,7 +25273,7 @@
           }
         }
       },
-      "compile_ms": 9.794,
+      "compile_ms": 9.334,
       "spec_bytes": 1747,
       "browser": {
         "id": "math-091",
@@ -25453,7 +25453,7 @@
           }
         }
       },
-      "compile_ms": 4.86,
+      "compile_ms": 4.959,
       "spec_bytes": 1360,
       "browser": {
         "id": "math-092",
@@ -25633,7 +25633,7 @@
           }
         }
       },
-      "compile_ms": 5.119,
+      "compile_ms": 5.052,
       "spec_bytes": 1360,
       "browser": {
         "id": "math-093",
@@ -25810,7 +25810,7 @@
           }
         }
       },
-      "compile_ms": 9.599,
+      "compile_ms": 9.713,
       "spec_bytes": 1747,
       "browser": {
         "id": "math-094",
@@ -25979,7 +25979,7 @@
           }
         }
       },
-      "compile_ms": 2.05,
+      "compile_ms": 2.099,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-095",
@@ -26152,7 +26152,7 @@
           }
         }
       },
-      "compile_ms": 5.324,
+      "compile_ms": 5.261,
       "spec_bytes": 1695,
       "browser": {
         "id": "math-096",
@@ -26338,7 +26338,7 @@
           }
         }
       },
-      "compile_ms": 5.334,
+      "compile_ms": 5.077,
       "spec_bytes": 1629,
       "browser": {
         "id": "math-097",
@@ -26524,7 +26524,7 @@
           }
         }
       },
-      "compile_ms": 2.602,
+      "compile_ms": 2.536,
       "spec_bytes": 1167,
       "browser": {
         "id": "math-098",
@@ -26697,7 +26697,7 @@
           }
         }
       },
-      "compile_ms": 2.666,
+      "compile_ms": 2.997,
       "spec_bytes": 1247,
       "browser": {
         "id": "math-099",
@@ -26870,7 +26870,7 @@
           }
         }
       },
-      "compile_ms": 8.043,
+      "compile_ms": 7.927,
       "spec_bytes": 2164,
       "browser": {
         "id": "math-100",
@@ -27069,7 +27069,7 @@
           "fallback": "Complex Mapping. Visible layers: domain polar circle r=0.6; image polar circle r²=0.36; domain polar circle r=1.2; image polar circle r²=1.44; domain polar circle r=1.8; image polar circle r²=3.24; domain ray θ=0; image ray 2θ=0; domain ray θ=1; image ray 2θ=1; domain ray θ=2; image ray 2θ=2; domain ray θ=3; image ray 2θ=3. Adjustable controls: Point Angle, Point Radius."
         }
       },
-      "compile_ms": 4.308,
+      "compile_ms": 4.166,
       "spec_bytes": 22736,
       "browser": {
         "id": "heldout-001",
@@ -27217,7 +27217,7 @@
           "fallback": "Polar Plot. Visible layers: r = cos(2θ); four radial maxima r=±1; zero crossings r=0 at θ=π/4+kπ/2; traversal point. Adjustable controls: Theta, Playback."
         }
       },
-      "compile_ms": 2.136,
+      "compile_ms": 1.864,
       "spec_bytes": 8220,
       "browser": {
         "id": "heldout-002",
@@ -27426,7 +27426,7 @@
           "fallback": "Fourier Series. Visible layers: square-wave target; harmonic n=1; harmonic n=3; harmonic n=5; odd-harmonic partial sum; Gibbs overshoot near jumps. Adjustable controls: Terms."
         }
       },
-      "compile_ms": 2.881,
+      "compile_ms": 2.54,
       "spec_bytes": 13117,
       "browser": {
         "id": "heldout-003",
@@ -27563,7 +27563,7 @@
           "fallback": "Logistic Map. Visible layers: iterate xₙ versus n; identity y=x; logistic map y=r x(1−x); cobweb iteration; bifurcation attractor samples; Iterate history; Cobweb diagram; Bifurcation behavior. Adjustable controls: Growth Rate, Initial Value."
         }
       },
-      "compile_ms": 5.938,
+      "compile_ms": 5.54,
       "spec_bytes": 31331,
       "browser": {
         "id": "heldout-004",
@@ -27742,7 +27742,7 @@
           "fallback": "Lagrange Multiplier. Visible layers: tangent contour through constrained minimum; contour r=1.5; contour r=2.5; constraint x+y=c; ∇f at constrained minimum; λ∇g parallel to ∇f; constrained minimum (c/2,c/2). Adjustable controls: Constraint Offset."
         }
       },
-      "compile_ms": 2.437,
+      "compile_ms": 2.237,
       "spec_bytes": 11235,
       "browser": {
         "id": "heldout-005",
@@ -27872,7 +27872,7 @@
           "fallback": "Parametric Surface. Visible layers: Möbius strip. Adjustable controls: Path Position, Playback."
         }
       },
-      "compile_ms": 0.855,
+      "compile_ms": 0.779,
       "spec_bytes": 2068,
       "browser": {
         "id": "heldout-006",
@@ -28023,7 +28023,7 @@
           "fallback": "A sampled vector field with a movable probe whose arrow evaluates the same typed field expression."
         }
       },
-      "compile_ms": 0.954,
+      "compile_ms": 0.85,
       "spec_bytes": 1714,
       "browser": {
         "id": "heldout-007",
@@ -28178,7 +28178,7 @@
           "fallback": "Convolution. Visible layers: box pulse A; sliding box pulse B; current overlap area; convolution result versus shift; current overlap-area value. Adjustable controls: Shift."
         }
       },
-      "compile_ms": 0.897,
+      "compile_ms": 0.798,
       "spec_bytes": 2912,
       "browser": {
         "id": "heldout-008",
@@ -28327,7 +28327,7 @@
           "fallback": "Kepler Orbit. Visible layers: trajectory; satellite at true anomaly; radius vector; velocity vector tangent to orbit; acceleration vector toward focus; equal-area sweep sector. Adjustable controls: Eccentricity, True Anomaly, Playback."
         }
       },
-      "compile_ms": 1.182,
+      "compile_ms": 1.038,
       "spec_bytes": 4943,
       "browser": {
         "id": "heldout-009",
@@ -28520,7 +28520,7 @@
           "fallback": "Coupled Oscillators. Visible layers: in-phase normal-mode displacement; out-of-phase normal-mode displacement; three springs and two masses; two moving masses. Adjustable controls: Mode, Playback."
         }
       },
-      "compile_ms": 1.583,
+      "compile_ms": 1.365,
       "spec_bytes": 6800,
       "browser": {
         "id": "heldout-010",
@@ -28784,7 +28784,7 @@
           "fallback": "Standing Wave. Visible layers: standing wave fixed at x=−4 and x=4; nodes including fixed endpoints; antinodes. Adjustable controls: Harmonic."
         }
       },
-      "compile_ms": 0.805,
+      "compile_ms": 0.737,
       "spec_bytes": 3548,
       "browser": {
         "id": "heldout-011",
@@ -28959,7 +28959,7 @@
           "fallback": "Doppler. Visible layers: wavefront; moving source. Adjustable controls: Source Speed, Playback."
         }
       },
-      "compile_ms": 2.021,
+      "compile_ms": 1.801,
       "spec_bytes": 10733,
       "browser": {
         "id": "heldout-012",
@@ -29135,7 +29135,7 @@
           "fallback": "Double Slit. Visible layers: intensity; opaque barrier upper; opaque barrier middle; opaque barrier lower; upper-slit path; lower-slit path; screen; path difference Δℓ. Adjustable controls: Slit Separation, Wavelength."
         }
       },
-      "compile_ms": 1.176,
+      "compile_ms": 1.161,
       "spec_bytes": 4291,
       "browser": {
         "id": "heldout-013",
@@ -29316,7 +29316,7 @@
           "fallback": "Lorentz Force. Visible layers: charged-particle helix; velocity v; Lorentz force q(v×B); uniform field B. Adjustable controls: Charge, Field, Speed, Playback."
         }
       },
-      "compile_ms": 0.88,
+      "compile_ms": 0.908,
       "spec_bytes": 3722,
       "browser": {
         "id": "heldout-014",
@@ -29529,7 +29529,7 @@
           "fallback": "Blackbody. Visible layers: T=1.2; T=1.7; T=2.2; Wien peak markers λmax∝1/T. Adjustable controls: Temperature."
         }
       },
-      "compile_ms": 1.982,
+      "compile_ms": 2.156,
       "spec_bytes": 9427,
       "browser": {
         "id": "heldout-015",
@@ -29683,7 +29683,7 @@
           "fallback": "Entropy Cycle. Visible layers: P–V hot isothermal expansion; P–V adiabatic expansion; P–V cold isothermal compression; P–V adiabatic compression; T–S hot isothermal expansion; T–S adiabatic expansion; T–S cold isothermal compression; T–S adiabatic compression; P–V synchronized state; T–S synchronized state; Pressure–volume cycle; Temperature–entropy cycle. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.65,
+      "compile_ms": 0.675,
       "spec_bytes": 2642,
       "browser": {
         "id": "heldout-016",
@@ -30059,7 +30059,7 @@
           "fallback": "Molecular Geometry. Visible layers: central atom; bond; lone pair 1; lone pair 2. Adjustable controls: Molecule."
         }
       },
-      "compile_ms": 0.451,
+      "compile_ms": 0.45,
       "spec_bytes": 1321,
       "browser": {
         "id": "heldout-018",
@@ -30227,7 +30227,7 @@
           "fallback": "Electrochemical Cell. Visible layers: Zn anode: Zn → Zn²⁺ + 2e⁻; Cu cathode: Cu²⁺ + 2e⁻ → Cu; salt bridge ion migration; E = 1.100 V; electron flow; NO₃⁻ anions migrate to anode; K⁺ cations migrate to cathode; voltage readout. Adjustable controls: Zinc Concentration, Copper Concentration."
         }
       },
-      "compile_ms": 0.477,
+      "compile_ms": 0.469,
       "spec_bytes": 1872,
       "browser": {
         "id": "heldout-019",
@@ -30374,7 +30374,7 @@
           "fallback": "Kinetics. Visible layers: zero-order [A]; first-order [A]; second-order [A]; zero-order linearized [A]; first-order linearized ln[A]; second-order linearized 1/[A]; selected reaction order. Adjustable controls: Order, Rate Constant."
         }
       },
-      "compile_ms": 3.859,
+      "compile_ms": 3.598,
       "spec_bytes": 14578,
       "browser": {
         "id": "heldout-020",
@@ -30537,7 +30537,7 @@
           "fallback": "Phase Diagram. Visible layers: solid–gas boundary; solid–liquid boundary; liquid–gas boundary; selected state (T,P). Adjustable controls: Temperature, Pressure."
         }
       },
-      "compile_ms": 0.532,
+      "compile_ms": 0.542,
       "spec_bytes": 1225,
       "browser": {
         "id": "heldout-021",
@@ -30720,7 +30720,7 @@
           "fallback": "Equilibrium Shift. Visible layers: N₂ + 3H₂ reactants; reversible ⇌; 2NH₃ product; fewer gas molecules; equilibrium composition responds to P and T; N₂ molecule population; H₂ molecule population; NH₃ molecule population; forward reaction; reverse reaction; higher pressure favors fewer gas molecules; temperature shifts equilibrium constant. Adjustable controls: Pressure, Temperature."
         }
       },
-      "compile_ms": 0.639,
+      "compile_ms": 0.596,
       "spec_bytes": 2535,
       "browser": {
         "id": "heldout-022",
@@ -30864,7 +30864,7 @@
           "fallback": "Enzyme Kinetics. Visible layers: Michaelis–Menten without inhibitor; competitive inhibition apparent Kₘ; selected substrate rates. Adjustable controls: Substrate, Inhibitor."
         }
       },
-      "compile_ms": 1.376,
+      "compile_ms": 1.393,
       "spec_bytes": 5752,
       "browser": {
         "id": "heldout-023",
@@ -31044,7 +31044,7 @@
           "fallback": "Dna Replication. Visible layers: helicase fork; RNA primer; leading 5′→3′ continuous; repeated RNA primers; Okazaki 5′→3′ fragments; ligase joins; primer starts; polymerase 5′→3′; fork exposes template; seal fragments. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.495,
+      "compile_ms": 0.503,
       "spec_bytes": 2183,
       "browser": {
         "id": "heldout-024",
@@ -31342,7 +31342,7 @@
           "fallback": "Nephron. Visible layers: glomerulus: filtration; proximal: H₂O, Na⁺, glucose; descending: H₂O; ascending: Na⁺; no water; distal: regulated Na⁺; collecting: regulated H₂O; filtrate; H₂O → blood; Na⁺ → blood; glucose → blood; H₂O reabsorbed; regulated H₂O; Na⁺ reabsorbed; regulated Na⁺. Adjustable controls: Nephron segment."
         }
       },
-      "compile_ms": 0.646,
+      "compile_ms": 0.627,
       "spec_bytes": 3180,
       "browser": {
         "id": "heldout-025",
@@ -31470,7 +31470,7 @@
           "fallback": "Predator Prey. Visible layers: prey population versus time; predator population versus time; predator-prey phase portrait; Populations over time; Predator–prey phase portrait. Adjustable controls: Prey Growth, Predation, Playback."
         }
       },
-      "compile_ms": 3.367,
+      "compile_ms": 3.208,
       "spec_bytes": 16727,
       "browser": {
         "id": "heldout-026",
@@ -31747,7 +31747,7 @@
           "fallback": "Membrane Transport. Visible layers: high concentration; simple diffusion; facilitated channel; active pump + ATP; low concentration; down gradient; no protein / ATP; protein; no ATP; against gradient; ATP required. Adjustable controls: Transport mode."
         }
       },
-      "compile_ms": 0.438,
+      "compile_ms": 0.351,
       "spec_bytes": 1844,
       "browser": {
         "id": "heldout-027",
@@ -32005,7 +32005,7 @@
           "fallback": "Merge Sort. Visible layers: [8,3,6,2,7,1]; recursive split; [8,3,6]; [8,3]; [8]; [3]; [6]; [2,7,1]; [2,7]; [2]; [7]; [1]; stable merge [3,8]; take smaller; left wins equal. Adjustable controls: Step."
         }
       },
-      "compile_ms": 1.033,
+      "compile_ms": 1.004,
       "spec_bytes": 5067,
       "browser": {
         "id": "heldout-028",
@@ -32275,7 +32275,7 @@
           "fallback": "Hash Table. Visible layers: key 17; h(k)=k mod 5; bucket 0; bucket 1; bucket 2; bucket 3; bucket 4; chain key 2; key 7; key 12; insert key 17; lookup / insert; 17 mod 5 = 2; head. Adjustable controls: Key, Operation, Step."
         }
       },
-      "compile_ms": 0.581,
+      "compile_ms": 0.561,
       "spec_bytes": 2483,
       "browser": {
         "id": "heldout-029",
@@ -32502,7 +32502,7 @@
           "fallback": "Graph Traversal. Visible layers: A; B; C; D; E; edge; BFS frontier [A]; visited []. Adjustable controls: Traversal, Step."
         }
       },
-      "compile_ms": 0.457,
+      "compile_ms": 0.447,
       "spec_bytes": 1569,
       "browser": {
         "id": "heldout-030",
@@ -32741,7 +32741,7 @@
           "fallback": "Heap. Visible layers: minimum root 1; 3; 5; 8; 9; 7; empty insert slot; parent ≤ children; insertion position. Adjustable controls: Heap operation, Value, Step."
         }
       },
-      "compile_ms": 0.566,
+      "compile_ms": 0.558,
       "spec_bytes": 2265,
       "browser": {
         "id": "heldout-031",
@@ -32972,7 +32972,7 @@
           "fallback": "Recursion Stack. Visible layers: factorial(5); factorial(4); factorial(3); factorial(2); factorial(1); return 1; return 2; return 6; return 24; return 120; recursive descent: push frame; base case; return-value unwind: pop × caller n. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.652,
+      "compile_ms": 0.644,
       "spec_bytes": 2714,
       "browser": {
         "id": "heldout-032",
@@ -33147,7 +33147,7 @@
           "fallback": "Virtual Memory. Visible layers: virtual address: page 2, offset 5; TLB; page table; physical frame 7, offset 5; backing storage; replace frame → retry; TLB miss; page-table lookup; resident hit; page fault; page-in replacement; preserve offset. Adjustable controls: Address, Step."
         }
       },
-      "compile_ms": 0.387,
+      "compile_ms": 0.377,
       "spec_bytes": 2260,
       "browser": {
         "id": "heldout-033",
@@ -33361,7 +33361,7 @@
           "fallback": "Impulse Response. Visible layers: finite input x[n] = [1,2,1]; flipped and shifted h[n] = [1,−1,2]; convolution output y[n] = [1,1,1,3,2]. Adjustable controls: Shift, Step."
         }
       },
-      "compile_ms": 0.455,
+      "compile_ms": 0.439,
       "spec_bytes": 1122,
       "browser": {
         "id": "heldout-034",
@@ -33494,7 +33494,7 @@
           "fallback": "Bode Plot. Visible layers: low-pass magnitude (dB); low-pass phase (degrees). Adjustable controls: Cutoff."
         }
       },
-      "compile_ms": 1.29,
+      "compile_ms": 1.235,
       "spec_bytes": 6235,
       "browser": {
         "id": "heldout-035",
@@ -33626,7 +33626,7 @@
           "fallback": "Nyquist. Visible layers: Nyquist locus, winding number N=0; critical point −1+0j. Adjustable controls: Gain."
         }
       },
-      "compile_ms": 0.805,
+      "compile_ms": 0.801,
       "spec_bytes": 4190,
       "browser": {
         "id": "heldout-036",
@@ -33763,7 +33763,7 @@
           "fallback": "Pid Response. Visible layers: P response; PI response; PID response; rise time marker; overshoot marker; steady-state error marker. Adjustable controls: Kp, Ki, Kd."
         }
       },
-      "compile_ms": 2.037,
+      "compile_ms": 2.018,
       "spec_bytes": 8888,
       "browser": {
         "id": "heldout-037",
@@ -33950,7 +33950,7 @@
           "fallback": "Pwm. Visible layers: PWM voltage; motor average voltage = duty × supply. Adjustable controls: Duty Cycle."
         }
       },
-      "compile_ms": 0.719,
+      "compile_ms": 0.613,
       "spec_bytes": 1439,
       "browser": {
         "id": "heldout-038",
@@ -34258,7 +34258,7 @@
           "fallback": "Spectrogram. Visible layers: chirp energy; chirp waveform; Time–frequency energy; Chirp waveform. Adjustable controls: Sweep Rate, Playback."
         }
       },
-      "compile_ms": 4.105,
+      "compile_ms": 3.73,
       "spec_bytes": 20464,
       "browser": {
         "id": "heldout-039",
@@ -34406,7 +34406,7 @@
           "fallback": "Robot Arm. Visible layers: base; elbow-up; end effector (2.50, 1.50); target ×; L₁ = 150 px; L₂ = 135 px. Adjustable controls: Target X, Target Y, Elbow Mode."
         }
       },
-      "compile_ms": 0.606,
+      "compile_ms": 0.511,
       "spec_bytes": 1459,
       "browser": {
         "id": "heldout-040",
@@ -34606,7 +34606,7 @@
           "fallback": "Kalman Filter. Visible layers: true moving-point trajectory; noisy measurements; Kalman estimate trajectory; predicted covariance ellipse P⁻; posterior covariance ellipse P; current true point; current noisy measurement; current Kalman update. Adjustable controls: Noise, Predict / update step."
         }
       },
-      "compile_ms": 2.074,
+      "compile_ms": 2.165,
       "spec_bytes": 10009,
       "browser": {
         "id": "heldout-041",
@@ -34794,7 +34794,7 @@
           "fallback": "Truss. Visible layers: pin support; 50 kN joint load; roller support; compression 33.1 kN; tension 22.0 kN; 50 kN downward; 25 kN reaction. Adjustable controls: Downward load (kN)."
         }
       },
-      "compile_ms": 0.571,
+      "compile_ms": 0.512,
       "spec_bytes": 1520,
       "browser": {
         "id": "heldout-042",
@@ -34960,7 +34960,7 @@
           "fallback": "Beam Bending. Visible layers: simply supported beam; left pin support; right roller support; moving point load 10; left support reaction; right support reaction; shear V(x); bending moment M(x); deflection v(x); Simply supported beam; Shear-force diagram; Bending-moment diagram; Deflection diagram. Adjustable controls: Load Position."
         }
       },
-      "compile_ms": 2.023,
+      "compile_ms": 1.881,
       "spec_bytes": 7519,
       "browser": {
         "id": "heldout-043",
@@ -35154,7 +35154,7 @@
           "fallback": "Fluid Flow. Visible layers: streamline ψ/U=0.35; streamline ψ/U=−0.35; streamline ψ/U=0.8; streamline ψ/U=−0.8; streamline ψ/U=1.4; streamline ψ/U=−1.4; streamline ψ/U=2.2; streamline ψ/U=−2.2; free-stream speed cue; stagnation points. Adjustable controls: Speed."
         }
       },
-      "compile_ms": 17.543,
+      "compile_ms": 17.153,
       "spec_bytes": 43991,
       "browser": {
         "id": "heldout-044",
@@ -35285,7 +35285,7 @@
           "fallback": "Heat Diffusion. Visible layers: temperature field; temperature profile; Temperature field; Temperature profile. Adjustable controls: Time, Playback."
         }
       },
-      "compile_ms": 2.863,
+      "compile_ms": 2.621,
       "spec_bytes": 14776,
       "browser": {
         "id": "heldout-045",
@@ -35524,7 +35524,7 @@
           "fallback": "State Machine. Visible layers: red; red + amber; green; amber; timer; timer / pedestrian request. Adjustable controls: Switch, Step."
         }
       },
-      "compile_ms": 0.575,
+      "compile_ms": 0.581,
       "spec_bytes": 1371,
       "browser": {
         "id": "heldout-046",
@@ -35676,7 +35676,7 @@
           "fallback": "Decision Boundary. Visible layers: class score regions; labelled training samples; decision boundary; training loss versus epoch; Classification regions; Training loss. Adjustable controls: Epoch, Learning Rate."
         }
       },
-      "compile_ms": 19.547,
+      "compile_ms": 20.159,
       "spec_bytes": 11738,
       "browser": {
         "id": "heldout-047",
@@ -35869,7 +35869,7 @@
           "fallback": "Backprop Graph. Visible layers: w=1, x=2, b=3; u=wx+b=5; y=u^2=25; reverse gradient ∂y/∂u=10; ∂y/∂w=20; ∂y/∂x=10; ∂y/∂b=10; forward; power 2; reverse; × x; × w; × 1. Adjustable controls: W, X, B, Step."
         }
       },
-      "compile_ms": 0.854,
+      "compile_ms": 0.912,
       "spec_bytes": 2159,
       "browser": {
         "id": "heldout-048",
@@ -36077,7 +36077,7 @@
           "fallback": "Energy Sankey. Visible layers: 100 J input; 65 J useful; 26.25 J heat; 8.75 J sound; 65 J; 26.25 J; 8.75 J. Adjustable controls: Efficiency."
         }
       },
-      "compile_ms": 0.498,
+      "compile_ms": 0.513,
       "spec_bytes": 1261,
       "browser": {
         "id": "heldout-049",
@@ -36204,7 +36204,7 @@
           "fallback": "Uncertainty Propagation. Visible layers: density histogram ρ=m/V; sampled mass and positive volume pairs; Sampled mass and volume; Density distribution. Adjustable controls: Mass Sigma, Volume Sigma, Samples."
         }
       },
-      "compile_ms": 2.231,
+      "compile_ms": 2.37,
       "spec_bytes": 8630,
       "browser": {
         "id": "heldout-050",
