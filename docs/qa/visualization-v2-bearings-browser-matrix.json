@@ -2,19 +2,225 @@
   "schema_version": 1,
   "count": 4,
   "passed": true,
+  "legibility_passed": true,
   "matrices": [
     {
-      "source_sha256": "6be2c25f467b5adbebd7b79edced20e9fca6ec728881739ed7bbec078530f629",
+      "source_sha256": "1f96cb5788671d9e9106f0683a27dd629f84c4a0358cd9d608c6b2f52fa378a9",
       "width": 760,
       "theme": "light",
       "reduced_motion": false,
       "passed": 15,
       "failed": 0,
       "page_errors": [],
+      "minimum_text_height_px": 14.0,
       "overflow_cases": [],
       "cases": [
         {
           "id": "bearings-001",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 30.8,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 1,
+            "angle_arc_count": 1,
+            "clockwise_arc_count": 1,
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-002",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 30.7,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 1,
+            "angle_arc_count": 1,
+            "clockwise_arc_count": 1,
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-003",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 28.7,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 1,
+            "angle_arc_count": 1,
+            "clockwise_arc_count": 1,
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-004",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 26.6,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 2,
+            "angle_arc_count": 2,
+            "clockwise_arc_count": 2,
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-005",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 26.1,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 2,
+            "angle_arc_count": 2,
+            "clockwise_arc_count": 2,
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-006",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 26.7,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 2,
+            "angle_arc_count": 2,
+            "clockwise_arc_count": 2,
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-007",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 29.3,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 1,
+            "angle_arc_count": 1,
+            "clockwise_arc_count": 1,
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-008",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 25.4,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 2,
+            "angle_arc_count": 3,
+            "clockwise_arc_count": 3,
+            "arrowhead_count": 8,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-009",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 26.7,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 1,
+            "angle_arc_count": 2,
+            "clockwise_arc_count": 2,
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-010",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 25.7,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 1,
+            "angle_arc_count": 1,
+            "clockwise_arc_count": 1,
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-011",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 27.9,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 1,
+            "angle_arc_count": 1,
+            "clockwise_arc_count": 1,
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-012",
+          "rendered": true,
+          "viewport": {
+            "width": 742,
+            "height": 520
+          },
+          "elapsed_ms": 26.7,
+          "visible_semantic_geometry": {
+            "passed": true,
+            "north_arrow_count": 2,
+            "angle_arc_count": 4,
+            "clockwise_arc_count": 3,
+            "arrowhead_count": 9,
+            "minimum_text_height_px": 14
+          }
+        },
+        {
+          "id": "bearings-013",
           "rendered": true,
           "viewport": {
             "width": 742,
@@ -23,202 +229,11 @@
           "elapsed_ms": 27.6,
           "visible_semantic_geometry": {
             "passed": true,
-            "north_arrow_count": 1,
-            "angle_arc_count": 1,
-            "clockwise_arc_count": 1,
-            "arrowhead_count": 3
-          }
-        },
-        {
-          "id": "bearings-002",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 21.3,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 1,
-            "angle_arc_count": 1,
-            "clockwise_arc_count": 1,
-            "arrowhead_count": 3
-          }
-        },
-        {
-          "id": "bearings-003",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.6,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 1,
-            "angle_arc_count": 1,
-            "clockwise_arc_count": 1,
-            "arrowhead_count": 3
-          }
-        },
-        {
-          "id": "bearings-004",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.4,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 2,
-            "angle_arc_count": 2,
-            "clockwise_arc_count": 2,
-            "arrowhead_count": 6
-          }
-        },
-        {
-          "id": "bearings-005",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.2,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 2,
-            "angle_arc_count": 2,
-            "clockwise_arc_count": 2,
-            "arrowhead_count": 6
-          }
-        },
-        {
-          "id": "bearings-006",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 17.9,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 2,
-            "angle_arc_count": 2,
-            "clockwise_arc_count": 2,
-            "arrowhead_count": 6
-          }
-        },
-        {
-          "id": "bearings-007",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.4,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 1,
-            "angle_arc_count": 1,
-            "clockwise_arc_count": 1,
-            "arrowhead_count": 5
-          }
-        },
-        {
-          "id": "bearings-008",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.3,
-          "visible_semantic_geometry": {
-            "passed": true,
             "north_arrow_count": 3,
-            "angle_arc_count": 3,
-            "clockwise_arc_count": 3,
-            "arrowhead_count": 9
-          }
-        },
-        {
-          "id": "bearings-009",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.2,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 1,
-            "angle_arc_count": 2,
-            "clockwise_arc_count": 2,
-            "arrowhead_count": 6
-          }
-        },
-        {
-          "id": "bearings-010",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.8,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 1,
-            "angle_arc_count": 1,
-            "clockwise_arc_count": 1,
-            "arrowhead_count": 5
-          }
-        },
-        {
-          "id": "bearings-011",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 17.8,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 1,
-            "angle_arc_count": 1,
-            "clockwise_arc_count": 1,
-            "arrowhead_count": 5
-          }
-        },
-        {
-          "id": "bearings-012",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 19.4,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 2,
-            "angle_arc_count": 4,
-            "clockwise_arc_count": 3,
-            "arrowhead_count": 9
-          }
-        },
-        {
-          "id": "bearings-013",
-          "rendered": true,
-          "viewport": {
-            "width": 742,
-            "height": 520
-          },
-          "elapsed_ms": 18.6,
-          "visible_semantic_geometry": {
-            "passed": true,
-            "north_arrow_count": 4,
             "angle_arc_count": 4,
             "clockwise_arc_count": 4,
-            "arrowhead_count": 12
+            "arrowhead_count": 11,
+            "minimum_text_height_px": 14
           }
         },
         {
@@ -228,13 +243,14 @@
             "width": 742,
             "height": 520
           },
-          "elapsed_ms": 18.6,
+          "elapsed_ms": 25.8,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 7
+            "arrowhead_count": 7,
+            "minimum_text_height_px": 14
           }
         },
         {
@@ -244,25 +260,27 @@
             "width": 742,
             "height": 520
           },
-          "elapsed_ms": 18.5,
+          "elapsed_ms": 26.9,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 14
           }
         }
       ]
     },
     {
-      "source_sha256": "38b42fc355b5bbc3ddb905259f763baad077a99bd3a8f350a306da3027a972d7",
+      "source_sha256": "54aa959c756c2db319c9428da5286677d150916b0fe877584313eb5760053a08",
       "width": 375,
       "theme": "light",
       "reduced_motion": false,
       "passed": 15,
       "failed": 0,
       "page_errors": [],
+      "minimum_text_height_px": 11.5,
       "overflow_cases": [],
       "cases": [
         {
@@ -272,13 +290,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 22,
+          "elapsed_ms": 25.7,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -288,13 +307,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 19.9,
+          "elapsed_ms": 24.9,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -304,13 +324,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 18.9,
+          "elapsed_ms": 23.9,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -320,13 +341,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 19.7,
+          "elapsed_ms": 24.5,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -336,13 +358,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 19.1,
+          "elapsed_ms": 25,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -352,13 +375,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 24.1,
+          "elapsed_ms": 25.4,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -368,13 +392,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 19,
+          "elapsed_ms": 25.6,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -384,13 +409,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 17.9,
+          "elapsed_ms": 25.8,
           "visible_semantic_geometry": {
             "passed": true,
-            "north_arrow_count": 3,
+            "north_arrow_count": 2,
             "angle_arc_count": 3,
             "clockwise_arc_count": 3,
-            "arrowhead_count": 9
+            "arrowhead_count": 8,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -400,13 +426,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 19.3,
+          "elapsed_ms": 25.1,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -416,13 +443,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 17.9,
+          "elapsed_ms": 24.7,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -432,13 +460,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 18.6,
+          "elapsed_ms": 24.2,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -448,13 +477,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 19.6,
+          "elapsed_ms": 25,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 4,
             "clockwise_arc_count": 3,
-            "arrowhead_count": 9
+            "arrowhead_count": 9,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -464,13 +494,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 17.7,
+          "elapsed_ms": 27.4,
           "visible_semantic_geometry": {
             "passed": true,
-            "north_arrow_count": 4,
+            "north_arrow_count": 3,
             "angle_arc_count": 4,
             "clockwise_arc_count": 4,
-            "arrowhead_count": 12
+            "arrowhead_count": 11,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -480,13 +511,14 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 18.2,
+          "elapsed_ms": 24.3,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 7
+            "arrowhead_count": 7,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -496,25 +528,27 @@
             "width": 375,
             "height": 520
           },
-          "elapsed_ms": 18.8,
+          "elapsed_ms": 24.8,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         }
       ]
     },
     {
-      "source_sha256": "ccdb93b378a2f5227c1ec29381f0ff0fb5e571e5abd7a1e07e3a6246eebed366",
+      "source_sha256": "b0443487741f57610e0e80e2c9caaa57474948f0884ab9cce553b10b542bd69d",
       "width": 430,
       "theme": "dark",
       "reduced_motion": true,
       "passed": 15,
       "failed": 0,
       "page_errors": [],
+      "minimum_text_height_px": 11.5,
       "overflow_cases": [],
       "cases": [
         {
@@ -524,13 +558,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 22.1,
+          "elapsed_ms": 26.8,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -540,13 +575,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 23.2,
+          "elapsed_ms": 25.7,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -556,13 +592,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 21.1,
+          "elapsed_ms": 26.9,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -572,13 +609,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 21.3,
+          "elapsed_ms": 25.3,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -588,13 +626,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 21.9,
+          "elapsed_ms": 26.1,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -604,13 +643,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 21.3,
+          "elapsed_ms": 26.2,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -620,13 +660,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 20.5,
+          "elapsed_ms": 25.5,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -636,13 +677,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 21.5,
+          "elapsed_ms": 27.1,
           "visible_semantic_geometry": {
             "passed": true,
-            "north_arrow_count": 3,
+            "north_arrow_count": 2,
             "angle_arc_count": 3,
             "clockwise_arc_count": 3,
-            "arrowhead_count": 9
+            "arrowhead_count": 8,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -652,13 +694,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 22.9,
+          "elapsed_ms": 25.4,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -668,13 +711,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 20.6,
+          "elapsed_ms": 25.8,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -684,13 +728,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 18.3,
+          "elapsed_ms": 25.8,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -700,13 +745,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 18.2,
+          "elapsed_ms": 26.5,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 4,
             "clockwise_arc_count": 3,
-            "arrowhead_count": 9
+            "arrowhead_count": 9,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -716,13 +762,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 18.9,
+          "elapsed_ms": 27.6,
           "visible_semantic_geometry": {
             "passed": true,
-            "north_arrow_count": 4,
+            "north_arrow_count": 3,
             "angle_arc_count": 4,
             "clockwise_arc_count": 4,
-            "arrowhead_count": 12
+            "arrowhead_count": 11,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -732,13 +779,14 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 19.7,
+          "elapsed_ms": 25.4,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 7
+            "arrowhead_count": 7,
+            "minimum_text_height_px": 11.5
           }
         },
         {
@@ -748,25 +796,27 @@
             "width": 430,
             "height": 520
           },
-          "elapsed_ms": 18.6,
+          "elapsed_ms": 25.6,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 11.5
           }
         }
       ]
     },
     {
-      "source_sha256": "46c6a1685b90d0c27828a7da858f8c46f9a77b461ba5e1a1d518df16e26257b7",
+      "source_sha256": "a086cfaff299f33fe2f4fd0fe7ff1d5033ae6b77b152ae3dc4d85519bed8b4d3",
       "width": 667,
       "theme": "dark",
       "reduced_motion": false,
       "passed": 15,
       "failed": 0,
       "page_errors": [],
+      "minimum_text_height_px": 13.0,
       "overflow_cases": [],
       "cases": [
         {
@@ -776,13 +826,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 20.7,
+          "elapsed_ms": 26,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -792,13 +843,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 20.3,
+          "elapsed_ms": 27,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -808,13 +860,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 19.2,
+          "elapsed_ms": 30.8,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 3
+            "arrowhead_count": 3,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -824,13 +877,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 17.4,
+          "elapsed_ms": 29.5,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -840,13 +894,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 19.4,
+          "elapsed_ms": 26.7,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -856,13 +911,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 17.8,
+          "elapsed_ms": 25.1,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -872,13 +928,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 17.9,
+          "elapsed_ms": 24.2,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -888,13 +945,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 18.1,
+          "elapsed_ms": 24.5,
           "visible_semantic_geometry": {
             "passed": true,
-            "north_arrow_count": 3,
+            "north_arrow_count": 2,
             "angle_arc_count": 3,
             "clockwise_arc_count": 3,
-            "arrowhead_count": 9
+            "arrowhead_count": 8,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -904,13 +962,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 18.3,
+          "elapsed_ms": 24.3,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -920,13 +979,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 17.9,
+          "elapsed_ms": 24,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -936,13 +996,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 17.9,
+          "elapsed_ms": 25,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 1,
             "clockwise_arc_count": 1,
-            "arrowhead_count": 5
+            "arrowhead_count": 5,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -952,13 +1013,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 19.2,
+          "elapsed_ms": 24.6,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 4,
             "clockwise_arc_count": 3,
-            "arrowhead_count": 9
+            "arrowhead_count": 9,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -968,13 +1030,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 19.3,
+          "elapsed_ms": 25.3,
           "visible_semantic_geometry": {
             "passed": true,
-            "north_arrow_count": 4,
+            "north_arrow_count": 3,
             "angle_arc_count": 4,
             "clockwise_arc_count": 4,
-            "arrowhead_count": 12
+            "arrowhead_count": 11,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -984,13 +1047,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 17.9,
+          "elapsed_ms": 24.5,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 2,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 7
+            "arrowhead_count": 7,
+            "minimum_text_height_px": 13
           }
         },
         {
@@ -1000,13 +1064,14 @@
             "width": 667,
             "height": 520
           },
-          "elapsed_ms": 17.5,
+          "elapsed_ms": 24.6,
           "visible_semantic_geometry": {
             "passed": true,
             "north_arrow_count": 1,
             "angle_arc_count": 2,
             "clockwise_arc_count": 2,
-            "arrowhead_count": 6
+            "arrowhead_count": 6,
+            "minimum_text_height_px": 13
           }
         }
       ]

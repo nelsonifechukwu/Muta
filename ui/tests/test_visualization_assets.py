@@ -54,11 +54,11 @@ def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> No
     assert "visualizations.js" in html and "viz-frame.js" in html
     assert 'viz-theme.js?v=20260825-mac-media-2' in html
     assert html.index("viz-theme.js") < html.index("viz-frame.css")
-    assert "viz-frame.js?v=20260827-v2-55" in html
-    assert 'loadTrustedScript("viz-frame-v2.js?v=20260827-v2-61")' in frame
+    assert "viz-frame.js?v=20260827-v2-56" in html
+    assert 'loadTrustedScript("viz-frame-v2.js?v=20260827-v2-62")' in frame
     assert "forceSinglePass: true" in frame_v2
     assert "gpuBudgetRespected" in browser_gate
-    assert "visualization-v2-browser-gate.js?v=20260827-v2-50" in browser_gate_html
+    assert "visualization-v2-browser-gate.js?v=20260827-v2-51" in browser_gate_html
     assert "http://" not in html and "https://" not in html
     assert "frame.src = source" in parent
     assert 'frame.loading = "lazy"' not in parent

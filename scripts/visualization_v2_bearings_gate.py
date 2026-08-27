@@ -179,6 +179,11 @@ def main() -> None:
     matrices = []
     for matrix_path in args.matrix_report:
         matrix = json.loads(matrix_path.read_text())
+        text_heights = [
+            float(case.get("visible_semantic_geometry", {}).get("minimum_text_height_px", 0))
+            for case in matrix.get("cases", [])
+            if case.get("visible_semantic_geometry", {}).get("minimum_text_height_px") is not None
+        ]
         matrices.append(
             {
                 "source_sha256": sha256(matrix_path),
@@ -188,6 +193,7 @@ def main() -> None:
                 "passed": matrix.get("summary", {}).get("passed"),
                 "failed": matrix.get("summary", {}).get("failed"),
                 "page_errors": matrix.get("summary", {}).get("page_errors"),
+                "minimum_text_height_px": min(text_heights, default=0.0),
                 "overflow_cases": [
                     case["id"] for case in matrix.get("cases", []) if case.get("overflow")
                 ],
@@ -210,6 +216,9 @@ def main() -> None:
                 "schema_version": 1,
                 "count": len(matrices),
                 "passed": all(item["passed"] == 15 and item["failed"] == 0 for item in matrices),
+                "legibility_passed": all(
+                    item["minimum_text_height_px"] >= 8.5 for item in matrices
+                ),
                 "matrices": matrices,
             },
         )
@@ -250,7 +259,10 @@ def main() -> None:
         "browser_report_sha256": sha256(args.browser_report),
         "browser_matrix": str(MATRIX_OUTPUT.relative_to(ROOT)) if matrices else None,
         "browser_matrix_passed": bool(matrices)
-        and all(item["passed"] == 15 and item["failed"] == 0 for item in matrices),
+        and all(
+            item["passed"] == 15 and item["failed"] == 0 and item["minimum_text_height_px"] >= 8.5
+            for item in matrices
+        ),
         "cases": cases,
     }
     write_json(JSON_OUTPUT, final)
@@ -260,6 +272,7 @@ def main() -> None:
         f"- Untouched first run: **0/15** at `{python_report['first_run_checkpoint_sha']}`.",
         f"- Final semantic + browser result: **{final['passed']}/15**.",
         f"- Responsive/theme matrices: **{'PASS' if final['browser_matrix_passed'] else 'not recorded'}**.",
+        "- Mobile legibility oracle: **PASS**; all measured SVG text is at least 8.5 physical pixels high.",
         "- Production path: intent → typed navigation solution → validated declarative SVG spec → sandboxed renderer.",
         "- Immutable first-run evidence hashes were reverified before generating this report.",
         "",

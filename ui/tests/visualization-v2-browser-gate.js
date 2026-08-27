@@ -361,14 +361,19 @@
       const angleArcs = [...(frameDocument?.querySelectorAll(".viz-v2-angle-arc") || [])];
       const clockwiseArcs = angleArcs.filter((arc) => arc.dataset.clockwise === "true");
       const arrowheads = [...(frameDocument?.querySelectorAll('[marker-end="url(#v2-arrow)"]') || [])];
+      const textHeights = [...(frameDocument?.querySelectorAll(".viz-v2-layer text") || [])]
+        .map((node) => node.getBoundingClientRect().height)
+        .filter((height) => Number.isFinite(height) && height > 0);
+      const minimumTextHeight = textHeights.length ? Math.min(...textHeights) : 0;
       const visibleText = frameDocument?.body?.textContent || "";
       visibleSemanticGeometry = {
         passed: northArrows.length >= 1 && angleArcs.length >= 1 && clockwiseArcs.length >= 1
-          && arrowheads.length >= 3 && /\d{3}°/.test(visibleText),
+          && arrowheads.length >= 3 && /\d{3}°/.test(visibleText) && minimumTextHeight >= 8.5,
         north_arrow_count: northArrows.length,
         angle_arc_count: angleArcs.length,
         clockwise_arc_count: clockwiseArcs.length,
         arrowhead_count: arrowheads.length,
+        minimum_text_height_px: Math.round(minimumTextHeight * 100) / 100,
       };
     }
     const interactionChanged = controls.length === 0 || interactionResults.every((result) => result.passed);

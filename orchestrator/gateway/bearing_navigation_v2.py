@@ -401,12 +401,21 @@ def _ray_intersection_solution(text: str) -> NavigationSolution | None:
         return None
     baseline = float(baseline_match.group(1))
     first, second = bearings[:2]
+    baseline_direction = re.search(
+        r"\bB\b.{0,48}?\bdue\s+(north|south|east|west)\s+of\s+\bA\b",
+        text,
+        re.IGNORECASE,
+    )
+    baseline_bearing = (
+        _CARDINAL[baseline_direction.group(1).casefold()] if baseline_direction else 90.0
+    )
+    baseline_vector = _components(baseline, baseline_bearing)
     direction_a = _components(1.0, first)
     direction_b = _components(1.0, second)
     determinant = direction_a[0] * (-direction_b[1]) - (-direction_b[0]) * direction_a[1]
     if abs(determinant) < 1e-9:
         return None
-    rhs_east, rhs_north = baseline, 0.0
+    rhs_east, rhs_north = baseline_vector
     distance_a = (rhs_east * (-direction_b[1]) - (-direction_b[0]) * rhs_north) / determinant
     distance_b = (direction_a[0] * rhs_north - rhs_east * direction_a[1]) / determinant
     if distance_a <= 0 or distance_b <= 0:
@@ -414,7 +423,7 @@ def _ray_intersection_solution(text: str) -> NavigationSolution | None:
     tower = _components(distance_a, first)
     return NavigationSolution(
         title="Triangulation from two bearing rays",
-        points={"A": (0.0, 0.0), "B": (baseline, 0.0), "T": tower},
+        points={"A": (0.0, 0.0), "B": baseline_vector, "T": tower},
         legs=[Leg("A", "T", distance_a, first), Leg("B", "T", distance_b, second)],
         result_arrows=[("A", "B", f"baseline {baseline:g} km")],
         north_points=["A", "B"],
@@ -438,13 +447,24 @@ def _interception_solution(text: str) -> NavigationSolution | None:
     initial_distance, initial_bearing = pairs[0]
     target_speed, rescuer_speed = speeds[0], speeds[1]
     initial = _components(initial_distance, initial_bearing)
-    target_direction = re.search(
+    numeric_direction = re.search(
+        r"(?:travels?|moves?|moving|sails?|steams?).{0,64}?\bbearing"
+        r"(?:\s+of|\s+is|\s*=|\s*:)?\s*\(?\s*(\d{1,3}(?:\.\d+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    cardinal_direction = re.search(
         r"(?:travels?|moves?|moving|sails?|steams?)\s+(?:on\s+a\s+bearing\s+of\s+)?"
         r"(?:due\s+)?(north|south|east|west|northeast|northwest|southeast|southwest)\b",
         text,
         re.IGNORECASE,
     )
-    target_bearing = _CARDINAL[target_direction.group(1).casefold()] if target_direction else 180.0
+    if numeric_direction:
+        target_bearing = _bearing(float(numeric_direction.group(1)))
+    elif cardinal_direction:
+        target_bearing = _CARDINAL[cardinal_direction.group(1).casefold()]
+    else:
+        target_bearing = 180.0
     target_velocity = _components(target_speed, target_bearing)
     # |p + vt|² = s²t². Select the earliest finite positive root.
     a = target_velocity[0] ** 2 + target_velocity[1] ** 2 - rescuer_speed**2

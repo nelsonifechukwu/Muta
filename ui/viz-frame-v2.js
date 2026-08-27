@@ -1890,7 +1890,7 @@
       svg.querySelectorAll(".viz-v2-layer text").forEach((textNode) => {
         const annotation = Number(textNode.getAttribute("x")) === 42;
         const desiredCssPixels = annotation ? 9 : 10;
-        textNode.setAttribute("font-size", String(Math.max(12, desiredCssPixels / scaleFactor)));
+        textNode.style.fontSize = `${Math.max(12, desiredCssPixels / scaleFactor)}px`;
       });
     };
     const links = layers.filter((layer) => layer.type === "link");

@@ -126,6 +126,21 @@ def test_unseen_navigation_paraphrases_use_general_solver_not_exact_prompt_route
     assert mapped is not None and "bearing 205°" in mapped["text_fallback"]
 
 
+def test_unseen_west_baseline_triangulation_and_numeric_moving_bearing() -> None:
+    triangulation = compile_bearing_navigation_v2(
+        "Draw a triangulation diagram: stations A and B are 10 km apart, B due west of A; "
+        "the target is on bearing 330° from A and 030° from B."
+    )
+    interception = compile_bearing_navigation_v2(
+        "Draw the earliest intercept: a ship is initially 20 km from harbour on bearing 070°, "
+        "then moves on bearing 045° at 4 km/h while a rescue boat travels at 12 km/h."
+    )
+    assert triangulation is not None
+    assert "10.00 km from A and 10.00 km from B" in triangulation["text_fallback"]
+    assert interception is not None
+    assert "2.423 h on bearing 062°" in interception["text_fallback"]
+
+
 def test_non_visual_or_non_navigation_requests_do_not_trigger() -> None:
     assert not is_bearing_navigation_request(
         "Show the proof that reverse bearings differ by 180 degrees in text only"
