@@ -7,7 +7,7 @@ Compared with base revision `238b95ff4e0cd38f2636c25d08e6e1c9eb53ded1` on the lo
 | Measurement | Before | After | Delta |
 |---|---:|---:|---:|
 | Synchronous chat UI source | 74628 B | 103854 B | +29226 B |
-| Median Node parse time for synchronous JS | 0.5059 ms | 0.6967 ms | +0.1908 ms |
+| Median Node parse time for synchronous JS | 0.5202 ms | 0.7516 ms | +0.2314 ms |
 | Lazy V2 renderer source | 0 B | 222614 B | +222614 B |
 | Existing vendored visualization libraries | 1102856 B | 1102856 B | 0 B |
 
