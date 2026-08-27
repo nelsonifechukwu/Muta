@@ -1,22 +1,17 @@
 {
   "schema_version": 1,
   "count": 4,
-  "runs": [
+  "passed": true,
+  "matrices": [
     {
-      "schema_version": 1,
-      "count": 5,
+      "source_sha256": "2e0dc3c05250d63c57fcf6f8bed0b2bcdfe3c297fa0e9a3a57bb8729865f1e68",
+      "passed": true,
       "theme": "light",
-      "viewport": {
-        "width": 774,
-        "height": 922
-      },
       "reduced_motion": false,
       "target_container": {
         "width": 980,
         "height": 480
       },
-      "simultaneous_frames": 5,
-      "used_js_heap_bytes": 56551666,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -341,24 +336,17 @@
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 3%"
           }
         }
-      ],
-      "passed": true
+      ]
     },
     {
-      "schema_version": 1,
-      "count": 5,
+      "source_sha256": "8497c45c5e24983f1c9b171a9ef1cd63a54bf67f70579f6461f4e7494c737095",
+      "passed": true,
       "theme": "light",
-      "viewport": {
-        "width": 774,
-        "height": 922
-      },
       "reduced_motion": false,
       "target_container": {
         "width": 375,
         "height": 520
       },
-      "simultaneous_frames": 5,
-      "used_js_heap_bytes": 50591764,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -683,24 +671,17 @@
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 2%"
           }
         }
-      ],
-      "passed": true
+      ]
     },
     {
-      "schema_version": 1,
-      "count": 5,
+      "source_sha256": "28a159a182ca13ea861135f3896519e8f1d3828b0648ff5eac81f4a891a0ad51",
+      "passed": true,
       "theme": "dark",
-      "viewport": {
-        "width": 774,
-        "height": 922
-      },
       "reduced_motion": true,
       "target_container": {
         "width": 430,
         "height": 520
       },
-      "simultaneous_frames": 5,
-      "used_js_heap_bytes": 27947936,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -1025,24 +1006,17 @@
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ✓ 100%"
           }
         }
-      ],
-      "passed": true
+      ]
     },
     {
-      "schema_version": 1,
-      "count": 5,
+      "source_sha256": "47ac10c192d5cd93fe5bf7d2884ef4057b83b4a098957d6f3ef4573ff36137dc",
+      "passed": true,
       "theme": "dark",
-      "viewport": {
-        "width": 774,
-        "height": 922
-      },
       "reduced_motion": false,
       "target_container": {
         "width": 667,
         "height": 375
       },
-      "simultaneous_frames": 5,
-      "used_js_heap_bytes": 56659746,
       "page_errors": [],
       "page_horizontal_overflow": false,
       "cases": [
@@ -1367,8 +1341,7 @@
             "state_description": "orbit = 0; reset view = 0; play = 1; pause = 0; restart = 0 · ▶ 2%"
           }
         }
-      ],
-      "passed": true
+      ]
     }
   ]
 }

@@ -53,6 +53,7 @@
     implicit_surface: new Set(["type", "label", "relationship", "x_domain", "y_domain", "z_domain", "resolution", "animation"]),
     parametric_surface: new Set(["type", "x_expression", "y_expression", "z_expression", "u_domain", "v_domain", "resolution", "label", "animation"]),
     arrow: new Set(["type", "from", "to", "label", "color"]),
+    angle_arc: new Set(["type", "cx", "cy", "r", "start_angle", "end_angle", "clockwise", "label", "color"]),
     circle: new Set(["type", "x", "y", "r", "label", "color"]),
     rect: new Set(["type", "x", "y", "width", "height", "label", "color"]),
     text: new Set(["type", "x", "y", "text", "color"]),
@@ -742,6 +743,12 @@
       }
       if (layer.type === "plane") triangleEstimate += 128;
       if (layer.type === "arrow" && (!point(layer.from) || !point(layer.to))) return { ok: false, error: "V2 arrow is invalid" };
+      if (layer.type === "angle_arc" && (!finiteNumber(layer.cx, -10000, 10000)
+        || !finiteNumber(layer.cy, -10000, 10000) || !finiteNumber(layer.r, 1, 2000)
+        || !finiteNumber(layer.start_angle, -1080, 1080) || !finiteNumber(layer.end_angle, -1080, 1080)
+        || typeof layer.clockwise !== "boolean" || !nonEmptyString(layer.label, 160))) {
+        return { ok: false, error: "V2 angle arc is invalid" };
+      }
       if (layer.type === "circle" && (!finiteNumber(layer.x, -10000, 10000) || !finiteNumber(layer.y, -10000, 10000) || !finiteNumber(layer.r, 0.1, 2000))) return { ok: false, error: "V2 circle is invalid" };
       if (layer.type === "rect" && (!finiteNumber(layer.x, -10000, 10000) || !finiteNumber(layer.y, -10000, 10000)
         || !finiteNumber(layer.width, 0.1, 2000) || !finiteNumber(layer.height, 0.1, 2000))) {

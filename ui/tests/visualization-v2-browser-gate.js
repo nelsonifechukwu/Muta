@@ -7,13 +7,20 @@
   const output = document.getElementById("result");
   const parameters = new URLSearchParams(location.search);
   const theme = parameters.get("theme") === "dark" ? "dark" : "light";
+  const motion = parameters.get("motion") === "reduce" ? "reduce" : "auto";
+  const targetWidth = Math.max(320, Math.min(760, Number(parameters.get("width") || 760)));
+  document.querySelector("main").style.width = `${targetWidth}px`;
+  document.querySelector("main").style.maxWidth = "100%";
   const limit = Math.max(1, Math.min(200, Number(parameters.get("limit") || 200)));
   const caseId = parameters.get("case");
   const report = parameters.get("report") === "1";
   const debug = parameters.get("debug") === "1";
-  const holdout = parameters.get("holdout") === "1";
+  const bearings = parameters.get("bearings") === "1";
+  const holdout = parameters.get("holdout") === "1" || bearings;
   const fixtureName = parameters.get("binding") === "1"
     ? "visualization-v2-planner-binding.json"
+    : bearings
+    ? "visualization-v2-bearings-holdout.json"
     : holdout
     ? "visualization-v2-user-holdout.json"
     : parameters.get("general") === "1"
@@ -86,7 +93,7 @@
     const frame = document.createElement("iframe");
     frame.title = "Inert planner string boundary test";
     frame.sandbox = "allow-scripts allow-same-origin";
-    frame.src = `../viz-frame.html?theme=${theme}#${encode(spec)}`;
+    frame.src = `../viz-frame.html?theme=${theme}&motion=${motion}#${encode(spec)}`;
     host.replaceChildren(frame);
     await new Promise((resolve) => frame.addEventListener("load", resolve, { once: true }));
     const frameDocument = frame.contentDocument;
@@ -215,7 +222,7 @@
     const frame = document.createElement("iframe");
     frame.title = `QA render ${item.id}`;
     frame.sandbox = "allow-scripts allow-same-origin";
-    frame.src = `../viz-frame.html?theme=${theme}#${encode(item.spec)}`;
+    frame.src = `../viz-frame.html?theme=${theme}&motion=${motion}#${encode(item.spec)}`;
     const started = performance.now();
     let messageEvidence = null;
     const receive = (event) => {
@@ -349,6 +356,21 @@
         target_fill: fill,
       };
     }
+    if (item.spec.family === "bearing_navigation") {
+      const northArrows = [...(frameDocument?.querySelectorAll('[aria-label^="N at "]') || [])];
+      const angleArcs = [...(frameDocument?.querySelectorAll(".viz-v2-angle-arc") || [])];
+      const clockwiseArcs = angleArcs.filter((arc) => arc.dataset.clockwise === "true");
+      const arrowheads = [...(frameDocument?.querySelectorAll('[marker-end="url(#v2-arrow)"]') || [])];
+      const visibleText = frameDocument?.body?.textContent || "";
+      visibleSemanticGeometry = {
+        passed: northArrows.length >= 1 && angleArcs.length >= 1 && clockwiseArcs.length >= 1
+          && arrowheads.length >= 3 && /\d{3}°/.test(visibleText),
+        north_arrow_count: northArrows.length,
+        angle_arc_count: angleArcs.length,
+        clockwise_arc_count: clockwiseArcs.length,
+        arrowhead_count: arrowheads.length,
+      };
+    }
     const interactionChanged = controls.length === 0 || interactionResults.every((result) => result.passed);
     const geometryChanged = controls.length === 0 || interactionResults.every((result) => result.transport || result.geometry_changed || result.visual_state_changed);
     const realGeometry = item.spec.renderer === "svg"
@@ -396,6 +418,9 @@
   const payload = {
     schema_version: 1,
     count: results.length,
+    target_container_width: targetWidth,
+    theme,
+    reduced_motion: motion === "reduce",
     summary: {
       passed: passedCount,
       failed: results.length - passedCount,

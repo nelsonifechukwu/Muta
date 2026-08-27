@@ -1,0 +1,2306 @@
+{
+  "schema_version": 1,
+  "count": 15,
+  "generated_at": "2026-08-27T19:46:20.087816+00:00",
+  "cases": [
+    {
+      "id": "bearings-001",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Bearing from north",
+        "aria_label": "Navigation diagram. B lies from A on bearing 060°.",
+        "text_fallback": "B lies from A on bearing 060°. Bearing 060° is measured clockwise from north.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                166.795,
+                250.0
+              ],
+              "to": [
+                166.795,
+                186.0
+              ],
+              "label": "N at A",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                166.795,
+                250.0
+              ],
+              "to": [
+                513.205,
+                50.0
+              ],
+              "label": "A→B: 10.00 km • 060°",
+              "color": "teal"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 166.795,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 60.0,
+              "clockwise": true,
+              "label": "060°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 166.795,
+              "y": 250.0,
+              "r": 6,
+              "label": "A",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 175.795,
+              "y": 268.0,
+              "text": "A",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 513.205,
+              "y": 50.0,
+              "r": 6,
+              "label": "B",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 522.205,
+              "y": 68.0,
+              "text": "B",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "Bearing 060° is measured clockwise from north.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-002",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Bearing from north",
+        "aria_label": "Navigation diagram. Southeast corresponds to bearing 135°.",
+        "text_fallback": "Southeast corresponds to bearing 135°. Bearing 135° is measured clockwise from north.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                240.0,
+                50.0
+              ],
+              "to": [
+                240.0,
+                24.0
+              ],
+              "label": "N at Harbour",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                240.0,
+                50.0
+              ],
+              "to": [
+                440.0,
+                250.0
+              ],
+              "label": "Harbour→Boat: 10.00 km • 135°",
+              "color": "teal"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 240.0,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 135.0,
+              "clockwise": true,
+              "label": "135°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 240.0,
+              "y": 50.0,
+              "r": 6,
+              "label": "Harbour",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 249.0,
+              "y": 68.0,
+              "text": "Harbour",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 440.0,
+              "y": 250.0,
+              "r": 6,
+              "label": "Boat",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 449.0,
+              "y": 268.0,
+              "text": "Boat",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "Bearing 135° is measured clockwise from north.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-003",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Bearing from north",
+        "aria_label": "Navigation diagram. Q lies from P on bearing 135°.",
+        "text_fallback": "Q lies from P on bearing 135°. Bearing 135° is measured clockwise from north.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                240.0,
+                50.0
+              ],
+              "to": [
+                240.0,
+                24.0
+              ],
+              "label": "N at P",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                240.0,
+                50.0
+              ],
+              "to": [
+                440.0,
+                250.0
+              ],
+              "label": "P→Q: 10.00 km • 135°",
+              "color": "teal"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 240.0,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 135.0,
+              "clockwise": true,
+              "label": "135°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 240.0,
+              "y": 50.0,
+              "r": 6,
+              "label": "P",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 249.0,
+              "y": 68.0,
+              "text": "P",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 440.0,
+              "y": 250.0,
+              "r": 6,
+              "label": "Q",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 449.0,
+              "y": 268.0,
+              "text": "Q",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "Bearing 135° is measured clockwise from north.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-004",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Forward and reverse bearings",
+        "aria_label": "Navigation diagram. The reverse of 070° is 250°.",
+        "text_fallback": "The reverse of 070° is 250°. reverse bearing = (070° + 180°) mod 360° = 250°.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                100.0,
+                237.353
+              ],
+              "to": [
+                100.0,
+                173.353
+              ],
+              "label": "N at A",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                580.0,
+                62.647
+              ],
+              "to": [
+                580.0,
+                24.0
+              ],
+              "label": "N at B",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                100.0,
+                237.353
+              ],
+              "to": [
+                580.0,
+                62.647
+              ],
+              "label": "A→B: 10.00 km • 070°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                580.0,
+                62.647
+              ],
+              "to": [
+                100.0,
+                237.353
+              ],
+              "label": "reverse 250°",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 100.0,
+              "cy": 237.353,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 70.0,
+              "clockwise": true,
+              "label": "forward 070°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 580.0,
+              "cy": 62.647,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 250.0,
+              "clockwise": true,
+              "label": "reverse 250°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 100.0,
+              "y": 237.353,
+              "r": 6,
+              "label": "A",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 109.0,
+              "y": 255.353,
+              "text": "A",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 580.0,
+              "y": 62.647,
+              "r": 6,
+              "label": "B",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 589.0,
+              "y": 80.64699999999999,
+              "text": "B",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "reverse bearing = (070° + 180°) mod 360° = 250°.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-005",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Forward and reverse bearings",
+        "aria_label": "Navigation diagram. The reverse of 230° is 050°.",
+        "text_fallback": "The reverse of 230° is 050°. reverse bearing = (230° + 180°) mod 360° = 050°.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                459.175,
+                50.0
+              ],
+              "to": [
+                459.175,
+                24.0
+              ],
+              "label": "N at Ship",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                220.825,
+                250.0
+              ],
+              "to": [
+                220.825,
+                186.0
+              ],
+              "label": "N at Lighthouse",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                459.175,
+                50.0
+              ],
+              "to": [
+                220.825,
+                250.0
+              ],
+              "label": "Ship→Lighthouse: 10.00 km • 230°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                220.825,
+                250.0
+              ],
+              "to": [
+                459.175,
+                50.0
+              ],
+              "label": "reverse 050°",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 459.175,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 230.0,
+              "clockwise": true,
+              "label": "forward 230°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 220.825,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 50.0,
+              "clockwise": true,
+              "label": "reverse 050°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 459.175,
+              "y": 50.0,
+              "r": 6,
+              "label": "Ship",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 468.175,
+              "y": 68.0,
+              "text": "Ship",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 220.825,
+              "y": 250.0,
+              "r": 6,
+              "label": "Lighthouse",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 229.825,
+              "y": 268.0,
+              "text": "Lighthouse",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "reverse bearing = (230° + 180°) mod 360° = 050°.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-006",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Forward and reverse bearings",
+        "aria_label": "Navigation diagram. The reverse of 040° is 220°.",
+        "text_fallback": "The reverse of 040° is 220°. reverse bearing = (040° + 180°) mod 360° = 220°. The claim is incorrect: 220°, not 320°, points directly back.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                256.09,
+                250.0
+              ],
+              "to": [
+                256.09,
+                186.0
+              ],
+              "label": "N at A",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                423.91,
+                50.0
+              ],
+              "to": [
+                423.91,
+                24.0
+              ],
+              "label": "N at B",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                256.09,
+                250.0
+              ],
+              "to": [
+                423.91,
+                50.0
+              ],
+              "label": "A→B: 10.00 km • 040°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                423.91,
+                50.0
+              ],
+              "to": [
+                256.09,
+                250.0
+              ],
+              "label": "reverse 220°",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 256.09,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 40.0,
+              "clockwise": true,
+              "label": "forward 040°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 423.91,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 220.0,
+              "clockwise": true,
+              "label": "reverse 220°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 256.09,
+              "y": 250.0,
+              "r": 6,
+              "label": "A",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 265.09,
+              "y": 268.0,
+              "text": "A",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 423.91,
+              "y": 50.0,
+              "r": 6,
+              "label": "B",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 432.91,
+              "y": 68.0,
+              "text": "B",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "reverse bearing = (040° + 180°) mod 360° = 220°.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "The claim is incorrect: 220°, not 320°, points directly back.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-007",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Bearing from north",
+        "aria_label": "Navigation diagram. Finish lies from Start on bearing 040°.",
+        "text_fallback": "Finish lies from Start on bearing 040°. Bearing 040° is measured clockwise from north. east = 80 sin 40° = 51.42 km; north = 80 cos 40° = 61.28 km.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                256.09,
+                250.0
+              ],
+              "to": [
+                256.09,
+                186.0
+              ],
+              "label": "N at Start",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                256.09,
+                250.0
+              ],
+              "to": [
+                423.91,
+                50.0
+              ],
+              "label": "Start→Finish: 80.00 km • 040°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                256.09,
+                250.0
+              ],
+              "to": [
+                423.91,
+                250.0
+              ],
+              "label": "east = 51.42 km",
+              "color": "purple"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                423.91,
+                250.0
+              ],
+              "to": [
+                423.91,
+                50.0
+              ],
+              "label": "north = 61.28 km",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 256.09,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 40.0,
+              "clockwise": true,
+              "label": "040°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 256.09,
+              "y": 250.0,
+              "r": 6,
+              "label": "Start",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 265.09,
+              "y": 268.0,
+              "text": "Start",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 423.91,
+              "y": 50.0,
+              "r": 6,
+              "label": "Finish",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 432.91,
+              "y": 68.0,
+              "text": "Finish",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 423.91,
+              "y": 250.0,
+              "r": 6,
+              "label": "Finish east component",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 432.91,
+              "y": 268.0,
+              "text": "Finish east component",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "Bearing 040° is measured clockwise from north.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "east = 80 sin 40° = 51.42 km; north = 80 cos 40° = 61.28 km.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-008",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Navigation route and resultant",
+        "aria_label": "Navigation diagram. Final displacement is 10.00 km on bearing 083°.",
+        "text_fallback": "Final displacement is 10.00 km on bearing 083°. leg 1: E=3.00, N=5.20 km; leg 2: E=6.93, N=-4.00 km Σeast = 9.93 km; Σnorth = 1.20 km. displacement = √(ΣE² + ΣN²) = 10.00 km; bearing = atan2(ΣE, ΣN) = 083°.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                148.932,
+                250.0
+              ],
+              "to": [
+                148.932,
+                186.0
+              ],
+              "label": "N at Start",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                264.402,
+                50.0
+              ],
+              "to": [
+                264.402,
+                24.0
+              ],
+              "label": "N at Turn 1",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                148.932,
+                250.0
+              ],
+              "to": [
+                264.402,
+                50.0
+              ],
+              "label": "Start→Turn 1: 6.00 km • 030°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                264.402,
+                50.0
+              ],
+              "to": [
+                531.068,
+                203.96
+              ],
+              "label": "Turn 1→Finish: 8.00 km • 120°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                148.932,
+                250.0
+              ],
+              "to": [
+                531.068,
+                203.96
+              ],
+              "label": "resultant 10.00 km • 083°",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 148.932,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 30.0,
+              "clockwise": true,
+              "label": "030°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 264.402,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 120.0,
+              "clockwise": true,
+              "label": "120°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 148.932,
+              "cy": 250.0,
+              "r": 58,
+              "start_angle": 0.0,
+              "end_angle": 83.13010235415598,
+              "clockwise": true,
+              "label": "resultant 083°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 148.932,
+              "y": 250.0,
+              "r": 6,
+              "label": "Start",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 157.932,
+              "y": 268.0,
+              "text": "Start",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 264.402,
+              "y": 50.0,
+              "r": 6,
+              "label": "Turn 1",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 273.402,
+              "y": 68.0,
+              "text": "Turn 1",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 531.068,
+              "y": 203.96,
+              "r": 6,
+              "label": "Finish",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 540.068,
+              "y": 221.96,
+              "text": "Finish",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "leg 1: E=3.00, N=5.20 km; leg 2: E=6.93, N=-4.00 km",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "Σeast = 9.93 km; Σnorth = 1.20 km.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 352,
+              "text": "displacement = √(ΣE² + ΣN²) = 10.00 km; bearing = atan2(ΣE, ΣN) = 083°.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-009",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Two objects from a common origin",
+        "aria_label": "Navigation diagram. The objects are 15.87 km apart.",
+        "text_fallback": "The objects are 15.87 km apart. included angle = |110° − 50°| = 60.0°. AB² = 12² + 18² − 2(12)(18) cos 60.0°. AB = 15.87 km (coordinate check 15.87 km).",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                218.048,
+                161.226
+              ],
+              "to": [
+                218.048,
+                97.226
+              ],
+              "label": "N at H",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                218.048,
+                161.226
+              ],
+              "to": [
+                350.603,
+                50.0
+              ],
+              "label": "H→A: 12.00 km • 050°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                218.048,
+                161.226
+              ],
+              "to": [
+                461.952,
+                250.0
+              ],
+              "label": "H→B: 18.00 km • 110°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                350.603,
+                50.0
+              ],
+              "to": [
+                461.952,
+                250.0
+              ],
+              "label": "AB = 15.87 km",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 218.048,
+              "cy": 161.226,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 50.0,
+              "clockwise": true,
+              "label": "050°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 218.048,
+              "cy": 161.226,
+              "r": 58,
+              "start_angle": 0.0,
+              "end_angle": 110.0,
+              "clockwise": true,
+              "label": "110°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 218.048,
+              "y": 161.226,
+              "r": 6,
+              "label": "H",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 227.048,
+              "y": 179.226,
+              "text": "H",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 350.603,
+              "y": 50.0,
+              "r": 6,
+              "label": "A",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 359.603,
+              "y": 68.0,
+              "text": "A",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 461.952,
+              "y": 250.0,
+              "r": 6,
+              "label": "B",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 470.952,
+              "y": 268.0,
+              "text": "B",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "included angle = |110° − 50°| = 60.0°.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "AB² = 12² + 18² − 2(12)(18) cos 60.0°.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 352,
+              "text": "AB = 15.87 km (coordinate check 15.87 km).",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-010",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Coordinates to bearing",
+        "aria_label": "Navigation diagram. The displacement (6 km east, 8 km north) has bearing 037°.",
+        "text_fallback": "The displacement (6 km east, 8 km north) has bearing 037°. θ = atan2(east, north) = atan2(6, 8) = 36.87°. Three-figure bearing = 037°; quadrant comes from the signs of east and north.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                265.0,
+                250.0
+              ],
+              "to": [
+                265.0,
+                186.0
+              ],
+              "label": "N at A",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                265.0,
+                250.0
+              ],
+              "to": [
+                415.0,
+                50.0
+              ],
+              "label": "A→B: 10.00 km • 037°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                265.0,
+                250.0
+              ],
+              "to": [
+                415.0,
+                250.0
+              ],
+              "label": "east = 6 km",
+              "color": "purple"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                415.0,
+                250.0
+              ],
+              "to": [
+                415.0,
+                50.0
+              ],
+              "label": "north = 8 km",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 265.0,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 36.86989764584402,
+              "clockwise": true,
+              "label": "037°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 265.0,
+              "y": 250.0,
+              "r": 6,
+              "label": "A",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 274.0,
+              "y": 268.0,
+              "text": "A",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 415.0,
+              "y": 250.0,
+              "r": 6,
+              "label": "east/north corner",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 424.0,
+              "y": 268.0,
+              "text": "east/north corner",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 415.0,
+              "y": 50.0,
+              "r": 6,
+              "label": "B",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 424.0,
+              "y": 68.0,
+              "text": "B",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "θ = atan2(east, north) = atan2(6, 8) = 36.87°.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "Three-figure bearing = 037°; quadrant comes from the signs of east and north.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-011",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Coordinates to bearing",
+        "aria_label": "Navigation diagram. The displacement (-9 km east, -4 km north) has bearing 246°.",
+        "text_fallback": "The displacement (-9 km east, -4 km north) has bearing 246°. θ = atan2(east, north) = atan2(-9, -4) = 246.04°. Three-figure bearing = 246°; quadrant comes from the signs of east and north.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                565.0,
+                50.0
+              ],
+              "to": [
+                565.0,
+                24.0
+              ],
+              "label": "N at Boat",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                565.0,
+                50.0
+              ],
+              "to": [
+                115.0,
+                250.0
+              ],
+              "label": "Boat→Rescue station: 9.85 km • 246°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                565.0,
+                50.0
+              ],
+              "to": [
+                115.0,
+                50.0
+              ],
+              "label": "east = -9 km",
+              "color": "purple"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                115.0,
+                50.0
+              ],
+              "to": [
+                115.0,
+                250.0
+              ],
+              "label": "north = -4 km",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 565.0,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 246.0375110254218,
+              "clockwise": true,
+              "label": "246°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 565.0,
+              "y": 50.0,
+              "r": 6,
+              "label": "Boat",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 574.0,
+              "y": 68.0,
+              "text": "Boat",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 115.0,
+              "y": 50.0,
+              "r": 6,
+              "label": "east/north corner",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 124.0,
+              "y": 68.0,
+              "text": "east/north corner",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 115.0,
+              "y": 250.0,
+              "r": 6,
+              "label": "Rescue station",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 124.0,
+              "y": 268.0,
+              "text": "Rescue station",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "θ = atan2(east, north) = atan2(-9, -4) = 246.04°.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "Three-figure bearing = 246°; quadrant comes from the signs of east and north.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-012",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Bearing between computed endpoints",
+        "aria_label": "Navigation diagram. C is 22.14 km from B on bearing 201°.",
+        "text_fallback": "C is 22.14 km from B on bearing 201°. C − B = (-7.84 km east, -20.71 km north). bearing B→C = atan2(-7.84, -20.71) = 201°. Interior angle ∠ABC = 44.26°; it is not a bearing from north.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                252.472,
+                131.63
+              ],
+              "to": [
+                252.472,
+                67.63
+              ],
+              "label": "N at A",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                427.528,
+                50.0
+              ],
+              "to": [
+                427.528,
+                24.0
+              ],
+              "label": "N at B",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                252.472,
+                131.63
+              ],
+              "to": [
+                427.528,
+                50.0
+              ],
+              "label": "A→B: 20.00 km • 065°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                252.472,
+                131.63
+              ],
+              "to": [
+                351.797,
+                250.0
+              ],
+              "label": "A→C: 16.00 km • 140°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                427.528,
+                50.0
+              ],
+              "to": [
+                351.797,
+                250.0
+              ],
+              "label": "BC = 22.14 km • 201°",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 252.472,
+              "cy": 131.63,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 65.0,
+              "clockwise": true,
+              "label": "A→B 065°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 252.472,
+              "cy": 131.63,
+              "r": 58,
+              "start_angle": 0.0,
+              "end_angle": 140.0,
+              "clockwise": true,
+              "label": "A→C 140°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 427.528,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 200.73932193314047,
+              "clockwise": true,
+              "label": "bearing 201°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 427.528,
+              "cy": 50.0,
+              "r": 58,
+              "start_angle": 245.0,
+              "end_angle": 200.73932193314047,
+              "clockwise": false,
+              "label": "interior ∠ABC = 44.26°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 252.472,
+              "y": 131.63,
+              "r": 6,
+              "label": "A",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 261.472,
+              "y": 149.63,
+              "text": "A",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 427.528,
+              "y": 50.0,
+              "r": 6,
+              "label": "B",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 436.528,
+              "y": 68.0,
+              "text": "B",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 351.797,
+              "y": 250.0,
+              "r": 6,
+              "label": "C",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 360.797,
+              "y": 268.0,
+              "text": "C",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "C − B = (-7.84 km east, -20.71 km north).",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "bearing B→C = atan2(-7.84, -20.71) = 201°.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 352,
+              "text": "Interior angle ∠ABC = 44.26°; it is not a bearing from north.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-013",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Navigation route and resultant",
+        "aria_label": "Navigation diagram. Final displacement is 28.23 km on bearing 141°.",
+        "text_fallback": "Final displacement is 28.23 km on bearing 141°. leg 1: E=21.21, N=21.21 km; leg 2: E=20.00, N=-34.64 km; leg 3: E=-23.49, N=-8.55 km Σeast = 17.72 km; Σnorth = -21.98 km. displacement = √(ΣE² + ΣN²) = 28.23 km; bearing = atan2(ΣE, ΣN) = 141°.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                244.58,
+                148.229
+              ],
+              "to": [
+                244.58,
+                84.22900000000001
+              ],
+              "label": "N at Start",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                342.809,
+                50.0
+              ],
+              "to": [
+                342.809,
+                24.0
+              ],
+              "label": "N at Turn 1",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                435.42,
+                210.407
+              ],
+              "to": [
+                435.42,
+                146.407
+              ],
+              "label": "N at Turn 2",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                244.58,
+                148.229
+              ],
+              "to": [
+                342.809,
+                50.0
+              ],
+              "label": "Start→Turn 1: 30.00 km • 045°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                342.809,
+                50.0
+              ],
+              "to": [
+                435.42,
+                210.407
+              ],
+              "label": "Turn 1→Turn 2: 40.00 km • 150°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                435.42,
+                210.407
+              ],
+              "to": [
+                326.638,
+                250.0
+              ],
+              "label": "Turn 2→Finish: 25.00 km • 250°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                244.58,
+                148.229
+              ],
+              "to": [
+                326.638,
+                250.0
+              ],
+              "label": "resultant 28.23 km • 141°",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 244.58,
+              "cy": 148.229,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 45.0,
+              "clockwise": true,
+              "label": "045°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 342.809,
+              "cy": 50.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 150.0,
+              "clockwise": true,
+              "label": "150°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 435.42,
+              "cy": 210.407,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 250.0,
+              "clockwise": true,
+              "label": "250°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 244.58,
+              "cy": 148.229,
+              "r": 58,
+              "start_angle": 0.0,
+              "end_angle": 141.12112852933342,
+              "clockwise": true,
+              "label": "resultant 141°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 244.58,
+              "y": 148.229,
+              "r": 6,
+              "label": "Start",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 253.58,
+              "y": 166.229,
+              "text": "Start",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 342.809,
+              "y": 50.0,
+              "r": 6,
+              "label": "Turn 1",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 351.809,
+              "y": 68.0,
+              "text": "Turn 1",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 435.42,
+              "y": 210.407,
+              "r": 6,
+              "label": "Turn 2",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 444.42,
+              "y": 228.407,
+              "text": "Turn 2",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 326.638,
+              "y": 250.0,
+              "r": 6,
+              "label": "Finish",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 335.638,
+              "y": 268.0,
+              "text": "Finish",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "leg 1: E=21.21, N=21.21 km; leg 2: E=20.00, N=-34.64 km; leg 3: E=-23.49, N=-8.55 km",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "Σeast = 17.72 km; Σnorth = -21.98 km.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 352,
+              "text": "displacement = √(ΣE² + ΣN²) = 28.23 km; bearing = atan2(ΣE, ΣN) = 141°.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-014",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Triangulation from two bearing rays",
+        "aria_label": "Navigation diagram. The tower is 7.78 km from A and 7.78 km from B.",
+        "text_fallback": "The tower is 7.78 km from A and 7.78 km from B. The two positive bearing rays meet at T; negative ray parameters are rejected. AT = 7.78 km; BT = 7.78 km.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                172.18,
+                250.0
+              ],
+              "to": [
+                172.18,
+                186.0
+              ],
+              "label": "N at A",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                507.82,
+                250.0
+              ],
+              "to": [
+                507.82,
+                186.0
+              ],
+              "label": "N at B",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                172.18,
+                250.0
+              ],
+              "to": [
+                340.0,
+                50.0
+              ],
+              "label": "A→T: 7.78 km • 040°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                507.82,
+                250.0
+              ],
+              "to": [
+                340.0,
+                50.0
+              ],
+              "label": "B→T: 7.78 km • 320°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                172.18,
+                250.0
+              ],
+              "to": [
+                507.82,
+                250.0
+              ],
+              "label": "baseline 10 km",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 172.18,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 40.0,
+              "clockwise": true,
+              "label": "040°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 507.82,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 320.0,
+              "clockwise": true,
+              "label": "320°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 172.18,
+              "y": 250.0,
+              "r": 6,
+              "label": "A",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 181.18,
+              "y": 268.0,
+              "text": "A",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 507.82,
+              "y": 250.0,
+              "r": 6,
+              "label": "B",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 516.8199999999999,
+              "y": 268.0,
+              "text": "B",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 340.0,
+              "y": 50.0,
+              "r": 6,
+              "label": "T",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 349.0,
+              "y": 68.0,
+              "text": "T",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "The two positive bearing rays meet at T; negative ray parameters are rejected.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "AT = 7.78 km; BT = 7.78 km.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bearings-015",
+      "domain": "bearings_navigation",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "bearing_navigation",
+        "title": "Earliest moving interception",
+        "aria_label": "Navigation diagram. Fastest interception is after 1.303 h on bearing 086°.",
+        "text_fallback": "Fastest interception is after 1.303 h on bearing 086°. Solve |p + vt| = 16t and choose the earliest positive root: t = 1.303 h. Intercept = (20.78 km east, 1.58 km north). Rescue path = 20.84 km on bearing 086°.",
+        "height": 500,
+        "controls": [],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 4096,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "arrow",
+              "from": [
+                166.795,
+                250.0
+              ],
+              "to": [
+                166.795,
+                186.0
+              ],
+              "label": "N at H",
+              "color": "gray"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                166.795,
+                250.0
+              ],
+              "to": [
+                513.205,
+                50.0
+              ],
+              "label": "H→Ship initial: 24.00 km • 060°",
+              "color": "teal"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                513.205,
+                50.0
+              ],
+              "to": [
+                513.205,
+                223.703
+              ],
+              "label": "ship: 8 km/h for 1.30 h",
+              "color": "purple"
+            },
+            {
+              "type": "arrow",
+              "from": [
+                166.795,
+                250.0
+              ],
+              "to": [
+                513.205,
+                223.703
+              ],
+              "label": "rescue: 20.84 km • 086°",
+              "color": "purple"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 166.795,
+              "cy": 250.0,
+              "r": 28,
+              "start_angle": 0.0,
+              "end_angle": 60.0,
+              "clockwise": true,
+              "label": "initial 060°",
+              "color": "orange"
+            },
+            {
+              "type": "angle_arc",
+              "cx": 166.795,
+              "cy": 250.0,
+              "r": 58,
+              "start_angle": 0.0,
+              "end_angle": 85.65890627325527,
+              "clockwise": true,
+              "label": "intercept 086°",
+              "color": "orange"
+            },
+            {
+              "type": "circle",
+              "x": 166.795,
+              "y": 250.0,
+              "r": 6,
+              "label": "H",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 175.795,
+              "y": 268.0,
+              "text": "H",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 513.205,
+              "y": 50.0,
+              "r": 6,
+              "label": "Ship initial",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 522.205,
+              "y": 68.0,
+              "text": "Ship initial",
+              "color": "black"
+            },
+            {
+              "type": "circle",
+              "x": 513.205,
+              "y": 223.703,
+              "r": 6,
+              "label": "Intercept",
+              "color": "gold"
+            },
+            {
+              "type": "text",
+              "x": 522.205,
+              "y": 241.703,
+              "text": "Intercept",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 312,
+              "text": "Solve |p + vt| = 16t and choose the earliest positive root: t = 1.303 h.",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 332,
+              "text": "Intercept = (20.78 km east, 1.58 km north).",
+              "color": "black"
+            },
+            {
+              "type": "text",
+              "x": 42,
+              "y": 352,
+              "text": "Rescue path = 20.84 km on bearing 086°.",
+              "color": "black"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

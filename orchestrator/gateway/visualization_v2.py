@@ -15,6 +15,11 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import Any
 
+from orchestrator.gateway.bearing_navigation_v2 import (
+    compile_bearing_navigation_v2,
+    is_bearing_navigation_request,
+)
+
 SPEC_VERSION = 2
 MAX_SPEC_BYTES = 48 * 1024
 MAX_AST_NODES = 160
@@ -117,6 +122,9 @@ _LAYER_KEYS: dict[str, frozenset[str]] = {
         }
     ),
     "arrow": frozenset({"type", "from", "to", "label", "color"}),
+    "angle_arc": frozenset(
+        {"type", "cx", "cy", "r", "start_angle", "end_angle", "clockwise", "label", "color"}
+    ),
     "circle": frozenset({"type", "x", "y", "r", "label", "color"}),
     "rect": frozenset({"type", "x", "y", "width", "height", "label", "color"}),
     "text": frozenset({"type", "x", "y", "text", "color"}),
@@ -1227,6 +1235,14 @@ def _generic_2d_spec(
 
 
 _FAMILY_RULES: tuple[tuple[str, str, str], ...] = (
+    (
+        (
+            r"\bbearings?\b|three[- ]figure bearing|clockwise.{0,32}north|"
+            r"\bdue (?:north|south|east|west|northeast|northwest|southeast|southwest)\b"
+        ),
+        "bearing_navigation",
+        "svg",
+    ),
     (
         r"(?:3d|three[- ]dimensional).*vector field|vector field.*(?:3d|three[- ]dimensional|\(x\s*,\s*y\s*,\s*z\))",
         "vector_field_3d",
@@ -6974,6 +6990,11 @@ def compile_visualization_v2(
         _add_initial_animation(cloned, request)
         validate_v2_spec(cloned)
         return cloned
+    if intent.family == "bearing_navigation" or is_bearing_navigation_request(request):
+        navigation = compile_bearing_navigation_v2(request)
+        if navigation is not None:
+            validate_v2_spec(navigation)
+            return navigation
     parametric = _parametric_expressions_from_request(request)
     if parametric is not None:
         spec = _parametric_spec(parametric, "parametric x(u,v), y(u,v), z(u,v)")
@@ -7151,10 +7172,7 @@ def _count_ast(node: dict[str, Any], depth: int = 0) -> int:
         raise VisualizationV2Error("invalid expression node type")
     keys = set(node)
     if kind == "number":
-        if (
-            keys != {"type", "value"}
-            or not _finite_number(node.get("value"), -1e9, 1e9)
-        ):
+        if keys != {"type", "value"} or not _finite_number(node.get("value"), -1e9, 1e9):
             raise VisualizationV2Error("invalid numeric expression node")
         return 1
     if kind in {"variable", "constant"}:
@@ -7293,10 +7311,7 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         control
         for control in controls
         if isinstance(control, dict)
-        and (
-            not isinstance(control.get("id"), str)
-            or control["id"] not in TRANSPORT_CONTROL_IDS
-        )
+        and (not isinstance(control.get("id"), str) or control["id"] not in TRANSPORT_CONTROL_IDS)
     ]
     if len(parameter_controls) > MAX_PARAMETER_CONTROLS:
         raise VisualizationV2Error("too many parameter controls")
@@ -7304,7 +7319,10 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
     for control in controls:
         control_type = control.get("type") if isinstance(control, dict) else None
         if not isinstance(control_type, str) or control_type not in {
-            "range", "select", "step", "button"
+            "range",
+            "select",
+            "step",
+            "button",
         }:
             raise VisualizationV2Error("unsupported control")
         if set(control) - {
@@ -7331,8 +7349,7 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         if control_id in TRANSPORT_CONTROL_IDS and control_type != "button":
             raise VisualizationV2Error("animation transport controls must be buttons")
         if control_id in TRANSPORT_CONTROL_IDS and (
-            control["label"].strip().casefold()
-            != TRANSPORT_CONTROL_LABELS[control_id].casefold()
+            control["label"].strip().casefold() != TRANSPORT_CONTROL_LABELS[control_id].casefold()
         ):
             raise VisualizationV2Error("animation transport labels must match their action")
         if control_type in {"range", "step"}:
@@ -7413,7 +7430,10 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             raise VisualizationV2Error("scene animation is invalid")
     coordinate_system = scene["coordinate_system"]
     if not isinstance(coordinate_system, str) or coordinate_system not in {
-        "screen", "cartesian2d", "polar", "cartesian3d"
+        "screen",
+        "cartesian2d",
+        "polar",
+        "cartesian3d",
     }:
         raise VisualizationV2Error("coordinate system is unsupported")
     layers = scene.get("layers")
@@ -7468,15 +7488,11 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         elif layer_type == "line":
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("line fields are incomplete")
-            point_count += _validate_points(
-                layer.get("points"), 3, 512, low=-1000, high=1000
-            )
+            point_count += _validate_points(layer.get("points"), 3, 512, low=-1000, high=1000)
         elif layer_type == "vector":
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("vector fields are incomplete")
-            _validate_points(
-                [layer.get("from"), layer.get("to")], 3, 2, low=-1000, high=1000
-            )
+            _validate_points([layer.get("from"), layer.get("to")], 3, 2, low=-1000, high=1000)
             if layer["from"] == layer["to"]:
                 raise VisualizationV2Error("vector must have non-zero length")
             triangle_estimate += _THREE_PRIMITIVE_TRIANGLES["vector"]
@@ -7582,10 +7598,10 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         elif layer_type == "plane":
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("plane fields are incomplete")
-            _validate_points(
-                [layer.get("normal"), [0, 0, 0]], 3, 2, low=-1000, high=1000
-            )
-            if layer["normal"] == [0, 0, 0] or not _finite_number(layer.get("constant"), -1000, 1000):
+            _validate_points([layer.get("normal"), [0, 0, 0]], 3, 2, low=-1000, high=1000)
+            if layer["normal"] == [0, 0, 0] or not _finite_number(
+                layer.get("constant"), -1000, 1000
+            ):
                 raise VisualizationV2Error("plane geometry is invalid")
             triangle_estimate += _THREE_PRIMITIVE_TRIANGLES["plane"]
         elif layer_type == "link":
@@ -7619,19 +7635,27 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         elif layer_type in {"sphere", "box", "point"}:
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("3D object fields are incomplete")
-            _validate_points(
-                [layer.get("position"), [0, 0, 0]], 3, 2, low=-1000, high=1000
-            )
+            _validate_points([layer.get("position"), [0, 0, 0]], 3, 2, low=-1000, high=1000)
             if not _finite_number(layer.get("size"), 0.01, 100):
                 raise VisualizationV2Error("3D object size is invalid")
             if not _safe_text(layer.get("label"), 160):
                 raise VisualizationV2Error("3D object label is invalid")
             triangle_estimate += _THREE_PRIMITIVE_TRIANGLES[layer_type]
-        elif layer_type in {"arrow", "circle", "rect", "text", "particles"}:
+        elif layer_type in {"arrow", "angle_arc", "circle", "rect", "text", "particles"}:
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error(f"{layer_type} fields are incomplete")
             if layer_type == "arrow":
                 _validate_points([layer.get("from"), layer.get("to")], 2, 2)
+            elif layer_type == "angle_arc":
+                if not all(
+                    _finite_number(layer.get(field), -10_000, 10_000) for field in ("cx", "cy")
+                ) or not _finite_number(layer.get("r"), 1, 2_000):
+                    raise VisualizationV2Error("angle arc geometry is invalid")
+                if not all(
+                    _finite_number(layer.get(field), -1_080, 1_080)
+                    for field in ("start_angle", "end_angle")
+                ) or not isinstance(layer.get("clockwise"), bool):
+                    raise VisualizationV2Error("angle arc direction is invalid")
             elif layer_type == "circle":
                 if not all(
                     _finite_number(layer.get(field), -10_000, 10_000) for field in ("x", "y")
@@ -7767,9 +7791,7 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             or transport_ids != TRANSPORT_CONTROL_IDS
             or any(control["type"] != "button" for control in transport_controls)
         ):
-            raise VisualizationV2Error(
-                "animation requires one Play, Pause, and Restart button"
-            )
+            raise VisualizationV2Error("animation requires one Play, Pause, and Restart button")
     return json.loads(json.dumps(spec, ensure_ascii=False))
 
 

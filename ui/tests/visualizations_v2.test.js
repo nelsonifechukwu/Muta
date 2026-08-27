@@ -67,6 +67,22 @@ function svgSpec() {
   };
 }
 
+function bearingSpec() {
+  const spec = svgSpec();
+  spec.family = "bearing_navigation";
+  spec.title = "Bearing from north";
+  spec.aria_label = "Point B lies on bearing 060 degrees clockwise from north.";
+  spec.text_fallback = "B is on bearing 060° from A.";
+  spec.controls = [];
+  spec.scene.layers = [
+    { type: "arrow", from: [120, 240], to: [120, 80], label: "N at A", color: "gray" },
+    { type: "arrow", from: [120, 240], to: [300, 136], label: "A→B: 10 km • 060°", color: "teal" },
+    { type: "angle_arc", cx: 120, cy: 240, r: 38, start_angle: 0, end_angle: 60, clockwise: true, label: "060°", color: "orange" },
+    { type: "text", x: 130, y: 252, text: "A", color: "black" },
+  ];
+  return spec;
+}
+
 test("accepts each V2 renderer pairing and preserves the serialized data boundary", () => {
   const svg = svgSpec();
   const canvas = structuredClone(svg);
@@ -81,6 +97,20 @@ test("accepts each V2 renderer pairing and preserves the serialized data boundar
     assert.equal(checked.ok, true, checked.error);
     assert.deepEqual(checked.spec, spec);
   }
+});
+
+test("validates the typed clockwise-from-north angle arc and rejects malformed variants", () => {
+  const valid = bearingSpec();
+  assert.equal(viz.validateSpec(valid).ok, true);
+  const nonBooleanDirection = structuredClone(valid);
+  nonBooleanDirection.scene.layers[2].clockwise = "clockwise";
+  assert.match(viz.validateSpec(nonBooleanDirection).error, /angle arc/);
+  const unboundedRadius = structuredClone(valid);
+  unboundedRadius.scene.layers[2].r = 5000;
+  assert.match(viz.validateSpec(unboundedRadius).error, /angle arc/);
+  const injectedField = structuredClone(valid);
+  injectedField.scene.layers[2].onclick = "alert(1)";
+  assert.match(viz.validateSpec(injectedField).error, /unsupported/);
 });
 
 test("preserves source-shaped and multilingual prose as inert visualization data", () => {

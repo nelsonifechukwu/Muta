@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "6f33d3f",
+  "revision": "working-tree",
   "corpus": {
     "supplied_stem": 50,
     "supplied_math": 100,
@@ -96,7 +96,7 @@
           "fallback": "Pythagoras. Visible layers: right triangle; square on a; square on b; square on c. Adjustable controls: A, B."
         }
       },
-      "compile_ms": 1.519,
+      "compile_ms": 1.736,
       "spec_bytes": 1077,
       "browser": {
         "id": "stem-001",
@@ -119,9 +119,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "a = 7.6, b = 7.6, c = 10.75; a² + b² = c²."
         },
-        "elapsed_ms": 69.3,
+        "elapsed_ms": 65.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -229,7 +229,7 @@
           "fallback": "Unit Circle. Visible layers: x² + y² = 1; radius to θ; cos θ projection. Adjustable controls: Angle."
         }
       },
-      "compile_ms": 0.743,
+      "compile_ms": 1.259,
       "spec_bytes": 4237,
       "browser": {
         "id": "stem-002",
@@ -251,9 +251,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "angle = 263"
         },
-        "elapsed_ms": 44.9,
+        "elapsed_ms": 42,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -414,7 +414,7 @@
           "fallback": "Quadratic. Visible layers: y = x²; axis of symmetry x = 0; vertex; real roots. Adjustable controls: A, B, C."
         }
       },
-      "compile_ms": 2.946,
+      "compile_ms": 2.513,
       "spec_bytes": 3342,
       "browser": {
         "id": "stem-003",
@@ -438,9 +438,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "a=1.80, b=3.70, c=3.70; vertex (-1.03, 1.80)."
         },
-        "elapsed_ms": 88.3,
+        "elapsed_ms": 84.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -630,7 +630,7 @@
           "fallback": "Line Intersection. Visible layers: line 1; line 2. Adjustable controls: Slope 1, C1, Slope 2, C2."
         }
       },
-      "compile_ms": 1.634,
+      "compile_ms": 1.796,
       "spec_bytes": 4869,
       "browser": {
         "id": "stem-004",
@@ -655,9 +655,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "The lines are identical."
         },
-        "elapsed_ms": 109.8,
+        "elapsed_ms": 108.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -849,7 +849,7 @@
           "fallback": "Triangle Angles. Visible layers: vertex A: 60°; vertex B: 60°; vertex C: 60°; A + B + C = 180°; side c; side a; side b. Adjustable controls: Vertex A, Vertex B, Vertex C."
         }
       },
-      "compile_ms": 0.356,
+      "compile_ms": 0.379,
       "spec_bytes": 1547,
       "browser": {
         "id": "stem-005",
@@ -873,9 +873,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "vertex a = 50; vertex b = 10; vertex c = 120"
         },
-        "elapsed_ms": 90.7,
+        "elapsed_ms": 88.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -1024,7 +1024,7 @@
           "fallback": "Derivative Tangent. Visible layers: f(x) = x³ − 3x; tangent at x = 1, slope 0. Adjustable controls: X."
         }
       },
-      "compile_ms": 1.232,
+      "compile_ms": 1.622,
       "spec_bytes": 4380,
       "browser": {
         "id": "stem-006",
@@ -1046,9 +1046,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "x = 1.4"
         },
-        "elapsed_ms": 45.5,
+        "elapsed_ms": 46.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -1175,7 +1175,7 @@
           "fallback": "Riemann Sum. Visible layers: y = x²; left Riemann rectangles. Adjustable controls: Rectangles."
         }
       },
-      "compile_ms": 0.834,
+      "compile_ms": 1.075,
       "spec_bytes": 3214,
       "browser": {
         "id": "stem-007",
@@ -1197,9 +1197,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "rectangles = 29"
         },
-        "elapsed_ms": 46.4,
+        "elapsed_ms": 43.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -1359,7 +1359,7 @@
           "fallback": "Gradient Field. Visible layers: contour r=1; contour r=2; contour r=3; gradient at probe. Adjustable controls: Point X, Point Y."
         }
       },
-      "compile_ms": 1.943,
+      "compile_ms": 2.499,
       "spec_bytes": 10712,
       "browser": {
         "id": "stem-008",
@@ -1382,9 +1382,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "point x = 7.3; point y = 7.3"
         },
-        "elapsed_ms": 274.8,
+        "elapsed_ms": 137.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -1520,7 +1520,7 @@
           "fallback": "Plane Intersection. Visible layers: x+y+z=3; x-y+2z=1; intersection. Adjustable controls: Orbit."
         }
       },
-      "compile_ms": 1.047,
+      "compile_ms": 1.552,
       "spec_bytes": 935,
       "browser": {
         "id": "stem-009",
@@ -1528,7 +1528,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 424,
+          "nonzero_pixel_samples": 449,
           "draw_calls": 3,
           "gpu_calls": 6,
           "gpu_triangles": 512,
@@ -1550,9 +1550,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "orbit = 7.3"
         },
-        "elapsed_ms": 181,
+        "elapsed_ms": 204.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -1700,7 +1700,7 @@
           "fallback": "Linear Transform. Visible layers: vertical x=-3; horizontal y=-3; vertical x=-2; horizontal y=-2; vertical x=-1; horizontal y=-1; vertical x=0; horizontal y=0; vertical x=1; horizontal y=1; vertical x=2; horizontal y=2; vertical x=3; horizontal y=3. Adjustable controls: Matrix."
         }
       },
-      "compile_ms": 0.638,
+      "compile_ms": 0.903,
       "spec_bytes": 2386,
       "browser": {
         "id": "stem-010",
@@ -1722,9 +1722,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Shear matrix: λ=1 is repeated, but only the x-axis supplies an independent real eigenvector."
         },
-        "elapsed_ms": 45.5,
+        "elapsed_ms": 48.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -1896,7 +1896,7 @@
           "fallback": "Projectile. Visible layers: projectile path; maximum height and range; instantaneous velocity. Adjustable controls: Angle, Speed."
         }
       },
-      "compile_ms": 0.618,
+      "compile_ms": 0.844,
       "spec_bytes": 4194,
       "browser": {
         "id": "stem-011",
@@ -1919,9 +1919,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Range 159.7 m; maximum height 78.3 m."
         },
-        "elapsed_ms": 64.1,
+        "elapsed_ms": 64.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -2058,7 +2058,7 @@
           "fallback": "Inclined Plane. Visible layers: inclined plane θ=30°; box; weight mg; normal N=mg cosθ; friction μN, μ=0.2; resultant a=3.21 m/s² down plane. Adjustable controls: Incline."
         }
       },
-      "compile_ms": 0.329,
+      "compile_ms": 0.464,
       "spec_bytes": 1536,
       "browser": {
         "id": "stem-012",
@@ -2080,9 +2080,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "At θ=45°, N=mg cosθ, friction μN with μ=0.2, and downhill a=max(0,g(sinθ−μcosθ))=5.55 m/s²."
         },
-        "elapsed_ms": 43.8,
+        "elapsed_ms": 44.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -2222,7 +2222,7 @@
           "fallback": "Spring Mass. Visible layers: fixed support; mass m = 2 kg; spring k = 12 N/m; weight mg; spring force kx; equilibrium x=mg/k=1.64 m. Adjustable controls: Spring Constant, Mass."
         }
       },
-      "compile_ms": 0.308,
+      "compile_ms": 0.464,
       "spec_bytes": 1307,
       "browser": {
         "id": "stem-013",
@@ -2245,9 +2245,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Hooke equilibrium x=mg/k=2.68 m; upward spring force balances weight."
         },
-        "elapsed_ms": 63,
+        "elapsed_ms": 64.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -2429,7 +2429,7 @@
           "fallback": "Elastic Collision. Visible layers: cart 1 before; cart 2 before; cart 1 after; cart 2 after; u₁; u₂; v₁; v₂. Adjustable controls: Mass 1, Velocity 1, Mass 2, Velocity 2."
         }
       },
-      "compile_ms": 0.346,
+      "compile_ms": 0.468,
       "spec_bytes": 1703,
       "browser": {
         "id": "stem-014",
@@ -2454,9 +2454,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Elastic result: v₁=3.50, v₂=3.50; Δp=0.0e+0, ΔK=0.0e+0."
         },
-        "elapsed_ms": 106.7,
+        "elapsed_ms": 107,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -2679,7 +2679,7 @@
           "fallback": "Pendulum. Visible layers: pivot; bob; L = 1.00 m; motion arc ±20°; restoring component mg sinθ; equilibrium. Adjustable controls: Length, Angle."
         }
       },
-      "compile_ms": 0.505,
+      "compile_ms": 0.675,
       "spec_bytes": 3122,
       "browser": {
         "id": "stem-015",
@@ -2697,18 +2697,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.00625
+            "__animation_progress": 0.006237500000000001
           },
           "geometry_signature": -20368,
           "visual_state_signature": -20368,
           "animation_state": "playing",
-          "animation_progress": 0.00625,
-          "observed_frame_interval_ms": 50,
+          "animation_progress": 0.006237500000000001,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "Initial angle 59.0°; small-angle period T = 3.8327430373795477 s for L=3.70 m. · ▶ 1%"
         },
-        "elapsed_ms": 257.7,
+        "elapsed_ms": 262.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -2917,7 +2917,7 @@
           "fallback": "Travelling Wave. Visible layers: transverse displacement; equilibrium position; wavelength crest-to-crest; crest and trough. Adjustable controls: Amplitude, Wavelength, Frequency."
         }
       },
-      "compile_ms": 0.676,
+      "compile_ms": 0.931,
       "spec_bytes": 3992,
       "browser": {
         "id": "stem-016",
@@ -2925,7 +2925,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 820,
+          "nontransparent_samples": 1035,
           "controls": 3,
           "family": "travelling_wave",
           "panel_count": 1,
@@ -2938,16 +2938,16 @@
             "wavelength": 5.9,
             "frequency": 3.7
           },
-          "geometry_signature": 48499647,
-          "visual_state_signature": 48499647,
+          "geometry_signature": 47874354,
+          "visual_state_signature": 47874354,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "A=2.20, λ=5.90, f=3.70; crest and trough lie ±A from equilibrium."
         },
-        "elapsed_ms": 101.6,
+        "elapsed_ms": 120.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -3095,7 +3095,7 @@
           "fallback": "Wave Interference. Visible layers: wave A; wave B; resultant A + B. Adjustable controls: Phase."
         }
       },
-      "compile_ms": 1.389,
+      "compile_ms": 1.482,
       "spec_bytes": 8530,
       "browser": {
         "id": "stem-017",
@@ -3103,7 +3103,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 648,
+          "nontransparent_samples": 916,
           "controls": 1,
           "family": "wave_interference",
           "panel_count": 1,
@@ -3114,16 +3114,16 @@
           "control_values": {
             "phase": 4.6
           },
-          "geometry_signature": 139620650,
-          "visual_state_signature": 139620650,
+          "geometry_signature": 137658284,
+          "visual_state_signature": 137658284,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "The purple resultant is A+B; phase difference 4.60 rad controls constructive and destructive interference."
         },
-        "elapsed_ms": 115,
+        "elapsed_ms": 60.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -3251,7 +3251,7 @@
           "fallback": "Circular Motion. Visible layers: circular path; position r; velocity v tangent; centripetal acceleration. Adjustable controls: Angular Velocity."
         }
       },
-      "compile_ms": 0.876,
+      "compile_ms": 0.836,
       "spec_bytes": 4209,
       "browser": {
         "id": "stem-018",
@@ -3273,9 +3273,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "angular velocity = 1.8"
         },
-        "elapsed_ms": 89.1,
+        "elapsed_ms": 44.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -3476,7 +3476,7 @@
           "fallback": "Harmonic Motion. Visible layers: displacement versus time; phase space velocity versus displacement; spring and moving mass; current moving mass. Adjustable controls: Spring Constant, Mass."
         }
       },
-      "compile_ms": 1.307,
+      "compile_ms": 1.222,
       "spec_bytes": 7917,
       "browser": {
         "id": "stem-019",
@@ -3484,7 +3484,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 876,
+          "nontransparent_samples": 1027,
           "controls": 5,
           "family": "harmonic_motion",
           "panel_count": 1,
@@ -3500,16 +3500,16 @@
             "restart": 1,
             "__animation_progress": 0.00625
           },
-          "geometry_signature": 126903,
-          "visual_state_signature": 126903,
+          "geometry_signature": 125388,
+          "visual_state_signature": 125388,
           "animation_state": "playing",
           "animation_progress": 0.00625,
           "observed_frame_interval_ms": 50,
           "state_description": "spring constant = 7.3; mass = 7.3; play = 0; pause = 1; restart = 1;   animation progress = 0.00625 · ▶ 1%"
         },
-        "elapsed_ms": 323.2,
+        "elapsed_ms": 277.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -3698,7 +3698,7 @@
           "fallback": "Double Pendulum. Visible layers: trajectory A: θ₀=75°; trajectory B: θ₀=75.5°; double-pendulum arms A; double-pendulum arms B. Adjustable controls: Angle 1, Angle 2."
         }
       },
-      "compile_ms": 5.021,
+      "compile_ms": 4.917,
       "spec_bytes": 8060,
       "browser": {
         "id": "stem-020",
@@ -3706,7 +3706,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 1606,
+          "nontransparent_samples": 1339,
           "controls": 2,
           "family": "double_pendulum",
           "panel_count": 1,
@@ -3718,16 +3718,16 @@
             "angle_1": 122,
             "angle_2": 122.2
           },
-          "geometry_signature": 78180814,
-          "visual_state_signature": 78180814,
+          "geometry_signature": 77164044,
+          "visual_state_signature": 77164044,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "angle 1 = 122; angle 2 = 122.2"
         },
-        "elapsed_ms": 126,
+        "elapsed_ms": 105.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -3839,7 +3839,7 @@
           "fallback": "Ohms Law Circuit. Visible layers: battery V; switch; resistor R; ammeter I = V/R; return path. Adjustable controls: Voltage, Resistance, Switch."
         }
       },
-      "compile_ms": 0.565,
+      "compile_ms": 0.57,
       "spec_bytes": 1435,
       "browser": {
         "id": "stem-021",
@@ -3863,9 +3863,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Closed switch: current I = V/R = 1.00 A (V=17.5 V, R=17.5 Ω)."
         },
-        "elapsed_ms": 85.8,
+        "elapsed_ms": 89,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -4064,7 +4064,7 @@
           "fallback": "Series Parallel Circuit. Visible layers: source 12 V; R₁=1 Ω; R₂=2 Ω; return / meter; series current; same current; voltage drops add; closed circuit. Adjustable controls: R1, R2, Circuit mode."
         }
       },
-      "compile_ms": 0.417,
+      "compile_ms": 0.428,
       "spec_bytes": 1626,
       "browser": {
         "id": "stem-022",
@@ -4088,9 +4088,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "r1 = 7.3; r2 = 7.3; mode = parallel"
         },
-        "elapsed_ms": 87.9,
+        "elapsed_ms": 92.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -4262,7 +4262,7 @@
           "fallback": "Electric Field Lines. Visible layers: field line + → −; + and − charges. Adjustable controls: Charge 1, Charge 2."
         }
       },
-      "compile_ms": 5.028,
+      "compile_ms": 4.996,
       "spec_bytes": 29763,
       "browser": {
         "id": "stem-023",
@@ -4270,7 +4270,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 898,
+          "nontransparent_samples": 981,
           "controls": 2,
           "family": "electric_field_lines",
           "panel_count": 1,
@@ -4282,16 +4282,16 @@
             "charge_1": -0.9,
             "charge_2": 2.2
           },
-          "geometry_signature": 363952731,
-          "visual_state_signature": 363952731,
+          "geometry_signature": 358842121,
+          "visual_state_signature": 358842121,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "charge 1 = -0.9; charge 2 = 2.2"
         },
-        "elapsed_ms": 108.4,
+        "elapsed_ms": 89.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -4444,7 +4444,7 @@
           "fallback": "Electric Field Vectors. Visible layers: net electric field; net force on test charge; source charges + and −. Adjustable controls: Test X, Test Y."
         }
       },
-      "compile_ms": 1.845,
+      "compile_ms": 1.787,
       "spec_bytes": 5362,
       "browser": {
         "id": "stem-024",
@@ -4452,7 +4452,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 461,
+          "nontransparent_samples": 752,
           "controls": 2,
           "family": "electric_field_vectors",
           "panel_count": 1,
@@ -4464,16 +4464,16 @@
             "test_x": 1.4,
             "test_y": 1.4
           },
-          "geometry_signature": 20442659,
-          "visual_state_signature": 20442659,
+          "geometry_signature": 20085589,
+          "visual_state_signature": 20085589,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "test x = 1.4; test y = 1.4"
         },
-        "elapsed_ms": 99,
+        "elapsed_ms": 123.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -4616,7 +4616,7 @@
           "fallback": "Magnetic Field Wire. Visible layers: magnetic field ring r=0.8; magnetic field ring r=1.5; magnetic field ring r=2.2; direction arrow r=0.8; direction arrow r=1.5; direction arrow r=2.2. Adjustable controls: Current direction."
         }
       },
-      "compile_ms": 1.802,
+      "compile_ms": 1.836,
       "spec_bytes": 11059,
       "browser": {
         "id": "stem-025",
@@ -4638,9 +4638,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Current reversed: every visible B-field arrow reverses by the right-hand rule."
         },
-        "elapsed_ms": 72.7,
+        "elapsed_ms": 72.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -4806,7 +4806,7 @@
           "fallback": "Rc Circuit. Visible layers: capacitor voltage Vc(t); circuit current I(t); DC source; resistor R; capacitor C; I(t); charge; return. Adjustable controls: RC mode, Resistance, Capacitance."
         }
       },
-      "compile_ms": 1.251,
+      "compile_ms": 1.287,
       "spec_bytes": 5800,
       "browser": {
         "id": "stem-026",
@@ -4830,9 +4830,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "discharging RC transient with τ=RC=21.46 display units; voltage and current share the circuit state."
         },
-        "elapsed_ms": 141.9,
+        "elapsed_ms": 144,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -5025,7 +5025,7 @@
           "fallback": "Rlc Circuit. Visible layers: damped transient; source; R = 1 Ω; L = 2 H; C = 3 F; i(t); series; return. Adjustable controls: Resistance, Inductance, Capacitance."
         }
       },
-      "compile_ms": 0.827,
+      "compile_ms": 0.856,
       "spec_bytes": 3847,
       "browser": {
         "id": "stem-027",
@@ -5049,9 +5049,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "resistance = 7.3; inductance = 7.3; capacitance = 7.3"
         },
-        "elapsed_ms": 98,
+        "elapsed_ms": 89.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -5203,7 +5203,7 @@
           "fallback": "Ac Phase. Visible layers: voltage v(t); current i(t). Adjustable controls: AC load."
         }
       },
-      "compile_ms": 1.755,
+      "compile_ms": 1.71,
       "spec_bytes": 5841,
       "browser": {
         "id": "stem-028",
@@ -5225,9 +5225,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Capacitive load: current leads voltage by 90°."
         },
-        "elapsed_ms": 58.8,
+        "elapsed_ms": 65.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -5363,7 +5363,7 @@
           "fallback": "Converging Lens. Visible layers: object; convex lens; F; F′; real inverted image; principal axis; parallel incident ray; refracts through F′; central ray; central ray undeviated. Adjustable controls: Object Distance."
         }
       },
-      "compile_ms": 0.423,
+      "compile_ms": 0.494,
       "spec_bytes": 1756,
       "browser": {
         "id": "stem-029",
@@ -5385,9 +5385,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Thin-lens check: 1/f = 1/dₒ + 1/dᵢ, with f = 1, dₒ = 4.00, dᵢ = 1.33, magnification = -0.33."
         },
-        "elapsed_ms": 100.6,
+        "elapsed_ms": 46.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -5495,7 +5495,7 @@
           "fallback": "Refraction. Visible layers: incident ray; normal / interface; refracted ray; n₁ sin θ₁ = n₂ sin θ₂; air; glass; Snell's law. Adjustable controls: Incident Angle, Second medium."
         }
       },
-      "compile_ms": 0.324,
+      "compile_ms": 0.326,
       "spec_bytes": 1501,
       "browser": {
         "id": "stem-030",
@@ -5518,9 +5518,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "incident angle = 58; medium = water"
         },
-        "elapsed_ms": 65.1,
+        "elapsed_ms": 62.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -5691,7 +5691,7 @@
           "fallback": "Ideal Gas. Visible layers: isotherm PV = nRT; selected pressure; selected volume; consistent state P·V=T. Adjustable controls: Pressure, Volume, Temperature."
         }
       },
-      "compile_ms": 0.978,
+      "compile_ms": 1.169,
       "spec_bytes": 3425,
       "browser": {
         "id": "stem-031",
@@ -5715,9 +5715,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Coupled state P=1.48, V=6.00, T=8.90; changing one control updates a dependent variable so P·V=T."
         },
-        "elapsed_ms": 85.3,
+        "elapsed_ms": 87.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -5913,7 +5913,7 @@
           "fallback": "Carnot Cycle. Visible layers: isothermal expansion hot; adiabatic expansion; isothermal compression cold; adiabatic compression; current thermodynamic state. Adjustable controls: Playback."
         }
       },
-      "compile_ms": 0.473,
+      "compile_ms": 0.626,
       "spec_bytes": 1407,
       "browser": {
         "id": "stem-032",
@@ -5930,18 +5930,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006262499999999999
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 142900,
           "visual_state_signature": 142900,
           "animation_state": "playing",
-          "animation_progress": 0.006262499999999999,
-          "observed_frame_interval_ms": 50.099999999999994,
-          "state_description": "playback = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.006262499999999999 · ▶ 1%"
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
+          "state_description": "playback = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.00625 · ▶ 1%"
         },
-        "elapsed_ms": 226.4,
+        "elapsed_ms": 289.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -6098,7 +6098,7 @@
           "fallback": "Atom. Visible layers: electron shell 1; electron shell 2; electron shell 3; nuclear protons Z; nuclear neutrons N≈Z; electrons arranged by atomic number. Adjustable controls: Atomic Number."
         }
       },
-      "compile_ms": 1.669,
+      "compile_ms": 2.248,
       "spec_bytes": 12994,
       "browser": {
         "id": "stem-033",
@@ -6120,9 +6120,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Atomic number Z=13: 13 protons and 13 electrons arranged into bounded shells."
         },
-        "elapsed_ms": 130.7,
+        "elapsed_ms": 121.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -6263,7 +6263,7 @@
           "fallback": "Ionic Bond. Visible layers: Na: 2,8,1; e⁻ transfer; Cl: 2,8,7; Na⁺ attracts Cl⁻; loses one electron; gains one electron; electrostatic attraction. Adjustable controls: Playback."
         }
       },
-      "compile_ms": 0.314,
+      "compile_ms": 0.47,
       "spec_bytes": 1361,
       "browser": {
         "id": "stem-034",
@@ -6285,9 +6285,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Step 3: sodium transfers one electron to chlorine, producing Na⁺ and Cl⁻ whose opposite charges attract."
         },
-        "elapsed_ms": 42.8,
+        "elapsed_ms": 72.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -6422,7 +6422,7 @@
           "fallback": "Molecular Geometry. Visible layers: central atom; bond; lone pair 1; lone pair 2. Adjustable controls: Molecule."
         }
       },
-      "compile_ms": 0.333,
+      "compile_ms": 0.449,
       "spec_bytes": 1339,
       "browser": {
         "id": "stem-035",
@@ -6452,9 +6452,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "NH₃: trigonal pyramidal, about 107°."
         },
-        "elapsed_ms": 146.2,
+        "elapsed_ms": 146.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -6583,7 +6583,7 @@
           "fallback": "Reaction Profile. Visible layers: uncatalysed exothermic profile; catalysed lower activation energy. Adjustable controls: Catalyst."
         }
       },
-      "compile_ms": 0.887,
+      "compile_ms": 1.195,
       "spec_bytes": 6077,
       "browser": {
         "id": "stem-036",
@@ -6605,9 +6605,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "catalyst = on"
         },
-        "elapsed_ms": 55.4,
+        "elapsed_ms": 70.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -6753,7 +6753,7 @@
           "fallback": "Titration. Visible layers: pH curve; selected titrant volume; burette: titrant; flask: analyte + indicator; measured titrant added. Adjustable controls: Titrant Volume."
         }
       },
-      "compile_ms": 1.034,
+      "compile_ms": 1.21,
       "spec_bytes": 6363,
       "browser": {
         "id": "stem-037",
@@ -6775,9 +6775,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "36.5 mL titrant added; curve and probe agree at pH 11.82, with equivalence near 25 mL."
         },
-        "elapsed_ms": 146.4,
+        "elapsed_ms": 100.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -6917,7 +6917,7 @@
           "fallback": "Molecular Orbitals. Visible layers: H 1s(A); σ1s bonding: in phase; σ*1s antibonding: node; H 1s(B); constructive overlap; lower energy; destructive overlap; higher energy. Adjustable controls: Molecular orbital."
         }
       },
-      "compile_ms": 0.477,
+      "compile_ms": 0.59,
       "spec_bytes": 1539,
       "browser": {
         "id": "stem-038",
@@ -6939,9 +6939,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "σ*1s: destructive overlap creates an internuclear node and raises energy."
         },
-        "elapsed_ms": 100.9,
+        "elapsed_ms": 98.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -7086,7 +7086,7 @@
           "fallback": "Animal Cell. Visible layers: cell membrane; nucleus: stores DNA; mitochondrion: makes ATP; ribosome: builds proteins; rough ER: folds proteins; Golgi: sorts cargo; lysosome: digests waste. Adjustable controls: Organelle."
         }
       },
-      "compile_ms": 0.343,
+      "compile_ms": 0.387,
       "spec_bytes": 1572,
       "browser": {
         "id": "stem-039",
@@ -7108,9 +7108,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "mitochondrion: makes ATP."
         },
-        "elapsed_ms": 43.3,
+        "elapsed_ms": 42.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -7270,7 +7270,7 @@
           "fallback": "Mitosis. Visible layers: prophase; metaphase; anaphase; telophase; X1; X2; X3; X4; next phase. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.336,
+      "compile_ms": 0.389,
       "spec_bytes": 1724,
       "browser": {
         "id": "stem-040",
@@ -7292,9 +7292,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Mitosis step 3: chromosomes condense, align, sister chromatids separate, then form two daughter nuclei."
         },
-        "elapsed_ms": 42,
+        "elapsed_ms": 41.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -7482,7 +7482,7 @@
           "fallback": "Circulation. Visible layers: body tissues; right heart; lungs; left heart; red blood cell; deoxygenated blood; pulmonary artery; pulmonary veins; oxygenated blood. Adjustable controls: Playback."
         }
       },
-      "compile_ms": 0.347,
+      "compile_ms": 0.426,
       "spec_bytes": 1755,
       "browser": {
         "id": "stem-041",
@@ -7499,18 +7499,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.004175000000000001
+            "__animation_progress": 0.0063125
           },
           "geometry_signature": 246375,
           "visual_state_signature": 246375,
           "animation_state": "playing",
-          "animation_progress": 0.004175000000000001,
-          "observed_frame_interval_ms": 33.400000000000006,
-          "state_description": "Playback 0: one red blood cell moves body → right heart → lungs → left heart → body; oxygenation changes at the lungs. · ▶ 0%"
+          "animation_progress": 0.0063125,
+          "observed_frame_interval_ms": 50.5,
+          "state_description": "Playback 0: one red blood cell moves body → right heart → lungs → left heart → body; oxygenation changes at the lungs. · ▶ 1%"
         },
-        "elapsed_ms": 225.9,
+        "elapsed_ms": 241,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -7675,7 +7675,7 @@
           "fallback": "Action Potential. Visible layers: membrane voltage; sodium channel conductance opens then closes; potassium channel conductance opens later; time probe. Adjustable controls: Time."
         }
       },
-      "compile_ms": 1.491,
+      "compile_ms": 1.565,
       "spec_bytes": 5481,
       "browser": {
         "id": "stem-042",
@@ -7697,9 +7697,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "time = 7.3"
         },
-        "elapsed_ms": 83.1,
+        "elapsed_ms": 79.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -7860,7 +7860,7 @@
           "fallback": "Binary Search. Visible layers: [1,3,5,7,9,11,13]; compare midpoint; discard one half; target result; choose midpoint; compare; shrink range / finish. Adjustable controls: Target value, Step."
         }
       },
-      "compile_ms": 0.741,
+      "compile_ms": 0.716,
       "spec_bytes": 1692,
       "browser": {
         "id": "stem-043",
@@ -7878,18 +7878,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.00625
+            "__animation_progress": 0.004175000000000001
           },
           "geometry_signature": 201297,
           "visual_state_signature": 201297,
           "animation_state": "playing",
-          "animation_progress": 0.00625,
-          "observed_frame_interval_ms": 50,
-          "state_description": "Step 0: compare target 13 with midpoint 7; discard left half, shrinking [0,6]. · ▶ 1%"
+          "animation_progress": 0.004175000000000001,
+          "observed_frame_interval_ms": 33.400000000000006,
+          "state_description": "Step 0: compare target 13 with midpoint 7; discard left half, shrinking [0,6]. · ▶ 0%"
         },
-        "elapsed_ms": 250.8,
+        "elapsed_ms": 253.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -8161,7 +8161,7 @@
           "fallback": "Binary Search Tree. Visible layers: 8; 3; 11; 1; 5; 9; 13; insert 6; smaller; larger; new-node placement. Adjustable controls: Insert, Step."
         }
       },
-      "compile_ms": 0.501,
+      "compile_ms": 0.528,
       "spec_bytes": 2251,
       "browser": {
         "id": "stem-044",
@@ -8188,9 +8188,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "Step 0: 11 is already in the tree; the search path is root → right and no duplicate node is added. · ▶ 1%"
         },
-        "elapsed_ms": 257.3,
+        "elapsed_ms": 261.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -8402,7 +8402,7 @@
           "fallback": "Dijkstra. Visible layers: A; B; C; D; E; F; 4; 2; 1; 5; 8; 10; 6; 3. Adjustable controls: Source node, Destination node, Algorithm step."
         }
       },
-      "compile_ms": 0.563,
+      "compile_ms": 0.55,
       "spec_bytes": 2116,
       "browser": {
         "id": "stem-045",
@@ -8421,18 +8421,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006162500000000001
+            "__animation_progress": 0.004175000000000001
           },
           "geometry_signature": 333666,
           "visual_state_signature": 333666,
           "animation_state": "playing",
-          "animation_progress": 0.006162500000000001,
-          "observed_frame_interval_ms": 49.30000000000001,
-          "state_description": "Shortest B → C → A has total weight 3. Settled: none. · ▶ 1%"
+          "animation_progress": 0.004175000000000001,
+          "observed_frame_interval_ms": 33.400000000000006,
+          "state_description": "Shortest B → C → A has total weight 3. Settled: none. · ▶ 0%"
         },
-        "elapsed_ms": 273.8,
+        "elapsed_ms": 284.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -8668,7 +8668,7 @@
           "fallback": "Stack Queue. Visible layers: Stack • LIFO; Queue • FIFO; A; B; C; push upward; top / pop first; front / dequeue first; enqueue at rear. Adjustable controls: Operation, Step."
         }
       },
-      "compile_ms": 0.557,
+      "compile_ms": 0.579,
       "spec_bytes": 1900,
       "browser": {
         "id": "stem-046",
@@ -8691,9 +8691,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "After 3 removals, the stack has removed newest-first (C,B,A) while the queue has removed oldest-first (A,B,C)."
         },
-        "elapsed_ms": 156.2,
+        "elapsed_ms": 69.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -8896,7 +8896,7 @@
           "fallback": "Cpu Memory. Visible layers: CPU request; registers / cache; RAM lookup; SSD storage; load page → retry CPU; cache miss; memory lookup; page fault; page-in; resume. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.902,
+      "compile_ms": 0.965,
       "spec_bytes": 1775,
       "browser": {
         "id": "stem-047",
@@ -8913,18 +8913,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006237500000000001
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 263413,
           "visual_state_signature": 263413,
           "animation_state": "playing",
-          "animation_progress": 0.006237500000000001,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "Access step 0: CPU → cache → RAM; a miss triggers a page fault, SSD page-in, then CPU retry. · ▶ 1%"
         },
-        "elapsed_ms": 229.8,
+        "elapsed_ms": 237.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -9058,7 +9058,7 @@
           "fallback": "Sampling Aliasing. Visible layers: continuous signal; aliased reconstruction; sample locations. Adjustable controls: Signal Frequency, Sample Frequency."
         }
       },
-      "compile_ms": 2.577,
+      "compile_ms": 2.632,
       "spec_bytes": 12402,
       "browser": {
         "id": "stem-048",
@@ -9066,7 +9066,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 1097,
+          "nontransparent_samples": 1083,
           "controls": 2,
           "family": "sampling_aliasing",
           "panel_count": 1,
@@ -9078,16 +9078,16 @@
             "signal_frequency": 14.5,
             "sample_frequency": 29
           },
-          "geometry_signature": 570017056,
-          "visual_state_signature": 570017056,
+          "geometry_signature": 561895945,
+          "visual_state_signature": 561895945,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "Nyquist condition satisfied: sampling rate is at least twice the signal frequency."
         },
-        "elapsed_ms": 181.6,
+        "elapsed_ms": 130.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -9191,7 +9191,7 @@
           "fallback": "Differential Drive. Visible layers: robot trajectory; robot body; left wheel; right wheel; instantaneous centre of curvature. Adjustable controls: Left Velocity, Right Velocity."
         }
       },
-      "compile_ms": 0.989,
+      "compile_ms": 0.969,
       "spec_bytes": 4543,
       "browser": {
         "id": "stem-049",
@@ -9199,7 +9199,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 910,
+          "nontransparent_samples": 1066,
           "controls": 2,
           "family": "differential_drive",
           "panel_count": 1,
@@ -9211,16 +9211,16 @@
             "left_velocity": 7.3,
             "right_velocity": 7.3
           },
-          "geometry_signature": 47714854,
-          "visual_state_signature": 47714854,
+          "geometry_signature": 47244660,
+          "visual_state_signature": 47244660,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "Equal wheel speeds produce a straight path; the instantaneous centre is at infinity."
         },
-        "elapsed_ms": 94.1,
+        "elapsed_ms": 89.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -9364,7 +9364,7 @@
           "fallback": "Neural Network. Visible layers: input x₁=0.6; input x₂=0.4; h₁=ReLU(0.60)=0.60; h₂=ReLU(0.18)=0.18; ŷ=sigmoid(0.464)=0.614; w₁₁ adjustable; w₁₂=0.5; w₂₁=−0.4; w₂₂=0.8; v₁=0.9; v₂=−0.7. Adjustable controls: Weight, Step."
         }
       },
-      "compile_ms": 0.585,
+      "compile_ms": 0.61,
       "spec_bytes": 1900,
       "browser": {
         "id": "stem-050",
@@ -9387,9 +9387,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Forward step 3: x₁=0.6, x₂=0.4; h₁=ReLU(7.30x₁+0.5x₂−0.2)=4.380, h₂=0.180, and sigmoid output ŷ=0.979."
         },
-        "elapsed_ms": 65.5,
+        "elapsed_ms": 67.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -9513,7 +9513,7 @@
           }
         }
       },
-      "compile_ms": 1.976,
+      "compile_ms": 1.885,
       "spec_bytes": 948,
       "browser": {
         "id": "math-001",
@@ -9558,12 +9558,12 @@
           "visual_state_signature": 30991762,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 33.39999999999999,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 264,
+        "elapsed_ms": 274.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -9687,7 +9687,7 @@
           }
         }
       },
-      "compile_ms": 1.603,
+      "compile_ms": 1.643,
       "spec_bytes": 1102,
       "browser": {
         "id": "math-002",
@@ -9732,12 +9732,12 @@
           "visual_state_signature": 31053109,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.099999999999994,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 275.7,
+        "elapsed_ms": 281.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -9861,7 +9861,7 @@
           }
         }
       },
-      "compile_ms": 1.615,
+      "compile_ms": 1.499,
       "spec_bytes": 1104,
       "browser": {
         "id": "math-003",
@@ -9869,7 +9869,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 554,
+          "nonzero_pixel_samples": 531,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -9906,12 +9906,12 @@
           "visual_state_signature": 30987511,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 33.39999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 280.9,
+        "elapsed_ms": 275.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -10035,7 +10035,7 @@
           }
         }
       },
-      "compile_ms": 1.931,
+      "compile_ms": 1.787,
       "spec_bytes": 1177,
       "browser": {
         "id": "math-004",
@@ -10080,12 +10080,12 @@
           "visual_state_signature": 30998857,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 274.9,
+        "elapsed_ms": 273.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -10209,7 +10209,7 @@
           }
         }
       },
-      "compile_ms": 1.714,
+      "compile_ms": 1.963,
       "spec_bytes": 1212,
       "browser": {
         "id": "math-005",
@@ -10254,12 +10254,12 @@
           "visual_state_signature": 30980584,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 261.6,
+        "elapsed_ms": 271.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -10383,7 +10383,7 @@
           }
         }
       },
-      "compile_ms": 1.413,
+      "compile_ms": 1.393,
       "spec_bytes": 1052,
       "browser": {
         "id": "math-006",
@@ -10428,12 +10428,12 @@
           "visual_state_signature": 31002604,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 272.9,
+        "elapsed_ms": 265.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -10557,7 +10557,7 @@
           }
         }
       },
-      "compile_ms": 1.866,
+      "compile_ms": 1.93,
       "spec_bytes": 1155,
       "browser": {
         "id": "math-007",
@@ -10565,7 +10565,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 380,
+          "nonzero_pixel_samples": 279,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -10602,12 +10602,12 @@
           "visual_state_signature": 30991202,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 50.10000000000001,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 267,
+        "elapsed_ms": 268,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -10731,7 +10731,7 @@
           }
         }
       },
-      "compile_ms": 1.575,
+      "compile_ms": 1.564,
       "spec_bytes": 1108,
       "browser": {
         "id": "math-008",
@@ -10739,7 +10739,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 240,
+          "nonzero_pixel_samples": 432,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -10776,12 +10776,12 @@
           "visual_state_signature": 31053540,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.999999999999986,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 283.2,
+        "elapsed_ms": 281.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -10905,7 +10905,7 @@
           }
         }
       },
-      "compile_ms": 1.673,
+      "compile_ms": 2.274,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-009",
@@ -10913,7 +10913,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 192,
+          "nonzero_pixel_samples": 336,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -10950,12 +10950,12 @@
           "visual_state_signature": 30913352,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 34.099999999999994,
+          "observed_frame_interval_ms": 49.5,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 273.2,
+        "elapsed_ms": 287.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -11079,7 +11079,7 @@
           }
         }
       },
-      "compile_ms": 1.839,
+      "compile_ms": 2.658,
       "spec_bytes": 1110,
       "browser": {
         "id": "math-010",
@@ -11087,7 +11087,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 168,
+          "nonzero_pixel_samples": 284,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -11124,12 +11124,12 @@
           "visual_state_signature": 31627917,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 282.9,
+        "elapsed_ms": 274.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -11253,7 +11253,7 @@
           }
         }
       },
-      "compile_ms": 3.236,
+      "compile_ms": 4.042,
       "spec_bytes": 1194,
       "browser": {
         "id": "math-011",
@@ -11261,7 +11261,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 192,
+          "nonzero_pixel_samples": 240,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -11298,12 +11298,12 @@
           "visual_state_signature": 31392379,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.000000000000014,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 269.7,
+        "elapsed_ms": 272.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -11440,7 +11440,7 @@
           }
         }
       },
-      "compile_ms": 1.696,
+      "compile_ms": 2.143,
       "spec_bytes": 1239,
       "browser": {
         "id": "math-012",
@@ -11485,12 +11485,12 @@
           "visual_state_signature": 30978307,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 262.8,
+        "elapsed_ms": 276.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -11614,7 +11614,7 @@
           }
         }
       },
-      "compile_ms": 1.543,
+      "compile_ms": 1.791,
       "spec_bytes": 1180,
       "browser": {
         "id": "math-013",
@@ -11659,12 +11659,12 @@
           "visual_state_signature": 30930556,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 34,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 279.9,
+        "elapsed_ms": 276,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -11788,7 +11788,7 @@
           }
         }
       },
-      "compile_ms": 1.625,
+      "compile_ms": 2.052,
       "spec_bytes": 1177,
       "browser": {
         "id": "math-014",
@@ -11833,12 +11833,12 @@
           "visual_state_signature": 31085959,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 281.4,
+        "elapsed_ms": 282.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -11962,7 +11962,7 @@
           }
         }
       },
-      "compile_ms": 1.688,
+      "compile_ms": 1.97,
       "spec_bytes": 1257,
       "browser": {
         "id": "math-015",
@@ -11970,7 +11970,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 514,
+          "nonzero_pixel_samples": 576,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -12007,12 +12007,12 @@
           "visual_state_signature": 31085350,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 262.7,
+        "elapsed_ms": 275.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -12136,7 +12136,7 @@
           }
         }
       },
-      "compile_ms": 0.669,
+      "compile_ms": 0.673,
       "spec_bytes": 945,
       "browser": {
         "id": "math-016",
@@ -12144,7 +12144,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 447,
+          "nonzero_pixel_samples": 408,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -12181,12 +12181,12 @@
           "visual_state_signature": 31020785,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.5,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 258.8,
+        "elapsed_ms": 270.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -12310,7 +12310,7 @@
           }
         }
       },
-      "compile_ms": 0.965,
+      "compile_ms": 0.897,
       "spec_bytes": 1027,
       "browser": {
         "id": "math-017",
@@ -12318,7 +12318,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 254,
+          "nonzero_pixel_samples": 454,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -12355,12 +12355,12 @@
           "visual_state_signature": 31018970,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.000000000000014,
+          "observed_frame_interval_ms": 49.999999999999986,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 263.9,
+        "elapsed_ms": 278.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -12484,7 +12484,7 @@
           }
         }
       },
-      "compile_ms": 0.959,
+      "compile_ms": 0.92,
       "spec_bytes": 1027,
       "browser": {
         "id": "math-018",
@@ -12492,7 +12492,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 246,
+          "nonzero_pixel_samples": 468,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -12529,12 +12529,12 @@
           "visual_state_signature": 31023008,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999999,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 272.6,
+        "elapsed_ms": 272.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -12658,7 +12658,7 @@
           }
         }
       },
-      "compile_ms": 1.974,
+      "compile_ms": 1.796,
       "spec_bytes": 1260,
       "browser": {
         "id": "math-019",
@@ -12666,7 +12666,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 143,
+          "nonzero_pixel_samples": 229,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -12703,12 +12703,12 @@
           "visual_state_signature": 30985364,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.89999999999999,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 274.9,
+        "elapsed_ms": 282,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -12832,7 +12832,7 @@
           }
         }
       },
-      "compile_ms": 1.518,
+      "compile_ms": 1.53,
       "spec_bytes": 1198,
       "browser": {
         "id": "math-020",
@@ -12877,12 +12877,12 @@
           "visual_state_signature": 31005488,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 34.30000000000001,
+          "observed_frame_interval_ms": 33.39999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 272.7,
+        "elapsed_ms": 288.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -13006,7 +13006,7 @@
           }
         }
       },
-      "compile_ms": 0.663,
+      "compile_ms": 0.672,
       "spec_bytes": 938,
       "browser": {
         "id": "math-021",
@@ -13051,12 +13051,12 @@
           "visual_state_signature": 30988794,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.999999999999986,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 261.1,
+        "elapsed_ms": 283.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -13180,7 +13180,7 @@
           }
         }
       },
-      "compile_ms": 1.16,
+      "compile_ms": 1.254,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-022",
@@ -13225,12 +13225,12 @@
           "visual_state_signature": 30989736,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999998,
+          "observed_frame_interval_ms": 50.000000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 278.5,
+        "elapsed_ms": 273.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -13354,7 +13354,7 @@
           }
         }
       },
-      "compile_ms": 1.17,
+      "compile_ms": 1.447,
       "spec_bytes": 1067,
       "browser": {
         "id": "math-023",
@@ -13399,12 +13399,12 @@
           "visual_state_signature": 30989553,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 274.9,
+        "elapsed_ms": 272.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -13528,7 +13528,7 @@
           }
         }
       },
-      "compile_ms": 0.933,
+      "compile_ms": 1.082,
       "spec_bytes": 1017,
       "browser": {
         "id": "math-024",
@@ -13576,9 +13576,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 278.8,
+        "elapsed_ms": 277.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -13702,7 +13702,7 @@
           }
         }
       },
-      "compile_ms": 0.926,
+      "compile_ms": 1.156,
       "spec_bytes": 1017,
       "browser": {
         "id": "math-025",
@@ -13747,12 +13747,12 @@
           "visual_state_signature": 30989117,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.10000000000001,
+          "observed_frame_interval_ms": 49.500000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 278.5,
+        "elapsed_ms": 276.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -13876,7 +13876,7 @@
           }
         }
       },
-      "compile_ms": 1.519,
+      "compile_ms": 1.851,
       "spec_bytes": 1173,
       "browser": {
         "id": "math-026",
@@ -13921,12 +13921,12 @@
           "visual_state_signature": 30988838,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 293,
+        "elapsed_ms": 283.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -14050,7 +14050,7 @@
           }
         }
       },
-      "compile_ms": 1.492,
+      "compile_ms": 1.847,
       "spec_bytes": 1173,
       "browser": {
         "id": "math-027",
@@ -14095,12 +14095,12 @@
           "visual_state_signature": 30989508,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.999999999999986,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 277.7,
+        "elapsed_ms": 277.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -14224,7 +14224,7 @@
           }
         }
       },
-      "compile_ms": 1.769,
+      "compile_ms": 2.191,
       "spec_bytes": 1230,
       "browser": {
         "id": "math-028",
@@ -14269,12 +14269,12 @@
           "visual_state_signature": 30990950,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 33.39999999999999,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 274.2,
+        "elapsed_ms": 277.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -14411,7 +14411,7 @@
           }
         }
       },
-      "compile_ms": 3.199,
+      "compile_ms": 3.717,
       "spec_bytes": 1619,
       "browser": {
         "id": "math-029",
@@ -14419,7 +14419,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 570,
+          "nonzero_pixel_samples": 576,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4626,
@@ -14456,12 +14456,12 @@
           "visual_state_signature": 30991612,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 34.20000000000002,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 298.1,
+        "elapsed_ms": 301.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -14585,7 +14585,7 @@
           }
         }
       },
-      "compile_ms": 1.768,
+      "compile_ms": 1.705,
       "spec_bytes": 1217,
       "browser": {
         "id": "math-030",
@@ -14630,12 +14630,12 @@
           "visual_state_signature": 30989361,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.5,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 278.8,
+        "elapsed_ms": 290.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -14759,7 +14759,7 @@
           }
         }
       },
-      "compile_ms": 1.154,
+      "compile_ms": 1.194,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-031",
@@ -14804,12 +14804,12 @@
           "visual_state_signature": 30989075,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999998,
+          "observed_frame_interval_ms": 49.30000000000001,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 266.3,
+        "elapsed_ms": 287.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -14933,7 +14933,7 @@
           }
         }
       },
-      "compile_ms": 1.17,
+      "compile_ms": 1.192,
       "spec_bytes": 1067,
       "browser": {
         "id": "math-032",
@@ -14978,12 +14978,12 @@
           "visual_state_signature": 30990886,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999999,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 270.2,
+        "elapsed_ms": 278.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -15107,7 +15107,7 @@
           }
         }
       },
-      "compile_ms": 1.137,
+      "compile_ms": 1.22,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-033",
@@ -15152,12 +15152,12 @@
           "visual_state_signature": 30990262,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.89999999999999,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 267.8,
+        "elapsed_ms": 278.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -15281,7 +15281,7 @@
           }
         }
       },
-      "compile_ms": 0.954,
+      "compile_ms": 0.988,
       "spec_bytes": 1010,
       "browser": {
         "id": "math-034",
@@ -15326,12 +15326,12 @@
           "visual_state_signature": 30988426,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 307.1,
+        "elapsed_ms": 277.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -15455,7 +15455,7 @@
           }
         }
       },
-      "compile_ms": 0.918,
+      "compile_ms": 0.95,
       "spec_bytes": 1014,
       "browser": {
         "id": "math-035",
@@ -15500,12 +15500,12 @@
           "visual_state_signature": 30990045,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 50.000000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 280.5,
+        "elapsed_ms": 282.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -15629,7 +15629,7 @@
           }
         }
       },
-      "compile_ms": 1.511,
+      "compile_ms": 1.631,
       "spec_bytes": 1169,
       "browser": {
         "id": "math-036",
@@ -15674,12 +15674,12 @@
           "visual_state_signature": 30988850,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 280.1,
+        "elapsed_ms": 287.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -15803,7 +15803,7 @@
           }
         }
       },
-      "compile_ms": 2.21,
+      "compile_ms": 2.324,
       "spec_bytes": 1328,
       "browser": {
         "id": "math-037",
@@ -15848,12 +15848,12 @@
           "visual_state_signature": 30990729,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49,
+          "observed_frame_interval_ms": 50.000000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 297.1,
+        "elapsed_ms": 276.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -15977,7 +15977,7 @@
           }
         }
       },
-      "compile_ms": 1.696,
+      "compile_ms": 1.768,
       "spec_bytes": 1220,
       "browser": {
         "id": "math-038",
@@ -16022,12 +16022,12 @@
           "visual_state_signature": 30989345,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.60000000000002,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 277.4,
+        "elapsed_ms": 280.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -16151,7 +16151,7 @@
           }
         }
       },
-      "compile_ms": 2.166,
+      "compile_ms": 2.259,
       "spec_bytes": 1368,
       "browser": {
         "id": "math-039",
@@ -16199,9 +16199,9 @@
           "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 272.9,
+        "elapsed_ms": 264.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -16325,7 +16325,7 @@
           }
         }
       },
-      "compile_ms": 4.294,
+      "compile_ms": 4.292,
       "spec_bytes": 1898,
       "browser": {
         "id": "math-040",
@@ -16370,12 +16370,12 @@
           "visual_state_signature": 30991301,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 295.8,
+        "elapsed_ms": 286.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -16499,7 +16499,7 @@
           }
         }
       },
-      "compile_ms": 1.684,
+      "compile_ms": 1.705,
       "spec_bytes": 1230,
       "browser": {
         "id": "math-041",
@@ -16544,12 +16544,12 @@
           "visual_state_signature": 30989561,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 33.39999999999999,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 268.6,
+        "elapsed_ms": 278.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -16673,7 +16673,7 @@
           }
         }
       },
-      "compile_ms": 2.075,
+      "compile_ms": 2.176,
       "spec_bytes": 1386,
       "browser": {
         "id": "math-042",
@@ -16718,12 +16718,12 @@
           "visual_state_signature": 30989811,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.89999999999999,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 264.1,
+        "elapsed_ms": 262.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -16847,7 +16847,7 @@
           }
         }
       },
-      "compile_ms": 2.068,
+      "compile_ms": 2.098,
       "spec_bytes": 1344,
       "browser": {
         "id": "math-043",
@@ -16892,12 +16892,12 @@
           "visual_state_signature": 30989801,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.099999999999994,
+          "observed_frame_interval_ms": 49.89999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 276.4,
+        "elapsed_ms": 283.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -17021,7 +17021,7 @@
           }
         }
       },
-      "compile_ms": 2.194,
+      "compile_ms": 2.185,
       "spec_bytes": 1408,
       "browser": {
         "id": "math-044",
@@ -17029,7 +17029,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 548,
+          "nonzero_pixel_samples": 543,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -17066,12 +17066,12 @@
           "visual_state_signature": 30989834,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.599999999999994,
+          "observed_frame_interval_ms": 49.999999999999986,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 273.2,
+        "elapsed_ms": 275.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -17195,7 +17195,7 @@
           }
         }
       },
-      "compile_ms": 4.247,
+      "compile_ms": 4.5,
       "spec_bytes": 2022,
       "browser": {
         "id": "math-045",
@@ -17203,7 +17203,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 549,
+          "nonzero_pixel_samples": 543,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -17240,12 +17240,12 @@
           "visual_state_signature": 30991278,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.999999999999986,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 281,
+        "elapsed_ms": 284.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -17369,7 +17369,7 @@
           }
         }
       },
-      "compile_ms": 6.479,
+      "compile_ms": 7.085,
       "spec_bytes": 1790,
       "browser": {
         "id": "math-046",
@@ -17414,12 +17414,12 @@
           "visual_state_signature": 30991206,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999998,
+          "observed_frame_interval_ms": 49.89999999999999,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 276.7,
+        "elapsed_ms": 287.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -17543,7 +17543,7 @@
           }
         }
       },
-      "compile_ms": 2.163,
+      "compile_ms": 2.074,
       "spec_bytes": 1306,
       "browser": {
         "id": "math-047",
@@ -17588,12 +17588,12 @@
           "visual_state_signature": 30989681,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 281.4,
+        "elapsed_ms": 278.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -17717,7 +17717,7 @@
           }
         }
       },
-      "compile_ms": 2.298,
+      "compile_ms": 2.04,
       "spec_bytes": 1306,
       "browser": {
         "id": "math-048",
@@ -17762,12 +17762,12 @@
           "visual_state_signature": 30989682,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 270.2,
+        "elapsed_ms": 284,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -17891,7 +17891,7 @@
           }
         }
       },
-      "compile_ms": 2.565,
+      "compile_ms": 2.43,
       "spec_bytes": 1382,
       "browser": {
         "id": "math-049",
@@ -17936,12 +17936,12 @@
           "visual_state_signature": 30989802,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 266,
+        "elapsed_ms": 286.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -18065,7 +18065,7 @@
           }
         }
       },
-      "compile_ms": 3.287,
+      "compile_ms": 2.922,
       "spec_bytes": 1547,
       "browser": {
         "id": "math-050",
@@ -18110,12 +18110,12 @@
           "visual_state_signature": 30990216,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.999999999999986,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 274.5,
+        "elapsed_ms": 279.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -18239,7 +18239,7 @@
           }
         }
       },
-      "compile_ms": 2.228,
+      "compile_ms": 2.049,
       "spec_bytes": 1287,
       "browser": {
         "id": "math-051",
@@ -18284,12 +18284,12 @@
           "visual_state_signature": 30989756,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.5,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 267.9,
+        "elapsed_ms": 284.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -18413,7 +18413,7 @@
           }
         }
       },
-      "compile_ms": 2.91,
+      "compile_ms": 2.449,
       "spec_bytes": 1440,
       "browser": {
         "id": "math-052",
@@ -18458,12 +18458,12 @@
           "visual_state_signature": 30989906,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 286.9,
+        "elapsed_ms": 293.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -18587,7 +18587,7 @@
           }
         }
       },
-      "compile_ms": 2.927,
+      "compile_ms": 2.538,
       "spec_bytes": 1440,
       "browser": {
         "id": "math-053",
@@ -18632,12 +18632,12 @@
           "visual_state_signature": 30989826,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 50.000000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 272.9,
+        "elapsed_ms": 269.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -18761,7 +18761,7 @@
           }
         }
       },
-      "compile_ms": 3.853,
+      "compile_ms": 3.974,
       "spec_bytes": 1727,
       "browser": {
         "id": "math-054",
@@ -18806,12 +18806,12 @@
           "visual_state_signature": 30990866,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.89999999999999,
+          "observed_frame_interval_ms": 50.099999999999994,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 281,
+        "elapsed_ms": 280.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -18935,7 +18935,7 @@
           }
         }
       },
-      "compile_ms": 1.891,
+      "compile_ms": 1.621,
       "spec_bytes": 1174,
       "browser": {
         "id": "math-055",
@@ -18980,12 +18980,12 @@
           "visual_state_signature": 30989976,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50.099999999999994,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 283.3,
+        "elapsed_ms": 270.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -19109,7 +19109,7 @@
           }
         }
       },
-      "compile_ms": 1.684,
+      "compile_ms": 1.818,
       "spec_bytes": 1278,
       "browser": {
         "id": "math-056",
@@ -19157,9 +19157,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 277.9,
+        "elapsed_ms": 285.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -19296,7 +19296,7 @@
           }
         }
       },
-      "compile_ms": 1.455,
+      "compile_ms": 1.603,
       "spec_bytes": 1208,
       "browser": {
         "id": "math-057",
@@ -19304,7 +19304,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 563,
+          "nonzero_pixel_samples": 576,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4602,
@@ -19344,9 +19344,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 275.2,
+        "elapsed_ms": 276.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -19483,7 +19483,7 @@
           }
         }
       },
-      "compile_ms": 1.501,
+      "compile_ms": 1.722,
       "spec_bytes": 1205,
       "browser": {
         "id": "math-058",
@@ -19528,12 +19528,12 @@
           "visual_state_signature": 30989557,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 50.000000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 287.9,
+        "elapsed_ms": 286.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -19670,7 +19670,7 @@
           }
         }
       },
-      "compile_ms": 1.59,
+      "compile_ms": 1.626,
       "spec_bytes": 1205,
       "browser": {
         "id": "math-059",
@@ -19715,12 +19715,12 @@
           "visual_state_signature": 30989562,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999999,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 278.7,
+        "elapsed_ms": 270.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -19844,7 +19844,7 @@
           }
         }
       },
-      "compile_ms": 2.138,
+      "compile_ms": 2.118,
       "spec_bytes": 1355,
       "browser": {
         "id": "math-060",
@@ -19889,12 +19889,12 @@
           "visual_state_signature": 30990424,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50.000000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 280.1,
+        "elapsed_ms": 283,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -20031,7 +20031,7 @@
           }
         }
       },
-      "compile_ms": 2.442,
+      "compile_ms": 2.462,
       "spec_bytes": 1436,
       "browser": {
         "id": "math-061",
@@ -20039,7 +20039,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 565,
+          "nonzero_pixel_samples": 499,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4626,
@@ -20076,12 +20076,12 @@
           "visual_state_signature": 30989971,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 272.7,
+        "elapsed_ms": 287.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -20218,7 +20218,7 @@
           }
         }
       },
-      "compile_ms": 1.032,
+      "compile_ms": 1.016,
       "spec_bytes": 1048,
       "browser": {
         "id": "math-062",
@@ -20266,9 +20266,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 274.8,
+        "elapsed_ms": 278.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -20405,7 +20405,7 @@
           }
         }
       },
-      "compile_ms": 1.535,
+      "compile_ms": 1.581,
       "spec_bytes": 1208,
       "browser": {
         "id": "math-063",
@@ -20413,7 +20413,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 369,
+          "nonzero_pixel_samples": 391,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4144,
@@ -20453,9 +20453,9 @@
           "observed_frame_interval_ms": 33.39999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 272.6,
+        "elapsed_ms": 289.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -20592,7 +20592,7 @@
           }
         }
       },
-      "compile_ms": 2.693,
+      "compile_ms": 2.744,
       "spec_bytes": 1505,
       "browser": {
         "id": "math-064",
@@ -20637,12 +20637,12 @@
           "visual_state_signature": 30990399,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 290.4,
+        "elapsed_ms": 287.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -20779,7 +20779,7 @@
           }
         }
       },
-      "compile_ms": 1.764,
+      "compile_ms": 1.793,
       "spec_bytes": 1238,
       "browser": {
         "id": "math-065",
@@ -20787,7 +20787,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 469,
+          "nonzero_pixel_samples": 566,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4256,
@@ -20824,12 +20824,12 @@
           "visual_state_signature": 30989104,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.099999999999994,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 277.4,
+        "elapsed_ms": 275.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -20962,7 +20962,7 @@
           }
         }
       },
-      "compile_ms": 102.712,
+      "compile_ms": 101.065,
       "spec_bytes": 1263,
       "browser": {
         "id": "math-066",
@@ -21003,12 +21003,12 @@
           "visual_state_signature": 31010571,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.49999999999997,
+          "observed_frame_interval_ms": 33.400000000000034,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 403.2,
+        "elapsed_ms": 368.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -21143,7 +21143,7 @@
           }
         }
       },
-      "compile_ms": 134.756,
+      "compile_ms": 135.34,
       "spec_bytes": 1551,
       "browser": {
         "id": "math-067",
@@ -21184,12 +21184,12 @@
           "visual_state_signature": 31003173,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.89999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 381.8,
+        "elapsed_ms": 375.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -21321,7 +21321,7 @@
           }
         }
       },
-      "compile_ms": 89.516,
+      "compile_ms": 90.646,
       "spec_bytes": 1181,
       "browser": {
         "id": "math-068",
@@ -21329,7 +21329,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 457,
+          "nonzero_pixel_samples": 438,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 18464,
@@ -21365,9 +21365,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 512.9,
+        "elapsed_ms": 399.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -21497,7 +21497,7 @@
           }
         }
       },
-      "compile_ms": 114.515,
+      "compile_ms": 116.143,
       "spec_bytes": 1373,
       "browser": {
         "id": "math-069",
@@ -21538,12 +21538,12 @@
           "visual_state_signature": 31039233,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.99999999999997,
+          "observed_frame_interval_ms": 49.900000000000034,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 421.6,
+        "elapsed_ms": 429.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -21676,7 +21676,7 @@
           }
         }
       },
-      "compile_ms": 78.625,
+      "compile_ms": 77.127,
       "spec_bytes": 1102,
       "browser": {
         "id": "math-070",
@@ -21717,12 +21717,12 @@
           "visual_state_signature": 31023152,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000034,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 395.7,
+        "elapsed_ms": 390.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -21856,7 +21856,7 @@
           }
         }
       },
-      "compile_ms": 99.709,
+      "compile_ms": 101.79,
       "spec_bytes": 1294,
       "browser": {
         "id": "math-071",
@@ -21897,12 +21897,12 @@
           "visual_state_signature": 31020416,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 387.8,
+        "elapsed_ms": 382.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -22033,7 +22033,7 @@
           }
         }
       },
-      "compile_ms": 77.945,
+      "compile_ms": 78.547,
       "spec_bytes": 1102,
       "browser": {
         "id": "math-072",
@@ -22041,7 +22041,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 489,
+          "nonzero_pixel_samples": 309,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 21600,
@@ -22074,12 +22074,12 @@
           "visual_state_signature": 31044367,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.89999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 412.6,
+        "elapsed_ms": 414.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -22212,7 +22212,7 @@
           }
         }
       },
-      "compile_ms": 55.23,
+      "compile_ms": 54.653,
       "spec_bytes": 946,
       "browser": {
         "id": "math-073",
@@ -22253,12 +22253,12 @@
           "visual_state_signature": 31028737,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.30000000000001,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 391.1,
+        "elapsed_ms": 386.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -22392,7 +22392,7 @@
           }
         }
       },
-      "compile_ms": 100.181,
+      "compile_ms": 102.049,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-074",
@@ -22400,7 +22400,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 566,
+          "nonzero_pixel_samples": 576,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 19584,
@@ -22433,12 +22433,12 @@
           "visual_state_signature": 31036970,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999998,
+          "observed_frame_interval_ms": 33.400000000000034,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 410.4,
+        "elapsed_ms": 401.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -22572,7 +22572,7 @@
           }
         }
       },
-      "compile_ms": 100.716,
+      "compile_ms": 101.984,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-075",
@@ -22580,7 +22580,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 265,
+          "nonzero_pixel_samples": 125,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 18128,
@@ -22613,12 +22613,12 @@
           "visual_state_signature": 31032469,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999998,
+          "observed_frame_interval_ms": 49.99999999999997,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 403.4,
+        "elapsed_ms": 419.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -22749,7 +22749,7 @@
           }
         }
       },
-      "compile_ms": 76.781,
+      "compile_ms": 76.907,
       "spec_bytes": 1103,
       "browser": {
         "id": "math-076",
@@ -22790,12 +22790,12 @@
           "visual_state_signature": 31010352,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.89999999999998,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 389,
+        "elapsed_ms": 374.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -22919,7 +22919,7 @@
           }
         }
       },
-      "compile_ms": 1.256,
+      "compile_ms": 1.408,
       "spec_bytes": 1104,
       "browser": {
         "id": "math-077",
@@ -22927,7 +22927,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 554,
+          "nonzero_pixel_samples": 531,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -22967,9 +22967,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 277.1,
+        "elapsed_ms": 280.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -23102,7 +23102,7 @@
           }
         }
       },
-      "compile_ms": 200.135,
+      "compile_ms": 206.638,
       "spec_bytes": 1979,
       "browser": {
         "id": "math-078",
@@ -23143,12 +23143,12 @@
           "visual_state_signature": 31011061,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 33.599999999999994,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 384.6,
+        "elapsed_ms": 395.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -23283,7 +23283,7 @@
           }
         }
       },
-      "compile_ms": 97.538,
+      "compile_ms": 100.206,
       "spec_bytes": 1263,
       "browser": {
         "id": "math-079",
@@ -23324,12 +23324,12 @@
           "visual_state_signature": 31001700,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 50.099999999999994,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 387.7,
+        "elapsed_ms": 387,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -23464,7 +23464,7 @@
           }
         }
       },
-      "compile_ms": 89.282,
+      "compile_ms": 91.012,
       "spec_bytes": 1184,
       "browser": {
         "id": "math-080",
@@ -23505,12 +23505,12 @@
           "visual_state_signature": 30991529,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 378.3,
+        "elapsed_ms": 415.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -23646,7 +23646,7 @@
           }
         }
       },
-      "compile_ms": 130.718,
+      "compile_ms": 131.974,
       "spec_bytes": 1478,
       "browser": {
         "id": "math-081",
@@ -23654,7 +23654,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 299,
+          "nonzero_pixel_samples": 139,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 10728,
@@ -23687,12 +23687,12 @@
           "visual_state_signature": 31007249,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 365.1,
+        "elapsed_ms": 379.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -23829,7 +23829,7 @@
           }
         }
       },
-      "compile_ms": 167.439,
+      "compile_ms": 168.864,
       "spec_bytes": 1742,
       "browser": {
         "id": "math-082",
@@ -23837,7 +23837,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 301,
+          "nonzero_pixel_samples": 139,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 10728,
@@ -23870,12 +23870,12 @@
           "visual_state_signature": 31007420,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000034,
+          "observed_frame_interval_ms": 49.099999999999994,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 386.3,
+        "elapsed_ms": 363.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -24012,7 +24012,7 @@
           }
         }
       },
-      "compile_ms": 130.41,
+      "compile_ms": 131.185,
       "spec_bytes": 1488,
       "browser": {
         "id": "math-083",
@@ -24020,7 +24020,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 127,
+          "nonzero_pixel_samples": 132,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 7432,
@@ -24053,12 +24053,12 @@
           "visual_state_signature": 30997720,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999998,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 359.8,
+        "elapsed_ms": 379.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -24195,7 +24195,7 @@
           }
         }
       },
-      "compile_ms": 142.155,
+      "compile_ms": 142.726,
       "spec_bytes": 1553,
       "browser": {
         "id": "math-084",
@@ -24236,12 +24236,12 @@
           "visual_state_signature": 31001661,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000034,
+          "observed_frame_interval_ms": 49.900000000000034,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 372.8,
+        "elapsed_ms": 390.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -24368,7 +24368,7 @@
           }
         }
       },
-      "compile_ms": 4.277,
+      "compile_ms": 4.427,
       "spec_bytes": 1955,
       "browser": {
         "id": "math-085",
@@ -24413,12 +24413,12 @@
           "visual_state_signature": 30991911,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 280.3,
+        "elapsed_ms": 278.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -24542,7 +24542,7 @@
           }
         }
       },
-      "compile_ms": 1.822,
+      "compile_ms": 1.862,
       "spec_bytes": 1259,
       "browser": {
         "id": "math-086",
@@ -24550,7 +24550,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 192,
+          "nonzero_pixel_samples": 336,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4632,
@@ -24587,12 +24587,12 @@
           "visual_state_signature": 30913352,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.10000000000001,
+          "observed_frame_interval_ms": 49.89999999999999,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 283.6,
+        "elapsed_ms": 283.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -24722,7 +24722,7 @@
           }
         }
       },
-      "compile_ms": 144.73,
+      "compile_ms": 145.901,
       "spec_bytes": 1565,
       "browser": {
         "id": "math-087",
@@ -24730,7 +24730,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 478,
+          "nonzero_pixel_samples": 549,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 7904,
@@ -24763,12 +24763,12 @@
           "visual_state_signature": 31001874,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 372.5,
+        "elapsed_ms": 397.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -24898,7 +24898,7 @@
           }
         }
       },
-      "compile_ms": 76.412,
+      "compile_ms": 76.856,
       "spec_bytes": 1100,
       "browser": {
         "id": "math-088",
@@ -24939,12 +24939,12 @@
           "visual_state_signature": 31021528,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "observed_frame_interval_ms": 50.073999999999984,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 389.6,
+        "elapsed_ms": 378.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -25075,7 +25075,7 @@
           }
         }
       },
-      "compile_ms": 188.506,
+      "compile_ms": 190.683,
       "spec_bytes": 1874,
       "browser": {
         "id": "math-089",
@@ -25083,7 +25083,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 405,
+          "nonzero_pixel_samples": 418,
           "draw_calls": 2,
           "gpu_calls": 10,
           "gpu_triangles": 106,
@@ -25119,9 +25119,9 @@
           "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 336.9,
+        "elapsed_ms": 337.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -25254,7 +25254,7 @@
           }
         }
       },
-      "compile_ms": 258.617,
+      "compile_ms": 260.955,
       "spec_bytes": 2389,
       "browser": {
         "id": "math-090",
@@ -25295,12 +25295,12 @@
           "visual_state_signature": 30985084,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.89999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 367.8,
+        "elapsed_ms": 362.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -25435,7 +25435,7 @@
           }
         }
       },
-      "compile_ms": 6.076,
+      "compile_ms": 5.93,
       "spec_bytes": 1747,
       "browser": {
         "id": "math-091",
@@ -25476,12 +25476,12 @@
           "visual_state_signature": 31059023,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000034,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 475.8,
+        "elapsed_ms": 467.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -25616,7 +25616,7 @@
           }
         }
       },
-      "compile_ms": 3.265,
+      "compile_ms": 3.206,
       "spec_bytes": 1360,
       "browser": {
         "id": "math-092",
@@ -25657,12 +25657,12 @@
           "visual_state_signature": 31035780,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.89999999999998,
+          "observed_frame_interval_ms": 49.10000000000002,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 437.7,
+        "elapsed_ms": 491.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -25797,7 +25797,7 @@
           }
         }
       },
-      "compile_ms": 3.208,
+      "compile_ms": 3.376,
       "spec_bytes": 1360,
       "browser": {
         "id": "math-093",
@@ -25838,12 +25838,12 @@
           "visual_state_signature": 31038251,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 50.39999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 450.9,
+        "elapsed_ms": 440.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -25975,7 +25975,7 @@
           }
         }
       },
-      "compile_ms": 6.031,
+      "compile_ms": 6.156,
       "spec_bytes": 1747,
       "browser": {
         "id": "math-094",
@@ -26016,12 +26016,12 @@
           "visual_state_signature": 31037224,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 33.400000000000034,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 443.8,
+        "elapsed_ms": 434.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -26145,7 +26145,7 @@
           }
         }
       },
-      "compile_ms": 1.288,
+      "compile_ms": 1.304,
       "spec_bytes": 1070,
       "browser": {
         "id": "math-095",
@@ -26190,12 +26190,12 @@
           "visual_state_signature": 30989571,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 33.39999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 285.1,
+        "elapsed_ms": 281.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -26319,7 +26319,7 @@
           }
         }
       },
-      "compile_ms": 3.378,
+      "compile_ms": 3.396,
       "spec_bytes": 1695,
       "browser": {
         "id": "math-096",
@@ -26364,12 +26364,12 @@
           "visual_state_signature": 30990674,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 33.80000000000001,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 275,
+        "elapsed_ms": 291.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -26506,7 +26506,7 @@
           }
         }
       },
-      "compile_ms": 3.319,
+      "compile_ms": 3.277,
       "spec_bytes": 1629,
       "browser": {
         "id": "math-097",
@@ -26514,7 +26514,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 576,
+          "nonzero_pixel_samples": 558,
           "draw_calls": 2,
           "gpu_calls": 17,
           "gpu_triangles": 4624,
@@ -26551,12 +26551,12 @@
           "visual_state_signature": 30990977,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50.000000000000014,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 293.1,
+        "elapsed_ms": 342.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -26693,7 +26693,7 @@
           }
         }
       },
-      "compile_ms": 1.519,
+      "compile_ms": 1.664,
       "spec_bytes": 1167,
       "browser": {
         "id": "math-098",
@@ -26738,12 +26738,12 @@
           "visual_state_signature": 30994467,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 50,
+          "observed_frame_interval_ms": 33.400000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 281.4,
+        "elapsed_ms": 282.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -26867,7 +26867,7 @@
           }
         }
       },
-      "compile_ms": 1.709,
+      "compile_ms": 1.822,
       "spec_bytes": 1247,
       "browser": {
         "id": "math-099",
@@ -26912,12 +26912,12 @@
           "visual_state_signature": 30994675,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999999,
+          "observed_frame_interval_ms": 50,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 277.4,
+        "elapsed_ms": 280.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -27041,7 +27041,7 @@
           }
         }
       },
-      "compile_ms": 4.933,
+      "compile_ms": 5.172,
       "spec_bytes": 2164,
       "browser": {
         "id": "math-100",
@@ -27086,12 +27086,12 @@
           "visual_state_signature": 30991995,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.79999999999998,
+          "observed_frame_interval_ms": 49.900000000000006,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 304.3,
+        "elapsed_ms": 291.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -27241,7 +27241,7 @@
           "fallback": "Complex Mapping. Visible layers: domain polar circle r=0.6; image polar circle r²=0.36; domain polar circle r=1.2; image polar circle r²=1.44; domain polar circle r=1.8; image polar circle r²=3.24; domain ray θ=0; image ray 2θ=0; domain ray θ=1; image ray 2θ=1; domain ray θ=2; image ray 2θ=2; domain ray θ=3; image ray 2θ=3. Adjustable controls: Point Angle, Point Radius."
         }
       },
-      "compile_ms": 2.891,
+      "compile_ms": 3.082,
       "spec_bytes": 22736,
       "browser": {
         "id": "heldout-001",
@@ -27264,9 +27264,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "point angle = 7.3; point radius = 7.3"
         },
-        "elapsed_ms": 105.6,
+        "elapsed_ms": 158.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -27390,7 +27390,7 @@
           "fallback": "Polar Plot. Visible layers: r = cos(2θ); four radial maxima r=±1; zero crossings r=0 at θ=π/4+kπ/2; traversal point. Adjustable controls: Theta, Playback."
         }
       },
-      "compile_ms": 1.383,
+      "compile_ms": 1.428,
       "spec_bytes": 8220,
       "browser": {
         "id": "heldout-002",
@@ -27408,18 +27408,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.004174999999999997
+            "__animation_progress": 0.004175000000000001
           },
           "geometry_signature": 388611,
           "visual_state_signature": 388611,
           "animation_state": "playing",
-          "animation_progress": 0.004174999999999997,
-          "observed_frame_interval_ms": 33.39999999999998,
-          "state_description": "theta = 7.3; playback = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.004174999999999997 · ▶ 0%"
+          "animation_progress": 0.004175000000000001,
+          "observed_frame_interval_ms": 33.400000000000006,
+          "state_description": "theta = 7.3; playback = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.004175000000000001 · ▶ 0%"
         },
-        "elapsed_ms": 327.3,
+        "elapsed_ms": 272.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -27600,7 +27600,7 @@
           "fallback": "Fourier Series. Visible layers: square-wave target; harmonic n=1; harmonic n=3; harmonic n=5; odd-harmonic partial sum; Gibbs overshoot near jumps. Adjustable controls: Terms."
         }
       },
-      "compile_ms": 1.886,
+      "compile_ms": 1.905,
       "spec_bytes": 13117,
       "browser": {
         "id": "heldout-003",
@@ -27622,9 +27622,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "terms = 11"
         },
-        "elapsed_ms": 98.7,
+        "elapsed_ms": 96.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -27738,7 +27738,7 @@
           "fallback": "Logistic Map. Visible layers: iterate xₙ versus n; identity y=x; logistic map y=r x(1−x); cobweb iteration; bifurcation attractor samples; Iterate history; Cobweb diagram; Bifurcation behavior. Adjustable controls: Growth Rate, Initial Value."
         }
       },
-      "compile_ms": 4.205,
+      "compile_ms": 4.434,
       "spec_bytes": 31331,
       "browser": {
         "id": "heldout-004",
@@ -27746,7 +27746,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 943,
+          "nontransparent_samples": 1045,
           "controls": 2,
           "family": "logistic_map",
           "panel_count": 3,
@@ -27760,16 +27760,16 @@
             "growth_rate": 2.92,
             "initial_value": 0.73
           },
-          "geometry_signature": 3434229722,
-          "visual_state_signature": 3434229722,
+          "geometry_signature": 3392276347,
+          "visual_state_signature": 3392276347,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "growth rate = 2.92; initial value = 0.73"
         },
-        "elapsed_ms": 125.9,
+        "elapsed_ms": 133.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -27918,7 +27918,7 @@
           "fallback": "Lagrange Multiplier. Visible layers: tangent contour through constrained minimum; contour r=1.5; contour r=2.5; constraint x+y=c; ∇f at constrained minimum; λ∇g parallel to ∇f; constrained minimum (c/2,c/2). Adjustable controls: Constraint Offset."
         }
       },
-      "compile_ms": 1.625,
+      "compile_ms": 1.743,
       "spec_bytes": 11235,
       "browser": {
         "id": "heldout-005",
@@ -27940,9 +27940,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "constraint offset = 7.3"
         },
-        "elapsed_ms": 65.1,
+        "elapsed_ms": 61.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -28049,7 +28049,7 @@
           "fallback": "Parametric Surface. Visible layers: Möbius strip. Adjustable controls: Path Position, Playback."
         }
       },
-      "compile_ms": 0.564,
+      "compile_ms": 0.566,
       "spec_bytes": 2068,
       "browser": {
         "id": "heldout-006",
@@ -28057,7 +28057,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 50,
+          "nonzero_pixel_samples": 44,
           "draw_calls": 3,
           "gpu_calls": 4,
           "gpu_triangles": 2242,
@@ -28088,9 +28088,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "path position = 7.3; playback = 3"
         },
-        "elapsed_ms": 306.6,
+        "elapsed_ms": 309.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -28201,7 +28201,7 @@
           "fallback": "A sampled vector field with a movable probe whose arrow evaluates the same typed field expression."
         }
       },
-      "compile_ms": 0.554,
+      "compile_ms": 0.623,
       "spec_bytes": 1714,
       "browser": {
         "id": "heldout-007",
@@ -28224,9 +28224,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "At probe (1.40, 1.40), F=(1.400, -1.400), divergence ∇·F=0.000, and scalar curl ∂Fᵧ/∂x−∂Fₓ/∂y=0.000."
         },
-        "elapsed_ms": 66.3,
+        "elapsed_ms": 76.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -28357,7 +28357,7 @@
           "fallback": "Convolution. Visible layers: box pulse A; sliding box pulse B; current overlap area; convolution result versus shift; current overlap-area value. Adjustable controls: Shift."
         }
       },
-      "compile_ms": 0.584,
+      "compile_ms": 0.631,
       "spec_bytes": 2912,
       "browser": {
         "id": "heldout-008",
@@ -28379,9 +28379,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "shift = 1.8"
         },
-        "elapsed_ms": 45.7,
+        "elapsed_ms": 44.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -28507,7 +28507,7 @@
           "fallback": "Kepler Orbit. Visible layers: trajectory; satellite at true anomaly; radius vector; velocity vector tangent to orbit; acceleration vector toward focus; equal-area sweep sector. Adjustable controls: Eccentricity, True Anomaly, Playback."
         }
       },
-      "compile_ms": 0.754,
+      "compile_ms": 0.786,
       "spec_bytes": 4943,
       "browser": {
         "id": "heldout-009",
@@ -28515,7 +28515,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 1019,
+          "nontransparent_samples": 885,
           "controls": 6,
           "family": "kepler_orbit",
           "panel_count": 1,
@@ -28530,18 +28530,18 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.0062625000000000024
+            "__animation_progress": 0.00625
           },
-          "geometry_signature": 168585,
-          "visual_state_signature": 168585,
+          "geometry_signature": 166448,
+          "visual_state_signature": 166448,
           "animation_state": "playing",
-          "animation_progress": 0.0062625000000000024,
-          "observed_frame_interval_ms": 50.10000000000002,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "At true anomaly 7.30, eccentricity 0.73, playback 0: velocity is tangent, acceleration points to the focus, and the gold sweep uses a constant areal increment. · ▶ 1%"
         },
-        "elapsed_ms": 288.7,
+        "elapsed_ms": 288.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -28701,7 +28701,7 @@
           "fallback": "Coupled Oscillators. Visible layers: in-phase normal-mode displacement; out-of-phase normal-mode displacement; three springs and two masses; two moving masses. Adjustable controls: Mode, Playback."
         }
       },
-      "compile_ms": 0.984,
+      "compile_ms": 1.024,
       "spec_bytes": 6800,
       "browser": {
         "id": "heldout-010",
@@ -28709,7 +28709,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 1064,
+          "nontransparent_samples": 1090,
           "controls": 5,
           "family": "coupled_oscillators",
           "panel_count": 1,
@@ -28723,18 +28723,18 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.006237499999999997
+            "__animation_progress": 0.006250000000000004
           },
-          "geometry_signature": 113923,
-          "visual_state_signature": 113923,
+          "geometry_signature": 113030,
+          "visual_state_signature": 113030,
           "animation_state": "playing",
-          "animation_progress": 0.006237499999999997,
-          "observed_frame_interval_ms": 49.89999999999998,
+          "animation_progress": 0.006250000000000004,
+          "observed_frame_interval_ms": 50.00000000000003,
           "state_description": "Out-of-phase mass motion is selected at playback phase 0.0; the two reference traces remain separated by π to compare both normal modes. · ▶ 1%"
         },
-        "elapsed_ms": 302.4,
+        "elapsed_ms": 297.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -28966,7 +28966,7 @@
           "fallback": "Standing Wave. Visible layers: standing wave fixed at x=−4 and x=4; nodes including fixed endpoints; antinodes. Adjustable controls: Harmonic."
         }
       },
-      "compile_ms": 0.55,
+      "compile_ms": 0.585,
       "spec_bytes": 3548,
       "browser": {
         "id": "heldout-011",
@@ -28988,9 +28988,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Harmonic n=7: 8 nodes include both fixed endpoints, with 7 antinodes between them."
         },
-        "elapsed_ms": 107.7,
+        "elapsed_ms": 54.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -29142,7 +29142,7 @@
           "fallback": "Doppler. Visible layers: wavefront; moving source. Adjustable controls: Source Speed, Playback."
         }
       },
-      "compile_ms": 1.31,
+      "compile_ms": 1.344,
       "spec_bytes": 10733,
       "browser": {
         "id": "heldout-012",
@@ -29150,7 +29150,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 632,
+          "nontransparent_samples": 722,
           "controls": 2,
           "family": "doppler",
           "panel_count": 1,
@@ -29162,16 +29162,16 @@
             "source_speed": 7.3,
             "playback": 3
           },
-          "geometry_signature": 166099474,
-          "visual_state_signature": 166099474,
+          "geometry_signature": 163596155,
+          "visual_state_signature": 163596155,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "Playback 3: the moving source compresses wavefront spacing ahead and stretches it behind; source speed=7.30 display units."
         },
-        "elapsed_ms": 120.3,
+        "elapsed_ms": 74.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -29319,7 +29319,7 @@
           "fallback": "Double Slit. Visible layers: intensity; opaque barrier upper; opaque barrier middle; opaque barrier lower; upper-slit path; lower-slit path; screen; path difference Δℓ. Adjustable controls: Slit Separation, Wavelength."
         }
       },
-      "compile_ms": 0.808,
+      "compile_ms": 0.832,
       "spec_bytes": 4291,
       "browser": {
         "id": "heldout-013",
@@ -29342,9 +29342,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Slit separation 1.90 and wavelength 1.10 give exact geometric path difference Δℓ=0.453 at the marked screen point; the intensity uses cos²(πΔℓ/λ)."
         },
-        "elapsed_ms": 63.2,
+        "elapsed_ms": 69.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -29501,7 +29501,7 @@
           "fallback": "Lorentz Force. Visible layers: charged-particle helix; velocity v; Lorentz force q(v×B); uniform field B. Adjustable controls: Charge, Field, Speed, Playback."
         }
       },
-      "compile_ms": 0.599,
+      "compile_ms": 0.627,
       "spec_bytes": 3722,
       "browser": {
         "id": "heldout-014",
@@ -29509,7 +29509,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "three",
-          "nonzero_pixel_samples": 116,
+          "nonzero_pixel_samples": 32,
           "draw_calls": 4,
           "gpu_calls": 8,
           "gpu_triangles": 45,
@@ -29529,18 +29529,18 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.006254499999999993
+            "__animation_progress": 0.0125
           },
-          "geometry_signature": 21044,
-          "visual_state_signature": 21044,
+          "geometry_signature": 39061,
+          "visual_state_signature": 39061,
           "animation_state": "playing",
-          "animation_progress": 0.006254499999999993,
-          "observed_frame_interval_ms": 50.035999999999945,
-          "state_description": "charge = 7.3; field = 7.3; speed = 7.3; playback = 0; play = 0; pause = 1; restart = 1;   animation progress = 0.006254499999999993 · ▶ 1%"
+          "animation_progress": 0.0125,
+          "observed_frame_interval_ms": 50,
+          "state_description": "charge = 7.3; field = 7.3; speed = 7.3; playback = 0; play = 0; pause = 1; restart = 1;   animation progress = 0.0125 · ▶ 1%"
         },
-        "elapsed_ms": 698.2,
+        "elapsed_ms": 703.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -29715,7 +29715,7 @@
           "fallback": "Blackbody. Visible layers: T=1.2; T=1.7; T=2.2; Wien peak markers λmax∝1/T. Adjustable controls: Temperature."
         }
       },
-      "compile_ms": 1.431,
+      "compile_ms": 1.448,
       "spec_bytes": 9427,
       "browser": {
         "id": "heldout-015",
@@ -29737,9 +29737,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "temperature = 2.8"
         },
-        "elapsed_ms": 116,
+        "elapsed_ms": 70.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -29870,7 +29870,7 @@
           "fallback": "Entropy Cycle. Visible layers: P–V hot isothermal expansion; P–V adiabatic expansion; P–V cold isothermal compression; P–V adiabatic compression; T–S hot isothermal expansion; T–S adiabatic expansion; T–S cold isothermal compression; T–S adiabatic compression; P–V synchronized state; T–S synchronized state; Pressure–volume cycle; Temperature–entropy cycle. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.483,
+      "compile_ms": 0.474,
       "spec_bytes": 2642,
       "browser": {
         "id": "heldout-016",
@@ -29878,7 +29878,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 1169,
+          "nontransparent_samples": 985,
           "controls": 1,
           "family": "entropy_cycle",
           "panel_count": 2,
@@ -29890,16 +29890,16 @@
           "control_values": {
             "step": 3
           },
-          "geometry_signature": 588551,
-          "visual_state_signature": 588551,
+          "geometry_signature": 582795,
+          "visual_state_signature": 582795,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "Synchronized process 4: the same reversible state is highlighted on the P–V and T–S cycles."
         },
-        "elapsed_ms": 94.5,
+        "elapsed_ms": 104.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -30036,7 +30036,7 @@
           "fallback": "Benzene. Visible layers: C1; C2; C3; C4; C5; C6; alternating / delocalized. Adjustable controls: Bond model."
         }
       },
-      "compile_ms": 0.418,
+      "compile_ms": 0.389,
       "spec_bytes": 1643,
       "browser": {
         "id": "heldout-017",
@@ -30058,9 +30058,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "bond model = delocalized"
         },
-        "elapsed_ms": 43.1,
+        "elapsed_ms": 44.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -30248,7 +30248,7 @@
           "fallback": "Molecular Geometry. Visible layers: central atom; bond; lone pair 1; lone pair 2. Adjustable controls: Molecule."
         }
       },
-      "compile_ms": 0.33,
+      "compile_ms": 0.329,
       "spec_bytes": 1321,
       "browser": {
         "id": "heldout-018",
@@ -30278,9 +30278,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "BrF₅: square pyramidal."
         },
-        "elapsed_ms": 139.9,
+        "elapsed_ms": 141.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -30417,7 +30417,7 @@
           "fallback": "Electrochemical Cell. Visible layers: Zn anode: Zn → Zn²⁺ + 2e⁻; Cu cathode: Cu²⁺ + 2e⁻ → Cu; salt bridge ion migration; E = 1.100 V; electron flow; NO₃⁻ anions migrate to anode; K⁺ cations migrate to cathode; voltage readout. Adjustable controls: Zinc Concentration, Copper Concentration."
         }
       },
-      "compile_ms": 0.341,
+      "compile_ms": 0.366,
       "spec_bytes": 1872,
       "browser": {
         "id": "heldout-019",
@@ -30440,9 +30440,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "zinc concentration = 2.2; copper concentration = 2.2"
         },
-        "elapsed_ms": 69.2,
+        "elapsed_ms": 66.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -30565,7 +30565,7 @@
           "fallback": "Kinetics. Visible layers: zero-order [A]; first-order [A]; second-order [A]; zero-order linearized [A]; first-order linearized ln[A]; second-order linearized 1/[A]; selected reaction order. Adjustable controls: Order, Rate Constant."
         }
       },
-      "compile_ms": 2.623,
+      "compile_ms": 2.77,
       "spec_bytes": 14578,
       "browser": {
         "id": "heldout-020",
@@ -30588,9 +30588,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "All three integrated rate laws and their linearized forms are shown; selected order 2, k = 0.75."
         },
-        "elapsed_ms": 169.6,
+        "elapsed_ms": 165.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -30729,7 +30729,7 @@
           "fallback": "Phase Diagram. Visible layers: solid–gas boundary; solid–liquid boundary; liquid–gas boundary; selected state (T,P). Adjustable controls: Temperature, Pressure."
         }
       },
-      "compile_ms": 0.329,
+      "compile_ms": 0.331,
       "spec_bytes": 1225,
       "browser": {
         "id": "heldout-021",
@@ -30752,9 +30752,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "temperature = 0.73; pressure = 0.73"
         },
-        "elapsed_ms": 91.4,
+        "elapsed_ms": 91.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -30913,7 +30913,7 @@
           "fallback": "Equilibrium Shift. Visible layers: N₂ + 3H₂ reactants; reversible ⇌; 2NH₃ product; fewer gas molecules; equilibrium composition responds to P and T; N₂ molecule population; H₂ molecule population; NH₃ molecule population; forward reaction; reverse reaction; higher pressure favors fewer gas molecules; temperature shifts equilibrium constant. Adjustable controls: Pressure, Temperature."
         }
       },
-      "compile_ms": 0.419,
+      "compile_ms": 0.44,
       "spec_bytes": 2535,
       "browser": {
         "id": "heldout-022",
@@ -30936,9 +30936,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "pressure = 3.8; temperature = 650"
         },
-        "elapsed_ms": 67.4,
+        "elapsed_ms": 95.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -31058,7 +31058,7 @@
           "fallback": "Enzyme Kinetics. Visible layers: Michaelis–Menten without inhibitor; competitive inhibition apparent Kₘ; selected substrate rates. Adjustable controls: Substrate, Inhibitor."
         }
       },
-      "compile_ms": 1.047,
+      "compile_ms": 1.072,
       "spec_bytes": 5752,
       "browser": {
         "id": "heldout-023",
@@ -31081,9 +31081,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "substrate = 7.3; inhibitor = 7.3"
         },
-        "elapsed_ms": 134.9,
+        "elapsed_ms": 103.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -31239,7 +31239,7 @@
           "fallback": "Dna Replication. Visible layers: helicase fork; RNA primer; leading 5′→3′ continuous; repeated RNA primers; Okazaki 5′→3′ fragments; ligase joins; primer starts; polymerase 5′→3′; fork exposes template; seal fragments. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.368,
+      "compile_ms": 0.38,
       "spec_bytes": 2183,
       "browser": {
         "id": "heldout-024",
@@ -31256,18 +31256,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006237500000000001
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 756229,
           "visual_state_signature": 756229,
           "animation_state": "playing",
-          "animation_progress": 0.006237500000000001,
-          "observed_frame_interval_ms": 49.900000000000006,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "Replication step 0: both new strands are synthesized 5′→3′; the lagging strand needs repeated primers and ligase-joined Okazaki fragments. · ▶ 1%"
         },
-        "elapsed_ms": 259.9,
+        "elapsed_ms": 267.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -31538,7 +31538,7 @@
           "fallback": "Nephron. Visible layers: glomerulus: filtration; proximal: H₂O, Na⁺, glucose; descending: H₂O; ascending: Na⁺; no water; distal: regulated Na⁺; collecting: regulated H₂O; filtrate; H₂O → blood; Na⁺ → blood; glucose → blood; H₂O reabsorbed; regulated H₂O; Na⁺ reabsorbed; regulated Na⁺. Adjustable controls: Nephron segment."
         }
       },
-      "compile_ms": 0.461,
+      "compile_ms": 0.479,
       "spec_bytes": 3180,
       "browser": {
         "id": "heldout-025",
@@ -31560,9 +31560,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Selected descending loop; arrows preserve filtrate order and labels distinguish water, sodium, and glucose reabsorption."
         },
-        "elapsed_ms": 51.6,
+        "elapsed_ms": 46.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -31667,7 +31667,7 @@
           "fallback": "Predator Prey. Visible layers: prey population versus time; predator population versus time; predator-prey phase portrait; Populations over time; Predator–prey phase portrait. Adjustable controls: Prey Growth, Predation, Playback."
         }
       },
-      "compile_ms": 2.41,
+      "compile_ms": 2.47,
       "spec_bytes": 16727,
       "browser": {
         "id": "heldout-026",
@@ -31675,7 +31675,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 824,
+          "nontransparent_samples": 1005,
           "controls": 6,
           "family": "predator_prey",
           "panel_count": 2,
@@ -31691,18 +31691,18 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.00625
+            "__animation_progress": 0.008299999999999997
           },
-          "geometry_signature": 106181,
-          "visual_state_signature": 106181,
+          "geometry_signature": 105214,
+          "visual_state_signature": 105214,
           "animation_state": "playing",
-          "animation_progress": 0.00625,
-          "observed_frame_interval_ms": 50,
-          "state_description": "prey growth = 7.3; predation = 7.3; playback = 0; play = 0; pause = 1; restart = 1;   animation progress = 0.00625 · ▶ 1%"
+          "animation_progress": 0.008299999999999997,
+          "observed_frame_interval_ms": 49.69999999999999,
+          "state_description": "prey growth = 7.3; predation = 7.3; playback = 0; play = 0; pause = 1; restart = 1;   animation progress = 0.008299999999999997 · ▶ 1%"
         },
-        "elapsed_ms": 310.6,
+        "elapsed_ms": 313.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -31945,7 +31945,7 @@
           "fallback": "Membrane Transport. Visible layers: high concentration; simple diffusion; facilitated channel; active pump + ATP; low concentration; down gradient; no protein / ATP; protein; no ATP; against gradient; ATP required. Adjustable controls: Transport mode."
         }
       },
-      "compile_ms": 0.26,
+      "compile_ms": 0.27,
       "spec_bytes": 1844,
       "browser": {
         "id": "heldout-027",
@@ -31967,9 +31967,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "facilitated: diffusion modes move down the concentration gradient; only active transport uses ATP to move against it."
         },
-        "elapsed_ms": 48.5,
+        "elapsed_ms": 48,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -32204,7 +32204,7 @@
           "fallback": "Merge Sort. Visible layers: [8,3,6,2,7,1]; recursive split; [8,3,6]; [8,3]; [8]; [3]; [6]; [2,7,1]; [2,7]; [2]; [7]; [1]; stable merge [3,8]; take smaller; left wins equal. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.703,
+      "compile_ms": 0.724,
       "spec_bytes": 5067,
       "browser": {
         "id": "heldout-028",
@@ -32230,9 +32230,9 @@
           "observed_frame_interval_ms": 50,
           "state_description": "step = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.00625 · ▶ 1%"
         },
-        "elapsed_ms": 233,
+        "elapsed_ms": 232.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -32475,7 +32475,7 @@
           "fallback": "Hash Table. Visible layers: key 17; h(k)=k mod 5; bucket 0; bucket 1; bucket 2; bucket 3; bucket 4; chain key 2; key 7; key 12; insert key 17; lookup / insert; 17 mod 5 = 2; head. Adjustable controls: Key, Operation, Step."
         }
       },
-      "compile_ms": 0.418,
+      "compile_ms": 0.425,
       "spec_bytes": 2483,
       "browser": {
         "id": "heldout-029",
@@ -32499,9 +32499,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "lookup key 72 at step 4; h(k)=k mod 5 selects bucket 2, then separate-chain links are traversed."
         },
-        "elapsed_ms": 90,
+        "elapsed_ms": 95.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -32703,7 +32703,7 @@
           "fallback": "Graph Traversal. Visible layers: A; B; C; D; E; edge; BFS frontier [A]; visited []. Adjustable controls: Traversal, Step."
         }
       },
-      "compile_ms": 0.328,
+      "compile_ms": 0.335,
       "spec_bytes": 1569,
       "browser": {
         "id": "heldout-030",
@@ -32726,9 +32726,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "DFS traverses the same five-node graph; the highlighted nodes and frontier status advance at step 3."
         },
-        "elapsed_ms": 67,
+        "elapsed_ms": 69,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -32943,7 +32943,7 @@
           "fallback": "Heap. Visible layers: minimum root 1; 3; 5; 8; 9; 7; empty insert slot; parent ≤ children; insertion position. Adjustable controls: Heap operation, Value, Step."
         }
       },
-      "compile_ms": 0.415,
+      "compile_ms": 0.438,
       "spec_bytes": 2265,
       "browser": {
         "id": "heldout-031",
@@ -32962,18 +32962,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006254250000000003
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 539890,
           "visual_state_signature": 539890,
           "animation_state": "playing",
-          "animation_progress": 0.006254250000000003,
-          "observed_frame_interval_ms": 50.03400000000002,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "Extract the minimum root, move the last value to the root, then sift down at step 0; the heap property is restored. · ▶ 1%"
         },
-        "elapsed_ms": 270.7,
+        "elapsed_ms": 278.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -33176,7 +33176,7 @@
           "fallback": "Recursion Stack. Visible layers: factorial(5); factorial(4); factorial(3); factorial(2); factorial(1); return 1; return 2; return 6; return 24; return 120; recursive descent: push frame; base case; return-value unwind: pop × caller n. Adjustable controls: Step."
         }
       },
-      "compile_ms": 0.464,
+      "compile_ms": 0.482,
       "spec_bytes": 2714,
       "browser": {
         "id": "heldout-032",
@@ -33198,9 +33198,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "step = 7"
         },
-        "elapsed_ms": 44.4,
+        "elapsed_ms": 53.5,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -33352,7 +33352,7 @@
           "fallback": "Virtual Memory. Visible layers: virtual address: page 2, offset 5; TLB; page table; physical frame 7, offset 5; backing storage; replace frame → retry; TLB miss; page-table lookup; resident hit; page fault; page-in replacement; preserve offset. Adjustable controls: Address, Step."
         }
       },
-      "compile_ms": 0.289,
+      "compile_ms": 0.317,
       "spec_bytes": 2260,
       "browser": {
         "id": "heldout-033",
@@ -33370,18 +33370,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006237500000000001
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 404404,
           "visual_state_signature": 404404,
           "animation_state": "playing",
-          "animation_progress": 0.006237500000000001,
-          "observed_frame_interval_ms": 49.900000000000006,
-          "state_description": "address = 186; step = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.006237500000000001 · ▶ 1%"
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
+          "state_description": "address = 186; step = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.00625 · ▶ 1%"
         },
-        "elapsed_ms": 250.4,
+        "elapsed_ms": 252.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -33567,7 +33567,7 @@
           "fallback": "Impulse Response. Visible layers: finite input x[n] = [1,2,1]; flipped and shifted h[n] = [1,−1,2]; convolution output y[n] = [1,1,1,3,2]. Adjustable controls: Shift, Step."
         }
       },
-      "compile_ms": 0.329,
+      "compile_ms": 0.328,
       "spec_bytes": 1122,
       "browser": {
         "id": "heldout-034",
@@ -33590,9 +33590,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "shift = 1.8; step = 3"
         },
-        "elapsed_ms": 64.4,
+        "elapsed_ms": 68.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -33701,7 +33701,7 @@
           "fallback": "Bode Plot. Visible layers: low-pass magnitude (dB); low-pass phase (degrees). Adjustable controls: Cutoff."
         }
       },
-      "compile_ms": 0.911,
+      "compile_ms": 0.96,
       "spec_bytes": 6235,
       "browser": {
         "id": "heldout-035",
@@ -33723,9 +33723,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "First-order low-pass magnitude and phase; at cutoff the response is −3.01 dB and −45°, cutoff 7.30."
         },
-        "elapsed_ms": 75.7,
+        "elapsed_ms": 44.3,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -33834,7 +33834,7 @@
           "fallback": "Nyquist. Visible layers: Nyquist locus, winding number N=0; critical point −1+0j. Adjustable controls: Gain."
         }
       },
-      "compile_ms": 0.606,
+      "compile_ms": 0.622,
       "spec_bytes": 4190,
       "browser": {
         "id": "heldout-036",
@@ -33856,9 +33856,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Gain 7.30: winding number about −1 is N=1; assuming no open-loop right-half-plane poles, the closed loop is unstable."
         },
-        "elapsed_ms": 42.4,
+        "elapsed_ms": 102.4,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -33972,7 +33972,7 @@
           "fallback": "Pid Response. Visible layers: P response; PI response; PID response; rise time marker; overshoot marker; steady-state error marker. Adjustable controls: Kp, Ki, Kd."
         }
       },
-      "compile_ms": 1.509,
+      "compile_ms": 1.511,
       "spec_bytes": 8888,
       "browser": {
         "id": "heldout-037",
@@ -33996,9 +33996,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "PID metrics: rise time 0.90 s, overshoot 7.1%, steady-state error 0.000."
         },
-        "elapsed_ms": 97.2,
+        "elapsed_ms": 146.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -34160,7 +34160,7 @@
           "fallback": "Pwm. Visible layers: PWM voltage; motor average voltage = duty × supply. Adjustable controls: Duty Cycle."
         }
       },
-      "compile_ms": 0.438,
+      "compile_ms": 0.433,
       "spec_bytes": 1439,
       "browser": {
         "id": "heldout-038",
@@ -34182,9 +34182,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Duty cycle 70%; average output is the same fraction of supply voltage."
         },
-        "elapsed_ms": 42.3,
+        "elapsed_ms": 51.8,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -34469,7 +34469,7 @@
           "fallback": "Spectrogram. Visible layers: chirp energy; chirp waveform; Time–frequency energy; Chirp waveform. Adjustable controls: Sweep Rate, Playback."
         }
       },
-      "compile_ms": 2.751,
+      "compile_ms": 2.759,
       "spec_bytes": 20464,
       "browser": {
         "id": "heldout-039",
@@ -34477,7 +34477,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 4379,
+          "nontransparent_samples": 2056,
           "controls": 2,
           "family": "spectrogram",
           "panel_count": 2,
@@ -34490,16 +34490,16 @@
             "sweep_rate": 7.3,
             "playback": 3
           },
-          "geometry_signature": 96297094,
-          "visual_state_signature": 96297094,
+          "geometry_signature": 95001704,
+          "visual_state_signature": 95001704,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "sweep rate = 7.3; playback = 3"
         },
-        "elapsed_ms": 147.5,
+        "elapsed_ms": 80.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -34618,7 +34618,7 @@
           "fallback": "Robot Arm. Visible layers: base; elbow-up; end effector (2.50, 1.50); target ×; L₁ = 150 px; L₂ = 135 px. Adjustable controls: Target X, Target Y, Elbow Mode."
         }
       },
-      "compile_ms": 0.356,
+      "compile_ms": 0.377,
       "spec_bytes": 1459,
       "browser": {
         "id": "heldout-040",
@@ -34642,9 +34642,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Two-link IK: L₁ = 150 px, L₂ = 135 px; target radius 0.0 px; target is unreachable inside the 15 px inner workspace, so the arm stops at the nearest reachable point."
         },
-        "elapsed_ms": 113.3,
+        "elapsed_ms": 114,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -34819,7 +34819,7 @@
           "fallback": "Kalman Filter. Visible layers: true moving-point trajectory; noisy measurements; Kalman estimate trajectory; predicted covariance ellipse P⁻; posterior covariance ellipse P; current true point; current noisy measurement; current Kalman update. Adjustable controls: Noise, Predict / update step."
         }
       },
-      "compile_ms": 1.644,
+      "compile_ms": 1.69,
       "spec_bytes": 10009,
       "browser": {
         "id": "heldout-041",
@@ -34837,18 +34837,18 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.004300000000000001
+            "__animation_progress": 0.004174999999999997
           },
           "geometry_signature": 236510,
           "visual_state_signature": 236510,
           "animation_state": "playing",
-          "animation_progress": 0.004300000000000001,
-          "observed_frame_interval_ms": 34.400000000000006,
+          "animation_progress": 0.004174999999999997,
+          "observed_frame_interval_ms": 33.39999999999998,
           "state_description": "Step 0, measurement noise 3.70, process noise 0.08: true position 0.00, noisy measurement 0.00, prediction 0.50 with P⁻=1.580, gain K=0.103, update 0.45 with contracted P=1.417. · ▶ 0%"
         },
-        "elapsed_ms": 265.8,
+        "elapsed_ms": 319.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -35008,7 +35008,7 @@
           "fallback": "Truss. Visible layers: pin support; 50 kN joint load; roller support; compression 33.1 kN; tension 22.0 kN; 50 kN downward; 25 kN reaction. Adjustable controls: Downward load (kN)."
         }
       },
-      "compile_ms": 0.327,
+      "compile_ms": 0.353,
       "spec_bytes": 1520,
       "browser": {
         "id": "heldout-042",
@@ -35030,9 +35030,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Joint equilibrium: 75 kN downward is balanced by 37.5 kN upward at each support."
         },
-        "elapsed_ms": 49.5,
+        "elapsed_ms": 45.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -35175,7 +35175,7 @@
           "fallback": "Beam Bending. Visible layers: simply supported beam; left pin support; right roller support; moving point load 10; left support reaction; right support reaction; shear V(x); bending moment M(x); deflection v(x); Simply supported beam; Shear-force diagram; Bending-moment diagram; Deflection diagram. Adjustable controls: Load Position."
         }
       },
-      "compile_ms": 1.365,
+      "compile_ms": 1.407,
       "spec_bytes": 7519,
       "browser": {
         "id": "heldout-043",
@@ -35183,7 +35183,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 1682,
+          "nontransparent_samples": 1603,
           "controls": 4,
           "family": "beam_bending",
           "panel_count": 4,
@@ -35201,16 +35201,16 @@
             "restart": 1,
             "__animation_progress": 0.00625
           },
-          "geometry_signature": 237701,
-          "visual_state_signature": 237701,
+          "geometry_signature": 234487,
+          "visual_state_signature": 234487,
           "animation_state": "playing",
           "animation_progress": 0.00625,
           "observed_frame_interval_ms": 50,
           "state_description": "Moving 10-unit point load at x = 7.00; reactions sum to the applied load and M(0)=M(L)=0. · ▶ 1%"
         },
-        "elapsed_ms": 353.7,
+        "elapsed_ms": 358.9,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -35370,7 +35370,7 @@
           "fallback": "Fluid Flow. Visible layers: streamline ψ/U=0.35; streamline ψ/U=−0.35; streamline ψ/U=0.8; streamline ψ/U=−0.8; streamline ψ/U=1.4; streamline ψ/U=−1.4; streamline ψ/U=2.2; streamline ψ/U=−2.2; free-stream speed cue; stagnation points. Adjustable controls: Speed."
         }
       },
-      "compile_ms": 12.291,
+      "compile_ms": 12.52,
       "spec_bytes": 43991,
       "browser": {
         "id": "heldout-044",
@@ -35378,7 +35378,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 1231,
+          "nontransparent_samples": 855,
           "controls": 1,
           "family": "fluid_flow",
           "panel_count": 1,
@@ -35389,16 +35389,16 @@
           "control_values": {
             "speed": 2.2
           },
-          "geometry_signature": 1429457530,
-          "visual_state_signature": 1429457530,
+          "geometry_signature": 1408907604,
+          "visual_state_signature": 1408907604,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "Potential-flow streamlines remain outside the cylinder; stagnation points are at (−1,0) and (1,0), U = 2.20."
         },
-        "elapsed_ms": 105.4,
+        "elapsed_ms": 96.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -35502,7 +35502,7 @@
           "fallback": "Heat Diffusion. Visible layers: temperature field; temperature profile; Temperature field; Temperature profile. Adjustable controls: Time, Playback."
         }
       },
-      "compile_ms": 1.77,
+      "compile_ms": 1.81,
       "spec_bytes": 14776,
       "browser": {
         "id": "heldout-045",
@@ -35510,7 +35510,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 4315,
+          "nontransparent_samples": 2053,
           "controls": 5,
           "family": "heat_diffusion",
           "panel_count": 2,
@@ -35525,18 +35525,18 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.006125
+            "__animation_progress": 0.0062625000000000024
           },
-          "geometry_signature": 40405284,
-          "visual_state_signature": 40405284,
+          "geometry_signature": 40404790,
+          "visual_state_signature": 40404790,
           "animation_state": "playing",
-          "animation_progress": 0.006125,
-          "observed_frame_interval_ms": 49,
-          "state_description": "time = 7.3; playback = 0; play = 0; pause = 1; restart = 1;   animation progress = 0.006125 · ▶ 1%"
+          "animation_progress": 0.0062625000000000024,
+          "observed_frame_interval_ms": 33.5,
+          "state_description": "time = 7.3; playback = 0; play = 0; pause = 1; restart = 1;   animation progress = 0.0062625000000000024 · ▶ 1%"
         },
-        "elapsed_ms": 284.9,
+        "elapsed_ms": 299.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -35742,7 +35742,7 @@
           "fallback": "State Machine. Visible layers: red; red + amber; green; amber; timer; timer / pedestrian request. Adjustable controls: Switch, Step."
         }
       },
-      "compile_ms": 0.349,
+      "compile_ms": 0.365,
       "spec_bytes": 1371,
       "browser": {
         "id": "heldout-046",
@@ -35765,9 +35765,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "pedestrian request = 1; step = 3"
         },
-        "elapsed_ms": 64,
+        "elapsed_ms": 65.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -35895,7 +35895,7 @@
           "fallback": "Decision Boundary. Visible layers: class score regions; labelled training samples; decision boundary; training loss versus epoch; Classification regions; Training loss. Adjustable controls: Epoch, Learning Rate."
         }
       },
-      "compile_ms": 13.175,
+      "compile_ms": 13.414,
       "spec_bytes": 11738,
       "browser": {
         "id": "heldout-047",
@@ -35903,7 +35903,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 4355,
+          "nontransparent_samples": 2069,
           "controls": 2,
           "family": "decision_boundary",
           "panel_count": 2,
@@ -35916,16 +35916,16 @@
             "epoch": 29,
             "learning_rate": 0.38
           },
-          "geometry_signature": 59588242,
-          "visual_state_signature": 59588242,
+          "geometry_signature": 59042858,
+          "visual_state_signature": 59042858,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "A bounded two-input, two-hidden-unit classifier completed 29 batch-gradient epochs at learning rate 0.38; cross-entropy fell from 0.648 to 0.055, and the visible boundary is p=0.5."
         },
-        "elapsed_ms": 176.1,
+        "elapsed_ms": 176.7,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -36089,7 +36089,7 @@
           "fallback": "Backprop Graph. Visible layers: w=1, x=2, b=3; u=wx+b=5; y=u^2=25; reverse gradient ∂y/∂u=10; ∂y/∂w=20; ∂y/∂x=10; ∂y/∂b=10; forward; power 2; reverse; × x; × w; × 1. Adjustable controls: W, X, B, Step."
         }
       },
-      "compile_ms": 0.586,
+      "compile_ms": 0.606,
       "spec_bytes": 2159,
       "browser": {
         "id": "heldout-048",
@@ -36114,9 +36114,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "w = 7.3; x = 7.3; b = 7.3; step = 3"
         },
-        "elapsed_ms": 106.5,
+        "elapsed_ms": 109.2,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -36298,7 +36298,7 @@
           "fallback": "Energy Sankey. Visible layers: 100 J input; 65 J useful; 26.25 J heat; 8.75 J sound; 65 J; 26.25 J; 8.75 J. Adjustable controls: Efficiency."
         }
       },
-      "compile_ms": 0.349,
+      "compile_ms": 0.378,
       "spec_bytes": 1261,
       "browser": {
         "id": "heldout-049",
@@ -36320,9 +36320,9 @@
           "observed_frame_interval_ms": 0,
           "state_description": "100 J branches into 70.00 J useful, 22.50 J heat, and 7.50 J sound; outputs total 100 J."
         },
-        "elapsed_ms": 41.2,
+        "elapsed_ms": 43.1,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -36426,7 +36426,7 @@
           "fallback": "Uncertainty Propagation. Visible layers: density histogram ρ=m/V; sampled mass and positive volume pairs; Sampled mass and volume; Density distribution. Adjustable controls: Mass Sigma, Volume Sigma, Samples."
         }
       },
-      "compile_ms": 1.645,
+      "compile_ms": 1.72,
       "spec_bytes": 8630,
       "browser": {
         "id": "heldout-050",
@@ -36434,7 +36434,7 @@
         "evidence": {
           "rendered": true,
           "renderer": "canvas",
-          "nontransparent_samples": 959,
+          "nontransparent_samples": 903,
           "controls": 3,
           "family": "uncertainty_propagation",
           "panel_count": 2,
@@ -36448,16 +36448,16 @@
             "volume_sigma": 0.59,
             "samples": 300
           },
-          "geometry_signature": 546907166,
-          "visual_state_signature": 546907166,
+          "geometry_signature": 541653853,
+          "visual_state_signature": 541653853,
           "animation_state": "static",
           "animation_progress": 1,
           "observed_frame_interval_ms": 0,
           "state_description": "300 deterministic mass-volume samples with σₘ=0.74 and σᵥ=0.59; every volume is positive and the density histogram represents ρ=m/V."
         },
-        "elapsed_ms": 102.2,
+        "elapsed_ms": 139.6,
         "viewport": {
-          "width": 760,
+          "width": 742,
           "height": 520
         },
         "theme": "light",
@@ -36529,9 +36529,5 @@
       "error": "",
       "passed": true
     }
-  ],
-  "pre_holdout_candidate": {
-    "sha": "ae3cc2e1572b042a0d53ab5af4fe1143e9cb71cd",
-    "frozen_at": "2026-08-27T12:07:54+01:00"
-  }
+  ]
 }

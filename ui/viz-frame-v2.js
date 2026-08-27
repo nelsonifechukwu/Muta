@@ -1884,6 +1884,15 @@
     drawing.appendChild(svg);
     stage.appendChild(drawing);
     const layers = spec.scene.layers;
+    const sizeBearingText = () => {
+      if (spec.family !== "bearing_navigation") return;
+      const scaleFactor = Math.max(0.2, svg.getBoundingClientRect().width / 720);
+      svg.querySelectorAll(".viz-v2-layer text").forEach((textNode) => {
+        const annotation = Number(textNode.getAttribute("x")) === 42;
+        const desiredCssPixels = annotation ? 9 : 10;
+        textNode.setAttribute("font-size", String(Math.max(12, desiredCssPixels / scaleFactor)));
+      });
+    };
     const links = layers.filter((layer) => layer.type === "link");
     const nodeRecords = new Map();
     const state = html("p", "viz-v2-state");
@@ -2081,6 +2090,27 @@
             ? numericLabel * 13
             : String(displayedLabel || "").split("").reduce((sum, character) => sum + character.charCodeAt(0), 0);
           geometrySignature += (onPath ? 1009 : 17) + linkLabelSignature + Math.round(linkWidth * 97);
+        } else if (layer.type === "angle_arc") {
+          const normalize = (angle) => ((Number(angle) % 360) + 360) % 360;
+          const startAngle = normalize(layer.start_angle);
+          const endAngle = normalize(layer.end_angle);
+          const delta = layer.clockwise
+            ? (endAngle - startAngle + 360) % 360
+            : (startAngle - endAngle + 360) % 360;
+          const pointAt = (angle, radius = layer.r) => {
+            const radians = angle * Math.PI / 180;
+            return [layer.cx + radius * Math.sin(radians), layer.cy - radius * Math.cos(radians)];
+          };
+          const start = pointAt(startAngle);
+          const end = pointAt(endAngle);
+          const middleAngle = layer.clockwise ? startAngle + delta / 2 : startAngle - delta / 2;
+          const labelPoint = pointAt(middleAngle, layer.r + 15);
+          const path = `M ${start[0]} ${start[1]} A ${layer.r} ${layer.r} 0 ${delta > 180 ? 1 : 0} ${layer.clockwise ? 1 : 0} ${end[0]} ${end[1]}`;
+          node = element("g", { class: "viz-v2-layer viz-v2-angle-arc", role: "img", "aria-label": layer.label, "data-clockwise": String(layer.clockwise) });
+          node.append(element("path", { d: path, fill: "none", stroke: color, "stroke-width": 2.5, "marker-end": "url(#v2-arrow)" }));
+          const compactBearingLabel = spec.family === "bearing_navigation" ? layer.label.match(/\d{3}°/)?.[0] : null;
+          node.append(element("text", { x: labelPoint[0], y: labelPoint[1], fill: context.neutral, "font-size": 12, "text-anchor": "middle" }, compactBearingLabel || layer.label));
+          geometrySignature += Math.round(layer.cx * 11 + layer.cy * 13 + layer.r * 17 + startAngle * 19 + endAngle * 23 + (layer.clockwise ? 101 : 211));
         } else if (layer.type === "circle") {
           node = element("circle", { class: "viz-v2-layer", cx: layer.x, cy: layer.y, r: layer.r, fill: color });
           geometrySignature += Math.round(layer.x * 11 + layer.y * 13 + layer.r * 101);
@@ -2092,17 +2122,26 @@
           node = element("rect", { class: "viz-v2-layer", x: displayed.x, y: displayed.y, width: displayed.width, height: displayed.height, rx: 6, fill: color, transform });
           geometrySignature += Math.round(displayed.x * 11 + displayed.y * 13 + displayed.width * 17 + displayed.height * 19 + displayed.rotation * 23);
         } else if (layer.type === "text") {
-          node = element("text", { class: "viz-v2-layer", x: layer.x, y: layer.y, fill: color }, layer.text);
+          const textColor = spec.family === "bearing_navigation" ? context.neutral : color;
+          node = element("text", { class: "viz-v2-layer", x: layer.x, y: layer.y, fill: textColor }, layer.text);
         } else if (layer.type === "arrow") {
           const displayed = controlledArrow(spec, layer, latestControlValues);
           node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": displayed.label });
           node.append(element("line", { x1: displayed.from[0], y1: displayed.from[1], x2: displayed.to[0], y2: displayed.to[1], stroke: color, "stroke-width": 3, "marker-end": "url(#v2-arrow)" }));
-          if (displayed.label) node.append(element("text", { x: (displayed.from[0]+displayed.to[0])/2+7, y: (displayed.from[1]+displayed.to[1])/2-7, fill: context.neutral, "font-size": 12 }, displayed.label));
+          const visibleArrowLabel = spec.family === "bearing_navigation" && displayed.label.startsWith("N at ") ? "N" : displayed.label;
+          const northLabel = spec.family === "bearing_navigation" && displayed.label.startsWith("N at ");
+          if (visibleArrowLabel) node.append(element("text", {
+            x: northLabel ? displayed.to[0] + 7 : (displayed.from[0]+displayed.to[0])/2+7,
+            y: northLabel ? displayed.to[1] + 5 : (displayed.from[1]+displayed.to[1])/2-7,
+            fill: context.neutral,
+            "font-size": 12,
+          }, visibleArrowLabel));
           geometrySignature += Math.round(displayed.from[0]*11+displayed.from[1]*13+displayed.to[0]*17+displayed.to[1]*19+displayed.label.length*23);
         }
         if (node) fragment.appendChild(node);
       });
       svg.appendChild(fragment);
+      sizeBearingText();
       const primitives = svg.querySelectorAll("path,line,circle,rect,text").length;
       recordEvidence(stage, { rendered: primitives > 2, renderer: "svg", primitive_count: primitives, controls: spec.controls.length, family: spec.family, control_revision: controlRevision, control_values: latestControlValues, geometry_signature: geometrySignature, visual_state_signature: geometrySignature, animation_state: animationStatus, animation_progress: animationProgress, observed_frame_interval_ms: animationFrameInterval, state_description: state.textContent });
     };
@@ -2121,6 +2160,7 @@
     attachFallback(stage, spec);
     const observer = new ResizeObserver(() => {
       svg.style.width = `${Math.max(1, drawing.clientWidth)}px`;
+      sizeBearingText();
     });
     observer.observe(drawing);
     return () => { animationController.cleanup(); controls.cleanup(); observer.disconnect(); };
