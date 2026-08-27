@@ -309,6 +309,11 @@ _RELATIONSHIP_TERMS = frozenset(
         "transfer",
     }
 )
+_INDIRECT_SOURCE_CALLABLE = (
+    r"(?:eval|exec|compile|open|Function|require|__import__|importScripts|"
+    r"setTimeout|setInterval|requestAnimationFrame|cancelAnimationFrame|fetch|"
+    r"WebSocket|Worker|SharedWorker|XMLHttpRequest|EventSource)"
+)
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*[A-Za-z][^>]{0,200}>|"
     r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\b(?:new\s+)?Function\s*\(|"
@@ -323,7 +328,7 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"\bclass\s+[A-Za-z_$][\w$]*(?:\s+extends\s+[A-Za-z_$][\w$]*)?\s*\{|"
     r"\b(?:require|importScripts|setTimeout|setInterval|requestAnimationFrame|"
     r"cancelAnimationFrame|fetch)(?:\s|/\*[^*]{0,80}\*/)*\(|"
-    r"\b(?:eval|setTimeout|setInterval|fetch|Function)\s*(?:\?\.|\.|\[)|"
+    rf"\b{_INDIRECT_SOURCE_CALLABLE}\s*(?:\?\.|\.|\[)|"
     r"\bimport\s*\(|\bnew\s+[A-Za-z_$][\w$]*\s*\(|"
     r"\b(?:WebSocket|Worker|SharedWorker|XMLHttpRequest|EventSource)\s*\(|"
     r"\b(?:d3|THREE|gsap|motion|anime)\s*(?:\?\.|\.|\[)|\banime\s*\(|"
@@ -340,11 +345,11 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"[A-Za-z_$][\w$]*|\[\s*['\"][A-Za-z_$][\w$]*['\"]\s*\])\s*\(|"
     r"(?:\.\s*(?:constructor|__proto__)\b|"
     r"\[\s*['\"](?:constructor|__proto__)['\"]\s*\])|"
-    r"(?:\bnew\s*)?\(\s*(?:Function|eval|exec|setTimeout|setInterval|fetch)\s*\)\s*"
+    rf"(?:\bnew\s*)?\(\s*{_INDIRECT_SOURCE_CALLABLE}\s*\)\s*"
     r"(?:\(|\?\.|\.|\[)|"
     r"\(\s*(?:document|window|globalThis|location|history|navigator|self|"
     r"d3|THREE|gsap|motion|anime)\s*\)\s*(?:\?\.|\.|\[)|"
-    r"\(\s*[^,()\r\n]{1,80},\s*(?:eval|Function|setTimeout|setInterval|fetch)\s*\)|"
+    rf"\(\s*[^,()\r\n]{{1,80}},\s*{_INDIRECT_SOURCE_CALLABLE}\s*\)|"
     r"\beval\s*(?:\?\.|\[)|"
     r"\b(?:exec|compile)\s*\(|\bopen\s*\(\s*['\"]|"
     r"\bopen\s*\(\s*(?!not\s+closed\b)[A-Za-z_]|"
