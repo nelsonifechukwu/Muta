@@ -310,6 +310,24 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
         r"set\u0054imeout(fn, 0)",
         "this['ev' + 'al']('2+2')",
         "this[method](payload)",
+        "(this)['ev' + 'al']('2+2')",
+        "((this))['ev' + 'al']('2+2')",
+        "((globalThis))['eval']('2+2')",
+        "((eval))('2+2')",
+        "(0,(eval))('2+2')",
+        "(0,(eval))?.('2+2')",
+        r"((e\u0076al))('2+2')",
+        r"((e\u{76}al))?.('2+2')",
+        "((ev/**/al)).call(null,'2+2')",
+        "((ev\\\nal))('2+2')",
+        "(0,(ev/**/al))?.('2+2')",
+        r"((set\u0054imeout)).apply(null,[fn,0])",
+        "((this/*x*/))['ev'+'al']('2+2')",
+        r"((global\u0054his))['eval']('2+2')",
+        "((unseenCallable))('payload')",
+        "(0,(unseenCallable))?.('payload')",
+        "unseenObject[method](payload)",
+        "unseenObject.render(payload)",
         "open(path)",
         "lambda x: x + 1",
         "lambda: 1",
@@ -349,16 +367,25 @@ def test_benign_data_prefix_is_not_treated_as_a_data_url() -> None:
 @pytest.mark.parametrize(
     "prose",
     (
-        "The function f(x) = x squared is shown in blue.",
+        "The function is represented by a validated expression tree and shown in blue.",
         "The domain is the set {x: x is positive}.",
         "Motion (position over time) is shown in blue.",
         "The interval is open (not closed) and shown in blue.",
+        "Use the U.S. standard label and compare Fig. A with Fig. B.",
     ),
 )
 def test_benign_math_and_set_prose_is_not_treated_as_authored_source(prose: str) -> None:
     candidate = _food_web_spec()
     candidate["text_fallback"] = prose
     assert _plan_errors(candidate, "Draw a mangrove food web from algae to crab to heron.") == []
+
+
+def test_planner_prose_cannot_bypass_the_typed_expression_ast() -> None:
+    candidate = _food_web_spec()
+    candidate["text_fallback"] = "f(x)"
+
+    errors = _plan_errors(candidate, "Draw a mangrove food web from algae to crab to heron.")
+    assert {error["code"] for error in errors} == {"authored_source_forbidden"}
 
 
 def test_unknown_primitive_is_rejected_and_repaired_without_execution() -> None:

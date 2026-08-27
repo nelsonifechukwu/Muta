@@ -136,9 +136,13 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   hide tabs, destructuring, bracket/template properties, constructors, parenthesized or indirect
   call targets, Python lambdas/builtins, or brace-less loops. URI checks
   recognize actual schemes without rejecting ordinary prose such as `Data: ...`.
-  Treat source detection as a lexical boundary rather than a keyword blacklist: require code
-  structure around overloaded prose words such as `function`, preserve mathematical set notation,
-  and normalize comments/optional chaining/bracket access before checking executable call sites.
+  Treat source detection as a structural, fail-closed planner boundary rather than a callable-name
+  denylist. Planner-authored strings are labels and accessible prose only: calls, member/index
+  access, assignment, declarations, and control flow are rejected independent of identifier name
+  or balanced-parenthesis depth after bounded escape/comment normalization. Mathematical
+  functions and relationships remain available through the separately validated typed expression
+  AST, never as source-shaped strings. Preserve ordinary parenthetical prose and mathematical set
+  notation that has no executable structure.
   Relationship, control, and viewpoint grounding uses bounded spans rather than consuming an
   entire clause: mixed directed/undirected components, postfix edge direction, arrow/no-arrow
   phrasing, reordered slider ranges, sea/eye-level viewpoints, and numeric elevation phrases must

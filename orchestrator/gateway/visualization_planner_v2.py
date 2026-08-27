@@ -8,6 +8,7 @@ structured repair attempt before the caller falls back to a deterministic safe s
 
 from __future__ import annotations
 
+import ast
 import json
 import logging
 import re
@@ -309,14 +310,32 @@ _RELATIONSHIP_TERMS = frozenset(
         "transfer",
     }
 )
-_INDIRECT_SOURCE_CALLABLE = (
-    r"(?:eval|exec|compile|open|Function|require|__import__|importScripts|"
-    r"setTimeout|setInterval|requestAnimationFrame|cancelAnimationFrame|fetch|"
-    r"WebSocket|Worker|SharedWorker|XMLHttpRequest|EventSource)"
+# Planner-authored strings are labels and accessible prose, never expression source.  Calls,
+# member access, indexing, assignment, and control flow belong in neither surface; mathematical
+# work is represented by the separately validated typed AST.  These structural forms avoid an
+# open-ended list of executable names and remain invariant under balanced parentheses.
+_SOURCE_STRUCTURAL_CHAIN = re.compile(
+    r"\b[A-Za-z_$][\w$]*(?:\(|\?\.|\[)|"
+    r"[)\]]\s*(?:\(|\?\.|\.(?=\s*[A-Za-z_$])|\[)"
+)
+_SOURCE_PYTHONISH_OPTIONAL_CALL = re.compile(r"\?\.\s*\(")
+_SOURCE_PYTHON_FORBIDDEN_EXPR = (
+    ast.Attribute,
+    ast.Await,
+    ast.Call,
+    ast.DictComp,
+    ast.GeneratorExp,
+    ast.Lambda,
+    ast.ListComp,
+    ast.NamedExpr,
+    ast.SetComp,
+    ast.Subscript,
+    ast.Yield,
+    ast.YieldFrom,
 )
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*[A-Za-z][^>]{0,200}>|"
-    r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\b(?:new\s+)?Function\s*\(|"
+    r"\bjavascript\s*:|\bon\w+\s*=|"
     r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\([^)]{0,160}\)\s*\{|"
     r"\b(?:const|let|var)\s+(?:[A-Za-z_$][\w$]*|\{[^}\r\n]{1,160}\}|"
     r"\[[^\]\r\n]{1,160}\])\s*=|"
@@ -326,44 +345,21 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:^|[\r\n])\s*from\s+[A-Za-z_][\w.]*\s+import\b|"
     r"(?:^|[\r\n])\s*(?:async\s+)?def\s+[A-Za-z_]\w*\s*\(|"
     r"\bclass\s+[A-Za-z_$][\w$]*(?:\s+extends\s+[A-Za-z_$][\w$]*)?\s*\{|"
-    r"\b(?:require|importScripts|setTimeout|setInterval|requestAnimationFrame|"
-    r"cancelAnimationFrame|fetch)(?:\s|/\*[^*]{0,80}\*/)*\(|"
-    rf"\b{_INDIRECT_SOURCE_CALLABLE}\s*(?:\?\.|\.|\[)|"
-    r"\bimport\s*\(|\bnew\s+[A-Za-z_$][\w$]*\s*\(|"
-    r"\b(?:WebSocket|Worker|SharedWorker|XMLHttpRequest|EventSource)\s*\(|"
-    r"\b(?:d3|THREE|gsap|motion|anime)\s*(?:\?\.|\.|\[)|\banime\s*\(|"
-    r"\b(?:module\s*(?:\.\s*exports|\[\s*['\"]exports['\"]\s*\])|"
-    r"exports\s*(?:\.|\[)|process\s*(?:\.|\[)|Deno\s*(?:\.|\[)|"
-    r"__import__\s*\()|"
+    r"\bnew\s+[A-Za-z_$][\w$]*\s*\(|"
     r"\bwhile\s*\([^)]{0,160}\)\s*(?:\{|[A-Za-z_$][\w$]*\s*(?:\(|\+\+|--|[+*/-]?=))|"
     r"\bdo\s+(?:\{|[A-Za-z_$][\w$]*\s*(?:\+\+|--|[+*/-]?=))|"
     r"\bfor\s+await\s*\(|"
     r"\bfor\s*\([^)]{0,160}(?:;|\+\+|--)[^)]{0,160}\)\s*|"
     r"\bfor\s*\([^)]{0,160}\b(?:in|of)\b[^)]{0,160}\)\s*|"
     r"(?:^|[\r\n])\s*(?:async\s+)?for\s+[A-Za-z_]\w*\s+in\s+[^:\r\n]{1,160}:|"
-    r"\b(?:console|Math|JSON|Object|Array|Promise|Reflect)\s*(?:(?:\?\.|\.)\s*"
-    r"[A-Za-z_$][\w$]*|\[\s*['\"][A-Za-z_$][\w$]*['\"]\s*\])\s*\(|"
     r"(?:\.\s*(?:constructor|__proto__)\b|"
     r"\[\s*['\"](?:constructor|__proto__)['\"]\s*\])|"
-    rf"(?:\bnew\s*)?\(\s*{_INDIRECT_SOURCE_CALLABLE}\s*\)\s*"
-    r"(?:\(|\?\.|\.|\[)|"
-    r"\(\s*(?:document|window|globalThis|location|history|navigator|self|"
-    r"d3|THREE|gsap|motion|anime)\s*\)\s*(?:\?\.|\.|\[)|"
-    rf"\(\s*[^,()\r\n]{{1,80}},\s*{_INDIRECT_SOURCE_CALLABLE}\s*\)|"
-    r"\beval\s*(?:\?\.|\[)|"
-    r"\b(?:exec|compile)\s*\(|\bopen\s*\(\s*['\"]|"
-    r"\bopen\s*\(\s*(?!not\s+closed\b)[A-Za-z_]|"
     r"\blambda(?:\s+[A-Za-z_]\w*)?\s*:|"
-    r"\bgetattr\s*\(\s*(?:builtins|__builtins__)\b|"
-    r"\b(?:os|subprocess|builtins|__builtins__)\s*(?:\.|\[)|"
-    r"\b(?:globals|locals|vars)\s*\(|"
     r"=>|`|\b(?:gl_FragColor|gl_Position|gl_PointSize|texture2D)\b|"
     r"#version\s+\d+|"
     r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
     r"\bprecision\s+(?:lowp|mediump|highp)\s+(?:float|int)\s*;|"
     r"\b(?:uniform|varying|attribute|vec[234]|mat[234]|sampler2D)\s+[A-Za-z_]\w*|"
-    r"\b(?:document|window|globalThis|location|history|navigator|self|this)\s*"
-    r"(?:\?\.|\.|\[)|"
     r"(?:[#.][-\w]+|\b(?:body|html|canvas|svg|div|span|button|input|main|section|article)\b"
     r"(?:\s+[.#][-\w]+)?)\s*\{\s*"
     r"(?:color|background|display|position|width|height|transform|animation|fill|stroke)\s*:|"
@@ -1043,7 +1039,7 @@ def _text_values(value: object) -> Iterator[str]:
 
 
 def _contains_authored_source(value: str) -> bool:
-    """Reject executable syntax after bounded source-level lexical normalization."""
+    """Reject source structure; planner prose never carries executable expressions."""
 
     def decode_identifier_escape(match: re.Match[str]) -> str:
         codepoint = int(match.group("braced") or match.group("fixed"), 16)
@@ -1055,10 +1051,28 @@ def _contains_authored_source(value: str) -> bool:
     normalized = _SOURCE_UNICODE_ESCAPE.sub(decode_identifier_escape, normalized)
     collapsed = _SOURCE_COMMENT.sub("", normalized)
     spaced = _SOURCE_COMMENT.sub(" ", normalized)
-    return any(
-        _FORBIDDEN_AUTHORED_SOURCE.search(candidate)
-        for candidate in (value, normalized, collapsed, spaced)
-    )
+
+    for candidate in (value, normalized, collapsed, spaced):
+        if _FORBIDDEN_AUTHORED_SOURCE.search(candidate):
+            return True
+        if _SOURCE_STRUCTURAL_CHAIN.search(candidate):
+            return True
+
+        # Python's parser is a bounded, non-executing structural check that also recognizes the
+        # call/assignment shape shared by the JavaScript and Python payloads relevant here.  Make
+        # optional-call punctuation parseable first; strict V2 validation still owns expressions.
+        pythonish = _SOURCE_PYTHONISH_OPTIONAL_CALL.sub("(", candidate).replace("?.", ".")
+        try:
+            tree = ast.parse(pythonish, mode="exec")
+        except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
+            continue
+        if any(
+            (isinstance(node, ast.stmt) and not isinstance(node, ast.Expr))
+            or isinstance(node, _SOURCE_PYTHON_FORBIDDEN_EXPR)
+            for node in ast.walk(tree)
+        ):
+            return True
+    return False
 
 
 def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
