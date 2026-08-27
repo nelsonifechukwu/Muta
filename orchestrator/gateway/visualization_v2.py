@@ -7708,8 +7708,10 @@ def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                     raise VisualizationV2Error("heatmap domain is invalid")
             point_count += rows * columns
         elif layer_type == "panel":
-            if set(layer) != _LAYER_KEYS[layer_type] or not _SAFE_ID.fullmatch(
-                str(layer.get("id", ""))
+            if (
+                set(layer) != _LAYER_KEYS[layer_type]
+                or not isinstance(layer.get("id"), str)
+                or not _SAFE_ID.fullmatch(layer["id"])
             ):
                 raise VisualizationV2Error("panel fields are invalid")
             if layer["id"] in panel_ids:

@@ -343,6 +343,10 @@ test("fails closed on the shared server-browser conformance mutations", () => {
     { type: "polyline", label: "trace", points: [[0, 0], [1, 1]], color: "teal" },
     { type: "panel", id: ["panel"], title: "Panel", x_label: "x", y_label: "y", members: ["trace"] },
   ] }; candidates.panel_id_array = candidate;
+  candidate = structuredClone(candidate); candidate.scene.layers.at(-1).id = false;
+  candidates.panel_id_boolean = candidate;
+  candidate = structuredClone(candidate); candidate.scene.layers.at(-1).id = null;
+  candidates.panel_id_null = candidate;
   candidate = surface(); candidate.scene.layers[0].relationship.right = { type: "number", value: 1e100 };
   candidates.large_ast_number = candidate;
   candidate = surface(); candidate.scene.layers = Array.from({ length: 60 }, (_, index) => ({
@@ -361,9 +365,12 @@ test("generated type-mutation properties fail closed across the browser schema",
     if (value && typeof value === "object") {
       for (const [key, child] of Object.entries(value)) {
         const path = [...prefix, Array.isArray(value) ? Number(key) : key];
-        const replacement = Array.isArray(child) ? {} : child && typeof child === "object"
-          ? [] : typeof child === "string" ? [] : {};
-        paths.push([path, replacement], ...mutationPaths(child, path));
+        const replacements = Array.isArray(child) ? [{}, null, false, "list"]
+          : child && typeof child === "object" ? [[], null, false, "object"]
+            : typeof child === "string" ? [[], {}, null, false, 0]
+              : typeof child === "boolean" ? [[], {}, null, "boolean"]
+                : [[], {}, null, "number"];
+        paths.push(...replacements.map((replacement) => [path, replacement]), ...mutationPaths(child, path));
       }
     }
     return paths;

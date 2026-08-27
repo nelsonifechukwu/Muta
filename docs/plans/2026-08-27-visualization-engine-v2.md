@@ -133,7 +133,8 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   Source-shaped text rejection includes HTML tags, CSS rule bodies, JavaScript declarations and
   browser/global calls/imports/loops, and shader declarations in addition to schema-level
   executable fields. Inspect authored string values before JSON serialization so escaping cannot
-  hide tabs, destructuring, bracket properties, constructors, or brace-less loops. URI checks
+  hide tabs, destructuring, bracket/template properties, constructors, parenthesized or indirect
+  call targets, Python lambdas/builtins, or brace-less loops. URI checks
   recognize actual schemes without rejecting ordinary prose such as `Data: ...`.
   Treat source detection as a lexical boundary rather than a keyword blacklist: require code
   structure around overloaded prose words such as `function`, preserve mathematical set notation,
@@ -147,8 +148,9 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   Both runtimes consume one checked-in mutation fixture covering exact keys, UTF-8 byte size,
   integer budgets, AST nodes/work, geometry bounds, accessible text, transport/control shapes,
   relationship references, panels, and animation objects. A generated recursive type-mutation
-  sweep complements those named regressions in both runtimes, including very large JSON integers
-  and nested schema values. Every malformed serializable value must fail with a typed validation
+  sweep applies every incompatible JSON primitive/container class at nested schema paths in both
+  runtimes, including very large JSON integers and panel identifiers. Every malformed serializable
+  value must fail with a typed validation
   result—never an uncaught language-level exception—and the server is authoritative if a future
   client drifts. Acceptance-report reproduction captures real browser evidence before writing a
   passing report; a compiler-only invocation is never presented as a successful end-to-end gate.

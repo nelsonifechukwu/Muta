@@ -36,6 +36,8 @@
     { "id": "color-array", "operation": "color_array", "accepted": false },
     { "id": "node-id-array", "operation": "node_id_array", "accepted": false },
     { "id": "panel-id-array", "operation": "panel_id_array", "accepted": false },
+    { "id": "panel-id-boolean", "operation": "panel_id_boolean", "accepted": false },
+    { "id": "panel-id-null", "operation": "panel_id_null", "accepted": false },
     { "id": "large-ast-number", "operation": "large_ast_number", "accepted": false },
     { "id": "utf8-within-byte-budget", "operation": "utf8_within_byte_budget", "accepted": true }
   ]

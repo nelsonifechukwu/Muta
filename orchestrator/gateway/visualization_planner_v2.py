@@ -196,6 +196,17 @@ _EDGE_ENTITY = r"[A-Za-z][A-Za-z0-9_/]*"
 _EDGE_SEPARATOR = r"(?:→|[-‐‑‒–—―−－]?to[-‐‑‒–—―−－]?|[-‐‑‒–—―−－])"
 _EDGE_COMPONENT_PATTERNS = (
     re.compile(
+        rf"(?:\bthe\s+)?(?P<left>{_EDGE_ENTITY})\s*[-‐‑‒–—―−－]\s*"
+        rf"(?P<right>{_EDGE_ENTITY})\s+(?:edge|link|connection)\s+(?:is\s+)?"
+        r"(?P<direction>directed|undirected)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"(?:\bthe\s+)?(?P<left>{_EDGE_ENTITY})\s+(?:connects?|links?)\s+to\s+"
+        rf"(?P<right>{_EDGE_ENTITY})\s+(?P<direction>directionally|non[-‐‑‒–—―−－]directionally)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
         rf"(?P<left>{_EDGE_ENTITY})\s*{_EDGE_SEPARATOR}\s*"
         rf"(?P<right>{_EDGE_ENTITY})\s+(?:as\s+an?\s+)?"
         r"(?P<direction>directed|undirected)\s+(?:edge|link|connection)\b",
@@ -327,14 +338,21 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:^|[\r\n])\s*(?:async\s+)?for\s+[A-Za-z_]\w*\s+in\s+[^:\r\n]{1,160}:|"
     r"\b(?:console|Math|JSON|Object|Array|Promise|Reflect)\s*(?:(?:\?\.|\.)\s*"
     r"[A-Za-z_$][\w$]*|\[\s*['\"][A-Za-z_$][\w$]*['\"]\s*\])\s*\(|"
-    r"(?:\[\]|\{\})\s*\.\s*(?:constructor|__proto__)\b|"
-    r"\bthis\s*(?:\.|\[)\s*(?:constructor|__proto__)\b|"
-    r"\(\s*\d+\s*,\s*eval\s*\)|\beval\s*(?:\?\.|\[)|"
+    r"(?:\.\s*(?:constructor|__proto__)\b|"
+    r"\[\s*['\"](?:constructor|__proto__)['\"]\s*\])|"
+    r"(?:\bnew\s*)?\(\s*(?:Function|eval|exec|setTimeout|setInterval|fetch)\s*\)\s*"
+    r"(?:\(|\?\.|\.|\[)|"
+    r"\(\s*(?:document|window|globalThis|location|history|navigator|self|"
+    r"d3|THREE|gsap|motion|anime)\s*\)\s*(?:\?\.|\.|\[)|"
+    r"\(\s*\d+\s*,\s*(?:eval|Function|setTimeout|setInterval|fetch)\s*\)\s*\(|"
+    r"\beval\s*(?:\?\.|\[)|"
     r"\b(?:exec|compile)\s*\(|\bopen\s*\(\s*['\"]|"
-    r"\bgetattr\s*\(\s*__builtins__\b|"
+    r"\bopen\s*\(\s*(?!not\s+closed\b)[A-Za-z_]|"
+    r"\blambda(?:\s+[A-Za-z_]\w*)?\s*:|"
+    r"\bgetattr\s*\(\s*(?:builtins|__builtins__)\b|"
     r"\b(?:os|subprocess|builtins|__builtins__)\s*(?:\.|\[)|"
     r"\b(?:globals|locals|vars)\s*\(|"
-    r"=>|```|\b(?:gl_FragColor|gl_Position|gl_PointSize|texture2D)\b|"
+    r"=>|`|\b(?:gl_FragColor|gl_Position|gl_PointSize|texture2D)\b|"
     r"#version\s+\d+|"
     r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
     r"\bprecision\s+(?:lowp|mediump|highp)\s+(?:float|int)\s*;|"
@@ -733,7 +751,7 @@ def _explicit_edge_components(request: str) -> list[tuple[list[frozenset[str]], 
         for match in pattern.finditer(request):
             values = match.groupdict()
             if values.get("direction"):
-                directed = values["direction"].casefold() == "directed"
+                directed = values["direction"].casefold() in {"directed", "directionally"}
             elif "negative" in values:
                 directed = not bool(values["negative"])
             else:

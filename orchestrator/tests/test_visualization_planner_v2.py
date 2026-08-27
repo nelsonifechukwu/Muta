@@ -279,6 +279,23 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
         "Reflect?.construct(Function, ['return 1'])()",
         "builtins.eval('2+2')",
         "globals()['__builtins__']['eval']('2+2')",
+        "this['constructor']['constructor']('return 1')()",
+        "[]['constructor']['constructor']('return 1')()",
+        "({})['constructor']['constructor']('return 1')()",
+        "[].filter.constructor('return 1')()",
+        "(Function)('return 1')()",
+        "new (Function)('return 1')",
+        "new/**/(Function)('return 1')",
+        "(0,setTimeout)(fn, 0)",
+        "open(path)",
+        "lambda x: x + 1",
+        "lambda: 1",
+        "(eval)('2+2')",
+        "(setTimeout).call(null, fn, 0)",
+        "(d3).select('body')",
+        "(window).location = '/x'",
+        "getattr(builtins, 'eval')('2+2')",
+        "self[`postMessage`](payload)",
     ),
 )
 def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
@@ -734,6 +751,14 @@ def test_mixed_relationship_clauses_do_not_consume_each_other_without_punctuatio
         (
             "Draw a graph connecting algae and crab with an arrow, plus heron and fish without "
             "an arrow."
+        ),
+        (
+            "Draw a mixed graph: the algae-crab connection is directed but the heron-fish "
+            "connection is undirected."
+        ),
+        (
+            "Draw a mixed graph: algae connects to crab directionally, while heron links to fish "
+            "non-directionally."
         ),
     ):
         assert _plan_errors(mixed, prompt) == []

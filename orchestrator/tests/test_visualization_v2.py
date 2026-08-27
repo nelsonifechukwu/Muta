@@ -1206,6 +1206,14 @@ def test_server_schema_fails_closed_on_cross_runtime_conformance_mutations() -> 
     }
     candidates["panel_id_array"] = candidate
 
+    candidate = json.loads(json.dumps(candidate))
+    candidate["scene"]["layers"][-1]["id"] = False
+    candidates["panel_id_boolean"] = candidate
+
+    candidate = json.loads(json.dumps(candidate))
+    candidate["scene"]["layers"][-1]["id"] = None
+    candidates["panel_id_null"] = candidate
+
     candidate = clone()
     candidate["scene"]["layers"][0]["relationship"]["right"] = {
         "type": "number", "value": 1e100,
@@ -1244,16 +1252,29 @@ def test_schema_generated_type_mutations_are_total_and_fail_closed() -> None:
     ]
     assert all(base is not None for base in bases)
 
+    def incompatible_values(value: object) -> tuple[object, ...]:
+        if isinstance(value, dict):
+            return ([], None, False, "object")
+        if isinstance(value, list):
+            return ({}, None, False, "list")
+        if isinstance(value, str):
+            return ([], {}, None, False, 0)
+        if isinstance(value, bool):
+            return ([], {}, None, "boolean")
+        return ([], {}, None, "number")
+
     def paths(value: object, prefix: tuple[object, ...] = ()):
         if isinstance(value, dict):
             for key, child in value.items():
                 path = (*prefix, key)
-                yield path, [] if isinstance(child, dict) else {} if isinstance(child, list) else [] if isinstance(child, str) else {}
+                for replacement in incompatible_values(child):
+                    yield path, replacement
                 yield from paths(child, path)
         elif isinstance(value, list):
             for index, child in enumerate(value):
                 path = (*prefix, index)
-                yield path, [] if isinstance(child, dict) else {} if isinstance(child, list) else [] if isinstance(child, str) else {}
+                for replacement in incompatible_values(child):
+                    yield path, replacement
                 yield from paths(child, path)
 
     mutation_count = 0
