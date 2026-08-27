@@ -6,9 +6,9 @@
     "sync_before_bytes": 74628,
     "sync_after_bytes": 107271,
     "sync_delta_bytes": 32643,
-    "sync_parse_before_ms": 0.508,
-    "sync_parse_after_ms": 0.7154,
-    "sync_parse_delta_ms": 0.2074,
+    "sync_parse_before_ms": 0.6396,
+    "sync_parse_after_ms": 0.8194,
+    "sync_parse_delta_ms": 0.1798,
     "lazy_v2_bytes": 222614,
     "vendor_bytes": 1102856,
     "new_network_dependencies": 0
@@ -23,21 +23,21 @@
     "by_renderer": {
       "svg": {
         "count": 74,
-        "mean_elapsed_ms": 111.835,
-        "p95_elapsed_ms": 263.1,
-        "max_elapsed_ms": 279.9
+        "mean_elapsed_ms": 112.099,
+        "p95_elapsed_ms": 276.5,
+        "max_elapsed_ms": 350.7
       },
       "canvas": {
         "count": 21,
-        "mean_elapsed_ms": 168.105,
-        "p95_elapsed_ms": 314.9,
-        "max_elapsed_ms": 350.7
+        "mean_elapsed_ms": 168.019,
+        "p95_elapsed_ms": 330.9,
+        "max_elapsed_ms": 351.2
       },
       "three": {
         "count": 105,
-        "mean_elapsed_ms": 326.969,
-        "p95_elapsed_ms": 443.0,
-        "max_elapsed_ms": 747.4
+        "mean_elapsed_ms": 324.947,
+        "p95_elapsed_ms": 443.3,
+        "max_elapsed_ms": 749.3
       }
     },
     "maximum_triangles": 26594,
