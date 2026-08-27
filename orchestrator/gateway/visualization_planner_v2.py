@@ -46,7 +46,7 @@ _EXPLICIT_EQUATION_PLOT = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _INTERACTION_SIGNAL = re.compile(
-    r"\b(?:interactive|adjust|slider|control|change|vary|step\s+through|toggle)\b",
+    r"\b(?:interactive|adjust|adjustable|slider|control|change|vary|step\s+through|toggle)\b",
     re.IGNORECASE,
 )
 _ANIMATION_SIGNAL = re.compile(
@@ -56,12 +56,12 @@ _ANIMATION_SIGNAL = re.compile(
 _STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
     r"\b(?:web|network|flow|cycle|process|path|loop|pipeline|hierarchy|tree|graph|"
     r"architecture|relationship|link|linking|connect|connected|connecting)\b|"
-    r"\bfrom\b.{0,100}\b(?:to|through|into|towards?|via)\b",
+    r"\bfrom\b.{0,100}\b(?:to|through|into|towards?|via|then)\b",
     re.IGNORECASE | re.DOTALL,
 )
-_EXPLICIT_ENTITY_CLAUSE = re.compile(
+_ENTITY_INTRODUCER = re.compile(
     r"\b(?P<introducer>showing|linking|connecting|between|including|containing|"
-    r"composed\s+of|with)\b(?P<entities>[^.!?;]{1,220})",
+    r"composed(?:\s+|-)of|with)\b",
     re.IGNORECASE,
 )
 _DIRECTIONAL_CHAIN = re.compile(
@@ -75,11 +75,14 @@ _PERSPECTIVE_CHAIN_HEAD = re.compile(
 )
 _DIRECTIONAL_TAIL = re.compile(
     r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
-    r"with\s+(?:(?:clear|named|accessible)\s+)?(?:labels?|annotations?)\b|"
-    r"with\s+(?:an?\s+)?(?:adjustable|interactive)\b|where\s+(?:i|we|the\s+user)\b)",
+    r"(?:an?\s+)?(?:adjustable|interactive)\b|"
+    r"including\b|containing\b|composed(?:\s+|-)of\b|"
+    r"with\b|where\s+(?:i|we|the\s+user)\b)",
     re.IGNORECASE,
 )
-_DIRECTION_STEP = re.compile(r"\b(?:to|through|into|towards?|via)\b|->|→", re.IGNORECASE)
+_DIRECTION_STEP = re.compile(
+    r"\b(?:to|through|into|towards?|via|then)\b|->|→", re.IGNORECASE
+)
 _ENTITY_SEPARATOR = re.compile(
     r"\s*(?:,|\band\b|\bas\s+well\s+as\b|\bplus\b|\bwith\b|\bto\b|\bthrough\b|"
     r"\binto\b|\btowards?\b|\bvia\b|\bthen\b|->|→)\s*",
@@ -89,7 +92,8 @@ _SEMANTIC_TOKEN = re.compile(r"[A-Za-z](?:/[A-Za-z])+|[A-Za-z][A-Za-z0-9_-]*")
 _WITH_PRESENTATION_CLAUSE = re.compile(
     r"^\s*(?:(?:clear|named|accessible)\s+)?(?:labels?|annotations?|measurements?|"
     r"dimensions?|legends?|titles?|captions?)\b|"
-    r"^\s*(?:high\s+contrast|(?:dark|light)\s+theme|large\s+(?:text|type|fonts?))\b",
+    r"^\s*(?:high\s+contrast|(?:dark|light)(?:\s+and\s+(?:dark|light))?\s+themes?|"
+    r"large\s+(?:text|type|fonts?))\b",
     re.IGNORECASE,
 )
 _PRESENTATION_TERMS = frozenset(
@@ -103,6 +107,7 @@ _PRESENTATION_TERMS = frozenset(
         "contrast",
         "dimension",
         "dimensions",
+        "dark",
         "font",
         "fonts",
         "high",
@@ -111,10 +116,12 @@ _PRESENTATION_TERMS = frozenset(
         "large",
         "legend",
         "legends",
+        "light",
         "measurement",
         "measurements",
         "named",
         "theme",
+        "themes",
         "title",
         "titles",
         "type",
@@ -204,6 +211,7 @@ _TOPIC_STOPWORDS = frozenset(
         "that",
         "the",
         "their",
+        "then",
         "these",
         "this",
         "through",
@@ -507,29 +515,56 @@ def _entity_groups(value: str) -> list[frozenset[str]]:
     return groups
 
 
-def _directional_entity_groups(request: str) -> list[frozenset[str]]:
-    """Extract the ordered entities in an explicit from-A-to-B chain."""
-    match = _DIRECTIONAL_CHAIN.search(request)
-    if not match:
-        return []
-    prefix = request[max(0, match.start() - 24) : match.start()]
-    if _PERSPECTIVE_FROM.search(prefix):
-        return []
-    chain = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
-    if _PERSPECTIVE_CHAIN_HEAD.search(chain) or not _DIRECTION_STEP.search(chain):
-        return []
-    return _entity_groups(chain)
+def _directional_entity_chains(request: str) -> list[list[frozenset[str]]]:
+    """Extract each ordered explicit from-A-to-B chain without presentation tails."""
+    chains: list[list[frozenset[str]]] = []
+    for match in _DIRECTIONAL_CHAIN.finditer(request):
+        prefix = request[max(0, match.start() - 24) : match.start()]
+        if _PERSPECTIVE_FROM.search(prefix):
+            continue
+        chain = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
+        if _PERSPECTIVE_CHAIN_HEAD.search(chain) or not _DIRECTION_STEP.search(chain):
+            continue
+        groups = _entity_groups(chain)
+        if len(groups) > 1:
+            chains.append(groups)
+    return chains
+
+
+def _explicit_entity_clauses(request: str) -> list[tuple[str, str]]:
+    """Split entity introducers without letting one clause consume a later clause."""
+    matches = list(_ENTITY_INTRODUCER.finditer(request))
+    clauses: list[tuple[str, str]] = []
+    for index, match in enumerate(matches):
+        sentence_end = re.search(r"[.!?;]", request[match.end() :])
+        stop = (
+            match.end() + sentence_end.start()
+            if sentence_end is not None
+            else len(request)
+        )
+        if index + 1 < len(matches):
+            stop = min(stop, matches[index + 1].start())
+        clause = request[match.end() : stop][:220]
+        if clause.strip():
+            clauses.append((match.group("introducer").lower(), clause))
+    return clauses
 
 
 def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
     """Extract the unique concrete phrases that each need their own labelled node."""
-    directional = _directional_entity_groups(request)
-    if directional:
-        return list(dict.fromkeys(directional))
     groups: list[frozenset[str]] = []
-    for match in _EXPLICIT_ENTITY_CLAUSE.finditer(request):
-        clause = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
-        introducer = match.group("introducer").lower()
+    for chain in _directional_entity_chains(request):
+        for group in chain:
+            if group not in groups:
+                groups.append(group)
+    for introducer, raw_clause in _explicit_entity_clauses(request):
+        # A clause such as "showing flow from A to B" is represented by the ordered chain
+        # above. Keep any concrete prefix, then let later introducers be parsed separately.
+        from_match = re.search(r"\bfrom\b", raw_clause, re.IGNORECASE)
+        clause = raw_clause
+        if from_match and _DIRECTION_STEP.search(raw_clause[from_match.end() :]):
+            clause = raw_clause[: from_match.start()]
+        clause = _DIRECTIONAL_TAIL.split(clause, maxsplit=1)[0]
         if introducer == "with" and _WITH_PRESENTATION_CLAUSE.search(clause):
             continue
         extracted = _entity_groups(clause)
@@ -707,19 +742,22 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
             relationship_grounded = all(
                 _has_path(undirected, mapped[0], node_id) for node_id in mapped[1:]
             )
-        directional_groups = _directional_entity_groups(request)
-        if relationship_grounded and len(directional_groups) > 1:
+        directional_chains = _directional_entity_chains(request)
+        if relationship_grounded and directional_chains:
             directed: dict[str, set[str]] = {}
             for link in links:
                 directed.setdefault(str(link["from"]), set()).add(str(link["to"]))
             relationship_grounded = all(
-                _has_path(
-                    directed,
-                    entity_nodes[start],
-                    entity_nodes[target],
-                    require_edge=True,
+                all(
+                    _has_path(
+                        directed,
+                        entity_nodes[start],
+                        entity_nodes[target],
+                        require_edge=True,
+                    )
+                    for start, target in pairwise(directional_groups)
                 )
-                for start, target in pairwise(directional_groups)
+                for directional_groups in directional_chains
             )
         if not relationship_grounded:
             errors.append(

@@ -369,7 +369,7 @@ def test_semantic_oracle_requires_every_term_of_each_multiword_entity() -> None:
 
 @pytest.mark.parametrize(
     "introducer",
-    ("with", "including", "containing", "composed of"),
+    ("with", "including", "containing", "composed of", "composed-of"),
 )
 def test_semantic_oracle_recognizes_common_entity_list_introducers(introducer: str) -> None:
     missing_fish = _food_web_spec()
@@ -445,6 +445,31 @@ def test_semantic_oracle_preserves_short_scientific_entities_and_slash_notation(
     ):
         layer["label"] = label
     assert _plan_errors(short_pair, "Draw a network showing pH and I/O.") == []
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    (
+        "Draw a food process from algae to crab. Diagram including heron.",
+        "Draw a food process from algae to crab. A view containing heron.",
+        "Draw a food process from algae to crab, including heron.",
+    ),
+)
+def test_semantic_oracle_combines_directional_and_later_entity_clauses(prompt: str) -> None:
+    assert _plan_errors(_food_web_spec(), prompt) == []
+
+    missing_heron = _food_web_spec()
+    missing_heron["scene"]["layers"] = [
+        layer
+        for layer in missing_heron["scene"]["layers"]
+        if layer.get("id") != "heron"
+        and layer.get("from") != "heron"
+        and layer.get("to") != "heron"
+    ]
+    assert {error["code"] for error in _plan_errors(missing_heron, prompt)} == {
+        "topic_not_grounded",
+        "relationship_not_grounded",
+    }
 
 
 def test_semantic_oracle_splits_connecting_with_and_directional_via_phrases() -> None:
@@ -569,6 +594,63 @@ def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps()
         )
         == []
     )
+
+
+def test_direction_parser_enforces_then_only_order() -> None:
+    request = "Draw a food process from algae then crab then heron."
+    assert _plan_errors(_food_web_spec(), request) == []
+
+    reversed_web = _food_web_spec()
+    for layer in reversed_web["scene"]["layers"]:
+        if layer["type"] == "link":
+            layer["from"], layer["to"] = layer["to"], layer["from"]
+    assert {error["code"] for error in _plan_errors(reversed_web, request)} == {
+        "relationship_not_grounded"
+    }
+
+
+@pytest.mark.parametrize(
+    "tail",
+    (
+        "with high contrast and dark theme",
+        "with light and dark themes",
+    ),
+)
+def test_direction_parser_ignores_theme_presentation_tails(tail: str) -> None:
+    request = f"Draw a food process from algae to crab to heron {tail}."
+    assert _explicit_entity_groups(request) == [
+        frozenset({"algae"}),
+        frozenset({"crab"}),
+        frozenset({"heron"}),
+    ]
+    assert _plan_errors(_food_web_spec(), request) == []
+
+
+def test_direction_parser_ignores_adjustable_property_tail_but_requires_control() -> None:
+    interactive = _food_web_spec()
+    interactive["controls"] = [
+        {
+            "id": "crab_height",
+            "label": "Crab height",
+            "type": "range",
+            "value": 0,
+            "min": -40,
+            "max": 40,
+            "step": 10,
+            "binding": {"target_label": "Crab", "effect": "translate_y"},
+        }
+    ]
+    request = "Draw a food process from algae to crab to heron and an adjustable crab height."
+
+    assert _explicit_entity_groups(request) == [
+        frozenset({"algae"}),
+        frozenset({"crab"}),
+        frozenset({"heron"}),
+    ]
+    assert _plan_errors(interactive, request) == []
+    assert {error["code"] for error in _plan_errors(_food_web_spec(), request)} == {
+        "interaction_missing"
+    }
 
 
 def test_planner_rejects_family_specific_controls_without_inert_bindings() -> None:
