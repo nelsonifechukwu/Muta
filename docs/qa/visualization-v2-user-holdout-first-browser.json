@@ -1,0 +1,2191 @@
+{
+  "schema_version": 1,
+  "count": 31,
+  "summary": {
+    "passed": 31,
+    "failed": 0,
+    "page_errors": []
+  },
+  "cases": [
+    {
+      "id": "user-holdout-001",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 25,
+        "controls": 0,
+        "family": "explicit_curve",
+        "control_revision": 0,
+        "control_values": {},
+        "geometry_signature": 11611008,
+        "visual_state_signature": 11611008,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Two-dimensional plot of y=2x+3."
+      },
+      "elapsed_ms": 86.1,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 0,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 25,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-002",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 25,
+        "controls": 0,
+        "family": "explicit_curve",
+        "control_revision": 0,
+        "control_values": {},
+        "geometry_signature": 9024267,
+        "visual_state_signature": 9024267,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Two-dimensional plot of y=x^2-4x+3."
+      },
+      "elapsed_ms": 66.4,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 0,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 25,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-003",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 25,
+        "controls": 0,
+        "family": "explicit_curve",
+        "control_revision": 0,
+        "control_values": {},
+        "geometry_signature": 1308612,
+        "visual_state_signature": 1308612,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Two-dimensional plot of y=sin(x)."
+      },
+      "elapsed_ms": 101.1,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 0,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 25,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-004",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 25,
+        "controls": 0,
+        "family": "implicit_curve",
+        "control_revision": 0,
+        "control_values": {},
+        "geometry_signature": 93725,
+        "visual_state_signature": 93725,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Two-dimensional plot of x^2+y^2=9."
+      },
+      "elapsed_ms": 94.8,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 0,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 25,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-005",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "three",
+        "nonzero_pixel_samples": 576,
+        "draw_calls": 2,
+        "gpu_calls": 18,
+        "gpu_triangles": 19320,
+        "gpu_lines": 28947,
+        "gpu_points": 0,
+        "gl_error": 0,
+        "triangles": 9648,
+        "topology": {
+          "components": 1,
+          "vertices": 4826,
+          "edges": 14472,
+          "faces": 9648,
+          "euler": 2,
+          "boundary_edges": 0,
+          "nonmanifold_edges": 0,
+          "periodic_boundary_edges": 0,
+          "periodic_matched_edges": 0,
+          "periodic_unmatched_edges": 0,
+          "periodic_components": 1,
+          "periodic_function_max_delta": 0
+        },
+        "surface_diagnostics": null,
+        "family": "implicit_surface",
+        "control_revision": 2,
+        "control_values": {
+          "orbit": 1,
+          "reset_view": 1
+        },
+        "geometry_signature": 0,
+        "visual_state_signature": 0,
+        "animation_state": "paused",
+        "animation_progress": 0,
+        "observed_frame_interval_ms": 41.60000000000002,
+        "state_description": "orbit = 1; reset view = 1"
+      },
+      "elapsed_ms": 432,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "orbit",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        },
+        {
+          "id": "reset_view",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-008",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 15,
+        "controls": 1,
+        "family": "animal_cell",
+        "control_revision": 1,
+        "control_values": {
+          "organelle": "mitochondrion"
+        },
+        "geometry_signature": 510100,
+        "visual_state_signature": 510100,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "mitochondrion: makes ATP."
+      },
+      "elapsed_ms": 52.9,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 1,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "organelle",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 15,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-012",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 29,
+        "controls": 1,
+        "family": "unit_circle",
+        "control_revision": 1,
+        "control_values": {
+          "angle": 263
+        },
+        "geometry_signature": -31031,
+        "visual_state_signature": -31031,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "angle = 263"
+      },
+      "elapsed_ms": 49.4,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 1,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "angle",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 29,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-013",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "three",
+        "nonzero_pixel_samples": 576,
+        "draw_calls": 2,
+        "gpu_calls": 18,
+        "gpu_triangles": 9240,
+        "gpu_lines": 13827,
+        "gpu_points": 0,
+        "gl_error": 0,
+        "triangles": 4608,
+        "topology": {
+          "components": 1,
+          "vertices": 2401,
+          "edges": 7008,
+          "faces": 4608,
+          "euler": 1,
+          "boundary_edges": 192,
+          "nonmanifold_edges": 0,
+          "periodic_boundary_edges": 192,
+          "periodic_matched_edges": 192,
+          "periodic_unmatched_edges": 0,
+          "periodic_components": 1,
+          "periodic_function_max_delta": 1.1600000000000001
+        },
+        "surface_diagnostics": {
+          "rejected_discontinuity_cells": 0,
+          "rejected_undefined_cells": 0,
+          "finite_triangles": 4608
+        },
+        "family": "explicit_surface",
+        "control_revision": 2,
+        "control_values": {
+          "orbit": 1,
+          "reset_view": 1
+        },
+        "geometry_signature": 0,
+        "visual_state_signature": 0,
+        "animation_state": "paused",
+        "animation_progress": 0,
+        "observed_frame_interval_ms": 41.599999999999994,
+        "state_description": "orbit = 1; reset view = 1"
+      },
+      "elapsed_ms": 302.2,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "orbit",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        },
+        {
+          "id": "reset_view",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-014",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "three",
+        "nonzero_pixel_samples": 576,
+        "draw_calls": 2,
+        "gpu_calls": 18,
+        "gpu_triangles": 9240,
+        "gpu_lines": 13827,
+        "gpu_points": 0,
+        "gl_error": 0,
+        "triangles": 4608,
+        "topology": {
+          "components": 1,
+          "vertices": 2401,
+          "edges": 7008,
+          "faces": 4608,
+          "euler": 1,
+          "boundary_edges": 192,
+          "nonmanifold_edges": 0,
+          "periodic_boundary_edges": 192,
+          "periodic_matched_edges": 96,
+          "periodic_unmatched_edges": 96,
+          "periodic_components": 1,
+          "periodic_function_max_delta": 9.237386
+        },
+        "surface_diagnostics": {
+          "rejected_discontinuity_cells": 0,
+          "rejected_undefined_cells": 0,
+          "finite_triangles": 4608
+        },
+        "family": "explicit_surface",
+        "control_revision": 2,
+        "control_values": {
+          "orbit": 1,
+          "reset_view": 1
+        },
+        "geometry_signature": 0,
+        "visual_state_signature": 0,
+        "animation_state": "paused",
+        "animation_progress": 0,
+        "observed_frame_interval_ms": 41.599999999999994,
+        "state_description": "orbit = 1; reset view = 1"
+      },
+      "elapsed_ms": 324.3,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "orbit",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        },
+        {
+          "id": "reset_view",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-015",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 29,
+        "controls": 2,
+        "family": "projectile",
+        "control_revision": 2,
+        "control_values": {
+          "angle": 63,
+          "speed": 44
+        },
+        "geometry_signature": 11335371,
+        "visual_state_signature": 11335371,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Range 159.7 m; maximum height 78.3 m."
+      },
+      "elapsed_ms": 70.4,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "angle",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "speed",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 29,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-016",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 12,
+        "controls": 1,
+        "family": "inclined_plane",
+        "control_revision": 1,
+        "control_values": {
+          "incline": 45
+        },
+        "geometry_signature": 62119,
+        "visual_state_signature": 62119,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "At θ=45°, N=mg cosθ, friction μN with μ=0.2, and downhill a=max(0,g(sinθ−μcosθ))=5.55 m/s²."
+      },
+      "elapsed_ms": 47.8,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 1,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "incline",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 12,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-018",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 14,
+        "controls": 3,
+        "family": "ohms_law_circuit",
+        "control_revision": 3,
+        "control_values": {
+          "voltage": 17.5,
+          "resistance": 17.5,
+          "switch": 1
+        },
+        "geometry_signature": 182968,
+        "visual_state_signature": 182968,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Closed switch: current I = V/R = 1.00 A (V=17.5 V, R=17.5 Ω)."
+      },
+      "elapsed_ms": 90.1,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 3,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "voltage",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "resistance",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "switch",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 14,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-019",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 15,
+        "controls": 2,
+        "family": "refraction",
+        "control_revision": 2,
+        "control_values": {
+          "incident_angle": 58,
+          "medium": "water"
+        },
+        "geometry_signature": 322352,
+        "visual_state_signature": 322352,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "incident angle = 58; medium = water"
+      },
+      "elapsed_ms": 70.2,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "incident_angle",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "medium",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 15,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-021",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 27,
+        "controls": 1,
+        "family": "derivative_tangent",
+        "control_revision": 1,
+        "control_values": {
+          "x": 1.4
+        },
+        "geometry_signature": 919531,
+        "visual_state_signature": 919531,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "x = 1.4"
+      },
+      "elapsed_ms": 49.1,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 1,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "x",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 27,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-023",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 31,
+        "controls": 2,
+        "family": "gradient_field",
+        "control_revision": 2,
+        "control_values": {
+          "point_x": 7.3,
+          "point_y": 7.3
+        },
+        "geometry_signature": -183494,
+        "visual_state_signature": -183494,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "point x = 7.3; point y = 7.3"
+      },
+      "elapsed_ms": 147.7,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "point_x",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "point_y",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 31,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-025",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 59,
+        "controls": 1,
+        "family": "linear_transform",
+        "control_revision": 1,
+        "control_values": {
+          "matrix": "shear"
+        },
+        "geometry_signature": 1509,
+        "visual_state_signature": 1509,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Shear matrix: λ=1 is repeated, but only the x-axis supplies an independent real eigenvector."
+      },
+      "elapsed_ms": 49.4,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 1,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "matrix",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 59,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-027",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "canvas",
+        "nontransparent_samples": 876,
+        "controls": 5,
+        "family": "harmonic_motion",
+        "panel_count": 1,
+        "panel_titles": [
+          "Harmonic Motion"
+        ],
+        "control_revision": 5,
+        "control_values": {
+          "spring_constant": 7.3,
+          "mass": 7.3,
+          "play": 0,
+          "pause": 1,
+          "restart": 1,
+          "__animation_progress": 0.005212499999999998
+        },
+        "geometry_signature": -360,
+        "visual_state_signature": -360,
+        "animation_state": "playing",
+        "animation_progress": 0.005212499999999998,
+        "observed_frame_interval_ms": 41.69999999999999,
+        "state_description": "spring constant = 7.3; mass = 7.3; play = 0; pause = 1; restart = 1;   animation progress = 0.005212499999999998 · ▶ 1%"
+      },
+      "elapsed_ms": 348.3,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 5,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "spring_constant",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "mass",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "play",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "pause",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "restart",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-028",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 17,
+        "controls": 4,
+        "family": "elastic_collision",
+        "control_revision": 4,
+        "control_values": {
+          "mass_1": 6,
+          "velocity_1": 3.5,
+          "mass_2": 6,
+          "velocity_2": 3.5
+        },
+        "geometry_signature": 274079,
+        "visual_state_signature": 274079,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Elastic result: v₁=3.50, v₂=3.50; Δp=0.0e+0, ΔK=0.0e+0."
+      },
+      "elapsed_ms": 114.2,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 4,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "mass_1",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "velocity_1",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "mass_2",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "velocity_2",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 17,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-030",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 39,
+        "controls": 6,
+        "family": "rc_circuit",
+        "control_revision": 6,
+        "control_values": {
+          "mode": "discharging",
+          "resistance": 14.5,
+          "capacitance": 7.4,
+          "play": 1,
+          "pause": 0,
+          "restart": 0,
+          "__animation_progress": 0.005212500000000002
+        },
+        "geometry_signature": 129649,
+        "visual_state_signature": 129649,
+        "animation_state": "playing",
+        "animation_progress": 0.005212500000000002,
+        "observed_frame_interval_ms": 33.400000000000006,
+        "state_description": "discharging RC transient with τ=RC=21.46 display units; voltage and current share the circuit state. · ▶ 1%"
+      },
+      "elapsed_ms": 293.3,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 6,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "resistance",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "capacitance",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "mode",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "play",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "pause",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "restart",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 39,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-032",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 109,
+        "controls": 1,
+        "family": "merge_sort",
+        "control_revision": 1,
+        "control_values": {
+          "step": 15
+        },
+        "geometry_signature": 6413006,
+        "visual_state_signature": 6413006,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "step = 15"
+      },
+      "elapsed_ms": 70.8,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 1,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "step",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 109,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-034",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 31,
+        "controls": 6,
+        "family": "dijkstra",
+        "control_revision": 6,
+        "control_values": {
+          "source": "B",
+          "destination": "A",
+          "step": 0,
+          "play": 1,
+          "pause": 0,
+          "restart": 0,
+          "__animation_progress": 0.005200000000000003
+        },
+        "geometry_signature": 333666,
+        "visual_state_signature": 333666,
+        "animation_state": "playing",
+        "animation_progress": 0.005200000000000003,
+        "observed_frame_interval_ms": 34.00000000000003,
+        "state_description": "Shortest B → C → A has total weight 3. Settled: none. · ▶ 1%"
+      },
+      "elapsed_ms": 327.3,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 6,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "step",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "source",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "destination",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "play",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "pause",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "restart",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 31,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-035",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 23,
+        "controls": 2,
+        "family": "neural_network",
+        "control_revision": 2,
+        "control_values": {
+          "weight": 7.3,
+          "step": 3
+        },
+        "geometry_signature": 455206,
+        "visual_state_signature": 455206,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Forward step 3: x₁=0.6, x₂=0.4; h₁=ReLU(7.30x₁+0.5x₂−0.2)=4.380, h₂=0.180, and sigmoid output ŷ=0.979."
+      },
+      "elapsed_ms": 70.6,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "weight",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "step",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 23,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-036",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 31,
+        "controls": 2,
+        "family": "gradient_field",
+        "control_revision": 2,
+        "control_values": {
+          "point_x": 7.3,
+          "point_y": 7.3
+        },
+        "geometry_signature": -183494,
+        "visual_state_signature": -183494,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "point x = 7.3; point y = 7.3"
+      },
+      "elapsed_ms": 121.3,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "point_x",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "point_y",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 31,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-037",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "canvas",
+        "nontransparent_samples": 790,
+        "controls": 2,
+        "family": "differential_drive",
+        "panel_count": 1,
+        "panel_titles": [
+          "Differential Drive"
+        ],
+        "control_revision": 2,
+        "control_values": {
+          "left_velocity": 7.3,
+          "right_velocity": 7.3
+        },
+        "geometry_signature": 77479,
+        "visual_state_signature": 77479,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Equal wheel speeds produce a straight path; the instantaneous centre is at infinity."
+      },
+      "elapsed_ms": 107.4,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "left_velocity",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "right_velocity",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-039",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "canvas",
+        "nontransparent_samples": 1094,
+        "controls": 2,
+        "family": "sampling_aliasing",
+        "panel_count": 1,
+        "panel_titles": [
+          "Sampling Aliasing"
+        ],
+        "control_revision": 2,
+        "control_values": {
+          "signal_frequency": 14.5,
+          "sample_frequency": 29
+        },
+        "geometry_signature": 864596,
+        "visual_state_signature": 864596,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "Nyquist condition satisfied: sampling rate is at least twice the signal frequency."
+      },
+      "elapsed_ms": 96.3,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "signal_frequency",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "sample_frequency",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-040",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 36,
+        "controls": 1,
+        "family": "fourier_series",
+        "control_revision": 1,
+        "control_values": {
+          "terms": 11
+        },
+        "geometry_signature": 408696,
+        "visual_state_signature": 408696,
+        "animation_state": "static",
+        "animation_progress": 1,
+        "observed_frame_interval_ms": 0,
+        "state_description": "terms = 11"
+      },
+      "elapsed_ms": 74,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 1,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "terms",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 36,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-042",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "canvas",
+        "nontransparent_samples": 966,
+        "controls": 5,
+        "family": "double_pendulum",
+        "panel_count": 1,
+        "panel_titles": [
+          "Double Pendulum"
+        ],
+        "control_revision": 5,
+        "control_values": {
+          "angle_1": 122,
+          "angle_2": 122.2,
+          "play": 0,
+          "pause": 1,
+          "restart": 1,
+          "__animation_progress": 0.007300000000000004
+        },
+        "geometry_signature": 442,
+        "visual_state_signature": 442,
+        "animation_state": "playing",
+        "animation_progress": 0.007300000000000004,
+        "observed_frame_interval_ms": 41.70000000000002,
+        "state_description": "angle 1 = 122; angle 2 = 122.2; play = 0; pause = 1; restart = 1;   animation progress = 0.007300000000000004 · ▶ 1%"
+      },
+      "elapsed_ms": 329,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 5,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "angle_1",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "angle_2",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "play",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "pause",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "restart",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-044",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "three",
+        "nonzero_pixel_samples": 576,
+        "draw_calls": 2,
+        "gpu_calls": 18,
+        "gpu_triangles": 53212,
+        "gpu_lines": 79785,
+        "gpu_points": 0,
+        "gl_error": 0,
+        "triangles": 26594,
+        "topology": {
+          "components": 2,
+          "vertices": 13762,
+          "edges": 40360,
+          "faces": 26594,
+          "euler": -4,
+          "boundary_edges": 938,
+          "nonmanifold_edges": 0,
+          "periodic_boundary_edges": 932,
+          "periodic_matched_edges": 932,
+          "periodic_unmatched_edges": 6,
+          "periodic_components": 1,
+          "periodic_function_max_delta": 4.440892098500626e-16
+        },
+        "surface_diagnostics": null,
+        "family": "implicit_surface",
+        "control_revision": 2,
+        "control_values": {
+          "orbit": 1,
+          "reset_view": 1
+        },
+        "geometry_signature": 0,
+        "visual_state_signature": 0,
+        "animation_state": "paused",
+        "animation_progress": 0,
+        "observed_frame_interval_ms": 41.80000000000001,
+        "state_description": "orbit = 1; reset view = 1"
+      },
+      "elapsed_ms": 542.5,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 2,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "orbit",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        },
+        {
+          "id": "reset_view",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": false
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 0,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-047",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 33,
+        "controls": 4,
+        "family": "titration",
+        "control_revision": 4,
+        "control_values": {
+          "titrant_volume": 36.5,
+          "play": 1,
+          "pause": 0,
+          "restart": 0,
+          "__animation_progress": 0.0073250000000000025
+        },
+        "geometry_signature": 93347,
+        "visual_state_signature": 93347,
+        "animation_state": "playing",
+        "animation_progress": 0.0073250000000000025,
+        "observed_frame_interval_ms": 41.60000000000002,
+        "state_description": "36.5 mL titrant added; curve and probe agree at pH 11.82, with equivalence near 25 mL. · ▶ 1%"
+      },
+      "elapsed_ms": 316.9,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 4,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "titrant_volume",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "play",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "pause",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "restart",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": true
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 33,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-048",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 25,
+        "controls": 5,
+        "family": "virtual_memory",
+        "control_revision": 5,
+        "control_values": {
+          "address": 186,
+          "step": 0,
+          "play": 1,
+          "pause": 0,
+          "restart": 0,
+          "__animation_progress": 0.0072999999999999975
+        },
+        "geometry_signature": 404404,
+        "visual_state_signature": 404404,
+        "animation_state": "playing",
+        "animation_progress": 0.0072999999999999975,
+        "observed_frame_interval_ms": 41.69999999999999,
+        "state_description": "address = 186; step = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.0072999999999999975 · ▶ 1%"
+      },
+      "elapsed_ms": 255,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 5,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "address",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "step",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "play",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "pause",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "restart",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 25,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "id": "user-holdout-050",
+      "rendered": true,
+      "evidence": {
+        "rendered": true,
+        "renderer": "svg",
+        "primitive_count": 39,
+        "controls": 5,
+        "family": "kalman_filter",
+        "control_revision": 5,
+        "control_values": {
+          "noise": 3.7,
+          "step": 0,
+          "play": 1,
+          "pause": 0,
+          "restart": 0,
+          "__animation_progress": 0.010412499999999998
+        },
+        "geometry_signature": 711,
+        "visual_state_signature": 711,
+        "animation_state": "playing",
+        "animation_progress": 0.010412499999999998,
+        "observed_frame_interval_ms": 41.599999999999994,
+        "state_description": "Step 0, noise 3.70: true position 0.00, noisy measurement 0.00, prediction 0.50 with P⁻=1.580, gain K=0.103, update 0.45 with contracted P=1.417. · ▶ 1%"
+      },
+      "elapsed_ms": 268.5,
+      "viewport": {
+        "width": 760,
+        "height": 520
+      },
+      "theme": "light",
+      "controls": 5,
+      "named_controls": true,
+      "accessible_canvas": true,
+      "interaction_changed": true,
+      "geometry_changed": true,
+      "interaction_results": [
+        {
+          "id": "noise",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "step",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": false,
+          "transport": false
+        },
+        {
+          "id": "play",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": true,
+          "visual_state_changed": true,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "pause",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        },
+        {
+          "id": "restart",
+          "passed": true,
+          "revision_changed": true,
+          "state_changed": true,
+          "semantic_outcome": true,
+          "geometry_changed": false,
+          "visual_state_changed": false,
+          "animation_changed": true,
+          "transport": true
+        }
+      ],
+      "visible_semantic_geometry": {
+        "passed": true
+      },
+      "visual_primitive_count": 39,
+      "overflow": false,
+      "errors": []
+    }
+  ]
+}

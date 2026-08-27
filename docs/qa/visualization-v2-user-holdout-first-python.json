@@ -1,0 +1,966 @@
+{
+  "schema_version": 1,
+  "phase": "unaltered-first-run",
+  "pre_holdout_candidate": {
+    "sha": "ae3cc2e1572b042a0d53ab5af4fe1143e9cb71cd",
+    "frozen_at": "2026-08-27T12:07:54+01:00"
+  },
+  "source": {
+    "sha256": "0e0224eecd1d849ff23565cf362ee3832e17bde1f987d5ced3049be1377ee363",
+    "case_count": 50
+  },
+  "summary": {
+    "total": 50,
+    "compiled": 31,
+    "compile_failed": 19
+  },
+  "cases": [
+    {
+      "id": "user-holdout-001",
+      "title": "Linear function",
+      "raw_prompt": "1. **Linear function**\n   Visualize\n\n   $$\n   y=2x+3\n   $$\n\n   with labelled axes, slope, and \\(y\\)-intercept.",
+      "compiled": true,
+      "family": "explicit_curve",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive 2D equation. Two-dimensional plot of y=2x+3.",
+      "text_fallback": "Two-dimensional plot of y=2x+3.",
+      "compile_ms": 7.078,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-002",
+      "title": "Parabola",
+      "raw_prompt": "2. **Parabola**\n   Visualize\n\n   $$\n   y=x^2-4x+3\n   $$\n\n   and label its roots, vertex, and axis of symmetry.",
+      "compiled": true,
+      "family": "explicit_curve",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive 2D equation. Two-dimensional plot of y=x^2-4x+3.",
+      "text_fallback": "Two-dimensional plot of y=x^2-4x+3.",
+      "compile_ms": 2.538,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-003",
+      "title": "Sine wave",
+      "raw_prompt": "3. **Sine wave**\n   Visualize\n\n   $$\n   y=\\sin x\n   $$\n\n   and label amplitude, wavelength, maxima, minima, and zero crossings.",
+      "compiled": true,
+      "family": "explicit_curve",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive 2D equation. Two-dimensional plot of y=sin(x).",
+      "text_fallback": "Two-dimensional plot of y=sin(x).",
+      "compile_ms": 2.611,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-004",
+      "title": "Circle",
+      "raw_prompt": "4. **Circle**\n   Visualize\n\n   $$\n   x^2+y^2=9\n   $$\n\n   and show its centre and radius.",
+      "compiled": true,
+      "family": "implicit_curve",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive 2D equation. Two-dimensional plot of x^2+y^2=9.",
+      "text_fallback": "Two-dimensional plot of x^2+y^2=9.",
+      "compile_ms": 8.174,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-005",
+      "title": "3D sphere",
+      "raw_prompt": "5. **3D sphere**\n   Visualize\n\n   $$\n   x^2+y^2+z^2=9.\n   $$\n\n   Allow the object to be rotated.",
+      "compiled": true,
+      "family": "implicit_surface",
+      "renderer": "three",
+      "kind": "scene3d",
+      "controls": [
+        "orbit",
+        "reset_view"
+      ],
+      "layer_types": [
+        "implicit_surface"
+      ],
+      "aria_label": "Three-dimensional plot of x^2+y^2+z^2=9, with x, y, and z axes.",
+      "text_fallback": "Surface x^2+y^2+z^2=9. Domains are x -5.0 to 5.0, y -5.0 to 5.0, and z -5.0 to 5.0. Undefined samples are left as gaps.",
+      "compile_ms": 138.074,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-006",
+      "title": "Vector addition",
+      "raw_prompt": "6. **Vector addition**\n   Visualize\n\n   $$\n   \\mathbf a=(3,2),\\qquad \\mathbf b=(1,4)\n   $$\n\n   and geometrically show \\(\\mathbf a+\\mathbf b\\).",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.342,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-007",
+      "title": "Basic atom",
+      "raw_prompt": "7. **Basic atom**\n   Draw a labelled carbon atom showing protons, neutrons, and electrons.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.186,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-008",
+      "title": "Animal cell",
+      "raw_prompt": "8. **Animal cell**\n   Draw a simplified animal cell with labelled nucleus, mitochondria, membrane, ribosomes, and cytoplasm.",
+      "compiled": true,
+      "family": "animal_cell",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "organelle"
+      ],
+      "layer_types": [
+        "node"
+      ],
+      "aria_label": "Interactive animal cell visualization with labelled relationships and controls.",
+      "text_fallback": "Animal Cell. Visible layers: cell membrane; nucleus: stores DNA; mitochondrion: makes ATP; ribosome: builds proteins; rough ER: folds proteins; Golgi: sorts cargo; lysosome: digests waste. Adjustable controls: Organelle.",
+      "compile_ms": 0.33,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-009",
+      "title": "Simple electric circuit",
+      "raw_prompt": "9. **Simple electric circuit**\n   Show a battery connected to one resistor and indicate conventional current direction.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.23,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-010",
+      "title": "Binary representation",
+      "raw_prompt": "10. **Binary representation**\n    Visualize how decimal \\(13\\) becomes binary \\(1101\\), showing the contribution of each bit.\n\n---\n\n# Level 2 — Parameterized interactive diagrams",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.357,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-011",
+      "title": "Interactive parabola",
+      "raw_prompt": "11. **Interactive parabola**\n    Visualize\n\n    $$\n    y=ax^2+bx+c\n    $$\n\n    with sliders for \\(a,b,c\\).",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.343,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-012",
+      "title": "Interactive unit circle",
+      "raw_prompt": "12. **Interactive unit circle**\n    Let me change \\(\\theta\\) and simultaneously show:\n\n    $$\n    \\sin\\theta,\\qquad \\cos\\theta\n    $$\n\n    on the unit circle.",
+      "compiled": true,
+      "family": "unit_circle",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "angle"
+      ],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive unit circle visualization with labelled relationships and controls.",
+      "text_fallback": "Unit Circle. Visible layers: x² + y² = 1; radius to θ; cos θ projection. Adjustable controls: Angle.",
+      "compile_ms": 0.605,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-013",
+      "title": "3D Gaussian surface",
+      "raw_prompt": "13. **3D Gaussian surface**\n    Visualize\n\n    $$\n    z=e^{-(x^2+y^2)}.\n    $$\n\n    Allow rotation and zoom.",
+      "compiled": true,
+      "family": "explicit_surface",
+      "renderer": "three",
+      "kind": "scene3d",
+      "controls": [
+        "orbit",
+        "reset_view"
+      ],
+      "layer_types": [
+        "explicit_surface"
+      ],
+      "aria_label": "Three-dimensional plot of z=e^(-(x^2+y^2)), with x, y, and z axes.",
+      "text_fallback": "Surface z=e^(-(x^2+y^2)). Domains are x -5.0 to 5.0, y -5.0 to 5.0, and z -0.08 to 1.08. Undefined samples are left as gaps.",
+      "compile_ms": 2.01,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-014",
+      "title": "Damped wave surface",
+      "raw_prompt": "14. **Damped wave surface**\n    Visualize\n\n    $$\n    z=4e^{-y^2/4}\\sin(2x).\n    $$",
+      "compiled": true,
+      "family": "explicit_surface",
+      "renderer": "three",
+      "kind": "scene3d",
+      "controls": [
+        "orbit",
+        "reset_view"
+      ],
+      "layer_types": [
+        "explicit_surface"
+      ],
+      "aria_label": "Three-dimensional plot of z=4e^(-y^2/4)sin(2x), with x, y, and z axes.",
+      "text_fallback": "Surface z=4e^(-y^2/4)sin(2x). Domains are x -5.0 to 5.0, y -5.0 to 5.0, and z -4.618693 to 4.618693. Undefined samples are left as gaps.",
+      "compile_ms": 2.7,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-015",
+      "title": "Projectile motion",
+      "raw_prompt": "15. **Projectile motion**\n    Show a projectile whose launch velocity and angle can be changed. Display trajectory, range, maximum height, and velocity vector.",
+      "compiled": true,
+      "family": "projectile",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "angle",
+        "speed"
+      ],
+      "layer_types": [
+        "arrow",
+        "axes",
+        "particles",
+        "polyline"
+      ],
+      "aria_label": "Interactive projectile visualization with labelled relationships and controls.",
+      "text_fallback": "Projectile. Visible layers: projectile path; maximum height and range; instantaneous velocity. Adjustable controls: Angle, Speed.",
+      "compile_ms": 0.611,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-016",
+      "title": "Inclined plane",
+      "raw_prompt": "16. **Inclined plane**\n    Show a block on an incline with gravity, normal force, friction, and resultant force. Allow incline angle to change.",
+      "compiled": true,
+      "family": "inclined_plane",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "incline"
+      ],
+      "layer_types": [
+        "arrow",
+        "rect"
+      ],
+      "aria_label": "Interactive inclined plane visualization with labelled relationships and controls.",
+      "text_fallback": "Inclined Plane. Visible layers: inclined plane θ=30°; box; weight mg; normal N=mg cosθ; friction μN, μ=0.2; resultant a=3.21 m/s² down plane. Adjustable controls: Incline.",
+      "compile_ms": 0.277,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-017",
+      "title": "Hooke's law",
+      "raw_prompt": "17. **Hooke's law**\n    Visualize a spring and mass governed by\n\n    $$\n    F=-kx.\n    $$\n\n    Allow \\(k\\) and displacement \\(x\\) to change.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.369,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-018",
+      "title": "Ohm's law",
+      "raw_prompt": "18. **Ohm's law**\n    Show a resistor circuit with adjustable voltage and resistance, updating\n\n    $$\n    I=\\frac VR.\n    $$",
+      "compiled": true,
+      "family": "ohms_law_circuit",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "voltage",
+        "resistance",
+        "switch"
+      ],
+      "layer_types": [
+        "link",
+        "node"
+      ],
+      "aria_label": "Interactive ohms law circuit visualization with labelled relationships and controls.",
+      "text_fallback": "Ohms Law Circuit. Visible layers: battery V; switch; resistor R; ammeter I = V/R; return path. Adjustable controls: Voltage, Resistance, Switch.",
+      "compile_ms": 0.372,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-019",
+      "title": "Refraction",
+      "raw_prompt": "19. **Refraction**\n    Visualize a light ray travelling from air into glass. Allow the incidence angle to change and show Snell's law geometrically.",
+      "compiled": true,
+      "family": "refraction",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "incident_angle",
+        "medium"
+      ],
+      "layer_types": [
+        "link",
+        "node"
+      ],
+      "aria_label": "Interactive refraction visualization with labelled relationships and controls.",
+      "text_fallback": "Refraction. Visible layers: incident ray; normal / interface; refracted ray; n₁ sin θ₁ = n₂ sin θ₂; air; glass; Snell's law. Adjustable controls: Incident Angle, Second medium.",
+      "compile_ms": 0.328,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-020",
+      "title": "Molecular geometry",
+      "raw_prompt": "20. **Molecular geometry**\n    Visualize \\(H_2O\\), \\(NH_3\\), and \\(CH_4\\) as selectable 3D molecules with their approximate bond angles.\n\n---\n\n# Level 3 — Dynamic state and multiple linked views",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.391,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-021",
+      "title": "Derivative visualizer",
+      "raw_prompt": "21. **Derivative visualizer**\n    For\n\n    $$\n    f(x)=x^3-3x,\n    $$\n\n    move a point along the curve and simultaneously show its tangent and \\(f'(x)\\).",
+      "compiled": true,
+      "family": "derivative_tangent",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "x"
+      ],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive derivative tangent visualization with labelled relationships and controls.",
+      "text_fallback": "Derivative Tangent. Visible layers: f(x) = x³ − 3x; tangent at x = 1, slope 0. Adjustable controls: X.",
+      "compile_ms": 0.766,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-022",
+      "title": "Riemann sum",
+      "raw_prompt": "22. **Riemann sum**\n    Approximate\n\n    $$\n    \\int_0^4x^2\\,dx\n    $$\n\n    with rectangles. Allow the number of rectangles to increase.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.263,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-023",
+      "title": "Gradient field",
+      "raw_prompt": "23. **Gradient field**\n    Visualize\n\n    $$\n    f(x,y)=x^2+y^2\n    $$\n\n    using both a 3D surface and 2D contour map with gradient vectors.",
+      "compiled": true,
+      "family": "gradient_field",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "point_x",
+        "point_y"
+      ],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive gradient field visualization with labelled relationships and controls.",
+      "text_fallback": "Gradient Field. Visible layers: contour r=1; contour r=2; contour r=3; gradient at probe. Adjustable controls: Point X, Point Y.",
+      "compile_ms": 1.405,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-024",
+      "title": "Matrix transformation",
+      "raw_prompt": "24. **Matrix transformation**\n    Show how\n\n    $$\n    A=\n    \\begin{bmatrix}\n    2&1\\\\\n    0&1\n    \\end{bmatrix}\n    $$\n\n    transforms a 2D coordinate grid.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.366,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-025",
+      "title": "Eigenvector visualization",
+      "raw_prompt": "25. **Eigenvector visualization**\n    Show which vectors maintain their direction under a \\(2\\times2\\) matrix transformation.",
+      "compiled": true,
+      "family": "linear_transform",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "matrix"
+      ],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive linear transform visualization with labelled relationships and controls.",
+      "text_fallback": "Linear Transform. Visible layers: vertical x=-3; horizontal y=-3; vertical x=-2; horizontal y=-2; vertical x=-1; horizontal y=-1; vertical x=0; horizontal y=0; vertical x=1; horizontal y=1; vertical x=2; horizontal y=2; vertical x=3; horizontal y=3. Adjustable controls: Matrix.",
+      "compile_ms": 0.366,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-026",
+      "title": "Travelling wave",
+      "raw_prompt": "26. **Travelling wave**\n    Animate\n\n    $$\n    y(x,t)=A\\sin(kx-\\omega t).\n    $$\n\n    Allow \\(A,k,\\omega\\) to change.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.285,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-027",
+      "title": "Simple harmonic oscillator",
+      "raw_prompt": "27. **Simple harmonic oscillator**\n    Simultaneously show:\n\n    * the moving mass,\n    * displacement versus time,\n    * velocity versus time.",
+      "compiled": true,
+      "family": "harmonic_motion",
+      "renderer": "canvas",
+      "kind": "simulation2d",
+      "controls": [
+        "spring_constant",
+        "mass",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "layer_types": [
+        "axes",
+        "particles",
+        "polyline"
+      ],
+      "aria_label": "Interactive harmonic motion visualization with labelled relationships and controls.",
+      "text_fallback": "Harmonic Motion. Visible layers: displacement versus time; phase space velocity versus displacement; spring and moving mass; current moving mass. Adjustable controls: Spring Constant, Mass.",
+      "compile_ms": 0.92,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-028",
+      "title": "Elastic collision",
+      "raw_prompt": "28. **Elastic collision**\n    Show two carts colliding. Allow masses and initial velocities to change and visualize momentum before and after collision.",
+      "compiled": true,
+      "family": "elastic_collision",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "mass_1",
+        "velocity_1",
+        "mass_2",
+        "velocity_2"
+      ],
+      "layer_types": [
+        "arrow",
+        "node"
+      ],
+      "aria_label": "Interactive elastic collision visualization with labelled relationships and controls.",
+      "text_fallback": "Elastic Collision. Visible layers: cart 1 before; cart 2 before; cart 1 after; cart 2 after; u₁; u₂; v₁; v₂. Adjustable controls: Mass 1, Velocity 1, Mass 2, Velocity 2.",
+      "compile_ms": 0.297,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-029",
+      "title": "Electric field",
+      "raw_prompt": "29. **Electric field**\n    Place a positive and negative charge in 2D. Allow either charge to move while updating electric field vectors.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.265,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-030",
+      "title": "RC circuit",
+      "raw_prompt": "30. **RC circuit**\n    Show an RC circuit alongside:\n\n    $$\n    V_C(t)=V(1-e^{-t/RC}).\n    $$\n\n    Animate capacitor charging while the graph updates.\n\n---\n\n# Level 4 — Algorithms, systems, spatial reasoning",
+      "compiled": true,
+      "family": "rc_circuit",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "mode",
+        "resistance",
+        "capacitance",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "layer_types": [
+        "axes",
+        "link",
+        "node",
+        "polyline"
+      ],
+      "aria_label": "Interactive rc circuit visualization with labelled relationships and controls.",
+      "text_fallback": "Rc Circuit. Visible layers: capacitor voltage Vc(t); circuit current I(t); DC source; resistor R; capacitor C; I(t); charge; return. Adjustable controls: RC mode, Resistance, Capacitance.",
+      "compile_ms": 1.072,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-031",
+      "title": "Binary search",
+      "raw_prompt": "31. **Binary search**\n    Visualize binary search operating on a sorted array. Animate every comparison and eliminated region.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.242,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-032",
+      "title": "Sorting algorithm",
+      "raw_prompt": "32. **Sorting algorithm**\n    Visualize merge sort on:\n\n    $$\n    [8,3,6,2,7,1,5,4].\n    $$\n\n    Show splitting and merging step by step.",
+      "compiled": true,
+      "family": "merge_sort",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "step"
+      ],
+      "layer_types": [
+        "link",
+        "node"
+      ],
+      "aria_label": "Interactive merge sort visualization with labelled relationships and controls.",
+      "text_fallback": "Merge Sort. Visible layers: [8,3,6,2,7,1,5,4]; recursive split; [8,3,6,2]; [8,3]; [8]; [3]; [6,2]; [6]; [2]; [7,1,5,4]; [7,1]; [7]; [1]; [5,4]. Adjustable controls: Step.",
+      "compile_ms": 0.807,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-033",
+      "title": "Binary search tree",
+      "raw_prompt": "33. **Binary search tree**\n    Insert numbers interactively and animate tree restructuring.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.187,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-034",
+      "title": "Dijkstra's algorithm",
+      "raw_prompt": "34. **Dijkstra's algorithm**\n    Show a weighted graph and animate shortest-path discovery from a selected source node.",
+      "compiled": true,
+      "family": "dijkstra",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "source",
+        "destination",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "layer_types": [
+        "link",
+        "node"
+      ],
+      "aria_label": "Interactive dijkstra visualization with labelled relationships and controls.",
+      "text_fallback": "Dijkstra. Visible layers: A; B; C; D; E; F; 4; 2; 1; 5; 8; 10; 6; 3. Adjustable controls: Source node, Destination node, Algorithm step.",
+      "compile_ms": 0.372,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-035",
+      "title": "Neural network",
+      "raw_prompt": "35. **Neural network**\n    Visualize a \\(2\\rightarrow3\\rightarrow1\\) network. Show values flowing through weighted connections and activations.",
+      "compiled": true,
+      "family": "neural_network",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "weight",
+        "step"
+      ],
+      "layer_types": [
+        "link",
+        "node"
+      ],
+      "aria_label": "Interactive neural network visualization with labelled relationships and controls.",
+      "text_fallback": "Neural Network. Visible layers: input x₁=0.6; input x₂=0.4; h₁=ReLU(0.60)=0.60; h₂=ReLU(0.18)=0.18; ŷ=sigmoid(0.464)=0.614; w₁₁ adjustable; w₁₂=0.5; w₂₁=−0.4; w₂₂=0.8; v₁=0.9; v₂=−0.7. Adjustable controls: Weight, Step.",
+      "compile_ms": 0.353,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-036",
+      "title": "Gradient descent",
+      "raw_prompt": "36. **Gradient descent**\n    Visualize optimization over\n\n    $$\n    f(x,y)=x^2+2y^2.\n    $$\n\n    Show the optimization trajectory on both a 3D surface and contour map.",
+      "compiled": true,
+      "family": "gradient_field",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "point_x",
+        "point_y"
+      ],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive gradient field visualization with labelled relationships and controls.",
+      "text_fallback": "Gradient Field. Visible layers: contour r=1; contour r=2; contour r=3; gradient at probe. Adjustable controls: Point X, Point Y.",
+      "compile_ms": 1.438,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-037",
+      "title": "Differential-drive robot",
+      "raw_prompt": "37. **Differential-drive robot**\n    Show a two-wheel robot. Independently control\n\n    $$\n    v_L,\\qquad v_R\n    $$\n\n    and visualize its trajectory and instantaneous centre of curvature.",
+      "compiled": true,
+      "family": "differential_drive",
+      "renderer": "canvas",
+      "kind": "simulation2d",
+      "controls": [
+        "left_velocity",
+        "right_velocity"
+      ],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive differential drive visualization with labelled relationships and controls.",
+      "text_fallback": "Differential Drive. Visible layers: robot trajectory; robot body; left wheel; right wheel; instantaneous centre of curvature. Adjustable controls: Left Velocity, Right Velocity.",
+      "compile_ms": 0.791,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-038",
+      "title": "Robot arm forward kinematics",
+      "raw_prompt": "38. **Robot arm forward kinematics**\n    Visualize a planar 3-link manipulator. Let each joint angle change and display the end-effector position.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.28,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-039",
+      "title": "Sampling and aliasing",
+      "raw_prompt": "39. **Sampling and aliasing**\n    Show a continuous sine wave and its sampled points. Allow the sampling frequency to change until aliasing occurs.",
+      "compiled": true,
+      "family": "sampling_aliasing",
+      "renderer": "canvas",
+      "kind": "simulation2d",
+      "controls": [
+        "signal_frequency",
+        "sample_frequency"
+      ],
+      "layer_types": [
+        "axes",
+        "particles",
+        "polyline"
+      ],
+      "aria_label": "Interactive sampling aliasing visualization with labelled relationships and controls.",
+      "text_fallback": "Sampling Aliasing. Visible layers: continuous signal; aliased reconstruction; sample locations. Adjustable controls: Signal Frequency, Sample Frequency.",
+      "compile_ms": 1.778,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-040",
+      "title": "Fourier decomposition",
+      "raw_prompt": "40. **Fourier decomposition**\n    Build a square wave by progressively adding sinusoidal harmonics and show both the constituent waves and their sum.\n\n---\n\n# Level 5 — Advanced university-level interactive simulations",
+      "compiled": true,
+      "family": "fourier_series",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "terms"
+      ],
+      "layer_types": [
+        "axes",
+        "particles",
+        "polyline"
+      ],
+      "aria_label": "Interactive fourier series visualization with labelled relationships and controls.",
+      "text_fallback": "Fourier Series. Visible layers: square-wave target; harmonic n=1; harmonic n=3; harmonic n=5; odd-harmonic partial sum; Gibbs overshoot near jumps. Adjustable controls: Terms.",
+      "compile_ms": 1.908,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-041",
+      "title": "3D vector field",
+      "raw_prompt": "41. **3D vector field**\n    Visualize\n\n    $$\n    \\mathbf F(x,y,z)=(-y,x,z)\n    $$\n\n    as arrows in 3D, with selectable points showing local vector values.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.344,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-042",
+      "title": "Double pendulum",
+      "raw_prompt": "42. **Double pendulum**\n    Animate two pendulums using slightly different initial conditions and show their trajectories diverging.",
+      "compiled": true,
+      "family": "double_pendulum",
+      "renderer": "canvas",
+      "kind": "simulation2d",
+      "controls": [
+        "angle_1",
+        "angle_2",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "layer_types": [
+        "axes",
+        "polyline"
+      ],
+      "aria_label": "Interactive double pendulum visualization with labelled relationships and controls.",
+      "text_fallback": "Double Pendulum. Visible layers: trajectory A: θ₀=75°; trajectory B: θ₀=75.5°; double-pendulum arms A; double-pendulum arms B. Adjustable controls: Angle 1, Angle 2.",
+      "compile_ms": 2.863,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-043",
+      "title": "Lorenz attractor",
+      "raw_prompt": "43. **Lorenz attractor**\n    Visualize the system\n\n    $$\n    \\dot x=\\sigma(y-x),\n    $$\n\n    $$\n    \\dot y=x(\\rho-z)-y,\n    $$\n\n    $$\n    \\dot z=xy-\\beta z.\n    $$\n\n    Animate its trajectory in 3D.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.506,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-044",
+      "title": "Gyroid",
+      "raw_prompt": "44. **Gyroid**\n    Visualize the implicit surface\n\n    $$\n    \\sin x\\cos y+\\sin y\\cos z+\\sin z\\cos x=0.\n    $$\n\n    Allow rotation and clipping through the structure.",
+      "compiled": true,
+      "family": "implicit_surface",
+      "renderer": "three",
+      "kind": "scene3d",
+      "controls": [
+        "orbit",
+        "reset_view"
+      ],
+      "layer_types": [
+        "implicit_surface"
+      ],
+      "aria_label": "Three-dimensional plot of sin(x)cos(y)+sin(y)cos(z)+sin(z)cos(x)=0, with x, y, and z axes.",
+      "text_fallback": "Surface sin(x)cos(y)+sin(y)cos(z)+sin(z)cos(x)=0. Domains are x -3.0909218043383446 to 3.1922635028412416, y -3.107812087422161 to 3.175373219757425, and z -3.1213243138892137 to 3.1618609932903725. Undefined samples are left as gaps.",
+      "compile_ms": 0.849,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-045",
+      "title": "Electromagnetic wave",
+      "raw_prompt": "45. **Electromagnetic wave**\n    Animate mutually perpendicular electric and magnetic fields propagating through space.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.223,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-046",
+      "title": "Action potential",
+      "raw_prompt": "46. **Action potential**\n    Simultaneously visualize:\n\n    * neuron membrane,\n    * membrane voltage,\n    * \\(Na^+\\) channel opening,\n    * \\(K^+\\) channel opening,\n    * ion flow.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.311,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-047",
+      "title": "Chemical titration",
+      "raw_prompt": "47. **Chemical titration**\n    Simulate acid being titrated with a base. Show burette volume, molecular composition, pH, and titration curve simultaneously.",
+      "compiled": true,
+      "family": "titration",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "titrant_volume",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "layer_types": [
+        "arrow",
+        "axes",
+        "node",
+        "polyline"
+      ],
+      "aria_label": "Interactive titration visualization with labelled relationships and controls.",
+      "text_fallback": "Titration. Visible layers: pH curve; selected titrant volume; burette: titrant; flask: analyte + indicator; measured titrant added. Adjustable controls: Titrant Volume.",
+      "compile_ms": 1.031,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-048",
+      "title": "CPU memory hierarchy",
+      "raw_prompt": "48. **CPU memory hierarchy**\n    Animate a CPU requesting data through:\n\n    $$\n    \\text{register}\\rightarrow\\text{cache}\\rightarrow\\text{RAM}\\rightarrow\\text{SSD}.\n    $$\n\n    Show cache hit, cache miss, page fault, and data movement.",
+      "compiled": true,
+      "family": "virtual_memory",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "address",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "layer_types": [
+        "link",
+        "node"
+      ],
+      "aria_label": "Interactive virtual memory visualization with labelled relationships and controls.",
+      "text_fallback": "Virtual Memory. Visible layers: virtual address: page 2, offset 5; TLB; page table; physical frame 7, offset 5; backing storage; replace frame → retry; TLB miss; page-table lookup; resident hit; page fault; page-in replacement; preserve offset. Adjustable controls: Address, Step.",
+      "compile_ms": 0.313,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-049",
+      "title": "Robot localization",
+      "raw_prompt": "49. **Robot localization**\n    Visualize a mobile robot moving through a 2D environment while simultaneously showing:\n\n    * true pose,\n    * noisy odometry,\n    * sensor observations,\n    * estimated pose,\n    * uncertainty ellipse or particles.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "controls": [],
+      "layer_types": [],
+      "aria_label": null,
+      "text_fallback": null,
+      "compile_ms": 0.417,
+      "error": "ValueError: intent resolver returned no visualization"
+    },
+    {
+      "id": "user-holdout-050",
+      "title": "Full Kalman filter visualization",
+      "raw_prompt": "50. **Full Kalman filter visualization**\n    Simulate a moving object with noisy measurements and simultaneously show:\n\n    * actual trajectory,\n    * measurements,\n    * predicted state,\n    * corrected state,\n    * covariance/uncertainty,\n    * prediction step,\n    * measurement-update step.\n\n    Allow measurement noise and process noise to be changed interactively.",
+      "compiled": true,
+      "family": "kalman_filter",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "controls": [
+        "noise",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "layer_types": [
+        "axes",
+        "particles",
+        "polyline"
+      ],
+      "aria_label": "Interactive kalman filter visualization with labelled relationships and controls.",
+      "text_fallback": "Kalman Filter. Visible layers: true moving-point trajectory; noisy measurements; Kalman estimate trajectory; predicted covariance ellipse P⁻; posterior covariance ellipse P; current true point; current noisy measurement; current Kalman update. Adjustable controls: Noise, Predict / update step.",
+      "compile_ms": 2.013,
+      "error": ""
+    }
+  ]
+}

@@ -11,7 +11,10 @@
   const caseId = parameters.get("case");
   const report = parameters.get("report") === "1";
   const debug = parameters.get("debug") === "1";
-  const fixtureName = parameters.get("general") === "1"
+  const holdout = parameters.get("holdout") === "1";
+  const fixtureName = holdout
+    ? "visualization-v2-user-holdout.json"
+    : parameters.get("general") === "1"
     ? "visualization-v2-general-math.json"
     : parameters.get("followup") === "1" ? "visualization-v2-followups.json" : "visualization-v2-specs.json";
   const fixture = await fetch(`fixtures/${fixtureName}?v=${encodeURIComponent(parameters.get("cache") || "current")}`).then((response) => {
@@ -64,7 +67,27 @@
     if (spec.family === "stack_queue" && values.operation === "remove") {
       return description.includes("newest-first") && description.includes("oldest-first");
     }
-    if (spec.family === "neural_network") return description.includes("h₁=ReLU") && description.includes("sigmoid output");
+    if (spec.family === "neural_network") {
+      const hasThird = spec.scene.layers.some((layer) => layer.type === "node" && layer.id === "h3");
+      return description.includes("h₁=ReLU") && description.includes("sigmoid output")
+        && (!hasThird || description.includes("h₃="));
+    }
+    if (spec.family === "spring_mass" && Object.hasOwn(values, "displacement")) {
+      return description.includes("F=−kx=") && description.includes("opposite the displacement");
+    }
+    if (spec.family === "gradient_linked") return description.includes("both views") && description.includes("∇f=");
+    if (spec.family === "gradient_descent") {
+      const match = description.match(/loss x²\+2y²=([0-9.]+)/);
+      return Boolean(match && Number.isFinite(Number(match[1])) && description.includes("both views"));
+    }
+    if (spec.family === "robot_localization") {
+      const match = description.match(/position error ([0-9]+(?:\.[0-9]+)?)/);
+      return Boolean(match && Number.isFinite(Number(match[1])) && description.includes("fused estimate"));
+    }
+    if (spec.family === "robot_forward_kinematics") return description.includes("end effector") && description.includes("cumulative joint angles");
+    if (spec.family === "vector_field_3d") return description.includes("F=(−y,x,z)=") && description.includes("selected arrow matches");
+    if (spec.family === "lorenz_attractor") return description.includes("500 samples") && description.includes("both lobes");
+    if (spec.family === "electromagnetic_wave") return description.includes("E ⟂ B") && description.includes("k=E×B");
     if (spec.family === "binary_search") return /compare|found|absent|exhausted/.test(description);
     if (spec.family === "graph_traversal") return description.includes(String(values.algorithm || "").toUpperCase()) && description.includes(`step ${Math.round(number("step"))}`);
     if (spec.family === "standing_wave") return description.includes(`${Math.round(number("harmonic")) + 1} nodes`);
@@ -254,8 +277,8 @@
     cases: results,
   };
   output.textContent = JSON.stringify(payload);
-  if (report && limit === 200) {
-    const response = await fetch("/__results", {
+  if (report && (holdout || limit === 200)) {
+    const response = await fetch(holdout ? "/__holdout" : "/__results", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

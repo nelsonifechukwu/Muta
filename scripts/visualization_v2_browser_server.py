@@ -24,6 +24,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--matrix-output", type=Path)
     parser.add_argument("--lru-output", type=Path)
+    parser.add_argument("--holdout-output", type=Path)
     parser.add_argument("--directory", type=Path, default=Path.cwd())
     args = parser.parse_args()
     output = args.output.resolve()
@@ -37,6 +38,11 @@ def main() -> None:
         if args.lru_output
         else output.with_name(f"{output.stem}-lru{output.suffix}")
     )
+    holdout_output = (
+        args.holdout_output.resolve()
+        if args.holdout_output
+        else output.with_name(f"{output.stem}-holdout{output.suffix}")
+    )
     directory = args.directory.resolve()
 
     class Handler(SimpleHTTPRequestHandler):
@@ -44,7 +50,7 @@ def main() -> None:
             super().__init__(*handler_args, directory=str(directory), **handler_kwargs)
 
         def do_POST(self) -> None:
-            if self.path not in {"/__results", "/__matrix", "/__lru"}:
+            if self.path not in {"/__results", "/__matrix", "/__lru", "/__holdout"}:
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
             try:
@@ -60,7 +66,16 @@ def main() -> None:
             except (UnicodeDecodeError, json.JSONDecodeError):
                 self.send_error(HTTPStatus.BAD_REQUEST, "result must be JSON")
                 return
-            if self.path == "/__lru":
+            if self.path == "/__holdout":
+                count = payload.get("count") if isinstance(payload, dict) else None
+                valid = (
+                    isinstance(count, int)
+                    and 1 <= count <= 50
+                    and len(payload.get("cases", [])) == count
+                )
+                expected_error = "holdout result must contain between 1 and 50 rendered cases"
+                destination = holdout_output
+            elif self.path == "/__lru":
                 valid = (
                     isinstance(payload, dict)
                     and payload.get("total") == 6

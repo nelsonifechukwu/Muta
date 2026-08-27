@@ -133,12 +133,13 @@
     return { path, parent, duplicate, candidate };
   }
 
-  function neuralState(values) {
+  function neuralState(values, includeThird = false) {
     const x1 = 0.6; const x2 = 0.4; const weight = stateNumber(values, "weight", 1);
     const h1 = Math.max(0, weight * x1 + 0.5 * x2 - 0.2);
     const h2 = Math.max(0, -0.4 * x1 + 0.8 * x2 + 0.1);
-    const logit = 0.9 * h1 - 0.7 * h2 + 0.05;
-    return { x1, x2, weight, h1, h2, output: 1 / (1 + Math.exp(-logit)) };
+    const h3 = Math.max(0, 0.3 * x1 + 0.4 * x2);
+    const logit = 0.9 * h1 - 0.7 * h2 + (includeThird ? 0.35 * h3 : 0) + 0.05;
+    return { x1, x2, weight, h1, h2, h3, output: 1 / (1 + Math.exp(-logit)) };
   }
 
   let classifierCache = null;
@@ -174,16 +175,98 @@
 
   function kalmanSequence(values) {
     const noise = Math.max(0.1, stateNumber(values, "noise", 1));
+    const processNoise = Math.max(0.01, stateNumber(values, "process_noise", 0.08));
     let estimate = 0; let variance = 1.5; const records = [];
     for (let step = 0; step <= 20; step += 1) {
       const truth = 0.5 * step + Math.sin(0.4 * step);
       const measurement = truth + noise * Math.sin(1.7 * step);
-      const prior = estimate + 0.5; const predictedVariance = variance + 0.08;
+      const prior = estimate + 0.5; const predictedVariance = variance + processNoise;
       const gain = predictedVariance / (predictedVariance + noise * noise);
       estimate = prior + gain * (measurement - prior); variance = (1 - gain) * predictedVariance;
       records.push({ step, truth, measurement, prior, predictedVariance, gain, estimate, variance });
     }
     return records;
+  }
+
+  function gradientDescentState(values) {
+    const learningRate = Math.max(0.02, Math.min(0.5, stateNumber(values, "learning_rate", 0.18)));
+    const requestedStep = Math.max(0, Math.min(16, Math.round(stateNumber(values, "step", 8))));
+    let x = 2.4; let y = 1.8; const points = [];
+    for (let step = 0; step <= 16; step += 1) {
+      points.push({ x, y, loss: x * x + 2 * y * y });
+      x -= learningRate * 2 * x;
+      y -= learningRate * 4 * y;
+    }
+    return { learningRate, requestedStep, points, selected: points[requestedStep] };
+  }
+
+  function localizationState(values) {
+    const odometryNoise = Math.max(0, Math.min(1, stateNumber(values, "odometry_noise", 0.25)));
+    const sensorNoise = Math.max(0, Math.min(1, stateNumber(values, "sensor_noise", 0.2)));
+    const requestedStep = Math.max(0, Math.min(60, Math.round(stateNumber(values, "step", 30))));
+    const records = Array.from({ length: 61 }, (_unused, step) => {
+      const time = step / 10;
+      const truth = [time - 3, 1.2 * Math.sin(time)];
+      const odometry = [
+        truth[0] + odometryNoise * 0.032 * step,
+        truth[1] + odometryNoise * 0.72 * Math.sin(step * 1.7),
+      ];
+      const sensor = [
+        truth[0] + sensorNoise * 0.55 * Math.cos(step * 1.13),
+        truth[1] + sensorNoise * 0.55 * Math.sin(step * 1.31),
+      ];
+      const odometryVariance = 0.01 + odometryNoise * odometryNoise;
+      const sensorVariance = 0.01 + sensorNoise * sensorNoise;
+      const sensorWeight = odometryVariance / (odometryVariance + sensorVariance);
+      const estimate = [
+        (1 - sensorWeight) * odometry[0] + sensorWeight * sensor[0],
+        (1 - sensorWeight) * odometry[1] + sensorWeight * sensor[1],
+      ];
+      return { step, truth, odometry, sensor, estimate, sensorWeight };
+    });
+    const selected = records[requestedStep];
+    const uncertainty = {
+      x: 0.12 + 0.5 * Math.sqrt(0.01 + odometryNoise * sensorNoise),
+      y: 0.1 + 0.34 * Math.sqrt(0.01 + odometryNoise * sensorNoise),
+    };
+    return { odometryNoise, sensorNoise, requestedStep, records, selected, uncertainty };
+  }
+
+  function forwardKinematicsState(values) {
+    const lengths = [105, 90, 75];
+    const angles = ["joint_1", "joint_2", "joint_3"].map((id, index) => stateNumber(values, id, [25, -35, 55][index]) * Math.PI / 180);
+    const points = [[165, 330]]; let heading = 0;
+    lengths.forEach((length, index) => {
+      heading += angles[index];
+      points.push([points.at(-1)[0] + length * Math.cos(heading), points.at(-1)[1] - length * Math.sin(heading)]);
+    });
+    return { lengths, angles, points, end: points.at(-1) };
+  }
+
+  function lorenzPoints(values) {
+    const sigma = Math.max(5, Math.min(20, stateNumber(values, "sigma", 10)));
+    const rho = Math.max(10, Math.min(40, stateNumber(values, "rho", 28)));
+    const beta = Math.max(1, Math.min(4, stateNumber(values, "beta", 8 / 3)));
+    const dt = 0.01; let x = 0.1; let y = 0; let z = 0; const points = [];
+    for (let step = 0; step < 620; step += 1) {
+      const dx = sigma * (y - x); const dy = x * (rho - z) - y; const dz = x * y - beta * z;
+      x += dt * dx; y += dt * dy; z += dt * dz;
+      if (step >= 120 && [x, y, z].every(Number.isFinite)) points.push([x / 7, y / 7, (z - 24) / 7]);
+    }
+    return { sigma, rho, beta, points: points.slice(0, 500) };
+  }
+
+  function electromagneticWavePoints(values, progress = 0) {
+    const amplitude = Math.max(0.2, Math.min(2, stateNumber(values, "amplitude", 1)));
+    const wavelength = Math.max(1, Math.min(6, stateNumber(values, "wavelength", 3)));
+    const phase = progress * 2 * Math.PI;
+    const samples = Array.from({ length: 161 }, (_unused, index) => -4 + 8 * index / 160);
+    return {
+      amplitude,
+      wavelength,
+      electric: samples.map((x) => [x, amplitude * Math.sin(2 * Math.PI * x / wavelength - phase), 0]),
+      magnetic: samples.map((x) => [x, 0, amplitude * Math.sin(2 * Math.PI * x / wavelength - phase)]),
+    };
   }
 
   function inclinedGeometry(values) {
@@ -248,6 +331,36 @@
       const px = stateNumber(values, "point_x", stateNumber(values, "probe_x", 1));
       const py = stateNumber(values, "point_y", stateNumber(values, "probe_y", 1));
       return [[px, py], [px + 0.45 * 2 * px, py + 0.45 * 2 * py]];
+    }
+    if (family === "gradient_linked") {
+      const px = stateNumber(values, "point_x", 1); const py = stateNumber(values, "point_y", 1);
+      if (layer.label === "surface probe at selected point") {
+        const point = [px + 0.35 * py - 4.5, 0.18 * (px * px + py * py) + 0.35 * py];
+        return [point, [point[0] + 0.015, point[1] + 0.015]];
+      }
+      if (layer.label === "contour probe and gradient direction") {
+        const magnitude = Math.max(1, Math.hypot(2 * px, 2 * py));
+        return [[3.2 + px, py], [3.2 + px + 0.9 * 2 * px / magnitude, py + 0.9 * 2 * py / magnitude]];
+      }
+    }
+    if (family === "gradient_descent") {
+      const descent = gradientDescentState(values);
+      const selected = descent.points.slice(0, descent.requestedStep + 1);
+      if (layer.label === "gradient-descent trajectory on projected surface") {
+        return selected.map(({ x, y, loss }) => [x + 0.35 * y - 4.5, 0.18 * loss + 0.35 * y]);
+      }
+      if (layer.label === "gradient-descent trajectory on contour map") return selected.map(({ x, y }) => [3.2 + x, y]);
+    }
+    if (family === "robot_localization") {
+      const localization = localizationState(values); const selected = localization.selected.estimate;
+      if (layer.label === "true pose trajectory") return localization.records.map((record) => record.truth);
+      if (layer.label === "noisy odometry trajectory") return localization.records.map((record) => record.odometry);
+      if (layer.label === "Kalman/particle estimated pose") return localization.records.slice(0, localization.requestedStep + 1).map((record) => record.estimate);
+      if (layer.label === "uncertainty ellipse") return base.map((_point, pointIndex) => {
+        const angle = 2 * Math.PI * pointIndex / Math.max(1, base.length - 1);
+        return [selected[0] + localization.uncertainty.x * Math.cos(angle), selected[1] + localization.uncertainty.y * Math.sin(angle)];
+      });
+      if (layer.label === "sensor observations to landmarks") return [selected, [-2.4, 2.3], selected, [2.5, 2.1]];
     }
     if (family === "pendulum") {
       const pivot = [250, 80];
@@ -655,6 +768,13 @@
   }
 
   function evaluatedProbe(layer, values) {
+    if (Object.hasOwn(values, "positive_charge_x") || Object.hasOwn(values, "negative_charge_x")) {
+      const positive = stateNumber(values, "positive_charge_x", -1); const negative = stateNumber(values, "negative_charge_x", 1);
+      const origin = [stateNumber(values, "test_x", (positive + negative) / 2), stateNumber(values, "test_y", 1.5)];
+      const field = (centre, charge) => { const dx=origin[0]-centre; const dy=origin[1]; const r2=Math.max(0.05,dx*dx+dy*dy); const gain=charge/(r2*Math.sqrt(r2)); return [gain*dx,gain*dy]; };
+      const left=field(positive,1); const right=field(negative,-1); const dx=left[0]+right[0]; const dy=left[1]+right[1]; const magnitude=Math.max(1,Math.hypot(dx,dy));
+      return [origin,[origin[0]+0.65*dx/magnitude,origin[1]+0.65*dy/magnitude]];
+    }
     const px = stateNumber(values, layer.x_control, 0);
     const py = stateNumber(values, layer.y_control, 0);
     try {
@@ -668,7 +788,28 @@
     }
   }
 
+  function controlledVectors(family, layer, values) {
+    if (family !== "electric_field_vectors") return layer.vectors;
+    const positive = stateNumber(values, "positive_charge_x", -1); const negative = stateNumber(values, "negative_charge_x", 1);
+    return layer.vectors.map(([x, y]) => {
+      const field = (centre, charge) => { const dx=x-centre; const r2=Math.max(0.05,dx*dx+y*y); const gain=charge/(r2*Math.sqrt(r2)); return [gain*dx,gain*y]; };
+      const left=field(positive,1); const right=field(negative,-1); const dx=left[0]+right[0]; const dy=left[1]+right[1]; const scaleValue=0.55/Math.max(0.55,Math.hypot(dx,dy));
+      return [x,y,dx*scaleValue,dy*scaleValue];
+    });
+  }
+
   function controlledParticles(family, layer, values) {
+    if (family === "electric_field_vectors" && layer.label.includes("source charges")) {
+      return [[stateNumber(values,"positive_charge_x",-1),0],[stateNumber(values,"negative_charge_x",1),0]];
+    }
+    if (family === "robot_localization") {
+      const localization = localizationState(values); const centre = localization.selected.estimate;
+      const spreadX = localization.uncertainty.x; const spreadY = localization.uncertainty.y;
+      return Array.from({ length: Math.min(48, layer.points.length) }, (_unused, index) => {
+        const angle = index * 2.399963; const radius = Math.sqrt((index + 0.5) / 48);
+        return [centre[0] + spreadX * radius * Math.cos(angle), centre[1] + spreadY * radius * Math.sin(angle)];
+      });
+    }
     if (family === "harmonic_motion" && layer.label.includes("moving mass")) {
       const omega=Math.sqrt(Math.max(0.1,stateNumber(values,"spring_constant",1))/Math.max(0.1,stateNumber(values,"mass",2)));
       const displacement=Math.cos(omega*stateNumber(values,"__animation_progress",0)*2*Math.PI);
@@ -832,8 +973,21 @@
     if (spec.family === "quadratic") { const a = v("a", 1); const b = v("b", 0); const c = v("c", 0); const x = Math.abs(a) < 1e-9 ? NaN : -b / (2 * a); return `a=${a.toFixed(2)}, b=${b.toFixed(2)}, c=${c.toFixed(2)}; vertex (${Number.isFinite(x) ? x.toFixed(2) : "undefined"}, ${Number.isFinite(x) ? (a*x*x+b*x+c).toFixed(2) : "undefined"}).`; }
     if (spec.family === "line_intersection") { const denominator = v("m1",1)-v("m2",-1); return Math.abs(denominator)<1e-9 ? (Math.abs(v("c1",0)-v("c2",2))<1e-9 ? "The lines are identical." : "The lines are parallel.") : `Intersection x = ${((v("c2",2)-v("c1",0))/denominator).toFixed(2)}.`; }
     if (spec.family === "linear_transform") { const matrix=String(values.matrix||"identity"); return matrix === "shear" ? "Shear matrix: λ=1 is repeated, but only the x-axis supplies an independent real eigenvector." : matrix === "scale" ? "Diagonal scale: e₁ and e₂ keep direction with eigenvalues 1.60 and 0.65." : "Identity: every nonzero vector is an eigenvector with λ=1."; }
+    if (spec.family === "vector_addition") return "Head-to-tail and parallelogram constructions agree: a=(3,2), b=(1,4), and a+b=(4,6).";
+    if (spec.family === "binary_representation") return "Place values 8, 4, 2, 1 with bits 1, 1, 0, 1 give 8+4+0+1=13, so 13₁₀=1101₂.";
+    if (spec.family === "gradient_linked") { const x=v("point_x",1); const y=v("point_y",1); return `Linked point (${x.toFixed(2)}, ${y.toFixed(2)}) has f=x²+y²=${(x*x+y*y).toFixed(3)} and gradient ∇f=(${(2*x).toFixed(2)}, ${(2*y).toFixed(2)}) in both views.`; }
+    if (spec.family === "gradient_descent") { const descent=gradientDescentState(values); const point=descent.selected; return `Gradient descent step ${descent.requestedStep}: learning rate ${descent.learningRate.toFixed(2)}, point (${point.x.toFixed(3)}, ${point.y.toFixed(3)}), loss x²+2y²=${point.loss.toFixed(4)}; both views show the same trajectory.`; }
+    if (spec.family === "robot_localization") { const localization=localizationState(values); const record=localization.selected; const error=Math.hypot(record.estimate[0]-record.truth[0],record.estimate[1]-record.truth[1]); return `Localization step ${localization.requestedStep}: true pose (${record.truth[0].toFixed(2)}, ${record.truth[1].toFixed(2)}), noisy odometry (${record.odometry[0].toFixed(2)}, ${record.odometry[1].toFixed(2)}), fused estimate (${record.estimate[0].toFixed(2)}, ${record.estimate[1].toFixed(2)}), position error ${error.toFixed(3)}.`; }
+    if (spec.family === "robot_forward_kinematics") { const kinematics=forwardKinematicsState(values); return `Three-link forward kinematics gives end effector (${kinematics.end[0].toFixed(1)}, ${kinematics.end[1].toFixed(1)}) px from cumulative joint angles ${kinematics.angles.map((angle)=>`${(angle*180/Math.PI).toFixed(0)}°`).join(", ")}.`; }
+    if (spec.family === "vector_field_3d") { const x=v("point_x",1); const y=v("point_y",1); const z=v("point_z",1); return `At (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}), F=(−y,x,z)=(${(-y).toFixed(1)}, ${x.toFixed(1)}, ${z.toFixed(1)}); the selected arrow matches the sampled 3D field.`; }
+    if (spec.family === "lorenz_attractor") { const lorenz=lorenzPoints(values); return `Lorenz system σ=${lorenz.sigma.toFixed(1)}, ρ=${lorenz.rho.toFixed(1)}, β=${lorenz.beta.toFixed(3)}; the bounded deterministic trajectory has ${lorenz.points.length} samples across both lobes.`; }
+    if (spec.family === "electromagnetic_wave") { const wave=electromagneticWavePoints(values); return `Electromagnetic wave amplitude ${wave.amplitude.toFixed(2)} and wavelength ${wave.wavelength.toFixed(2)}: E ⟂ B, both are perpendicular to propagation k=E×B.`; }
     if (spec.family === "projectile") { const a=v("angle",45)*Math.PI/180; const speed=v("speed",20); return `Range ${(speed*speed*Math.sin(2*a)/9.81).toFixed(1)} m; maximum height ${(speed*speed*Math.sin(a)**2/19.62).toFixed(1)} m.`; }
-    if (spec.family === "spring_mass") return `Hooke equilibrium x=mg/k=${(9.81*v("mass",2)/Math.max(0.1,v("spring_constant",12))).toFixed(2)} m; upward spring force balances weight.`;
+    if (spec.family === "spring_mass") {
+      const spring=Math.max(0.1,v("spring_constant",12));
+      if (Object.hasOwn(values,"displacement")) { const displacement=v("displacement",1); return `Hooke's law: k=${spring.toFixed(2)} N/m, x=${displacement.toFixed(2)} m, restoring force F=−kx=${(-spring*displacement).toFixed(2)} N, opposite the displacement.`; }
+      return `Hooke equilibrium x=mg/k=${(9.81*v("mass",2)/spring).toFixed(2)} m; upward spring force balances weight.`;
+    }
     if (spec.family === "ohms_law_circuit") return `${values.switch ? "Closed" : "Open"} switch: current I = ${values.switch ? "V/R = "+(v("voltage",12)/Math.max(0.01,v("resistance",6))).toFixed(2) : "0.00"} A (V=${v("voltage",12).toFixed(1)} V, R=${v("resistance",6).toFixed(1)} Ω).`;
     if (spec.family === "pendulum") return `Initial angle ${v("angle",20).toFixed(1)}°; small-angle period T = ${2*Math.PI*Math.sqrt(v("length",1)/9.81).toFixed(2)} s for L=${v("length",1).toFixed(2)} m.`;
     if (spec.family === "dna_replication") return `Replication step ${Math.max(Math.round(v("step",0)),Math.round(v("playback",0)))}: both new strands are synthesized 5′→3′; the lagging strand needs repeated primers and ligase-joined Okazaki fragments.`;
@@ -862,7 +1016,7 @@
     }
     if (spec.family === "binary_search_tree") { const inserted=Math.round(v("insert",6)); const step=Math.round(v("step",0)); const state=bstInsertionState(spec.scene.layers,inserted); return state.duplicate ? `Step ${step}: ${inserted} is already in the tree; the search path is ${state.path.join(" → ")} and no duplicate node is added.` : `Step ${step}: insert ${inserted}; compare along ${state.path.join(" → ")}, then attach it ${inserted < Number(String(spec.scene.layers.find((layer)=>layer.id===state.parent)?.label).match(/-?\d+/)?.[0]) ? "left" : "right"} of ${state.parent}.`; }
     if (spec.family === "stack_queue") { const operation=String(values.operation||"add"); const step=Math.max(0,Math.min(3,Math.round(v("step",0)))); return operation === "add" ? `After ${step+1} additions, the stack top and queue rear both receive the newest item; removal will pop newest from the stack but dequeue oldest from the queue.` : `After ${step} removals, the stack has removed newest-first (C,B,A) while the queue has removed oldest-first (A,B,C).`; }
-    if (spec.family === "neural_network") { const state=neuralState(values); return `Forward step ${Math.round(v("step",0))}: x₁=${state.x1}, x₂=${state.x2}; h₁=ReLU(${state.weight.toFixed(2)}x₁+0.5x₂−0.2)=${state.h1.toFixed(3)}, h₂=${state.h2.toFixed(3)}, and sigmoid output ŷ=${state.output.toFixed(3)}.`; }
+    if (spec.family === "neural_network") { const hasThird=spec.scene.layers.some((layer)=>layer.type==="node"&&layer.id==="h3"); const state=neuralState(values,hasThird); return `Forward step ${Math.round(v("step",0))}: x₁=${state.x1}, x₂=${state.x2}; h₁=ReLU(${state.weight.toFixed(2)}x₁+0.5x₂−0.2)=${state.h1.toFixed(3)}, h₂=${state.h2.toFixed(3)}${hasThird ? `, h₃=${state.h3.toFixed(3)}` : ""}, and sigmoid output ŷ=${state.output.toFixed(3)}.`; }
     if (spec.family === "decision_boundary") { const state=classifierState(values); return `A bounded two-input, two-hidden-unit classifier completed ${state.epochs} batch-gradient epochs at learning rate ${state.learningRate.toFixed(2)}; cross-entropy fell from ${state.loss[0][1].toFixed(3)} to ${state.loss.at(-1)[1].toFixed(3)}, and the visible boundary is p=0.5.`; }
     if (spec.family === "energy_sankey") { const efficiency=Math.max(0,Math.min(1,v("efficiency",0.65))); return `100 J branches into ${(100*efficiency).toFixed(2)} J useful, ${(75*(1-efficiency)).toFixed(2)} J heat, and ${(25*(1-efficiency)).toFixed(2)} J sound; outputs total 100 J.`; }
     if (spec.family === "inclined_plane") { const theta=v("incline",30)*Math.PI/180; const mu=0.2; return `At θ=${v("incline",30).toFixed(0)}°, N=mg cosθ, friction μN with μ=${mu}, and downhill a=max(0,g(sinθ−μcosθ))=${Math.max(0,9.81*(Math.sin(theta)-mu*Math.cos(theta))).toFixed(2)} m/s².`; }
@@ -903,7 +1057,7 @@
     if (spec.family === "converging_lens") { const d=Math.max(1.2,v("object_distance",2.5)); const di=d/(d-1); return `Thin-lens check: 1/f = 1/dₒ + 1/dᵢ, with f = 1, dₒ = ${d.toFixed(2)}, dᵢ = ${di.toFixed(2)}, magnification = ${(-di/d).toFixed(2)}.`; }
     if (spec.family === "robot_arm") { const target=Math.hypot(v("target_x",2.5),v("target_y",1.5)); const radius=65*target; const reach=radius>=15-1e-6&&radius<=285+1e-6; return `Two-link IK: L₁ = 150 px, L₂ = 135 px; target radius ${radius.toFixed(1)} px; ${reach ? `${String(values.elbow_mode||"default") === "alternate" ? "elbow-down" : "elbow-up"} solution reaches the target` : "target is unreachable inside the 15 px inner workspace, so the arm stops at the nearest reachable point"}.`; }
     if (spec.family === "truss") { const load=v("load",50); return `Joint equilibrium: ${load.toFixed(0)} kN downward is balanced by ${(load/2).toFixed(1)} kN upward at each support.`; }
-    if (spec.family === "kalman_filter") { const records=kalmanSequence(values); const record=records[Math.max(0,Math.min(20,Math.round(v("step",0))))]; return `Step ${record.step}, noise ${v("noise",1).toFixed(2)}: true position ${record.truth.toFixed(2)}, noisy measurement ${record.measurement.toFixed(2)}, prediction ${record.prior.toFixed(2)} with P⁻=${record.predictedVariance.toFixed(3)}, gain K=${record.gain.toFixed(3)}, update ${record.estimate.toFixed(2)} with contracted P=${record.variance.toFixed(3)}.`; }
+    if (spec.family === "kalman_filter") { const records=kalmanSequence(values); const record=records[Math.max(0,Math.min(20,Math.round(v("step",0))))]; return `Step ${record.step}, measurement noise ${v("noise",1).toFixed(2)}, process noise ${v("process_noise",0.08).toFixed(2)}: true position ${record.truth.toFixed(2)}, noisy measurement ${record.measurement.toFixed(2)}, prediction ${record.prior.toFixed(2)} with P⁻=${record.predictedVariance.toFixed(3)}, gain K=${record.gain.toFixed(3)}, update ${record.estimate.toFixed(2)} with contracted P=${record.variance.toFixed(3)}.`; }
     if (spec.family === "kinetics") return `All three integrated rate laws and their linearized forms are shown; selected order ${Math.round(v("order",1))}, k = ${v("rate_constant",0.35).toFixed(2)}.`;
     if (spec.family === "bode_plot") return `First-order low-pass magnitude and phase; at cutoff the response is −3.01 dB and −45°, cutoff ${v("cutoff",1).toFixed(2)}.`;
     if (spec.family === "beam_bending") return `Moving 10-unit point load at x = ${v("load_position",5).toFixed(2)}; reactions sum to the applied load and M(0)=M(L)=0.`;
@@ -946,7 +1100,15 @@
     const node = { ...layer };
     const step = Math.max(0, Math.round(stateNumber(values, "step", stateNumber(values, "playback", 0))));
 
-    if (spec.family === "binary_search") {
+    if (spec.family === "robot_forward_kinematics") {
+      const kinematics = forwardKinematicsState(values);
+      const jointIndex = Number(layer.id.split("_")[1]);
+      const point = kinematics.points[jointIndex];
+      if (point) { node.x = point[0]; node.y = point[1]; }
+      if (jointIndex === 3) node.label = `end effector (${kinematics.end[0].toFixed(1)}, ${kinematics.end[1].toFixed(1)})`;
+      else if (jointIndex > 0) node.label = `joint ${jointIndex} • θ${jointIndex}=${(kinematics.angles[jointIndex - 1] * 180 / Math.PI).toFixed(0)}°`;
+      return node;
+    } else if (spec.family === "binary_search") {
       const arrayLayer = spec.scene.layers.find((candidate) => candidate.type === "node" && candidate.id === "array");
       const items = numbersFromLabel(arrayLayer?.label); const target = stateNumber(values, "target", 11);
       const trace = []; let low = 0; let high = items.length - 1;
@@ -1136,7 +1298,8 @@
       if (["virtual", "tlb", "page_table", "storage", "replacement", "frame"][Math.min(5, step)] === layer.id) { node.width += 24; node.height += 12; }
     } else if (spec.family === "kalman_filter") {
       const noise = Math.max(0.1, stateNumber(values, "noise", 1));
-      const prior = 2; const measurement = 6; const predictedVariance = 2;
+      const processNoise = Math.max(0.01, stateNumber(values, "process_noise", 0.08));
+      const prior = 2; const measurement = 6; const predictedVariance = 1.92 + processNoise;
       const gain = predictedVariance / (predictedVariance + noise);
       const estimate = prior + gain * (measurement - prior);
       const posteriorVariance = (1 - gain) * predictedVariance;
@@ -1164,13 +1327,15 @@
       const states = ["red", "red + amber", requested ? "green • pedestrian request queued" : "green", "amber → red"];
       node.label = `${states[index] || node.label}${index === phase ? " • active" : ""}`;
     } else if (spec.family === "neural_network") {
-      const state = neuralState(values); const labels = {
+      const hasThird = spec.scene.layers.some((candidate) => candidate.type === "node" && candidate.id === "h3");
+      const state = neuralState(values, hasThird); const labels = {
         x1: `input x₁=${state.x1}`, x2: `input x₂=${state.x2}`,
         h1: `h₁=ReLU(·)=${state.h1.toFixed(3)}`, h2: `h₂=ReLU(·)=${state.h2.toFixed(3)}`,
+        h3: `h₃=ReLU(·)=${state.h3.toFixed(3)}`,
         output: `ŷ=sigmoid(·)=${state.output.toFixed(3)}`,
       };
       node.label = labels[layer.id] || node.label;
-      const activeColumns = [{x1:true,x2:true},{h1:true,h2:true},{output:true}][Math.min(2,step)] || {};
+      const activeColumns = [{x1:true,x2:true},{h1:true,h2:true,h3:hasThird},{output:true}][Math.min(2,step)] || {};
       if (activeColumns[layer.id]) { node.width += 20; node.height += 10; }
     } else if (spec.family === "backprop_graph") {
       const w = stateNumber(values, "w", 1); const xValue = stateNumber(values, "x", 2); const bias = stateNumber(values, "b", 3); const u = w * xValue + bias;
@@ -1280,6 +1445,12 @@
     }
     if (spec.family === "spring_mass") {
       const spring = Math.max(0.2, stateNumber(values, "spring_constant", 1));
+      if (Object.hasOwn(values, "displacement")) {
+        const displacement = stateNumber(values, "displacement", 1); const extensionPixels = 75 + Math.abs(displacement) * 70;
+        if (layer.id === "support") Object.assign(node, { x: 360, y: 70 });
+        if (layer.id === "mass") Object.assign(node, { x: 360, y: 70 + extensionPixels, label: `displacement x=${displacement.toFixed(2)} m` });
+        return node;
+      }
       const mass = Math.max(0.2, stateNumber(values, "mass", 2));
       const extensionMetres = 9.81 * mass / spring;
       const extensionPixels = Math.min(260, 75 + extensionMetres * 70);
@@ -1368,6 +1539,12 @@
     }
     if (spec.family === "spring_mass") {
       const spring = Math.max(0.2, stateNumber(values, "spring_constant", 12));
+      if (Object.hasOwn(values, "displacement")) {
+        const displacement=stateNumber(values,"displacement",1); const y=145+Math.abs(displacement)*70; const force=-spring*displacement;
+        if (layer.label.startsWith("spring force")) return { ...layer, from:[360,y], to:[360,y-Math.sign(displacement||1)*Math.min(110,35+Math.abs(force)*2)], label:`restoring force F=−kx=${force.toFixed(2)} N` };
+        if (layer.label.startsWith("weight")) return { ...layer, from:[360,y], to:[360,y+55], label:"applied displacement direction" };
+        return { ...layer, from:[485,70], to:[485,y], label:`displacement x=${displacement.toFixed(2)} m` };
+      }
       const mass = Math.max(0.2, stateNumber(values, "mass", 2));
       const extension = 9.81 * mass / spring;
       const y = 70 + Math.min(260, 75 + extension * 70);
@@ -1681,7 +1858,9 @@
       const controlled = new Map(polylineLayers.map((layer, polylineIndex) => [layer, controlledPoints(spec.family, layer, polylineIndex, latestControlValues)]));
       const particleLayers = layers.filter((layer) => layer.type === "particles");
       const particles = new Map(particleLayers.map((layer) => [layer, controlledParticles(spec.family, layer, latestControlValues)]));
-      const fieldPoints = layers.filter((layer) => layer.type === "vector_field").flatMap((layer) => layer.vectors.flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]]));
+      const vectorLayers = layers.filter((layer) => layer.type === "vector_field");
+      const vectors = new Map(vectorLayers.map((layer) => [layer, controlledVectors(spec.family, layer, latestControlValues)]));
+      const fieldPoints = vectorLayers.flatMap((layer) => vectors.get(layer).flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]]));
       const probes = new Map(layers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, latestControlValues)]));
       const plotPoints = [...controlled.values()].flat().concat([...particles.values()].flat(), fieldPoints, [...probes.values()].flat());
       const xDomain = extent(plotPoints.map((point) => point[0]));
@@ -1736,7 +1915,7 @@
           });
         } else if (layer.type === "vector_field") {
           node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": layer.label });
-          layer.vectors.forEach(([vx, vy, dx, dy], vectorIndex) => {
+          vectors.get(layer).forEach(([vx, vy, dx, dy], vectorIndex) => {
             node.append(element("line", { x1: x(vx), y1: y(vy), x2: x(vx + dx), y2: y(vy + dy), stroke: color, "stroke-width": 1.8, "marker-end": "url(#v2-arrow)" }));
             geometrySignature += Math.round((vx * 11 + vy * 13 + dx * 17 + dy * 19) * (vectorIndex + 1));
           });
@@ -1801,7 +1980,7 @@
             linkDash=stateNumber(latestControlValues,"step",0) >= insertion.path.length ? "" : "5 5";
           }
           if (spec.family === "neural_network") {
-            const state=neuralState(latestControlValues);
+            const state=neuralState(latestControlValues, layers.some((candidate)=>candidate.type==="node"&&candidate.id==="h3"));
             if (layer.from === "x1" && layer.to === "h1") displayedLabel=`w₁₁=${state.weight.toFixed(2)}`;
             linkWidth=2+Math.min(5,Math.abs(layer.from === "x1"&&layer.to === "h1" ? state.weight : Number(String(displayedLabel).match(/-?\d+(?:\.\d+)?/)?.[0])||1)*2);
           }
@@ -1917,6 +2096,7 @@
       const particleLayers = spec.scene.layers.filter((layer) => layer.type === "particles");
       const particlePoints = particleLayers.map((layer) => controlledParticles(spec.family, layer, values));
       const vectorFields = spec.scene.layers.filter((layer) => layer.type === "vector_field");
+      const vectorValues = vectorFields.map((layer) => controlledVectors(spec.family, layer, values));
       const probes = spec.scene.layers.filter((layer) => layer.type === "probe_vector").map((layer) => [layer, evaluatedProbe(layer, values)]);
       const heatmaps = spec.scene.layers.filter((layer) => layer.type === "heatmap");
       const defaultAxes = spec.scene.layers.find((layer) => layer.type === "axes") || { x_label: "x", y_label: "y" };
@@ -1945,7 +2125,7 @@
         const panelHeatmaps = heatmaps.filter((layer) => belongs(panel, layer));
         const domainPoints = lineIndices.flatMap((index) => complete[index])
           .concat(particleIndices.flatMap((index) => particlePoints[index]))
-          .concat(vectorIndices.flatMap((index) => vectorFields[index].vectors.flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]])))
+          .concat(vectorIndices.flatMap((index) => vectorValues[index].flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]])))
           .concat(panelProbes.flatMap((record) => record[1]));
         panelHeatmaps.forEach((layer) => domainPoints.push([layer.x_domain[0], layer.y_domain[0]], [layer.x_domain[1], layer.y_domain[1]]));
         const xDomain = extent(domainPoints.map((point) => point[0]));
@@ -1985,7 +2165,7 @@
         });
         vectorIndices.forEach((index) => {
           const layer = vectorFields[index]; ctx.strokeStyle = paletteValue(context, layer.color, index + polylines.length + particleLayers.length); ctx.fillStyle = ctx.strokeStyle;
-          layer.vectors.forEach(([vx, vy, dx, dy], vectorIndex) => { const startX = mapX(vx); const startY = mapY(vy); const endX = mapX(vx + dx); const endY = mapY(vy + dy); ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); const angle = Math.atan2(endY - startY, endX - startX); ctx.beginPath(); ctx.moveTo(endX, endY); ctx.lineTo(endX - 7 * Math.cos(angle - 0.45), endY - 7 * Math.sin(angle - 0.45)); ctx.lineTo(endX - 7 * Math.cos(angle + 0.45), endY - 7 * Math.sin(angle + 0.45)); ctx.closePath(); ctx.fill(); customGeometrySignature += Math.round((vx * 11 + vy * 13 + dx * 17 + dy * 19) * (vectorIndex + 1)); });
+          vectorValues[index].forEach(([vx, vy, dx, dy], vectorIndex) => { const startX = mapX(vx); const startY = mapY(vy); const endX = mapX(vx + dx); const endY = mapY(vy + dy); ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); const angle = Math.atan2(endY - startY, endX - startX); ctx.beginPath(); ctx.moveTo(endX, endY); ctx.lineTo(endX - 7 * Math.cos(angle - 0.45), endY - 7 * Math.sin(angle - 0.45)); ctx.lineTo(endX - 7 * Math.cos(angle + 0.45), endY - 7 * Math.sin(angle + 0.45)); ctx.closePath(); ctx.fill(); customGeometrySignature += Math.round((vx * 11 + vy * 13 + dx * 17 + dy * 19) * (vectorIndex + 1)); });
         });
         panelProbes.forEach(([layer, [from, to]], probeIndex) => { ctx.strokeStyle = paletteValue(context, layer.color, probeIndex + polylines.length + particleLayers.length + vectorFields.length); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(mapX(from[0]), mapY(from[1])); ctx.lineTo(mapX(to[0]), mapY(to[1])); ctx.stroke(); ctx.beginPath(); ctx.arc(mapX(from[0]), mapY(from[1]), 5, 0, Math.PI * 2); ctx.fill(); customGeometrySignature += Math.round((from[0] * 41 + from[1] * 43 + to[0] * 47 + to[1] * 53) * 100); });
         if (spec.family === "fluid_flow") { ctx.beginPath(); ctx.arc(mapX(0), mapY(0), Math.abs(mapX(1) - mapX(0)), 0, Math.PI * 2); ctx.fillStyle = context.border; ctx.fill(); customGeometrySignature += Math.round(stateNumber(values, "speed", 1) * 1000); }
@@ -2351,6 +2531,9 @@
     const stage = context.stage;
     const drawing = html("div", "viz-v2-drawing viz-v2-three");
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
+    const clipControl = spec.controls.find((control) => control.id === "clip_z");
+    const clippingPlane = clipControl ? new THREE.Plane(new THREE.Vector3(0, -1, 0), Number(clipControl.value)) : null;
+    renderer.localClippingEnabled = Boolean(clippingPlane);
     renderer.setPixelRatio(Math.min(2, global.devicePixelRatio || 1));
     renderer.domElement.tabIndex = 0;
     renderer.domElement.setAttribute("role", "img");
@@ -2380,7 +2563,9 @@
     let pathMarker = null;
     let lorentzLine = null;
     const lorentzVectors = new Map();
+    const familyObjects = new Map();
     const surfaceRecords = [];
+    let viewRevision = 0;
     let phaseProgress = 0;
     let raf = 0; let playing = false; let elapsed = 0; let lastTick = 0; let lastDraw = 0; let observedFrameInterval = 0;
     const toWorld = ([x, y, z]) => [x, z, y];
@@ -2413,8 +2598,8 @@
         });
         geometry.setAttribute("color", new THREE.BufferAttribute(colours, 3));
         geometry.computeVertexNormals();
-        object = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0.02, side: THREE.DoubleSide, transparent: true, opacity: 0.94 }));
-        const wire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: context.neutral, wireframe: true, transparent: true, opacity: 0.12 }));
+        object = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0.02, side: THREE.DoubleSide, transparent: true, opacity: 0.94, clippingPlanes: clippingPlane ? [clippingPlane] : [] }));
+        const wire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: context.neutral, wireframe: true, transparent: true, opacity: 0.12, clippingPlanes: clippingPlane ? [clippingPlane] : [] }));
         wire.renderOrder = 2;
         group.add(wire);
         surfaceRecords.push({ layer, object, wire });
@@ -2443,6 +2628,12 @@
         object.position.copy(normal.multiplyScalar(layer.constant / Math.max(1e-6, new THREE.Vector3(...layer.normal).length())));
       }
       if (object) {
+        object.userData.vizLabel = layer.label || "";
+        object.userData.vizType = layer.type;
+        if (layer.label) {
+          const records = familyObjects.get(layer.label) || [];
+          records.push(object); familyObjects.set(layer.label, records);
+        }
         group.add(object); object.updateMatrixWorld(true); bounds.expandByObject(object); drawCalls += 1;
       }
     });
@@ -2527,7 +2718,27 @@
           + direction[0] * 401 + direction[1] * 503 + direction[2] * 607 + labelSignature,
         );
       });
+      familyObjects.forEach((objects, label) => {
+        const labelSignature = label.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0);
+        objects.forEach((object, index) => {
+          geometryState += labelSignature + (index + 1) * Math.round(object.position.x * 101 + object.position.y * 211 + object.position.z * 307);
+          const positions = object.geometry?.getAttribute?.("position");
+          if (positions?.count) {
+            const requestedDrawCount = object.geometry.drawRange?.count;
+            const drawCount = Number.isFinite(requestedDrawCount) ? requestedDrawCount : positions.count;
+            geometryState += Math.round(
+              positions.getX(0) * 401 + positions.getY(0) * 503 + positions.getZ(0) * 607
+              + positions.getX(positions.count - 1) * 701 + positions.getY(positions.count - 1) * 809 + positions.getZ(positions.count - 1) * 907
+              + drawCount,
+            );
+          }
+          const direction = object.userData.vizDirection;
+          if (direction) geometryState += Math.round(direction[0] * 1013 + direction[1] * 1213 + direction[2] * 1423);
+        });
+      });
       geometryState += Math.round(phaseProgress * 1000003);
+      geometryState += viewRevision * 15485863;
+      if (clippingPlane) geometryState += Math.round(clippingPlane.constant * 10007);
       const visualStateSignature = geometryState;
       recordEvidence(stage, { rendered: drawCalls > 0 && submittedGeometry && glError === gl.NO_ERROR, renderer: "three", nonzero_pixel_samples: nonzero, draw_calls: drawCalls, gpu_calls: gpu.calls, gpu_triangles: gpu.triangles, gpu_lines: gpu.lines, gpu_points: gpu.points, gl_error: glError, triangles: triangleCount, topology, surface_diagnostics: surfaceDiagnostics, family: spec.family, control_revision: controlRevision, control_values: latestControlValues, geometry_signature: visualStateSignature, visual_state_signature: visualStateSignature, animation_state: playing ? "playing" : phaseProgress >= 1 ? "complete" : "paused", animation_progress: phaseProgress, observed_frame_interval_ms: observedFrameInterval, state_description: state.textContent });
     };
@@ -2562,6 +2773,19 @@
     const phaseMode = spec.scene.layers.some((layer) => layer.animation?.mode === "phase");
     const frameInterval = 1000 / Math.max(1, Math.min(30, spec.budget.max_fps));
     let transportControls = null;
+    const labelledObject = (label) => familyObjects.get(label)?.[0] || null;
+    const replaceLinePoints = (object, points) => {
+      if (!object || points.length < 2) return;
+      object.geometry.dispose();
+      object.geometry = new THREE.BufferGeometry().setFromPoints(points.map((point) => new THREE.Vector3(...toWorld(point))));
+    };
+    const setArrow = (object, from, to) => {
+      if (!object) return;
+      const origin = new THREE.Vector3(...toWorld(from)); const delta = new THREE.Vector3(...toWorld(to)).sub(origin);
+      const length = Math.max(0.001, delta.length()); const direction = delta.normalize();
+      object.position.copy(origin); object.setDirection(direction); object.setLength(length, Math.min(0.3, length * 0.35), Math.min(0.18, length * 0.22));
+      object.userData.vizDirection = direction.toArray();
+    };
     const updateSurfacePhase = (progress) => {
       phaseProgress = progress;
       surfaceRecords.forEach((record) => {
@@ -2579,6 +2803,32 @@
         topology = meshTopology(triangles, record.layer);
       });
     };
+    const updateFamilyAnimation = (progress) => {
+      phaseProgress = progress;
+      if (spec.family === "vector_field_3d") {
+        const base = [stateNumber(latestControlValues, "point_x", 1), stateNumber(latestControlValues, "point_y", 1), stateNumber(latestControlValues, "point_z", 1)];
+        const angle = progress * 2 * Math.PI; const pointValues = [
+          base[0] * Math.cos(angle) - base[1] * Math.sin(angle),
+          base[0] * Math.sin(angle) + base[1] * Math.cos(angle),
+          Math.max(-2.8, Math.min(2.8, base[2] * Math.exp(progress * 0.35))),
+        ];
+        const vector = [-pointValues[1], pointValues[0], pointValues[2]]; const magnitude = Math.max(1, Math.hypot(...vector));
+        labelledObject("selected point (1,1,1)")?.position.set(...toWorld(pointValues));
+        setArrow(labelledObject("local F=(-1,1,1)"), pointValues, pointValues.map((value, index) => value + 0.9 * vector[index] / magnitude));
+      } else if (spec.family === "lorenz_attractor") {
+        const line = labelledObject("Lorenz trajectory σ=10, ρ=28, β=8/3");
+        const point = labelledObject("current state"); const positions = line?.geometry?.getAttribute("position");
+        if (positions?.count) {
+          const visible = Math.max(2, Math.min(positions.count, Math.ceil(positions.count * Math.max(0.004, progress))));
+          line.geometry.setDrawRange(0, visible);
+          point?.position.set(positions.getX(visible - 1), positions.getY(visible - 1), positions.getZ(visible - 1));
+        }
+      } else if (spec.family === "electromagnetic_wave") {
+        const wave = electromagneticWavePoints(latestControlValues, progress);
+        replaceLinePoints(labelledObject("electric field E ⟂ propagation"), wave.electric);
+        replaceLinePoints(labelledObject("magnetic field B ⟂ E"), wave.magnetic);
+      }
+    };
     const tick = (now) => {
       raf = 0;
       if (!playing || !context.renderActive()) { lastTick = 0; return; }
@@ -2590,7 +2840,9 @@
         lastDraw = now;
         latestControlValues = animationControlValues(spec, latestControlValues, progress);
         applyThreeControls(latestControlValues);
-        if (phaseMode) updateSurfacePhase(progress); else { phaseProgress = progress; group.rotation.y = progress * Math.PI * 2; }
+        if (phaseMode) updateSurfacePhase(progress);
+        else if (["vector_field_3d", "lorenz_attractor", "electromagnetic_wave"].includes(spec.family)) updateFamilyAnimation(progress);
+        else { phaseProgress = progress; group.rotation.y = progress * Math.PI * 2; }
         state.textContent = animationStatusText(stateDescription(spec, latestControlValues), progress >= 1 ? "complete" : "playing", progress);
         resize();
       }
@@ -2601,7 +2853,7 @@
       if ((!animated && !orbitEnabled) || playing) return;
       if (context.reducedMotion) {
         playing = false; elapsed = duration; phaseProgress = 1;
-        if (phaseMode) updateSurfacePhase(1);
+        if (phaseMode) updateSurfacePhase(1); else updateFamilyAnimation(1);
         state.textContent = animationStatusText(stateDescription(spec, latestControlValues), "complete", 1);
         transportControls?.setPressed("play", false); transportControls?.setPressed("pause", true); resize(); return;
       }
@@ -2610,10 +2862,28 @@
       if (!raf && context.renderActive()) raf = requestAnimationFrame(tick);
     };
     const pause = () => { playing = false; lastTick = 0; if (raf) cancelAnimationFrame(raf); raf = 0; transportControls?.setPressed("play", false); transportControls?.setPressed("pause", true); resize(); };
-    const restart = () => { pause(); elapsed = 0; phaseProgress = 0; group.rotation.y = 0; if (phaseMode) updateSurfacePhase(0); transportControls?.setPressed("restart", false); transportControls?.setPressed("pause", false); resize(); play(); };
-    const resetView = () => { pause(); elapsed = 0; phaseProgress = 0; group.rotation.set(0, 0, 0); if (phaseMode) updateSurfacePhase(0); transportControls?.setPressed("reset_view", false); resize(); };
+    const restart = () => { pause(); elapsed = 0; phaseProgress = 0; group.rotation.y = 0; if (phaseMode) updateSurfacePhase(0); else updateFamilyAnimation(0); transportControls?.setPressed("restart", false); transportControls?.setPressed("pause", false); resize(); play(); };
+    const resetView = () => { pause(); elapsed = 0; phaseProgress = 0; viewRevision += 1; group.rotation.set(0, 0, 0); if (phaseMode) updateSurfacePhase(0); else updateFamilyAnimation(0); transportControls?.setPressed("reset_view", false); resize(); };
     const applyThreeControls = (values) => {
+      if (clippingPlane) clippingPlane.constant = stateNumber(values, "clip_z", Number(clipControl.value));
       if (spec.family === "plane_intersection") group.rotation.y = stateNumber(values, "orbit", 1) * Math.PI / 10;
+      if (spec.family === "vector_field_3d") {
+        const pointValues = [stateNumber(values, "point_x", 1), stateNumber(values, "point_y", 1), stateNumber(values, "point_z", 1)];
+        const vector = [-pointValues[1], pointValues[0], pointValues[2]]; const magnitude = Math.max(1, Math.hypot(...vector));
+        labelledObject("selected point (1,1,1)")?.position.set(...toWorld(pointValues));
+        setArrow(labelledObject("local F=(-1,1,1)"), pointValues, pointValues.map((value, index) => value + 0.9 * vector[index] / magnitude));
+      }
+      if (spec.family === "lorenz_attractor") {
+        const lorenz = lorenzPoints(values); const line = labelledObject("Lorenz trajectory σ=10, ρ=28, β=8/3");
+        replaceLinePoints(line, lorenz.points);
+        if (line) line.geometry.setDrawRange(0, line.geometry.getAttribute("position").count);
+        const current = lorenz.points.at(-1); if (current) labelledObject("current state")?.position.set(...toWorld(current));
+      }
+      if (spec.family === "electromagnetic_wave") {
+        const wave = electromagneticWavePoints(values, phaseProgress);
+        replaceLinePoints(labelledObject("electric field E ⟂ propagation"), wave.electric);
+        replaceLinePoints(labelledObject("magnetic field B ⟂ E"), wave.magnetic);
+      }
       if (spec.family === "molecular_geometry" && bondObjects.length) {
         const molecule = String(values.molecule || "ch4");
         const directions = {
@@ -2665,7 +2935,12 @@
       state.textContent = stateDescription(spec, latestControlValues);
       applyThreeControls(latestControlValues);
       const changedControl = spec.controls.find((control) => control.id === id);
-      if (id === "play" || (id === "orbit" && changedControl?.type === "button")) play();
+      if (id === "orbit" && changedControl?.type === "button") {
+        viewRevision += 1;
+        group.rotation.y += Math.PI / 12;
+        resize();
+        play();
+      } else if (id === "play") play();
       else if (id === "pause") pause();
       else if (id === "restart") restart();
       else if (id === "reset_view") resetView();

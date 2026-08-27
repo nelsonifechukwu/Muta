@@ -923,3 +923,198 @@ def test_truss_spec_has_force_balance_member_signs_and_reaction_directions() -> 
     assert sum("tension" in layer["label"] for layer in links) == 1
     assert sum(layer["to"][1] > layer["from"][1] for layer in arrows) == 1
     assert sum(layer["to"][1] < layer["from"][1] for layer in arrows) == 2
+
+
+def test_markdown_heading_does_not_hide_a_later_visual_action() -> None:
+    prompt = (
+        "**Dynamics study**\nUse a labelled diagram to illustrate a spring and its restoring force."
+    )
+    intent = resolve_intent(prompt)
+    assert intent.requested
+    spec = compile_visualization_v2(prompt)
+    assert spec is not None
+    assert spec["family"] == "spring_mass"
+
+
+def test_named_multiview_family_owns_its_embedded_equation() -> None:
+    spec = compile_visualization_v2(
+        "Animate optimization for f(x,y)=x^2+2*y^2 on linked surface and contour views."
+    )
+    assert spec is not None
+    assert spec["family"] == "gradient_descent"
+    panels = [layer for layer in spec["scene"]["layers"] if layer["type"] == "panel"]
+    labels = {layer.get("label") for layer in spec["scene"]["layers"]}
+    assert len(panels) == 2
+    assert "gradient-descent trajectory on projected surface" in labels
+    assert "gradient-descent trajectory on contour map" in labels
+    controls = {control["id"]: control for control in spec["controls"]}
+    assert controls["step"]["max"] == 16
+    validate_v2_spec(spec)
+
+
+@pytest.mark.parametrize(
+    ("prompt", "family", "renderer", "required_layer"),
+    [
+        ("Draw the head-to-tail sum of vectors a and b.", "vector_addition", "svg", "vector_field"),
+        (
+            "Show an eight-four-two-one binary place-value diagram.",
+            "binary_representation",
+            "svg",
+            "node",
+        ),
+        (
+            "Visualise a selectable three-dimensional vector field F=(−y,x,z).",
+            "vector_field_3d",
+            "three",
+            "vector",
+        ),
+        (
+            "Animate the Lorenz system while varying its three parameters.",
+            "lorenz_attractor",
+            "three",
+            "line",
+        ),
+        (
+            "Model perpendicular electric and magnetic waves propagating in 3D.",
+            "electromagnetic_wave",
+            "three",
+            "line",
+        ),
+        (
+            "Map true, odometry, and fused robot poses with uncertainty.",
+            "robot_localization",
+            "canvas",
+            "particles",
+        ),
+        (
+            "Draw a three-link manipulator controlled by its joint angles.",
+            "robot_forward_kinematics",
+            "svg",
+            "link",
+        ),
+    ],
+)
+def test_post_holdout_general_families_are_typed_and_validated(
+    prompt: str,
+    family: str,
+    renderer: str,
+    required_layer: str,
+) -> None:
+    spec = compile_visualization_v2(prompt)
+    assert spec is not None
+    assert spec["family"] == family
+    assert spec["renderer"] == renderer
+    assert any(layer["type"] == required_layer for layer in spec["scene"]["layers"])
+    validate_v2_spec(spec)
+
+
+def test_localization_controls_cover_the_entire_deterministic_trajectory() -> None:
+    spec = compile_visualization_v2(
+        "Simulate robot localization with adjustable odometry and sensor noise and a step control."
+    )
+    assert spec is not None
+    controls = {control["id"]: control for control in spec["controls"]}
+    assert controls["step"] == {
+        "id": "step",
+        "label": "Step",
+        "type": "step",
+        "value": 30,
+        "min": 0,
+        "max": 60,
+        "step": 1,
+    }
+    assert (
+        len(
+            next(
+                layer
+                for layer in spec["scene"]["layers"]
+                if layer.get("label") == "true pose trajectory"
+            )["points"]
+        )
+        == 61
+    )
+
+
+@pytest.mark.parametrize(
+    ("prompt", "labels"),
+    [
+        (
+            "Plot y = 2x + 3 and label the slope and intercept.",
+            {"y-intercept (0,3)", "slope rise/run = 2/1"},
+        ),
+        (
+            "Plot y = x^2 - 4x + 3 and show roots, vertex and axis of symmetry.",
+            {"vertex (2,-1); roots 1, 3", "axis of symmetry x=2"},
+        ),
+        (
+            "Plot y = 2 sin(3x) and show amplitude, wavelength, maxima, minimum, and zero crossings.",
+            {"amplitude≈2; wavelength≈2.09; extrema and zero crossings"},
+        ),
+        (
+            "Draw x^2+y^2=9 and label its centre and radius.",
+            {"centre (0,0) and radius point", "radius≈3"},
+        ),
+    ],
+)
+def test_generic_equation_annotations_are_derived_from_the_typed_relationship(
+    prompt: str, labels: set[str]
+) -> None:
+    spec = compile_visualization_v2(prompt)
+    assert spec is not None
+    actual = {str(layer.get("label")) for layer in spec["scene"]["layers"]}
+    assert labels <= actual
+    assert spec["family"] in {"explicit_curve", "implicit_curve"}
+    validate_v2_spec(spec)
+
+
+def test_hooke_source_charge_network_kalman_and_clipping_controls_are_semantic() -> None:
+    spring = compile_visualization_v2(
+        "Illustrate Hooke law with spring constant and displacement controls; show restoring force."
+    )
+    assert spring is not None
+    assert [control["id"] for control in spring["controls"]] == [
+        "spring_constant",
+        "displacement",
+    ]
+
+    source_charges = compile_visualization_v2(
+        "Simulate electric field vectors for two point charges and let either charge move."
+    )
+    assert source_charges is not None
+    assert [control["id"] for control in source_charges["controls"][:4]] == [
+        "positive_charge_x",
+        "negative_charge_x",
+        "test_x",
+        "test_y",
+    ]
+    movable_test = compile_visualization_v2(
+        "Show electric field vectors for two point charges and move a test charge."
+    )
+    assert movable_test is not None
+    assert [control["id"] for control in movable_test["controls"]] == ["test_x", "test_y"]
+
+    network = compile_visualization_v2(
+        "Draw a neural network architecture 2-3-1 with weights and activations."
+    )
+    assert network is not None
+    node_ids = {layer["id"] for layer in network["scene"]["layers"] if layer["type"] == "node"}
+    assert {"x1", "x2", "h1", "h2", "h3", "output"} == node_ids
+
+    kalman = compile_visualization_v2(
+        "Visualize a Kalman filter with measurement noise, process noise, and step controls."
+    )
+    assert kalman is not None
+    assert [control["id"] for control in kalman["controls"]] == [
+        "noise",
+        "process_noise",
+        "step",
+    ]
+
+    gyroid = compile_visualization_v2(
+        "Plot sin(x)*cos(y)+sin(y)*cos(z)+sin(z)*cos(x)=0 as a 3D gyroid surface with clipping."
+    )
+    assert gyroid is not None
+    assert gyroid["family"] == "implicit_surface"
+    assert gyroid["controls"][0]["id"] == "clip_z"
+    for spec in (spring, source_charges, movable_test, network, kalman, gyroid):
+        validate_v2_spec(spec)

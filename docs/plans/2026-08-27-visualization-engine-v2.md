@@ -74,6 +74,31 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
 - For unsupported or ambiguous relationships, return an explicit accessible fallback explaining
   what could not be drawn. Never substitute a visually plausible but semantically different chart.
 
+### 3a. Bounded local-model semantic planner
+
+- Preserve deterministic expression and recognised-family planning as the first, low-latency path.
+  Invoke a local-model semantic planner only for a genuinely requested visual that remains an
+  unseen `concept_process` composition after those routes.
+- Give that planner a closed catalogue of the existing V2 primitives, coordinate systems,
+  relationships, layouts, controls, renderer hints, and animation modes. Its output is JSON data
+  for the existing versioned specification only. The prompt explicitly forbids source code, and
+  the runtime independently rejects HTML, JavaScript, CSS, shader text, URLs, event handlers,
+  prototype keys, unknown fields, and every expression outside the typed AST.
+- Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: requested
+  labels must be represented, referenced nodes must exist, controls must affect declared state,
+  and the chosen renderer must be compatible. On failure, return a structured list of validation
+  codes to one repair attempt. The repair sees only the original learner request, the rejected
+  data candidate, the allow-list catalogue, and those codes. It never sees or emits renderer
+  source.
+- Revalidate and recheck the repaired candidate. If it still fails, return the deterministic,
+  accessible concept fallback and record the planner rejection; never render partially valid data.
+  Cap proposal/repair bytes, attempts, timeout, AST work, layer/control counts, and total model
+  tokens under the same 8 GB CPU constraints.
+- Test this boundary with previously unseen compositions and paraphrases, malicious code-shaped
+  proposals, unknown primitives, oversized candidates, dangling relationships, and a repairable
+  missing-label case. Prove that no production path calls `eval`, `new Function`, injects markup,
+  accepts a network resource, or imports QA prompt fixtures.
+
 ### 4. Geometry and sampling
 
 - Explicit and parametric plots sample bounded domains while splitting undefined/discontinuous
@@ -135,6 +160,16 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
 6. Hand the clean committed branch to an independent adversarial reviewer. The reviewer searches
    for fixture-string cheats, independently samples rendered cases and interactions, attacks
    schemas/CSP/lifecycle/budgets, and verifies the checked-in 200/200 report is reproducible.
+7. Freeze the pre-user-holdout candidate before opening the sealed 50-case attachment. Preserve
+   its first-run result immutably. Generalise only reusable primitives/planning gaps, rerun the
+   original 200 plus the 50 holdout cases, add fresh metamorphic and reviewer-created probes for
+   affected families, and repeat the independent review. The final gate is 200/200 + 50/50 with
+   no waiver and no holdout strings or IDs in production routing.
+8. A separate 15-case bearings/navigation holdout remains sealed beyond this task checkpoint. Do
+   not locate, inspect, or ingest it until the user explicitly unseals it after the post-first-
+   holdout checkpoint is committed and independently approved. At unseal, preserve immutable
+   first-run per-case evidence before any general refinement; production routing may never contain
+   its prompts, IDs, or exact answers.
 
 ## Handoff boundary
 

@@ -7,21 +7,21 @@ Compared with base revision `238b95ff4e0cd38f2636c25d08e6e1c9eb53ded1` on the lo
 | Measurement | Before | After | Delta |
 |---|---:|---:|---:|
 | Synchronous chat UI source | 74628 B | 100843 B | +26215 B |
-| Median Node parse time for synchronous JS | 0.7682 ms | 0.9580 ms | +0.1898 ms |
-| Lazy V2 renderer source | 0 B | 194777 B | +194777 B |
+| Median Node parse time for synchronous JS | 0.7510 ms | 0.9531 ms | +0.2021 ms |
+| Lazy V2 renderer source | 0 B | 215271 B | +215271 B |
 | Existing vendored visualization libraries | 1102856 B | 1102856 B | 0 B |
 
 The V2 renderer is loaded only inside a validated visualization iframe; ordinary text chat does not fetch it. No CDN or new vendor package was added.
 
 ## Real-browser acceptance rendering
 
-The full gate rendered 200 cases. Peak measured browser JS heap across the responsive matrix was 51753032 bytes.
+The full gate rendered 200 cases. Peak measured browser JS heap across the responsive matrix was 44296374 bytes.
 
 | Renderer | Cases | Mean first render | p95 | Maximum |
 |---|---:|---:|---:|---:|
-| svg | 74 | 110.45 ms | 261.40 ms | 357.00 ms |
-| canvas | 21 | 167.68 ms | 345.20 ms | 347.70 ms |
-| three | 105 | 335.13 ms | 468.80 ms | 719.90 ms |
+| svg | 74 | 113.54 ms | 265.60 ms | 347.80 ms |
+| canvas | 21 | 162.19 ms | 348.90 ms | 353.70 ms |
+| three | 105 | 329.66 ms | 472.30 ms | 721.00 ms |
 
 ## Browser screenshots
 

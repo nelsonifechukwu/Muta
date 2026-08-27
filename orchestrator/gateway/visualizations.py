@@ -24,6 +24,10 @@ from orchestrator.gateway.surface_equations import (
     parse_surface_expression,
     phase_animation_expression,
 )
+from orchestrator.gateway.visualization_planner_v2 import (
+    plan_visualization_v2,
+    should_use_semantic_planner,
+)
 from orchestrator.gateway.visualization_v2 import (
     VisualizationV2Error,
     compile_visualization_v2,
@@ -1495,6 +1499,20 @@ def generate_visualization(
     fallback = _fallback_diagram(resolved_request)
     if _UNSUPPORTED_VISUAL.search(resolved_request):
         log.info("visual request uses an unsupported primitive; returning a safe schematic")
+        return fallback
+    if v2_spec is not None and should_use_semantic_planner(resolved_request):
+        planned = plan_visualization_v2(
+            engine,
+            resolved_request,
+            prose,
+            cancel_event=cancel_event,
+            on_generation=on_generation,
+        )
+        if planned is not None:
+            return planned
+        if cancel_event is not None and cancel_event.is_set():
+            return None
+        log.info("bounded semantic planner exhausted its repair budget; using safe schematic")
         return fallback
     library = select_library(resolved_request)
     kind = select_kind(resolved_request, library)

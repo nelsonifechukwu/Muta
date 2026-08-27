@@ -12,6 +12,7 @@ import math
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Any
 
 SPEC_VERSION = 2
@@ -614,6 +615,21 @@ def _relationship_from_request(request: str) -> tuple[str, dict[str, Any]] | Non
             candidate,
             flags=re.IGNORECASE,
         )
+        # Keep a trailing annotation request from becoming part of the typed equation. This
+        # accepts broad educational wording ("and show the roots", "label the radius") while
+        # the retained left-hand expression still has to pass the closed AST parser.
+        stripped = re.split(
+            r"\s+(?:and\s+)?(?:label|show|mark|identify|annotate|highlight|indicate)\b",
+            stripped,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        stripped = re.split(
+            r"\s+as\s+(?:(?:an?|the)\s+)?(?:3d|three[- ]dimensional)\b",
+            stripped,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
         stripped = re.sub(
             r"\s+(?:as\s+)?(?:(?:an?|the)\s+)?(?:(?:implicit|explicit)\s+)?"
             r"(?:surface|curve|plot|graph|diagram)\s*$",
@@ -1063,12 +1079,159 @@ def _generic_2d_spec(
         {"type": "polyline", "label": normalized, "points": points, "color": "orange"}
         for points in curves[: MAX_LAYERS - 1]
     ]
-    return _curve_spec(
-        family, "Interactive 2D equation", layers, f"Two-dimensional plot of {normalized}."
-    )
+    fallback = f"Two-dimensional plot of {normalized}."
+    if family == "explicit_curve" and left == {"type": "variable", "name": "y"}:
+        at_minus_one = _safe_sample(right, {"x": -1})
+        at_zero = _safe_sample(right, {"x": 0})
+        at_one = _safe_sample(right, {"x": 1})
+        at_two = _safe_sample(right, {"x": 2})
+        if None not in {at_minus_one, at_zero, at_one, at_two}:
+            a = (at_one + at_minus_one - 2 * at_zero) / 2  # type: ignore[operator]
+            b = (at_one - at_minus_one) / 2  # type: ignore[operator]
+            c = at_zero
+            quadratic_check = a * 4 + b * 2 + c  # type: ignore[operator]
+            if abs(quadratic_check - at_two) < 1e-6:  # type: ignore[operator]
+                if abs(a) < 1e-9 and re.search(r"slope|intercept", text, re.IGNORECASE):
+                    layers.extend(
+                        [
+                            {
+                                "type": "particles",
+                                "points": [[0, c], [1, c + b]],
+                                "label": f"y-intercept (0,{c:.3g})",
+                                "color": "gold",
+                            },
+                            {
+                                "type": "polyline",
+                                "points": [[0, c], [1, c], [1, c + b]],
+                                "label": f"slope rise/run = {b:.3g}/1",
+                                "color": "purple",
+                            },
+                        ]
+                    )
+                    fallback += f" Slope {b:.3g}; y-intercept (0,{c:.3g})."
+                elif abs(a) >= 1e-9 and re.search(
+                    r"root|vertex|axis of symmetry", text, re.IGNORECASE
+                ):
+                    vertex_x = -b / (2 * a)
+                    vertex_y = a * vertex_x * vertex_x + b * vertex_x + c
+                    discriminant = b * b - 4 * a * c
+                    roots = (
+                        []
+                        if discriminant < 0
+                        else [
+                            (-b - math.sqrt(discriminant)) / (2 * a),
+                            (-b + math.sqrt(discriminant)) / (2 * a),
+                        ]
+                    )
+                    layers.append(
+                        {
+                            "type": "particles",
+                            "points": [[vertex_x, vertex_y], *[[root, 0] for root in roots]],
+                            "label": f"vertex ({vertex_x:.3g},{vertex_y:.3g}); roots "
+                            + (", ".join(f"{root:.3g}" for root in roots) or "none"),
+                            "color": "gold",
+                        }
+                    )
+                    layers.append(
+                        {
+                            "type": "polyline",
+                            "points": [[vertex_x, vertex_y - 5], [vertex_x, vertex_y + 5]],
+                            "label": f"axis of symmetry x={vertex_x:.3g}",
+                            "color": "purple",
+                        }
+                    )
+                    fallback += f" Vertex ({vertex_x:.3g},{vertex_y:.3g}); axis x={vertex_x:.3g}."
+        if _contains_call(right, {"sin", "cos"}) and re.search(
+            r"amplitude|wavelength|maxima|minimum|zero crossing", text, re.IGNORECASE
+        ):
+            sampled = curves[0]
+            maximum = max(sampled, key=lambda point: point[1])
+            minimum = min(sampled, key=lambda point: point[1])
+            zeroes: list[list[float]] = []
+            for first, second in pairwise(sampled):
+                if first[1] == 0:
+                    zeroes.append(first)
+                elif first[1] * second[1] < 0:
+                    ratio = abs(first[1]) / (abs(first[1]) + abs(second[1]))
+                    zeroes.append([first[0] + ratio * (second[0] - first[0]), 0])
+            amplitude = (maximum[1] - minimum[1]) / 2
+            wavelength = zeroes[2][0] - zeroes[0][0] if len(zeroes) >= 3 else float("nan")
+            layers.append(
+                {
+                    "type": "particles",
+                    "points": [maximum, minimum, *zeroes[:5]],
+                    "label": f"amplitude≈{amplitude:.3g}; wavelength≈{wavelength:.3g}; extrema and zero crossings",
+                    "color": "gold",
+                }
+            )
+            fallback += f" Amplitude about {amplitude:.3g} and wavelength about {wavelength:.3g}."
+    if family == "implicit_curve" and re.search(r"centre|center|radius", text, re.IGNORECASE):
+        sampled = [point for curve in curves for point in curve]
+        x_low = min(point[0] for point in sampled)
+        x_high = max(point[0] for point in sampled)
+        y_low = min(point[1] for point in sampled)
+        y_high = max(point[1] for point in sampled)
+        centre = [(x_low + x_high) / 2, (y_low + y_high) / 2]
+        radius = sum(math.dist(centre, point) for point in sampled) / len(sampled)
+        radius_point = max(sampled, key=lambda point: point[0])
+        layers.extend(
+            [
+                {
+                    "type": "particles",
+                    "points": [centre, radius_point],
+                    "label": f"centre ({centre[0]:.3g},{centre[1]:.3g}) and radius point",
+                    "color": "gold",
+                },
+                {
+                    "type": "polyline",
+                    "points": [centre, radius_point],
+                    "label": f"radius≈{radius:.3g}",
+                    "color": "purple",
+                },
+            ]
+        )
+        fallback += f" Centre ({centre[0]:.3g},{centre[1]:.3g}); radius about {radius:.3g}."
+    return _curve_spec(family, "Interactive 2D equation", layers[:MAX_LAYERS], fallback)
 
 
 _FAMILY_RULES: tuple[tuple[str, str, str], ...] = (
+    (
+        r"(?:3d|three[- ]dimensional).*vector field|vector field.*(?:3d|three[- ]dimensional|\(x\s*,\s*y\s*,\s*z\))",
+        "vector_field_3d",
+        "three",
+    ),
+    (r"lorenz(?: attractor| system)?", "lorenz_attractor", "three"),
+    (
+        r"electromagnetic wave|electric.*magnetic.*(?:wave|perpendicular|propagat)",
+        "electromagnetic_wave",
+        "three",
+    ),
+    (
+        r"robot localization|noisy odometry|(?:odometry|fused robot pose).*uncertainty",
+        "robot_localization",
+        "canvas",
+    ),
+    (
+        r"forward kinematics|(?:3|three)[- ]link manipulator|manipulator.*joint angles",
+        "robot_forward_kinematics",
+        "svg",
+    ),
+    (
+        r"gradient descent|optimization trajectory|optimization.*(?:learning rate|minimum|linked surface)",
+        "gradient_descent",
+        "svg",
+    ),
+    (r"3d surface.*2d contour|2d contour.*3d surface", "gradient_linked", "svg"),
+    (
+        r"vector addition|vector sum|head[- ]to[- ]tail.*vectors?|geometrically show.*\+",
+        "vector_addition",
+        "svg",
+    ),
+    (
+        r"binary representation|decimal.*binary|contribution of each bit|binary place[- ]value",
+        "binary_representation",
+        "svg",
+    ),
     (r"lagrange multiplier|constraint.*gradients? align", "lagrange_multiplier", "svg"),
     (r"saddle vector field|vector field\s+f\s*=", "vector_field", "svg"),
     (r"membrane transport|diffusion.*active transport", "membrane_transport", "svg"),
@@ -1082,7 +1245,11 @@ _FAMILY_RULES: tuple[tuple[str, str, str], ...] = (
     (r"pythag|right[- ]angled triangle", "pythagoras", "svg"),
     (r"unit circle", "unit_circle", "svg"),
     (r"parabola|quadratic", "quadratic", "svg"),
-    (r"straight lines|line intersection|slopes? and intercept", "line_intersection", "svg"),
+    (
+        r"straight lines|line intersection|(?:two|both|compare).{0,32}slopes?.{0,16}intercepts?",
+        "line_intersection",
+        "svg",
+    ),
     (r"triangle.*interior angle|interior angle.*triangle", "triangle_angles", "svg"),
     (r"derivative|tangent line", "derivative_tangent", "svg"),
     (r"riemann|integral.*rectang", "riemann_sum", "svg"),
@@ -1092,10 +1259,14 @@ _FAMILY_RULES: tuple[tuple[str, str, str], ...] = (
         "plane_intersection",
         "three",
     ),
-    (r"eigenvector|transforms? a grid|linear transform", "linear_transform", "svg"),
+    (
+        r"eigenvector|matrix transformation|transforms?.{0,32}coordinate grid|linear transform",
+        "linear_transform",
+        "svg",
+    ),
     (r"projectile", "projectile", "svg"),
     (r"inclined plane|free[- ]body.*box", "inclined_plane", "svg"),
-    (r"hooke|hanging mass|mass[- ]spring", "spring_mass", "svg"),
+    (r"hooke|hanging mass|mass[- ]spring|spring.*restoring force", "spring_mass", "svg"),
     (r"colliding carts?|elastic collision", "elastic_collision", "svg"),
     (r"double pendulum", "double_pendulum", "canvas"),
     (r"pendulum", "pendulum", "svg"),
@@ -1104,7 +1275,7 @@ _FAMILY_RULES: tuple[tuple[str, str, str], ...] = (
     (r"transverse wave|travelling wave|traveling wave", "travelling_wave", "canvas"),
     (r"circular motion", "circular_motion", "svg"),
     (r"series and parallel|resistors?.*parallel", "series_parallel_circuit", "svg"),
-    (r"simple circuit|ohm['’]s law", "ohms_law_circuit", "svg"),
+    (r"simple (?:electric )?circuit|ohm['’]s law|battery.*resistor", "ohms_law_circuit", "svg"),
     (r"electric field.*vectors?|two point charges", "electric_field_vectors", "canvas"),
     (r"electric field|positive.*negative charge", "electric_field_lines", "canvas"),
     (r"magnetic field.*wire|current-carrying.*wire", "magnetic_field_wire", "canvas"),
@@ -1115,9 +1286,13 @@ _FAMILY_RULES: tuple[tuple[str, str, str], ...] = (
     (r"refraction|snell", "refraction", "svg"),
     (r"ideal gas|pv=nrt", "ideal_gas", "svg"),
     (r"carnot", "carnot_cycle", "svg"),
-    (r"atomic number|atom with|structure of an atom", "atom", "svg"),
+    (
+        r"atomic number|atom with|structure of an atom|(?:labelled|labeled|carbon) atom",
+        "atom",
+        "svg",
+    ),
     (r"ionic bond|sodium and chlorine", "ionic_bond", "svg"),
-    (r"molecular geometry|vsepr|sf₆|brf₅", "molecular_geometry", "three"),
+    (r"molecular geometry|vsepr|sf₆|brf₅|h_?2o.*nh_?3.*ch_?4", "molecular_geometry", "three"),
     (r"energy profile|activation energy|exothermic", "reaction_profile", "svg"),
     (r"titration", "titration", "svg"),
     (r"molecular orbital", "molecular_orbitals", "svg"),
@@ -1283,10 +1458,25 @@ def resolve_intent(request: str, previous_spec: dict[str, Any] | None = None) ->
             animate_previous=previous_spec is not None,
             reason="anaphoric animation" if previous_spec else "no prior visualization artifact",
         )
-    visual_signal = bool(_VISUAL_REQUEST_PHRASE.search(text) or _DIRECT_VISUAL_REQUEST.search(text))
+    # Learners often paste a numbered Markdown exercise whose visual verb appears on a later
+    # line after a bold title. The negative/non-visual guards above already reject semantic
+    # false positives, so an allow-listed visual word anywhere in the bounded request is a
+    # genuine signal; it need not be the first token in the whole message.
+    visual_signal = bool(
+        _VISUAL_WORDS.search(text)
+        or _VISUAL_REQUEST_PHRASE.search(text)
+        or _DIRECT_VISUAL_REQUEST.search(text)
+    )
     for pattern, family, renderer in _FAMILY_RULES:
         if re.search(pattern, text, re.IGNORECASE):
-            explicit = visual_signal or bool(_AMBIGUOUS_VISUAL_VERB.search(text))
+            explicit = visual_signal or bool(
+                _AMBIGUOUS_VISUAL_VERB.search(text)
+                or re.search(
+                    r"\b(?:allow|approximate|display|place|update|operate|simultaneously)\b",
+                    text,
+                    re.IGNORECASE,
+                )
+            )
             if explicit:
                 return VisualIntent(True, family, renderer, reason="topic family")
     relationship = _relationship_from_request(text)
@@ -1318,6 +1508,7 @@ _CONTROL_PRESETS: dict[tuple[str, str], tuple[float, float, float, float]] = {
     ("inclined_plane", "incline"): (30, 5, 60, 1),
     ("spring_mass", "spring_constant"): (12, 1, 30, 0.5),
     ("spring_mass", "mass"): (2, 0.25, 8, 0.25),
+    ("spring_mass", "displacement"): (1, -3, 3, 0.1),
     ("elastic_collision", "mass_1"): (2, 0.5, 8, 0.5),
     ("elastic_collision", "velocity_1"): (3, -8, 8, 0.5),
     ("elastic_collision", "mass_2"): (3, 0.5, 8, 0.5),
@@ -1361,6 +1552,7 @@ _CONTROL_PRESETS: dict[tuple[str, str], tuple[float, float, float, float]] = {
     ("hash_table", "key"): (17, 0, 99, 1),
     ("virtual_memory", "address"): (37, 0, 255, 1),
     ("kalman_filter", "noise"): (1, 0.1, 5, 0.1),
+    ("kalman_filter", "process_noise"): (0.08, 0.01, 1, 0.01),
     ("converging_lens", "object_distance"): (2.5, 1.2, 5, 0.1),
     ("robot_arm", "target_x"): (2.5, -2.5, 2.5, 0.1),
     ("robot_arm", "target_y"): (1.5, -2.5, 2.5, 0.1),
@@ -1368,6 +1560,8 @@ _CONTROL_PRESETS: dict[tuple[str, str], tuple[float, float, float, float]] = {
     ("electric_field_lines", "charge_2"): (1, 0.2, 3, 0.1),
     ("electric_field_vectors", "test_x"): (0, -3, 3, 0.1),
     ("electric_field_vectors", "test_y"): (1.5, -3, 3, 0.1),
+    ("electric_field_vectors", "positive_charge_x"): (-1, -3, -0.2, 0.1),
+    ("electric_field_vectors", "negative_charge_x"): (1, 0.2, 3, 0.1),
     ("kinetics", "order"): (1, 0, 2, 1),
     ("kinetics", "rate_constant"): (0.35, 0.05, 1, 0.05),
     ("bode_plot", "cutoff"): (1, 0.1, 10, 0.1),
@@ -1382,6 +1576,22 @@ _CONTROL_PRESETS: dict[tuple[str, str], tuple[float, float, float, float]] = {
     ("double_slit", "wavelength"): (0.5, 0.1, 1.5, 0.05),
     ("decision_boundary", "epoch"): (20, 1, 40, 1),
     ("decision_boundary", "learning_rate"): (0.2, 0.05, 0.5, 0.01),
+    ("robot_forward_kinematics", "joint_1"): (25, -180, 180, 1),
+    ("robot_forward_kinematics", "joint_2"): (-35, -180, 180, 1),
+    ("robot_forward_kinematics", "joint_3"): (55, -180, 180, 1),
+    ("vector_field_3d", "point_x"): (1, -2, 2, 1),
+    ("vector_field_3d", "point_y"): (1, -2, 2, 1),
+    ("vector_field_3d", "point_z"): (1, -2, 2, 1),
+    ("lorenz_attractor", "sigma"): (10, 5, 20, 0.5),
+    ("lorenz_attractor", "rho"): (28, 10, 40, 0.5),
+    ("lorenz_attractor", "beta"): (2.667, 1, 4, 0.05),
+    ("electromagnetic_wave", "amplitude"): (1, 0.2, 2, 0.1),
+    ("electromagnetic_wave", "wavelength"): (3, 1, 6, 0.1),
+    ("robot_localization", "odometry_noise"): (0.25, 0, 1, 0.05),
+    ("robot_localization", "sensor_noise"): (0.2, 0, 1, 0.05),
+    ("robot_localization", "step"): (30, 0, 60, 1),
+    ("gradient_descent", "learning_rate"): (0.18, 0.02, 0.5, 0.01),
+    ("gradient_descent", "step"): (8, 0, 16, 1),
 }
 
 
@@ -1414,14 +1624,16 @@ def _control(control_id: str, index: int, family: str) -> dict[str, Any]:
     if control_id in {"switch", "pedestrian_request"}:
         return {"id": control_id, "label": "Switch", "type": "button", "value": 0}
     if control_id in {"playback", "step"}:
+        preset = _CONTROL_PRESETS.get((family, control_id))
+        value, minimum, maximum, step = preset or (0, 0, 4, 1)
         return {
             "id": control_id,
             "label": label.title(),
             "type": "step",
-            "value": 0,
-            "min": 0,
-            "max": 4,
-            "step": 1,
+            "value": value,
+            "min": minimum,
+            "max": maximum,
+            "step": step,
         }
     value, minimum, maximum, step = _CONTROL_PRESETS.get(
         (family, control_id), (1 + index, 0, 10, 0.1)
@@ -1565,8 +1777,29 @@ def _controls_for_request(request: str, family: str) -> list[dict[str, Any]]:
         "backprop_graph": ("w", "x", "b", "step"),
         "energy_sankey": ("efficiency",),
         "uncertainty_propagation": ("mass_sigma", "volume_sigma", "samples"),
+        "vector_addition": (),
+        "binary_representation": (),
+        "robot_forward_kinematics": ("joint_1", "joint_2", "joint_3"),
+        "vector_field_3d": ("point_x", "point_y", "point_z"),
+        "lorenz_attractor": ("sigma", "rho", "beta"),
+        "electromagnetic_wave": ("amplitude", "wavelength"),
+        "robot_localization": ("odometry_noise", "sensor_noise", "step"),
+        "gradient_descent": ("learning_rate", "step"),
+        "gradient_linked": ("point_x", "point_y"),
     }
     names = aliases.get(family)
+    if family == "spring_mass" and re.search(
+        r"displacement|\bx\b.{0,20}change", request, re.IGNORECASE
+    ):
+        names = ("spring_constant", "displacement")
+    if family == "electric_field_vectors" and re.search(
+        r"(?:either charge|(?:positive|negative|source) charge.{0,30}move|move.{0,30}(?:positive|negative|source) charge)",
+        request,
+        re.IGNORECASE,
+    ):
+        names = ("positive_charge_x", "negative_charge_x", "test_x", "test_y")
+    if family == "kalman_filter" and re.search(r"process noise", request, re.IGNORECASE):
+        names = ("noise", "process_noise", "step")
     if names is None:
         requested = re.findall(
             r"\b(?:change|adjust|vary|move|select|toggle)\s+(?:the\s+)?([A-Za-z][A-Za-z _-]{0,24})",
@@ -1787,16 +2020,19 @@ def _controls_for_request(request: str, family: str) -> list[dict[str, Any]]:
         for control in controls:
             if control["id"] in {"step", "playback"}:
                 control["max"] = 20
-    if family == "kalman_filter" and len(controls) > 1:
-        controls[1] = {
-            "id": "step",
-            "label": "Predict / update step",
-            "type": "step",
-            "value": 0,
-            "min": 0,
-            "max": 20,
-            "step": 1,
-        }
+    if family == "kalman_filter":
+        for index, control in enumerate(controls):
+            if control["id"] == "step":
+                controls[index] = {
+                    "id": "step",
+                    "label": "Predict / update step",
+                    "type": "step",
+                    "value": 0,
+                    "min": 0,
+                    "max": 20,
+                    "step": 1,
+                }
+                break
     if family == "heap" and controls:
         controls[0] = {
             "id": "operation",
@@ -1972,6 +2208,122 @@ def _plot_layers(family: str) -> list[dict[str, Any]]:
         point = math.sqrt(0.5)
         add("radius to θ", [[0, 0], [point, point]], "purple")
         add("cos θ projection", [[0, 0], [point, 0], [point, point]], "teal")
+    elif family == "vector_addition":
+        layers.append(
+            {
+                "type": "vector_field",
+                "vectors": [[0, 0, 3, 2], [3, 2, 1, 4], [0, 0, 4, 6]],
+                "label": "a=(3,2), translated b=(1,4), resultant a+b=(4,6)",
+                "color": "purple",
+            }
+        )
+        add("head-to-tail construction", [[0, 0], [3, 2], [4, 6]], "teal")
+        add("parallelogram completion", [[0, 0], [1, 4], [4, 6]], "gold")
+    elif family in {"gradient_linked", "gradient_descent"}:
+        surface_labels: list[str] = []
+        contour_labels: list[str] = []
+        for row in (-2, -1, 0, 1, 2):
+            label = f"projected 3D surface row y={row}"
+            surface_labels.append(label)
+            add(
+                label,
+                [
+                    [
+                        x + 0.35 * row - 4.5,
+                        0.18 * (x * x + (2 if family == "gradient_descent" else 1) * row * row)
+                        + 0.35 * row,
+                    ]
+                    for x in xs
+                ],
+                "teal",
+            )
+        for contour in (0.8, 1.5, 2.3):
+            label = f"2D contour f={contour:.1f}"
+            contour_labels.append(label)
+            vertical_scale = math.sqrt(2) if family == "gradient_descent" else 1
+            add(
+                label,
+                [
+                    [3.2 + contour * math.cos(t), contour * math.sin(t) / vertical_scale]
+                    for t in turns
+                ],
+                "orange",
+            )
+        trajectory = []
+        x_value, y_value = 2.4, 1.8
+        for _step in range(17):
+            trajectory.append([3.2 + x_value, y_value])
+            x_value *= 0.64
+            y_value *= 0.36 if family == "gradient_descent" else 0.58
+        if family == "gradient_descent":
+            surface_trajectory_label = "gradient-descent trajectory on projected surface"
+            contour_trajectory_label = "gradient-descent trajectory on contour map"
+            add(
+                surface_trajectory_label,
+                [
+                    [
+                        x_value + 0.35 * y_value - 4.5,
+                        0.18 * (x_value * x_value + 2 * y_value * y_value) + 0.35 * y_value,
+                    ]
+                    for x_value, y_value in [
+                        (2.4 * 0.64**step, 1.8 * 0.36**step) for step in range(17)
+                    ]
+                ],
+                "gold",
+            )
+            add(contour_trajectory_label, trajectory, "purple")
+            surface_members = [*surface_labels, surface_trajectory_label]
+            contour_members = [*contour_labels, contour_trajectory_label]
+        else:
+            surface_probe_label = "surface probe at selected point"
+            contour_probe_label = "contour probe and gradient direction"
+            add(surface_probe_label, [[-3.8, 0.53], [-3.79, 0.54]], "gold")
+            add(contour_probe_label, [[4.2, 1.0], [5.8, 2.6]], "purple")
+            surface_members = [*surface_labels, surface_probe_label]
+            contour_members = [*contour_labels, contour_probe_label]
+        panel("surface", "Projected 3D surface", "x", "height z", *surface_members)
+        panel(
+            "contour",
+            "Linked 2D contour map",
+            "x",
+            "y",
+            *contour_members,
+        )
+    elif family == "robot_localization":
+        times = [index / 10 for index in range(61)]
+        true_path = [[time - 3, 1.2 * math.sin(time)] for time in times]
+        odometry = [
+            [x + 0.08 * index / 10, y + 0.18 * math.sin(index * 1.7)]
+            for index, (x, y) in enumerate(true_path)
+        ]
+        estimate = [
+            [0.72 * truth[0] + 0.28 * noisy[0], 0.72 * truth[1] + 0.28 * noisy[1]]
+            for truth, noisy in zip(true_path, odometry)
+        ]
+        add("true pose trajectory", true_path, "teal")
+        add("noisy odometry trajectory", odometry, "orange")
+        add("Kalman/particle estimated pose", estimate, "purple")
+        current = estimate[30]
+        add(
+            "uncertainty ellipse",
+            [[current[0] + 0.55 * math.cos(t), current[1] + 0.3 * math.sin(t)] for t in turns],
+            "gold",
+        )
+        add("sensor observations to landmarks", [current, [-2.4, 2.3], current, [2.5, 2.1]], "blue")
+        layers.append(
+            {
+                "type": "particles",
+                "points": [
+                    [
+                        current[0] + 0.45 * math.cos(index * 2.399),
+                        current[1] + 0.25 * math.sin(index * 2.399),
+                    ]
+                    for index in range(48)
+                ],
+                "label": "localization particles",
+                "color": "purple",
+            }
+        )
     elif family == "line_intersection":
         add("line 1", [[x, x] for x in xs])
         add("line 2", [[x, -x + 2] for x in xs], "teal")
@@ -3336,6 +3688,86 @@ def _plot_layers(family: str) -> list[dict[str, Any]]:
 
 
 def _schematic_layers(family: str, request: str = "") -> list[dict[str, Any]]:
+    if family == "binary_representation":
+        layers: list[dict[str, Any]] = []
+        for index, (bit, power, contribution) in enumerate(
+            ((1, 8, 8), (1, 4, 4), (0, 2, 0), (1, 1, 1))
+        ):
+            layers.append(
+                {
+                    "type": "node",
+                    "id": f"bit_{power}",
+                    "x": 135 + index * 145,
+                    "y": 165,
+                    "width": 118,
+                    "height": 76,
+                    "label": f"bit {bit} × {power} = {contribution}",
+                    "color": "teal" if bit else "purple",
+                }
+            )
+        layers.append(
+            {
+                "type": "node",
+                "id": "sum",
+                "x": 360,
+                "y": 330,
+                "width": 270,
+                "height": 64,
+                "label": "8 + 4 + 0 + 1 = 13₁₀ = 1101₂",
+                "color": "orange",
+            }
+        )
+        for power in (8, 4, 2, 1):
+            layers.append(
+                {
+                    "type": "link",
+                    "from": f"bit_{power}",
+                    "to": "sum",
+                    "arrow": True,
+                    "label": "place-value contribution",
+                }
+            )
+        return layers
+    if family == "robot_forward_kinematics":
+        lengths = (105.0, 90.0, 75.0)
+        angles = [math.radians(value) for value in (25, -35, 55)]
+        points = [[165.0, 330.0]]
+        heading = 0.0
+        for length, angle in zip(lengths, angles):
+            heading += angle
+            points.append(
+                [
+                    points[-1][0] + length * math.cos(heading),
+                    points[-1][1] - length * math.sin(heading),
+                ]
+            )
+        labels = ("base", "joint 1", "joint 2", "end effector")
+        layers = [
+            {
+                "type": "node",
+                "id": f"joint_{index}",
+                "x": point[0],
+                "y": point[1],
+                "width": 104 if index < 3 else 150,
+                "height": 50,
+                "label": labels[index]
+                if index < 3
+                else f"end effector ({point[0]:.1f}, {point[1]:.1f})",
+                "color": ("teal", "orange", "purple", "blue")[index],
+            }
+            for index, point in enumerate(points)
+        ]
+        for index, length in enumerate(lengths):
+            layers.append(
+                {
+                    "type": "link",
+                    "from": f"joint_{index}",
+                    "to": f"joint_{index + 1}",
+                    "arrow": False,
+                    "label": f"L{index + 1}={length:.0f} px",
+                }
+            )
+        return layers
     if family == "binary_search_tree":
         seed = (
             ("root", 8, 360, 70),
@@ -3480,13 +3912,23 @@ def _schematic_layers(family: str, request: str = "") -> list[dict[str, Any]]:
         )
         return layers
     if family == "neural_network":
-        nodes = (
+        nodes = [
             ("x1", 90, 140, "input x₁=0.6", "teal"),
             ("x2", 90, 300, "input x₂=0.4", "teal"),
             ("h1", 345, 125, "h₁=ReLU(0.60)=0.60", "purple"),
             ("h2", 345, 315, "h₂=ReLU(0.18)=0.18", "purple"),
             ("output", 625, 220, "ŷ=sigmoid(0.464)=0.614", "gold"),
-        )
+        ]
+        three_hidden = bool(re.search(r"2\D{0,28}3\D{0,28}1", request))
+        if three_hidden:
+            nodes = [
+                nodes[0],
+                nodes[1],
+                ("h1", 345, 105, "h₁=ReLU(0.60)=0.60", "purple"),
+                ("h2", 345, 220, "h₂=ReLU(0.18)=0.18", "purple"),
+                ("h3", 345, 335, "h₃=ReLU(0.34)=0.34", "purple"),
+                ("output", 625, 220, "ŷ=sigmoid(0.583)=0.642", "gold"),
+            ]
         layers = [
             {
                 "type": "node",
@@ -3500,14 +3942,23 @@ def _schematic_layers(family: str, request: str = "") -> list[dict[str, Any]]:
             }
             for node_id, x, y, label, color in nodes
         ]
-        for start, end, label in (
+        connections = [
             ("x1", "h1", "w₁₁ adjustable"),
             ("x2", "h1", "w₁₂=0.5"),
             ("x1", "h2", "w₂₁=−0.4"),
             ("x2", "h2", "w₂₂=0.8"),
             ("h1", "output", "v₁=0.9"),
             ("h2", "output", "v₂=−0.7"),
-        ):
+        ]
+        if three_hidden:
+            connections.extend(
+                [
+                    ("x1", "h3", "w₃₁=0.3"),
+                    ("x2", "h3", "w₃₂=0.4"),
+                    ("h3", "output", "v₃=0.35"),
+                ]
+            )
+        for start, end, label in connections:
             layers.append({"type": "link", "from": start, "to": end, "arrow": True, "label": label})
         return layers
     if family == "equilibrium_shift":
@@ -6087,6 +6538,101 @@ def _plane_layers_from_request(request: str) -> list[dict[str, Any]] | None:
 
 
 def _three_composition(family: str, request: str = "") -> list[dict[str, Any]]:
+    if family == "vector_field_3d":
+        layers: list[dict[str, Any]] = []
+        for x in (-2.0, 0.0, 2.0):
+            for y in (-2.0, 0.0, 2.0):
+                for z in (-2.0, 0.0, 2.0):
+                    vector = (-y, x, z)
+                    magnitude = math.sqrt(sum(value * value for value in vector))
+                    if magnitude < 1e-9:
+                        continue
+                    scale_value = 0.72 / magnitude
+                    layers.append(
+                        {
+                            "type": "vector",
+                            "from": [x, y, z],
+                            "to": [
+                                x + vector[0] * scale_value,
+                                y + vector[1] * scale_value,
+                                z + vector[2] * scale_value,
+                            ],
+                            "label": "sampled F=(-y,x,z)",
+                            "color": "teal",
+                        }
+                    )
+        layers.extend(
+            [
+                {
+                    "type": "point",
+                    "position": [1, 1, 1],
+                    "size": 0.18,
+                    "label": "selected point (1,1,1)",
+                    "color": "gold",
+                },
+                {
+                    "type": "vector",
+                    "from": [1, 1, 1],
+                    "to": [0.4, 1.6, 1.6],
+                    "label": "local F=(-1,1,1)",
+                    "color": "purple",
+                },
+            ]
+        )
+        return layers
+    if family == "lorenz_attractor":
+        sigma, rho, beta, dt = 10.0, 28.0, 8 / 3, 0.01
+        x, y, z = 0.1, 0.0, 0.0
+        points: list[list[float]] = []
+        for step in range(620):
+            dx = sigma * (y - x)
+            dy = x * (rho - z) - y
+            dz = x * y - beta * z
+            x += dt * dx
+            y += dt * dy
+            z += dt * dz
+            if step >= 120:
+                points.append([x / 7, y / 7, (z - 24) / 7])
+        return [
+            {
+                "type": "line",
+                "points": points,
+                "label": "Lorenz trajectory σ=10, ρ=28, β=8/3",
+                "color": "orange",
+            },
+            {
+                "type": "point",
+                "position": points[-1],
+                "size": 0.18,
+                "label": "current state",
+                "color": "gold",
+            },
+        ]
+    if family == "electromagnetic_wave":
+        samples = [-4 + 8 * index / 160 for index in range(161)]
+        electric = [[x, math.sin(2 * math.pi * x / 3), 0] for x in samples]
+        magnetic = [[x, 0, math.sin(2 * math.pi * x / 3)] for x in samples]
+        return [
+            {
+                "type": "line",
+                "points": electric,
+                "label": "electric field E ⟂ propagation",
+                "color": "orange",
+            },
+            {
+                "type": "line",
+                "points": magnetic,
+                "label": "magnetic field B ⟂ E",
+                "color": "teal",
+            },
+            {
+                "type": "vector",
+                "from": [-4, -1.6, -1.6],
+                "to": [4, -1.6, -1.6],
+                "label": "propagation k = E×B",
+                "color": "purple",
+            },
+        ]
     if family == "molecular_geometry":
         return [
             {
@@ -6409,7 +6955,22 @@ def compile_visualization_v2(
         if normalized_relationship
         else (relationship_match or (None, None))[1]
     )
-    two_dimensional = _generic_2d_spec(request, relationship_source, relationship)
+    # Named educational compositions own equations embedded in their prose. Generic 2D
+    # parsing is only appropriate when no reusable semantic family was selected; otherwise a
+    # valid but impoverished curve can erase requested roots, forces, linked views, and controls.
+    two_dimensional = (
+        _generic_2d_spec(request, relationship_source, relationship)
+        if intent.family
+        in {
+            None,
+            "concept_process",
+            "mathematical_surface",
+            "basic_geometry",
+            "quadratic",
+            "vector_field",
+        }
+        else None
+    )
     if two_dimensional is not None:
         _add_initial_animation(two_dimensional, request)
         validate_v2_spec(two_dimensional)
@@ -6424,6 +6985,20 @@ def compile_visualization_v2(
             return None
         relationship = relationship or parse_relationship(relationship_source)
         spec = _surface_spec(relationship_source, relationship)
+        if re.search(r"clipp(?:ing|ed)?", request, re.IGNORECASE):
+            z_domain = spec["scene"]["layers"][0]["z_domain"]
+            spec["controls"].insert(
+                0,
+                {
+                    "id": "clip_z",
+                    "label": "Clipping height",
+                    "type": "range",
+                    "value": z_domain[1],
+                    "min": z_domain[0],
+                    "max": z_domain[1],
+                    "step": max(0.01, round((z_domain[1] - z_domain[0]) / 40, 4)),
+                },
+            )
         _add_initial_animation(spec, request)
         validate_v2_spec(spec)
         return spec
@@ -6484,6 +7059,10 @@ def compile_visualization_v2(
             "pwm",
             "beam_bending",
             "kalman_filter",
+            "vector_addition",
+            "gradient_descent",
+            "gradient_linked",
+            "robot_localization",
         }
         layers = (
             _basic_geometry_layers(request)

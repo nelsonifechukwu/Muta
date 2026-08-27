@@ -6,10 +6,10 @@
     "sync_before_bytes": 74628,
     "sync_after_bytes": 100843,
     "sync_delta_bytes": 26215,
-    "sync_parse_before_ms": 0.7682,
-    "sync_parse_after_ms": 0.958,
-    "sync_parse_delta_ms": 0.1898,
-    "lazy_v2_bytes": 194777,
+    "sync_parse_before_ms": 0.751,
+    "sync_parse_after_ms": 0.9531,
+    "sync_parse_delta_ms": 0.2021,
+    "lazy_v2_bytes": 215271,
     "vendor_bytes": 1102856,
     "new_network_dependencies": 0
   },
@@ -23,28 +23,28 @@
     "by_renderer": {
       "svg": {
         "count": 74,
-        "mean_elapsed_ms": 110.449,
-        "p95_elapsed_ms": 261.4,
-        "max_elapsed_ms": 357.0
+        "mean_elapsed_ms": 113.543,
+        "p95_elapsed_ms": 265.6,
+        "max_elapsed_ms": 347.8
       },
       "canvas": {
         "count": 21,
-        "mean_elapsed_ms": 167.676,
-        "p95_elapsed_ms": 345.2,
-        "max_elapsed_ms": 347.7
+        "mean_elapsed_ms": 162.195,
+        "p95_elapsed_ms": 348.9,
+        "max_elapsed_ms": 353.7
       },
       "three": {
         "count": 105,
-        "mean_elapsed_ms": 335.126,
-        "p95_elapsed_ms": 468.8,
-        "max_elapsed_ms": 719.9
+        "mean_elapsed_ms": 329.658,
+        "p95_elapsed_ms": 472.3,
+        "max_elapsed_ms": 721.0
       }
     },
     "maximum_triangles": 26594,
     "observed_animation_frame_interval_ms": {
-      "minimum": 33.5,
-      "median": 41.7,
-      "maximum": 42.4
+      "minimum": 33.4,
+      "median": 33.5,
+      "maximum": 66.8
     }
   },
   "responsive_matrix": {
@@ -62,7 +62,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 44714647,
+        "used_js_heap_bytes": 37284696,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -79,58 +79,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 34872571,
-        "trusted_browser_input": null,
-        "page_errors": [],
-        "passed": true
-      },
-      {
-        "theme": "light",
-        "viewport": {
-          "width": 375,
-          "height": 812
-        },
-        "target_container": {
-          "width": 375,
-          "height": 480
-        },
-        "reduced_motion": false,
-        "simultaneous_frames": 5,
-        "used_js_heap_bytes": 34959437,
-        "trusted_browser_input": null,
-        "page_errors": [],
-        "passed": true
-      },
-      {
-        "theme": "dark",
-        "viewport": {
-          "width": 430,
-          "height": 932
-        },
-        "target_container": {
-          "width": 430,
-          "height": 480
-        },
-        "reduced_motion": false,
-        "simultaneous_frames": 5,
-        "used_js_heap_bytes": 50178792,
-        "trusted_browser_input": null,
-        "page_errors": [],
-        "passed": true
-      },
-      {
-        "theme": "light",
-        "viewport": {
-          "width": 667,
-          "height": 375
-        },
-        "target_container": {
-          "width": 667,
-          "height": 375
-        },
-        "reduced_motion": false,
-        "simultaneous_frames": 5,
-        "used_js_heap_bytes": 51753032,
+        "used_js_heap_bytes": 28817628,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -142,18 +91,69 @@
           "height": 900
         },
         "target_container": {
-          "width": 980,
-          "height": 480
+          "width": 375,
+          "height": 600
+        },
+        "reduced_motion": false,
+        "simultaneous_frames": 5,
+        "used_js_heap_bytes": 29490962,
+        "trusted_browser_input": null,
+        "page_errors": [],
+        "passed": true
+      },
+      {
+        "theme": "dark",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "target_container": {
+          "width": 430,
+          "height": 600
+        },
+        "reduced_motion": false,
+        "simultaneous_frames": 5,
+        "used_js_heap_bytes": 44296374,
+        "trusted_browser_input": null,
+        "page_errors": [],
+        "passed": true
+      },
+      {
+        "theme": "light",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "target_container": {
+          "width": 667,
+          "height": 375
+        },
+        "reduced_motion": false,
+        "simultaneous_frames": 5,
+        "used_js_heap_bytes": 31970828,
+        "trusted_browser_input": null,
+        "page_errors": [],
+        "passed": true
+      },
+      {
+        "theme": "dark",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "target_container": {
+          "width": 430,
+          "height": 600
         },
         "reduced_motion": true,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 27484299,
+        "used_js_heap_bytes": 20840197,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
       }
     ],
-    "peak_used_js_heap_bytes": 51753032,
+    "peak_used_js_heap_bytes": 44296374,
     "all_passed": true
   },
   "active_frame_lru": {
