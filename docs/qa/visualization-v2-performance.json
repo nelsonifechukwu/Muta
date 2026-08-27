@@ -6,9 +6,9 @@
     "sync_before_bytes": 74628,
     "sync_after_bytes": 103854,
     "sync_delta_bytes": 29226,
-    "sync_parse_before_ms": 0.5202,
-    "sync_parse_after_ms": 0.7516,
-    "sync_parse_delta_ms": 0.2314,
+    "sync_parse_before_ms": 0.5933,
+    "sync_parse_after_ms": 0.7987,
+    "sync_parse_delta_ms": 0.2054,
     "lazy_v2_bytes": 222614,
     "vendor_bytes": 1102856,
     "new_network_dependencies": 0
