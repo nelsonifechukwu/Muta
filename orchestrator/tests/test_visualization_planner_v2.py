@@ -328,6 +328,8 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
         "(0,(unseenCallable))?.('payload')",
         "unseenObject[method](payload)",
         "unseenObject.render(payload)",
+        "unseenCallable\n(payload)",
+        "eval\n('2+2')",
         "open(path)",
         "lambda x: x + 1",
         "lambda: 1",
@@ -372,6 +374,7 @@ def test_benign_data_prefix_is_not_treated_as_a_data_url() -> None:
         "Motion (position over time) is shown in blue.",
         "The interval is open (not closed) and shown in blue.",
         "Use the U.S. standard label and compare Fig. A with Fig. B.",
+        "Mass: kg",
     ),
 )
 def test_benign_math_and_set_prose_is_not_treated_as_authored_source(prose: str) -> None:

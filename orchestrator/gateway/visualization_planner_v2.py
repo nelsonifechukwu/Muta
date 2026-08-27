@@ -1062,12 +1062,17 @@ def _contains_authored_source(value: str) -> bool:
         # call/assignment shape shared by the JavaScript and Python payloads relevant here.  Make
         # optional-call punctuation parseable first; strict V2 validation still owns expressions.
         pythonish = _SOURCE_PYTHONISH_OPTIONAL_CALL.sub("(", candidate).replace("?.", ".")
+        pythonish = re.sub(r"\s+", " ", pythonish).strip()
         try:
             tree = ast.parse(pythonish, mode="exec")
         except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
             continue
         if any(
-            (isinstance(node, ast.stmt) and not isinstance(node, ast.Expr))
+            (
+                isinstance(node, ast.stmt)
+                and not isinstance(node, (ast.Expr, ast.AnnAssign))
+            )
+            or (isinstance(node, ast.AnnAssign) and node.value is not None)
             or isinstance(node, _SOURCE_PYTHON_FORBIDDEN_EXPR)
             for node in ast.walk(tree)
         ):
