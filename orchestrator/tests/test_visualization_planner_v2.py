@@ -10,6 +10,7 @@ import pytest
 
 from orchestrator.gateway.visualization_planner_v2 import (
     MAX_PLANNER_ATTEMPTS,
+    _explicit_entity_groups,
     _plan_errors,
     plan_visualization_v2,
     planner_schema_v2,
@@ -436,6 +437,52 @@ def test_semantic_oracle_preserves_short_scientific_entities_and_slash_notation(
         == []
     )
 
+    short_pair = _food_web_spec()
+    for layer, label in zip(
+        (layer for layer in short_pair["scene"]["layers"] if layer["type"] == "node"),
+        ("pH", "I/O", "Context"),
+        strict=True,
+    ):
+        layer["label"] = label
+    assert _plan_errors(short_pair, "Draw a network showing pH and I/O.") == []
+
+
+def test_semantic_oracle_splits_connecting_with_and_directional_via_phrases() -> None:
+    assert (
+        _plan_errors(
+            _food_web_spec(),
+            "Draw a food web connecting algae with crab as well as heron.",
+        )
+        == []
+    )
+
+    no_links = _food_web_spec()
+    no_links["scene"]["layers"] = [
+        layer for layer in no_links["scene"]["layers"] if layer["type"] != "link"
+    ]
+    assert {
+        error["code"] for error in _plan_errors(no_links, "Draw a diagram connecting algae and crab.")
+    } == {"relationship_not_grounded"}
+
+
+def test_with_presentation_modifiers_are_not_invented_as_entity_nodes() -> None:
+    for request in (
+        "Draw a diagram with clear labels and measurements.",
+        "Draw a diagram with high contrast and dark theme.",
+    ):
+        assert _explicit_entity_groups(request) == []
+
+    semantic = _food_web_spec()
+    semantic["scene"]["layers"][0]["label"] = "Food producer"
+    assert _plan_errors(semantic, "Draw a food web with clear labels and measurements.") == []
+    assert (
+        _plan_errors(
+            _food_web_spec(),
+            "Draw a food web showing energy from algae via crab to heron.",
+        )
+        == []
+    )
+
 
 def test_semantic_oracle_requires_requested_directional_paths() -> None:
     reversed_web = _food_web_spec()
@@ -484,14 +531,15 @@ def test_semantic_oracle_preserves_repeated_entities_in_directional_cycles() -> 
 
 
 def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps() -> None:
-    assert (
-        _plan_errors(
-            _food_web_spec(),
-            "Draw a mangrove food web viewed from above and drawn to scale showing algae, crab, "
-            "and heron.",
+    for perspective in ("viewed from above", "view from above", "from above"):
+        assert (
+            _plan_errors(
+                _food_web_spec(),
+                f"Draw a mangrove food web {perspective} and drawn to scale showing algae, crab, "
+                "and heron.",
+            )
+            == []
         )
-        == []
-    )
 
     interactive = _food_web_spec()
     interactive["controls"] = [

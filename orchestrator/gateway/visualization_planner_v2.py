@@ -55,7 +55,8 @@ _ANIMATION_SIGNAL = re.compile(
 )
 _STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
     r"\b(?:web|network|flow|cycle|process|path|loop|pipeline|hierarchy|tree|graph|"
-    r"architecture|relationship)\b|\bfrom\b.{0,100}\b(?:to|through|into|towards?)\b",
+    r"architecture|relationship|link|linking|connect|connected|connecting)\b|"
+    r"\bfrom\b.{0,100}\b(?:to|through|into|towards?|via)\b",
     re.IGNORECASE | re.DOTALL,
 )
 _EXPLICIT_ENTITY_CLAUSE = re.compile(
@@ -67,19 +68,58 @@ _DIRECTIONAL_CHAIN = re.compile(
     r"\bfrom\b(?P<entities>[^.!?;]{1,220})",
     re.IGNORECASE,
 )
-_PERSPECTIVE_FROM = re.compile(r"\b(?:viewed|seen|looking)\s*$", re.IGNORECASE)
+_PERSPECTIVE_FROM = re.compile(r"\b(?:view|viewed|seen|looking)\s*$", re.IGNORECASE)
+_PERSPECTIVE_CHAIN_HEAD = re.compile(
+    r"^\s*(?:directly\s+)?(?:above|below|overhead|front|behind|the\s+(?:front|back|side))\b",
+    re.IGNORECASE,
+)
 _DIRECTIONAL_TAIL = re.compile(
     r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
     r"with\s+(?:(?:clear|named|accessible)\s+)?(?:labels?|annotations?)\b|"
     r"with\s+(?:an?\s+)?(?:adjustable|interactive)\b|where\s+(?:i|we|the\s+user)\b)",
     re.IGNORECASE,
 )
-_DIRECTION_STEP = re.compile(r"\b(?:to|through|into|towards?)\b|->|→", re.IGNORECASE)
+_DIRECTION_STEP = re.compile(r"\b(?:to|through|into|towards?|via)\b|->|→", re.IGNORECASE)
 _ENTITY_SEPARATOR = re.compile(
-    r"\s*(?:,|\band\b|\bto\b|\bthrough\b|\binto\b|\btowards?\b|\bthen\b|->|→)\s*",
+    r"\s*(?:,|\band\b|\bas\s+well\s+as\b|\bplus\b|\bwith\b|\bto\b|\bthrough\b|"
+    r"\binto\b|\btowards?\b|\bvia\b|\bthen\b|->|→)\s*",
     re.IGNORECASE,
 )
 _SEMANTIC_TOKEN = re.compile(r"[A-Za-z](?:/[A-Za-z])+|[A-Za-z][A-Za-z0-9_-]*")
+_WITH_PRESENTATION_CLAUSE = re.compile(
+    r"^\s*(?:(?:clear|named|accessible)\s+)?(?:labels?|annotations?|measurements?|"
+    r"dimensions?|legends?|titles?|captions?)\b|"
+    r"^\s*(?:high\s+contrast|(?:dark|light)\s+theme|large\s+(?:text|type|fonts?))\b",
+    re.IGNORECASE,
+)
+_PRESENTATION_TERMS = frozenset(
+    {
+        "accessible",
+        "annotation",
+        "annotations",
+        "caption",
+        "captions",
+        "clear",
+        "contrast",
+        "dimension",
+        "dimensions",
+        "font",
+        "fonts",
+        "high",
+        "label",
+        "labels",
+        "large",
+        "legend",
+        "legends",
+        "measurement",
+        "measurements",
+        "named",
+        "theme",
+        "title",
+        "titles",
+        "type",
+    }
+)
 _RELATIONSHIP_TERMS = frozenset(
     {
         "connection",
@@ -436,7 +476,11 @@ def _topic_terms(request: str) -> set[str]:
                 and (raw.isupper() or not raw.islower() and not raw.isupper())
             )
         )
-        if token not in _TOPIC_STOPWORDS and (len(token) >= 4 or is_short_symbol):
+        if (
+            token not in _TOPIC_STOPWORDS
+            and token not in _PRESENTATION_TERMS
+            and (len(token) >= 4 or is_short_symbol)
+        ):
             terms.add(token)
     return terms
 
@@ -472,7 +516,7 @@ def _directional_entity_groups(request: str) -> list[frozenset[str]]:
     if _PERSPECTIVE_FROM.search(prefix):
         return []
     chain = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
-    if not _DIRECTION_STEP.search(chain):
+    if _PERSPECTIVE_CHAIN_HEAD.search(chain) or not _DIRECTION_STEP.search(chain):
         return []
     return _entity_groups(chain)
 
@@ -485,8 +529,11 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
     groups: list[frozenset[str]] = []
     for match in _EXPLICIT_ENTITY_CLAUSE.finditer(request):
         clause = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
+        introducer = match.group("introducer").lower()
+        if introducer == "with" and _WITH_PRESENTATION_CLAUSE.search(clause):
+            continue
         extracted = _entity_groups(clause)
-        if match.group("introducer").lower() == "with" and len(extracted) < 2:
+        if introducer == "with" and len(extracted) < 2:
             continue
         for group in extracted:
             if group not in groups:
@@ -627,11 +674,12 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
     entity_nodes = _map_entity_nodes(explicit_groups, layers)
     required_grounding = min(3, len(terms))
     required_layers = min(2, required_grounding)
-    if (
-        len(grounded) < required_grounding
-        or len(layer_matches) < required_layers
-        or len(entity_nodes) != len(explicit_groups)
-    ):
+    topic_grounded = (
+        len(entity_nodes) == len(explicit_groups)
+        if explicit_groups
+        else len(grounded) >= required_grounding and len(layer_matches) >= required_layers
+    )
+    if not topic_grounded:
         errors.append(
             {
                 "code": "topic_not_grounded",

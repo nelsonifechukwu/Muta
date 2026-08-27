@@ -95,9 +95,11 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   ordered step. Partial phrase labels, duplicate catch-all labels, isolated requested entities,
   and one-way paths masquerading as cycles are invalid. List introducers include showing, with,
   including, containing, and composed-of forms; acronym, mixed-case symbol, and slash-notation
-  entities remain significant. A `from` phrase becomes a directed chain only when it contains a
-  direction step and is not perspective prose. Every transport ID is reserved for a button, must
-  appear as the complete Play/Pause/Restart set, and is valid only when the scene has animation.
+  entities remain significant. Presentation-only `with` clauses do not become entities, while
+  linking/connecting language still requires actual relationship geometry. A `from` phrase becomes
+  a directed chain only when it contains a direction step and is not perspective prose. Every
+  transport ID is reserved for a button, must appear as the complete Play/Pause/Restart set, and is
+  valid only when the scene has animation.
   Every other control must be a numeric control carrying a typed binding to one unique compatible
   labelled layer. The deterministic renderer owns the allow-listed translation, scale,
   and radius effects inside a stable, unbound coordinate frame, so auto-fitting cannot cancel a
