@@ -782,6 +782,21 @@
         return { ok: false, error: "V2 control binding target is invalid" };
       }
     }
+    const transportLabels = new Map([
+      ["play", "Play"], ["pause", "Pause"], ["restart", "Restart"],
+    ]);
+    const transportControls = candidate.controls.filter((control) => transportLabels.has(control.id));
+    const hasAnimation = candidate.scene.animation !== undefined
+      || candidate.scene.layers.some((layer) => layer.animation !== undefined);
+    if (transportControls.length || hasAnimation) {
+      const completeTransport = transportControls.length === transportLabels.size
+        && new Set(transportControls.map((control) => control.id)).size === transportLabels.size;
+      const validTransport = transportControls.every((control) => control.type === "button"
+        && control.label.trim().toLocaleLowerCase() === transportLabels.get(control.id).toLocaleLowerCase());
+      if (!hasAnimation || !completeTransport || !validTransport) {
+        return { ok: false, error: "V2 animation requires canonical Play, Pause, and Restart buttons" };
+      }
+    }
     return { ok: true, spec: JSON.parse(encoded), error: "" };
   }
 

@@ -229,6 +229,11 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
         "body { color:red }",
         "alert(document.cookie)",
         "void main(){ gl_FragColor = vec4(1.0); }",
+        "require('fs').readFileSync('/etc/passwd')",
+        "import helper from 'module'; helper()",
+        "precision highp float; float brightness = 1.0;",
+        "while (ready) { step(); }",
+        "location.assign('/next')",
     ),
 )
 def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
@@ -244,6 +249,16 @@ def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
             "Draw a mangrove food web from algae to crab to heron.",
         )
     }
+
+
+def test_benign_data_prefix_is_not_treated_as_a_data_url() -> None:
+    candidate = _food_web_spec()
+    candidate["text_fallback"] = "Data: algae transfers energy to crab."
+
+    assert _plan_errors(
+        candidate,
+        "Draw a mangrove food web from algae to crab to heron.",
+    ) == []
 
 
 def test_unknown_primitive_is_rejected_and_repaired_without_execution() -> None:
@@ -402,6 +417,8 @@ def test_semantic_oracle_requires_every_term_of_each_multiword_entity() -> None:
         "composed - of",
         "composed–of",
         "composed — of",
+        "composed―of",
+        "composed－of",
     ),
 )
 def test_semantic_oracle_recognizes_common_entity_list_introducers(introducer: str) -> None:
@@ -544,6 +561,46 @@ def test_semantic_oracle_accepts_independent_directional_components() -> None:
     }
 
 
+def test_semantic_oracle_accepts_mixed_directed_and_undirected_components() -> None:
+    mixed = _food_web_spec()
+    mixed["scene"]["layers"] = [
+        layer
+        for layer in mixed["scene"]["layers"]
+        if not (layer["type"] == "link" and layer["from"] == "crab")
+    ]
+    mixed["scene"]["layers"].extend(
+        [
+            {
+                "type": "node",
+                "id": "fish",
+                "x": 650,
+                "y": 150,
+                "width": 100,
+                "height": 50,
+                "label": "Fish",
+                "color": "teal",
+            },
+            {
+                "type": "link",
+                "from": "heron",
+                "to": "fish",
+                "arrow": False,
+                "label": "association",
+            },
+        ]
+    )
+    prompt = (
+        "Draw a mixed graph: directed flow from algae to crab; undirected link between "
+        "heron and fish."
+    )
+
+    assert _plan_errors(mixed, prompt) == []
+    mixed["scene"]["layers"][-1]["arrow"] = True
+    assert {error["code"] for error in _plan_errors(mixed, prompt)} == {
+        "relationship_not_grounded"
+    }
+
+
 def test_semantic_oracle_splits_connecting_with_and_directional_via_phrases() -> None:
     assert (
         _plan_errors(
@@ -568,6 +625,7 @@ def test_with_presentation_modifiers_are_not_invented_as_entity_nodes() -> None:
         "Draw a diagram with high contrast and dark theme.",
         "Draw a diagram with colour-coded labels and descriptive annotations.",
         "Draw a diagram with sliders for crab height and heron height.",
+        "Draw a diagram with each component clearly labelled and annotated.",
     ):
         assert _explicit_entity_groups(request) == []
 
@@ -640,7 +698,14 @@ def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps()
             == []
         )
 
-    for perspective in ("a top-down perspective", "a top–down view", "a bird’s-eye perspective"):
+    for perspective in (
+        "a top-down perspective",
+        "a top–down view",
+        "a bird’s-eye perspective",
+        "the top view",
+        "a left-side view",
+        "a 45 degree viewing angle",
+    ):
         assert (
             _plan_errors(
                 _food_web_spec(),
@@ -758,8 +823,13 @@ def test_named_slider_parameters_require_distinct_matching_bound_controls() -> N
     )
 
     assert _plan_errors(interactive, prompt) == []
+    named_prompt = "Draw a food web from algae to crab to heron with a slider named Heron height."
+    assert _plan_errors(interactive, named_prompt) == []
     interactive["controls"].pop()
     assert {error["code"] for error in _plan_errors(interactive, prompt)} == {
+        "interaction_not_grounded"
+    }
+    assert {error["code"] for error in _plan_errors(interactive, named_prompt)} == {
         "interaction_not_grounded"
     }
 

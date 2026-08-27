@@ -62,7 +62,7 @@ _STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
 )
 _ENTITY_INTRODUCER = re.compile(
     r"\b(?P<introducer>showing|linking|connecting|between|including|containing|"
-    r"composed(?:\s+|\s*[-‐‑‒–—]\s*)of|with)\b",
+    r"composed(?:\s+|\s*[-‐‑‒–—―−－]\s*)of|with)\b",
     re.IGNORECASE,
 )
 _DIRECTIONAL_CHAIN = re.compile(
@@ -73,15 +73,18 @@ _DIRECTIONAL_CHAIN = re.compile(
 _PERSPECTIVE_FROM = re.compile(r"\b(?:view|viewed|seen|looking)\s*$", re.IGNORECASE)
 _PERSPECTIVE_CHAIN_HEAD = re.compile(
     r"^\s*(?:directly\s+)?(?:above|below|overhead|front|behind|the\s+(?:front|back|side)|"
-    r"(?:an?\s+)?(?:top[-‐‑‒–—\s]?down|bottom[-‐‑‒–—\s]?up|side|front|rear|"
-    r"isometric|bird(?:['’]?s)?[-‐‑‒–—\s]?eye)\s+(?:view|perspective|angle)|"
-    r"(?:an?\s+)?(?:view|perspective)\b)",
+    r"(?:(?:an?|the)\s+)?(?:top(?:[-‐‑‒–—―−－\s]?down)?|"
+    r"bottom(?:[-‐‑‒–—―−－\s]?up)?|(?:left|right)[-‐‑‒–—―−－\s]?side|"
+    r"side|front|rear|isometric|bird(?:['’]?s)?[-‐‑‒–—―−－\s]?eye)\s+"
+    r"(?:view|perspective|angle)|"
+    r"(?:(?:an?|the)\s+)?(?:\d{1,3}(?:\.\d+)?\s*(?:degree|degrees|°)\s+)?"
+    r"(?:view|viewing\s+angle|perspective)\b)",
     re.IGNORECASE,
 )
 _DIRECTIONAL_TAIL = re.compile(
     r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
     r"(?:an?\s+)?(?:adjustable|interactive)\b|"
-    r"including\b|containing\b|composed(?:\s+|\s*[-‐‑‒–—]\s*)of\b|"
+    r"including\b|containing\b|composed(?:\s+|\s*[-‐‑‒–—―−－]\s*)of\b|"
     r"with\b|where\s+(?:i|we|the\s+user)\b)",
     re.IGNORECASE,
 )
@@ -95,19 +98,26 @@ _ENTITY_SEPARATOR = re.compile(
 )
 _SEMANTIC_TOKEN = re.compile(r"[A-Za-z](?:/[A-Za-z])+|[A-Za-z][A-Za-z0-9_-]*")
 _WITH_PRESENTATION_CLAUSE = re.compile(
-    r"^\s*(?:(?:clear|named|accessible|descriptive|colou?r[-\s]?coded)\s+)*"
-    r"(?:labels?|annotations?|measurements?|"
+    r"^\s*(?:each\s+component\s+)?"
+    r"(?:(?:clear|clearly|named|accessible|descriptive|colou?r[-\s]?coded)\s+)*"
+    r"(?:labels?|labelled|labeled|annotated|annotations?|measurements?|"
     r"dimensions?|legends?|titles?|captions?)\b|"
     r"^\s*(?:high\s+contrast|(?:dark|light)(?:\s+and\s+(?:dark|light))?\s+themes?|"
     r"large\s+(?:text|type|fonts?)|(?:an?\s+)?(?:sliders?|controls?|toggles?|inputs?)\b)",
     re.IGNORECASE,
 )
 _REQUESTED_CONTROL_CLAUSE = re.compile(
-    r"\b(?:sliders?|controls?|inputs?)\s+(?:for|to\s+(?:adjust|vary|change))\s+"
+    r"\b(?:an?\s+)?(?:sliders?|controls?|inputs?)\s+"
+    r"(?:for|named|to\s+(?:adjust|vary|change))\s+"
     r"(?P<controls>[^.!?;]{1,160})",
     re.IGNORECASE,
 )
 _UNDIRECTED_SIGNAL = re.compile(r"\b(?:undirected|non[-\s]?directional)\b", re.IGNORECASE)
+_UNDIRECTED_ENTITY_CLAUSE = re.compile(
+    r"\bundirected\b\s*(?:network|graph|component|link|edge|connection|path)?\s*"
+    r"(?:between|connecting|linking|containing|with)?\s*(?P<entities>[^.!?;]{1,220})",
+    re.IGNORECASE,
+)
 _PRESENTATION_TERMS = frozenset(
     {
         "accessible",
@@ -116,6 +126,7 @@ _PRESENTATION_TERMS = frozenset(
         "caption",
         "captions",
         "clear",
+        "clearly",
         "coded",
         "color",
         "colour",
@@ -128,6 +139,8 @@ _PRESENTATION_TERMS = frozenset(
         "fonts",
         "high",
         "label",
+        "labeled",
+        "labelled",
         "labels",
         "large",
         "legend",
@@ -170,16 +183,21 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\bnew\s+Function\b|"
     r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\(|"
     r"\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=|"
+    r"\bimport\s+(?:[A-Za-z_$][\w$]*|\*|\{)[^;]{0,160}\bfrom\b|"
     r"\bclass\s+[A-Za-z_$][\w$]*\s*\{|"
-    r"\b(?:setTimeout|setInterval|requestAnimationFrame|cancelAnimationFrame|fetch)\s*\(|"
+    r"\b(?:require|importScripts|setTimeout|setInterval|requestAnimationFrame|"
+    r"cancelAnimationFrame|fetch)\s*\(|"
+    r"\b(?:while|for)\s*\([^)]{0,160}\)\s*\{|"
     r"\b(?:console|Math|JSON|Object|Array|Promise)\s*\.\s*[A-Za-z_$][\w$]*\s*\(|"
     r"=>|```|\bgl_FragColor\b|#version\s+\d+|"
     r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
+    r"\bprecision\s+(?:lowp|mediump|highp)\s+(?:float|int)\s*;|"
     r"\b(?:uniform|varying|attribute|vec[234]|mat[234]|sampler2D)\s+[A-Za-z_]\w*|"
-    r"\b(?:document|window|globalThis)\s*\.|"
+    r"\b(?:document|window|globalThis|location|history|navigator)\s*\.|"
     r"(?:[#.][-\w]+|\b[A-Za-z][-\w]*(?:\s+[A-Za-z][-\w]*)?)\s*"
     r"\{\s*-?[-\w]+\s*:|"
-    r"https?\s*:|\bdata\s*:|\bfile\s*:|\burl\s*\(|@import\b|[\"\s]//[A-Za-z0-9])",
+    r"https?\s*:|\bdata\s*:[A-Za-z][^,\s]{0,100},|\bfile\s*://|"
+    r"\burl\s*\(|@import\b|[\"\s]//[A-Za-z0-9])",
     re.IGNORECASE,
 )
 _TOPIC_STOPWORDS = frozenset(
@@ -564,6 +582,17 @@ def _directional_entity_chains(request: str) -> list[list[frozenset[str]]]:
     return chains
 
 
+def _undirected_entity_components(request: str) -> list[list[frozenset[str]]]:
+    """Extract explicitly undirected components whose links must not carry arrows."""
+    components: list[list[frozenset[str]]] = []
+    for match in _UNDIRECTED_ENTITY_CLAUSE.finditer(request):
+        clause = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
+        groups = _entity_groups(clause)
+        if len(groups) > 1:
+            components.append(groups)
+    return components
+
+
 def _explicit_entity_clauses(request: str) -> list[tuple[str, str]]:
     """Split entity introducers without letting one clause consume a later clause."""
     matches = list(_ENTITY_INTRODUCER.finditer(request))
@@ -827,43 +856,62 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
     if _STRUCTURAL_RELATIONSHIP_SIGNAL.search(request):
         links = [layer for layer in meaningful if layer.get("type") == "link"]
         directional_chains = _directional_entity_chains(request)
+        undirected_components = _undirected_entity_components(request)
         undirected_requested = bool(_UNDIRECTED_SIGNAL.search(request))
         relationship_grounded = bool(links)
-        if relationship_grounded and undirected_requested:
+        if (
+            relationship_grounded
+            and undirected_requested
+            and not directional_chains
+            and not undirected_components
+        ):
             relationship_grounded = all(not layer.get("arrow") for layer in links)
-        elif relationship_grounded and not directional_chains:
+        elif relationship_grounded and not directional_chains and not undirected_components:
             relationship_grounded = all(layer.get("arrow") for layer in links)
         if relationship_grounded and explicit_groups:
             relationship_grounded = len(entity_nodes) == len(explicit_groups)
         undirected: dict[str, set[str]] = {}
+        non_directional: dict[str, set[str]] = {}
         if relationship_grounded:
             for link in links:
                 start = str(link["from"])
                 target = str(link["to"])
                 undirected.setdefault(start, set()).add(target)
                 undirected.setdefault(target, set()).add(start)
+                if not link.get("arrow"):
+                    non_directional.setdefault(start, set()).add(target)
+                    non_directional.setdefault(target, set()).add(start)
         if relationship_grounded and len(explicit_groups) > 1:
             directional_entities = {
                 group for chain in directional_chains for group in chain
             }
+            undirected_entities = {
+                group for component in undirected_components for group in component
+            }
             extra_groups = [
-                group for group in explicit_groups if group not in directional_entities
+                group
+                for group in explicit_groups
+                if group not in directional_entities and group not in undirected_entities
             ]
-            if not directional_chains:
+            if not directional_chains and not undirected_components:
                 mapped = [entity_nodes[group] for group in explicit_groups]
                 relationship_grounded = all(
                     _has_path(undirected, mapped[0], node_id) for node_id in mapped[1:]
                 )
             elif extra_groups:
-                chain_nodes = [
+                component_nodes = [
                     entity_nodes[group]
                     for chain in directional_chains
                     for group in chain
+                ] + [
+                    entity_nodes[group]
+                    for component in undirected_components
+                    for group in component
                 ]
                 relationship_grounded = all(
                     any(
-                        _has_path(undirected, entity_nodes[group], chain_node)
-                        for chain_node in chain_nodes
+                        _has_path(undirected, entity_nodes[group], component_node)
+                        for component_node in component_nodes
                     )
                     for group in extra_groups
                 )
@@ -883,6 +931,19 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
                     for start, target in pairwise(directional_groups)
                 )
                 for directional_groups in directional_chains
+            )
+        if relationship_grounded and undirected_components:
+            relationship_grounded = all(
+                all(
+                    _has_path(
+                        non_directional,
+                        entity_nodes[component[0]],
+                        entity_nodes[group],
+                        require_edge=True,
+                    )
+                    for group in component[1:]
+                )
+                for component in undirected_components
             )
         if not relationship_grounded:
             errors.append(

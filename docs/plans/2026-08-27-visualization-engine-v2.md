@@ -102,13 +102,17 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   are merged with, rather than hidden by, the chain. Hyphenated `composed-of` is equivalent to
   `composed of` across ordinary and Unicode dash forms. Independent `from … to …` clauses retain
   independent components, and explicit undirected networks retain lines without invented arrow
-  direction. Perspective phrases are excluded before interpreting `to scale` as a transition.
+  direction. Mixed graphs validate each directed and undirected component against its own edge
+  semantics. Perspective phrases—including top/side/angle forms—are excluded before interpreting
+  `to scale` as a transition.
   Theme, label, and adjustable-property tails remain presentation/control requirements instead of
   invented entity nodes; named slider parameters must map one-to-one to bound numeric controls.
   Entity assignment uses a bounded unique bipartite match so overlapping names such as `blue crab`
   and `crab` can map to distinct nodes without admitting catch-all labels. Every
   transport ID is reserved for a button, must appear as the complete Play/Pause/Restart set, and is
   valid only when the scene has animation; its visible/ARIA label must match its reserved action.
+  The browser validator mirrors these transport invariants before it creates an iframe, so a stale,
+  incomplete, numeric, or misleading transport cannot cross a weaker client boundary.
   Every other control must be a numeric control carrying a typed binding to one unique compatible
   labelled layer. The deterministic renderer owns the allow-listed translation, scale,
   and radius effects inside a stable, unbound coordinate frame, so auto-fitting cannot cancel a
@@ -127,7 +131,9 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   for a socket timeout. Prove that no production path dynamically executes authored source,
   injects markup, accepts a network/file/data resource token, or imports QA prompt fixtures.
   Source-shaped text rejection includes HTML tags, CSS rule bodies, JavaScript declarations and
-  browser/global calls, and shader declarations in addition to schema-level executable fields.
+  browser/global calls/imports/loops, and shader declarations in addition to schema-level
+  executable fields. URI checks recognize actual schemes without rejecting ordinary prose such as
+  `Data: ...`.
 
 ### 4. Geometry and sampling
 

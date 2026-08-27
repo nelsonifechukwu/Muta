@@ -185,6 +185,7 @@ test("validates explicit non-overlapping multi-panel membership", () => {
 
 test("keeps eight parameter controls plus bounded animation transport controls", () => {
   const spec = svgSpec();
+  spec.scene.animation = { mode: "guided_reveal", duration: 6 };
   spec.controls = Array.from({ length: 8 }, (_, index) => ({
     id: `parameter_${index}`,
     label: `Parameter ${index}`,
@@ -207,6 +208,27 @@ test("keeps eight parameter controls plus bounded animation transport controls",
     value: 0, min: 0, max: 1, step: 0.1,
   });
   assert.equal(viz.validateSpec(extraParameter).ok, false);
+});
+
+test("rejects incomplete mislabeled numeric and static animation transport controls", () => {
+  const animated = svgSpec();
+  animated.scene.animation = { mode: "guided_reveal", duration: 6 };
+  animated.controls = [
+    { id: "play", label: "Play", type: "button", value: 0 },
+    { id: "pause", label: "Pause", type: "button", value: 0 },
+    { id: "restart", label: "Restart", type: "button", value: 0 },
+  ];
+  assert.equal(viz.validateSpec(animated).ok, true);
+
+  const incomplete = structuredClone(animated); incomplete.controls.pop();
+  assert.match(viz.validateSpec(incomplete).error, /canonical Play/);
+  const mislabeled = structuredClone(animated); mislabeled.controls[0].label = "Delete diagram";
+  assert.match(viz.validateSpec(mislabeled).error, /canonical Play/);
+  const numeric = structuredClone(animated);
+  numeric.controls[0] = { id: "play", label: "Play", type: "range", value: 0, min: 0, max: 1, step: 0.1 };
+  assert.match(viz.validateSpec(numeric).error, /canonical Play/);
+  const staticTransport = structuredClone(animated); delete staticTransport.scene.animation;
+  assert.match(viz.validateSpec(staticTransport).error, /canonical Play/);
 });
 
 test("rejects unsafe fields, functions, budgets, topology and prototype keys", () => {
