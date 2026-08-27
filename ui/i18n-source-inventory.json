@@ -3037,7 +3037,7 @@
     },
     {
       "file": "ui/viz-frame-v2.js",
-      "line": 2625,
+      "line": 2631,
       "kind": "js:t",
       "key": "visualization.rotateHint"
     },
