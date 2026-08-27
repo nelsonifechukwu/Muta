@@ -50,6 +50,7 @@
       secondNode: "Await f(x): 개체 P(t)는 시간에 따라 증가합니다.",
       link: "export{x}; new Function('return 1')",
       control: "Await P(t) <?php echo 1 ?>",
+      polyline: "direction arrow Await f(x)",
     };
     const spec = {
       version: 2,
@@ -78,6 +79,7 @@
           { type: "node", id: "source", x: 140, y: 180, width: 180, height: 58, label: strings.firstNode, color: "green" },
           { type: "node", id: "target", x: 470, y: 180, width: 180, height: 58, label: strings.secondNode, color: "orange" },
           { type: "link", from: "source", to: "target", arrow: true, label: strings.link },
+          { type: "polyline", label: strings.polyline, points: [[0, 0], [1, 1], [2, 0]], color: "teal" },
         ],
       },
     };
@@ -107,6 +109,13 @@
     const errorElement = frameDocument?.getElementById("viz-error");
     const renderError = stage?.dataset.vizError
       || (errorElement && !errorElement.hidden ? errorElement.textContent.trim() : "");
+    const descriptivePolyline = [...(stage?.querySelectorAll("g.viz-v2-layer") || [])]
+      .find((node) => node.getAttribute("aria-label") === strings.polyline);
+    const descriptiveBehaviorAttributes = descriptivePolyline
+      ? [...(descriptivePolyline.querySelector("path")?.attributes || [])]
+        .filter((attribute) => ["marker-start", "marker-mid", "marker-end"].includes(attribute.name) && attribute.value)
+        .map((attribute) => ({ name: attribute.name, value: attribute.value }))
+      : [{ name: "missing-polyline", value: "" }];
     const result = {
       passed: Boolean(
         evidence?.rendered
@@ -120,11 +129,13 @@
         && frameDocument?.getElementById("viz-v2-population")?.getAttribute("aria-label") === strings.control
         && !stage?.querySelector("script,style,iframe,img,object,embed,link,form")
         && eventOrResourceAttributes.length === 0
+        && descriptiveBehaviorAttributes.length === 0
         && frame.contentWindow.__mutaVizSinkProbe === undefined
         && window.__mutaVizSinkProbe === undefined
       ),
       literal_text_fields: visibleText.filter((value) => Object.values(strings).includes(value)),
       event_or_resource_attributes: eventOrResourceAttributes,
+      descriptive_behavior_attributes: descriptiveBehaviorAttributes,
       child_markup_sink: Boolean(stage?.querySelector("script,style,iframe,img,object,embed,link,form")),
       frame_global_mutated: frame.contentWindow.__mutaVizSinkProbe !== undefined,
       parent_global_mutated: window.__mutaVizSinkProbe !== undefined,

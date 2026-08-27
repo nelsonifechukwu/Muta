@@ -1965,7 +1965,13 @@
             displayedCurveLabel = `Nyquist locus • winding N=${winding} • ${winding ? "unstable" : "stable"}`;
           }
           node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": displayedCurveLabel });
-          node.append(element("path", { d: path, fill: "none", stroke: color, "stroke-width": 3, "stroke-linejoin": "round", "marker-end": layer.label.includes("direction arrow") ? "url(#v2-arrow)" : "" }));
+          const pathAttributes = { d: path, fill: "none", stroke: color, "stroke-width": 3, "stroke-linejoin": "round" };
+          // The deterministic magnetic-field template owns this cue. Generic semantic-planner
+          // labels are inert data; they must use the typed arrow primitive to request an arrow.
+          if (spec.family === "magnetic_field_wire" && layer.label.includes("direction arrow")) {
+            pathAttributes["marker-end"] = "url(#v2-arrow)";
+          }
+          node.append(element("path", pathAttributes));
           node.append(element("text", { x: 688, y: 34 + index * 18, "text-anchor": "end", fill: color }, displayedCurveLabel));
         } else if (layer.type === "particles") {
           node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": layer.label });

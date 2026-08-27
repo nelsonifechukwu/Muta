@@ -157,7 +157,9 @@ math are typed AST/enums/numbers, while prose stays inert text data throughout t
   Run the same source-shaped, multilingual, mathematical, URL-looking, and `Await` strings through
   a real SVG render as a release-gate preflight. Assert their literal text and ARIA values survive,
   no proposal-controlled markup/resource/event-handler attribute is created, and neither the frame
-  nor its parent gains the probe global. This is a sink-flow test, not source-text classification.
+  nor its parent gains the probe global. Also prove that behavior-shaped labels cannot synthesize
+  marker or transition attributes: a model-planned arrow must use the typed arrow primitive. This
+  is a sink-flow and dispatch-flow test, not source-text classification.
   Relationship, control, and viewpoint grounding uses bounded spans rather than consuming an
   entire clause: mixed directed/undirected components, postfix edge direction, arrow/no-arrow
   phrasing, reordered slider ranges, sea/eye-level viewpoints, and numeric elevation phrases must

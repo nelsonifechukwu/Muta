@@ -3413,6 +3413,7 @@ def markdown_report(payload: dict[str, Any]) -> str:
             ),
             f"- Literal source-shaped text fields preserved: {len(boundary.get('literal_text_fields', []))}",
             f"- Proposal-controlled event/resource/style attributes: {len(boundary.get('event_or_resource_attributes', []))}",
+            f"- Descriptive-label behavior attributes: {len(boundary.get('descriptive_behavior_attributes', []))}",
             f"- Child markup sink created: {bool(boundary.get('child_markup_sink'))}",
             f"- Frame/parent global mutated: {bool(boundary.get('frame_global_mutated') or boundary.get('parent_global_mutated'))}",
             "",
