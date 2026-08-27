@@ -1153,6 +1153,72 @@ def test_server_schema_fails_closed_on_cross_runtime_conformance_mutations() -> 
     }
     candidates["malformed_panel_members"] = candidate
 
+    candidate = clone()
+    candidate["renderer"] = ["three"]
+    candidates["renderer_array"] = candidate
+    candidate = clone()
+    candidate["family"] = ["explicit_surface"]
+    candidates["family_array"] = candidate
+    candidate = clone()
+    candidate["family"] = False
+    candidates["family_boolean"] = candidate
+    candidate = json.loads(json.dumps(pythagoras))
+    candidate["controls"][0]["id"] = False
+    candidates["control_id_boolean"] = candidate
+    candidate = json.loads(json.dumps(pythagoras))
+    candidate["controls"][0]["id"] = None
+    candidates["control_id_null"] = candidate
+
+    candidate = clone()
+    candidate.update({"library": "d3", "renderer": "svg", "kind": "scene2d"})
+    candidate["scene"] = {
+        "coordinate_system": "screen",
+        "layers": [
+            {"type": "circle", "x": 10, "y": 10, "r": 2, "label": "circle", "color": ["gold"]}
+        ],
+    }
+    candidates["color_array"] = candidate
+
+    candidate = clone()
+    candidate.update({"library": "d3", "renderer": "svg", "kind": "scene2d"})
+    candidate["scene"] = {
+        "coordinate_system": "screen",
+        "layers": [
+            {
+                "type": "node", "id": ["n0"], "x": 0, "y": 0, "width": 20,
+                "height": 20, "label": "Node", "color": "teal",
+            }
+        ],
+    }
+    candidates["node_id_array"] = candidate
+
+    candidate = clone()
+    candidate.update({"library": "d3", "renderer": "svg", "kind": "scene2d"})
+    candidate["scene"] = {
+        "coordinate_system": "screen",
+        "layers": [
+            {"type": "polyline", "label": "trace", "points": [[0, 0], [1, 1]], "color": "teal"},
+            {
+                "type": "panel", "id": ["panel"], "title": "Panel", "x_label": "x",
+                "y_label": "y", "members": ["trace"],
+            },
+        ],
+    }
+    candidates["panel_id_array"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"][0]["relationship"]["right"] = {
+        "type": "number", "value": 1e100,
+    }
+    candidates["large_ast_number"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"] = [
+        {"type": "text", "x": 0, "y": index, "text": "界" * 160, "color": "teal"}
+        for index in range(60)
+    ]
+    candidates["utf8_within_byte_budget"] = candidate
+
     conformance_path = (
         Path(__file__).parents[2]
         / "ui"
@@ -1169,6 +1235,54 @@ def test_server_schema_fails_closed_on_cross_runtime_conformance_mutations() -> 
         else:
             with pytest.raises(VisualizationV2Error, match=".+"):
                 validate_v2_spec(candidate)
+
+
+def test_schema_generated_type_mutations_are_total_and_fail_closed() -> None:
+    bases = [
+        compile_visualization_v2("Plot z=x^2+y^2"),
+        compile_visualization_v2("Explain Pythagoras with a diagram"),
+    ]
+    assert all(base is not None for base in bases)
+
+    def paths(value: object, prefix: tuple[object, ...] = ()):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                path = (*prefix, key)
+                yield path, [] if isinstance(child, dict) else {} if isinstance(child, list) else [] if isinstance(child, str) else {}
+                yield from paths(child, path)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                path = (*prefix, index)
+                yield path, [] if isinstance(child, dict) else {} if isinstance(child, list) else [] if isinstance(child, str) else {}
+                yield from paths(child, path)
+
+    mutation_count = 0
+    for base in bases:
+        assert base is not None
+        for path, replacement in paths(base):
+            candidate = json.loads(json.dumps(base))
+            parent: object = candidate
+            for part in path[:-1]:
+                parent = parent[part]  # type: ignore[index]
+            parent[path[-1]] = replacement  # type: ignore[index]
+            mutation_count += 1
+            with pytest.raises(VisualizationV2Error, match=".+"):
+                validate_v2_spec(candidate)
+    assert mutation_count >= 100
+
+
+def test_schema_rejects_huge_json_integers_with_only_the_domain_error() -> None:
+    surface = compile_visualization_v2("Plot z=x^2+y^2")
+    pythagoras = compile_visualization_v2("Explain Pythagoras with a diagram")
+    assert surface is not None and pythagoras is not None
+
+    surface["scene"]["layers"][0]["relationship"]["right"] = {
+        "type": "number", "value": 10**1000,
+    }
+    pythagoras["controls"][0]["value"] = 10**1000
+    for candidate in (surface, pythagoras):
+        with pytest.raises(VisualizationV2Error, match=".+"):
+            validate_v2_spec(candidate)
 
 
 def test_schema_rejects_type_confused_incomplete_or_static_animation_transport() -> None:

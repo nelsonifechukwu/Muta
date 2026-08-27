@@ -325,11 +325,64 @@ test("fails closed on the shared server-browser conformance mutations", () => {
   candidate.scene = { coordinate_system: "screen", layers: [{
     type: "panel", id: "panel", title: "Panel", x_label: "x", y_label: "y", members: [{}],
   }] }; candidates.malformed_panel_members = candidate;
+  candidate = surface(); candidate.renderer = ["three"]; candidates.renderer_array = candidate;
+  candidate = surface(); candidate.family = ["explicit_surface"]; candidates.family_array = candidate;
+  candidate = surface(); candidate.family = false; candidates.family_boolean = candidate;
+  candidate = svgSpec(); candidate.controls[0].id = false; candidates.control_id_boolean = candidate;
+  candidate = svgSpec(); candidate.controls[0].id = null; candidates.control_id_null = candidate;
+  candidate = surface(); candidate.library = "d3"; candidate.renderer = "svg"; candidate.kind = "scene2d";
+  candidate.scene = { coordinate_system: "screen", layers: [
+    { type: "circle", x: 10, y: 10, r: 2, label: "circle", color: ["gold"] },
+  ] }; candidates.color_array = candidate;
+  candidate = surface(); candidate.library = "d3"; candidate.renderer = "svg"; candidate.kind = "scene2d";
+  candidate.scene = { coordinate_system: "screen", layers: [
+    { type: "node", id: ["n0"], x: 0, y: 0, width: 20, height: 20, label: "Node", color: "teal" },
+  ] }; candidates.node_id_array = candidate;
+  candidate = surface(); candidate.library = "d3"; candidate.renderer = "svg"; candidate.kind = "scene2d";
+  candidate.scene = { coordinate_system: "screen", layers: [
+    { type: "polyline", label: "trace", points: [[0, 0], [1, 1]], color: "teal" },
+    { type: "panel", id: ["panel"], title: "Panel", x_label: "x", y_label: "y", members: ["trace"] },
+  ] }; candidates.panel_id_array = candidate;
+  candidate = surface(); candidate.scene.layers[0].relationship.right = { type: "number", value: 1e100 };
+  candidates.large_ast_number = candidate;
+  candidate = surface(); candidate.scene.layers = Array.from({ length: 60 }, (_, index) => ({
+    type: "text", x: 0, y: index, text: "界".repeat(160), color: "teal",
+  })); candidates.utf8_within_byte_budget = candidate;
 
   assert.deepEqual(new Set(schemaConformance.cases.map((item) => item.operation)), new Set(Object.keys(candidates)));
   for (const item of schemaConformance.cases) {
     assert.equal(viz.validateSpec(candidates[item.operation]).ok, item.accepted, item.id);
   }
+});
+
+test("generated type-mutation properties fail closed across the browser schema", () => {
+  const mutationPaths = (value, prefix = []) => {
+    const paths = [];
+    if (value && typeof value === "object") {
+      for (const [key, child] of Object.entries(value)) {
+        const path = [...prefix, Array.isArray(value) ? Number(key) : key];
+        const replacement = Array.isArray(child) ? {} : child && typeof child === "object"
+          ? [] : typeof child === "string" ? [] : {};
+        paths.push([path, replacement], ...mutationPaths(child, path));
+      }
+    }
+    return paths;
+  };
+  const setPath = (target, path, replacement) => {
+    let parent = target;
+    for (const part of path.slice(0, -1)) parent = parent[part];
+    parent[path.at(-1)] = replacement;
+  };
+  let mutationCount = 0;
+  for (const base of [surface(), svgSpec()]) {
+    for (const [path, replacement] of mutationPaths(base)) {
+      const candidate = structuredClone(base);
+      setPath(candidate, path, replacement);
+      mutationCount += 1;
+      assert.equal(viz.validateSpec(candidate).ok, false, path.join("."));
+    }
+  }
+  assert.ok(mutationCount >= 100);
 });
 
 test("round-trips V2 fragments and extracts only a fully validated fence", () => {

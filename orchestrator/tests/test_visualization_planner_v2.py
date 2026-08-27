@@ -256,6 +256,29 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
         "(0, eval)('2+2')",
         "eval?.('2+2')",
         "fetch /*x*/ ('/x')",
+        "Function('return globalThis')()",
+        "new/*gap*/Function('return 1')()",
+        "ev/**/al('2+2')",
+        "d3/*gap*/.select('body').append('svg')",
+        "setTimeout.call(null, draw, 0)",
+        "fetch.call(null, '/x')",
+        "Reflect['construct'](Function, ['return 1'])()",
+        "Object['constructor']('return 1')()",
+        "this.constructor.constructor('return 1')()",
+        "class Payload extends Base { run(){ return 1; } }",
+        "exec('print(1)')",
+        "open('/etc/passwd').read()",
+        "os.system('id')",
+        "subprocess.run(['id'])",
+        "__builtins__['eval']('2+2')",
+        "getattr(__builtins__, 'eval')('2+2')",
+        "window/*gap*/.location='/x'",
+        "self /*gap*/ .postMessage(payload)",
+        "d3?.select('body').append('svg')",
+        "setTimeout?.call(null, draw, 0)",
+        "Reflect?.construct(Function, ['return 1'])()",
+        "builtins.eval('2+2')",
+        "globals()['__builtins__']['eval']('2+2')",
     ),
 )
 def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
@@ -289,6 +312,7 @@ def test_benign_data_prefix_is_not_treated_as_a_data_url() -> None:
         "The function f(x) = x squared is shown in blue.",
         "The domain is the set {x: x is positive}.",
         "Motion (position over time) is shown in blue.",
+        "The interval is open (not closed) and shown in blue.",
     ),
 )
 def test_benign_math_and_set_prose_is_not_treated_as_authored_source(prose: str) -> None:
@@ -693,6 +717,24 @@ def test_mixed_relationship_clauses_do_not_consume_each_other_without_punctuatio
             "Draw a mixed graph with an arrow from algae to crab and without arrows between "
             "heron and fish."
         ),
+        (
+            "Draw a mixed graph with heron to fish as an undirected edge followed by algae to "
+            "crab as a directed edge."
+        ),
+        (
+            "Draw a mixed graph with algae to crab together with heron to fish; the first edge "
+            "is directed and the second undirected."
+        ),
+        (
+            "Draw a mixed graph where algae to crab has an arrow, while heron to fish has no "
+            "arrow."
+        ),
+        "Draw a mixed graph: algae → crab (directed); heron — fish (undirected).",
+        "Draw a mixed graph with directed algae-to-crab and undirected heron-to-fish links.",
+        (
+            "Draw a graph connecting algae and crab with an arrow, plus heron and fish without "
+            "an arrow."
+        ),
     ):
         assert _plan_errors(mixed, prompt) == []
 
@@ -951,6 +993,8 @@ def test_named_slider_parameters_require_distinct_matching_bound_controls() -> N
         "a numeric input Heron height",
         "a Heron height slider",
         "a slider: Heron height",
+        "a -40 to 40 Heron height slider",
+        "a slider range -40–40, label Heron height",
     ):
         prompt = f"Draw a food web from algae to crab to heron with {requested}."
         assert {error["code"] for error in _plan_errors(interactive, prompt)} == {

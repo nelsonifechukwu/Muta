@@ -3414,8 +3414,13 @@ def markdown_report(payload: dict[str, Any]) -> str:
             "",
             "## Reproduce",
             "",
+            (
+                "Capture real-browser evidence first, then merge that evidence into the "
+                "checked-in report. The compiler-only command intentionally does not write "
+                "a passing acceptance report without browser results."
+            ),
+            "",
             "```bash",
-            ".venv/bin/python scripts/visualization_v2_gate.py --write",
             ".venv/bin/python scripts/visualization_v2_browser_server.py --port 18084 \\",
             "  --output /tmp/muta-v2-browser-results.json \\",
             "  --matrix-output /tmp/muta-v2-browser-matrix.json \\",

@@ -27,6 +27,16 @@
     { "id": "malformed-animation-mode", "operation": "malformed_animation_mode", "accepted": false },
     { "id": "malformed-link-id", "operation": "malformed_link_id", "accepted": false },
     { "id": "malformed-binding-effect", "operation": "malformed_binding_effect", "accepted": false },
-    { "id": "malformed-panel-members", "operation": "malformed_panel_members", "accepted": false }
+    { "id": "malformed-panel-members", "operation": "malformed_panel_members", "accepted": false },
+    { "id": "renderer-array", "operation": "renderer_array", "accepted": false },
+    { "id": "family-array", "operation": "family_array", "accepted": false },
+    { "id": "family-boolean", "operation": "family_boolean", "accepted": false },
+    { "id": "control-id-boolean", "operation": "control_id_boolean", "accepted": false },
+    { "id": "control-id-null", "operation": "control_id_null", "accepted": false },
+    { "id": "color-array", "operation": "color_array", "accepted": false },
+    { "id": "node-id-array", "operation": "node_id_array", "accepted": false },
+    { "id": "panel-id-array", "operation": "panel_id_array", "accepted": false },
+    { "id": "large-ast-number", "operation": "large_ast_number", "accepted": false },
+    { "id": "utf8-within-byte-budget", "operation": "utf8_within_byte_budget", "accepted": true }
   ]
 }

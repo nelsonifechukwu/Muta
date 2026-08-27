@@ -146,9 +146,12 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   booleans are never accepted as numbers merely because Python treats `bool` as an `int` subtype.
   Both runtimes consume one checked-in mutation fixture covering exact keys, UTF-8 byte size,
   integer budgets, AST nodes/work, geometry bounds, accessible text, transport/control shapes,
-  relationship references, panels, and animation objects. Every malformed serializable value must
-  fail with a typed validation result—never an uncaught language-level exception—and the server is
-  authoritative if a future client drifts.
+  relationship references, panels, and animation objects. A generated recursive type-mutation
+  sweep complements those named regressions in both runtimes, including very large JSON integers
+  and nested schema values. Every malformed serializable value must fail with a typed validation
+  result—never an uncaught language-level exception—and the server is authoritative if a future
+  client drifts. Acceptance-report reproduction captures real browser evidence before writing a
+  passing report; a compiler-only invocation is never presented as a successful end-to-end gate.
 
 ### 4. Geometry and sampling
 

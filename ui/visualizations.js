@@ -564,11 +564,12 @@
       && Object.keys(value).every((key) => allowed.has(key) && !FORBIDDEN_KEYS.has(key));
     const top = new Set(["version", "library", "renderer", "kind", "family", "title", "aria_label", "text_fallback", "height", "controls", "budget", "scene"]);
     if (!exactKeys(candidate, top) || Object.keys(candidate).length !== top.size) return { ok: false, error: "V2 fields are incomplete" };
-    const compatible = V2_RENDERERS[candidate.renderer];
-    if (!compatible || candidate.library !== compatible[0] || candidate.kind !== compatible[1]) {
+    const compatible = typeof candidate.renderer === "string" ? V2_RENDERERS[candidate.renderer] : null;
+    if (!compatible || typeof candidate.library !== "string" || typeof candidate.kind !== "string"
+      || candidate.library !== compatible[0] || candidate.kind !== compatible[1]) {
       return { ok: false, error: "V2 renderer and kind are incompatible" };
     }
-    if (!SAFE_FAMILY.test(candidate.family) || !nonEmptyString(candidate.title, 120)
+    if (typeof candidate.family !== "string" || !SAFE_FAMILY.test(candidate.family) || !nonEmptyString(candidate.title, 120)
       || !nonEmptyString(candidate.aria_label, 400) || !nonEmptyString(candidate.text_fallback, 1000)) {
       return { ok: false, error: "V2 accessible metadata is invalid" };
     }
@@ -585,7 +586,7 @@
     const numericControlKeys = new Set(["id", "label", "type", "value", "min", "max", "step", "binding"]);
     const bindingEffects = new Set(["translate_x", "translate_y", "scale", "radius"]);
     for (const control of candidate.controls) {
-      if (!exactKeys(control, controlKeys) || !SAFE_CONTROL_ID.test(control.id) || controlIds.has(control.id)
+      if (!exactKeys(control, controlKeys) || typeof control.id !== "string" || !SAFE_CONTROL_ID.test(control.id) || controlIds.has(control.id)
         || !nonEmptyString(control.label, 80) || !["range", "select", "step", "button"].includes(control.type)) {
         return { ok: false, error: "V2 control is invalid" };
       }
@@ -649,6 +650,9 @@
     const panelIds = new Set();
     const panelMembers = new Set();
     for (const layer of candidate.scene.layers) {
+      if (!layer || typeof layer !== "object" || Array.isArray(layer) || typeof layer.type !== "string") {
+        return { ok: false, error: "V2 layer is unsupported" };
+      }
       const allowed = V2_LAYER_KEYS[layer?.type];
       if (!allowed || !exactKeys(layer, allowed)) return { ok: false, error: "V2 layer is unsupported" };
       const animationOptional = ["explicit_surface", "implicit_surface", "parametric_surface"].includes(layer.type);
@@ -657,7 +661,7 @@
         return { ok: false, error: "V2 layer fields are incomplete" };
       }
       for (const key of ["color"]) {
-        if (layer[key] !== undefined && !SAFE_COLOR.test(layer[key])) return { ok: false, error: "V2 layer color is unsafe" };
+        if (layer[key] !== undefined && (typeof layer[key] !== "string" || !SAFE_COLOR.test(layer[key]))) return { ok: false, error: "V2 layer color is unsafe" };
       }
       for (const key of ["label", "text"]) {
         if (layer[key] !== undefined && layer[key] !== "" && !nonEmptyString(layer[key], 160)) {
@@ -703,7 +707,7 @@
         points += layer.values.length;
       }
       if (layer.type === "panel") {
-        if (!SAFE_ID.test(layer.id) || panelIds.has(layer.id)
+        if (typeof layer.id !== "string" || !SAFE_ID.test(layer.id) || panelIds.has(layer.id)
           || !nonEmptyString(layer.title, 80) || !nonEmptyString(layer.x_label, 80) || !nonEmptyString(layer.y_label, 80)
           || !Array.isArray(layer.members) || layer.members.length < 1 || layer.members.length > 16
           || new Set(layer.members).size !== layer.members.length
@@ -721,7 +725,7 @@
       if (layer.type === "axes" && (!nonEmptyString(layer.x_label, 80) || !nonEmptyString(layer.y_label, 80) || typeof layer.grid !== "boolean")) {
         return { ok: false, error: "V2 axes are invalid" };
       }
-      if (layer.type === "node" && (!SAFE_ID.test(layer.id) || !finiteNumber(layer.x, -10000, 10000)
+      if (layer.type === "node" && (typeof layer.id !== "string" || !SAFE_ID.test(layer.id) || !finiteNumber(layer.x, -10000, 10000)
         || !finiteNumber(layer.y, -10000, 10000) || !finiteNumber(layer.width, 1, 2000)
         || !finiteNumber(layer.height, 1, 2000) || !nonEmptyString(layer.label, 160))) {
         return { ok: false, error: "V2 node geometry is invalid" };

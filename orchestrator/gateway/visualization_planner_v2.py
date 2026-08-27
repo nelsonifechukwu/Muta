@@ -143,6 +143,18 @@ _SUFFIX_CONTROL_LABEL = re.compile(
     r"(?:sliders?|controls?|inputs?)\b",
     re.IGNORECASE,
 )
+_PREFIX_RANGE_CONTROL = re.compile(
+    r"\b(?:with|add|using)?\s*(?:an?\s+)?[+−-]?\d+(?:\.\d+)?\s+to\s+"
+    r"[+−-]?\d+(?:\.\d+)?\s+(?P<controls>[^,.!?;]{1,80}?)\s+"
+    r"(?:sliders?|controls?|inputs?)\b",
+    re.IGNORECASE,
+)
+_RANGE_THEN_LABEL_CONTROL = re.compile(
+    r"\b(?:sliders?|controls?|inputs?)\s+range\s+[+−-]?\d+(?:\.\d+)?\s*"
+    r"(?:to|[-‐‑‒–—―−－])\s*[+−-]?\d+(?:\.\d+)?\s*,?\s*"
+    r"(?:named|called|labelled|labeled|label)\s+(?P<controls>[^,.!?;]{1,80})",
+    re.IGNORECASE,
+)
 _CONTROL_RANGE_TAIL = re.compile(
     r"\s*(?:,\s*)?(?:ranging\s+from|(?:with\s+)?range(?:\s+from)?|from)\s+"
     r"[+−-]?\d+(?:\.\d+)?\s+to\s+[+−-]?\d+(?:\.\d+)?\b.*$",
@@ -180,8 +192,54 @@ _NO_ARROW_COMPONENT = re.compile(
     r"(?P<entities>[^.!?;]{1,180})",
     re.IGNORECASE,
 )
+_EDGE_ENTITY = r"[A-Za-z][A-Za-z0-9_/]*"
+_EDGE_SEPARATOR = r"(?:→|[-‐‑‒–—―−－]?to[-‐‑‒–—―−－]?|[-‐‑‒–—―−－])"
+_EDGE_COMPONENT_PATTERNS = (
+    re.compile(
+        rf"(?P<left>{_EDGE_ENTITY})\s*{_EDGE_SEPARATOR}\s*"
+        rf"(?P<right>{_EDGE_ENTITY})\s+(?:as\s+an?\s+)?"
+        r"(?P<direction>directed|undirected)\s+(?:edge|link|connection)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"(?P<left>{_EDGE_ENTITY})\s+to\s+(?P<right>{_EDGE_ENTITY})\s+"
+        r"has\s+(?P<negative>no\s+)?(?:an?\s+)?arrow\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"(?P<left>{_EDGE_ENTITY})\s*(?P<symbol>→|[-‐‑‒–—―−－])\s*"
+        rf"(?P<right>{_EDGE_ENTITY})\s*\((?P<direction>directed|undirected)\)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"\b(?P<direction>directed|undirected)\s+(?P<left>{_EDGE_ENTITY})\s*"
+        rf"{_EDGE_SEPARATOR}\s*(?P<right>{_EDGE_ENTITY})(?=\s+(?:links?|edges?)\b|"
+        r"\s+(?:and|plus)\b|[,;.!?]|$)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"(?:connecting\s+)?(?P<left>{_EDGE_ENTITY})\s+and\s+(?P<right>{_EDGE_ENTITY})\s+"
+        r"(?P<arrow>with\s+(?:an?\s+)?arrow|without\s+(?:an?\s+)?arrow)",
+        re.IGNORECASE,
+    ),
+)
+_ORDINAL_EDGE_DIRECTIONS = re.compile(
+    r"\bfirst(?:\s+edge)?\s+(?:is\s+)?(?P<first>directed|undirected)\b.{0,120}?"
+    r"\bsecond(?:\s+edge)?\s+(?:is\s+)?(?P<second>directed|undirected)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+_ORDINAL_EDGE_PAIR = re.compile(
+    r"\b(?P<left>[A-Za-z][A-Za-z0-9_/]*)\s+to\s+"
+    r"(?P<right>[A-Za-z][A-Za-z0-9_/]*)(?=\s+(?:together\s+with|and|plus)\b|[,;.!?]|$)",
+    re.IGNORECASE,
+)
+_EXPLICIT_EDGE_SIGNAL = re.compile(
+    r"\b(?:directed|undirected|arrow|edge|link|to)\b|→|[-‐‑‒–—―−－]",
+    re.IGNORECASE,
+)
 _PRESENTATION_TERMS = frozenset(
     {
+        "a",
         "accessible",
         "annotation",
         "annotations",
@@ -242,7 +300,7 @@ _RELATIONSHIP_TERMS = frozenset(
 )
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*[A-Za-z][^>]{0,200}>|"
-    r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\bnew\s+Function\b|"
+    r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\b(?:new\s+)?Function\s*\(|"
     r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\([^)]{0,160}\)\s*\{|"
     r"\b(?:const|let|var)\s+(?:[A-Za-z_$][\w$]*|\{[^}\r\n]{1,160}\}|"
     r"\[[^\]\r\n]{1,160}\])\s*=|"
@@ -251,12 +309,13 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:\s+as\s+[A-Za-z_]\w*)?\s*(?:$|[\r\n;])|"
     r"(?:^|[\r\n])\s*from\s+[A-Za-z_][\w.]*\s+import\b|"
     r"(?:^|[\r\n])\s*(?:async\s+)?def\s+[A-Za-z_]\w*\s*\(|"
-    r"\bclass\s+[A-Za-z_$][\w$]*\s*\{|"
+    r"\bclass\s+[A-Za-z_$][\w$]*(?:\s+extends\s+[A-Za-z_$][\w$]*)?\s*\{|"
     r"\b(?:require|importScripts|setTimeout|setInterval|requestAnimationFrame|"
     r"cancelAnimationFrame|fetch)(?:\s|/\*[^*]{0,80}\*/)*\(|"
+    r"\b(?:eval|setTimeout|setInterval|fetch|Function)\s*(?:\?\.|\.|\[)|"
     r"\bimport\s*\(|\bnew\s+[A-Za-z_$][\w$]*\s*\(|"
     r"\b(?:WebSocket|Worker|SharedWorker|XMLHttpRequest|EventSource)\s*\(|"
-    r"\b(?:d3|THREE|gsap|motion|anime)\s*(?:\.|\[)|\banime\s*\(|"
+    r"\b(?:d3|THREE|gsap|motion|anime)\s*(?:\?\.|\.|\[)|\banime\s*\(|"
     r"\b(?:module\s*(?:\.\s*exports|\[\s*['\"]exports['\"]\s*\])|"
     r"exports\s*(?:\.|\[)|process\s*(?:\.|\[)|Deno\s*(?:\.|\[)|"
     r"__import__\s*\()|"
@@ -266,10 +325,15 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"\bfor\s*\([^)]{0,160}(?:;|\+\+|--)[^)]{0,160}\)\s*|"
     r"\bfor\s*\([^)]{0,160}\b(?:in|of)\b[^)]{0,160}\)\s*|"
     r"(?:^|[\r\n])\s*(?:async\s+)?for\s+[A-Za-z_]\w*\s+in\s+[^:\r\n]{1,160}:|"
-    r"\b(?:console|Math|JSON|Object|Array|Promise|Reflect)\s*\.\s*"
-    r"[A-Za-z_$][\w$]*\s*\(|"
+    r"\b(?:console|Math|JSON|Object|Array|Promise|Reflect)\s*(?:(?:\?\.|\.)\s*"
+    r"[A-Za-z_$][\w$]*|\[\s*['\"][A-Za-z_$][\w$]*['\"]\s*\])\s*\(|"
     r"(?:\[\]|\{\})\s*\.\s*(?:constructor|__proto__)\b|"
+    r"\bthis\s*(?:\.|\[)\s*(?:constructor|__proto__)\b|"
     r"\(\s*\d+\s*,\s*eval\s*\)|\beval\s*(?:\?\.|\[)|"
+    r"\b(?:exec|compile)\s*\(|\bopen\s*\(\s*['\"]|"
+    r"\bgetattr\s*\(\s*__builtins__\b|"
+    r"\b(?:os|subprocess|builtins|__builtins__)\s*(?:\.|\[)|"
+    r"\b(?:globals|locals|vars)\s*\(|"
     r"=>|```|\b(?:gl_FragColor|gl_Position|gl_PointSize|texture2D)\b|"
     r"#version\s+\d+|"
     r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
@@ -284,6 +348,7 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"\burl\s*\(|@import\b|(?:^|[\"\s])//[A-Za-z0-9])",
     re.IGNORECASE,
 )
+_SOURCE_COMMENT = re.compile(r"/\*[\s\S]*?\*/|//[^\r\n]*")
 _TOPIC_STOPWORDS = frozenset(
     {
         "about",
@@ -317,6 +382,7 @@ _TOPIC_STOPWORDS = frozenset(
         "draw",
         "descriptive",
         "for",
+        "followed",
         "explain",
         "from",
         "graph",
@@ -330,14 +396,17 @@ _TOPIC_STOPWORDS = frozenset(
         "make",
         "me",
         "model",
+        "mixed",
         "of",
         "on",
         "or",
+        "plus",
         "picture",
         "please",
         "plot",
         "render",
         "show",
+        "together",
         "showing",
         "simulate",
         "sketch",
@@ -362,6 +431,7 @@ _TOPIC_STOPWORDS = frozenset(
         "where",
         "which",
         "with",
+        "while",
         "you",
         "your",
     }
@@ -611,7 +681,7 @@ def _topic_terms(request: str) -> set[str]:
     terms: set[str] = set()
     for match in _SEMANTIC_TOKEN.finditer(request):
         raw = match.group(0)
-        token = raw.lower()
+        token = raw.lower().strip("_-")
         is_short_symbol = (
             "/" in raw
             or (
@@ -633,7 +703,7 @@ def _entity_terms(value: str) -> set[str]:
     terms: set[str] = set()
     for match in _SEMANTIC_TOKEN.finditer(value):
         raw = match.group(0)
-        token = raw.lower()
+        token = raw.lower().strip("_-")
         uppercase_single = len(raw) == 1 and raw.isupper() and raw != "I"
         if (token not in _TOPIC_STOPWORDS or uppercase_single) and token not in _RELATIONSHIP_TERMS:
             terms.add(token)
@@ -648,6 +718,39 @@ def _entity_groups(value: str) -> list[frozenset[str]]:
         if terms:
             groups.append(frozenset(terms))
     return groups
+
+
+def _explicit_edge_components(request: str) -> list[tuple[list[frozenset[str]], bool]]:
+    """Extract bounded edge-local entity pairs with their requested direction."""
+    components: list[tuple[list[frozenset[str]], bool]] = []
+
+    def add(left: str, right: str, directed: bool) -> None:
+        groups = [frozenset(_entity_terms(left)), frozenset(_entity_terms(right))]
+        if all(groups) and groups[0] != groups[1] and (groups, directed) not in components:
+            components.append((groups, directed))
+
+    for pattern in _EDGE_COMPONENT_PATTERNS:
+        for match in pattern.finditer(request):
+            values = match.groupdict()
+            if values.get("direction"):
+                directed = values["direction"].casefold() == "directed"
+            elif "negative" in values:
+                directed = not bool(values["negative"])
+            else:
+                directed = values.get("arrow", "").casefold().startswith("with ")
+            add(values["left"], values["right"], directed)
+
+    ordinal = _ORDINAL_EDGE_DIRECTIONS.search(request)
+    if ordinal is not None:
+        pairs = list(_ORDINAL_EDGE_PAIR.finditer(request[: ordinal.start()]))
+        if len(pairs) >= 2:
+            for pair, name in zip(pairs[:2], ("first", "second"), strict=True):
+                add(
+                    pair.group("left"),
+                    pair.group("right"),
+                    ordinal.group(name).casefold() == "directed",
+                )
+    return components
 
 
 def _directional_entity_chains(request: str) -> list[list[frozenset[str]]]:
@@ -674,27 +777,35 @@ def _directional_entity_chains(request: str) -> list[list[frozenset[str]]]:
         groups = _entity_groups(match.group("entities"))
         if len(groups) > 1 and groups not in chains:
             chains.append(groups)
+    for groups, directed in _explicit_edge_components(request):
+        if directed and groups not in chains:
+            chains.append(groups)
     return chains
 
 
 def _undirected_entity_components(request: str) -> list[list[frozenset[str]]]:
     """Extract explicitly undirected components whose links must not carry arrows."""
     components: list[list[frozenset[str]]] = []
-    for match in _UNDIRECTED_ENTITY_CLAUSE.finditer(request):
-        clause = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
-        groups = _entity_groups(clause)
-        if len(groups) > 1:
-            components.append(groups)
-    for match in _POSTFIX_EDGE.finditer(request):
-        if match.group("direction").casefold() != "undirected":
-            continue
-        groups = [_entity_terms(match.group("left")), _entity_terms(match.group("right"))]
-        frozen = [frozenset(group) for group in groups if group]
-        if len(frozen) == 2 and frozen not in components:
-            components.append(frozen)
-    for match in _NO_ARROW_COMPONENT.finditer(request):
-        groups = _entity_groups(match.group("entities"))
-        if len(groups) > 1 and groups not in components:
+    explicit_edges = _explicit_edge_components(request)
+    if not explicit_edges:
+        for match in _UNDIRECTED_ENTITY_CLAUSE.finditer(request):
+            clause = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
+            groups = _entity_groups(clause)
+            if len(groups) > 1:
+                components.append(groups)
+        for match in _POSTFIX_EDGE.finditer(request):
+            if match.group("direction").casefold() != "undirected":
+                continue
+            groups = [_entity_terms(match.group("left")), _entity_terms(match.group("right"))]
+            frozen = [frozenset(group) for group in groups if group]
+            if len(frozen) == 2 and frozen not in components:
+                components.append(frozen)
+        for match in _NO_ARROW_COMPONENT.finditer(request):
+            groups = _entity_groups(match.group("entities"))
+            if len(groups) > 1 and groups not in components:
+                components.append(groups)
+    for groups, directed in explicit_edges:
+        if not directed and groups not in components:
             components.append(groups)
     return components
 
@@ -729,6 +840,7 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
         for group in component:
             if group not in groups:
                 groups.append(group)
+    edge_components = _explicit_edge_components(request)
     for introducer, raw_clause in _explicit_entity_clauses(request):
         # A clause such as "showing flow from A to B" is represented by the ordered chain
         # above. Keep any concrete prefix, then let later introducers be parsed separately.
@@ -742,7 +854,13 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
         if from_match and _DIRECTION_STEP.search(clause[from_match.end() :]):
             clause = clause[: from_match.start()]
         clause = _DIRECTIONAL_TAIL.split(clause, maxsplit=1)[0]
+        if edge_components and _EXPLICIT_EDGE_SIGNAL.search(raw_clause):
+            continue
         if introducer == "with" and _WITH_PRESENTATION_CLAUSE.search(clause):
+            continue
+        if introducer == "with" and re.search(
+            r"\b(?:sliders?|controls?|inputs?|toggles?)\b", raw_clause, re.IGNORECASE
+        ):
             continue
         extracted = _entity_groups(clause)
         if introducer == "with" and len(extracted) < 2:
@@ -762,6 +880,8 @@ def _requested_control_groups(request: str) -> list[frozenset[str]]:
         _COLON_CONTROL_LABEL,
         _DIRECT_CONTROL_LABEL,
         _SUFFIX_CONTROL_LABEL,
+        _PREFIX_RANGE_CONTROL,
+        _RANGE_THEN_LABEL_CONTROL,
     )
     for pattern in patterns:
         matches = pattern.finditer(request)
@@ -897,6 +1017,13 @@ def _text_values(value: object) -> Iterator[str]:
             yield from _text_values(child)
 
 
+def _contains_authored_source(value: str) -> bool:
+    """Reject executable syntax even when comments split its lexical tokens."""
+    collapsed = _SOURCE_COMMENT.sub("", value)
+    spaced = _SOURCE_COMMENT.sub(" ", value)
+    return any(_FORBIDDEN_AUTHORED_SOURCE.search(candidate) for candidate in (value, collapsed, spaced))
+
+
 def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
     """Return stable machine-readable validation and semantic-oracle failures."""
     try:
@@ -905,7 +1032,7 @@ def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
         return [{"code": "schema_invalid", "detail": str(exc)[:200]}]
 
     errors: list[dict[str, str]] = []
-    if any(_FORBIDDEN_AUTHORED_SOURCE.search(value) for value in _text_values(spec)):
+    if any(_contains_authored_source(value) for value in _text_values(spec)):
         errors.append(
             {
                 "code": "authored_source_forbidden",

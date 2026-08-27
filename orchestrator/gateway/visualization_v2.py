@@ -7152,9 +7152,7 @@ def _count_ast(node: dict[str, Any], depth: int = 0) -> int:
     if kind == "number":
         if (
             keys != {"type", "value"}
-            or not isinstance(node["value"], (int, float))
-            or isinstance(node["value"], bool)
-            or not math.isfinite(node["value"])
+            or not _finite_number(node.get("value"), -1e9, 1e9)
         ):
             raise VisualizationV2Error("invalid numeric expression node")
         return 1
@@ -7211,37 +7209,31 @@ def _validate_points(
         if (
             not isinstance(point, list)
             or len(point) != dimensions
-            or not all(
-                isinstance(value, (int, float))
-                and not isinstance(value, bool)
-                and math.isfinite(value)
-                and low <= value <= high
-                for value in point
-            )
+            or not all(_finite_number(value, low, high) for value in point)
         ):
             raise VisualizationV2Error("point coordinate is invalid")
     return len(points)
 
 
 def _finite_number(value: Any, low: float = -1e6, high: float = 1e6) -> bool:
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(value)
-        and low <= value <= high
-    )
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value) and low <= value <= high
+    except (OverflowError, TypeError, ValueError):
+        return False
 
 
 def _safe_text(value: Any, limit: int = 160) -> bool:
     return isinstance(value, str) and bool(value.strip()) and len(value) <= limit
 
 
-def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
+def _validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
     """Strict server-side schema/resource validation for one V2 visualization."""
     if not isinstance(spec, dict):
         raise VisualizationV2Error("visualization is not an object or exceeds 48 KiB")
     try:
-        serialized_spec = json.dumps(spec, separators=(",", ":"))
+        serialized_spec = json.dumps(spec, separators=(",", ":"), ensure_ascii=False)
     except (TypeError, ValueError):
         raise VisualizationV2Error("visualization cannot be serialized") from None
     if len(serialized_spec.encode()) > MAX_SPEC_BYTES:
@@ -7775,7 +7767,17 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             raise VisualizationV2Error(
                 "animation requires one Play, Pause, and Restart button"
             )
-    return json.loads(json.dumps(spec))
+    return json.loads(json.dumps(spec, ensure_ascii=False))
+
+
+def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
+    """Validate one V2 spec and expose only the stable domain error type."""
+    try:
+        return _validate_v2_spec(spec)
+    except VisualizationV2Error:
+        raise
+    except (KeyError, OverflowError, RecursionError, TypeError, ValueError) as exc:
+        raise VisualizationV2Error(f"visualization schema value is invalid: {exc}") from None
 
 
 def iter_ast(node: dict[str, Any]) -> Iterable[dict[str, Any]]:
