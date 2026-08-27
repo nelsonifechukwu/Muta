@@ -56,7 +56,7 @@ _ANIMATION_SIGNAL = re.compile(
 )
 _STRUCTURAL_RELATIONSHIP_SIGNAL = re.compile(
     r"\b(?:web|network|flow|cycle|process|path|loop|pipeline|hierarchy|tree|graph|"
-    r"architecture|relationship|link|linking|connect|connected|connecting)\b|"
+    r"architecture|relationship|link|linking|edge|arrow|connect|connected|connecting)\b|"
     r"\bfrom\b.{0,100}\b(?:to|through|into|towards?|via|then)\b",
     re.IGNORECASE | re.DOTALL,
 )
@@ -70,20 +70,28 @@ _DIRECTIONAL_CHAIN = re.compile(
     r"(?:,\s*)?(?:and|then)\s+from\b|,\s*from\b|[.!?;]|$)",
     re.IGNORECASE,
 )
-_PERSPECTIVE_FROM = re.compile(r"\b(?:view|viewed|seen|looking)\s*$", re.IGNORECASE)
+_PERSPECTIVE_FROM = re.compile(
+    r"\b(?:view|viewed|viewing|seen|looking)(?:\s+at\s+it|\s+it)?\s*$",
+    re.IGNORECASE,
+)
 _PERSPECTIVE_CHAIN_HEAD = re.compile(
-    r"^\s*(?:directly\s+)?(?:above|below|overhead|front|behind|the\s+(?:front|back|side)|"
+    r"^\s*(?:directly\s+)?(?:above|below|overhead|front|behind|"
+    r"(?:an?\s+)?(?:sea|eye)\s+level|(?:an?\s+)?(?:high|low)\s+elevation|"
+    r"the\s+(?:front|back|side)|"
     r"(?:(?:an?|the)\s+)?(?:top(?:[-‐‑‒–—―−－\s]?down)?|"
     r"bottom(?:[-‐‑‒–—―−－\s]?up)?|(?:left|right)[-‐‑‒–—―−－\s]?side|"
     r"side|front|rear|overhead|isometric|bird(?:['’]?s)?[-‐‑‒–—―−－\s]?eye)\s+"
     r"(?:view|viewpoint|perspective|angle)|"
-    r"(?:(?:an?|the)\s+)?(?:\d{1,3}(?:\.\d+)?\s*(?:degree|degrees|°)\s+)?"
+    r"(?:(?:an?|the)\s+)?(?:\d{1,3}(?:\.\d+)?\s*"
+    r"(?:[-‐‑‒–—―−－]\s*)?(?:degree|degrees|°)\s+)?"
     r"(?:view|viewpoint|viewing\s+angle|perspective|elevation)\b)",
     re.IGNORECASE,
 )
 _DIRECTIONAL_TAIL = re.compile(
-    r"\b(?:and\s+)?(?:let\s+(?:me|us)\b|allow\b|enable\b|"
+    r"\b(?:(?:and|plus)\s+|followed\s+by\s+|together\s+with\s+)?"
+    r"(?:let\s+(?:me|us)\b|allow\b|enable\b|"
     r"(?:an?\s+)?(?:adjustable|interactive)\b|"
+    r"(?:without|no)\s+arrows?\b|"
     r"(?:an?\s+)?(?:directed|undirected|non[-\s]?directional)\b|"
     r"including\b|containing\b|composed(?:\s+|\s*[-‐‑‒–—―−－]\s*)of\b|"
     r"with\b|where\s+(?:i|we|the\s+user)\b)",
@@ -114,17 +122,62 @@ _REQUESTED_CONTROL_CLAUSE = re.compile(
     r"(?P<controls>[^.!?;]{1,160})",
     re.IGNORECASE,
 )
+_POSTFIX_CONTROL_LABEL = re.compile(
+    r"\b(?:(?:range|numeric|number)\s+)?(?:sliders?|controls?|inputs?)\b"
+    r"[^.!?;]{0,100}?\b(?:named|called|labelled|labeled)\s+"
+    r"(?P<controls>[^,.!?;]{1,100})",
+    re.IGNORECASE,
+)
+_COLON_CONTROL_LABEL = re.compile(
+    r"\b(?:sliders?|controls?|inputs?)\s*:\s*(?P<controls>[^,.!?;]{1,100})",
+    re.IGNORECASE,
+)
+_DIRECT_CONTROL_LABEL = re.compile(
+    r"\b(?:numeric|number)\s+(?:sliders?|controls?|inputs?)\s+"
+    r"(?P<controls>[^,.!?;]{1,100})",
+    re.IGNORECASE,
+)
+_SUFFIX_CONTROL_LABEL = re.compile(
+    r"(?:^|\b(?:with|and|add|an?|the)\s+)"
+    r"(?P<controls>(?:[A-Za-z][A-Za-z0-9_-]*\s+){1,4}[A-Za-z][A-Za-z0-9_-]*)\s+"
+    r"(?:sliders?|controls?|inputs?)\b",
+    re.IGNORECASE,
+)
+_CONTROL_RANGE_TAIL = re.compile(
+    r"\s*(?:,\s*)?(?:ranging\s+from|(?:with\s+)?range(?:\s+from)?|from)\s+"
+    r"[+−-]?\d+(?:\.\d+)?\s+to\s+[+−-]?\d+(?:\.\d+)?\b.*$",
+    re.IGNORECASE,
+)
 _UNDIRECTED_SIGNAL = re.compile(r"\b(?:undirected|non[-\s]?directional)\b", re.IGNORECASE)
 _UNDIRECTED_ENTITY_CLAUSE = re.compile(
     r"\b(?:undirected|non[-\s]?directional)\b\s*"
     r"(?:network|graph|component|link|edge|connection|path)?\s*"
     r"(?:between|connecting|linking|containing|with)?\s*"
     r"(?P<entities>[^.!?;]{1,220}?)(?="
-    r"(?:,\s*|\s+)(?:and\s+|plus\s+)?(?:an?\s+)?directed\b|[.!?;]|$)",
+    r"(?:,\s*|\s+)(?:(?:and|plus)\s+|followed\s+by\s+|"
+    r"together\s+with\s+)?(?:an?\s+)?directed\b|[.!?;]|$)",
     re.IGNORECASE,
 )
 _RELATIONSHIP_COMPONENT_BOUNDARY = re.compile(
-    r"\b(?:and|plus)\s+(?:an?\s+)?(?:directed|undirected|non[-\s]?directional)\b",
+    r"\b(?:(?:and|plus)\s+|followed\s+by\s+|together\s+with\s+)"
+    r"(?:an?\s+)?(?:directed|undirected|non[-\s]?directional)\b",
+    re.IGNORECASE,
+)
+_POSTFIX_EDGE = re.compile(
+    r"(?P<left>[A-Za-z][A-Za-z0-9_/-]*(?:\s+[A-Za-z][A-Za-z0-9_/-]*){0,5})"
+    r"\s+(?:to|[-=]*>|→)\s+"
+    r"(?P<right>[A-Za-z][A-Za-z0-9_/-]*(?:\s+[A-Za-z][A-Za-z0-9_/-]*){0,5})"
+    r"\s+(?:edge|link|connection)\s+(?P<direction>directed|undirected)\b",
+    re.IGNORECASE,
+)
+_ARROW_CHAIN = re.compile(
+    r"\b(?:with\s+)?(?:an?\s+)?arrows?\s+from\s+(?P<entities>[^.!?;]{1,180}?)(?="
+    r"\s+(?:and|plus)\s+(?:without|no)\s+arrows?\b|[.!?;]|$)",
+    re.IGNORECASE,
+)
+_NO_ARROW_COMPONENT = re.compile(
+    r"\b(?:without|no)\s+arrows?\s+(?:between|connecting|linking)?\s*"
+    r"(?P<entities>[^.!?;]{1,180})",
     re.IGNORECASE,
 )
 _PRESENTATION_TERMS = frozenset(
@@ -190,7 +243,7 @@ _RELATIONSHIP_TERMS = frozenset(
 _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:<\s*/?\s*[A-Za-z][^>]{0,200}>|"
     r"\bjavascript\s*:|\bon\w+\s*=|\beval\s*\(|\bnew\s+Function\b|"
-    r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\(|"
+    r"\bfunction(?:\s+[A-Za-z_$][\w$]*)?\s*\([^)]{0,160}\)\s*\{|"
     r"\b(?:const|let|var)\s+(?:[A-Za-z_$][\w$]*|\{[^}\r\n]{1,160}\}|"
     r"\[[^\]\r\n]{1,160}\])\s*=|"
     r"\bimport\s+(?:['\"]|(?:[A-Za-z_$][\w$]*|\*|\{)[^;]{0,160}\bfrom\b)|"
@@ -200,24 +253,33 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"(?:^|[\r\n])\s*(?:async\s+)?def\s+[A-Za-z_]\w*\s*\(|"
     r"\bclass\s+[A-Za-z_$][\w$]*\s*\{|"
     r"\b(?:require|importScripts|setTimeout|setInterval|requestAnimationFrame|"
-    r"cancelAnimationFrame|fetch)\s*\(|"
+    r"cancelAnimationFrame|fetch)(?:\s|/\*[^*]{0,80}\*/)*\(|"
     r"\bimport\s*\(|\bnew\s+[A-Za-z_$][\w$]*\s*\(|"
     r"\b(?:WebSocket|Worker|SharedWorker|XMLHttpRequest|EventSource)\s*\(|"
-    r"\b(?:d3|THREE|gsap|motion)\s*(?:\.|\[)|\banime\s*\(|"
-    r"\b(?:module\s*\.\s*exports|exports\s*\.|process\s*\.|Deno\s*\.|__import__\s*\()|"
-    r"\bwhile\s*\([^)]{0,160}\)\s*(?:\{|[A-Za-z_$][\w$]*\s*\()|"
+    r"\b(?:d3|THREE|gsap|motion|anime)\s*(?:\.|\[)|\banime\s*\(|"
+    r"\b(?:module\s*(?:\.\s*exports|\[\s*['\"]exports['\"]\s*\])|"
+    r"exports\s*(?:\.|\[)|process\s*(?:\.|\[)|Deno\s*(?:\.|\[)|"
+    r"__import__\s*\()|"
+    r"\bwhile\s*\([^)]{0,160}\)\s*(?:\{|[A-Za-z_$][\w$]*\s*(?:\(|\+\+|--|[+*/-]?=))|"
+    r"\bdo\s+(?:\{|[A-Za-z_$][\w$]*\s*(?:\+\+|--|[+*/-]?=))|"
+    r"\bfor\s+await\s*\(|"
     r"\bfor\s*\([^)]{0,160}(?:;|\+\+|--)[^)]{0,160}\)\s*|"
     r"\bfor\s*\([^)]{0,160}\b(?:in|of)\b[^)]{0,160}\)\s*|"
-    r"\b(?:console|Math|JSON|Object|Array|Promise)\s*\.\s*[A-Za-z_$][\w$]*\s*\(|"
+    r"(?:^|[\r\n])\s*(?:async\s+)?for\s+[A-Za-z_]\w*\s+in\s+[^:\r\n]{1,160}:|"
+    r"\b(?:console|Math|JSON|Object|Array|Promise|Reflect)\s*\.\s*"
+    r"[A-Za-z_$][\w$]*\s*\(|"
+    r"(?:\[\]|\{\})\s*\.\s*(?:constructor|__proto__)\b|"
+    r"\(\s*\d+\s*,\s*eval\s*\)|\beval\s*(?:\?\.|\[)|"
     r"=>|```|\b(?:gl_FragColor|gl_Position|gl_PointSize|texture2D)\b|"
     r"#version\s+\d+|"
     r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
     r"\bprecision\s+(?:lowp|mediump|highp)\s+(?:float|int)\s*;|"
     r"\b(?:uniform|varying|attribute|vec[234]|mat[234]|sampler2D)\s+[A-Za-z_]\w*|"
-    r"\b(?:document|window|globalThis|location|history|navigator)\s*"
-    r"(?:\.|\[\s*['\"])|"
-    r"(?:[#.][-\w]+|\b[A-Za-z][-\w]*(?:\s+[A-Za-z][-\w]*)?)\s*"
-    r"\{\s*-?[-\w]+\s*:|"
+    r"\b(?:document|window|globalThis|location|history|navigator|self)\s*"
+    r"(?:\?\.|\.|\[\s*['\"])|"
+    r"(?:[#.][-\w]+|\b(?:body|html|canvas|svg|div|span|button|input|main|section|article)\b"
+    r"(?:\s+[.#][-\w]+)?)\s*\{\s*"
+    r"(?:color|background|display|position|width|height|transform|animation|fill|stroke)\s*:|"
     r"https?\s*:|\bdata\s*:[A-Za-z][^,\s]{0,100},|\bfile\s*://|"
     r"\burl\s*\(|@import\b|(?:^|[\"\s])//[A-Za-z0-9])",
     re.IGNORECASE,
@@ -601,6 +663,17 @@ def _directional_entity_chains(request: str) -> list[list[frozenset[str]]]:
         groups = _entity_groups(chain)
         if len(groups) > 1:
             chains.append(groups)
+    for match in _POSTFIX_EDGE.finditer(request):
+        if match.group("direction").casefold() != "directed":
+            continue
+        groups = [_entity_terms(match.group("left")), _entity_terms(match.group("right"))]
+        frozen = [frozenset(group) for group in groups if group]
+        if len(frozen) == 2 and frozen not in chains:
+            chains.append(frozen)
+    for match in _ARROW_CHAIN.finditer(request):
+        groups = _entity_groups(match.group("entities"))
+        if len(groups) > 1 and groups not in chains:
+            chains.append(groups)
     return chains
 
 
@@ -611,6 +684,17 @@ def _undirected_entity_components(request: str) -> list[list[frozenset[str]]]:
         clause = _DIRECTIONAL_TAIL.split(match.group("entities"), maxsplit=1)[0]
         groups = _entity_groups(clause)
         if len(groups) > 1:
+            components.append(groups)
+    for match in _POSTFIX_EDGE.finditer(request):
+        if match.group("direction").casefold() != "undirected":
+            continue
+        groups = [_entity_terms(match.group("left")), _entity_terms(match.group("right"))]
+        frozen = [frozenset(group) for group in groups if group]
+        if len(frozen) == 2 and frozen not in components:
+            components.append(frozen)
+    for match in _NO_ARROW_COMPONENT.finditer(request):
+        groups = _entity_groups(match.group("entities"))
+        if len(groups) > 1 and groups not in components:
             components.append(groups)
     return components
 
@@ -641,6 +725,10 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
         for group in chain:
             if group not in groups:
                 groups.append(group)
+    for component in _undirected_entity_components(request):
+        for group in component:
+            if group not in groups:
+                groups.append(group)
     for introducer, raw_clause in _explicit_entity_clauses(request):
         # A clause such as "showing flow from A to B" is represented by the ordered chain
         # above. Keep any concrete prefix, then let later introducers be parsed separately.
@@ -668,11 +756,21 @@ def _explicit_entity_groups(request: str) -> list[frozenset[str]]:
 def _requested_control_groups(request: str) -> list[frozenset[str]]:
     """Extract distinct learner-named parameters from explicit slider/control clauses."""
     groups: list[frozenset[str]] = []
-    for match in _REQUESTED_CONTROL_CLAUSE.finditer(request):
-        clause = _DIRECTIONAL_TAIL.split(match.group("controls"), maxsplit=1)[0]
-        for group in _entity_groups(clause):
-            if group not in groups:
-                groups.append(group)
+    patterns = (
+        _REQUESTED_CONTROL_CLAUSE,
+        _POSTFIX_CONTROL_LABEL,
+        _COLON_CONTROL_LABEL,
+        _DIRECT_CONTROL_LABEL,
+        _SUFFIX_CONTROL_LABEL,
+    )
+    for pattern in patterns:
+        matches = pattern.finditer(request)
+        for match in matches:
+            clause = _DIRECTIONAL_TAIL.split(match.group("controls"), maxsplit=1)[0]
+            clause = _CONTROL_RANGE_TAIL.sub("", clause)
+            for group in _entity_groups(clause):
+                if group not in groups:
+                    groups.append(group)
     return groups
 
 

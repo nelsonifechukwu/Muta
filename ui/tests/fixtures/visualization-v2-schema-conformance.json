@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "description": "Shared server/browser V2 schema parity mutations. Both validators must make the same decision for every operation.",
+  "cases": [
+    { "id": "valid-surface", "operation": "none", "accepted": true },
+    { "id": "fractional-budget", "operation": "fractional_budget", "accepted": false },
+    { "id": "unsafe-control-id", "operation": "unsafe_control_id", "accepted": false },
+    { "id": "oversize-control-label", "operation": "oversize_control_label", "accepted": false },
+    { "id": "invalid-sphere", "operation": "invalid_sphere", "accepted": false },
+    { "id": "oversize-line", "operation": "oversize_line", "accepted": false },
+    { "id": "oversize-particles", "operation": "oversize_particles", "accepted": false },
+    { "id": "oversize-surface-work", "operation": "oversize_surface_work", "accepted": false },
+    { "id": "malformed-animation", "operation": "malformed_animation", "accepted": false },
+    { "id": "malformed-plane", "operation": "malformed_plane", "accepted": false },
+    { "id": "malformed-select", "operation": "malformed_select", "accepted": false },
+    { "id": "tiny-control-step", "operation": "tiny_control_step", "accepted": false },
+    { "id": "oversize-utf8", "operation": "oversize_utf8", "accepted": false },
+    { "id": "missing-layer-field", "operation": "missing_layer_field", "accepted": false },
+    { "id": "oversize-combined-ast", "operation": "oversize_combined_ast", "accepted": false },
+    { "id": "invalid-circle-position", "operation": "invalid_circle_position", "accepted": false },
+    { "id": "empty-text", "operation": "empty_text", "accepted": false },
+    { "id": "malformed-renderer", "operation": "malformed_renderer", "accepted": false },
+    { "id": "malformed-control-type", "operation": "malformed_control_type", "accepted": false },
+    { "id": "malformed-coordinate-system", "operation": "malformed_coordinate_system", "accepted": false },
+    { "id": "malformed-ast-type", "operation": "malformed_ast_type", "accepted": false },
+    { "id": "malformed-ast-function", "operation": "malformed_ast_function", "accepted": false },
+    { "id": "malformed-animation-mode", "operation": "malformed_animation_mode", "accepted": false },
+    { "id": "malformed-link-id", "operation": "malformed_link_id", "accepted": false },
+    { "id": "malformed-binding-effect", "operation": "malformed_binding_effect", "accepted": false },
+    { "id": "malformed-panel-members", "operation": "malformed_panel_members", "accepted": false }
+  ]
+}

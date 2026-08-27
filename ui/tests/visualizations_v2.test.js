@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const viz = require("../visualizations.js");
+const schemaConformance = require("./fixtures/visualization-v2-schema-conformance.json");
 
 const number = (value) => ({ type: "number", value });
 const variable = (name) => ({ type: "variable", name });
@@ -253,6 +254,82 @@ test("rejects unsafe family names and boolean numeric AST values", () => {
   const booleanAst = surface();
   booleanAst.scene.layers[0].relationship.right = { type: "number", value: true };
   assert.match(viz.validateSpec(booleanAst).error, /invalid number node/);
+});
+
+test("fails closed on the shared server-browser conformance mutations", () => {
+  const balancedExpression = (leaves) => {
+    if (leaves === 1) return variable("x");
+    const half = Math.floor(leaves / 2);
+    return binary("+", balancedExpression(half), balancedExpression(leaves - half));
+  };
+  const candidates = { none: surface() };
+
+  let candidate = surface(); candidate.budget.max_points = 4096.5; candidates.fractional_budget = candidate;
+  candidate = svgSpec(); candidate.controls[0].id = "Height"; candidates.unsafe_control_id = candidate;
+  candidate = svgSpec(); candidate.controls[0].label = "x".repeat(81); candidates.oversize_control_label = candidate;
+  candidate = surface(); candidate.scene.layers = [
+    { type: "sphere", position: [1001, 0, 0], size: 1, label: "", color: "teal" },
+  ]; candidates.invalid_sphere = candidate;
+  candidate = surface(); candidate.scene.layers = [{
+    type: "line", points: Array.from({ length: 513 }, (_, index) => [index, 0, 0]),
+    label: "bounded line", color: "teal",
+  }]; candidates.oversize_line = candidate;
+  candidate = surface(); candidate.library = "d3"; candidate.renderer = "canvas";
+  candidate.kind = "simulation2d"; candidate.scene = { coordinate_system: "screen", layers: [{
+    type: "particles", points: Array.from({ length: 801 }, (_, index) => [index, 0]),
+    label: "particles", color: "teal",
+  }] }; candidates.oversize_particles = candidate;
+  candidate = surface(); candidate.scene.layers[0].relationship.right = balancedExpression(64);
+  candidate.scene.layers[0].resolution = [65, 65]; candidates.oversize_surface_work = candidate;
+  candidate = surface(); candidate.scene.layers[0].animation = ["mode", "duration"];
+  candidates.malformed_animation = candidate;
+  candidate = surface(); candidate.scene.layers = [{
+    type: "plane", normal: [0, 0, 1], constant: "oops", label: "plane", color: "teal",
+  }]; candidates.malformed_plane = candidate;
+  candidate = surface(); candidate.controls = [
+    { id: "choice", label: "Choice", type: "select", value: "x", options: [{}] },
+  ]; candidates.malformed_select = candidate;
+  candidate = svgSpec(); candidate.controls[0].step = 1e-7; candidates.tiny_control_step = candidate;
+  candidate = surface(); candidate.scene.layers = Array.from({ length: 96 }, (_, index) => ({
+    type: "text", x: 0, y: index, text: "界".repeat(160), color: "teal",
+  })); candidates.oversize_utf8 = candidate;
+  candidate = surface(); delete candidate.scene.layers[0].z_domain; candidates.missing_layer_field = candidate;
+  candidate = surface(); candidate.scene.layers[0].relationship.right = balancedExpression(81);
+  candidate.scene.layers[0].resolution = [9, 9]; candidates.oversize_combined_ast = candidate;
+  candidate = surface(); candidate.library = "d3"; candidate.renderer = "svg"; candidate.kind = "scene2d";
+  candidate.scene = { coordinate_system: "screen", layers: [
+    { type: "circle", x: 10001, y: 0, r: 2, label: "circle", color: "teal" },
+  ] }; candidates.invalid_circle_position = candidate;
+  candidate = structuredClone(candidate); candidate.scene.layers = [
+    { type: "text", x: 0, y: 0, text: "", color: "teal" },
+  ]; candidates.empty_text = candidate;
+  candidate = surface(); candidate.renderer = []; candidates.malformed_renderer = candidate;
+  candidate = svgSpec(); candidate.controls[0].type = {}; candidates.malformed_control_type = candidate;
+  candidate = surface(); candidate.scene.coordinate_system = []; candidates.malformed_coordinate_system = candidate;
+  candidate = surface(); candidate.scene.layers[0].relationship.right.type = {}; candidates.malformed_ast_type = candidate;
+  candidate = surface(); candidate.scene.layers[0].relationship.right = {
+    type: "call", name: {}, args: [variable("x")],
+  }; candidates.malformed_ast_function = candidate;
+  candidate = surface(); candidate.scene.layers[0].animation = { mode: {}, duration: 8 };
+  candidates.malformed_animation_mode = candidate;
+  candidate = surface(); candidate.library = "d3"; candidate.renderer = "svg"; candidate.kind = "scene2d";
+  candidate.controls = []; candidate.scene = { coordinate_system: "screen", layers: [
+    { type: "node", id: "a", x: 0, y: 0, width: 20, height: 20, label: "A", color: "teal" },
+    { type: "node", id: "b", x: 40, y: 0, width: 20, height: 20, label: "B", color: "teal" },
+    { type: "link", from: [], to: "b", arrow: true, label: "edge" },
+  ] };
+  candidates.malformed_link_id = candidate;
+  candidate = svgSpec(); candidate.controls[0].binding = { target_label: "triangle", effect: {} };
+  candidates.malformed_binding_effect = candidate;
+  candidate = surface(); candidate.library = "d3"; candidate.renderer = "svg"; candidate.kind = "scene2d";
+  candidate.scene = { coordinate_system: "screen", layers: [{
+    type: "panel", id: "panel", title: "Panel", x_label: "x", y_label: "y", members: [{}],
+  }] }; candidates.malformed_panel_members = candidate;
+
+  assert.deepEqual(new Set(schemaConformance.cases.map((item) => item.operation)), new Set(Object.keys(candidates)));
+  for (const item of schemaConformance.cases) {
+    assert.equal(viz.validateSpec(candidates[item.operation]).ok, item.accepted, item.id);
+  }
 });
 
 test("round-trips V2 fragments and extracts only a fully validated fence", () => {

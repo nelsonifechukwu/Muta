@@ -960,6 +960,217 @@ def test_server_schema_matches_browser_safe_family_and_numeric_types() -> None:
         validate_v2_spec(boolean_height)
 
 
+def test_server_schema_fails_closed_on_cross_runtime_conformance_mutations() -> None:
+    surface = compile_visualization_v2("Plot z=x^2+y^2")
+    assert surface is not None
+
+    def clone() -> dict:
+        return json.loads(json.dumps(surface))
+
+    def balanced_expression(leaves: int) -> dict:
+        if leaves == 1:
+            return {"type": "variable", "name": "x"}
+        half = leaves // 2
+        return {
+            "type": "binary",
+            "op": "+",
+            "left": balanced_expression(half),
+            "right": balanced_expression(leaves - half),
+        }
+
+    candidates: dict[str, dict] = {"none": clone()}
+    candidate = clone()
+    candidate["budget"]["max_points"] = 4096.5
+    candidates["fractional_budget"] = candidate
+
+    pythagoras = compile_visualization_v2("Explain Pythagoras with a diagram")
+    assert pythagoras is not None
+    candidate = json.loads(json.dumps(pythagoras))
+    candidate["controls"][0]["id"] = "Height"
+    candidates["unsafe_control_id"] = candidate
+    candidate = json.loads(json.dumps(pythagoras))
+    candidate["controls"][0]["label"] = "x" * 81
+    candidates["oversize_control_label"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"] = [
+        {"type": "sphere", "position": [1001, 0, 0], "size": 1, "label": "", "color": "teal"}
+    ]
+    candidates["invalid_sphere"] = candidate
+    candidate = clone()
+    candidate["scene"]["layers"] = [
+        {
+            "type": "line",
+            "points": [[float(index), 0, 0] for index in range(513)],
+            "label": "bounded line",
+            "color": "teal",
+        }
+    ]
+    candidates["oversize_line"] = candidate
+
+    candidate = clone()
+    candidate.update({"library": "d3", "renderer": "canvas", "kind": "simulation2d"})
+    candidate["scene"] = {
+        "coordinate_system": "screen",
+        "layers": [
+            {
+                "type": "particles",
+                "points": [[float(index), 0] for index in range(801)],
+                "label": "particles",
+                "color": "teal",
+            }
+        ],
+    }
+    candidates["oversize_particles"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"][0]["relationship"]["right"] = balanced_expression(64)
+    candidate["scene"]["layers"][0]["resolution"] = [65, 65]
+    candidates["oversize_surface_work"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"][0]["animation"] = ["mode", "duration"]
+    candidates["malformed_animation"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"] = [
+        {
+            "type": "plane",
+            "normal": [0, 0, 1],
+            "constant": "oops",
+            "label": "plane",
+            "color": "teal",
+        }
+    ]
+    candidates["malformed_plane"] = candidate
+
+    candidate = clone()
+    candidate["controls"] = [
+        {"id": "choice", "label": "Choice", "type": "select", "value": "x", "options": [{}]}
+    ]
+    candidates["malformed_select"] = candidate
+
+    candidate = json.loads(json.dumps(pythagoras))
+    candidate["controls"][0]["step"] = 1e-7
+    candidates["tiny_control_step"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"] = [
+        {"type": "text", "x": 0, "y": index, "text": "界" * 160, "color": "teal"}
+        for index in range(96)
+    ]
+    candidates["oversize_utf8"] = candidate
+
+    candidate = clone()
+    del candidate["scene"]["layers"][0]["z_domain"]
+    candidates["missing_layer_field"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"][0]["relationship"]["right"] = balanced_expression(81)
+    candidate["scene"]["layers"][0]["resolution"] = [9, 9]
+    candidates["oversize_combined_ast"] = candidate
+
+    candidate = clone()
+    candidate.update({"library": "d3", "renderer": "svg", "kind": "scene2d"})
+    candidate["scene"] = {
+        "coordinate_system": "screen",
+        "layers": [
+            {"type": "circle", "x": 10001, "y": 0, "r": 2, "label": "circle", "color": "teal"}
+        ],
+    }
+    candidates["invalid_circle_position"] = candidate
+
+    candidate = json.loads(json.dumps(candidate))
+    candidate["scene"]["layers"] = [
+        {"type": "text", "x": 0, "y": 0, "text": "", "color": "teal"}
+    ]
+    candidates["empty_text"] = candidate
+
+    candidate = clone()
+    candidate["renderer"] = []
+    candidates["malformed_renderer"] = candidate
+
+    candidate = json.loads(json.dumps(pythagoras))
+    candidate["controls"][0]["type"] = {}
+    candidates["malformed_control_type"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["coordinate_system"] = []
+    candidates["malformed_coordinate_system"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"][0]["relationship"]["right"]["type"] = {}
+    candidates["malformed_ast_type"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"][0]["relationship"]["right"] = {
+        "type": "call",
+        "name": {},
+        "args": [{"type": "variable", "name": "x"}],
+    }
+    candidates["malformed_ast_function"] = candidate
+
+    candidate = clone()
+    candidate["scene"]["layers"][0]["animation"] = {"mode": {}, "duration": 8}
+    candidates["malformed_animation_mode"] = candidate
+
+    candidate = clone()
+    candidate.update({"library": "d3", "renderer": "svg", "kind": "scene2d", "controls": []})
+    candidate["scene"] = {
+        "coordinate_system": "screen",
+        "layers": [
+            {
+                "type": "node", "id": "a", "x": 0, "y": 0, "width": 20, "height": 20,
+                "label": "A", "color": "teal",
+            },
+            {
+                "type": "node", "id": "b", "x": 40, "y": 0, "width": 20, "height": 20,
+                "label": "B", "color": "teal",
+            },
+            {"type": "link", "from": [], "to": "b", "arrow": True, "label": "edge"},
+        ],
+    }
+    candidates["malformed_link_id"] = candidate
+
+    candidate = json.loads(json.dumps(pythagoras))
+    candidate["controls"][0]["binding"] = {"target_label": "triangle", "effect": {}}
+    candidates["malformed_binding_effect"] = candidate
+
+    candidate = clone()
+    candidate.update({"library": "d3", "renderer": "svg", "kind": "scene2d"})
+    candidate["scene"] = {
+        "coordinate_system": "screen",
+        "layers": [
+            {
+                "type": "panel",
+                "id": "panel",
+                "title": "Panel",
+                "x_label": "x",
+                "y_label": "y",
+                "members": [{}],
+            }
+        ],
+    }
+    candidates["malformed_panel_members"] = candidate
+
+    conformance_path = (
+        Path(__file__).parents[2]
+        / "ui"
+        / "tests"
+        / "fixtures"
+        / "visualization-v2-schema-conformance.json"
+    )
+    conformance = json.loads(conformance_path.read_text())
+    assert {case["operation"] for case in conformance["cases"]} == candidates.keys()
+    for case in conformance["cases"]:
+        candidate = candidates[case["operation"]]
+        if case["accepted"]:
+            validate_v2_spec(candidate)
+        else:
+            with pytest.raises(VisualizationV2Error, match=".+"):
+                validate_v2_spec(candidate)
+
+
 def test_schema_rejects_type_confused_incomplete_or_static_animation_transport() -> None:
     static = compile_visualization_v2("Plot z=x^2+y^2")
     assert static is not None

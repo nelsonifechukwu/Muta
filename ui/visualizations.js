@@ -23,6 +23,7 @@
   const V2_PARAMETRIC_MARKER_TRIANGLES = 352;
   const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
   const SAFE_FAMILY = /^[a-z][a-z0-9_]{0,63}$/;
+  const SAFE_CONTROL_ID = /^[a-z][a-z0-9_]{0,31}$/;
   const SAFE_COLOR = /^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([0-9.,%\s-]+\)|black|white|gray|grey|red|green|blue|orange|purple|teal|gold)$/;
   const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
   const SURFACE_FUNCTIONS = new Set([
@@ -515,6 +516,17 @@
     return visit(root);
   }
 
+  function countV2ExpressionNodes(root) {
+    if (root.type === "unary") return 1 + countV2ExpressionNodes(root.arg);
+    if (root.type === "binary") {
+      return 1 + countV2ExpressionNodes(root.left) + countV2ExpressionNodes(root.right);
+    }
+    if (root.type === "call") {
+      return 1 + root.args.reduce((total, argument) => total + countV2ExpressionNodes(argument), 0);
+    }
+    return 1;
+  }
+
   function evaluateExpressionV2(root, variables = {}) {
     const visit = (node, depth = 0) => {
       if (depth > 24) throw new Error("V2 expression is nested too deeply");
@@ -573,7 +585,7 @@
     const numericControlKeys = new Set(["id", "label", "type", "value", "min", "max", "step", "binding"]);
     const bindingEffects = new Set(["translate_x", "translate_y", "scale", "radius"]);
     for (const control of candidate.controls) {
-      if (!exactKeys(control, controlKeys) || !SAFE_ID.test(control.id) || controlIds.has(control.id)
+      if (!exactKeys(control, controlKeys) || !SAFE_CONTROL_ID.test(control.id) || controlIds.has(control.id)
         || !nonEmptyString(control.label, 80) || !["range", "select", "step", "button"].includes(control.type)) {
         return { ok: false, error: "V2 control is invalid" };
       }
@@ -639,13 +651,25 @@
     for (const layer of candidate.scene.layers) {
       const allowed = V2_LAYER_KEYS[layer?.type];
       if (!allowed || !exactKeys(layer, allowed)) return { ok: false, error: "V2 layer is unsupported" };
+      const animationOptional = ["explicit_surface", "implicit_surface", "parametric_surface"].includes(layer.type);
+      const expectedKeyCount = allowed.size - (animationOptional && layer.animation === undefined ? 1 : 0);
+      if (Object.keys(layer).length !== expectedKeyCount) {
+        return { ok: false, error: "V2 layer fields are incomplete" };
+      }
       for (const key of ["color"]) {
         if (layer[key] !== undefined && !SAFE_COLOR.test(layer[key])) return { ok: false, error: "V2 layer color is unsafe" };
       }
+      for (const key of ["label", "text"]) {
+        if (layer[key] !== undefined && layer[key] !== "" && !nonEmptyString(layer[key], 160)) {
+          return { ok: false, error: `V2 layer ${key} is invalid` };
+        }
+      }
       if (["polyline", "line", "particles"].includes(layer.type)) {
         const dimensions = layer.type === "line" ? 3 : 2;
-        if (!Array.isArray(layer.points) || layer.points.length < 2 || layer.points.length > 4096
-          || !layer.points.every((item) => Array.isArray(item) && item.length === dimensions && item.every((value) => finiteNumber(value)))) {
+        const pointLimit = layer.type === "line" ? 512 : layer.type === "particles" ? 800 : 4096;
+        const coordinateValid = layer.type === "line" ? vector3 : point;
+        if (!Array.isArray(layer.points) || layer.points.length < 2 || layer.points.length > pointLimit
+          || !layer.points.every((item) => coordinateValid(item) && item.length === dimensions)) {
           return { ok: false, error: "V2 point layer is invalid" };
         }
         points += layer.points.length;
@@ -714,17 +738,19 @@
       }
       if (layer.type === "plane") triangleEstimate += 128;
       if (layer.type === "arrow" && (!point(layer.from) || !point(layer.to))) return { ok: false, error: "V2 arrow is invalid" };
-      if (layer.type === "circle" && (!finiteNumber(layer.x) || !finiteNumber(layer.y) || !finiteNumber(layer.r, 0.1, 2000))) return { ok: false, error: "V2 circle is invalid" };
-      if (layer.type === "rect" && (!finiteNumber(layer.x) || !finiteNumber(layer.y)
+      if (layer.type === "circle" && (!finiteNumber(layer.x, -10000, 10000) || !finiteNumber(layer.y, -10000, 10000) || !finiteNumber(layer.r, 0.1, 2000))) return { ok: false, error: "V2 circle is invalid" };
+      if (layer.type === "rect" && (!finiteNumber(layer.x, -10000, 10000) || !finiteNumber(layer.y, -10000, 10000)
         || !finiteNumber(layer.width, 0.1, 2000) || !finiteNumber(layer.height, 0.1, 2000))) {
         return { ok: false, error: "V2 rectangle is invalid" };
       }
-      if (layer.type === "text" && (!finiteNumber(layer.x) || !finiteNumber(layer.y) || !nonEmptyString(layer.text, 160))) return { ok: false, error: "V2 text is invalid" };
+      if (layer.type === "text" && (!finiteNumber(layer.x, -10000, 10000) || !finiteNumber(layer.y, -10000, 10000) || !nonEmptyString(layer.text, 160))) return { ok: false, error: "V2 text is invalid" };
       if (["explicit_surface", "implicit_surface"].includes(layer.type)) {
         const relation = layer.relationship;
         if (!relation || Object.keys(relation).length !== 4 || relation.type !== "relationship" || relation.op !== "=") return { ok: false, error: "V2 relationship is invalid" };
         const expressionError = validateV2Expression(relation.left) || validateV2Expression(relation.right);
         if (expressionError) return { ok: false, error: expressionError };
+        const expressionNodes = countV2ExpressionNodes(relation.left) + countV2ExpressionNodes(relation.right);
+        if (expressionNodes > 160) return { ok: false, error: "V2 surface expression exceeds its AST budget" };
         const dimensions = layer.type === "explicit_surface" ? 2 : 3;
         if (!Array.isArray(layer.resolution) || layer.resolution.length !== dimensions
           || !layer.resolution.every((value) => Number.isInteger(value) && value >= 9 && value <= 65)
@@ -732,6 +758,9 @@
           return { ok: false, error: "V2 surface resolution exceeds its budget" };
         }
         if (layer.type === "explicit_surface") {
+          if (layer.resolution.reduce((a, b) => a * b, 1) * expressionNodes > MAX_STATIC_SURFACE_WORK) {
+            return { ok: false, error: "V2 explicit surface work exceeds its budget" };
+          }
           triangleEstimate += 2 * (layer.resolution[0] - 1) * (layer.resolution[1] - 1);
         } else {
           triangleEstimate += 1;
@@ -743,6 +772,8 @@
         }
       }
       if (layer.type === "parametric_surface" && ((validateV2Expression(layer.x_expression) || validateV2Expression(layer.y_expression) || validateV2Expression(layer.z_expression))
+        || countV2ExpressionNodes(layer.x_expression) + countV2ExpressionNodes(layer.y_expression)
+          + countV2ExpressionNodes(layer.z_expression) > 160
         || !numberPair(layer.u_domain, -100, 100) || !numberPair(layer.v_domain, -100, 100)
         || !Array.isArray(layer.resolution) || layer.resolution.length !== 2
         || !layer.resolution.every((value) => Number.isInteger(value) && value >= 9 && value <= 65)
@@ -811,7 +842,7 @@
     } catch {
       return { ok: false, error: "visualization cannot be serialized" };
     }
-    if (encoded.length > MAX_SPEC_CHARS) return { ok: false, error: "visualization is too large" };
+    if (new TextEncoder().encode(encoded).length > MAX_SPEC_CHARS) return { ok: false, error: "visualization is too large" };
     if (candidate.version === 2) return validateV2Spec(candidate, encoded);
     const treeError = validateTree(candidate);
     if (treeError) return { ok: false, error: treeError };

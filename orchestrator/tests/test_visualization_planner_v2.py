@@ -243,6 +243,19 @@ def test_model_authored_network_and_resource_tokens_are_rejected(resource: str) 
         "for (const item of items) draw(item);",
         "d3.select('body').append('svg')",
         "def draw_scene():\n    return None",
+        "anime.timeline().add({targets: node, x: 10})",
+        "while (ready) counter++;",
+        "do counter++; while (ready);",
+        "for await (const item of items) draw(item);",
+        "for item in items:\n    draw(item)",
+        "document?.body.append(node)",
+        "module['exports']=payload",
+        "self.postMessage(payload)",
+        "Reflect.construct(Function, ['return 1'])()",
+        "[].constructor.constructor('return 1')()",
+        "(0, eval)('2+2')",
+        "eval?.('2+2')",
+        "fetch /*x*/ ('/x')",
     ),
 )
 def test_model_authored_markup_script_css_and_shader_shapes_are_rejected(
@@ -268,6 +281,20 @@ def test_benign_data_prefix_is_not_treated_as_a_data_url() -> None:
         candidate,
         "Draw a mangrove food web from algae to crab to heron.",
     ) == []
+
+
+@pytest.mark.parametrize(
+    "prose",
+    (
+        "The function f(x) = x squared is shown in blue.",
+        "The domain is the set {x: x is positive}.",
+        "Motion (position over time) is shown in blue.",
+    ),
+)
+def test_benign_math_and_set_prose_is_not_treated_as_authored_source(prose: str) -> None:
+    candidate = _food_web_spec()
+    candidate["text_fallback"] = prose
+    assert _plan_errors(candidate, "Draw a mangrove food web from algae to crab to heron.") == []
 
 
 def test_unknown_primitive_is_rejected_and_repaired_without_execution() -> None:
@@ -649,6 +676,25 @@ def test_mixed_relationship_clauses_do_not_consume_each_other_without_punctuatio
         "Draw a mixed graph with an undirected link between heron and fish plus a "
         "directed flow from algae to crab.",
     ) == []
+    for prompt in (
+        (
+            "Draw a mixed graph with an undirected link between heron and fish followed by a "
+            "directed flow from algae to crab."
+        ),
+        (
+            "Draw a mixed graph with a directed flow from algae to crab together with an "
+            "undirected link between heron and fish."
+        ),
+        (
+            "Draw a mixed graph: make the algae to crab edge directed and the heron to fish "
+            "edge undirected."
+        ),
+        (
+            "Draw a mixed graph with an arrow from algae to crab and without arrows between "
+            "heron and fish."
+        ),
+    ):
+        assert _plan_errors(mixed, prompt) == []
 
 
 def test_semantic_oracle_splits_connecting_with_and_directional_via_phrases() -> None:
@@ -757,6 +803,9 @@ def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps()
         "a 45 degree viewing angle",
         "a 30° elevation",
         "an overhead viewpoint",
+        "sea level up to a 30 degree elevation",
+        "a high elevation to a low elevation",
+        "a 45-degree elevation down to eye level",
     ):
         assert (
             _plan_errors(
@@ -766,6 +815,12 @@ def test_direction_parser_distinguishes_viewpoint_prose_tails_and_toward_steps()
             )
             == []
         )
+
+    assert _plan_errors(
+        _food_web_spec(),
+        "Draw a mangrove food web viewing it from sea level up to a 30 degree elevation "
+        "showing algae, crab, and heron.",
+    ) == []
 
     interactive = _food_web_spec()
     interactive["controls"] = [
@@ -890,6 +945,12 @@ def test_named_slider_parameters_require_distinct_matching_bound_controls() -> N
         "a slider labelled Heron height",
         "a slider labeled Heron height",
         "a range control called Heron height",
+        "a control labelled Heron height ranging from -40 to 40",
+        "a slider labelled Heron height, range -40 to 40",
+        "a range slider from -40 to 40 labelled Heron height",
+        "a numeric input Heron height",
+        "a Heron height slider",
+        "a slider: Heron height",
     ):
         prompt = f"Draw a food web from algae to crab to heron with {requested}."
         assert {error["code"] for error in _plan_errors(interactive, prompt)} == {

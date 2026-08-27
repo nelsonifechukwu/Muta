@@ -7146,6 +7146,8 @@ def _count_ast(node: dict[str, Any], depth: int = 0) -> int:
     if depth > MAX_AST_DEPTH or not isinstance(node, dict):
         raise VisualizationV2Error("invalid expression tree")
     kind = node.get("type")
+    if not isinstance(kind, str):
+        raise VisualizationV2Error("invalid expression node type")
     keys = set(node)
     if kind == "number":
         if (
@@ -7158,7 +7160,11 @@ def _count_ast(node: dict[str, Any], depth: int = 0) -> int:
         return 1
     if kind in {"variable", "constant"}:
         allowed = _VARIABLES if kind == "variable" else _CONSTANTS
-        if keys != {"type", "name"} or node["name"] not in allowed:
+        if (
+            keys != {"type", "name"}
+            or not isinstance(node.get("name"), str)
+            or node["name"] not in allowed
+        ):
             raise VisualizationV2Error("invalid named expression node")
         return 1
     if kind == "unary":
@@ -7166,29 +7172,39 @@ def _count_ast(node: dict[str, Any], depth: int = 0) -> int:
             raise VisualizationV2Error("invalid unary expression node")
         return 1 + _count_ast(node["arg"], depth + 1)
     if kind == "binary":
-        if keys != {"type", "op", "left", "right"} or node.get("op") not in {
-            "+",
-            "-",
-            "*",
-            "/",
-            "^",
-        }:
+        operation = node.get("op")
+        if (
+            keys != {"type", "op", "left", "right"}
+            or not isinstance(operation, str)
+            or operation not in {"+", "-", "*", "/", "^"}
+        ):
             raise VisualizationV2Error("invalid binary expression node")
         return 1 + _count_ast(node["left"], depth + 1) + _count_ast(node["right"], depth + 1)
     if kind == "call":
         function = node.get("name")
+        if not isinstance(function, str):
+            raise VisualizationV2Error("invalid function expression node")
+        arguments = node.get("args")
         expected = 2 if function in _BINARY_FUNCTIONS else 1
         if (
             keys != {"type", "name", "args"}
             or function not in _UNARY_FUNCTIONS | _BINARY_FUNCTIONS
-            or len(node.get("args", [])) != expected
+            or not isinstance(arguments, list)
+            or len(arguments) != expected
         ):
             raise VisualizationV2Error("invalid function expression node")
-        return 1 + sum(_count_ast(arg, depth + 1) for arg in node["args"])
+        return 1 + sum(_count_ast(arg, depth + 1) for arg in arguments)
     raise VisualizationV2Error("unsupported expression node")
 
 
-def _validate_points(points: Any, dimensions: int, limit: int = MAX_POINTS) -> int:
+def _validate_points(
+    points: Any,
+    dimensions: int,
+    limit: int = MAX_POINTS,
+    *,
+    low: float = -1e6,
+    high: float = 1e6,
+) -> int:
     if not isinstance(points, list) or not 2 <= len(points) <= limit:
         raise VisualizationV2Error("point collection is outside the budget")
     for point in points:
@@ -7199,7 +7215,7 @@ def _validate_points(points: Any, dimensions: int, limit: int = MAX_POINTS) -> i
                 isinstance(value, (int, float))
                 and not isinstance(value, bool)
                 and math.isfinite(value)
-                and abs(value) <= 1e6
+                and low <= value <= high
                 for value in point
             )
         ):
@@ -7222,10 +7238,13 @@ def _safe_text(value: Any, limit: int = 160) -> bool:
 
 def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
     """Strict server-side schema/resource validation for one V2 visualization."""
-    if (
-        not isinstance(spec, dict)
-        or len(json.dumps(spec, separators=(",", ":")).encode()) > MAX_SPEC_BYTES
-    ):
+    if not isinstance(spec, dict):
+        raise VisualizationV2Error("visualization is not an object or exceeds 48 KiB")
+    try:
+        serialized_spec = json.dumps(spec, separators=(",", ":"))
+    except (TypeError, ValueError):
+        raise VisualizationV2Error("visualization cannot be serialized") from None
+    if len(serialized_spec.encode()) > MAX_SPEC_BYTES:
         raise VisualizationV2Error("visualization is not an object or exceeds 48 KiB")
     required = {
         "version",
@@ -7248,9 +7267,11 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         "canvas": ("d3", "simulation2d"),
         "three": ("three", "scene3d"),
     }
+    renderer = spec.get("renderer")
     if (
-        spec.get("renderer") not in compatible
-        or (spec.get("library"), spec.get("kind")) != compatible[spec["renderer"]]
+        not isinstance(renderer, str)
+        or renderer not in compatible
+        or (spec.get("library"), spec.get("kind")) != compatible[renderer]
     ):
         raise VisualizationV2Error("renderer/library/kind are incompatible")
     if not isinstance(spec.get("family"), str) or not _SAFE_FAMILY.fullmatch(spec["family"]):
@@ -7278,17 +7299,19 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
     parameter_controls = [
         control
         for control in controls
-        if isinstance(control, dict) and control.get("id") not in TRANSPORT_CONTROL_IDS
+        if isinstance(control, dict)
+        and (
+            not isinstance(control.get("id"), str)
+            or control["id"] not in TRANSPORT_CONTROL_IDS
+        )
     ]
     if len(parameter_controls) > MAX_PARAMETER_CONTROLS:
         raise VisualizationV2Error("too many parameter controls")
     ids: set[str] = set()
     for control in controls:
-        if not isinstance(control, dict) or control.get("type") not in {
-            "range",
-            "select",
-            "step",
-            "button",
+        control_type = control.get("type") if isinstance(control, dict) else None
+        if not isinstance(control_type, str) or control_type not in {
+            "range", "select", "step", "button"
         }:
             raise VisualizationV2Error("unsupported control")
         if set(control) - {
@@ -7310,9 +7333,8 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             or control_id in ids
         ):
             raise VisualizationV2Error("control IDs must be unique and safe")
-        if not isinstance(control.get("label"), str) or not control["label"]:
+        if not _safe_text(control.get("label"), 80):
             raise VisualizationV2Error("control needs an accessible label")
-        control_type = control["type"]
         if control_id in TRANSPORT_CONTROL_IDS and control_type != "button":
             raise VisualizationV2Error("animation transport controls must be buttons")
         if control_id in TRANSPORT_CONTROL_IDS and (
@@ -7330,7 +7352,7 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 raise VisualizationV2Error("numeric control values are invalid")
             if not control["min"] <= control["value"] <= control["max"] or not (
                 control["min"] < control["max"]
-                and 0 < control["step"] <= control["max"] - control["min"]
+                and 0.000001 <= control["step"] <= control["max"] - control["min"]
             ):
                 raise VisualizationV2Error("numeric control range is invalid")
             binding = control.get("binding")
@@ -7338,7 +7360,8 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 not isinstance(binding, dict)
                 or set(binding) != {"target_label", "effect"}
                 or not _safe_text(binding.get("target_label"), 160)
-                or binding.get("effect") not in CONTROL_BINDING_EFFECTS
+                or not isinstance(binding.get("effect"), str)
+                or binding["effect"] not in CONTROL_BINDING_EFFECTS
             ):
                 raise VisualizationV2Error("control binding is invalid")
         elif control_type == "select":
@@ -7348,8 +7371,8 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             if (
                 not isinstance(options, list)
                 or not 1 <= len(options) <= 12
-                or len(set(options)) != len(options)
                 or not all(_safe_text(option, 48) for option in options)
+                or len(set(options)) != len(options)
                 or control.get("value") not in options
             ):
                 raise VisualizationV2Error("select control options are invalid")
@@ -7368,10 +7391,16 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         "max_fps",
     }:
         raise VisualizationV2Error("resource budget is incomplete")
-    if not (
-        _finite_number(budget.get("max_points"), 1, 20_000)
-        and _finite_number(budget.get("max_triangles"), 1, MAX_TRIANGLES)
-        and _finite_number(budget.get("max_fps"), 1, 30)
+    budget_limits = {
+        "max_points": 20_000,
+        "max_triangles": MAX_TRIANGLES,
+        "max_fps": 30,
+    }
+    if not all(
+        isinstance(budget.get(field), int)
+        and not isinstance(budget[field], bool)
+        and 1 <= budget[field] <= limit
+        for field, limit in budget_limits.items()
     ):
         raise VisualizationV2Error("resource budget exceeds the runtime cap")
     scene = spec.get("scene")
@@ -7389,21 +7418,29 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             or not _finite_number(animation.get("duration"), 2, 30)
         ):
             raise VisualizationV2Error("scene animation is invalid")
-    if scene["coordinate_system"] not in {"screen", "cartesian2d", "polar", "cartesian3d"}:
+    coordinate_system = scene["coordinate_system"]
+    if not isinstance(coordinate_system, str) or coordinate_system not in {
+        "screen", "cartesian2d", "polar", "cartesian3d"
+    }:
         raise VisualizationV2Error("coordinate system is unsupported")
     layers = scene.get("layers")
     if not isinstance(layers, list) or not 1 <= len(layers) <= MAX_LAYERS:
         raise VisualizationV2Error("scene layer count is outside the budget")
     point_count = 0
     triangle_estimate = 0
-    layer_ids = {
+    node_ids = [
         layer.get("id")
         for layer in layers
         if isinstance(layer, dict) and layer.get("type") == "node"
-    }
+    ]
     node_count = sum(isinstance(layer, dict) and layer.get("type") == "node" for layer in layers)
-    if len(layer_ids) != node_count:
+    if (
+        len(node_ids) != node_count
+        or not all(isinstance(node_id, str) and _SAFE_ID.fullmatch(node_id) for node_id in node_ids)
+        or len(set(node_ids)) != node_count
+    ):
         raise VisualizationV2Error("node IDs must be unique")
+    layer_ids = set(node_ids)
     labelled_layers = {
         layer.get("label")
         for layer in layers
@@ -7438,11 +7475,15 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
         elif layer_type == "line":
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("line fields are incomplete")
-            point_count += _validate_points(layer.get("points"), 3, 512)
+            point_count += _validate_points(
+                layer.get("points"), 3, 512, low=-1000, high=1000
+            )
         elif layer_type == "vector":
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("vector fields are incomplete")
-            _validate_points([layer.get("from"), layer.get("to")], 3, 2)
+            _validate_points(
+                [layer.get("from"), layer.get("to")], 3, 2, low=-1000, high=1000
+            )
             if layer["from"] == layer["to"]:
                 raise VisualizationV2Error("vector must have non-zero length")
             triangle_estimate += _THREE_PRIMITIVE_TRIANGLES["vector"]
@@ -7496,9 +7537,11 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                     raise VisualizationV2Error("surface domain is invalid")
             animation = layer.get("animation")
             if animation is not None and (
-                set(animation) != {"mode", "duration"}
-                or animation.get("mode") not in {"orbit", "phase"}
-                or not 2 <= animation.get("duration", 0) <= 30
+                not isinstance(animation, dict)
+                or set(animation) != {"mode", "duration"}
+                or not isinstance(animation.get("mode"), str)
+                or animation["mode"] not in {"orbit", "phase"}
+                or not _finite_number(animation.get("duration"), 2, 30)
             ):
                 raise VisualizationV2Error("surface animation is not finite and controlled")
         elif layer_type == "parametric_surface":
@@ -7536,24 +7579,33 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                     raise VisualizationV2Error("parametric domain is invalid")
             animation = layer.get("animation")
             if animation is not None and (
-                set(animation) != {"mode", "duration"}
-                or animation.get("mode") not in {"orbit", "phase"}
+                not isinstance(animation, dict)
+                or set(animation) != {"mode", "duration"}
+                or not isinstance(animation.get("mode"), str)
+                or animation["mode"] not in {"orbit", "phase"}
                 or not _finite_number(animation.get("duration"), 2, 30)
             ):
                 raise VisualizationV2Error("parametric animation is invalid")
         elif layer_type == "plane":
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("plane fields are incomplete")
-            _validate_points([layer.get("normal"), [0, 0, float(layer.get("constant", 0))]], 3, 2)
-            if layer["normal"] == [0, 0, 0] or not _finite_number(
-                layer.get("constant"), -1000, 1000
-            ):
+            _validate_points(
+                [layer.get("normal"), [0, 0, 0]], 3, 2, low=-1000, high=1000
+            )
+            if layer["normal"] == [0, 0, 0] or not _finite_number(layer.get("constant"), -1000, 1000):
                 raise VisualizationV2Error("plane geometry is invalid")
             triangle_estimate += _THREE_PRIMITIVE_TRIANGLES["plane"]
         elif layer_type == "link":
             if set(layer) != _LAYER_KEYS[layer_type] or not isinstance(layer.get("arrow"), bool):
                 raise VisualizationV2Error("link fields are invalid")
-            if layer.get("from") not in layer_ids or layer.get("to") not in layer_ids:
+            source_id = layer.get("from")
+            target_id = layer.get("to")
+            if (
+                not isinstance(source_id, str)
+                or not isinstance(target_id, str)
+                or source_id not in layer_ids
+                or target_id not in layer_ids
+            ):
                 raise VisualizationV2Error("link references an unknown node")
         elif layer_type == "axes":
             if set(layer) != _LAYER_KEYS[layer_type] or not isinstance(layer.get("grid"), bool):
@@ -7569,12 +7621,18 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 raise VisualizationV2Error("node position is invalid")
             if not all(_finite_number(layer.get(field), 1, 2_000) for field in ("width", "height")):
                 raise VisualizationV2Error("node dimensions are invalid")
+            if not _safe_text(layer.get("label"), 160):
+                raise VisualizationV2Error("node label is invalid")
         elif layer_type in {"sphere", "box", "point"}:
             if set(layer) != _LAYER_KEYS[layer_type]:
                 raise VisualizationV2Error("3D object fields are incomplete")
-            _validate_points([layer.get("position"), [0, 0, 0]], 3, 2)
+            _validate_points(
+                [layer.get("position"), [0, 0, 0]], 3, 2, low=-1000, high=1000
+            )
             if not _finite_number(layer.get("size"), 0.01, 100):
                 raise VisualizationV2Error("3D object size is invalid")
+            if not _safe_text(layer.get("label"), 160):
+                raise VisualizationV2Error("3D object label is invalid")
             triangle_estimate += _THREE_PRIMITIVE_TRIANGLES[layer_type]
         elif layer_type in {"arrow", "circle", "rect", "text", "particles"}:
             if set(layer) != _LAYER_KEYS[layer_type]:
@@ -7596,7 +7654,7 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             elif layer_type == "text":
                 if not all(
                     _finite_number(layer.get(field), -10_000, 10_000) for field in ("x", "y")
-                ):
+                ) or not _safe_text(layer.get("text"), 160):
                     raise VisualizationV2Error("text position is invalid")
             else:
                 point_count += _validate_points(layer.get("points"), 2, MAX_PARTICLES)
@@ -7672,8 +7730,8 @@ def validate_v2_spec(spec: dict[str, Any]) -> dict[str, Any]:
             if (
                 not isinstance(members, list)
                 or not 1 <= len(members) <= 16
-                or len(set(members)) != len(members)
                 or not all(_safe_text(member, 160) for member in members)
+                or len(set(members)) != len(members)
                 or not set(members) <= labelled_layers
                 or assigned_panel_members.intersection(members)
             ):

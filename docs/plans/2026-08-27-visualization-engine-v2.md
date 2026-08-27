@@ -135,8 +135,20 @@ offline libraries. No model-authored JavaScript, HTML, CSS, shader source, URL, 
   executable fields. Inspect authored string values before JSON serialization so escaping cannot
   hide tabs, destructuring, bracket properties, constructors, or brace-less loops. URI checks
   recognize actual schemes without rejecting ordinary prose such as `Data: ...`.
+  Treat source detection as a lexical boundary rather than a keyword blacklist: require code
+  structure around overloaded prose words such as `function`, preserve mathematical set notation,
+  and normalize comments/optional chaining/bracket access before checking executable call sites.
+  Relationship, control, and viewpoint grounding uses bounded spans rather than consuming an
+  entire clause: mixed directed/undirected components, postfix edge direction, arrow/no-arrow
+  phrasing, reordered slider ranges, sea/eye-level viewpoints, and numeric elevation phrases must
+  each retain their intended local semantics.
   Keep server and browser schema decisions identical for safe family IDs and JSON numeric types;
   booleans are never accepted as numbers merely because Python treats `bool` as an `int` subtype.
+  Both runtimes consume one checked-in mutation fixture covering exact keys, UTF-8 byte size,
+  integer budgets, AST nodes/work, geometry bounds, accessible text, transport/control shapes,
+  relationship references, panels, and animation objects. Every malformed serializable value must
+  fail with a typed validation result—never an uncaught language-level exception—and the server is
+  authoritative if a future client drifts.
 
 ### 4. Geometry and sampling
 
