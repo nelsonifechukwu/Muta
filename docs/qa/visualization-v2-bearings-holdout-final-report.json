@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-27T19:55:51.638817+00:00",
+  "generated_at": "2026-08-27T20:04:23.488990+00:00",
   "immutable_first_run_hashes": {
     "docs/qa/visualization-v2-bearings-holdout-first-python.json": "813198f1263c1ec73d3fbdbe7c605064e31c7a2388866ed814e7b80bca4cfb7f",
     "docs/qa/visualization-v2-bearings-holdout-first-browser.json": "fbc99a6ce5fda71bd3b553b211f9dd1b1160d725b66f425bbff7faa9e905e451",
@@ -12,7 +12,7 @@
   "passed": 15,
   "failed": 0,
   "python_report": "docs/qa/visualization-v2-bearings-holdout-final-python.json",
-  "browser_report_sha256": "1f96cb5788671d9e9106f0683a27dd629f84c4a0358cd9d608c6b2f52fa378a9",
+  "browser_report_sha256": "13350e3ba00077e5f9200d00cd10f53e5a872d397b000621010ff2734aa7433e",
   "browser_matrix": "docs/qa/visualization-v2-bearings-browser-matrix.json",
   "browser_matrix_passed": true,
   "cases": [
@@ -26,7 +26,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 30.8,
+      "elapsed_ms": 25,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,
@@ -47,7 +47,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 30.7,
+      "elapsed_ms": 24.9,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,
@@ -68,7 +68,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 28.7,
+      "elapsed_ms": 23.9,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,
@@ -89,7 +89,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 26.6,
+      "elapsed_ms": 24.6,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 2,
@@ -110,7 +110,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 26.1,
+      "elapsed_ms": 23.7,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 2,
@@ -131,7 +131,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 26.7,
+      "elapsed_ms": 24.4,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 2,
@@ -152,7 +152,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 29.3,
+      "elapsed_ms": 24.1,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,
@@ -173,7 +173,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 25.4,
+      "elapsed_ms": 24.3,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 2,
@@ -194,7 +194,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 26.7,
+      "elapsed_ms": 24,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,
@@ -215,7 +215,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 25.7,
+      "elapsed_ms": 23.8,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,
@@ -236,7 +236,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 27.9,
+      "elapsed_ms": 26.6,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,
@@ -257,7 +257,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 26.7,
+      "elapsed_ms": 27.9,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 2,
@@ -278,7 +278,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 27.6,
+      "elapsed_ms": 27.8,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 3,
@@ -299,7 +299,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 25.8,
+      "elapsed_ms": 25.4,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 2,
@@ -320,7 +320,7 @@
         "width": 742,
         "height": 520
       },
-      "elapsed_ms": 26.9,
+      "elapsed_ms": 23.6,
       "visible_semantic_geometry": {
         "passed": true,
         "north_arrow_count": 1,

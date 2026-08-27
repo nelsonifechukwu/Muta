@@ -1887,7 +1887,7 @@
     const sizeBearingText = () => {
       if (spec.family !== "bearing_navigation") return;
       const scaleFactor = Math.max(0.2, svg.getBoundingClientRect().width / 720);
-      svg.querySelectorAll(".viz-v2-layer text").forEach((textNode) => {
+      svg.querySelectorAll("text").forEach((textNode) => {
         const annotation = Number(textNode.getAttribute("x")) === 42;
         const desiredCssPixels = annotation ? 9 : 10;
         textNode.style.fontSize = `${Math.max(12, desiredCssPixels / scaleFactor)}px`;

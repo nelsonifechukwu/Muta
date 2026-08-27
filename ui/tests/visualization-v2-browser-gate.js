@@ -361,7 +361,7 @@
       const angleArcs = [...(frameDocument?.querySelectorAll(".viz-v2-angle-arc") || [])];
       const clockwiseArcs = angleArcs.filter((arc) => arc.dataset.clockwise === "true");
       const arrowheads = [...(frameDocument?.querySelectorAll('[marker-end="url(#v2-arrow)"]') || [])];
-      const textHeights = [...(frameDocument?.querySelectorAll(".viz-v2-layer text") || [])]
+      const textHeights = [...(frameDocument?.querySelectorAll("svg text") || [])]
         .map((node) => node.getBoundingClientRect().height)
         .filter((height) => Number.isFinite(height) && height > 0);
       const minimumTextHeight = textHeights.length ? Math.min(...textHeights) : 0;

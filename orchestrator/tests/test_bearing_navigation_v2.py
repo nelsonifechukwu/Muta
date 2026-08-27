@@ -141,6 +141,25 @@ def test_unseen_west_baseline_triangulation_and_numeric_moving_bearing() -> None
     assert "2.423 h on bearing 062°" in interception["text_fallback"]
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        (
+            "Draw the intercept. A ship travels 20 km from harbour on bearing 070°, then "
+            "changes course and moves on bearing 045° at 4 km/h; rescue travels at 12 km/h."
+        ),
+        (
+            "Draw the intercept. A rescue boat can travel at 12 km/h. A ship is initially "
+            "20 km from harbour on bearing 070° and moves on bearing 045° at 4 km/h."
+        ),
+    ],
+)
+def test_interception_associates_motion_and_speed_by_semantic_role(prompt: str) -> None:
+    spec = compile_bearing_navigation_v2(prompt)
+    assert spec is not None
+    assert "2.423 h on bearing 062°" in spec["text_fallback"]
+
+
 def test_non_visual_or_non_navigation_requests_do_not_trigger() -> None:
     assert not is_bearing_navigation_request(
         "Show the proof that reverse bearings differ by 180 degrees in text only"

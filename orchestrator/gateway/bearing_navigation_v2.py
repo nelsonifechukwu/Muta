@@ -41,7 +41,7 @@ _ELIDED_BEARING = re.compile(
     re.IGNORECASE,
 )
 _DISTANCE_BEARING = re.compile(
-    r"(\d+(?:\.\d+)?)\s*km\b.{0,96}?\bbearing(?:\s+of|\s+is|\s*=|\s*:)?\s*\(?\s*(\d{1,3}(?:\.\d+)?)",
+    r"(\d+(?:\.\d+)?)\s*km(?!\s*/\s*h)\b.{0,96}?\bbearing(?:\s+of|\s+is|\s*=|\s*:)?\s*\(?\s*(\d{1,3}(?:\.\d+)?)",
     re.IGNORECASE | re.DOTALL,
 )
 _CARDINAL = {
@@ -439,32 +439,103 @@ def _ray_intersection_solution(text: str) -> NavigationSolution | None:
     )
 
 
+def _role_speed(
+    text: str, role_pattern: str, *, excluded_starts: set[int] | None = None
+) -> tuple[float, int] | None:
+    roles = list(re.finditer(rf"\b(?:{role_pattern})\b", text, re.IGNORECASE))
+    speeds = list(re.finditer(r"(\d+(?:\.\d+)?)\s*km/h", text, re.IGNORECASE))
+    if not roles or not speeds:
+        return None
+    excluded = excluded_starts or set()
+    candidates = [speed for speed in speeds if speed.start() not in excluded]
+    if not candidates:
+        return None
+
+    def association_score(speed: re.Match[str]) -> tuple[int, int]:
+        before = text[: speed.start()]
+        after = text[speed.end() :]
+        clause_start = max(before.rfind(mark) for mark in (".", ";", "\n")) + 1
+        next_boundaries = [
+            position for mark in (".", ";", "\n") if (position := after.find(mark)) >= 0
+        ]
+        clause_end = speed.end() + (min(next_boundaries) if next_boundaries else len(after))
+        local_roles = [
+            role for role in roles if clause_start <= role.start() and role.end() <= clause_end
+        ]
+        preceding = [role for role in local_roles if role.end() <= speed.start()]
+        if preceding:
+            return 0, min(speed.start() - role.end() for role in preceding)
+        if local_roles:
+            return 1, min(role.start() - speed.end() for role in local_roles)
+        return 2, min(abs(speed.start() - role.start()) for role in roles)
+
+    match = min(candidates, key=association_score)
+    return float(match.group(1)), match.start()
+
+
+def _motion_bearing(text: str, target_speed_position: int) -> float:
+    candidates: list[tuple[int, float]] = []
+    numeric_pattern = re.compile(
+        r"(?:travels?|moves?|moving|sails?|steams?).{0,72}?\bbearing"
+        r"(?:\s+of|\s+is|\s*=|\s*:)?\s*\(?\s*(\d{1,3}(?:\.\d+)?)",
+        re.IGNORECASE,
+    )
+    cardinal_pattern = re.compile(
+        r"(?:travels?|moves?|moving|sails?|steams?).{0,48}?"
+        r"(?:due\s+)?(north|south|east|west|northeast|northwest|southeast|southwest)\b",
+        re.IGNORECASE,
+    )
+    for match in numeric_pattern.finditer(text):
+        distance = (
+            0
+            if match.start() <= target_speed_position <= match.end()
+            else min(
+                abs(target_speed_position - match.start()),
+                abs(target_speed_position - match.end()),
+            )
+        )
+        candidates.append((distance, _bearing(float(match.group(1)))))
+    for match in cardinal_pattern.finditer(text):
+        distance = (
+            0
+            if match.start() <= target_speed_position <= match.end()
+            else min(
+                abs(target_speed_position - match.start()),
+                abs(target_speed_position - match.end()),
+            )
+        )
+        candidates.append((distance, _CARDINAL[match.group(1).casefold()]))
+    return min(candidates, default=(0, 180.0), key=lambda item: item[0])[1]
+
+
 def _interception_solution(text: str) -> NavigationSolution | None:
     pairs = _distance_bearing_pairs(text)
-    speeds = [float(value) for value in re.findall(r"(\d+(?:\.\d+)?)\s*km/h", text, re.IGNORECASE)]
-    if not pairs or len(speeds) < 2:
+    rescuer = _role_speed(
+        text,
+        r"rescuer|rescue\s+(?:boat|vessel|craft)|lifeboat|patrol\s+boat|helicopter|pursuer",
+    )
+    target = _role_speed(
+        text,
+        r"ship|vessel|target|aircraft|vehicle",
+        excluded_starts={rescuer[1]} if rescuer else None,
+    )
+    fallback_speeds = list(re.finditer(r"(\d+(?:\.\d+)?)\s*km/h", text, re.IGNORECASE))
+    if target is None and fallback_speeds:
+        target = (float(fallback_speeds[0].group(1)), fallback_speeds[0].start())
+    if rescuer is None and len(fallback_speeds) >= 2:
+        fallback = next(
+            (match for match in fallback_speeds if target is None or match.start() != target[1]),
+            None,
+        )
+        if fallback is not None:
+            rescuer = (float(fallback.group(1)), fallback.start())
+    if not pairs or target is None or rescuer is None:
         return None
     initial_distance, initial_bearing = pairs[0]
-    target_speed, rescuer_speed = speeds[0], speeds[1]
+    target_speed, target_speed_position = target
+    rescuer_speed, _ = rescuer
     initial = _components(initial_distance, initial_bearing)
-    numeric_direction = re.search(
-        r"(?:travels?|moves?|moving|sails?|steams?).{0,64}?\bbearing"
-        r"(?:\s+of|\s+is|\s*=|\s*:)?\s*\(?\s*(\d{1,3}(?:\.\d+)?)",
-        text,
-        re.IGNORECASE,
-    )
-    cardinal_direction = re.search(
-        r"(?:travels?|moves?|moving|sails?|steams?)\s+(?:on\s+a\s+bearing\s+of\s+)?"
-        r"(?:due\s+)?(north|south|east|west|northeast|northwest|southeast|southwest)\b",
-        text,
-        re.IGNORECASE,
-    )
-    if numeric_direction:
-        target_bearing = _bearing(float(numeric_direction.group(1)))
-    elif cardinal_direction:
-        target_bearing = _CARDINAL[cardinal_direction.group(1).casefold()]
-    else:
-        target_bearing = 180.0
+    target_bearing = _motion_bearing(text, target_speed_position)
     target_velocity = _components(target_speed, target_bearing)
     # |p + vt|² = s²t². Select the earliest finite positive root.
     a = target_velocity[0] ** 2 + target_velocity[1] ** 2 - rescuer_speed**2
