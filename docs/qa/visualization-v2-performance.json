@@ -6,10 +6,10 @@
     "sync_before_bytes": 74628,
     "sync_after_bytes": 108207,
     "sync_delta_bytes": 33579,
-    "sync_parse_before_ms": 0.5563,
-    "sync_parse_after_ms": 0.7986,
-    "sync_parse_delta_ms": 0.2423,
-    "lazy_v2_bytes": 222947,
+    "sync_parse_before_ms": 0.514,
+    "sync_parse_after_ms": 0.7194,
+    "sync_parse_delta_ms": 0.2054,
+    "lazy_v2_bytes": 222912,
     "vendor_bytes": 1102856,
     "new_network_dependencies": 0
   },
@@ -22,22 +22,22 @@
     },
     "by_renderer": {
       "svg": {
-        "count": 74,
-        "mean_elapsed_ms": 111.642,
-        "p95_elapsed_ms": 266.0,
-        "max_elapsed_ms": 350.8
+        "count": 75,
+        "mean_elapsed_ms": 112.2,
+        "p95_elapsed_ms": 265.8,
+        "max_elapsed_ms": 327.3
       },
       "canvas": {
-        "count": 21,
-        "mean_elapsed_ms": 171.476,
-        "p95_elapsed_ms": 323.7,
-        "max_elapsed_ms": 333.4
+        "count": 20,
+        "mean_elapsed_ms": 178.055,
+        "p95_elapsed_ms": 323.2,
+        "max_elapsed_ms": 353.7
       },
       "three": {
         "count": 105,
-        "mean_elapsed_ms": 282.866,
-        "p95_elapsed_ms": 336.7,
-        "max_elapsed_ms": 710.7
+        "mean_elapsed_ms": 308.615,
+        "p95_elapsed_ms": 437.7,
+        "max_elapsed_ms": 698.2
       }
     },
     "maximum_triangles": 26594,
@@ -48,8 +48,8 @@
     },
     "observed_animation_frame_interval_ms": {
       "minimum": 33.4,
-      "median": 50.0,
-      "maximum": 50.1
+      "median": 49.9,
+      "maximum": 50.0
     }
   },
   "responsive_matrix": {
@@ -67,7 +67,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 48312949,
+        "used_js_heap_bytes": 56431621,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -84,7 +84,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 43239596,
+        "used_js_heap_bytes": 58856270,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -101,7 +101,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 55661813,
+        "used_js_heap_bytes": 68779504,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -118,7 +118,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 54474692,
+        "used_js_heap_bytes": 68289387,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -135,7 +135,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 55317447,
+        "used_js_heap_bytes": 67666800,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -152,13 +152,13 @@
         },
         "reduced_motion": true,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 27548281,
+        "used_js_heap_bytes": 45115825,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
       }
     ],
-    "peak_used_js_heap_bytes": 55661813,
+    "peak_used_js_heap_bytes": 68779504,
     "all_passed": true
   },
   "active_frame_lru": {
