@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "phase": "post-holdout-final",
-  "revision": "6fafb5fac8fd459cd17631ea6bb9a1d7ae771ce5",
+  "revision": "edb6c93ea0901146911a8c0762d8fc247f633158",
   "pre_holdout_candidate": {
     "sha": "ae3cc2e1572b042a0d53ab5af4fe1143e9cb71cd",
     "frozen_at": "2026-08-27T12:07:54+01:00"
@@ -47,8 +47,8 @@
           "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=2x+3. slope 2; y-intercept (0,3). two-dimensional plot of y=2x+3. slope 2; y-intercept (0,3).    y=2x+3   y-intercept (0,3)   slope rise/run = 2/1  "
         }
       },
-      "compile_ms": 5.244,
-      "browser_ms": 99.6,
+      "compile_ms": 5.302,
+      "browser_ms": 116.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -70,7 +70,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Two-dimensional plot of y=2x+3. Slope 2; y-intercept (0,3)."
         },
-        "elapsed_ms": 99.6,
+        "elapsed_ms": 116.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -116,8 +116,8 @@
           "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=x^2-4x+3. vertex (2,-1); axis x=2. two-dimensional plot of y=x^2-4x+3. vertex (2,-1); axis x=2.    y=x^2-4x+3   vertex (2,-1); roots 1, 3   axis of symmetry x=2  "
         }
       },
-      "compile_ms": 1.776,
-      "browser_ms": 94.1,
+      "compile_ms": 1.873,
+      "browser_ms": 100.1,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -139,7 +139,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Two-dimensional plot of y=x^2-4x+3. Vertex (2,-1); axis x=2."
         },
-        "elapsed_ms": 94.1,
+        "elapsed_ms": 100.1,
         "viewport": {
           "width": 742,
           "height": 520
@@ -185,8 +185,8 @@
           "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=sin(x). amplitude about 1 and wavelength about 6.28. two-dimensional plot of y=sin(x). amplitude about 1 and wavelength about 6.28.    y=sin(x)   amplitude≈1; wavelength≈6.28; extrema and zero crossings  "
         }
       },
-      "compile_ms": 2.02,
-      "browser_ms": 102.4,
+      "compile_ms": 1.942,
+      "browser_ms": 81.3,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -208,7 +208,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Two-dimensional plot of y=sin(x). Amplitude about 1 and wavelength about 6.28."
         },
-        "elapsed_ms": 102.4,
+        "elapsed_ms": 81.3,
         "viewport": {
           "width": 742,
           "height": 520
@@ -254,8 +254,8 @@
           "point_count": 117
         }
       },
-      "compile_ms": 5.417,
-      "browser_ms": 96.2,
+      "compile_ms": 5.535,
+      "browser_ms": 22.1,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -277,7 +277,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Two-dimensional plot of x^2+y^2=9. Centre (0,0); radius about 3."
         },
-        "elapsed_ms": 96.2,
+        "elapsed_ms": 22.1,
         "viewport": {
           "width": 742,
           "height": 520
@@ -327,8 +327,8 @@
           "clipped": false
         }
       },
-      "compile_ms": 95.792,
-      "browser_ms": 384.0,
+      "compile_ms": 96.553,
+      "browser_ms": 370.4,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -371,10 +371,10 @@
           "visual_state_signature": 31002913,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.39999999999998,
+          "observed_frame_interval_ms": 50.79999999999998,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 384,
+        "elapsed_ms": 370.4,
         "viewport": {
           "width": 742,
           "height": 520
@@ -461,8 +461,8 @@
           ]
         }
       },
-      "compile_ms": 0.206,
-      "browser_ms": 27.4,
+      "compile_ms": 0.25,
+      "browser_ms": 29.8,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -484,7 +484,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Head-to-tail and parallelogram constructions agree: a=(3,2), b=(1,4), and a+b=(4,6)."
         },
-        "elapsed_ms": 27.4,
+        "elapsed_ms": 29.8,
         "viewport": {
           "width": 742,
           "height": 520
@@ -540,8 +540,8 @@
           }
         }
       },
-      "compile_ms": 1.49,
-      "browser_ms": 106.6,
+      "compile_ms": 1.586,
+      "browser_ms": 121.0,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -565,7 +565,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Atomic number Z=13: 13 protons and 13 electrons arranged into bounded shells."
         },
-        "elapsed_ms": 106.6,
+        "elapsed_ms": 121,
         "viewport": {
           "width": 742,
           "height": 520
@@ -646,8 +646,8 @@
           }
         }
       },
-      "compile_ms": 0.269,
-      "browser_ms": 43.0,
+      "compile_ms": 0.3,
+      "browser_ms": 98.6,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -671,7 +671,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "mitochondrion: makes ATP."
         },
-        "elapsed_ms": 43,
+        "elapsed_ms": 98.6,
         "viewport": {
           "width": 742,
           "height": 520
@@ -747,8 +747,8 @@
           }
         }
       },
-      "compile_ms": 0.238,
-      "browser_ms": 86.8,
+      "compile_ms": 0.231,
+      "browser_ms": 88.4,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -774,7 +774,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Closed switch: current I = V/R = 1.00 A (V=17.5 V, R=17.5 Ω)."
         },
-        "elapsed_ms": 86.8,
+        "elapsed_ms": 88.4,
         "viewport": {
           "width": 742,
           "height": 520
@@ -853,8 +853,8 @@
           "node_count": 5
         }
       },
-      "compile_ms": 0.186,
-      "browser_ms": 21.9,
+      "compile_ms": 0.212,
+      "browser_ms": 22.8,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -876,7 +876,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Place values 8, 4, 2, 1 with bits 1, 1, 0, 1 give 8+4+0+1=13, so 13₁₀=1101₂."
         },
-        "elapsed_ms": 21.9,
+        "elapsed_ms": 22.8,
         "viewport": {
           "width": 742,
           "height": 520
@@ -964,8 +964,8 @@
           }
         }
       },
-      "compile_ms": 0.483,
-      "browser_ms": 86.0,
+      "compile_ms": 0.514,
+      "browser_ms": 85.5,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -991,7 +991,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "a=1.80, b=3.70, c=3.70; vertex (-1.03, 1.80)."
         },
-        "elapsed_ms": 86,
+        "elapsed_ms": 85.5,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1087,8 +1087,8 @@
           }
         }
       },
-      "compile_ms": 0.555,
-      "browser_ms": 42.4,
+      "compile_ms": 0.546,
+      "browser_ms": 45.4,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1112,7 +1112,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "angle = 263"
         },
-        "elapsed_ms": 42.4,
+        "elapsed_ms": 45.4,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1176,8 +1176,8 @@
           ]
         }
       },
-      "compile_ms": 1.482,
-      "browser_ms": 302.2,
+      "compile_ms": 1.459,
+      "browser_ms": 270.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1224,10 +1224,10 @@
           "visual_state_signature": 30989561,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.89999999999998,
+          "observed_frame_interval_ms": 48.000000000000014,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 302.2,
+        "elapsed_ms": 270.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1302,8 +1302,8 @@
           ]
         }
       },
-      "compile_ms": 2.052,
-      "browser_ms": 291.5,
+      "compile_ms": 1.964,
+      "browser_ms": 286.4,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1350,10 +1350,10 @@
           "visual_state_signature": 30989906,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 33.400000000000006,
+          "observed_frame_interval_ms": 49.999999999999986,
           "state_description": "orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 291.5,
+        "elapsed_ms": 286.4,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1511,8 +1511,8 @@
           }
         }
       },
-      "compile_ms": 0.506,
-      "browser_ms": 65.3,
+      "compile_ms": 0.497,
+      "browser_ms": 78.2,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1537,7 +1537,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Range 159.7 m; maximum height 78.3 m."
         },
-        "elapsed_ms": 65.3,
+        "elapsed_ms": 78.2,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1618,8 +1618,8 @@
           }
         }
       },
-      "compile_ms": 0.269,
-      "browser_ms": 41.0,
+      "compile_ms": 0.263,
+      "browser_ms": 45.9,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1643,7 +1643,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "At θ=45°, N=mg cosθ, friction μN with μ=0.2, and downhill a=max(0,g(sinθ−μcosθ))=5.55 m/s²."
         },
-        "elapsed_ms": 41,
+        "elapsed_ms": 45.9,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1703,8 +1703,8 @@
           "initial_restoring_force": -12
         }
       },
-      "compile_ms": 0.312,
-      "browser_ms": 62.6,
+      "compile_ms": 0.331,
+      "browser_ms": 65.1,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1729,7 +1729,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Hooke's law: k=22.00 N/m, x=1.40 m, restoring force F=−kx=-30.80 N, opposite the displacement."
         },
-        "elapsed_ms": 62.6,
+        "elapsed_ms": 65.1,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1816,8 +1816,8 @@
           }
         }
       },
-      "compile_ms": 0.285,
-      "browser_ms": 84.2,
+      "compile_ms": 0.307,
+      "browser_ms": 87.8,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1843,7 +1843,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Closed switch: current I = V/R = 1.00 A (V=17.5 V, R=17.5 Ω)."
         },
-        "elapsed_ms": 84.2,
+        "elapsed_ms": 87.8,
         "viewport": {
           "width": 742,
           "height": 520
@@ -1946,8 +1946,8 @@
           }
         }
       },
-      "compile_ms": 0.232,
-      "browser_ms": 63.9,
+      "compile_ms": 0.251,
+      "browser_ms": 68.1,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -1972,7 +1972,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "incident angle = 58; medium = water"
         },
-        "elapsed_ms": 63.9,
+        "elapsed_ms": 68.1,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2058,8 +2058,8 @@
           }
         }
       },
-      "compile_ms": 0.294,
-      "browser_ms": 143.4,
+      "compile_ms": 0.326,
+      "browser_ms": 145.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -2091,7 +2091,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "NH₃: trigonal pyramidal, about 107°."
         },
-        "elapsed_ms": 143.4,
+        "elapsed_ms": 145.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2159,8 +2159,8 @@
           }
         }
       },
-      "compile_ms": 0.583,
-      "browser_ms": 47.5,
+      "compile_ms": 0.623,
+      "browser_ms": 49.0,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -2184,7 +2184,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "x = 1.4"
         },
-        "elapsed_ms": 47.5,
+        "elapsed_ms": 49,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2252,7 +2252,7 @@
           }
         }
       },
-      "compile_ms": 0.462,
+      "compile_ms": 0.501,
       "browser_ms": 43.2,
       "python_passed": true,
       "browser_evaluated": true,
@@ -2340,8 +2340,8 @@
           ]
         }
       },
-      "compile_ms": 1.998,
-      "browser_ms": 99.8,
+      "compile_ms": 2.14,
+      "browser_ms": 137.4,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -2366,7 +2366,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Linked point (7.30, 7.30) has f=x²+y²=106.580 and gradient ∇f=(14.60, 14.60) in both views."
         },
-        "elapsed_ms": 99.8,
+        "elapsed_ms": 137.4,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2450,8 +2450,8 @@
           }
         }
       },
-      "compile_ms": 0.395,
-      "browser_ms": 76.2,
+      "compile_ms": 0.397,
+      "browser_ms": 73.6,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -2475,7 +2475,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Shear matrix: λ=1 is repeated, but only the x-axis supplies an independent real eigenvector."
         },
-        "elapsed_ms": 76.2,
+        "elapsed_ms": 73.6,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2548,8 +2548,8 @@
           }
         }
       },
-      "compile_ms": 0.276,
-      "browser_ms": 42.5,
+      "compile_ms": 0.296,
+      "browser_ms": 43.3,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -2573,7 +2573,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Shear matrix: λ=1 is repeated, but only the x-axis supplies an independent real eigenvector."
         },
-        "elapsed_ms": 42.5,
+        "elapsed_ms": 43.3,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2655,8 +2655,8 @@
           }
         }
       },
-      "compile_ms": 0.465,
-      "browser_ms": 283.7,
+      "compile_ms": 0.493,
+      "browser_ms": 286.3,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -2681,16 +2681,16 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.006250000000000004
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 149668,
           "visual_state_signature": 149668,
           "animation_state": "playing",
-          "animation_progress": 0.006250000000000004,
-          "observed_frame_interval_ms": 50.00000000000003,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "A=2.20, λ=5.90, f=3.70; crest and trough lie ±A from equilibrium. · ▶ 1%"
         },
-        "elapsed_ms": 283.7,
+        "elapsed_ms": 286.3,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2836,8 +2836,8 @@
           }
         }
       },
-      "compile_ms": 0.753,
-      "browser_ms": 293.7,
+      "compile_ms": 0.709,
+      "browser_ms": 295.4,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -2861,16 +2861,16 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.004175000000000001
+            "__animation_progress": 0.0041875
           },
           "geometry_signature": 125390,
           "visual_state_signature": 125390,
           "animation_state": "playing",
-          "animation_progress": 0.004175000000000001,
-          "observed_frame_interval_ms": 33.400000000000006,
-          "state_description": "spring constant = 7.3; mass = 7.3; play = 0; pause = 1; restart = 1;   animation progress = 0.004175000000000001 · ▶ 0%"
+          "animation_progress": 0.0041875,
+          "observed_frame_interval_ms": 33.5,
+          "state_description": "spring constant = 7.3; mass = 7.3; play = 0; pause = 1; restart = 1;   animation progress = 0.0041875 · ▶ 0%"
         },
-        "elapsed_ms": 293.7,
+        "elapsed_ms": 295.4,
         "viewport": {
           "width": 742,
           "height": 520
@@ -2986,8 +2986,8 @@
           }
         }
       },
-      "compile_ms": 0.29,
-      "browser_ms": 115.4,
+      "compile_ms": 0.257,
+      "browser_ms": 121.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -3014,7 +3014,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Elastic result: v₁=3.50, v₂=3.50; Δp=0.0e+0, ΔK=0.0e+0."
         },
-        "elapsed_ms": 115.4,
+        "elapsed_ms": 121.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -3117,8 +3117,8 @@
           }
         }
       },
-      "compile_ms": 1.235,
-      "browser_ms": 136.5,
+      "compile_ms": 1.214,
+      "browser_ms": 124.2,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -3149,7 +3149,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "positive charge x = -0.9; negative charge x = 2.2; test x = 1.4; test y = 1.4"
         },
-        "elapsed_ms": 136.5,
+        "elapsed_ms": 124.2,
         "viewport": {
           "width": 742,
           "height": 520
@@ -3255,8 +3255,8 @@
           }
         }
       },
-      "compile_ms": 0.803,
-      "browser_ms": 366.5,
+      "compile_ms": 0.816,
+      "browser_ms": 378.6,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -3277,16 +3277,16 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.0061875
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 169256,
           "visual_state_signature": 169256,
           "animation_state": "playing",
-          "animation_progress": 0.0061875,
-          "observed_frame_interval_ms": 49.5,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "discharging RC transient with τ=RC=21.46 display units; voltage and current share the circuit state. · ▶ 1%"
         },
-        "elapsed_ms": 366.5,
+        "elapsed_ms": 378.6,
         "viewport": {
           "width": 742,
           "height": 520
@@ -3475,8 +3475,8 @@
           }
         }
       },
-      "compile_ms": 0.4,
-      "browser_ms": 256.4,
+      "compile_ms": 0.408,
+      "browser_ms": 264.2,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -3496,16 +3496,16 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006137499999999999
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 201297,
           "visual_state_signature": 201297,
           "animation_state": "playing",
-          "animation_progress": 0.006137499999999999,
-          "observed_frame_interval_ms": 49.099999999999994,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "Step 0: compare target 13 with midpoint 7; discard left half, shrinking [0,6]. · ▶ 1%"
         },
-        "elapsed_ms": 256.4,
+        "elapsed_ms": 264.2,
         "viewport": {
           "width": 742,
           "height": 520
@@ -3745,8 +3745,8 @@
           }
         }
       },
-      "compile_ms": 0.67,
-      "browser_ms": 108.4,
+      "compile_ms": 0.698,
+      "browser_ms": 97.2,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -3770,7 +3770,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "step = 15"
         },
-        "elapsed_ms": 108.4,
+        "elapsed_ms": 97.2,
         "viewport": {
           "width": 742,
           "height": 520
@@ -3876,8 +3876,8 @@
           }
         }
       },
-      "compile_ms": 0.271,
-      "browser_ms": 298.1,
+      "compile_ms": 0.289,
+      "browser_ms": 301.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -3897,16 +3897,16 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.008337500000000003
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 706115,
           "visual_state_signature": 706115,
           "animation_state": "playing",
-          "animation_progress": 0.008337500000000003,
-          "observed_frame_interval_ms": 50.00000000000003,
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
           "state_description": "Step 0: 11 is already in the tree; the search path is root → right and no duplicate node is added. · ▶ 1%"
         },
-        "elapsed_ms": 298.1,
+        "elapsed_ms": 301.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4083,8 +4083,8 @@
           }
         }
       },
-      "compile_ms": 0.33,
-      "browser_ms": 281.5,
+      "compile_ms": 0.323,
+      "browser_ms": 295.6,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4105,16 +4105,16 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.0041875
+            "__animation_progress": 0.00625
           },
           "geometry_signature": 333666,
           "visual_state_signature": 333666,
           "animation_state": "playing",
-          "animation_progress": 0.0041875,
-          "observed_frame_interval_ms": 33.5,
-          "state_description": "Shortest B → C → A has total weight 3. Settled: none. · ▶ 0%"
+          "animation_progress": 0.00625,
+          "observed_frame_interval_ms": 50,
+          "state_description": "Shortest B → C → A has total weight 3. Settled: none. · ▶ 1%"
         },
-        "elapsed_ms": 281.5,
+        "elapsed_ms": 295.6,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4275,8 +4275,8 @@
           "output_consistent": true
         }
       },
-      "compile_ms": 0.349,
-      "browser_ms": 71.0,
+      "compile_ms": 0.378,
+      "browser_ms": 73.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4301,7 +4301,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Forward step 3: x₁=0.6, x₂=0.4; h₁=ReLU(7.30x₁+0.5x₂−0.2)=4.380, h₂=0.180, h₃=0.340, and sigmoid output ŷ=0.982."
         },
-        "elapsed_ms": 71,
+        "elapsed_ms": 73.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4375,8 +4375,8 @@
           ]
         }
       },
-      "compile_ms": 2.169,
-      "browser_ms": 168.0,
+      "compile_ms": 2.161,
+      "browser_ms": 142.4,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4401,7 +4401,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Gradient descent step 12: learning rate 0.37, point (0.000, 0.000), loss x²+2y²=0.0000; both views show the same trajectory."
         },
-        "elapsed_ms": 168,
+        "elapsed_ms": 142.4,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4481,8 +4481,8 @@
           }
         }
       },
-      "compile_ms": 0.552,
-      "browser_ms": 98.2,
+      "compile_ms": 0.56,
+      "browser_ms": 102.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4511,7 +4511,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Equal wheel speeds produce a straight path; the instantaneous centre is at infinity."
         },
-        "elapsed_ms": 98.2,
+        "elapsed_ms": 102.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4584,8 +4584,8 @@
           "links": 3
         }
       },
-      "compile_ms": 0.149,
-      "browser_ms": 89.4,
+      "compile_ms": 0.17,
+      "browser_ms": 89.8,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4611,7 +4611,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Three-link forward kinematics gives end effector (63.6, 274.0) px from cumulative joint angles 83°, 83°, 83°."
         },
-        "elapsed_ms": 89.4,
+        "elapsed_ms": 89.8,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4710,8 +4710,8 @@
           }
         }
       },
-      "compile_ms": 1.421,
-      "browser_ms": 107.3,
+      "compile_ms": 1.353,
+      "browser_ms": 115.6,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4740,7 +4740,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Nyquist condition satisfied: sampling rate is at least twice the signal frequency."
         },
-        "elapsed_ms": 107.3,
+        "elapsed_ms": 115.6,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4861,8 +4861,8 @@
           }
         }
       },
-      "compile_ms": 1.418,
-      "browser_ms": 74.3,
+      "compile_ms": 1.482,
+      "browser_ms": 68.7,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4886,7 +4886,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "terms = 11"
         },
-        "elapsed_ms": 74.3,
+        "elapsed_ms": 68.7,
         "viewport": {
           "width": 742,
           "height": 520
@@ -4948,8 +4948,8 @@
           "direction_error": 1.9229626863835638e-16
         }
       },
-      "compile_ms": 0.414,
-      "browser_ms": 399.9,
+      "compile_ms": 0.418,
+      "browser_ms": 403.5,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -4983,7 +4983,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "At (2.0, 2.0, 2.0), F=(−y,x,z)=(-2.0, 2.0, 2.0); the selected arrow matches the sampled 3D field."
         },
-        "elapsed_ms": 399.9,
+        "elapsed_ms": 403.5,
         "viewport": {
           "width": 742,
           "height": 520
@@ -5080,8 +5080,8 @@
           }
         }
       },
-      "compile_ms": 2.032,
-      "browser_ms": 336.7,
+      "compile_ms": 2.065,
+      "browser_ms": 386.0,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -5105,16 +5105,16 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.008325000000000003
+            "__animation_progress": 0.010424999999999997
           },
           "geometry_signature": 106128,
           "visual_state_signature": 106128,
           "animation_state": "playing",
-          "animation_progress": 0.008325000000000003,
-          "observed_frame_interval_ms": 49.900000000000034,
-          "state_description": "angle 1 = 122; angle 2 = 122.2; play = 0; pause = 1; restart = 1;   animation progress = 0.008325000000000003 · ▶ 1%"
+          "animation_progress": 0.010424999999999997,
+          "observed_frame_interval_ms": 50,
+          "state_description": "angle 1 = 122; angle 2 = 122.2; play = 0; pause = 1; restart = 1;   animation progress = 0.010424999999999997 · ▶ 1%"
         },
-        "elapsed_ms": 336.7,
+        "elapsed_ms": 386,
         "viewport": {
           "width": 742,
           "height": 520
@@ -5226,8 +5226,8 @@
           ]
         }
       },
-      "compile_ms": 2.649,
-      "browser_ms": 663.4,
+      "compile_ms": 2.762,
+      "browser_ms": 732.8,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -5241,7 +5241,7 @@
           "draw_calls": 2,
           "gpu_calls": 3,
           "gpu_triangles": 720,
-          "gpu_lines": 9,
+          "gpu_lines": 8,
           "gpu_points": 0,
           "gl_error": 0,
           "triangles": 0,
@@ -5256,16 +5256,16 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.0125
+            "__animation_progress": 0.010412499999999995
           },
-          "geometry_signature": 22583,
-          "visual_state_signature": 22583,
+          "geometry_signature": 20347,
+          "visual_state_signature": 20347,
           "animation_state": "playing",
-          "animation_progress": 0.0125,
-          "observed_frame_interval_ms": 50,
+          "animation_progress": 0.010412499999999995,
+          "observed_frame_interval_ms": 49.89999999999998,
           "state_description": "Lorenz system σ=16.0, ρ=32.0, β=3.200; the bounded deterministic trajectory has 500 samples across both lobes. · ▶ 1%"
         },
-        "elapsed_ms": 663.4,
+        "elapsed_ms": 732.8,
         "viewport": {
           "width": 742,
           "height": 520
@@ -5383,8 +5383,8 @@
           "clipped": true
         }
       },
-      "compile_ms": 0.619,
-      "browser_ms": 575.6,
+      "compile_ms": 0.626,
+      "browser_ms": 567.5,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -5428,10 +5428,10 @@
           "visual_state_signature": 31073379,
           "animation_state": "paused",
           "animation_progress": 0,
-          "observed_frame_interval_ms": 49.900000000000034,
+          "observed_frame_interval_ms": 50,
           "state_description": "clip z = 1.43457568611079; orbit = 1; reset view = 1"
         },
-        "elapsed_ms": 575.6,
+        "elapsed_ms": 567.5,
         "viewport": {
           "width": 742,
           "height": 520
@@ -5517,8 +5517,8 @@
           "orthogonal": true
         }
       },
-      "compile_ms": 1.314,
-      "browser_ms": 626.2,
+      "compile_ms": 1.203,
+      "browser_ms": 645.6,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -5546,16 +5546,16 @@
             "play": 0,
             "pause": 1,
             "restart": 1,
-            "__animation_progress": 0.010446250000000006
+            "__animation_progress": 0.010424999999999997
           },
-          "geometry_signature": 37561,
-          "visual_state_signature": 37561,
+          "geometry_signature": 37540,
+          "visual_state_signature": 37540,
           "animation_state": "playing",
-          "animation_progress": 0.010446250000000006,
-          "observed_frame_interval_ms": 49.89999999999998,
+          "animation_progress": 0.010424999999999997,
+          "observed_frame_interval_ms": 33.39999999999998,
           "state_description": "Electromagnetic wave amplitude 1.50 and wavelength 4.70: E ⟂ B, both are perpendicular to propagation k=E×B. · ▶ 1%"
         },
-        "elapsed_ms": 626.2,
+        "elapsed_ms": 645.6,
         "viewport": {
           "width": 742,
           "height": 520
@@ -5670,8 +5670,8 @@
           }
         }
       },
-      "compile_ms": 0.708,
-      "browser_ms": 86.7,
+      "compile_ms": 0.676,
+      "browser_ms": 116.1,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -5695,7 +5695,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "time = 7.3"
         },
-        "elapsed_ms": 86.7,
+        "elapsed_ms": 116.1,
         "viewport": {
           "width": 742,
           "height": 520
@@ -5777,8 +5777,8 @@
           }
         }
       },
-      "compile_ms": 0.754,
-      "browser_ms": 283.9,
+      "compile_ms": 0.804,
+      "browser_ms": 280.8,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -5797,16 +5797,16 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.00625
+            "__animation_progress": 0.004175000000000001
           },
           "geometry_signature": 152401,
           "visual_state_signature": 152401,
           "animation_state": "playing",
-          "animation_progress": 0.00625,
-          "observed_frame_interval_ms": 50,
-          "state_description": "36.5 mL titrant added; curve and probe agree at pH 11.82, with equivalence near 25 mL. · ▶ 1%"
+          "animation_progress": 0.004175000000000001,
+          "observed_frame_interval_ms": 33.400000000000006,
+          "state_description": "36.5 mL titrant added; curve and probe agree at pH 11.82, with equivalence near 25 mL. · ▶ 0%"
         },
-        "elapsed_ms": 283.9,
+        "elapsed_ms": 280.8,
         "viewport": {
           "width": 742,
           "height": 520
@@ -5959,8 +5959,8 @@
           }
         }
       },
-      "compile_ms": 0.258,
-      "browser_ms": 264.2,
+      "compile_ms": 0.279,
+      "browser_ms": 259.8,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -5980,16 +5980,16 @@
             "play": 1,
             "pause": 0,
             "restart": 0,
-            "__animation_progress": 0.006275000000000002
+            "__animation_progress": 0.006162500000000001
           },
           "geometry_signature": 404404,
           "visual_state_signature": 404404,
           "animation_state": "playing",
-          "animation_progress": 0.006275000000000002,
-          "observed_frame_interval_ms": 50.20000000000002,
-          "state_description": "address = 186; step = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.006275000000000002 · ▶ 1%"
+          "animation_progress": 0.006162500000000001,
+          "observed_frame_interval_ms": 49.30000000000001,
+          "state_description": "address = 186; step = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.006162500000000001 · ▶ 1%"
         },
-        "elapsed_ms": 264.2,
+        "elapsed_ms": 259.8,
         "viewport": {
           "width": 742,
           "height": 520
@@ -6095,8 +6095,8 @@
           "estimate_mean_error": 0.07829636945331428
         }
       },
-      "compile_ms": 1.088,
-      "browser_ms": 219.2,
+      "compile_ms": 1.16,
+      "browser_ms": 115.5,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -6126,7 +6126,7 @@
           "observed_frame_interval_ms": 0,
           "state_description": "Localization step 44: true pose (1.40, -1.14), noisy odometry (2.46, -1.45), fused estimate (2.10, -1.11), position error 0.705."
         },
-        "elapsed_ms": 219.2,
+        "elapsed_ms": 115.5,
         "viewport": {
           "width": 742,
           "height": 520
@@ -6271,8 +6271,8 @@
           }
         }
       },
-      "compile_ms": 1.345,
-      "browser_ms": 374.3,
+      "compile_ms": 1.396,
+      "browser_ms": 389.1,
       "python_passed": true,
       "browser_evaluated": true,
       "browser_passed": true,
@@ -6302,7 +6302,7 @@
           "observed_frame_interval_ms": 50,
           "state_description": "Step 0, measurement noise 3.70, process noise 0.73: true position 0.00, noisy measurement 0.00, prediction 0.50 with P⁻=2.230, gain K=0.140, update 0.43 with contracted P=1.918. · ▶ 1%"
         },
-        "elapsed_ms": 374.3,
+        "elapsed_ms": 389.1,
         "viewport": {
           "width": 742,
           "height": 520
