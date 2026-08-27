@@ -100,7 +100,8 @@ math are typed AST/enums/numbers, while prose stays inert text data throughout t
   in inert descriptive fields.
 - Treat the durable visualization fence as a server-owned protocol, not model prose. Before the
   gateway appends its validated artifact, remove every complete model-authored `muta-viz` or
-  marked-JSON visualization block from the explanation. As defense in depth for legacy persisted
+  marked-JSON visualization block and any unterminated reserved-protocol tail from the explanation.
+  As defense in depth for legacy persisted
   replies, the browser removes every valid visualization block and renders only the final validated
   artifact, which is the server-owned position. Invalid blocks remain inert literal text. Align
   descriptive-string limits across Python and JavaScript by counting Unicode scalar values rather
@@ -153,6 +154,10 @@ math are typed AST/enums/numbers, while prose stays inert text data throughout t
   relationships execute only through the separately validated typed expression AST. This
   structural boundary is smaller and safer than an incomplete lexical denylist and avoids damaging
   legitimate educational or localized labels.
+  Run the same source-shaped, multilingual, mathematical, URL-looking, and `Await` strings through
+  a real SVG render as a release-gate preflight. Assert their literal text and ARIA values survive,
+  no proposal-controlled markup/resource/event-handler attribute is created, and neither the frame
+  nor its parent gains the probe global. This is a sink-flow test, not source-text classification.
   Relationship, control, and viewpoint grounding uses bounded spans rather than consuming an
   entire clause: mixed directed/undirected components, postfix edge direction, arrow/no-arrow
   phrasing, reordered slider ranges, sea/eye-level viewpoints, and numeric elevation phrases must

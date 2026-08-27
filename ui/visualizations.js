@@ -62,11 +62,11 @@
     heatmap: new Set(["type", "x_domain", "y_domain", "rows", "columns", "values", "color", "label"]),
     panel: new Set(["type", "id", "title", "x_label", "y_label", "members"]),
   });
-  const FENCE = /(^|\n)( {0,3})```muta-viz[\t ]*\r?\n([\s\S]*?)\r?\n\2```[\t ]*(?=\r?\n|$)/g;
+  const FENCE_START = /(^|\n)( {0,3})```muta-viz[\t ]*\r?\n/g;
   // Qwen3-0.6B sometimes obeys the semantic marker but normalizes the unfamiliar fence into
   // display text plus a JSON fence. It is equally safe after strict schema validation, and
   // accepting this one exact degradation makes the shipped smoke model useful.
-  const MARKED_JSON_FENCE = /(^|\n)( {0,3})\$\$muta-viz\$\$[\t ]*\r?\n\2```json[\t ]*\r?\n([\s\S]*?)\r?\n\2```[\t ]*(?=\r?\n|$)/g;
+  const MARKED_JSON_START = /(^|\n)( {0,3})\$\$muta-viz\$\$[\t ]*\r?\n\2```json[\t ]*\r?\n/g;
 
   function finiteNumber(value, min = -1e6, max = 1e6) {
     return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
@@ -880,13 +880,25 @@
 
   function extract(text) {
     const source = typeof text === "string" ? text : "";
-    const matches = [
-      ...Array.from(source.matchAll(FENCE)),
-      ...Array.from(source.matchAll(MARKED_JSON_FENCE)),
-    ].sort((left, right) => left.index - right.index);
+    const blocks = (pattern) => Array.from(source.matchAll(pattern)).flatMap((opening) => {
+      const bodyStart = opening.index + opening[0].length;
+      const closing = new RegExp("\\r?\\n" + opening[2] + "```[\\t ]*(?=\\r?\\n|$)")
+        .exec(source.slice(bodyStart));
+      if (!closing) return [];
+      return [{
+        start: opening.index,
+        end: bodyStart + closing.index + closing[0].length,
+        leading: opening[1],
+        body: source.slice(bodyStart, bodyStart + closing.index),
+      }];
+    });
+    // Scan every opener independently. An unterminated legacy opener must not consume a later
+    // server-owned opener and hide its otherwise-valid artifact.
+    const matches = [...blocks(FENCE_START), ...blocks(MARKED_JSON_START)]
+      .sort((left, right) => left.start - right.start);
     const accepted = [];
     for (const match of matches) {
-      const body = match[3];
+      const body = match.body;
       if (body.length > MAX_SPEC_CHARS) continue;
       let candidate;
       try {
@@ -896,9 +908,9 @@
       }
       const result = validateSpec(candidate);
       if (result.ok) accepted.push({
-        start: match.index,
-        end: match.index + match[0].length,
-        leading: match[1],
+        start: match.start,
+        end: match.end,
+        leading: match.leading,
         spec: result.spec,
       });
     }

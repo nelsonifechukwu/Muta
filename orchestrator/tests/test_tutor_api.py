@@ -827,6 +827,57 @@ def test_nonvisual_stream_replaces_and_persists_without_model_visual_protocol(wi
     assert engine.store.updated_messages[-1] == (43, replacements[0])
 
 
+def test_visual_stream_replaces_unterminated_model_opener_with_trusted_artifact(
+    wired, monkeypatch
+):
+    engine, *_ = wired
+
+    class BrokenVisualEvents:
+        assistant_message_id = 44
+
+        def __init__(self):
+            self._events = iter([("content", "Safe prose.\n\n```muta-viz\n{unfinished")])
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return next(self._events)
+
+        def close(self):
+            return None
+
+    engine.stream_events_chat = lambda **_kwargs: ("conv-broken-viz", 1, BrokenVisualEvents())
+    spec = {
+        "version": 1,
+        "library": "d3",
+        "kind": "bar",
+        "title": "Trusted fruit count",
+        "aria_label": "A trusted bar chart.",
+        "height": 300,
+        "data": [{"label": "apples", "value": 3}],
+    }
+    monkeypatch.setattr(routes, "generate_visualization", lambda *_args, **_kwargs: spec)
+
+    response = client.post(
+        "/v1/tutor/chat/stream",
+        json=turn(text="Draw a bar chart for apples."),
+    )
+    frames = [
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+
+    assert [frame["replace"] for frame in frames if "replace" in frame][-1] == "Safe prose."
+    trusted_delta = [frame["delta"] for frame in frames if "delta" in frame][-1]
+    final = engine.store.updated_messages[-1][1]
+    assert final.startswith("Safe prose.\n\n```muta-viz\n")
+    assert final.count("```muta-viz") == 1
+    assert "{unfinished" not in final
+    assert '"title":"Trusted fruit count"' in final
+    assert trusted_delta in final
+    assert engine.store.updated_messages[-1] == (44, final)
+
+
 def test_tutor_stream_lang_is_trusted_system_context_not_user_text(wired):
     engine, *_ = wired
     user_text = "What is the definition of electron spin?"

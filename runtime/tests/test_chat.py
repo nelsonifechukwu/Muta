@@ -405,6 +405,13 @@ def test_untrusted_visualization_blocks_are_removed_at_the_persistence_boundary(
     assert list(events) == [("content", raw)]
     assert persisted_store.get_messages(cid)[-1]["content"] == "Safe prose.\n\nSafe ending."
 
+    unterminated = "Safe prose.\n\n```muta-viz\n{unfinished"
+    assert strip_model_visualization_blocks(unterminated) == "Safe prose."
+    assert strip_model_visualization_blocks("Safe prose.\n   ```muta-viz") == "Safe prose."
+    assert strip_model_visualization_blocks("Safe prose.\n$$muta-viz$$\n```json\n{") == (
+        "Safe prose."
+    )
+
 
 def test_language_change_replaces_only_the_next_system_prompt_and_keeps_history(tmp_path):
     store = ConversationStore(f"sqlite:///{tmp_path / 'language-change.sqlite3'}")

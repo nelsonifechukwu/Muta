@@ -116,6 +116,16 @@ test("a model-authored valid family before the trusted artifact cannot hijack ex
   assert.equal(result.markdown, "Model prose");
 });
 
+test("an unterminated legacy opener cannot hide the later trusted artifact", () => {
+  const trusted = { ...line, title: "Trusted after broken opener" };
+  const source = `Model prose\n\n\`\`\`muta-viz\n{unfinished\n\n`
+    + `\`\`\`muta-viz\n${JSON.stringify(trusted)}\n\`\`\``;
+  const result = viz.extract(source);
+  assert.deepEqual(result.visualizations, [trusted]);
+  assert.match(result.markdown, /\{unfinished/);
+  assert.doesNotMatch(result.markdown, /Trusted after broken opener/);
+});
+
 test("validates every supported renderer family", () => {
   const bar = {
     version: 1, library: "d3", kind: "bar", title: "Bars", aria_label: "Two bars.", height: 300,

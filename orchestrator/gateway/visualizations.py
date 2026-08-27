@@ -1762,8 +1762,9 @@ def strip_model_visualization_protocol(prose: str) -> str:
     """Remove complete model-authored visualization blocks before server serialization.
 
     The visualization protocol is owned by the gateway. Model prose is never allowed to choose
-    which otherwise-valid artifact the browser sees, so both valid and malformed complete blocks
-    are removed without attempting to interpret their contents. Ordinary fenced code remains.
+    which otherwise-valid artifact the browser sees, so valid, malformed, and unterminated
+    reserved-protocol tails are removed without interpreting their contents. Ordinary fenced code
+    remains.
     """
     return strip_model_visualization_blocks(prose)
 

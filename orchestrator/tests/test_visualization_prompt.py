@@ -302,6 +302,14 @@ def test_gateway_owns_the_only_visualization_protocol_block() -> None:
     assert "model artifact" not in reply
     assert "ordinary teaching code" in reply
 
+    unterminated = append_visualization(
+        "Keep this explanation.\n\n```muta-viz\n{unfinished",
+        _bar_spec(),
+    )
+    assert unterminated.count("```muta-viz") == 1
+    assert "{unfinished" not in unterminated
+    assert '"kind":"bar"' in unterminated
+
 
 def test_canonical_vector_addition_does_not_depend_on_a_second_model_decode() -> None:
     local = _RecordingVisualClient({"this": "must not be used"})

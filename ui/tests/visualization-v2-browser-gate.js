@@ -41,6 +41,103 @@
     return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
   };
 
+  const verifyInertStringBoundary = async () => {
+    const strings = {
+      title: "<script>globalThis.__mutaVizSinkProbe=true</script>",
+      aria: "개체 P(t)와 ऊँचाई h(t): Await the next stage.",
+      fallback: "selector { color:red } <?php echo 1 ?> https://example.invalid/payload.js",
+      firstNode: "δelta\n('x') <img src=x onerror=globalThis.__mutaVizSinkProbe=true>",
+      secondNode: "Await f(x): 개체 P(t)는 시간에 따라 증가합니다.",
+      link: "export{x}; new Function('return 1')",
+      control: "Await P(t) <?php echo 1 ?>",
+    };
+    const spec = {
+      version: 2,
+      library: "d3",
+      renderer: "svg",
+      kind: "scene2d",
+      family: "semantic_composition",
+      title: strings.title,
+      aria_label: strings.aria,
+      text_fallback: strings.fallback,
+      height: 420,
+      controls: [{
+        id: "population",
+        label: strings.control,
+        type: "range",
+        value: 1,
+        min: 0.1,
+        max: 2,
+        step: 0.1,
+        binding: { target_label: strings.firstNode, effect: "scale" },
+      }],
+      budget: { max_points: 512, max_triangles: 4096, max_fps: 20 },
+      scene: {
+        coordinate_system: "screen",
+        layers: [
+          { type: "node", id: "source", x: 140, y: 180, width: 180, height: 58, label: strings.firstNode, color: "green" },
+          { type: "node", id: "target", x: 470, y: 180, width: 180, height: 58, label: strings.secondNode, color: "orange" },
+          { type: "link", from: "source", to: "target", arrow: true, label: strings.link },
+        ],
+      },
+    };
+    const frame = document.createElement("iframe");
+    frame.title = "Inert planner string boundary test";
+    frame.sandbox = "allow-scripts allow-same-origin";
+    frame.src = `../viz-frame.html?theme=${theme}#${encode(spec)}`;
+    host.replaceChildren(frame);
+    await new Promise((resolve) => frame.addEventListener("load", resolve, { once: true }));
+    const frameDocument = frame.contentDocument;
+    const stage = frameDocument?.getElementById("viz-stage");
+    const deadline = performance.now() + 2500;
+    while (stage && !stage.dataset.vizEvidence && performance.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    const visibleText = [...(stage?.querySelectorAll("text,.viz-v2-control-label,.viz-v2-fallback p") || [])]
+      .map((node) => node.textContent);
+    const eventOrResourceAttributes = [...(stage?.querySelectorAll("*") || [])].flatMap((node) => (
+      [...node.attributes]
+        .map((attribute) => ({ name: attribute.name.toLowerCase(), value: attribute.value }))
+        .filter(({ name, value }) => (
+          (name.startsWith("on") || ["href", "src", "srcdoc", "style"].includes(name))
+          && Object.values(strings).some((sourceText) => value.includes(sourceText))
+        ))
+    ));
+    const evidence = stage?.dataset.vizEvidence ? JSON.parse(stage.dataset.vizEvidence) : null;
+    const errorElement = frameDocument?.getElementById("viz-error");
+    const renderError = stage?.dataset.vizError
+      || (errorElement && !errorElement.hidden ? errorElement.textContent.trim() : "");
+    const result = {
+      passed: Boolean(
+        evidence?.rendered
+        && visibleText.includes(strings.firstNode)
+        && visibleText.includes(strings.secondNode)
+        && visibleText.includes(strings.link)
+        && visibleText.includes(strings.control)
+        && visibleText.includes(strings.fallback)
+        && stage?.getAttribute("aria-label") === strings.aria
+        && frameDocument?.querySelector(".viz-v2-controls")?.getAttribute("aria-label")?.startsWith(strings.title)
+        && frameDocument?.getElementById("viz-v2-population")?.getAttribute("aria-label") === strings.control
+        && !stage?.querySelector("script,style,iframe,img,object,embed,link,form")
+        && eventOrResourceAttributes.length === 0
+        && frame.contentWindow.__mutaVizSinkProbe === undefined
+        && window.__mutaVizSinkProbe === undefined
+      ),
+      literal_text_fields: visibleText.filter((value) => Object.values(strings).includes(value)),
+      event_or_resource_attributes: eventOrResourceAttributes,
+      child_markup_sink: Boolean(stage?.querySelector("script,style,iframe,img,object,embed,link,form")),
+      frame_global_mutated: frame.contentWindow.__mutaVizSinkProbe !== undefined,
+      parent_global_mutated: window.__mutaVizSinkProbe !== undefined,
+      render_error: renderError,
+    };
+    frame.src = "about:blank";
+    frame.remove();
+    return result;
+  };
+
+  const inertStringBoundary = await verifyInertStringBoundary();
+  if (!inertStringBoundary.passed) errors.push("proposal-controlled strings crossed an inert text boundary");
+
   const semanticControlOutcome = (spec, evidence) => {
     const values = evidence?.control_values || {};
     const description = String(evidence?.state_description || "");
@@ -276,14 +373,17 @@
     progress.value = index + 1;
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
+  const renderedCount = results.filter((result) => result.rendered).length;
+  const passedCount = inertStringBoundary.passed ? renderedCount : Math.max(0, renderedCount - 1);
   const payload = {
     schema_version: 1,
     count: results.length,
     summary: {
-      passed: results.filter((result) => result.rendered).length,
-      failed: results.filter((result) => !result.rendered).length,
+      passed: passedCount,
+      failed: results.length - passedCount,
       page_errors: errors,
     },
+    inert_string_boundary: inertStringBoundary,
     cases: results,
   };
   output.textContent = JSON.stringify(payload);

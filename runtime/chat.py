@@ -50,6 +50,12 @@ _VIZ_MARKED_JSON_FENCE = re.compile(
     r"(^|\n)( {0,3})\$\$muta-viz\$\$[\t ]*\r?\n\2```json[\t ]*\r?\n"
     r"([\s\S]*?)\r?\n\2```[\t ]*(?=\r?\n|$)"
 )
+_VIZ_FENCE_TAIL = re.compile(
+    r"(^|\n)( {0,3})```muta-viz[\t ]*(?:\r?\n[\s\S]*)?$"
+)
+_VIZ_MARKED_JSON_TAIL = re.compile(
+    r"(^|\n)( {0,3})\$\$muta-viz\$\$[\t ]*(?:\r?\n[\s\S]*)?$"
+)
 
 
 def strip_model_visualization_blocks(text: str) -> str:
@@ -57,10 +63,12 @@ def strip_model_visualization_blocks(text: str) -> str:
 
     The gateway alone owns durable visualization artifacts. This persistence-boundary helper does
     not parse or trust the body: valid, invalid, V1, and V2 model blocks are all untrusted. A
-    partial block remains inert text until a later flush completes it, at which point it is removed.
+    partial reserved-protocol tail is removed fail-closed so it cannot consume a later trusted fence.
     """
     cleaned = str(text or "")
     for pattern in (_VIZ_FENCE, _VIZ_MARKED_JSON_FENCE):
+        cleaned = pattern.sub(lambda match: match.group(1), cleaned)
+    for pattern in (_VIZ_FENCE_TAIL, _VIZ_MARKED_JSON_TAIL):
         cleaned = pattern.sub(lambda match: match.group(1), cleaned)
     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
