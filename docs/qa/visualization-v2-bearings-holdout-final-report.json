@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-27T20:04:23.488990+00:00",
+  "generated_at": "2026-08-27T20:09:03.118237+00:00",
   "immutable_first_run_hashes": {
     "docs/qa/visualization-v2-bearings-holdout-first-python.json": "813198f1263c1ec73d3fbdbe7c605064e31c7a2388866ed814e7b80bca4cfb7f",
     "docs/qa/visualization-v2-bearings-holdout-first-browser.json": "fbc99a6ce5fda71bd3b553b211f9dd1b1160d725b66f425bbff7faa9e905e451",

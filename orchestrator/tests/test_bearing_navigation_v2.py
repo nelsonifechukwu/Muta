@@ -160,6 +160,49 @@ def test_interception_associates_motion_and_speed_by_semantic_role(prompt: str) 
     assert "2.423 h on bearing 062°" in spec["text_fallback"]
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        (
+            "Draw the intercept. A ship is 20 km from harbour on bearing 070°. Its speed is "
+            "4 km/h and its course is bearing 045°. A rescue boat travels at 12 km/h."
+        ),
+        (
+            "Draw the intercept. The ship and rescue boat travel at 4 km/h and 12 km/h "
+            "respectively; the ship starts 20 km away on bearing 070° and moves on bearing 045°."
+        ),
+        (
+            "Draw the intercept. The rescue boat and ship travel at 12 km/h and 4 km/h "
+            "respectively; the ship starts 20 km away on bearing 070° and moves on bearing 045°."
+        ),
+    ],
+)
+def test_interception_normalizes_course_and_respectively_forms(prompt: str) -> None:
+    spec = compile_bearing_navigation_v2(prompt)
+    assert spec is not None
+    assert "2.423 h on bearing 062°" in spec["text_fallback"]
+
+
+@pytest.mark.parametrize(
+    ("relation", "first", "second"),
+    [
+        ("A is due east of B", "330", "030"),
+        ("A is due west of B", "030", "330"),
+        ("A is due north of B", "240", "300"),
+        ("A is due south of B", "060", "120"),
+    ],
+)
+def test_triangulation_normalizes_inverse_baseline_relations(
+    relation: str, first: str, second: str
+) -> None:
+    spec = compile_bearing_navigation_v2(
+        f"Draw the triangulation: A and B are 10 km apart and {relation}; "
+        f"the target is on bearing {first}° from A and {second}° from B."
+    )
+    assert spec is not None
+    assert "10.00 km from A and 10.00 km from B" in spec["text_fallback"]
+
+
 def test_non_visual_or_non_navigation_requests_do_not_trigger() -> None:
     assert not is_bearing_navigation_request(
         "Show the proof that reverse bearings differ by 180 degrees in text only"
