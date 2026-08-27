@@ -10,6 +10,7 @@ from runtime.chat import (
     ChatEngine,
     ImageInput,
     _message_tokens,
+    strip_model_visualization_blocks,
     strip_visualization_protocol,
 )
 from runtime.client import Generation, InferenceStreamError
@@ -390,6 +391,19 @@ def test_visualization_payload_is_persisted_but_not_replayed_to_model(store):
     assert client.seen[1][2]["content"] == "The curve is U-shaped."
     assert store.get_messages(first.conversation_id)[1]["content"] == visual_reply
     assert strip_visualization_protocol("```muta-viz\n{bad}\n```").startswith("```muta-viz")
+
+
+def test_untrusted_visualization_blocks_are_removed_at_the_persistence_boundary(store):
+    raw = (
+        "Safe prose.\n\n```muta-viz\n"
+        '{"version":2,"family":"pythagoras"}\n```\n\nSafe ending.'
+    )
+    assert strip_model_visualization_blocks(raw) == "Safe prose.\n\nSafe ending."
+
+    engine, persisted_store = _stream_engine(store, [raw])
+    cid, _mid, events = engine.stream_events_chat("s1", "Explain without a diagram")
+    assert list(events) == [("content", raw)]
+    assert persisted_store.get_messages(cid)[-1]["content"] == "Safe prose.\n\nSafe ending."
 
 
 def test_language_change_replaces_only_the_next_system_prompt_and_keeps_history(tmp_path):

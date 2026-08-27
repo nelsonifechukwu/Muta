@@ -36,7 +36,7 @@ from orchestrator.gateway.visualization_v2 import (
 from orchestrator.gateway.visualization_v2 import (
     resolve_intent as resolve_v2_intent,
 )
-from runtime.chat import ChatEngine
+from runtime.chat import ChatEngine, strip_model_visualization_blocks
 from runtime.client import Generation
 
 log = logging.getLogger("muta.gateway.visualizations")
@@ -1758,6 +1758,16 @@ def _contradicts_verified_visual(prose: str, spec: dict[str, Any]) -> bool:
     return False
 
 
+def strip_model_visualization_protocol(prose: str) -> str:
+    """Remove complete model-authored visualization blocks before server serialization.
+
+    The visualization protocol is owned by the gateway. Model prose is never allowed to choose
+    which otherwise-valid artifact the browser sees, so both valid and malformed complete blocks
+    are removed without attempting to interpret their contents. Ordinary fenced code remains.
+    """
+    return strip_model_visualization_blocks(prose)
+
+
 def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
     """Keep an explanation beside every visual, using checked copy for standard science.
 
@@ -1767,7 +1777,8 @@ def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
     Unknown/custom visuals retain the model's complete prose. In both cases the diagram remains
     supporting material rather than replacing the written explanation.
     """
-    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", str(prose or "")) if part.strip()]
+    trusted_prose = strip_model_visualization_protocol(prose)
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", trusted_prose) if part.strip()]
     kept = [part for part in paragraphs if not _VISUAL_REFUSAL.search(part)]
     explanation = "\n\n".join(kept)
     verified = _verified_visual_explanation(spec)

@@ -1227,6 +1227,14 @@ def test_server_schema_fails_closed_on_cross_runtime_conformance_mutations() -> 
     ]
     candidates["utf8_within_byte_budget"] = candidate
 
+    candidate = clone()
+    candidate["title"] = "🧭" * 120
+    candidates["unicode_scalar_title_limit"] = candidate
+
+    candidate = clone()
+    candidate["title"] = "🧭" * 121
+    candidates["unicode_scalar_title_oversize"] = candidate
+
     conformance_path = (
         Path(__file__).parents[2]
         / "ui"

@@ -73,7 +73,7 @@
   }
 
   function nonEmptyString(value, max) {
-    return typeof value === "string" && value.trim().length > 0 && value.length <= max;
+    return typeof value === "string" && value.trim().length > 0 && [...value].length <= max;
   }
 
   function point(value) {
@@ -880,25 +880,38 @@
 
   function extract(text) {
     const source = typeof text === "string" ? text : "";
-    const visualizations = [];
-    const consume = (input, pattern) => input.replace(
-      pattern,
-      (whole, leading, _indent, body) => {
-        if (visualizations.length >= 1 || body.length > MAX_SPEC_CHARS) return whole;
-        let candidate;
-        try {
-          candidate = JSON.parse(body);
-        } catch {
-          return whole;
-        }
-        const result = validateSpec(candidate);
-        if (!result.ok) return whole;
-        visualizations.push(result.spec);
-        return leading;
-      },
-    );
-    const markdown = consume(consume(source, FENCE), MARKED_JSON_FENCE);
-    return { markdown: markdown.replace(/\n{3,}/g, "\n\n").trim(), visualizations };
+    const matches = [
+      ...Array.from(source.matchAll(FENCE)),
+      ...Array.from(source.matchAll(MARKED_JSON_FENCE)),
+    ].sort((left, right) => left.index - right.index);
+    const accepted = [];
+    for (const match of matches) {
+      const body = match[3];
+      if (body.length > MAX_SPEC_CHARS) continue;
+      let candidate;
+      try {
+        candidate = JSON.parse(body);
+      } catch {
+        continue;
+      }
+      const result = validateSpec(candidate);
+      if (result.ok) accepted.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        leading: match[1],
+        spec: result.spec,
+      });
+    }
+    let cursor = 0;
+    const prose = [];
+    for (const match of accepted) {
+      prose.push(source.slice(cursor, match.start), match.leading);
+      cursor = match.end;
+    }
+    prose.push(source.slice(cursor));
+    const markdown = prose.join("").replace(/\n{3,}/g, "\n\n").trim();
+    const visualizations = accepted.length ? [accepted.at(-1).spec] : [];
+    return { markdown, visualizations };
   }
 
   function encodeSpec(spec) {

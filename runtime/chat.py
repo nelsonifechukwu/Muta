@@ -52,6 +52,19 @@ _VIZ_MARKED_JSON_FENCE = re.compile(
 )
 
 
+def strip_model_visualization_blocks(text: str) -> str:
+    """Remove every complete model-authored visualization protocol block.
+
+    The gateway alone owns durable visualization artifacts. This persistence-boundary helper does
+    not parse or trust the body: valid, invalid, V1, and V2 model blocks are all untrusted. A
+    partial block remains inert text until a later flush completes it, at which point it is removed.
+    """
+    cleaned = str(text or "")
+    for pattern in (_VIZ_FENCE, _VIZ_MARKED_JSON_FENCE):
+        cleaned = pattern.sub(lambda match: match.group(1), cleaned)
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+
 def strip_visualization_protocol(text: str) -> str:
     """Remove only recognized, minimally valid visual blocks from a prompt/evaluation copy.
 
@@ -331,12 +344,13 @@ class _ReplyWriter:
         text = "".join(self.chunks)
         if len(text) == self._flushed_len:
             return
+        persisted_text = strip_model_visualization_blocks(text)
         if self.message_id is None:
             try:
                 self.message_id = self.store.add_message(
                     self.cid,
                     "assistant",
-                    text,
+                    persisted_text,
                     completion_state="streaming",
                 )
             except TypeError as exc:
@@ -344,12 +358,12 @@ class _ReplyWriter:
                 # contract. Keep them compatible; production stores persist this atomically.
                 if "completion_state" not in str(exc):
                     raise
-                self.message_id = self.store.add_message(self.cid, "assistant", text)
+                self.message_id = self.store.add_message(self.cid, "assistant", persisted_text)
                 setter = getattr(self.store, "set_message_completion", None)
                 if callable(setter):
                     setter(self.message_id, "streaming")
         else:
-            self.store.update_message(self.message_id, text)
+            self.store.update_message(self.message_id, persisted_text)
         self._flushed_len = len(text)
 
     def set_completion(self, state: str) -> None:
@@ -1103,12 +1117,16 @@ class ChatEngine:
             generation = self._chat_with_length_recovery(messages, request_params)
         except InferenceStreamError as exc:
             if exc.partial_text:
-                message_id = self.store.add_message(cid, "assistant", exc.partial_text)
+                message_id = self.store.add_message(
+                    cid, "assistant", strip_model_visualization_blocks(exc.partial_text)
+                )
                 setter = getattr(self.store, "set_message_completion", None)
                 if callable(setter):
                     setter(message_id, "failed")
             raise
-        assistant_message_id = self.store.add_message(cid, "assistant", generation.text)
+        assistant_message_id = self.store.add_message(
+            cid, "assistant", strip_model_visualization_blocks(generation.text)
+        )
         setter = getattr(self.store, "set_message_completion", None)
         if callable(setter):
             setter(assistant_message_id, "complete")

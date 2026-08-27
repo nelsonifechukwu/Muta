@@ -136,6 +136,7 @@ from orchestrator.gateway.sharing import SESSION_COOKIE, AuthenticationError, ge
 from orchestrator.gateway.visualizations import (
     append_visualization,
     generate_visualization,
+    strip_model_visualization_protocol,
     turn_instruction,
     wants_live_visual,
 )
@@ -986,6 +987,11 @@ def chat(
                 visualizations=visual_requested,
             ),
         )
+        sanitized_reply = strip_model_visualization_protocol(chat_result.reply)
+        if sanitized_reply != chat_result.reply:
+            chat_result.reply = sanitized_reply
+            if chat_result.assistant_message_id is not None:
+                engine.store.update_message(chat_result.assistant_message_id, sanitized_reply)
         if req.use_rag:
             chat_result.reply, final_resource_sources = finalize_resource_reply(
                 chat_result.reply, resource_sources
@@ -1311,6 +1317,15 @@ def _start_chat_generation(
                     # The browser replaces the provisional body so raw (R5)/R3 syntax and
                     # printed citation audits never survive in the completed transcript.
                     yield f"data: {json.dumps({'replace': finalized_reply})}\n\n"
+            if reply_parts and not cancel_event.is_set():
+                raw_reply = "".join(reply_parts)
+                sanitized_reply = strip_model_visualization_protocol(raw_reply)
+                if sanitized_reply != raw_reply:
+                    reply_parts[:] = [sanitized_reply]
+                    assistant_message_id = getattr(events, "assistant_message_id", None)
+                    if assistant_message_id is not None:
+                        engine.store.update_message(assistant_message_id, sanitized_reply)
+                    yield f"data: {json.dumps({'replace': sanitized_reply})}\n\n"
             if visual_requested and reply_parts and not cancel_event.is_set():
                 prose_reply = "".join(reply_parts)
                 yield f"data: {json.dumps({'phase': 'visualization'})}\n\n"
@@ -2052,6 +2067,11 @@ def tutor_chat(
             cancel_event=turn_cancel,
             **sampling_params,
         )
+        sanitized_reply = strip_model_visualization_protocol(chat_result.reply)
+        if sanitized_reply != chat_result.reply:
+            chat_result.reply = sanitized_reply
+            if chat_result.assistant_message_id is not None:
+                engine.store.update_message(chat_result.assistant_message_id, sanitized_reply)
         if visual_requested:
             spec = generate_visualization(
                 engine,
@@ -2236,6 +2256,15 @@ def tutor_chat_stream(
                     content_count += 1
                     reply_parts.append(text)
                 yield f"data: {json.dumps({key: text})}\n\n"
+            if reply_parts:
+                raw_reply = "".join(reply_parts)
+                sanitized_reply = strip_model_visualization_protocol(raw_reply)
+                if sanitized_reply != raw_reply:
+                    reply_parts[:] = [sanitized_reply]
+                    assistant_message_id = getattr(events, "assistant_message_id", None)
+                    if assistant_message_id is not None:
+                        engine.store.update_message(assistant_message_id, sanitized_reply)
+                    yield f"data: {json.dumps({'replace': sanitized_reply})}\n\n"
             if visual_requested and reply_parts:
                 prose_reply = "".join(reply_parts)
                 yield f"data: {json.dumps({'phase': 'visualization'})}\n\n"

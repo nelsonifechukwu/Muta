@@ -377,6 +377,10 @@ test("fails closed on the shared server-browser conformance mutations", () => {
   candidate = surface(); candidate.scene.layers = Array.from({ length: 60 }, (_, index) => ({
     type: "text", x: 0, y: index, text: "界".repeat(160), color: "teal",
   })); candidates.utf8_within_byte_budget = candidate;
+  candidate = surface(); candidate.title = "🧭".repeat(120);
+  candidates.unicode_scalar_title_limit = candidate;
+  candidate = surface(); candidate.title = "🧭".repeat(121);
+  candidates.unicode_scalar_title_oversize = candidate;
 
   assert.deepEqual(new Set(schemaConformance.cases.map((item) => item.operation)), new Set(Object.keys(candidates)));
   for (const item of schemaConformance.cases) {

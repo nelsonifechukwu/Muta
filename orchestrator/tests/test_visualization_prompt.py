@@ -26,6 +26,7 @@ from orchestrator.gateway.visualizations import (
     resolve_visualization_request,
     select_kind,
     select_library,
+    strip_model_visualization_protocol,
     turn_instruction,
     visualization_schema,
     wants_live_visual,
@@ -277,6 +278,29 @@ def test_constrained_pass_uses_local_client_fitter_and_durable_protocol() -> Non
     reply = append_visualization("Complete prose.", spec)
     assert reply.startswith("Complete prose.\n\n```muta-viz\n")
     assert reply.endswith("\n```")
+
+
+def test_gateway_owns_the_only_visualization_protocol_block() -> None:
+    prose = (
+        "Keep this explanation.\n\n"
+        "```muta-viz\n"
+        '{"version":2,"family":"pythagoras","title":"model artifact"}\n'
+        "```\n\n"
+        "$$muta-viz$$\n"
+        "```json\n{bad json}\n```\n\n"
+        "```python\nprint('ordinary teaching code')\n```\n\n"
+        "Keep this conclusion."
+    )
+
+    cleaned = strip_model_visualization_protocol(prose)
+    assert "model artifact" not in cleaned
+    assert "{bad json}" not in cleaned
+    assert "ordinary teaching code" in cleaned
+    reply = append_visualization(prose, _bar_spec())
+    assert reply.count("```muta-viz") == 1
+    assert '"kind":"bar"' in reply
+    assert "model artifact" not in reply
+    assert "ordinary teaching code" in reply
 
 
 def test_canonical_vector_addition_does_not_depend_on_a_second_model_decode() -> None:

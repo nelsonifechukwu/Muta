@@ -98,6 +98,13 @@ math are typed AST/enums/numbers, while prose stays inert text data throughout t
   are trusted renderer behavior dispatch keys rather than inert labels. The planning prompt forbids
   executable/source fields while explicitly allowing learner-requested code and function notation
   in inert descriptive fields.
+- Treat the durable visualization fence as a server-owned protocol, not model prose. Before the
+  gateway appends its validated artifact, remove every complete model-authored `muta-viz` or
+  marked-JSON visualization block from the explanation. As defense in depth for legacy persisted
+  replies, the browser removes every valid visualization block and renders only the final validated
+  artifact, which is the server-owned position. Invalid blocks remain inert literal text. Align
+  descriptive-string limits across Python and JavaScript by counting Unicode scalar values rather
+  than UTF-16 code units, and keep this parity in the shared conformance fixture.
 - Validate the candidate with `validate_v2_spec`, then run bounded semantic checks: concrete
   request terms and every meaningful token in an explicit entity phrase must map one-to-one to
   unambiguous labelled nodes; graph/process requests require those nodes to be connected, and an
