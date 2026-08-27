@@ -1,0 +1,426 @@
+{
+  "schema_version": 1,
+  "checkpoint_sha": "b5e726ba184d49b57a4f025ada16b43881c9b2da",
+  "source_sha256": "9abcdc5e7c7a252eda82f0877656db78275d3bd0b4431ecd197328dca7fd9d24",
+  "recorded_at": "2026-08-27T19:08:22.813Z",
+  "total": 15,
+  "attempted": 9,
+  "rendered": 9,
+  "cases": [
+    {
+      "number": 1,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 2,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 3,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 4,
+      "attempted": false,
+      "rendered": false,
+      "renderer": null,
+      "error": "production compiler returned no spec",
+      "dom": null,
+      "evidence": null
+    },
+    {
+      "number": 5,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 6,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 7,
+      "attempted": false,
+      "rendered": false,
+      "renderer": null,
+      "error": "production compiler returned no spec",
+      "dom": null,
+      "evidence": null
+    },
+    {
+      "number": 8,
+      "attempted": false,
+      "rendered": false,
+      "renderer": null,
+      "error": "production compiler returned no spec",
+      "dom": null,
+      "evidence": null
+    },
+    {
+      "number": 9,
+      "attempted": false,
+      "rendered": false,
+      "renderer": null,
+      "error": "production compiler returned no spec",
+      "dom": null,
+      "evidence": null
+    },
+    {
+      "number": 10,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 11,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 12,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    },
+    {
+      "number": 13,
+      "attempted": false,
+      "rendered": false,
+      "renderer": null,
+      "error": "production compiler returned no spec",
+      "dom": null,
+      "evidence": null
+    },
+    {
+      "number": 14,
+      "attempted": false,
+      "rendered": false,
+      "renderer": null,
+      "error": "production compiler returned no spec",
+      "dom": null,
+      "evidence": null
+    },
+    {
+      "number": 15,
+      "attempted": true,
+      "dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "error": "",
+      "evidence": {
+        "animation_progress": 1,
+        "animation_state": "static",
+        "control_revision": 0,
+        "control_values": {
+          "step": 0
+        },
+        "controls": 1,
+        "family": "concept_process",
+        "geometry_signature": 179731,
+        "observed_frame_interval_ms": 0,
+        "primitive_count": 12,
+        "rendered": true,
+        "renderer": "svg",
+        "state_description": "step = 0",
+        "visual_state_signature": 179731
+      },
+      "rendered": true,
+      "renderer": "svg"
+    }
+  ],
+  "count": 15
+}

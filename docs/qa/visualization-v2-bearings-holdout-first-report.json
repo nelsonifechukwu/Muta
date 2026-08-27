@@ -1,0 +1,492 @@
+{
+  "schema_version": 1,
+  "immutable_first_run": true,
+  "checkpoint_sha": "b5e726ba184d49b57a4f025ada16b43881c9b2da",
+  "recorded_at": "2026-08-27T20:06:05+01:00",
+  "source_sha256": "9abcdc5e7c7a252eda82f0877656db78275d3bd0b4431ecd197328dca7fd9d24",
+  "python_artifact_sha256": "813198f1263c1ec73d3fbdbe7c605064e31c7a2388866ed814e7b80bca4cfb7f",
+  "browser_artifact_sha256": "fbc99a6ce5fda71bd3b553b211f9dd1b1160d725b66f425bbff7faa9e905e451",
+  "summary": {
+    "total": 15,
+    "compiled": 9,
+    "browser_rendered": 9,
+    "semantically_correct": 0,
+    "failed": 15
+  },
+  "cases": [
+    {
+      "number": 1,
+      "raw_prompt": "**Simple three-figure bearing**\n   Point (B) is on a bearing of (060^\\circ) from point (A). Draw a clear diagram showing (A), (B), the north line at (A), the clockwise angle, and the bearing (060^\\circ).",
+      "expected": {
+        "bearing_deg": 60,
+        "bearing_text": "060°"
+      },
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: concept_process",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation"
+      ]
+    },
+    {
+      "number": 2,
+      "raw_prompt": "**Cardinal direction to bearing**\n   A boat travels due southeast from a harbour. What is its three-figure bearing? Draw a compass-style diagram showing how you obtained the answer.",
+      "expected": {
+        "bearing_deg": 135,
+        "bearing_text": "135°",
+        "direction": "southeast"
+      },
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: concept_process",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation"
+      ]
+    },
+    {
+      "number": 3,
+      "raw_prompt": "**Bearing from a diagram**\n   Draw point (P) and point (Q) so that (Q) lies on a bearing of (135^\\circ) from (P). Explain visually why the angle must be measured clockwise from north rather than from east.\n\n---\n\n## Level 2 — Reverse bearings",
+      "expected": {
+        "bearing_deg": 135,
+        "bearing_text": "135°"
+      },
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: concept_process",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation"
+      ]
+    },
+    {
+      "number": 4,
+      "raw_prompt": "**Finding a reverse bearing**\n   Town (B) is on a bearing of (070^\\circ) from town (A). What is the bearing of (A) from (B)? Draw both north lines and mark both bearings.",
+      "expected": {
+        "forward_bearing_deg": 70,
+        "reverse_bearing_deg": 250,
+        "reverse_text": "250°"
+      },
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "browser_rendered": false,
+      "browser_dom": {},
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "production compiler returned no visualization",
+        "wrong semantic family: none",
+        "no real-browser visualization rendered",
+        "no visible north reference line or label",
+        "no visible route/bearing direction arrow",
+        "no visible bearing value or bearing explanation"
+      ]
+    },
+    {
+      "number": 5,
+      "raw_prompt": "**Reverse bearing crossing (360^\\circ)**\n   A lighthouse is on a bearing of (230^\\circ) from a ship. Find the bearing of the ship from the lighthouse and show the relationship on a diagram.",
+      "expected": {
+        "forward_bearing_deg": 230,
+        "reverse_bearing_deg": 50,
+        "reverse_text": "050°"
+      },
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: concept_process",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation"
+      ]
+    },
+    {
+      "number": 6,
+      "raw_prompt": "**Spot the misconception**\n   A student says, “If (B) is on a bearing of (040^\\circ) from (A), then (A) is on a bearing of (320^\\circ) from (B).” Determine whether the student is correct and use a diagram to explain your reasoning.\n\n---\n\n## Level 3 — Bearings with distance and trigonometry",
+      "expected": {
+        "student_correct": false,
+        "forward_bearing_deg": 40,
+        "reverse_bearing_deg": 220,
+        "reverse_text": "220°"
+      },
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: concept_process",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation"
+      ]
+    },
+    {
+      "number": 7,
+      "raw_prompt": "**One journey with components**\n   A plane flies (80\\text{ km}) on a bearing of (040^\\circ). Draw the journey and determine how far north and how far east of its starting point the plane finishes.",
+      "expected": {
+        "distance_km": 80,
+        "bearing_deg": 40,
+        "east_km": 51.42300877492314,
+        "north_km": 61.28355544951824
+      },
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "browser_rendered": false,
+      "browser_dom": {},
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "production compiler returned no visualization",
+        "wrong semantic family: none",
+        "no real-browser visualization rendered",
+        "no visible north reference line or label",
+        "no visible route/bearing direction arrow",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 8,
+      "raw_prompt": "**Two-leg journey**\n   A hiker walks (6\\text{ km}) on a bearing of (030^\\circ), then (8\\text{ km}) on a bearing of (120^\\circ). Draw the full route and determine the hiker's final displacement from the starting point.",
+      "expected": {
+        "east_km": 9.928203230275509,
+        "north_km": 1.1961524227066334,
+        "displacement_km": 10.0,
+        "bearing_deg": 83.13010235415598
+      },
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "browser_rendered": false,
+      "browser_dom": {},
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "production compiler returned no visualization",
+        "wrong semantic family: none",
+        "no real-browser visualization rendered",
+        "no visible north reference line or label",
+        "no visible route/bearing direction arrow",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 9,
+      "raw_prompt": "**Distance between two objects**\n   From a harbour (H), boat (A) is (12\\text{ km}) away on a bearing of (050^\\circ), while boat (B) is (18\\text{ km}) away on a bearing of (110^\\circ). Draw an accurate schematic and calculate the distance between the boats.\n\n---\n\n## Level 4 — Finding unknown bearings",
+      "expected": {
+        "included_angle_deg": 60,
+        "distance_km": 15.874507866387543
+      },
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "browser_rendered": false,
+      "browser_dom": {},
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "production compiler returned no visualization",
+        "wrong semantic family: none",
+        "no real-browser visualization rendered",
+        "no visible north reference line or label",
+        "no visible route/bearing direction arrow",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 10,
+      "raw_prompt": "**Coordinates to bearing**\n    Relative to point (A), point (B) is (6\\text{ km}) east and (8\\text{ km}) north. Determine the bearing of (B) from (A). Draw the north-east coordinate triangle and show how the bearing is calculated.",
+      "expected": {
+        "east_km": 6,
+        "north_km": 8,
+        "distance_km": 10,
+        "bearing_deg": 36.86989764584402,
+        "bearing_text": "037°"
+      },
+      "compiled": true,
+      "family": "basic_geometry",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: basic_geometry",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 11,
+      "raw_prompt": "**Bearing in a non-obvious quadrant**\n    A rescue station is (9\\text{ km}) west and (4\\text{ km}) south of a boat. Find the three-figure bearing of the rescue station from the boat. Your diagram must make clear why the final bearing is greater than (180^\\circ).",
+      "expected": {
+        "east_km": -9,
+        "north_km": -4,
+        "bearing_deg": 246.0375110254218,
+        "bearing_text": "246°"
+      },
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: concept_process",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 12,
+      "raw_prompt": "**Missing bearing in a triangle**\n    (B) is (20\\text{ km}) from (A) on a bearing of (065^\\circ). Point (C) is (16\\text{ km}) from (A) on a bearing of (140^\\circ). Determine the bearing of (C) from (B). Draw all required north lines and clearly distinguish interior triangle angles from bearings.\n\n---\n\n## Level 5 — Multi-step navigation and intersection problems",
+      "expected": {
+        "east_km": -7.841553985748366,
+        "north_km": -20.709076324717635,
+        "distance_bc_km": 22.143979117005745,
+        "bearing_b_to_c_deg": 200.73932193314047,
+        "interior_angle_b_deg": 44.260678066859526
+      },
+      "compiled": true,
+      "family": "basic_geometry",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: basic_geometry",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 13,
+      "raw_prompt": "**Three-leg navigation problem**\n    A ship travels:\n\n    - (30\\text{ km}) on bearing (045^\\circ),\n    - then (40\\text{ km}) on bearing (150^\\circ),\n    - then (25\\text{ km}) on bearing (250^\\circ).\n\n    Draw the complete journey and calculate the ship's final distance and bearing from its starting point.",
+      "expected": {
+        "east_km": 17.72088791594871,
+        "north_km": -21.978316298922834,
+        "distance_km": 28.232538955345728,
+        "bearing_deg": 141.12112852933342
+      },
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "browser_rendered": false,
+      "browser_dom": {},
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "production compiler returned no visualization",
+        "wrong semantic family: none",
+        "no real-browser visualization rendered",
+        "no visible north reference line or label",
+        "no visible route/bearing direction arrow",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 14,
+      "raw_prompt": "**Triangulation using two bearings**\n    Two observation stations (A) and (B) are (10\\text{ km}) apart, with (B) due east of (A). A radio tower (T) is observed on a bearing of (040^\\circ) from (A) and (320^\\circ) from (B). Draw the two bearing rays, identify their intersection, and calculate the distance from each station to the tower.",
+      "expected": {
+        "baseline_km": 10,
+        "bearing_a_deg": 40,
+        "bearing_b_deg": 320,
+        "distance_a_to_t_km": 7.778619134302063,
+        "distance_b_to_t_km": 7.778619134302063
+      },
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "browser_rendered": false,
+      "browser_dom": {},
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "production compiler returned no visualization",
+        "wrong semantic family: none",
+        "no real-browser visualization rendered",
+        "no visible north reference line or label",
+        "no visible route/bearing direction arrow",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    },
+    {
+      "number": 15,
+      "raw_prompt": "**Advanced moving-object interception**\n    A rescue boat starts at harbour (H). A distressed ship is initially (24\\text{ km}) from (H) on a bearing of (060^\\circ) and then travels due south at (8\\text{ km/h}). The rescue boat can travel at (16\\text{ km/h}).\n\n    Determine the bearing the rescue boat should follow if it wants to intercept the ship as quickly as possible. Generate a diagram showing:\n\n    - the harbour,\n    - the ship's initial position,\n    - the ship's direction of travel,\n    - the interception point,\n    - the rescue boat's path,\n    - relevant distances and angles.\n\n    Explain mathematically why your chosen interception bearing works.",
+      "expected": {
+        "time_hours": 1.3027756377319946,
+        "intercept_east_km": 20.784609690826528,
+        "intercept_north_km": 1.577794898144047,
+        "rescue_distance_km": 20.844410203711913,
+        "ship_south_distance_km": 10.422205101855956,
+        "bearing_deg": 85.65890627325527,
+        "bearing_text": "086°"
+      },
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "browser_rendered": true,
+      "browser_dom": {
+        "canvas_present": false,
+        "line_count": 3,
+        "marker_end_count": 3,
+        "north_label_count": 0,
+        "path_count": 1,
+        "svg_present": true,
+        "visible_text": [
+          "Input",
+          "Concept Process",
+          "Relationship",
+          "Outcome",
+          "step = 0",
+          "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step."
+        ]
+      },
+      "semantic_math_oracle_passed": false,
+      "failures": [
+        "wrong semantic family: concept_process",
+        "no visible north reference line or label",
+        "no visible bearing value or bearing explanation",
+        "no visible distance units or computed distance"
+      ]
+    }
+  ]
+}
