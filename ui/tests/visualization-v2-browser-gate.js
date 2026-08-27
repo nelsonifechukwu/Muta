@@ -323,6 +323,13 @@
         screen_x: screenStart?.x,
       };
     }
+    if (item.spec.family === "magnetic_field_wire") {
+      const directionMarkers = [...(frameDocument?.querySelectorAll('.viz-v2-layer path[marker-end="url(#v2-arrow)"]') || [])];
+      visibleSemanticGeometry = {
+        passed: directionMarkers.length === 3,
+        visible_direction_arrowheads: directionMarkers.length,
+      };
+    }
     if (item.spec.family === "robot_arm") {
       const targetX = frameDocument?.getElementById("viz-v2-target_x");
       const targetY = frameDocument?.getElementById("viz-v2-target_y");

@@ -1966,9 +1966,9 @@
           }
           node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": displayedCurveLabel });
           const pathAttributes = { d: path, fill: "none", stroke: color, "stroke-width": 3, "stroke-linejoin": "round" };
-          // The deterministic magnetic-field template owns this cue. Generic semantic-planner
-          // labels are inert data; they must use the typed arrow primitive to request an arrow.
-          if (spec.family === "magnetic_field_wire" && layer.label.includes("direction arrow")) {
+          // The trusted magnetic-field family structurally owns its two-point tangent cues.
+          // Descriptive labels remain inert and never dispatch renderer behaviour.
+          if (spec.family === "magnetic_field_wire" && points.length === 2) {
             pathAttributes["marker-end"] = "url(#v2-arrow)";
           }
           node.append(element("path", pathAttributes));

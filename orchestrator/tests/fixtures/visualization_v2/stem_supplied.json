@@ -562,8 +562,8 @@
       "expected": {
         "intent": "interactive_visual",
         "family": "magnetic_field_wire",
-        "renderer": "canvas",
-        "spec_kind": "simulation2d",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
         "controls": [
           "current_direction"
         ],

@@ -12744,8 +12744,8 @@
       "spec": {
         "version": 2,
         "library": "d3",
-        "renderer": "canvas",
-        "kind": "simulation2d",
+        "renderer": "svg",
+        "kind": "scene2d",
         "family": "magnetic_field_wire",
         "title": "Magnetic Field Wire",
         "aria_label": "Interactive magnetic field wire visualization with labelled relationships and controls.",

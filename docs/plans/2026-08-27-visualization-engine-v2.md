@@ -204,6 +204,9 @@ math are typed AST/enums/numbers, while prose stays inert text data throughout t
 - Count renderer-owned Three.js geometry in the same declared triangle cap as scene geometry.
   Surface label sprites and parametric path markers are reserved before implicit meshing, and
   every accepted implicit layer retains room for at least one triangle.
+- Render the sparse current-carrying-wire field with SVG. Its trusted family structure identifies
+  the three two-point tangent cues; prose labels remain inert. Browser acceptance must count three
+  actual SVG arrowhead markers, not infer direction from cue labels or control-state changes.
 
 ## Release-gate implementation
 

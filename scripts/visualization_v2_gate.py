@@ -536,11 +536,18 @@ def _semantic_relationship_oracle(spec: dict[str, Any]) -> dict[str, Any] | None
             },
         )
     if family == "magnetic_field_wire":
-        rings = [line for line in lines if "ring" in str(line.get("label", ""))]
-        cues = [line for line in lines if "direction arrow" in str(line.get("label", ""))]
+        # Direction is structural: the trusted family has three sampled rings followed by three
+        # two-point tangent cues. Labels remain inert and cannot request renderer behaviour.
+        rings = [line for line in lines if len(line["points"]) > 2]
+        cues = [line for line in lines if len(line["points"]) == 2]
         cue_on_ring = all(
             abs(math.hypot(*cue["points"][0]) - radius) < 0.08
             for cue, radius in zip(cues, (0.8, 1.5, 2.2))
+        )
+        tangent_cues = all(
+            abs(cue["points"][0][1] - cue["points"][1][1]) < 1e-9
+            and cue["points"][1][0] > cue["points"][0][0]
+            for cue in cues
         )
         options = next(
             control["options"]
@@ -551,11 +558,13 @@ def _semantic_relationship_oracle(spec: dict[str, Any]) -> dict[str, Any] | None
             len(rings) == 3
             and len(cues) == 3
             and cue_on_ring
+            and tangent_cues
             and options == ["forward", "reverse"],
             {
                 "rings": len(rings),
-                "visible_direction_cues": len(cues),
+                "typed_direction_cues": len(cues),
                 "cues_on_rings": cue_on_ring,
+                "tangent_cues": tangent_cues,
             },
         )
     if family == "rc_circuit":
