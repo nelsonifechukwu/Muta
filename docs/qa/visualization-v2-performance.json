@@ -4,11 +4,11 @@
   "measurement_host": "macOS development browser; not target x86",
   "source_impact": {
     "sync_before_bytes": 74628,
-    "sync_after_bytes": 103854,
-    "sync_delta_bytes": 29226,
-    "sync_parse_before_ms": 0.5579,
-    "sync_parse_after_ms": 0.7404,
-    "sync_parse_delta_ms": 0.1825,
+    "sync_after_bytes": 104837,
+    "sync_delta_bytes": 30209,
+    "sync_parse_before_ms": 0.7554,
+    "sync_parse_after_ms": 1.0389,
+    "sync_parse_delta_ms": 0.2835,
     "lazy_v2_bytes": 222614,
     "vendor_bytes": 1102856,
     "new_network_dependencies": 0
@@ -23,21 +23,21 @@
     "by_renderer": {
       "svg": {
         "count": 74,
-        "mean_elapsed_ms": 112.149,
-        "p95_elapsed_ms": 262.9,
-        "max_elapsed_ms": 342.9
+        "mean_elapsed_ms": 112.896,
+        "p95_elapsed_ms": 264.4,
+        "max_elapsed_ms": 350.3
       },
       "canvas": {
         "count": 21,
-        "mean_elapsed_ms": 176.652,
-        "p95_elapsed_ms": 316.6,
-        "max_elapsed_ms": 342.1
+        "mean_elapsed_ms": 162.486,
+        "p95_elapsed_ms": 342.8,
+        "max_elapsed_ms": 356.0
       },
       "three": {
         "count": 105,
-        "mean_elapsed_ms": 303.916,
-        "p95_elapsed_ms": 418.3,
-        "max_elapsed_ms": 707.2
+        "mean_elapsed_ms": 330.23,
+        "p95_elapsed_ms": 480.3,
+        "max_elapsed_ms": 712.0
       }
     },
     "maximum_triangles": 26594,
@@ -48,8 +48,8 @@
     },
     "observed_animation_frame_interval_ms": {
       "minimum": 33.4,
-      "median": 37.75,
-      "maximum": 41.7
+      "median": 49.9,
+      "maximum": 50.0
     }
   },
   "responsive_matrix": {
@@ -67,7 +67,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 78288923,
+        "used_js_heap_bytes": 50383973,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -84,7 +84,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 52200507,
+        "used_js_heap_bytes": 56832915,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -101,7 +101,7 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 66969044,
+        "used_js_heap_bytes": 62530397,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -114,11 +114,11 @@
         },
         "target_container": {
           "width": 430,
-          "height": 480
+          "height": 520
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 63178932,
+        "used_js_heap_bytes": 82824775,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
@@ -135,30 +135,30 @@
         },
         "reduced_motion": false,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 79664006,
+        "used_js_heap_bytes": 68947354,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
       },
       {
-        "theme": "dark",
+        "theme": "light",
         "viewport": {
-          "width": 430,
-          "height": 932
+          "width": 1280,
+          "height": 900
         },
         "target_container": {
-          "width": 430,
+          "width": 980,
           "height": 480
         },
         "reduced_motion": true,
         "simultaneous_frames": 5,
-        "used_js_heap_bytes": 28239806,
+        "used_js_heap_bytes": 45269717,
         "trusted_browser_input": null,
         "page_errors": [],
         "passed": true
       }
     ],
-    "peak_used_js_heap_bytes": 79664006,
+    "peak_used_js_heap_bytes": 82824775,
     "all_passed": true
   },
   "active_frame_lru": {

@@ -6,8 +6,8 @@ Compared with base revision `238b95ff4e0cd38f2636c25d08e6e1c9eb53ded1` on the lo
 
 | Measurement | Before | After | Delta |
 |---|---:|---:|---:|
-| Synchronous chat UI source | 74628 B | 103854 B | +29226 B |
-| Median Node parse time for synchronous JS | 0.5579 ms | 0.7404 ms | +0.1825 ms |
+| Synchronous chat UI source | 74628 B | 104837 B | +30209 B |
+| Median Node parse time for synchronous JS | 0.7554 ms | 1.0389 ms | +0.2835 ms |
 | Lazy V2 renderer source | 0 B | 222614 B | +222614 B |
 | Existing vendored visualization libraries | 1102856 B | 1102856 B | 0 B |
 
@@ -15,14 +15,14 @@ The V2 renderer is loaded only inside a validated visualization iframe; ordinary
 
 ## Real-browser acceptance rendering
 
-The full gate rendered 200 cases. Peak measured browser JS heap across the responsive matrix was 79664006 bytes.
+The full gate rendered 200 cases. Peak measured browser JS heap across the responsive matrix was 82824775 bytes.
 All 105 Three.js cases stayed within their declared GPU triangle budgets; the largest submitted frame contained 26618 triangles.
 
 | Renderer | Cases | Mean first render | p95 | Maximum |
 |---|---:|---:|---:|---:|
-| svg | 74 | 112.15 ms | 262.90 ms | 342.90 ms |
-| canvas | 21 | 176.65 ms | 316.60 ms | 342.10 ms |
-| three | 105 | 303.92 ms | 418.30 ms | 707.20 ms |
+| svg | 74 | 112.90 ms | 264.40 ms | 350.30 ms |
+| canvas | 21 | 162.49 ms | 342.80 ms | 356.00 ms |
+| three | 105 | 330.23 ms | 480.30 ms | 712.00 ms |
 
 ## Browser screenshots
 
