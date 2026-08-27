@@ -362,8 +362,8 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     r"\bvoid\s+main\s*\(|\b(?:alert|confirm|prompt)\s*\(|"
     r"\bprecision\s+(?:lowp|mediump|highp)\s+(?:float|int)\s*;|"
     r"\b(?:uniform|varying|attribute|vec[234]|mat[234]|sampler2D)\s+[A-Za-z_]\w*|"
-    r"\b(?:document|window|globalThis|location|history|navigator|self)\s*"
-    r"(?:\?\.|\.|\[\s*['\"])|"
+    r"\b(?:document|window|globalThis|location|history|navigator|self|this)\s*"
+    r"(?:\?\.|\.|\[)|"
     r"(?:[#.][-\w]+|\b(?:body|html|canvas|svg|div|span|button|input|main|section|article)\b"
     r"(?:\s+[.#][-\w]+)?)\s*\{\s*"
     r"(?:color|background|display|position|width|height|transform|animation|fill|stroke)\s*:|"
@@ -372,6 +372,8 @@ _FORBIDDEN_AUTHORED_SOURCE = re.compile(
     re.IGNORECASE,
 )
 _SOURCE_COMMENT = re.compile(r"/\*[\s\S]*?\*/|//[^\r\n]*")
+_SOURCE_LINE_CONTINUATION = re.compile(r"\\\r?\n")
+_SOURCE_UNICODE_ESCAPE = re.compile(r"\\u(?:\{(?P<braced>[0-9A-Fa-f]{1,6})\}|(?P<fixed>[0-9A-Fa-f]{4}))")
 _TOPIC_STOPWORDS = frozenset(
     {
         "about",
@@ -1041,10 +1043,22 @@ def _text_values(value: object) -> Iterator[str]:
 
 
 def _contains_authored_source(value: str) -> bool:
-    """Reject executable syntax even when comments split its lexical tokens."""
-    collapsed = _SOURCE_COMMENT.sub("", value)
-    spaced = _SOURCE_COMMENT.sub(" ", value)
-    return any(_FORBIDDEN_AUTHORED_SOURCE.search(candidate) for candidate in (value, collapsed, spaced))
+    """Reject executable syntax after bounded source-level lexical normalization."""
+
+    def decode_identifier_escape(match: re.Match[str]) -> str:
+        codepoint = int(match.group("braced") or match.group("fixed"), 16)
+        if codepoint > 0x10FFFF or 0xD800 <= codepoint <= 0xDFFF:
+            return match.group(0)
+        return chr(codepoint)
+
+    normalized = _SOURCE_LINE_CONTINUATION.sub("", value)
+    normalized = _SOURCE_UNICODE_ESCAPE.sub(decode_identifier_escape, normalized)
+    collapsed = _SOURCE_COMMENT.sub("", normalized)
+    spaced = _SOURCE_COMMENT.sub(" ", normalized)
+    return any(
+        _FORBIDDEN_AUTHORED_SOURCE.search(candidate)
+        for candidate in (value, normalized, collapsed, spaced)
+    )
 
 
 def _plan_errors(candidate: object, request: str) -> list[dict[str, str]]:
