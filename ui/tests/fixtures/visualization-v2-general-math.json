@@ -11,8 +11,8 @@
         "kind": "scene2d",
         "family": "explicit_curve",
         "title": "Interactive 2D equation",
-        "aria_label": "Interactive 2D equation. Two-dimensional plot of y=x^2.",
-        "text_fallback": "Two-dimensional plot of y=x^2.",
+        "aria_label": "Interactive 2D equation. Two-dimensional plot of y=x^2. Sampled horizontal range -5 to 5; sampled vertical range 0 to 25. The displayed axes include a small framing margin.",
+        "text_fallback": "Two-dimensional plot of y=x^2. Sampled horizontal range -5 to 5; sampled vertical range 0 to 25. The displayed axes include a small framing margin.",
         "height": 420,
         "controls": [],
         "budget": {
@@ -1333,8 +1333,8 @@
         "kind": "scene2d",
         "family": "explicit_curve",
         "title": "Interactive 2D equation",
-        "aria_label": "Interactive 2D equation. Two-dimensional plot of y=sin(x).",
-        "text_fallback": "Two-dimensional plot of y=sin(x).",
+        "aria_label": "Interactive 2D equation. Two-dimensional plot of y=sin(x). Sampled horizontal range -5 to 5; sampled vertical range -0.99998 to 0.99998. The displayed axes include a small framing margin.",
+        "text_fallback": "Two-dimensional plot of y=sin(x). Sampled horizontal range -5 to 5; sampled vertical range -0.99998 to 0.99998. The displayed axes include a small framing margin.",
         "height": 420,
         "controls": [],
         "budget": {
@@ -2655,8 +2655,8 @@
         "kind": "scene2d",
         "family": "explicit_curve",
         "title": "Interactive 2D equation",
-        "aria_label": "Interactive 2D equation. Two-dimensional plot of y=2*x+1.",
-        "text_fallback": "Two-dimensional plot of y=2*x+1.",
+        "aria_label": "Interactive 2D equation. Two-dimensional plot of y=2*x+1. Sampled horizontal range -5 to 5; sampled vertical range -9 to 11. The displayed axes include a small framing margin.",
+        "text_fallback": "Two-dimensional plot of y=2*x+1. Sampled horizontal range -5 to 5; sampled vertical range -9 to 11. The displayed axes include a small framing margin.",
         "height": 420,
         "controls": [],
         "budget": {
@@ -3977,8 +3977,8 @@
         "kind": "scene2d",
         "family": "implicit_curve",
         "title": "Interactive 2D equation",
-        "aria_label": "Interactive 2D equation. Two-dimensional plot of x^2+y^2=1.",
-        "text_fallback": "Two-dimensional plot of x^2+y^2=1.",
+        "aria_label": "Interactive 2D equation. Two-dimensional plot of x^2+y^2=1. Sampled horizontal range -0.996296 to 0.996296; sampled vertical range -0.996296 to 0.996296. The displayed axes include a small framing margin.",
+        "text_fallback": "Two-dimensional plot of x^2+y^2=1. Sampled horizontal range -0.996296 to 0.996296; sampled vertical range -0.996296 to 0.996296. The displayed axes include a small framing margin.",
         "height": 420,
         "controls": [],
         "budget": {

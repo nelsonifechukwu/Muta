@@ -112,7 +112,14 @@ def _relationship_agreement(
                 try:
                     if explicit:
                         actual_value = evaluate_expression_v2(actual["right"], variables)
-                        expected_value = evaluate_expression_v2(expected["right"], variables)
+                        dependent = actual["left"]
+                        if dependent.get("type") != "variable":
+                            raise VisualizationV2Error(
+                                "explicit relationship must isolate a dependent variable"
+                            )
+                        variables[dependent["name"]] = actual_value
+                        expected_value = 0.0
+                        actual_value = relationship_residual(expected, variables)
                     else:
                         actual_value = relationship_residual(actual, variables)
                         expected_value = relationship_residual(expected, variables)
@@ -3104,6 +3111,55 @@ def semantic_evidence(case: dict[str, Any], spec: dict[str, Any]) -> dict[str, A
     layers = spec["scene"]["layers"]
     requested_oracles = case["expected"]["oracles"]
     if case["id"].startswith("math-"):
+        if spec["family"] == "explicit_curve":
+            axes = next(layer for layer in layers if layer["type"] == "axes")
+            curves = [layer for layer in layers if layer["type"] == "polyline"]
+            relationship = parse_relationship(case["normalized_equation"])
+            points = [point for curve in curves for point in curve["points"]]
+            residuals = []
+            for horizontal, vertical in points:
+                variables = {
+                    axes["x_label"]: horizontal,
+                    axes["y_label"]: vertical,
+                }
+                residuals.append(abs(relationship_residual(relationship, variables)))
+            finite = bool(points) and all(
+                math.isfinite(coordinate) for point in points for coordinate in point
+            )
+            worst = max(residuals, default=math.inf)
+            axis_labels_present = all(
+                str(axis).casefold() in spec["aria_label"].casefold()
+                for axis in (axes["x_label"], axes["y_label"])
+            )
+            oracle_results = {
+                "expression_residual": _result(
+                    worst <= 1e-8,
+                    {"sample_count": len(points), "max_relationship_residual": worst},
+                ),
+                "finite_geometry": _result(
+                    finite and len(points) >= 4,
+                    {"finite": finite, "sample_count": len(points)},
+                ),
+                "axis_labels": _result(
+                    axis_labels_present,
+                    {
+                        "x_label": axes["x_label"],
+                        "y_label": axes["y_label"],
+                        "aria_label": spec["aria_label"],
+                    },
+                ),
+            }
+            passed = all(oracle_results[name]["passed"] for name in requested_oracles)
+            return {
+                "passed": passed,
+                "checks": requested_oracles,
+                "oracle_results": oracle_results,
+                "topology_expected": case["expected"].get("topology"),
+                "detail": {
+                    "sample_count": len(points),
+                    "max_relationship_residual": worst,
+                },
+            }
         layer = layers[0]
         agreement = _relationship_agreement(
             layer["relationship"],

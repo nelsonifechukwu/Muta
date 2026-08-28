@@ -2000,7 +2000,7 @@
       "normalization_decision": null,
       "expected": {
         "intent": "mathematical_visual",
-        "family": "implicit_surface",
+        "family": "explicit_surface",
         "renderer": "three",
         "spec_kind": "scene3d",
         "controls": [
