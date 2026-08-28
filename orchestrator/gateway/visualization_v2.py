@@ -595,6 +595,152 @@ def _contains_call(node: dict[str, Any], names: set[str]) -> bool:
     return False
 
 
+def _expression_variables(node: dict[str, Any]) -> set[str]:
+    """Return the variables referenced by one already-validated expression AST."""
+    node_type = node.get("type")
+    if node_type == "variable":
+        return {str(node["name"])}
+    if node_type == "binary":
+        return _expression_variables(node["left"]) | _expression_variables(node["right"])
+    if node_type == "unary":
+        return _expression_variables(node["arg"])
+    if node_type == "call":
+        variables: set[str] = set()
+        for argument in node.get("args", []):
+            variables.update(_expression_variables(argument))
+        return variables
+    return set()
+
+
+def _trim_contextual_expression(source: str) -> str:
+    """Remove representation prose around a candidate, never mathematical syntax inside it."""
+    value = str(source or "").strip()
+    value = re.split(r"\.(?=\s+[A-Za-z])", value, maxsplit=1)[0]
+    value = re.sub(
+        r"^\s*(?:(?:an?|the)\s+)?(?:(?:explicit|scalar)\s+)?"
+        r"(?:function|expression|equation|curve)\s+(?:of\s+)?",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
+    for pattern in (
+        r"\s+(?:and\s+)?(?:label|show|mark|identify|annotate|highlight|indicate)\b",
+        r"\s+(?:as\s+)?(?:(?:an?|the)\s+)?(?:2d|two[- ]dimensional|3d|three[- ]dimensional)\b",
+        r"\s+(?:as\s+)?(?:(?:an?|the)\s+)?(?:surface|curve|plot|graph|diagram|heat\s*map|contour(?:\s+map)?)\s*$",
+        r"\s+(?:over|on|for|from)\s+(?:(?:the|a)\s+)?(?:domain|range|interval|[xyzuvt]\s*(?:=|from|in|between|∈))\b",
+        r"\s+(?:with|using)\s+(?:(?:an?|the)\s+)?(?:label|labels|axes|axis|grid|colour|color|animation|slider|controls?)\b",
+    ):
+        value = re.split(pattern, value, maxsplit=1, flags=re.IGNORECASE)[0]
+    value = re.sub(r"(?:,\s*)?please\s*$", "", value, flags=re.IGNORECASE)
+    return value.strip().strip("'\"` ").rstrip(".,;:")
+
+
+def _lexical_function_expression(source: str) -> str:
+    """Translate ordinary names for standard unary functions into the safe grammar."""
+    value = _trim_contextual_expression(source)
+    match = re.fullmatch(
+        r"(?:(?:an?|the)\s+)?"
+        r"(sine|sinusoidal|cosine|tangent|logarithm(?:ic)?|natural\s+logarithm|"
+        r"square\s+root|absolute\s+value|reciprocal)"
+        r"(?:\s+(?:function|curve|wave))?(?:\s+of\s+([xyzuvt]))?",
+        value,
+        re.IGNORECASE,
+    )
+    if not match:
+        return value
+    variable = (match.group(2) or "x").lower()
+    name = re.sub(r"\s+", " ", match.group(1).lower())
+    function = {
+        "sine": "sin",
+        "sinusoidal": "sin",
+        "cosine": "cos",
+        "tangent": "tan",
+        "logarithm": "log",
+        "logarithmic": "log",
+        "natural logarithm": "ln",
+        "square root": "sqrt",
+        "absolute value": "abs",
+        "reciprocal": None,
+    }[name]
+    return f"{function}({variable})" if function else f"1/{variable}"
+
+
+def _canonical_function_relationship(candidate: str) -> tuple[str, dict[str, Any]] | None:
+    """Convert conventional f(x)=... notation into the compiler's coordinate relation."""
+    trimmed = _trim_contextual_expression(candidate)
+    match = re.fullmatch(
+        r"[A-Za-z][A-Za-z0-9_]{0,31}\s*\(\s*([xyzuvt](?:\s*,\s*[xyzuvt])?)\s*\)\s*=\s*(.+)",
+        trimmed,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not match:
+        return None
+    arguments = tuple(part.strip().lower() for part in match.group(1).split(","))
+    if len(set(arguments)) != len(arguments):
+        return None
+    try:
+        expression_source = normalize_relationship(match.group(2))
+        expression = parse_expression_v2(expression_source)
+    except VisualizationV2Error:
+        return None
+    if not _expression_variables(expression).issubset(set(arguments)):
+        return None
+    if len(arguments) == 1:
+        dependent = "x" if arguments[0] == "y" else "y"
+    elif set(arguments) == {"x", "y"}:
+        dependent = "z"
+    else:
+        return None
+    normalized = f"{dependent}={expression_source}"
+    return normalized, parse_relationship(normalized)
+
+
+def _contextual_expression_candidates(request: str) -> list[str]:
+    """Extract math attached to a visual command; unrelated prose is intentionally ignored."""
+    pattern = re.compile(
+        r"\b(?:plot|graph|chart|draw|sketch|visuali[sz]e|render|trace|illustrate|"
+        r"show|display|create|generate|make)\s+"
+        r"(?:me\s+)?(?:(?:an?|the)\s+)?(?:(?:interactive|animated)\s+)?"
+        r"(?:(?:2d|two[- ]dimensional|3d|three[- ]dimensional)\s+)?"
+        r"(?:(?:plot|graph|curve|function|expression|equation|surface|contour(?:\s+map)?|heat\s*map)\s+)?"
+        r"(?:of\s+)?([^\n!?]+)",
+        re.IGNORECASE,
+    )
+    candidates: list[str] = []
+    for match in pattern.finditer(str(request or "")):
+        candidate = _trim_contextual_expression(match.group(1))
+        if candidate and "=" not in candidate:
+            candidates.append(candidate)
+    return candidates
+
+
+def _contextual_relationship_from_request(request: str) -> tuple[str, dict[str, Any]] | None:
+    """Infer a canonical dependent axis from safe bare mathematical expressions."""
+    for candidate in _contextual_expression_candidates(request):
+        try:
+            expression_source = normalize_relationship(_lexical_function_expression(candidate))
+            expression = parse_expression_v2(expression_source)
+        except VisualizationV2Error:
+            continue
+        variables = _expression_variables(expression)
+        if not variables:
+            dependent = "y"
+        elif variables == {"y"}:
+            dependent = "x"
+        elif len(variables) == 1:
+            dependent = "y"
+        elif variables == {"x", "y"}:
+            dependent = "z"
+        else:
+            continue
+        normalized = f"{dependent}={expression_source}"
+        try:
+            return normalized, parse_relationship(normalized)
+        except VisualizationV2Error:
+            continue
+    return None
+
+
 def _relationship_from_request(request: str) -> tuple[str, dict[str, Any]] | None:
     value = str(request or "")
     candidates: list[str] = []
@@ -685,12 +831,15 @@ def _relationship_from_request(request: str) -> tuple[str, dict[str, Any]] | Non
         if candidate in seen:
             continue
         seen.add(candidate)
+        function_relationship = _canonical_function_relationship(candidate)
+        if function_relationship is not None:
+            return function_relationship
         try:
             normalized = normalize_relationship(candidate)
             return normalized, parse_relationship(normalized)
         except VisualizationV2Error:
             continue
-    return None
+    return _contextual_relationship_from_request(value)
 
 
 def _parametric_expressions_from_request(request: str) -> dict[str, dict[str, Any]] | None:
@@ -1083,11 +1232,19 @@ def _generic_2d_spec(
         )
 
     left, right = relationship["left"], relationship["right"]
-    if left == {"type": "variable", "name": "y"} and not _contains_variable(right, "y"):
+    right_variables = _expression_variables(right)
+    independent_variable = "x"
+    if (
+        left == {"type": "variable", "name": "y"}
+        and "y" not in right_variables
+        and len(right_variables) <= 1
+    ):
+        independent_variable = next(iter(right_variables), "x")
+        axes["x_label"] = independent_variable
         segments: list[list[list[float]]] = [[]]
         for index in range(321):
             x = -5 + 10 * index / 320
-            y = _safe_sample(right, {"x": x})
+            y = _safe_sample(right, {independent_variable: x})
             if y is None or abs(y) > 10_000 or (segments[-1] and abs(y - segments[-1][-1][1]) > 50):
                 if segments[-1]:
                     segments.append([])
@@ -1095,16 +1252,24 @@ def _generic_2d_spec(
                 segments[-1].append([x, y])
         curves = [segment for segment in segments if len(segment) >= 2]
         family = "explicit_curve"
-    elif left == {"type": "variable", "name": "x"} and not _contains_variable(right, "x"):
+    elif (
+        left == {"type": "variable", "name": "x"}
+        and "x" not in right_variables
+        and len(right_variables) <= 1
+    ):
+        independent_variable = next(iter(right_variables), "y")
+        axes["y_label"] = independent_variable
         points = []
         for index in range(321):
             y = -5 + 10 * index / 320
-            x = _safe_sample(right, {"y": y})
+            x = _safe_sample(right, {independent_variable: y})
             if x is not None:
                 points.append([x, y])
         curves = [points] if len(points) >= 2 else []
         family = "explicit_curve"
     else:
+        if not (_expression_variables(left) | right_variables).issubset({"x", "y"}):
+            return None
         sample = lambda x, y: (
             None
             if (left_value := _safe_sample(left, {"x": x, "y": y})) is None
@@ -1120,7 +1285,11 @@ def _generic_2d_spec(
         for points in curves[: MAX_LAYERS - 1]
     ]
     fallback = f"Two-dimensional plot of {normalized}."
-    if family == "explicit_curve" and left == {"type": "variable", "name": "y"}:
+    if (
+        family == "explicit_curve"
+        and left == {"type": "variable", "name": "y"}
+        and independent_variable == "x"
+    ):
         at_minus_one = _safe_sample(right, {"x": -1})
         at_zero = _safe_sample(right, {"x": 0})
         at_one = _safe_sample(right, {"x": 1})
@@ -6895,6 +7064,10 @@ def _surface_spec(
     normalized: str, relationship: dict[str, Any], *, animate: bool = False
 ) -> dict[str, Any]:
     left = relationship["left"]
+    if not (_expression_variables(left) | _expression_variables(relationship["right"])).issubset(
+        {"x", "y", "z"}
+    ):
+        raise VisualizationV2Error("surface relationships may use only x, y, and z")
     explicit = left == {"type": "variable", "name": "z"} and not _contains_variable(
         relationship["right"], "z"
     )

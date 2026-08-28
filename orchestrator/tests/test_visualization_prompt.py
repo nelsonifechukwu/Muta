@@ -420,6 +420,26 @@ def test_exact_unicode_surface_prompt_skips_the_model_pass() -> None:
     assert local.calls == [] and engine.fit_calls == []
 
 
+def test_contextual_sine_plot_skips_the_model_pass_and_reaches_v2() -> None:
+    local = _RecordingVisualClient({"this": "must not be used"})
+    engine = _VisualEngine(local)
+
+    spec = generate_visualization(
+        engine,
+        "plot sin(x)",
+        "The sine function oscillates between negative one and one.",
+    )
+
+    assert spec is not None
+    assert (spec["version"], spec["family"], spec["renderer"]) == (
+        2,
+        "explicit_curve",
+        "svg",
+    )
+    assert spec["scene"]["layers"][1]["label"] == "y=sin(x)"
+    assert local.calls == [] and engine.fit_calls == []
+
+
 def test_standard_science_visuals_are_deterministic_and_semantically_exact() -> None:
     phase = _phase_shift_spec("Show a sine wave shifted by 180 degrees.")
     assert len(phase["series"]) == 2

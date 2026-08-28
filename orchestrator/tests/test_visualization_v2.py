@@ -775,6 +775,105 @@ def test_general_2d_planner_selects_the_requested_representation(
     validate_v2_spec(spec)
 
 
+def test_contextual_function_shorthand_compiles_the_released_sine_request() -> None:
+    spec = compile_visualization_v2("plot sin(x)")
+    assert spec is not None
+    assert (spec["family"], spec["renderer"], spec["kind"]) == (
+        "explicit_curve",
+        "svg",
+        "scene2d",
+    )
+    axes, curve = spec["scene"]["layers"][:2]
+    assert axes["x_label"] == "x" and axes["y_label"] == "y"
+    assert curve["label"] == "y=sin(x)"
+    origin = min(curve["points"], key=lambda point: abs(point[0]))
+    crest = min(curve["points"], key=lambda point: abs(point[0] - math.pi / 2))
+    assert origin == pytest.approx([0, 0])
+    assert crest[1] == pytest.approx(1, abs=0.001)
+
+
+@pytest.mark.parametrize(
+    ("prompt", "label", "horizontal_axis"),
+    [
+        ("Show me the plot of cos x.", "y=cos(x)", "x"),
+        ("Draw 2x+1 and label the intercept.", "y=2x+1", "x"),
+        ("Visualise exp(-x^2).", "y=exp(-x^2)", "x"),
+        ("Graph `log(x)` with axes.", "y=log(x)", "x"),
+        ("Plot the function 5.", "y=5", "x"),
+        ("Plot f(x)=sin(x).", "y=sin(x)", "x"),
+        ("Plot g(t)=cos(t).", "y=cos(t)", "t"),
+        ("Plot sin(u).", "y=sin(u)", "u"),
+        ("Plot a sine wave.", "y=sin(x)", "x"),
+        ("Graph cosine of t.", "y=cos(t)", "t"),
+        ("Draw the reciprocal function.", "y=1/x", "x"),
+    ],
+)
+def test_contextual_function_shorthand_uses_the_typed_expression_grammar(
+    prompt: str, label: str, horizontal_axis: str
+) -> None:
+    spec = compile_visualization_v2(prompt)
+    assert spec is not None and spec["family"] == "explicit_curve"
+    axes, curve = spec["scene"]["layers"][:2]
+    assert axes["x_label"] == horizontal_axis
+    assert curve["label"] == label
+    assert any(abs(point[1]) > 1e-3 for point in curve["points"])
+    validate_v2_spec(spec)
+
+
+def test_contextual_function_shorthand_stops_at_prose_and_animates_the_saved_artifact() -> None:
+    spec = compile_visualization_v2("Plot sin(x). Explain its amplitude and period.")
+    assert spec is not None and spec["family"] == "explicit_curve"
+    assert spec["scene"]["layers"][1]["label"] == "y=sin(x)"
+
+    animated = compile_visualization_v2("animate", previous_spec=spec)
+    assert animated is not None
+    assert animated["scene"]["layers"] == spec["scene"]["layers"]
+    assert animated["scene"]["animation"] == {"mode": "guided_reveal", "duration": 8}
+    assert {control["id"] for control in animated["controls"]} == {
+        "play",
+        "pause",
+        "restart",
+    }
+
+
+def test_contextual_axis_inference_handles_sideways_curves_and_scalar_fields() -> None:
+    sideways = compile_visualization_v2("Plot sin(y).")
+    assert sideways is not None and sideways["family"] == "explicit_curve"
+    assert sideways["scene"]["layers"][1]["label"] == "x=sin(y)"
+
+    surface = compile_visualization_v2("Plot sin(x)+cos(y) as a 3D surface.")
+    assert surface is not None and surface["family"] == "explicit_surface"
+    assert surface["scene"]["layers"][0]["label"] == "z=sin(x)+cos(y)"
+
+    contour = compile_visualization_v2("Show a contour map of sin(x)+cos(y).")
+    assert contour is not None and contour["family"] == "contour_map"
+    assert contour["renderer"] == "canvas"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Explain the plot of the novel.",
+        "Define graph theory.",
+        "Do not draw a graph of sin(x); text only.",
+        "Plot __import__('os').system('id').",
+        "Plot https://example.com/data.",
+        "Plot x+t.",
+    ],
+)
+def test_contextual_expression_inference_fails_closed_for_non_math_or_ambiguous_text(
+    prompt: str,
+) -> None:
+    spec = compile_visualization_v2(prompt)
+    assert spec is None or spec["family"] == "concept_process"
+
+
+@pytest.mark.parametrize("prompt", ["Plot y=x+t.", "Plot z=sin(u)."])
+def test_explicit_relationships_with_unbound_dimensions_are_rejected(prompt: str) -> None:
+    with pytest.raises(VisualizationV2Error):
+        compile_visualization_v2(prompt)
+
+
 @pytest.mark.parametrize(
     ("prompt", "family", "renderer"),
     [
