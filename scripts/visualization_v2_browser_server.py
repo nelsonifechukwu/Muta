@@ -16,6 +16,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 MAX_RESULT_BYTES = 8 * 1024 * 1024
+MATRIX_CASE_COUNT = 6
 
 
 def main() -> None:
@@ -87,7 +88,7 @@ def main() -> None:
                 expected_error = "LRU result must prove total=6, active=4, suspended=2, and restore"
                 destination = lru_output
             else:
-                expected_count = 200 if self.path == "/__results" else 5
+                expected_count = 200 if self.path == "/__results" else MATRIX_CASE_COUNT
                 valid = (
                     isinstance(payload, dict)
                     and payload.get("count") == expected_count
