@@ -1059,6 +1059,68 @@ def _curve_spec(
     return spec
 
 
+def _sample_explicit_curve(
+    expression: dict[str, Any],
+    *,
+    dependent_variable: str,
+    independent_variable: str,
+) -> tuple[list[list[list[float]]], list[float], list[float]]:
+    """Sample a one-dimensional relation in a readable, bounded Cartesian window."""
+    chosen: list[tuple[float, float]] = []
+    chosen_half_width = 1.0
+    # Preserve a conventional broad window when its range is readable. Contract only explosive
+    # functions; the renderer independently scales horizontal and vertical axes.
+    for half_width in (5.0, 4.0, 3.0, 2.0, 1.0):
+        samples: list[tuple[float, float]] = []
+        for index in range(321):
+            independent = -half_width + 2 * half_width * index / 320
+            dependent = _safe_sample(expression, {independent_variable: independent})
+            if dependent is not None and abs(dependent) <= 1_000_000:
+                samples.append((independent, dependent))
+        if not samples:
+            continue
+        chosen, chosen_half_width = samples, half_width
+        finite_ratio = len(samples) / 321
+        maximum = max(abs(value) for _argument, value in samples)
+        if finite_ratio >= 0.45 and maximum <= 1_000:
+            break
+
+    if len(chosen) < 2:
+        return [], [-chosen_half_width, chosen_half_width], [-1.0, 1.0]
+    dependent_values = [value for _argument, value in chosen]
+    value_span = max(dependent_values) - min(dependent_values)
+    jump_limit = max(50.0, value_span * 0.35)
+    segments: list[list[list[float]]] = [[]]
+    previous_argument: float | None = None
+    previous_value: float | None = None
+    expected_step = 2 * chosen_half_width / 320
+    for argument, value in chosen:
+        discontinuity = previous_argument is not None and (
+            argument - previous_argument > expected_step * 1.5
+            or (previous_value is not None and abs(value - previous_value) > jump_limit)
+        )
+        if discontinuity and segments[-1]:
+            segments.append([])
+        point = [value, argument] if dependent_variable == "x" else [argument, value]
+        segments[-1].append(point)
+        previous_argument, previous_value = argument, value
+    curves = [segment for segment in segments if len(segment) >= 2]
+    plotted = [point for segment in curves for point in segment]
+    if not plotted:
+        return [], [-chosen_half_width, chosen_half_width], [-1.0, 1.0]
+    return (
+        curves,
+        [
+            round(min(point[0] for point in plotted), 6),
+            round(max(point[0] for point in plotted), 6),
+        ],
+        [
+            round(min(point[1] for point in plotted), 6),
+            round(max(point[1] for point in plotted), 6),
+        ],
+    )
+
+
 def _generic_2d_spec(
     request: str,
     normalized: str | None,
@@ -1161,9 +1223,6 @@ def _generic_2d_spec(
 
     if relationship is None or normalized is None:
         return None
-    uses_z = _contains_variable(relationship["left"], "z") or _contains_variable(
-        relationship["right"], "z"
-    )
     contour = bool(re.search(r"\b(?:contour|heat\s*map|heatmap)\b", text, re.IGNORECASE))
     if not contour and re.search(
         r"\b(?:3d|three[- ]dimensional|surface|cylinder|cone|sphere|ellipsoid|torus|"
@@ -1171,8 +1230,6 @@ def _generic_2d_spec(
         text,
         re.IGNORECASE,
     ):
-        return None
-    if uses_z and not contour:
         return None
     axes = {"type": "axes", "x_label": "x", "y_label": "y", "grid": True}
     if contour:
@@ -1234,40 +1291,36 @@ def _generic_2d_spec(
     left, right = relationship["left"], relationship["right"]
     right_variables = _expression_variables(right)
     independent_variable = "x"
+    dependent_variable = left.get("name") if left.get("type") == "variable" else None
+    explicit_variables = right_variables.issubset({"x", "y", "z"}) or (
+        dependent_variable == "y" and right_variables.issubset({"x", "t", "u"})
+    )
     if (
-        left == {"type": "variable", "name": "y"}
-        and "y" not in right_variables
+        dependent_variable in {"x", "y", "z"}
+        and dependent_variable not in right_variables
         and len(right_variables) <= 1
+        and explicit_variables
     ):
-        independent_variable = next(iter(right_variables), "x")
-        axes["x_label"] = independent_variable
-        segments: list[list[list[float]]] = [[]]
-        for index in range(321):
-            x = -5 + 10 * index / 320
-            y = _safe_sample(right, {independent_variable: x})
-            if y is None or abs(y) > 10_000 or (segments[-1] and abs(y - segments[-1][-1][1]) > 50):
-                if segments[-1]:
-                    segments.append([])
-            else:
-                segments[-1].append([x, y])
-        curves = [segment for segment in segments if len(segment) >= 2]
-        family = "explicit_curve"
-    elif (
-        left == {"type": "variable", "name": "x"}
-        and "x" not in right_variables
-        and len(right_variables) <= 1
-    ):
-        independent_variable = next(iter(right_variables), "y")
-        axes["y_label"] = independent_variable
-        points = []
-        for index in range(321):
-            y = -5 + 10 * index / 320
-            x = _safe_sample(right, {independent_variable: y})
-            if x is not None:
-                points.append([x, y])
-        curves = [points] if len(points) >= 2 else []
+        independent_variable = next(
+            iter(right_variables), "y" if dependent_variable == "x" else "x"
+        )
+        if independent_variable == dependent_variable:
+            return None
+        if dependent_variable == "x":
+            axes["x_label"] = dependent_variable
+            axes["y_label"] = independent_variable
+        else:
+            axes["x_label"] = independent_variable
+            axes["y_label"] = dependent_variable
+        curves, x_range, y_range = _sample_explicit_curve(
+            right,
+            dependent_variable=dependent_variable,
+            independent_variable=independent_variable,
+        )
         family = "explicit_curve"
     else:
+        if _contains_variable(left, "z") or _contains_variable(right, "z"):
+            return None
         if not (_expression_variables(left) | right_variables).issubset({"x", "y"}):
             return None
         sample = lambda x, y: (
@@ -1278,13 +1331,32 @@ def _generic_2d_spec(
         )
         curves = _marching_squares(sample)
         family = "implicit_curve"
+        x_range = (
+            [
+                round(min(point[0] for curve in curves for point in curve), 6),
+                round(max(point[0] for curve in curves for point in curve), 6),
+            ]
+            if curves
+            else [-1.0, 1.0]
+        )
+        y_range = (
+            [
+                round(min(point[1] for curve in curves for point in curve), 6),
+                round(max(point[1] for curve in curves for point in curve), 6),
+            ]
+            if curves
+            else [-1.0, 1.0]
+        )
     if not curves:
         return None
     layers = [axes] + [
         {"type": "polyline", "label": normalized, "points": points, "color": "orange"}
         for points in curves[: MAX_LAYERS - 1]
     ]
-    fallback = f"Two-dimensional plot of {normalized}."
+    fallback = (
+        f"Two-dimensional plot of {normalized}. Visible horizontal range {x_range[0]:g} to "
+        f"{x_range[1]:g}; visible vertical range {y_range[0]:g} to {y_range[1]:g}."
+    )
     if (
         family == "explicit_curve"
         and left == {"type": "variable", "name": "y"}

@@ -542,13 +542,10 @@
       "normalization_decision": null,
       "expected": {
         "intent": "mathematical_visual",
-        "family": "explicit_surface",
-        "renderer": "three",
-        "spec_kind": "scene3d",
-        "controls": [
-          "orbit",
-          "reset_view"
-        ],
+        "family": "explicit_curve",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [],
         "oracles": [
           "expression_residual",
           "finite_geometry",

@@ -775,6 +775,48 @@ def test_general_2d_planner_selects_the_requested_representation(
     validate_v2_spec(spec)
 
 
+@pytest.mark.parametrize("dependent", ["y", "z"])
+def test_one_independent_variable_relations_render_as_readable_curves(dependent: str) -> None:
+    spec = compile_visualization_v2(f"plot {dependent} = x^3")
+    assert spec is not None
+    assert (spec["family"], spec["renderer"], spec["kind"]) == (
+        "explicit_curve",
+        "svg",
+        "scene2d",
+    )
+    axes, curve = spec["scene"]["layers"][:2]
+    assert (axes["x_label"], axes["y_label"]) == ("x", dependent)
+    assert curve["points"][0] == pytest.approx([-5, -125])
+    assert curve["points"][-1] == pytest.approx([5, 125])
+    origin = min(curve["points"], key=lambda point: abs(point[0]))
+    assert origin == pytest.approx([0, 0])
+    assert "horizontal range -5 to 5" in spec["text_fallback"]
+    validate_v2_spec(spec)
+
+
+def test_fast_growing_curve_contracts_domain_without_clipping_or_nonfinite_points() -> None:
+    spec = compile_visualization_v2("plot z = exp(x^2)")
+    assert spec is not None and spec["family"] == "explicit_curve"
+    curve = spec["scene"]["layers"][1]
+    assert curve["points"][0][0] == pytest.approx(-2)
+    assert curve["points"][-1][0] == pytest.approx(2)
+    assert all(math.isfinite(coordinate) for point in curve["points"] for coordinate in point)
+    assert max(point[1] for point in curve["points"]) < 100
+
+
+def test_two_independent_variables_still_require_a_three_dimensional_surface() -> None:
+    spec = compile_visualization_v2("plot z = x^3 + y^2")
+    assert spec is not None
+    assert (spec["family"], spec["renderer"], spec["kind"]) == (
+        "explicit_surface",
+        "three",
+        "scene3d",
+    )
+    expression_json = json.dumps(spec["scene"]["layers"][0]["relationship"]["right"])
+    assert '"name": "x"' in expression_json
+    assert '"name": "y"' in expression_json
+
+
 def test_contextual_function_shorthand_compiles_the_released_sine_request() -> None:
     spec = compile_visualization_v2("plot sin(x)")
     assert spec is not None

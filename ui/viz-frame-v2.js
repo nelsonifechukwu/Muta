@@ -1771,6 +1771,41 @@
     return { values, inputs, setPressed, cleanup: () => listeners.forEach((remove) => remove()) };
   }
 
+  function buildViewControls(drawing, handlers) {
+    const wrapper = html("div", "viz-view-controls");
+    wrapper.setAttribute("role", "group");
+    wrapper.setAttribute("aria-label", handlers.groupLabel);
+    const listeners = [];
+    const actions = [
+      ["zoom_in", "Zoom in", handlers.zoomIn],
+      ["zoom_out", "Zoom out", handlers.zoomOut],
+    ];
+    if (handlers.includeReset !== false) actions.push(["reset_view", "Reset view", handlers.reset]);
+    actions.forEach(([id, label, handler]) => {
+      const button = html("button", "", label);
+      button.type = "button";
+      button.id = `viz-view-${id}`;
+      button.setAttribute("aria-label", label);
+      button.addEventListener("click", handler);
+      listeners.push(() => button.removeEventListener("click", handler));
+      wrapper.appendChild(button);
+    });
+    drawing.appendChild(wrapper);
+    return { cleanup: () => { listeners.forEach((remove) => remove()); wrapper.remove(); } };
+  }
+
+  function zoomedDomain(domain, amount) {
+    const middle = (domain[0] + domain[1]) / 2;
+    const half = (domain[1] - domain[0]) / (2 * amount);
+    return [middle - half, middle + half];
+  }
+
+  function tickLabel(value) {
+    const magnitude = Math.abs(value);
+    if (magnitude >= 10000 || (magnitude > 0 && magnitude < 0.001)) return value.toExponential(1);
+    return Number(value.toPrecision(4)).toString();
+  }
+
   function synchronizeIdealGas(values, changedId, controls) {
     if (!controls || !["pressure", "volume", "temperature"].includes(changedId)) return;
     const ranges = { pressure: [0.5, 8], volume: [0.5, 8], temperature: [0.5, 12] };
@@ -1880,6 +1915,9 @@
     const marker = element("marker", { id: "v2-arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" });
     marker.appendChild(element("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: context.neutral }));
     defs.appendChild(marker);
+    const plotClip = element("clipPath", { id: "v2-plot-clip" });
+    plotClip.appendChild(element("rect", { x: 62, y: 22, width: 633, height: height - 68 }));
+    defs.appendChild(plotClip);
     svg.appendChild(defs);
     drawing.appendChild(svg);
     stage.appendChild(drawing);
@@ -1905,6 +1943,8 @@
     let animationProgress = spec.scene.animation ? 0 : 1;
     let animationStatus = spec.scene.animation ? "paused" : "static";
     let animationFrameInterval = 0;
+    let viewScale = 1;
+    let viewRevision = 0;
     const domainControlValues = Object.fromEntries(spec.controls.map((control) => [control.id, control.value]));
     const redraw = (controlValues = {}, changedId = "") => {
       latestControlValues = animationControlValues(spec, controlValues, animationProgress);
@@ -1933,8 +1973,10 @@
       const baseProbes = layers.filter((layer) => layer.type === "probe_vector").map((layer) => evaluatedProbe(layer, domainControlValues));
       const fieldPoints = baseVectorValues.flatMap((samples) => samples.flatMap(([vx, vy, dx, dy]) => [[vx, vy], [vx + dx, vy + dy]]));
       const plotPoints = baseControlled.flat().concat(baseParticlePoints.flat(), fieldPoints, baseProbes.flat());
-      const xDomain = extent(plotPoints.map((point) => point[0]));
-      const yDomain = extent(plotPoints.map((point) => point[1]));
+      const baseXDomain = extent(plotPoints.map((point) => point[0]));
+      const baseYDomain = extent(plotPoints.map((point) => point[1]));
+      const xDomain = zoomedDomain(baseXDomain, viewScale);
+      const yDomain = zoomedDomain(baseYDomain, viewScale);
       const x = scale(xDomain, [62, 695]);
       const y = scale(yDomain, [height - 46, 22]);
       const stateControl = spec.controls.find((control) => ["step", "select"].includes(control.type));
@@ -1958,6 +2000,16 @@
           }
           node.append(element("line", { x1: 62, y1: height - 46, x2: 695, y2: height - 46, stroke: context.neutral, "stroke-width": 1.4 }));
           node.append(element("line", { x1: 62, y1: 22, x2: 62, y2: height - 46, stroke: context.neutral, "stroke-width": 1.4 }));
+          if (spec.family === "explicit_curve") {
+            for (let tick = 0; tick <= 4; tick += 1) {
+              const gx = 62 + (633 * tick) / 4;
+              const gy = 22 + ((height - 68) * tick) / 4;
+              const xValue = xDomain[0] + (xDomain[1] - xDomain[0]) * tick / 4;
+              const yValue = yDomain[1] - (yDomain[1] - yDomain[0]) * tick / 4;
+              node.append(element("text", { x: gx, y: height - 29, "text-anchor": "middle", fill: context.neutral, "font-size": 10, class: "viz-v2-scale-label" }, tickLabel(xValue)));
+              node.append(element("text", { x: 55, y: gy + 4, "text-anchor": "end", fill: context.neutral, "font-size": 10, class: "viz-v2-scale-label" }, tickLabel(yValue)));
+            }
+          }
           node.append(element("text", { x: 378, y: height - 12, "text-anchor": "middle", fill: context.neutral }, layer.x_label || "x"));
           node.append(element("text", { x: 17, y: height / 2, transform: `rotate(-90 17 ${height / 2})`, "text-anchor": "middle", fill: context.neutral }, layer.y_label || "y"));
         } else if (layer.type === "polyline") {
@@ -1973,7 +2025,9 @@
             const winding = Math.abs(1 - 0.25 * gain) < 0.2 * gain ? 1 : 0;
             displayedCurveLabel = `Nyquist locus • winding N=${winding} • ${winding ? "unstable" : "stable"}`;
           }
-          node = element("g", { class: "viz-v2-layer", role: "img", "aria-label": displayedCurveLabel });
+          const polylineAttributes = { class: "viz-v2-layer", role: "img", "aria-label": displayedCurveLabel };
+          if (spec.family === "explicit_curve") polylineAttributes["clip-path"] = "url(#v2-plot-clip)";
+          node = element("g", polylineAttributes);
           const pathAttributes = { d: path, fill: "none", stroke: color, "stroke-width": 3, "stroke-linejoin": "round" };
           // The trusted magnetic-field family structurally owns its two-point tangent cues.
           // Descriptive labels remain inert and never dispatch renderer behaviour.
@@ -2143,7 +2197,8 @@
       svg.appendChild(fragment);
       sizeBearingText();
       const primitives = svg.querySelectorAll("path,line,circle,rect,text").length;
-      recordEvidence(stage, { rendered: primitives > 2, renderer: "svg", primitive_count: primitives, controls: spec.controls.length, family: spec.family, control_revision: controlRevision, control_values: latestControlValues, geometry_signature: geometrySignature, visual_state_signature: geometrySignature, animation_state: animationStatus, animation_progress: animationProgress, observed_frame_interval_ms: animationFrameInterval, state_description: state.textContent });
+      const visualStateSignature = geometrySignature + viewRevision * 15485863 + Math.round(viewScale * 1009);
+      recordEvidence(stage, { rendered: primitives > 2, renderer: "svg", primitive_count: primitives, controls: spec.controls.length, family: spec.family, control_revision: controlRevision, control_values: latestControlValues, geometry_signature: geometrySignature, visual_state_signature: visualStateSignature, view_scale: viewScale, view_revision: viewRevision, x_domain: xDomain, y_domain: yDomain, animation_state: animationStatus, animation_progress: animationProgress, observed_frame_interval_ms: animationFrameInterval, state_description: state.textContent });
     };
     let animationController = null;
     let controls;
@@ -2156,6 +2211,56 @@
     animationController = createAnimationController(spec, context, controls, (progress, statusValue, frameInterval) => {
       animationProgress = progress; animationStatus = statusValue; animationFrameInterval = frameInterval; redraw(controls.values);
     });
+    const viewListeners = [];
+    let viewControls = null;
+    if (spec.family === "explicit_curve") {
+      const setViewScale = (next) => {
+        const bounded = Math.max(0.5, Math.min(8, next));
+        if (Math.abs(bounded - viewScale) < 1e-9) return;
+        viewScale = bounded; viewRevision += 1; redraw(controls.values);
+      };
+      viewControls = buildViewControls(drawing, {
+        groupLabel: [spec.title, context.t("visualization.controls")].join(": "),
+        zoomIn: () => setViewScale(viewScale * 1.35),
+        zoomOut: () => setViewScale(viewScale / 1.35),
+        reset: () => setViewScale(1),
+      });
+      svg.tabIndex = 0;
+      svg.classList.add("viz-v2-interactive-plot");
+      const wheel = (event) => { event.preventDefault(); setViewScale(viewScale * (event.deltaY < 0 ? 1.18 : 1 / 1.18)); };
+      const keydown = (event) => {
+        if (!["+", "=", "-", "_", "0"].includes(event.key)) return;
+        event.preventDefault();
+        if (event.key === "0") setViewScale(1);
+        else setViewScale(viewScale * (["+", "="].includes(event.key) ? 1.35 : 1 / 1.35));
+      };
+      const pointers = new Map(); let pinchDistance = 0;
+      const pointerDown = (event) => { if (event.pointerType === "touch") pointers.set(event.pointerId, [event.clientX, event.clientY]); };
+      const pointerMove = (event) => {
+        if (!pointers.has(event.pointerId)) return;
+        pointers.set(event.pointerId, [event.clientX, event.clientY]);
+        if (pointers.size !== 2) { pinchDistance = 0; return; }
+        const [first, second] = [...pointers.values()];
+        const distance = Math.hypot(first[0] - second[0], first[1] - second[1]);
+        if (pinchDistance > 0) setViewScale(viewScale * distance / pinchDistance);
+        pinchDistance = distance; event.preventDefault();
+      };
+      const pointerUp = (event) => { pointers.delete(event.pointerId); if (pointers.size < 2) pinchDistance = 0; };
+      svg.addEventListener("wheel", wheel, { passive: false });
+      svg.addEventListener("keydown", keydown);
+      svg.addEventListener("pointerdown", pointerDown);
+      svg.addEventListener("pointermove", pointerMove);
+      svg.addEventListener("pointerup", pointerUp);
+      svg.addEventListener("pointercancel", pointerUp);
+      viewListeners.push(
+        () => svg.removeEventListener("wheel", wheel),
+        () => svg.removeEventListener("keydown", keydown),
+        () => svg.removeEventListener("pointerdown", pointerDown),
+        () => svg.removeEventListener("pointermove", pointerMove),
+        () => svg.removeEventListener("pointerup", pointerUp),
+        () => svg.removeEventListener("pointercancel", pointerUp),
+      );
+    }
     redraw(controls.values);
     attachFallback(stage, spec);
     const observer = new ResizeObserver(() => {
@@ -2163,7 +2268,7 @@
       sizeBearingText();
     });
     observer.observe(drawing);
-    return () => { animationController.cleanup(); controls.cleanup(); observer.disconnect(); };
+    return () => { animationController.cleanup(); controls.cleanup(); viewControls?.cleanup(); viewListeners.forEach((remove) => remove()); observer.disconnect(); };
   }
 
   function canvasScene(spec, context) {
@@ -2705,6 +2810,7 @@
     const familyObjects = new Map();
     const surfaceRecords = [];
     let viewRevision = 0;
+    let viewScale = 1;
     let phaseProgress = 0;
     let raf = 0; let playing = false; let elapsed = 0; let lastTick = 0; let lastDraw = 0; let observedFrameInterval = 0;
     const toWorld = ([x, y, z]) => [x, z, y];
@@ -2840,6 +2946,7 @@
     camera.position.copy(center).add(new THREE.Vector3(1.6, 1.25, 1.9).normalize().multiplyScalar(extentSize * 1.7));
     camera.lookAt(center);
     camera.updateProjectionMatrix();
+    const initialCameraOffset = camera.position.clone().sub(center);
     const resize = () => {
       const width = Math.max(1, drawing.clientWidth || 720);
       const height = Math.max(240, spec.height - 110);
@@ -2890,33 +2997,65 @@
       geometryState += viewRevision * 15485863;
       if (clippingPlane) geometryState += Math.round(clippingPlane.constant * 10007);
       const visualStateSignature = geometryState;
-      recordEvidence(stage, { rendered: drawCalls > 0 && submittedGeometry && glError === gl.NO_ERROR, renderer: "three", nonzero_pixel_samples: nonzero, draw_calls: drawCalls, gpu_calls: gpu.calls, gpu_triangles: gpu.triangles, gpu_lines: gpu.lines, gpu_points: gpu.points, gl_error: glError, triangles: triangleCount, topology, surface_diagnostics: surfaceDiagnostics, family: spec.family, control_revision: controlRevision, control_values: latestControlValues, geometry_signature: visualStateSignature, visual_state_signature: visualStateSignature, animation_state: playing ? "playing" : phaseProgress >= 1 ? "complete" : "paused", animation_progress: phaseProgress, observed_frame_interval_ms: observedFrameInterval, state_description: state.textContent });
+      recordEvidence(stage, { rendered: drawCalls > 0 && submittedGeometry && glError === gl.NO_ERROR, renderer: "three", nonzero_pixel_samples: nonzero, draw_calls: drawCalls, gpu_calls: gpu.calls, gpu_triangles: gpu.triangles, gpu_lines: gpu.lines, gpu_points: gpu.points, gl_error: glError, triangles: triangleCount, topology, surface_diagnostics: surfaceDiagnostics, family: spec.family, control_revision: controlRevision, control_values: latestControlValues, geometry_signature: visualStateSignature, visual_state_signature: visualStateSignature, view_scale: viewScale, view_revision: viewRevision, animation_state: playing ? "playing" : phaseProgress >= 1 ? "complete" : "paused", animation_progress: phaseProgress, observed_frame_interval_ms: observedFrameInterval, state_description: state.textContent });
     };
     const observer = new ResizeObserver(resize);
     observer.observe(drawing);
     resize();
+    const setViewScale = (next) => {
+      const bounded = Math.max(0.5, Math.min(3, next));
+      if (Math.abs(bounded - viewScale) < 1e-9) return;
+      viewScale = bounded; viewRevision += 1;
+      camera.position.copy(center).add(initialCameraOffset.clone().multiplyScalar(1 / viewScale));
+      camera.lookAt(center); resize();
+    };
     let dragging = false; let previous = null;
+    const touchPointers = new Map(); let pinchDistance = 0;
     const pointerDown = (event) => {
+      if (event.pointerType === "touch") touchPointers.set(event.pointerId, [event.clientX, event.clientY]);
       dragging = true; previous = [event.clientX, event.clientY];
       try { renderer.domElement.setPointerCapture(event.pointerId); } catch { /* synthetic QA events have no active pointer */ }
     };
     const pointerMove = (event) => {
+      if (touchPointers.has(event.pointerId)) {
+        touchPointers.set(event.pointerId, [event.clientX, event.clientY]);
+        if (touchPointers.size === 2) {
+          const [first, second] = [...touchPointers.values()];
+          const distance = Math.hypot(first[0] - second[0], first[1] - second[1]);
+          if (pinchDistance > 0) setViewScale(viewScale * distance / pinchDistance);
+          pinchDistance = distance; event.preventDefault(); return;
+        }
+      }
       if (!dragging || !previous) return;
       group.rotation.y += (event.clientX - previous[0]) * 0.009;
       group.rotation.x += (event.clientY - previous[1]) * 0.009;
       previous = [event.clientX, event.clientY]; resize();
     };
-    const pointerUp = () => { dragging = false; previous = null; };
+    const pointerUp = (event) => { touchPointers.delete(event.pointerId); if (touchPointers.size < 2) pinchDistance = 0; dragging = false; previous = null; };
+    const wheel = (event) => { event.preventDefault(); setViewScale(viewScale * (event.deltaY < 0 ? 1.18 : 1 / 1.18)); };
     const keyDown = (event) => {
       const directions = { ArrowLeft: [-0.12, 0], ArrowRight: [0.12, 0], ArrowUp: [0, -0.12], ArrowDown: [0, 0.12] };
-      if (!directions[event.key]) return;
-      event.preventDefault(); group.rotation.y += directions[event.key][0]; group.rotation.x += directions[event.key][1]; resize();
+      if (directions[event.key]) {
+        event.preventDefault(); group.rotation.y += directions[event.key][0]; group.rotation.x += directions[event.key][1]; resize(); return;
+      }
+      if (!["+", "=", "-", "_", "0"].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === "0") setViewScale(1);
+      else setViewScale(viewScale * (["+", "="].includes(event.key) ? 1.35 : 1 / 1.35));
     };
     renderer.domElement.addEventListener("pointerdown", pointerDown);
     renderer.domElement.addEventListener("pointermove", pointerMove);
     renderer.domElement.addEventListener("pointerup", pointerUp);
     renderer.domElement.addEventListener("pointercancel", pointerUp);
+    renderer.domElement.addEventListener("wheel", wheel, { passive: false });
     renderer.domElement.addEventListener("keydown", keyDown);
+    const viewControls = buildViewControls(drawing, {
+      groupLabel: [spec.title, context.t("visualization.controls")].join(": "),
+      zoomIn: () => setViewScale(viewScale * 1.35),
+      zoomOut: () => setViewScale(viewScale / 1.35),
+      reset: () => { group.rotation.set(0, 0, 0); setViewScale(1); resize(); },
+      includeReset: !spec.controls.some((control) => control.id === "reset_view"),
+    });
     const animated = Boolean(spec.scene.animation) || spec.scene.layers.some((layer) => layer.animation);
     const orbitEnabled = spec.controls.some((control) => control.id === "orbit");
     const duration = Math.max(2000, (spec.scene.layers.find((layer) => layer.animation)?.animation.duration || spec.scene.animation?.duration || 8) * 1000);
@@ -3013,7 +3152,7 @@
     };
     const pause = () => { playing = false; lastTick = 0; if (raf) cancelAnimationFrame(raf); raf = 0; transportControls?.setPressed("play", false); transportControls?.setPressed("pause", true); resize(); };
     const restart = () => { pause(); elapsed = 0; phaseProgress = 0; group.rotation.y = 0; if (phaseMode) updateSurfacePhase(0); else updateFamilyAnimation(0); transportControls?.setPressed("restart", false); transportControls?.setPressed("pause", false); resize(); play(); };
-    const resetView = () => { pause(); elapsed = 0; phaseProgress = 0; viewRevision += 1; group.rotation.set(0, 0, 0); if (phaseMode) updateSurfacePhase(0); else updateFamilyAnimation(0); transportControls?.setPressed("reset_view", false); resize(); };
+    const resetView = () => { pause(); elapsed = 0; phaseProgress = 0; viewRevision += 1; group.rotation.set(0, 0, 0); setViewScale(1); if (phaseMode) updateSurfacePhase(0); else updateFamilyAnimation(0); transportControls?.setPressed("reset_view", false); resize(); };
     const applyThreeControls = (values) => {
       if (clippingPlane) clippingPlane.constant = stateNumber(values, "clip_z", Number(clipControl.value));
       if (spec.family === "plane_intersection") group.rotation.y = stateNumber(values, "orbit", 1) * Math.PI / 10;
@@ -3108,11 +3247,12 @@
     });
     attachFallback(stage, spec);
     return () => {
-      pause(); controls.cleanup(); removeActivity(); observer.disconnect();
+      pause(); controls.cleanup(); viewControls.cleanup(); removeActivity(); observer.disconnect();
       renderer.domElement.removeEventListener("pointerdown", pointerDown);
       renderer.domElement.removeEventListener("pointermove", pointerMove);
       renderer.domElement.removeEventListener("pointerup", pointerUp);
       renderer.domElement.removeEventListener("pointercancel", pointerUp);
+      renderer.domElement.removeEventListener("wheel", wheel);
       renderer.domElement.removeEventListener("keydown", keyDown);
       group.traverse((child) => {
         child.geometry?.dispose?.();

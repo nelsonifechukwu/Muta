@@ -885,7 +885,7 @@
       if (spec.version === 2) {
         replay.hidden = true;
         surfaceControls.hidden = true;
-      await loadTrustedScript("viz-frame-v2.js?v=20260827-v2-63");
+      await loadTrustedScript("viz-frame-v2.js?v=20260828-dimensionality-1");
         await window.MutaVizV2.render(spec, {
           stage,
           palette,

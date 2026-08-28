@@ -11,7 +11,7 @@ UI = ROOT / "ui"
 
 def _contrast(foreground: str, background: str) -> float:
     def luminance(value: str) -> float:
-        channels = [int(value[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+        channels = [int(value[index : index + 2], 16) / 255 for index in (1, 3, 5)]
         linear = [
             channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
             for channel in channels
@@ -23,8 +23,8 @@ def _contrast(foreground: str, background: str) -> float:
 
 
 def _blend(foreground: str, background: str, opacity: float) -> str:
-    front = [int(foreground[index:index + 2], 16) for index in (1, 3, 5)]
-    back = [int(background[index:index + 2], 16) for index in (1, 3, 5)]
+    front = [int(foreground[index : index + 2], 16) for index in (1, 3, 5)]
+    back = [int(background[index : index + 2], 16) for index in (1, 3, 5)]
     channels = [round(left * opacity + right * (1 - opacity)) for left, right in zip(front, back)]
     return "#" + "".join(f"{channel:02x}" for channel in channels)
 
@@ -52,10 +52,10 @@ def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> No
         assert network_api not in frame + frame_v2
     assert "innerHTML" not in frame + frame_v2
     assert "visualizations.js" in html and "viz-frame.js" in html
-    assert 'viz-theme.js?v=20260825-mac-media-2' in html
+    assert "viz-theme.js?v=20260825-mac-media-2" in html
     assert html.index("viz-theme.js") < html.index("viz-frame.css")
     assert "viz-frame.js?v=20260827-v2-57" in html
-    assert 'loadTrustedScript("viz-frame-v2.js?v=20260827-v2-63")' in frame
+    assert 'loadTrustedScript("viz-frame-v2.js?v=20260828-dimensionality-1")' in frame
     assert "forceSinglePass: true" in frame_v2
     assert "gpuBudgetRespected" in browser_gate
     assert "visualization-v2-browser-gate.js?v=20260827-v2-52" in browser_gate_html
@@ -66,7 +66,7 @@ def test_model_output_is_data_inside_a_network_isolated_trusted_renderer() -> No
     assert "let intersecting = true" in parent
     assert "muta-viz-visibility" in parent and "muta-viz-visibility" in frame
     assert 'document.addEventListener("muta:themechange", refreshTheme)' in parent
-    assert 'viz-frame.html?theme=${safeTheme}#' in parent
+    assert "viz-frame.html?theme=${safeTheme}#" in parent
     assert "window.MutaViz?.cleanup(messagesEl)" in (UI / "app.js").read_text()
     assert "requestAnimationFrame(tick)" not in frame
     assert "render on demand" in frame
@@ -99,10 +99,10 @@ def test_v2_proposal_strings_have_only_inert_text_sinks() -> None:
     assert 'html("p", "", spec.text_fallback)' in frame
     assert "title.textContent = spec.title" in parent
     assert "ctx.fillText(" in frame
-    assert 'connect-src \'none\'' in html
-    assert 'worker-src \'none\'' in html
-    assert 'object-src \'none\'' in html
-    assert 'base-uri \'none\'' in html
+    assert "connect-src 'none'" in html
+    assert "worker-src 'none'" in html
+    assert "object-src 'none'" in html
+    assert "base-uri 'none'" in html
     assert 'spec.family === "semantic_composition"' not in frame
 
 
@@ -129,8 +129,27 @@ def test_math_surface_is_responsive_accessible_and_lifecycle_bounded() -> None:
     assert "min-width: 44px" in css and "min-height: 44px" in css
     assert "@media (max-width: 430px)" in css
     assert "@media (pointer: coarse), (max-width: 700px) and (max-height: 650px)" in css
-    reduced = re.search(r"@media \(prefers-reduced-motion: reduce\)\s*\{(?P<body>.*?)\}", css, re.DOTALL)
-    assert reduced and "#viz-surface-controls" in reduced.group("body")
+    reduced = re.search(
+        r"@media \(prefers-reduced-motion: reduce\)\s*\{(?P<body>.*?)\}", css, re.DOTALL
+    )
+    assert reduced and ".viz-view-controls" not in reduced.group("body")
+
+
+def test_curve_and_surface_view_controls_cover_all_input_modes_and_cleanup() -> None:
+    frame = (UI / "viz-frame-v2.js").read_text()
+    css = (UI / "viz-frame.css").read_text()
+
+    for label in ("Zoom in", "Zoom out", "Reset view"):
+        assert label in frame
+    assert 'addEventListener("wheel", wheel, { passive: false })' in frame
+    assert 'event.pointerType === "touch"' in frame
+    assert "touchPointers.size === 2" in frame and "pointers.size !== 2" in frame
+    assert '["+", "=", "-", "_", "0"]' in frame
+    assert frame.count('removeEventListener("wheel", wheel)') == 2
+    assert 'class: "viz-v2-scale-label"' in frame
+    assert 'clip-path": "url(#v2-plot-clip)"' in frame
+    assert "min-height: 44px" in css
+    assert ".viz-view-controls" in css and ".viz-v2-interactive-plot" in css
 
 
 def test_dark_visualization_geometry_keeps_non_text_contrast() -> None:

@@ -3037,9 +3037,21 @@
     },
     {
       "file": "ui/viz-frame-v2.js",
-      "line": 2671,
+      "line": 2223,
+      "kind": "js:t",
+      "key": "visualization.controls"
+    },
+    {
+      "file": "ui/viz-frame-v2.js",
+      "line": 2776,
       "kind": "js:t",
       "key": "visualization.rotateHint"
+    },
+    {
+      "file": "ui/viz-frame-v2.js",
+      "line": 3053,
+      "kind": "js:t",
+      "key": "visualization.controls"
     },
     {
       "file": "ui/viz-frame.html",

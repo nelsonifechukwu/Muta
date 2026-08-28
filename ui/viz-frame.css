@@ -62,6 +62,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 .viz-v2-drawing > svg,
 .viz-v2-drawing > canvas { display: block; width: 100%; height: 100%; }
 .viz-v2-three > canvas { touch-action: none; }
+.viz-v2-interactive-plot { touch-action: none; }
 
 .viz-v2-formula {
   position: absolute;
@@ -117,7 +118,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 .viz-v2-control-value { color: var(--viz-muted); font-variant-numeric: tabular-nums; }
 .viz-v2-control input,
 .viz-v2-control select,
-.viz-v2-control button { grid-column: 1 / -1; min-height: 36px; }
+.viz-v2-control button { grid-column: 1 / -1; min-height: 44px; }
 
 .viz-v2-control select,
 .viz-v2-control button {
@@ -244,6 +245,37 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 .viz-surface-controls button:focus-visible { outline: 2px solid var(--viz-1); outline-offset: 2px; }
 .viz-surface-controls button:disabled { cursor: default; opacity: 0.5; }
 
+.viz-view-controls {
+  position: absolute;
+  inset: auto 8px 8px auto;
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  padding: 4px;
+  border: 1px solid var(--viz-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--viz-bg) 94%, transparent);
+}
+
+.viz-view-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid var(--viz-border);
+  border-radius: 8px;
+  background: var(--viz-panel);
+  color: var(--viz-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.viz-view-controls button:hover { border-color: var(--viz-1); }
+.viz-view-controls button:focus-visible { outline: 3px solid var(--viz-1); outline-offset: 2px; }
+
 #viz-replay {
   position: absolute; inset: auto 9px 8px auto; z-index: 6;
   min-height: 32px; padding: 5px 10px; border: 1px solid var(--viz-border); border-radius: 8px;
@@ -262,8 +294,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 [hidden] { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
-  #viz-replay,
-  #viz-surface-controls { display: none !important; }
+  #viz-replay { display: none !important; }
 }
 
 @media (max-width: 430px) {
@@ -284,6 +315,8 @@ body { background: var(--viz-bg); color: var(--viz-text); }
   .viz-surface-equation { max-width: calc(100% - 14px); inset: 7px auto auto 7px; }
   .viz-surface-controls { right: 7px; justify-content: center; }
   .viz-surface-controls button { flex: 1 1 0; }
+  .viz-view-controls { inset: auto 6px 6px 6px; }
+  .viz-view-controls button { flex: 1 1 84px; }
 }
 
 @media (pointer: coarse), (max-width: 700px) and (max-height: 650px) {

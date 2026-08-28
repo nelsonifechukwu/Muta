@@ -15,7 +15,20 @@
     fetch("fixtures/visualization-v2-followups.json?v=matrix-4").then((response) => response.json()),
   ]);
   const select = (id) => corpus.cases.find((item) => item.id === id);
-  const items = [select("stem-001"), select("stem-048"), select("math-062"), ...followups.cases].filter(Boolean);
+  const cubicCurve = {
+    id: "regression-z-x3",
+    spec: {
+      version: 2, library: "d3", renderer: "svg", kind: "scene2d", family: "explicit_curve",
+      title: "Interactive 2D equation", aria_label: "Two-dimensional plot of z=x cubed with x and z axes.",
+      text_fallback: "Two-dimensional plot of z=x cubed from x=-5 to x=5.", height: 420, controls: [],
+      budget: { max_points: 4096, max_triangles: 1, max_fps: 30 },
+      scene: { coordinate_system: "cartesian2d", layers: [
+        { type: "axes", x_label: "x", y_label: "z", grid: true },
+        { type: "polyline", label: "z=x^3", points: [[-5,-125],[-4,-64],[-3,-27],[-2,-8],[-1,-1],[0,0],[1,1],[2,8],[3,27],[4,64],[5,125]], color: "orange" },
+      ] },
+    },
+  };
+  const items = [select("stem-001"), select("stem-048"), select("math-062"), cubicCurve, ...followups.cases].filter(Boolean);
   const encode = (spec) => {
     const bytes = new TextEncoder().encode(JSON.stringify(spec)); let binary = "";
     for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
@@ -43,13 +56,26 @@
   const results = [];
   for (const record of records) {
     const { item, article, frame, stage } = record; const documentValue = frame.contentDocument;
-    let evidence = record.evidence; const controls = [...documentValue.querySelectorAll(".viz-v2-control input,.viz-v2-control select,.viz-v2-control button")];
+    let evidence = record.evidence; const controls = [...documentValue.querySelectorAll(".viz-v2-control input,.viz-v2-control select,.viz-v2-control button,.viz-view-controls button")];
     controls[0]?.focus();
     const focusStyle = controls[0] ? frame.contentWindow.getComputedStyle(controls[0]) : null;
     const focusVisible = !controls[0] || Number.parseFloat(focusStyle.outlineWidth || "0") > 0 || Number.parseFloat(focusStyle.borderWidth || "0") > 0;
     let keyboardChanged = false; let pointerHandlerChanged = false;
     const canvas = documentValue.querySelector(".viz-v2-three canvas");
-    if (canvas) {
+    const interactivePlot = documentValue.querySelector("svg.viz-v2-interactive-plot");
+    if (interactivePlot) {
+      const before = evidence?.visual_state_signature;
+      interactivePlot.dispatchEvent(new frame.contentWindow.KeyboardEvent("keydown", { key: "+", bubbles: true, cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 30)); evidence = JSON.parse(stage.dataset.vizEvidence); keyboardChanged = evidence.visual_state_signature !== before;
+      const pointerBefore = evidence?.visual_state_signature;
+      interactivePlot.dispatchEvent(new frame.contentWindow.PointerEvent("pointerdown", { pointerId: 21, pointerType: "touch", clientX: 80, clientY: 120, bubbles: true }));
+      interactivePlot.dispatchEvent(new frame.contentWindow.PointerEvent("pointerdown", { pointerId: 22, pointerType: "touch", clientX: 160, clientY: 120, bubbles: true }));
+      interactivePlot.dispatchEvent(new frame.contentWindow.PointerEvent("pointermove", { pointerId: 22, pointerType: "touch", clientX: 190, clientY: 120, bubbles: true, cancelable: true }));
+      interactivePlot.dispatchEvent(new frame.contentWindow.PointerEvent("pointermove", { pointerId: 22, pointerType: "touch", clientX: 220, clientY: 120, bubbles: true, cancelable: true }));
+      interactivePlot.dispatchEvent(new frame.contentWindow.PointerEvent("pointerup", { pointerId: 21, pointerType: "touch", clientX: 80, clientY: 120, bubbles: true }));
+      interactivePlot.dispatchEvent(new frame.contentWindow.PointerEvent("pointerup", { pointerId: 22, pointerType: "touch", clientX: 220, clientY: 120, bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 30)); evidence = JSON.parse(stage.dataset.vizEvidence); pointerHandlerChanged = evidence.visual_state_signature !== pointerBefore;
+    } else if (canvas) {
       const before = evidence?.geometry_signature;
       canvas.dispatchEvent(new frame.contentWindow.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
       await new Promise((resolve) => setTimeout(resolve, 30)); evidence = JSON.parse(stage.dataset.vizEvidence); keyboardChanged = evidence.geometry_signature !== before;
@@ -78,15 +104,14 @@
     }
     article.style.width = "300px"; await new Promise((resolve) => setTimeout(resolve, 70));
     const responsive = stage.scrollWidth <= stage.clientWidth + 1 && stage.scrollHeight <= stage.clientHeight + 1;
-    const controlWrapper = documentValue.querySelector(".viz-v2-controls");
-    const controlsFullyVisible = !controlWrapper || controlWrapper.scrollWidth <= controlWrapper.clientWidth + 1;
+    const controlWrappers = [...documentValue.querySelectorAll(".viz-v2-controls,.viz-view-controls")];
+    const controlsFullyVisible = controlWrappers.every((wrapper) => wrapper.scrollWidth <= wrapper.clientWidth + 1);
     const controlBounds = controls.map((control) => {
       const bounds = control.getBoundingClientRect();
       return { id: control.id, width: bounds.width, height: bounds.height };
     });
-    const compactTouchLayout = targetWidth <= 430 || (targetWidth <= 700 && targetHeight <= 650);
     const touchTargetReady = controls.length === 0 || controlBounds.every((bounds) => (
-      bounds.width >= 44 && (!compactTouchLayout || bounds.height >= 44)
+      bounds.width >= 44 && bounds.height >= 44
     ));
     const nativeTouchReady = controls.length === 0 || controls.every((control) => (
       ["INPUT", "SELECT", "BUTTON"].includes(control.tagName) && Boolean(control.getAttribute("aria-label"))
