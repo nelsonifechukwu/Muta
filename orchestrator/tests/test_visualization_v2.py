@@ -790,7 +790,8 @@ def test_one_independent_variable_relations_render_as_readable_curves(dependent:
     assert curve["points"][-1] == pytest.approx([5, 125])
     origin = min(curve["points"], key=lambda point: abs(point[0]))
     assert origin == pytest.approx([0, 0])
-    assert "horizontal range -5 to 5" in spec["text_fallback"]
+    assert "Sampled horizontal range -5 to 5" in spec["text_fallback"]
+    assert "displayed axes include a small framing margin" in spec["text_fallback"]
     validate_v2_spec(spec)
 
 

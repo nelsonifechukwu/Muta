@@ -1364,8 +1364,9 @@ def _generic_2d_spec(
         for points in curves[: MAX_LAYERS - 1]
     ]
     fallback = (
-        f"Two-dimensional plot of {normalized}. Visible horizontal range {x_range[0]:g} to "
-        f"{x_range[1]:g}; visible vertical range {y_range[0]:g} to {y_range[1]:g}."
+        f"Two-dimensional plot of {normalized}. Sampled horizontal range {x_range[0]:g} to "
+        f"{x_range[1]:g}; sampled vertical range {y_range[0]:g} to {y_range[1]:g}. "
+        "The displayed axes include a small framing margin."
     )
     if (
         family == "explicit_curve"
