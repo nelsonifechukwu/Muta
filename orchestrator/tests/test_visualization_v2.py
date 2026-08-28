@@ -794,6 +794,17 @@ def test_one_independent_variable_relations_render_as_readable_curves(dependent:
     validate_v2_spec(spec)
 
 
+@pytest.mark.parametrize("dependent", ["y", "z"])
+def test_reversed_one_variable_relations_use_the_same_effective_dimension(dependent: str) -> None:
+    spec = compile_visualization_v2(f"plot x^3 = {dependent}")
+    assert spec is not None
+    assert (spec["family"], spec["renderer"]) == ("explicit_curve", "svg")
+    axes, curve = spec["scene"]["layers"][:2]
+    assert (axes["x_label"], axes["y_label"]) == ("x", dependent)
+    assert curve["points"][0] == pytest.approx([-5, -125])
+    assert curve["points"][-1] == pytest.approx([5, 125])
+
+
 def test_fast_growing_curve_contracts_domain_without_clipping_or_nonfinite_points() -> None:
     spec = compile_visualization_v2("plot z = exp(x^2)")
     assert spec is not None and spec["family"] == "explicit_curve"
@@ -815,6 +826,13 @@ def test_two_independent_variables_still_require_a_three_dimensional_surface() -
     expression_json = json.dumps(spec["scene"]["layers"][0]["relationship"]["right"])
     assert '"name": "x"' in expression_json
     assert '"name": "y"' in expression_json
+
+    reversed_spec = compile_visualization_v2("plot x^3 + y^2 = z")
+    assert reversed_spec is not None
+    assert (reversed_spec["family"], reversed_spec["renderer"]) == (
+        "explicit_surface",
+        "three",
+    )
 
 
 def test_contextual_function_shorthand_compiles_the_released_sine_request() -> None:

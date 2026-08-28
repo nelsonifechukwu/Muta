@@ -1289,6 +1289,16 @@ def _generic_2d_spec(
         )
 
     left, right = relationship["left"], relationship["right"]
+    # Equality is symmetric. Canonicalize an isolated dependent-axis variable from either side
+    # before dimensionality inference, so x^3=z cannot become a redundant y-extruded surface.
+    if (
+        left.get("type") != "variable"
+        and right.get("type") == "variable"
+        and right.get("name") in {"x", "y", "z"}
+        and right.get("name") not in _expression_variables(left)
+        and len(_expression_variables(left)) <= 1
+    ):
+        left, right = right, left
     right_variables = _expression_variables(right)
     independent_variable = "x"
     dependent_variable = left.get("name") if left.get("type") == "variable" else None
@@ -7136,6 +7146,15 @@ def _surface_spec(
     normalized: str, relationship: dict[str, Any], *, animate: bool = False
 ) -> dict[str, Any]:
     left = relationship["left"]
+    if relationship["right"] == {"type": "variable", "name": "z"} and not _contains_variable(
+        left, "z"
+    ):
+        relationship = {
+            **relationship,
+            "left": relationship["right"],
+            "right": left,
+        }
+        left = relationship["left"]
     if not (_expression_variables(left) | _expression_variables(relationship["right"])).issubset(
         {"x", "y", "z"}
     ):
