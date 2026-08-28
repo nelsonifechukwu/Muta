@@ -61,6 +61,7 @@
     const focusStyle = controls[0] ? frame.contentWindow.getComputedStyle(controls[0]) : null;
     const focusVisible = !controls[0] || Number.parseFloat(focusStyle.outlineWidth || "0") > 0 || Number.parseFloat(focusStyle.borderWidth || "0") > 0;
     let keyboardChanged = false; let pointerHandlerChanged = false;
+    let viewButtonsChanged = true; let wheelHandlerChanged = true; let resetRestored = true;
     const canvas = documentValue.querySelector(".viz-v2-three canvas");
     const interactivePlot = documentValue.querySelector("svg.viz-v2-interactive-plot");
     if (interactivePlot) {
@@ -102,6 +103,36 @@
     } else {
       keyboardChanged = true; pointerHandlerChanged = true;
     }
+    const viewTarget = interactivePlot || canvas;
+    if (viewTarget) {
+      const zoomIn = documentValue.getElementById("viz-view-zoom_in");
+      const zoomOut = documentValue.getElementById("viz-view-zoom_out");
+      const resetView = documentValue.getElementById("viz-view-reset_view")
+        || documentValue.getElementById("viz-v2-reset_view");
+      if (!zoomIn || !zoomOut || !resetView) {
+        viewButtonsChanged = false; wheelHandlerChanged = false; resetRestored = false;
+      } else {
+        const scaleBeforeZoomIn = evidence.view_scale;
+        zoomIn.click(); await new Promise((resolve) => setTimeout(resolve, 40));
+        evidence = JSON.parse(stage.dataset.vizEvidence);
+        const zoomInChanged = evidence.view_scale > scaleBeforeZoomIn;
+        const scaleBeforeZoomOut = evidence.view_scale;
+        zoomOut.click(); await new Promise((resolve) => setTimeout(resolve, 40));
+        evidence = JSON.parse(stage.dataset.vizEvidence);
+        const zoomOutChanged = evidence.view_scale < scaleBeforeZoomOut;
+        viewButtonsChanged = zoomInChanged && zoomOutChanged;
+        const scaleBeforeWheel = evidence.view_scale;
+        viewTarget.dispatchEvent(new frame.contentWindow.WheelEvent("wheel", {
+          deltaY: -120, bubbles: true, cancelable: true,
+        }));
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        evidence = JSON.parse(stage.dataset.vizEvidence);
+        wheelHandlerChanged = evidence.view_scale > scaleBeforeWheel;
+        resetView.click(); await new Promise((resolve) => setTimeout(resolve, 40));
+        evidence = JSON.parse(stage.dataset.vizEvidence);
+        resetRestored = Math.abs(evidence.view_scale - 1) < 1e-9;
+      }
+    }
     article.style.width = "300px"; await new Promise((resolve) => setTimeout(resolve, 70));
     const responsive = stage.scrollWidth <= stage.clientWidth + 1 && stage.scrollHeight <= stage.clientHeight + 1;
     const controlWrappers = [...documentValue.querySelectorAll(".viz-v2-controls,.viz-view-controls")];
@@ -132,7 +163,7 @@
         : evidence.animation_progress > hiddenProgress || evidence.animation_progress === 1;
       documentValue.getElementById("viz-v2-pause")?.click();
     }
-    results.push({ id: item.id, renderer: item.spec.renderer, rendered: Boolean(evidence?.rendered), responsive, controls_fully_visible: controlsFullyVisible, focus_visible: focusVisible, keyboard_handler_changed: keyboardChanged, synthetic_pointer_handler_changed: pointerHandlerChanged, native_touch_ready: nativeTouchReady, touch_target_ready: touchTargetReady, control_bounds: controlBounds, hidden_paused: hiddenPaused, resumed, accessible_description: Boolean(documentValue.querySelector(".viz-v2-fallback")), overflow: !responsive || !controlsFullyVisible, evidence });
+    results.push({ id: item.id, renderer: item.spec.renderer, rendered: Boolean(evidence?.rendered), responsive, controls_fully_visible: controlsFullyVisible, focus_visible: focusVisible, keyboard_handler_changed: keyboardChanged, synthetic_pointer_handler_changed: pointerHandlerChanged, view_buttons_changed: viewButtonsChanged, wheel_handler_changed: wheelHandlerChanged, reset_restored: resetRestored, native_touch_ready: nativeTouchReady, touch_target_ready: touchTargetReady, control_bounds: controlBounds, hidden_paused: hiddenPaused, resumed, accessible_description: Boolean(documentValue.querySelector(".viz-v2-fallback")), overflow: !responsive || !controlsFullyVisible, evidence });
   }
   const pageHorizontalOverflow = document.documentElement.scrollWidth > innerWidth + 1;
   const payload = {
@@ -145,7 +176,7 @@
     page_errors: errors, page_horizontal_overflow: pageHorizontalOverflow, cases: results,
     // Programmatically dispatched events exercise the internal handlers only. Trusted
     // keyboard/pointer input is recorded separately by the browser-skill QA artifact.
-    passed: errors.length === 0 && !pageHorizontalOverflow && results.every((item) => item.rendered && item.responsive && item.controls_fully_visible && item.focus_visible && item.keyboard_handler_changed && item.native_touch_ready && item.touch_target_ready && item.hidden_paused && item.resumed && item.accessible_description),
+    passed: errors.length === 0 && !pageHorizontalOverflow && results.every((item) => item.rendered && item.responsive && item.controls_fully_visible && item.focus_visible && item.keyboard_handler_changed && item.view_buttons_changed && item.wheel_handler_changed && item.reset_restored && item.native_touch_ready && item.touch_target_ready && item.hidden_paused && item.resumed && item.accessible_description),
   };
   output.textContent = JSON.stringify(payload); document.documentElement.dataset.complete = "true";
   document.documentElement.dataset.passed = String(payload.passed); status.textContent = payload.passed ? `Complete: ${results.length}/${results.length} matrix checks passed` : "Matrix checks failed";

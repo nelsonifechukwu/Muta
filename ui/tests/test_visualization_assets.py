@@ -137,6 +137,7 @@ def test_math_surface_is_responsive_accessible_and_lifecycle_bounded() -> None:
 
 def test_curve_and_surface_view_controls_cover_all_input_modes_and_cleanup() -> None:
     frame = (UI / "viz-frame-v2.js").read_text()
+    matrix = (UI / "tests" / "visualization-v2-matrix.js").read_text()
     css = (UI / "viz-frame.css").read_text()
 
     for label in ("Zoom in", "Zoom out", "Reset view"):
@@ -148,6 +149,12 @@ def test_curve_and_surface_view_controls_cover_all_input_modes_and_cleanup() -> 
     assert frame.count('removeEventListener("wheel", wheel)') == 2
     assert 'class: "viz-v2-scale-label"' in frame
     assert 'polylineAttributes["clip-path"] = "url(#v2-plot-clip)"' in frame
+    assert 'new frame.contentWindow.WheelEvent("wheel"' in matrix
+    assert "zoomIn.click()" in matrix and "zoomOut.click()" in matrix
+    assert "resetView.click()" in matrix
+    assert "wheel_handler_changed: wheelHandlerChanged" in matrix
+    assert "reset_restored: resetRestored" in matrix
+    assert "Math.abs(evidence.view_scale - 1) < 1e-9" in matrix
     assert "min-height: 44px" in css
     assert ".viz-view-controls" in css and ".viz-v2-interactive-plot" in css
 
