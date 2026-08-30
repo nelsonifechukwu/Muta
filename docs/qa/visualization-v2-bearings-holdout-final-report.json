@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-27T20:13:10.577839+00:00",
+  "immutable_first_run_hashes": {
+    "docs/qa/visualization-v2-bearings-holdout-first-python.json": "813198f1263c1ec73d3fbdbe7c605064e31c7a2388866ed814e7b80bca4cfb7f",
+    "docs/qa/visualization-v2-bearings-holdout-first-browser.json": "fbc99a6ce5fda71bd3b553b211f9dd1b1160d725b66f425bbff7faa9e905e451",
+    "docs/qa/visualization-v2-bearings-holdout-first-report.json": "1fabf5b7a487834017238eed562a3a2d5c403ed9059ba8988304d60212d71b5f",
+    "docs/qa/visualization-v2-bearings-holdout-first-report.md": "95fb8611694fea679662aa8f1ab99e1043cfa0e4934b903cc36f96626b0b1120"
+  },
+  "first_run_score": "0/15",
+  "count": 15,
+  "passed": 15,
+  "failed": 0,
+  "python_report": "docs/qa/visualization-v2-bearings-holdout-final-python.json",
+  "browser_report_sha256": "13350e3ba00077e5f9200d00cd10f53e5a872d397b000621010ff2734aa7433e",
+  "browser_matrix": "docs/qa/visualization-v2-bearings-browser-matrix.json",
+  "browser_matrix_passed": true,
+  "cases": [
+    {
+      "number": 1,
+      "id": "bearings-001",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 25,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 1,
+        "clockwise_arc_count": 1,
+        "arrowhead_count": 3,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 2,
+      "id": "bearings-002",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 24.9,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 1,
+        "clockwise_arc_count": 1,
+        "arrowhead_count": 3,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 3,
+      "id": "bearings-003",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 23.9,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 1,
+        "clockwise_arc_count": 1,
+        "arrowhead_count": 3,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 4,
+      "id": "bearings-004",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 24.6,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 2,
+        "angle_arc_count": 2,
+        "clockwise_arc_count": 2,
+        "arrowhead_count": 6,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 5,
+      "id": "bearings-005",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 23.7,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 2,
+        "angle_arc_count": 2,
+        "clockwise_arc_count": 2,
+        "arrowhead_count": 6,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 6,
+      "id": "bearings-006",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 24.4,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 2,
+        "angle_arc_count": 2,
+        "clockwise_arc_count": 2,
+        "arrowhead_count": 6,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 7,
+      "id": "bearings-007",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 24.1,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 1,
+        "clockwise_arc_count": 1,
+        "arrowhead_count": 5,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 8,
+      "id": "bearings-008",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 24.3,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 2,
+        "angle_arc_count": 3,
+        "clockwise_arc_count": 3,
+        "arrowhead_count": 8,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 9,
+      "id": "bearings-009",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 24,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 2,
+        "clockwise_arc_count": 2,
+        "arrowhead_count": 6,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 10,
+      "id": "bearings-010",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 23.8,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 1,
+        "clockwise_arc_count": 1,
+        "arrowhead_count": 5,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 11,
+      "id": "bearings-011",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 26.6,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 1,
+        "clockwise_arc_count": 1,
+        "arrowhead_count": 5,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 12,
+      "id": "bearings-012",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 27.9,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 2,
+        "angle_arc_count": 4,
+        "clockwise_arc_count": 3,
+        "arrowhead_count": 9,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 13,
+      "id": "bearings-013",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 27.8,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 3,
+        "angle_arc_count": 4,
+        "clockwise_arc_count": 4,
+        "arrowhead_count": 11,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 14,
+      "id": "bearings-014",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 25.4,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 2,
+        "angle_arc_count": 2,
+        "clockwise_arc_count": 2,
+        "arrowhead_count": 7,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    },
+    {
+      "number": 15,
+      "id": "bearings-015",
+      "semantic_passed": true,
+      "browser_passed": true,
+      "theme": "light",
+      "viewport": {
+        "width": 742,
+        "height": 520
+      },
+      "elapsed_ms": 23.6,
+      "visible_semantic_geometry": {
+        "passed": true,
+        "north_arrow_count": 1,
+        "angle_arc_count": 2,
+        "clockwise_arc_count": 2,
+        "arrowhead_count": 6,
+        "minimum_text_height_px": 14
+      },
+      "passed": true
+    }
+  ]
+}

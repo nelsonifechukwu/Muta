@@ -1,0 +1,1099 @@
+{
+  "schema_version": 1,
+  "set": "synthetic_held_out_50",
+  "count": 50,
+  "design_note": "Distinct semantic challenges spanning representations and state transitions; not paraphrases of supplied prompts.",
+  "cases": [
+    {
+      "id": "heldout-001",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Visualize how z ↦ z² maps a polar grid in the complex plane; let me drag one point and show its image.",
+      "normalized_prompt": "Visualize how z ↦ z² maps a polar grid in the complex plane; let me drag one point and show its image.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "complex_mapping",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "point_angle",
+          "point_radius"
+        ],
+        "oracles": [
+          "complex_square_mapping",
+          "angle_doubles"
+        ]
+      }
+    },
+    {
+      "id": "heldout-002",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Plot the four-petal polar rose r = cos(2θ), label its zeros and maxima, and animate one traversal.",
+      "normalized_prompt": "Plot the four-petal polar rose r = cos(2θ), label its zeros and maxima, and animate one traversal.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "polar_plot",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "theta",
+          "playback"
+        ],
+        "oracles": [
+          "polar_radius",
+          "four_petals"
+        ]
+      }
+    },
+    {
+      "id": "heldout-003",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Build a square wave from odd Fourier harmonics and let me increase the number of terms while showing the Gibbs overshoot.",
+      "normalized_prompt": "Build a square wave from odd Fourier harmonics and let me increase the number of terms while showing the Gibbs overshoot.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "fourier_series",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "terms"
+        ],
+        "oracles": [
+          "odd_harmonics",
+          "gibbs_overshoot"
+        ]
+      }
+    },
+    {
+      "id": "heldout-004",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Show the logistic-map cobweb and bifurcation behavior as r changes from 2.5 to 4.0.",
+      "normalized_prompt": "Show the logistic-map cobweb and bifurcation behavior as r changes from 2.5 to 4.0.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "logistic_map",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "growth_rate",
+          "initial_value"
+        ],
+        "oracles": [
+          "iterate_logistic",
+          "bounded_unit_interval"
+        ]
+      }
+    },
+    {
+      "id": "heldout-005",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Draw contours of x²+y² and the constraint x+y=1; show where their gradients align at the constrained minimum.",
+      "normalized_prompt": "Draw contours of x²+y² and the constraint x+y=1; show where their gradients align at the constrained minimum.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "lagrange_multiplier",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "constraint_offset"
+        ],
+        "oracles": [
+          "tangent_contours",
+          "parallel_gradients"
+        ]
+      }
+    },
+    {
+      "id": "heldout-006",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Render a Möbius strip from its parametric equations, with a guided path proving it has one side.",
+      "normalized_prompt": "Render a Möbius strip from its parametric equations, with a guided path proving it has one side.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "parametric_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "path_position",
+          "playback"
+        ],
+        "oracles": [
+          "mobius_single_boundary",
+          "parametric_samples"
+        ]
+      }
+    },
+    {
+      "id": "heldout-007",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Plot the saddle vector field F=(x,−y), with stream arrows and local divergence/curl values at a movable probe.",
+      "normalized_prompt": "Plot the saddle vector field F=(x,−y), with stream arrows and local divergence/curl values at a movable probe.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "vector_field",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "probe_x",
+          "probe_y"
+        ],
+        "oracles": [
+          "field_components",
+          "divergence_zero"
+        ]
+      }
+    },
+    {
+      "id": "heldout-008",
+      "source": "synthetic_held_out",
+      "domain": "mathematics",
+      "level": "progressive",
+      "raw_prompt": "Illustrate convolution of two box pulses by sliding one across the other and plotting overlap area versus shift.",
+      "normalized_prompt": "Illustrate convolution of two box pulses by sliding one across the other and plotting overlap area versus shift.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "convolution",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "shift"
+        ],
+        "oracles": [
+          "overlap_equals_convolution",
+          "triangular_result"
+        ]
+      }
+    },
+    {
+      "id": "heldout-009",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Simulate an eccentric satellite orbit and show radius, velocity and acceleration vectors at each point with equal-area sweeps.",
+      "normalized_prompt": "Simulate an eccentric satellite orbit and show radius, velocity and acceleration vectors at each point with equal-area sweeps.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "kepler_orbit",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "eccentricity",
+          "true_anomaly",
+          "playback"
+        ],
+        "oracles": [
+          "acceleration_inward",
+          "equal_area"
+        ]
+      }
+    },
+    {
+      "id": "heldout-010",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Show two masses joined by three springs and animate the in-phase and out-of-phase normal modes.",
+      "normalized_prompt": "Show two masses joined by three springs and animate the in-phase and out-of-phase normal modes.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "coupled_oscillators",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "mode",
+          "playback"
+        ],
+        "oracles": [
+          "normal_mode_phase",
+          "energy_bounded"
+        ]
+      }
+    },
+    {
+      "id": "heldout-011",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Draw a standing wave on a string fixed at both ends; change the harmonic number and mark nodes and antinodes.",
+      "normalized_prompt": "Draw a standing wave on a string fixed at both ends; change the harmonic number and mark nodes and antinodes.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "standing_wave",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "harmonic"
+        ],
+        "oracles": [
+          "node_count",
+          "fixed_endpoints"
+        ]
+      }
+    },
+    {
+      "id": "heldout-012",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Visualize wavefronts from a moving sound source and compare the wavelength ahead and behind as source speed changes.",
+      "normalized_prompt": "Visualize wavefronts from a moving sound source and compare the wavelength ahead and behind as source speed changes.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "doppler",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "source_speed",
+          "playback"
+        ],
+        "oracles": [
+          "front_wavelength_shorter",
+          "wavefront_spacing"
+        ]
+      }
+    },
+    {
+      "id": "heldout-013",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Show a double-slit setup, path difference rays, and the intensity pattern while slit separation changes.",
+      "normalized_prompt": "Show a double-slit setup, path difference rays, and the intensity pattern while slit separation changes.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "double_slit",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "slit_separation",
+          "wavelength"
+        ],
+        "oracles": [
+          "fringe_spacing",
+          "central_maximum"
+        ]
+      }
+    },
+    {
+      "id": "heldout-014",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Animate a charged particle entering a uniform magnetic field and trace its helical path with force and velocity vectors.",
+      "normalized_prompt": "Animate a charged particle entering a uniform magnetic field and trace its helical path with force and velocity vectors.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "lorentz_force",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "charge",
+          "field",
+          "speed",
+          "playback"
+        ],
+        "oracles": [
+          "force_perpendicular_velocity",
+          "helix_radius"
+        ]
+      }
+    },
+    {
+      "id": "heldout-015",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Plot blackbody spectra for three temperatures and let me change the hottest temperature; mark Wien peaks.",
+      "normalized_prompt": "Plot blackbody spectra for three temperatures and let me change the hottest temperature; mark Wien peaks.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "blackbody",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "temperature"
+        ],
+        "oracles": [
+          "peak_shifts_shorter",
+          "radiance_positive"
+        ]
+      }
+    },
+    {
+      "id": "heldout-016",
+      "source": "synthetic_held_out",
+      "domain": "physics",
+      "level": "progressive",
+      "raw_prompt": "Show a reversible heat-engine cycle on both P–V and T–S diagrams with synchronized process arrows.",
+      "normalized_prompt": "Show a reversible heat-engine cycle on both P–V and T–S diagrams with synchronized process arrows.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "entropy_cycle",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "step"
+        ],
+        "oracles": [
+          "closed_cycle",
+          "process_direction"
+        ]
+      }
+    },
+    {
+      "id": "heldout-017",
+      "source": "synthetic_held_out",
+      "domain": "chemistry",
+      "level": "progressive",
+      "raw_prompt": "Draw benzene resonance structures beside a delocalized-ring model and toggle between localized and delocalized bonding.",
+      "normalized_prompt": "Draw benzene resonance structures beside a delocalized-ring model and toggle between localized and delocalized bonding.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "benzene",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "bond_model"
+        ],
+        "oracles": [
+          "six_carbon_ring",
+          "alternating_or_delocalized"
+        ]
+      }
+    },
+    {
+      "id": "heldout-018",
+      "source": "synthetic_held_out",
+      "domain": "chemistry",
+      "level": "progressive",
+      "raw_prompt": "Compare the octahedral geometry of SF₆ with square-pyramidal BrF₅, including lone pairs and bond angles.",
+      "normalized_prompt": "Compare the octahedral geometry of SF₆ with square-pyramidal BrF₅, including lone pairs and bond angles.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "molecular_geometry",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "molecule"
+        ],
+        "oracles": [
+          "coordination_geometry",
+          "bond_angles"
+        ]
+      }
+    },
+    {
+      "id": "heldout-019",
+      "source": "synthetic_held_out",
+      "domain": "chemistry",
+      "level": "progressive",
+      "raw_prompt": "Diagram a Daniell cell with electron flow, ion migration, half-reactions, and a voltage readout as concentrations change.",
+      "normalized_prompt": "Diagram a Daniell cell with electron flow, ion migration, half-reactions, and a voltage readout as concentrations change.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "electrochemical_cell",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "zinc_concentration",
+          "copper_concentration"
+        ],
+        "oracles": [
+          "electron_anode_to_cathode",
+          "ion_migration"
+        ]
+      }
+    },
+    {
+      "id": "heldout-020",
+      "source": "synthetic_held_out",
+      "domain": "chemistry",
+      "level": "progressive",
+      "raw_prompt": "Compare zero-, first-, and second-order concentration curves and their linearized plots using one initial concentration.",
+      "normalized_prompt": "Compare zero-, first-, and second-order concentration curves and their linearized plots using one initial concentration.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "kinetics",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "order",
+          "rate_constant"
+        ],
+        "oracles": [
+          "integrated_rate_law",
+          "half_life_behavior"
+        ]
+      }
+    },
+    {
+      "id": "heldout-021",
+      "source": "synthetic_held_out",
+      "domain": "chemistry",
+      "level": "progressive",
+      "raw_prompt": "Draw a water phase diagram with triple and critical points and let me trace a pressure-temperature path.",
+      "normalized_prompt": "Draw a water phase diagram with triple and critical points and let me trace a pressure-temperature path.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "phase_diagram",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "temperature",
+          "pressure"
+        ],
+        "oracles": [
+          "phase_region",
+          "triple_point"
+        ]
+      }
+    },
+    {
+      "id": "heldout-022",
+      "source": "synthetic_held_out",
+      "domain": "chemistry",
+      "level": "progressive",
+      "raw_prompt": "Show N₂+3H₂ ⇌ 2NH₃ particles and equilibrium composition while pressure and temperature change.",
+      "normalized_prompt": "Show N₂+3H₂ ⇌ 2NH₃ particles and equilibrium composition while pressure and temperature change.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "equilibrium_shift",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "pressure",
+          "temperature"
+        ],
+        "oracles": [
+          "stoichiometric_ratio",
+          "le_chatelier_direction"
+        ]
+      }
+    },
+    {
+      "id": "heldout-023",
+      "source": "synthetic_held_out",
+      "domain": "biology",
+      "level": "progressive",
+      "raw_prompt": "Plot Michaelis–Menten rate versus substrate concentration and show competitive inhibition changing apparent Kₘ.",
+      "normalized_prompt": "Plot Michaelis–Menten rate versus substrate concentration and show competitive inhibition changing apparent Kₘ.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "enzyme_kinetics",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "substrate",
+          "inhibitor"
+        ],
+        "oracles": [
+          "vmax_limit",
+          "competitive_km_shift"
+        ]
+      }
+    },
+    {
+      "id": "heldout-024",
+      "source": "synthetic_held_out",
+      "domain": "biology",
+      "level": "progressive",
+      "raw_prompt": "Animate a DNA replication fork with leading and lagging strands, primers, and Okazaki fragments.",
+      "normalized_prompt": "Animate a DNA replication fork with leading and lagging strands, primers, and Okazaki fragments.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "dna_replication",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "step"
+        ],
+        "oracles": [
+          "five_to_three_synthesis",
+          "strand_roles"
+        ]
+      }
+    },
+    {
+      "id": "heldout-025",
+      "source": "synthetic_held_out",
+      "domain": "biology",
+      "level": "progressive",
+      "raw_prompt": "Trace filtrate through a nephron and use colour to show water, sodium and glucose reabsorption by segment.",
+      "normalized_prompt": "Trace filtrate through a nephron and use colour to show water, sodium and glucose reabsorption by segment.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "nephron",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "segment"
+        ],
+        "oracles": [
+          "flow_order",
+          "reabsorption_location"
+        ]
+      }
+    },
+    {
+      "id": "heldout-026",
+      "source": "synthetic_held_out",
+      "domain": "biology",
+      "level": "progressive",
+      "raw_prompt": "Simulate Lotka–Volterra predator and prey populations with time plots and a phase portrait.",
+      "normalized_prompt": "Simulate Lotka–Volterra predator and prey populations with time plots and a phase portrait.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "predator_prey",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "prey_growth",
+          "predation",
+          "playback"
+        ],
+        "oracles": [
+          "population_nonnegative",
+          "phase_cycle"
+        ]
+      }
+    },
+    {
+      "id": "heldout-027",
+      "source": "synthetic_held_out",
+      "domain": "biology",
+      "level": "progressive",
+      "raw_prompt": "Compare diffusion, facilitated diffusion, and active transport across one membrane with concentration gradients and ATP use.",
+      "normalized_prompt": "Compare diffusion, facilitated diffusion, and active transport across one membrane with concentration gradients and ATP use.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "membrane_transport",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "transport_mode"
+        ],
+        "oracles": [
+          "gradient_direction",
+          "atp_only_active"
+        ]
+      }
+    },
+    {
+      "id": "heldout-028",
+      "source": "synthetic_held_out",
+      "domain": "computer_science",
+      "level": "progressive",
+      "raw_prompt": "Animate merge sort on [8,3,6,2,7,1], showing recursive splits and stable merge operations.",
+      "normalized_prompt": "Animate merge sort on [8,3,6,2,7,1], showing recursive splits and stable merge operations.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "merge_sort",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "step"
+        ],
+        "oracles": [
+          "sorted_output",
+          "stable_merge"
+        ]
+      }
+    },
+    {
+      "id": "heldout-029",
+      "source": "synthetic_held_out",
+      "domain": "computer_science",
+      "level": "progressive",
+      "raw_prompt": "Visualize a hash table using separate chaining; insert colliding keys and show lookup traversal.",
+      "normalized_prompt": "Visualize a hash table using separate chaining; insert colliding keys and show lookup traversal.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "hash_table",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "key",
+          "operation",
+          "step"
+        ],
+        "oracles": [
+          "bucket_hash",
+          "collision_chain"
+        ]
+      }
+    },
+    {
+      "id": "heldout-030",
+      "source": "synthetic_held_out",
+      "domain": "computer_science",
+      "level": "progressive",
+      "raw_prompt": "Compare BFS and DFS on the same graph, showing frontier contents and visit order step by step.",
+      "normalized_prompt": "Compare BFS and DFS on the same graph, showing frontier contents and visit order step by step.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "graph_traversal",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "algorithm",
+          "step"
+        ],
+        "oracles": [
+          "frontier_policy",
+          "visits_once"
+        ]
+      }
+    },
+    {
+      "id": "heldout-031",
+      "source": "synthetic_held_out",
+      "domain": "computer_science",
+      "level": "progressive",
+      "raw_prompt": "Build a min-heap from values and animate insert and extract-min while preserving the heap property.",
+      "normalized_prompt": "Build a min-heap from values and animate insert and extract-min while preserving the heap property.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "heap",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "operation",
+          "value",
+          "step"
+        ],
+        "oracles": [
+          "parent_not_greater_child",
+          "extracts_minimum"
+        ]
+      }
+    },
+    {
+      "id": "heldout-032",
+      "source": "synthetic_held_out",
+      "domain": "computer_science",
+      "level": "progressive",
+      "raw_prompt": "Trace recursive factorial(5) with call-stack frames during descent and return values during unwind.",
+      "normalized_prompt": "Trace recursive factorial(5) with call-stack frames during descent and return values during unwind.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "recursion_stack",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "step"
+        ],
+        "oracles": [
+          "stack_lifo",
+          "factorial_result"
+        ]
+      }
+    },
+    {
+      "id": "heldout-033",
+      "source": "synthetic_held_out",
+      "domain": "computer_science",
+      "level": "progressive",
+      "raw_prompt": "Show a virtual-address translation through page table and TLB, then animate a page fault and replacement.",
+      "normalized_prompt": "Show a virtual-address translation through page table and TLB, then animate a page fault and replacement.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "virtual_memory",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "address",
+          "step"
+        ],
+        "oracles": [
+          "page_offset_preserved",
+          "fault_path"
+        ]
+      }
+    },
+    {
+      "id": "heldout-034",
+      "source": "synthetic_held_out",
+      "domain": "signals",
+      "level": "progressive",
+      "raw_prompt": "Convolve a finite input sequence with an impulse response using a flip-and-slide diagram and output stem plot.",
+      "normalized_prompt": "Convolve a finite input sequence with an impulse response using a flip-and-slide diagram and output stem plot.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "impulse_response",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "shift",
+          "step"
+        ],
+        "oracles": [
+          "discrete_convolution_sum",
+          "output_length"
+        ]
+      }
+    },
+    {
+      "id": "heldout-035",
+      "source": "synthetic_held_out",
+      "domain": "controls",
+      "level": "progressive",
+      "raw_prompt": "Plot magnitude and phase for a first-order low-pass transfer function and move the cutoff frequency.",
+      "normalized_prompt": "Plot magnitude and phase for a first-order low-pass transfer function and move the cutoff frequency.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "bode_plot",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "cutoff"
+        ],
+        "oracles": [
+          "minus3db_at_cutoff",
+          "phase_transition"
+        ]
+      }
+    },
+    {
+      "id": "heldout-036",
+      "source": "synthetic_held_out",
+      "domain": "controls",
+      "level": "progressive",
+      "raw_prompt": "Draw the Nyquist curve for a feedback loop and mark encirclements of −1 as gain changes.",
+      "normalized_prompt": "Draw the Nyquist curve for a feedback loop and mark encirclements of −1 as gain changes.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "nyquist",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "gain"
+        ],
+        "oracles": [
+          "encirclement_count",
+          "closed_loop_stability"
+        ]
+      }
+    },
+    {
+      "id": "heldout-037",
+      "source": "synthetic_held_out",
+      "domain": "controls",
+      "level": "progressive",
+      "raw_prompt": "Compare P, PI, and PID step responses while changing gains; label rise time, overshoot and steady-state error.",
+      "normalized_prompt": "Compare P, PI, and PID step responses while changing gains; label rise time, overshoot and steady-state error.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "pid_response",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "kp",
+          "ki",
+          "kd"
+        ],
+        "oracles": [
+          "response_metrics",
+          "final_value"
+        ]
+      }
+    },
+    {
+      "id": "heldout-038",
+      "source": "synthetic_held_out",
+      "domain": "signals",
+      "level": "progressive",
+      "raw_prompt": "Show PWM voltage and motor average voltage while duty cycle changes from 10% to 90%.",
+      "normalized_prompt": "Show PWM voltage and motor average voltage while duty cycle changes from 10% to 90%.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "pwm",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "duty_cycle"
+        ],
+        "oracles": [
+          "pulse_width_ratio",
+          "average_voltage"
+        ]
+      }
+    },
+    {
+      "id": "heldout-039",
+      "source": "synthetic_held_out",
+      "domain": "signals",
+      "level": "progressive",
+      "raw_prompt": "Generate a chirp spectrogram beside its waveform and let me change sweep rate.",
+      "normalized_prompt": "Generate a chirp spectrogram beside its waveform and let me change sweep rate.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "spectrogram",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "sweep_rate",
+          "playback"
+        ],
+        "oracles": [
+          "frequency_rises_with_time",
+          "time_frequency_alignment"
+        ]
+      }
+    },
+    {
+      "id": "heldout-040",
+      "source": "synthetic_held_out",
+      "domain": "robotics",
+      "level": "progressive",
+      "raw_prompt": "Draw a planar two-link robot arm, drag the end effector, and show both inverse-kinematic elbow solutions.",
+      "normalized_prompt": "Draw a planar two-link robot arm, drag the end effector, and show both inverse-kinematic elbow solutions.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "robot_arm",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "target_x",
+          "target_y",
+          "elbow_mode"
+        ],
+        "oracles": [
+          "link_lengths_constant",
+          "end_effector_target"
+        ]
+      }
+    },
+    {
+      "id": "heldout-041",
+      "source": "synthetic_held_out",
+      "domain": "robotics",
+      "level": "progressive",
+      "raw_prompt": "Track a noisy moving point with a Kalman estimate and covariance ellipse; step through predict and update.",
+      "normalized_prompt": "Track a noisy moving point with a Kalman estimate and covariance ellipse; step through predict and update.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "kalman_filter",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "noise",
+          "step"
+        ],
+        "oracles": [
+          "covariance_contracts_on_update",
+          "estimate_between_prior_measurement"
+        ]
+      }
+    },
+    {
+      "id": "heldout-042",
+      "source": "synthetic_held_out",
+      "domain": "engineering",
+      "level": "progressive",
+      "raw_prompt": "Draw a loaded triangular truss and colour members by tension or compression with reaction arrows.",
+      "normalized_prompt": "Draw a loaded triangular truss and colour members by tension or compression with reaction arrows.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "truss",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "load"
+        ],
+        "oracles": [
+          "joint_force_balance",
+          "member_sign"
+        ]
+      }
+    },
+    {
+      "id": "heldout-043",
+      "source": "synthetic_held_out",
+      "domain": "engineering",
+      "level": "progressive",
+      "raw_prompt": "Show a simply supported beam under a moving point load with synchronized shear, moment, and deflection diagrams.",
+      "normalized_prompt": "Show a simply supported beam under a moving point load with synchronized shear, moment, and deflection diagrams.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "beam_bending",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "load_position"
+        ],
+        "oracles": [
+          "support_reactions",
+          "moment_zero_at_supports"
+        ]
+      }
+    },
+    {
+      "id": "heldout-044",
+      "source": "synthetic_held_out",
+      "domain": "engineering",
+      "level": "progressive",
+      "raw_prompt": "Plot incompressible flow around a cylinder with streamlines, stagnation points, and adjustable free-stream speed.",
+      "normalized_prompt": "Plot incompressible flow around a cylinder with streamlines, stagnation points, and adjustable free-stream speed.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "fluid_flow",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "speed"
+        ],
+        "oracles": [
+          "streamline_symmetry",
+          "no_penetration"
+        ]
+      }
+    },
+    {
+      "id": "heldout-045",
+      "source": "synthetic_held_out",
+      "domain": "engineering",
+      "level": "progressive",
+      "raw_prompt": "Animate heat diffusion along a rod from a hot initial centre and plot temperature profiles over time.",
+      "normalized_prompt": "Animate heat diffusion along a rod from a hot initial centre and plot temperature profiles over time.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "heat_diffusion",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "time",
+          "playback"
+        ],
+        "oracles": [
+          "temperature_smooths",
+          "energy_bounded"
+        ]
+      }
+    },
+    {
+      "id": "heldout-046",
+      "source": "synthetic_held_out",
+      "domain": "computer_science",
+      "level": "progressive",
+      "raw_prompt": "Model a traffic light as a finite-state machine and step through timed transitions including a pedestrian request.",
+      "normalized_prompt": "Model a traffic light as a finite-state machine and step through timed transitions including a pedestrian request.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "state_machine",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "pedestrian_request",
+          "step"
+        ],
+        "oracles": [
+          "legal_transition",
+          "mutually_exclusive_lights"
+        ]
+      }
+    },
+    {
+      "id": "heldout-047",
+      "source": "synthetic_held_out",
+      "domain": "ai",
+      "level": "progressive",
+      "raw_prompt": "Train a tiny two-layer classifier on two clusters and show its decision boundary changing each epoch.",
+      "normalized_prompt": "Train a tiny two-layer classifier on two clusters and show its decision boundary changing each epoch.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "decision_boundary",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "epoch",
+          "learning_rate"
+        ],
+        "oracles": [
+          "class_regions",
+          "loss_nonincreasing"
+        ]
+      }
+    },
+    {
+      "id": "heldout-048",
+      "source": "synthetic_held_out",
+      "domain": "ai",
+      "level": "progressive",
+      "raw_prompt": "Visualize forward values and reverse gradients through y=(w·x+b)², with editable w, x, and b.",
+      "normalized_prompt": "Visualize forward values and reverse gradients through y=(w·x+b)², with editable w, x, and b.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "backprop_graph",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "w",
+          "x",
+          "b",
+          "step"
+        ],
+        "oracles": [
+          "chain_rule_gradients",
+          "forward_value"
+        ]
+      }
+    },
+    {
+      "id": "heldout-049",
+      "source": "synthetic_held_out",
+      "domain": "mixed",
+      "level": "progressive",
+      "raw_prompt": "Create a Sankey-style energy audit from 100 J input through useful output, heat and sound, with unit-consistent totals.",
+      "normalized_prompt": "Create a Sankey-style energy audit from 100 J input through useful output, heat and sound, with unit-consistent totals.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "energy_sankey",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "efficiency"
+        ],
+        "oracles": [
+          "energy_conservation",
+          "units_joules"
+        ]
+      }
+    },
+    {
+      "id": "heldout-050",
+      "source": "synthetic_held_out",
+      "domain": "mixed",
+      "level": "progressive",
+      "raw_prompt": "Show Monte Carlo uncertainty propagation for density ρ=m/V using sampled mass and volume distributions and a density histogram.",
+      "normalized_prompt": "Show Monte Carlo uncertainty propagation for density ρ=m/V using sampled mass and volume distributions and a density histogram.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "uncertainty_propagation",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "mass_sigma",
+          "volume_sigma",
+          "samples"
+        ],
+        "oracles": [
+          "positive_volume",
+          "density_distribution"
+        ]
+      }
+    }
+  ]
+}

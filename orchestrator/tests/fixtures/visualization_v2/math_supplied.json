@@ -1,0 +1,2682 @@
+{
+  "schema_version": 1,
+  "set": "supplied_math_100",
+  "count": 100,
+  "source_count_confirmed": 100,
+  "normalization_notes": [
+    "Raw strings preserve stray closing brackets and multiline formatting from the supplied corpus.",
+    "math-046 is the only source case with a missing arithmetic operator; its explicit normalization decision is stored on that case.",
+    "The topology metadata for math-074 and math-075 was corrected to match the supplied one-sheet and two-sheet equations; no prompt text was changed.",
+    "math-078 contains two closed spherical factors tangent at (3,0,0); its union is one connected component, not two disconnected components."
+  ],
+  "cases": [
+    {
+      "id": "math-001",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x+y\n]",
+      "normalized_equation": "z=x+y",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-002",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^2+y^2\n]",
+      "normalized_equation": "z=x^2+y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-003",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^2-y^2\n]",
+      "normalized_equation": "z=x^2-y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-004",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sqrt{x^2+y^2}\n]",
+      "normalized_equation": "z=sqrt(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-005",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=-\\sqrt{x^2+y^2}\n]",
+      "normalized_equation": "z=-sqrt(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-006",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=|x|+|y|\n]",
+      "normalized_equation": "z=abs(x)+abs(y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-007",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=|x^2-y^2|\n]",
+      "normalized_equation": "z=abs(x^2-y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-008",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^3+y^3\n]",
+      "normalized_equation": "z=x^3+y^3",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-009",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^3-3xy^2\n]",
+      "normalized_equation": "z=x^3-3*x*y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-010",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^4+y^4\n]",
+      "normalized_equation": "z=x^4+y^4",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-011",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=(x^2+y^2)^2\n]",
+      "normalized_equation": "z=(x^2+y^2)^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-012",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sqrt{9-x^2-y^2}\n]",
+      "normalized_equation": "z=sqrt(9-x^2-y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-013",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=4-x^2-y^2\n]",
+      "normalized_equation": "z=4-x^2-y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-014",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^2+2y^2\n]",
+      "normalized_equation": "z=x^2+2*y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-015",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^2+xy+y^2\n]",
+      "normalized_equation": "z=x^2+x*y+y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-016",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=xy\n]",
+      "normalized_equation": "z=x*y",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-017",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^2y\n]",
+      "normalized_equation": "z=x^2*y",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-018",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=xy^2\n]",
+      "normalized_equation": "z=x*y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-019",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=x^2y-xy^2\n]",
+      "normalized_equation": "z=x^2*y-x*y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-020",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "basic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\frac{x^2+y^2}{4}\n]",
+      "normalized_equation": "z=(x^2+y^2)/4",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-021",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x)\n]",
+      "normalized_equation": "z=sin(x)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_curve",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-022",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x)+\\cos(y)\n]",
+      "normalized_equation": "z=sin(x)+cos(y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-023",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x)\\cos(y)\n]",
+      "normalized_equation": "z=sin(x)*cos(y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-024",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x+y)\n]",
+      "normalized_equation": "z=sin(x+y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-025",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x-y)\n]",
+      "normalized_equation": "z=sin(x-y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-026",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x^2+y^2)\n]",
+      "normalized_equation": "z=sin(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-027",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\cos(x^2+y^2)\n]",
+      "normalized_equation": "z=cos(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-028",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin\\left(\\sqrt{x^2+y^2}\\right)\n]",
+      "normalized_equation": "z=sin(sqrt(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-029",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\frac{\\sin\\left(\\sqrt{x^2+y^2}\\right)}\n{\\sqrt{x^2+y^2}}\n]",
+      "normalized_equation": "z=sin(sqrt(x^2+y^2))/sqrt(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-030",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(3x)\\cos(2y)\n]",
+      "normalized_equation": "z=sin(3*x)*cos(2*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-031",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x)+\\sin(y)\n]",
+      "normalized_equation": "z=sin(x)+sin(y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-032",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x)\\sin(y)\n]",
+      "normalized_equation": "z=sin(x)*sin(y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-033",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\cos(x)+\\cos(y)\n]",
+      "normalized_equation": "z=cos(x)+cos(y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-034",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(xy)\n]",
+      "normalized_equation": "z=sin(x*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-035",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\cos(xy)\n]",
+      "normalized_equation": "z=cos(x*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-036",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x^2-y^2)\n]",
+      "normalized_equation": "z=sin(x^2-y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-037",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(x)\\cos(y)+\\cos(x)\\sin(y)\n]",
+      "normalized_equation": "z=sin(x)*cos(y)+cos(x)*sin(y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-038",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=2\\sin(x)+\\sin(3y)\n]",
+      "normalized_equation": "z=2*sin(x)+sin(3*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-039",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=\\sin(5x)e^{-0.2y^2}\n]",
+      "normalized_equation": "z=sin(5*x)*exp(-0.2*y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-040",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "periodic_explicit",
+      "name": "",
+      "raw_prompt": "z=5e^{-0.1(x^2+y^2)}\n\\cos\\left(3\\sqrt{x^2+y^2}\\right)\n]",
+      "normalized_equation": "z=5*exp(-0.1*(x^2+y^2))*cos(3*sqrt(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-041",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=e^{-(x^2+y^2)}\n]",
+      "normalized_equation": "z=exp(-(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-042",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=5e^{-0.25(x^2+y^2)}\n]",
+      "normalized_equation": "z=5*exp(-0.25*(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-043",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=e^{-x^2}+e^{-y^2}\n]",
+      "normalized_equation": "z=exp(-x^2)+exp(-y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-044",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=e^{-(x-2)^2-(y-2)^2}\n]",
+      "normalized_equation": "z=exp(-(x-2)^2-(y-2)^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-045",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=\ne^{-((x-2)^2+(y-2)^2)}\n+\ne^{-((x+2)^2+(y+2)^2)}\n]",
+      "normalized_equation": "z=exp(-((x-2)^2+(y-2)^2))+exp(-((x+2)^2+(y+2)^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-046",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=\ne^{-((x-2)^2+y^2)}\ne^{-((x+2)^2+y^2)}\n]",
+      "normalized_prompt": "Plot z=exp(-((x-2)^2+y^2))-exp(-((x+2)^2+y^2))",
+      "normalized_equation": "z=exp(-((x-2)^2+y^2))-exp(-((x+2)^2+y^2))",
+      "normalization_decision": "The source placed two Gaussian terms on separate lines without an operator; normalized as first minus second to preserve the section’s stated hills-and-valleys intent and contrast with case math-045, which explicitly uses addition.",
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-047",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=xe^{-(x^2+y^2)}\n]",
+      "normalized_equation": "z=x*exp(-(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-048",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=ye^{-(x^2+y^2)}\n]",
+      "normalized_equation": "z=y*exp(-(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-049",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=xye^{-(x^2+y^2)}\n]",
+      "normalized_equation": "z=x*y*exp(-(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-050",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=(x^2-y^2)e^{-(x^2+y^2)}\n]",
+      "normalized_equation": "z=(x^2-y^2)*exp(-(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-051",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=e^{-x^2}\\sin(4y)\n]",
+      "normalized_equation": "z=exp(-x^2)*sin(4*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-052",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=4e^{-y^2/4}\\sin(2x)\n]",
+      "normalized_equation": "z=4*exp(-y^2/4)*sin(2*x)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-053",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=3e^{-x^2/3}\\cos(3y)\n]",
+      "normalized_equation": "z=3*exp(-x^2/3)*cos(3*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-054",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=e^{-0.1(x^2+y^2)}\\sin(4x)\\cos(4y)\n]",
+      "normalized_equation": "z=exp(-0.1*(x^2+y^2))*sin(4*x)*cos(4*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-055",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "gaussian_explicit",
+      "name": "",
+      "raw_prompt": "z=e^{-|x|-|y|}\n]",
+      "normalized_equation": "z=exp(-abs(x)-abs(y))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-056",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{1}{1+x^2+y^2}\n]",
+      "normalized_equation": "z=1/(1+x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-057",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{1}{x^2+y^2}\n]",
+      "normalized_equation": "z=1/(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-058",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{x}{x^2+y^2}\n]",
+      "normalized_equation": "z=x/(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-059",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{y}{x^2+y^2}\n]",
+      "normalized_equation": "z=y/(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-060",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{xy}{1+x^2+y^2}\n]",
+      "normalized_equation": "z=x*y/(1+x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-061",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{x^2-y^2}{x^2+y^2}\n]",
+      "normalized_equation": "z=(x^2-y^2)/(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-062",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{1}{x+y}\n]",
+      "normalized_equation": "z=1/(x+y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-063",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{1}{x^2-y^2}\n]",
+      "normalized_equation": "z=1/(x^2-y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-064",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{\\sin(x^2+y^2)}{x^2+y^2}\n]",
+      "normalized_equation": "z=sin(x^2+y^2)/(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-065",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "rational_singular",
+      "name": "",
+      "raw_prompt": "z=\\frac{\\sin x\\sin y}{xy}\n]",
+      "normalized_equation": "z=sin(x)*sin(y)/(x*y)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-066",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Sphere",
+      "raw_prompt": "Sphere\n$$ x^2+y^2+z^2=16 $$",
+      "normalized_equation": "x^2+y^2+z^2=16",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true
+        }
+      }
+    },
+    {
+      "id": "math-067",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Ellipsoid",
+      "raw_prompt": "Ellipsoid\n$$ \\frac{x^2}{9}+\\frac{y^2}{4}+\\frac{z^2}{16}=1 $$",
+      "normalized_equation": "x^2/9+y^2/4+z^2/16=1",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true
+        }
+      }
+    },
+    {
+      "id": "math-068",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Cone",
+      "raw_prompt": "Cone\n$$ x^2+y^2=z^2 $$",
+      "normalized_equation": "x^2+y^2=z^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-069",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Elliptic cone",
+      "raw_prompt": "Elliptic cone\n$$ \\frac{x^2}{4}+\\frac{y^2}{9}=z^2 $$",
+      "normalized_equation": "x^2/4+y^2/9=z^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-070",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Cylinder",
+      "raw_prompt": "Cylinder\n$$ x^2+y^2=9 $$",
+      "normalized_equation": "x^2+y^2=9",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": false
+        }
+      }
+    },
+    {
+      "id": "math-071",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Elliptic cylinder",
+      "raw_prompt": "Elliptic cylinder\n$$ \\frac{x^2}{9}+\\frac{y^2}{4}=1 $$",
+      "normalized_equation": "x^2/9+y^2/4=1",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": false
+        }
+      }
+    },
+    {
+      "id": "math-072",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Hyperbolic cylinder",
+      "raw_prompt": "Hyperbolic cylinder\n$$ x^2-y^2=1 $$",
+      "normalized_equation": "x^2-y^2=1",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-073",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Parabolic cylinder",
+      "raw_prompt": "Parabolic cylinder\n$$ y=x^2 $$",
+      "normalized_equation": "y=x^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": false
+        }
+      }
+    },
+    {
+      "id": "math-074",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Hyperboloid of one sheet",
+      "raw_prompt": "Hyperboloid of one sheet\n$$ x^2+y^2-z^2=1 $$",
+      "normalized_equation": "x^2+y^2-z^2=1",
+      "normalization_decision": "Corrected the topology oracle: the supplied equation and name describe one connected sheet.",
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": false
+        }
+      }
+    },
+    {
+      "id": "math-075",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Hyperboloid of two sheets",
+      "raw_prompt": "Hyperboloid of two sheets\n$$ z^2-x^2-y^2=1 $$",
+      "normalized_equation": "z^2-x^2-y^2=1",
+      "normalization_decision": "Added the missing topology oracle implied by the supplied two-sheet equation and name.",
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 2,
+          "closed": false
+        }
+      }
+    },
+    {
+      "id": "math-076",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Elliptic paraboloid",
+      "raw_prompt": "Elliptic paraboloid\n$$ x^2+y^2=z $$",
+      "normalized_equation": "x^2+y^2=z",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-077",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Hyperbolic paraboloid",
+      "raw_prompt": "Hyperbolic paraboloid\n$$ z=x^2-y^2 $$",
+      "normalized_equation": "z=x^2-y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-078",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Double sphere system",
+      "raw_prompt": "Double sphere system\n$$ (x^2+y^2+z^2-9) \\left((x-5)^2+y^2+z^2-4\\right)=0 $$",
+      "normalized_equation": "(x^2+y^2+z^2-9)*((x-5)^2+y^2+z^2-4)=0",
+      "normalization_decision": "Corrected the topology oracle: the radius-3 sphere at the origin and radius-2 sphere centred at x=5 meet at (3,0,0), so their union is connected.",
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true
+        }
+      }
+    },
+    {
+      "id": "math-079",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Superellipsoid",
+      "raw_prompt": "Superellipsoid\n$$ x^4+y^4+z^4=16 $$",
+      "normalized_equation": "x^4+y^4+z^4=16",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true
+        }
+      }
+    },
+    {
+      "id": "math-080",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "implicit_classics",
+      "name": "Octahedron",
+      "raw_prompt": "Octahedron\n$$ |x|+|y|+|z|=4 $$",
+      "normalized_equation": "abs(x)+abs(y)+abs(z)=4",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true
+        }
+      }
+    },
+    {
+      "id": "math-081",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "torus_ring",
+      "name": "Torus",
+      "raw_prompt": "Torus\n$$ \\left(\\sqrt{x^2+y^2}-3\\right)^2+z^2=1 $$",
+      "normalized_equation": "(sqrt(x^2+y^2)-3)^2+z^2=1",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true,
+          "genus": 1
+        }
+      }
+    },
+    {
+      "id": "math-082",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "torus_ring",
+      "name": "Polynomial torus",
+      "raw_prompt": "Polynomial torus\n$$ (x^2+y^2+z^2+8)^2 = 36(x^2+y^2) $$",
+      "normalized_equation": "(x^2+y^2+z^2+8)^2=36*(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true,
+          "genus": 1
+        }
+      }
+    },
+    {
+      "id": "math-083",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "torus_ring",
+      "name": "Thin torus",
+      "raw_prompt": "Thin torus\n$$ \\left(\\sqrt{x^2+y^2}-4\\right)^2+z^2=0.25 $$",
+      "normalized_equation": "(sqrt(x^2+y^2)-4)^2+z^2=0.25",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true,
+          "genus": 1
+        }
+      }
+    },
+    {
+      "id": "math-084",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "torus_ring",
+      "name": "Elliptically distorted torus",
+      "raw_prompt": "Elliptically distorted torus\n$$ \\left(\\sqrt{x^2+4y^2}-3\\right)^2+z^2=1 $$",
+      "normalized_equation": "(sqrt(x^2+4*y^2)-3)^2+z^2=1",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true,
+          "genus": 1
+        }
+      }
+    },
+    {
+      "id": "math-085",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "torus_ring",
+      "name": "Rippled toroidal-style surface",
+      "raw_prompt": "Rippled toroidal-style surface\n$$ z=e^{-(\\sqrt{x^2+y^2}-3)^2}\\cos(6\\sqrt{x^2+y^2}) $$",
+      "normalized_equation": "z=exp(-(sqrt(x^2+y^2)-3)^2)*cos(6*sqrt(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-086",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Monkey saddle",
+      "raw_prompt": "Monkey saddle\n$$ z=x^3-3xy^2 $$",
+      "normalized_equation": "z=x^3-3*x*y^2",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-087",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Cross-cap-type algebraic surface",
+      "raw_prompt": "Cross-cap-type algebraic surface\n$$ x^2y^2+x^2z^2-yz=0 $$",
+      "normalized_equation": "x^2*y^2+x^2*z^2-y*z=0",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-088",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Whitney umbrella",
+      "raw_prompt": "Whitney umbrella\n$$ x^2=y^2z $$",
+      "normalized_equation": "x^2=y^2*z",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-089",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Roman-surface-type equation",
+      "raw_prompt": "Roman-surface-type equation\n$$ x^2y^2+y^2z^2+z^2x^2=xyz $$",
+      "normalized_equation": "x^2*y^2+y^2*z^2+z^2*x^2=x*y*z",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-090",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Heart-like implicit surface",
+      "raw_prompt": "Heart-like implicit surface\n$$ \\left(x^2+\\frac94y^2+z^2-1\\right)^3 -x^2z^3 -\\frac{9}{80}y^2z^3 =0 $$",
+      "normalized_equation": "(x^2+9*y^2/4+z^2-1)^3-x^2*z^3-9*y^2*z^3/80=0",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "closed": true
+        }
+      }
+    },
+    {
+      "id": "math-091",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Gyroid",
+      "raw_prompt": "Gyroid\n$$ \\sin(x)\\cos(y) +\\sin(y)\\cos(z) +\\sin(z)\\cos(x) =0 $$",
+      "normalized_equation": "sin(x)*cos(y)+sin(y)*cos(z)+sin(z)*cos(x)=0",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "periodic": true
+        }
+      }
+    },
+    {
+      "id": "math-092",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Schwarz-P-type surface",
+      "raw_prompt": "Schwarz-P-type surface\n$$ \\cos(x)+\\cos(y)+\\cos(z)=0 $$",
+      "normalized_equation": "cos(x)+cos(y)+cos(z)=0",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "periodic": true
+        }
+      }
+    },
+    {
+      "id": "math-093",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Periodic implicit lattice",
+      "raw_prompt": "Periodic implicit lattice\n$$ \\sin(x)+\\sin(y)+\\sin(z)=0 $$",
+      "normalized_equation": "sin(x)+sin(y)+sin(z)=0",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": {
+          "components": 1,
+          "periodic": true
+        }
+      }
+    },
+    {
+      "id": "math-094",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "3D interference surface",
+      "raw_prompt": "3D interference surface\n$$ \\sin(x)\\cos(y)+\\sin(y)\\cos(z)+\\sin(z)\\cos(x)=1 $$",
+      "normalized_equation": "sin(x)*cos(y)+sin(y)*cos(z)+sin(z)*cos(x)=1",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "implicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-095",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Nested oscillation",
+      "raw_prompt": "Nested oscillation\n$$ z=\\sin\\left(x+\\sin(y)\\right) $$",
+      "normalized_equation": "z=sin(x+sin(y))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-096",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Radial nonlinear wave",
+      "raw_prompt": "Radial nonlinear wave\n$$ z=\\sin(x^2+y^2)\\, e^{-0.05(x^2+y^2)} $$",
+      "normalized_equation": "z=sin(x^2+y^2)*exp(-0.05*(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-097",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Angular/radial pattern",
+      "raw_prompt": "Angular/radial pattern\n$$ z= \\sin\\left(5\\arctan2(y,x)\\right) e^{-0.1(x^2+y^2)} $$",
+      "normalized_equation": "z=sin(5*atan2(y,x))*exp(-0.1*(x^2+y^2))",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-098",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Sharp logarithmic surface",
+      "raw_prompt": "Sharp logarithmic surface\n$$ z=\\ln(x^2+y^2) $$",
+      "normalized_equation": "z=ln(x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels",
+          "undefined_domain_split"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-099",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "Logarithmic bowl",
+      "raw_prompt": "Logarithmic bowl\n$$ z=\\ln(1+x^2+y^2) $$",
+      "normalized_equation": "z=ln(1+x^2+y^2)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    },
+    {
+      "id": "math-100",
+      "source": "supplied",
+      "domain": "mathematics",
+      "section": "unusual",
+      "name": "High-complexity stress test",
+      "raw_prompt": "High-complexity stress test\n$$ z= 4e^{-0.08(x^2+y^2)} \\sin\\left(2x+\\frac{y}{2}\\right) \\cos\\left(2y-\\frac{x}{3}\\right) $$",
+      "normalized_equation": "z=4*exp(-0.08*(x^2+y^2))*sin(2*x+y/2)*cos(2*y-x/3)",
+      "normalization_decision": null,
+      "expected": {
+        "intent": "mathematical_visual",
+        "family": "explicit_surface",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit",
+          "reset_view"
+        ],
+        "oracles": [
+          "expression_residual",
+          "finite_geometry",
+          "axis_labels"
+        ],
+        "topology": null
+      }
+    }
+  ]
+}

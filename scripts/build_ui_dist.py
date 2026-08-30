@@ -52,6 +52,7 @@ UI_FILES = (
     "viz-frame.css",
     "viz-frame.html",
     "viz-frame.js",
+    "viz-frame-v2.js",
     "viz-theme.js",
     "worklet.js",
 )

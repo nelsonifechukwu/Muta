@@ -750,6 +750,23 @@ a.user-resource-mention:focus-visible {
 .muta-visualization-frame {
   display: block; width: 100%; min-height: 240px; border: 0; background: var(--card);
 }
+.muta-visualization-restore {
+  display: block;
+  width: calc(100% - 24px);
+  min-height: 48px;
+  margin: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--panel);
+  font: inherit;
+  cursor: pointer;
+}
+.muta-visualization-restore[hidden] { display: none; }
+.muta-visualization-restore:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
 
 @media (max-width: 520px) {
   .muta-visualization { width: calc(100% + 12px); margin-inline: -6px; border-radius: 11px; }

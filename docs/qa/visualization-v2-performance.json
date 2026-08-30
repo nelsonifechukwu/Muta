@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "base_revision": "238b95ff4e0cd38f2636c25d08e6e1c9eb53ded1",
+  "measurement_host": "macOS development browser; not target x86",
+  "source_impact": {
+    "sync_before_bytes": 74628,
+    "sync_after_bytes": 108747,
+    "sync_delta_bytes": 34119,
+    "sync_parse_before_ms": 0.7541,
+    "sync_parse_after_ms": 1.197,
+    "sync_parse_delta_ms": 0.4429,
+    "lazy_v2_bytes": 225664,
+    "vendor_bytes": 1102856,
+    "new_network_dependencies": 0
+  },
+  "browser": {
+    "case_count": 200,
+    "summary": {
+      "passed": 200,
+      "failed": 0,
+      "page_errors": []
+    },
+    "by_renderer": {
+      "svg": {
+        "count": 75,
+        "mean_elapsed_ms": 110.077,
+        "p95_elapsed_ms": 272.9,
+        "max_elapsed_ms": 319.9
+      },
+      "canvas": {
+        "count": 20,
+        "mean_elapsed_ms": 168.01,
+        "p95_elapsed_ms": 313.5,
+        "max_elapsed_ms": 358.9
+      },
+      "three": {
+        "count": 105,
+        "mean_elapsed_ms": 310.845,
+        "p95_elapsed_ms": 429.2,
+        "max_elapsed_ms": 703.2
+      }
+    },
+    "maximum_triangles": 26594,
+    "gpu_triangle_budget": {
+      "three_cases": 105,
+      "all_respected": true,
+      "maximum_submitted_triangles": 26618
+    },
+    "observed_animation_frame_interval_ms": {
+      "minimum": 33.4,
+      "median": 49.9,
+      "maximum": 50.0
+    }
+  },
+  "responsive_matrix": {
+    "artifact": "docs/qa/visualization-v2-browser-matrix.json",
+    "runs": [
+      {
+        "theme": "light",
+        "viewport": {
+          "width": 774,
+          "height": 922
+        },
+        "target_container": {
+          "width": 980,
+          "height": 480
+        },
+        "reduced_motion": false,
+        "simultaneous_frames": 5,
+        "used_js_heap_bytes": 56551666,
+        "trusted_browser_input": null,
+        "page_errors": [],
+        "passed": true
+      },
+      {
+        "theme": "light",
+        "viewport": {
+          "width": 774,
+          "height": 922
+        },
+        "target_container": {
+          "width": 375,
+          "height": 520
+        },
+        "reduced_motion": false,
+        "simultaneous_frames": 5,
+        "used_js_heap_bytes": 50591764,
+        "trusted_browser_input": null,
+        "page_errors": [],
+        "passed": true
+      },
+      {
+        "theme": "dark",
+        "viewport": {
+          "width": 774,
+          "height": 922
+        },
+        "target_container": {
+          "width": 430,
+          "height": 520
+        },
+        "reduced_motion": true,
+        "simultaneous_frames": 5,
+        "used_js_heap_bytes": 27947936,
+        "trusted_browser_input": null,
+        "page_errors": [],
+        "passed": true
+      },
+      {
+        "theme": "dark",
+        "viewport": {
+          "width": 774,
+          "height": 922
+        },
+        "target_container": {
+          "width": 667,
+          "height": 375
+        },
+        "reduced_motion": false,
+        "simultaneous_frames": 5,
+        "used_js_heap_bytes": 56659746,
+        "trusted_browser_input": null,
+        "page_errors": [],
+        "passed": true
+      }
+    ],
+    "peak_used_js_heap_bytes": 56659746,
+    "all_passed": true
+  },
+  "active_frame_lru": {
+    "artifact": "docs/qa/visualization-v2-lru.json",
+    "total": 6,
+    "initial_active": 4,
+    "initial_suspended": 2,
+    "restored_with_cap_preserved": true,
+    "passed": true
+  },
+  "browser_screenshots": [
+    {
+      "path": "docs/qa/screenshots/coupled-oscillator-modes.png",
+      "bytes": 41975,
+      "sha256": "f48352b0e51a340e124d71f726586867f60928d4e4070a38cb4d416761304d38"
+    },
+    {
+      "path": "docs/qa/screenshots/damped-sine-followup-animation.png",
+      "bytes": 40157,
+      "sha256": "d4cd6675c0215ffb0c548fd9812c9bb49fe132f656abf613a86dcabbfbfbdb02"
+    },
+    {
+      "path": "docs/qa/screenshots/double-slit-linked.png",
+      "bytes": 44580,
+      "sha256": "e19ee0257e198b0a925d1232cea239a7a5072764f3be3e54122f03347708ff69"
+    },
+    {
+      "path": "docs/qa/screenshots/general-vector-field.png",
+      "bytes": 42627,
+      "sha256": "49537a08dbb89fdb66f57af0401af0e06d2d8f51449c69502f709253a9e84d78"
+    },
+    {
+      "path": "docs/qa/screenshots/matrix-desktop-dark.png",
+      "bytes": 113013,
+      "sha256": "5d3fd3614f9c8353aac5f632ddfb27d8cdc8b492f71d4bde342818e15553b7bc"
+    },
+    {
+      "path": "docs/qa/screenshots/matrix-desktop-light.png",
+      "bytes": 112029,
+      "sha256": "233e571e5d89a30c305b6b0413122cbc9f0215531c0a4517abc2435163d5b0d5"
+    },
+    {
+      "path": "docs/qa/screenshots/matrix-landscape.png",
+      "bytes": 113136,
+      "sha256": "e84106e75b42722d9cfe053cbc1254504806866cedd5a12535cfd611f9ae2e84"
+    },
+    {
+      "path": "docs/qa/screenshots/matrix-mobile-375.png",
+      "bytes": 86611,
+      "sha256": "b75336158da6c8e48cd4f02105fd95df542700204eeb6c84963813e6a3716d43"
+    },
+    {
+      "path": "docs/qa/screenshots/matrix-mobile-430-dark.png",
+      "bytes": 96469,
+      "sha256": "714668434f720a03dddb3d55157415523fdc0023c69754d4d27092f9ebe3166f"
+    },
+    {
+      "path": "docs/qa/screenshots/matrix-reduced.png",
+      "bytes": 112360,
+      "sha256": "c587a1d76a920025e647b630aed1a93c8ade0cd48b874342ec73e2d3b510539b"
+    },
+    {
+      "path": "docs/qa/screenshots/multipanel-spectrogram-dark.png",
+      "bytes": 46479,
+      "sha256": "2e3525737fb0e9021b223e47e8d50749a05dac124cfb76aa7563545c624fb453"
+    },
+    {
+      "path": "docs/qa/screenshots/robot-unreachable.png",
+      "bytes": 40072,
+      "sha256": "a3c8f1b7d462b52accc0e8662d2b7de012bfd4c96e5c6468828f9c78ac01c5c2"
+    }
+  ],
+  "caps": {
+    "ast_nodes": 160,
+    "ast_depth": 24,
+    "points": 4096,
+    "heatmap_cells": 4096,
+    "particles": 800,
+    "implicit_cells": 32768,
+    "triangles": 32000,
+    "max_fps": 30,
+    "active_frames": 4
+  }
+}

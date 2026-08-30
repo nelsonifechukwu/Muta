@@ -25,6 +25,7 @@
       "ui/syntax.js",
       "ui/theme.js",
       "ui/visualizations.js",
+      "ui/viz-frame-v2.js",
       "ui/viz-frame.js",
       "ui/viz-theme.js"
     ]
@@ -3035,6 +3036,24 @@
       "key": "privacy.saveSettingFailed"
     },
     {
+      "file": "ui/viz-frame-v2.js",
+      "line": 2223,
+      "kind": "js:t",
+      "key": "visualization.controls"
+    },
+    {
+      "file": "ui/viz-frame-v2.js",
+      "line": 2776,
+      "kind": "js:t",
+      "key": "visualization.rotateHint"
+    },
+    {
+      "file": "ui/viz-frame-v2.js",
+      "line": 3053,
+      "kind": "js:t",
+      "key": "visualization.controls"
+    },
+    {
       "file": "ui/viz-frame.html",
       "line": 15,
       "kind": "html:data-i18n",
@@ -3078,49 +3097,49 @@
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 479,
+      "line": 490,
       "kind": "js:t",
       "key": "visualization.rotateHint"
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 574,
+      "line": 585,
       "kind": "js:t",
       "key": "visualization.dragRotate"
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 579,
+      "line": 590,
       "kind": "js:t",
       "key": "visualization.orbitalRelationships"
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 599,
+      "line": 610,
       "kind": "js:t",
       "key": "visualization.axisDomains"
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 61,
+      "line": 62,
       "kind": "js:t",
       "key": "visualization.failed"
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 859,
+      "line": 871,
       "kind": "js:t",
       "key": "visualization.incomplete"
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 864,
+      "line": 877,
       "kind": "js:t",
       "key": "visualization.invalid"
     },
     {
       "file": "ui/viz-frame.js",
-      "line": 877,
+      "line": 905,
       "kind": "js:t",
       "key": "visualization.failed"
     }

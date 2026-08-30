@@ -97,11 +97,33 @@ test("accepts the smoke model's exact marker-plus-json fence degradation", () =>
   assert.deepEqual(result.visualizations, [line]);
 });
 
-test("accepts one visualization per reply and exposes a second as inert code", () => {
+test("removes all valid artifacts and renders only the final server-owned position", () => {
   const source = `${fenced(line)}\n\n${fenced({ ...line, title: "Second" })}`;
   const result = viz.extract(source);
   assert.equal(result.visualizations.length, 1);
-  assert.match(result.markdown, /"title":"Second"/);
+  assert.equal(result.visualizations[0].title, "Second");
+  assert.doesNotMatch(result.markdown, /```muta-viz|"title":"Second"/);
+  assert.equal((result.markdown.match(/Before the visual\./g) || []).length, 2);
+});
+
+test("a model-authored valid family before the trusted artifact cannot hijack extraction", () => {
+  const untrusted = { ...line, title: "Model-selected Pythagoras" };
+  const trusted = { ...line, title: "Trusted semantic composition" };
+  const source = `Model prose\n\n\`\`\`muta-viz\n${JSON.stringify(untrusted)}\n\`\`\`\n\n`
+    + `\`\`\`muta-viz\n${JSON.stringify(trusted)}\n\`\`\``;
+  const result = viz.extract(source);
+  assert.deepEqual(result.visualizations, [trusted]);
+  assert.equal(result.markdown, "Model prose");
+});
+
+test("an unterminated legacy opener cannot hide the later trusted artifact", () => {
+  const trusted = { ...line, title: "Trusted after broken opener" };
+  const source = `Model prose\n\n\`\`\`muta-viz\n{unfinished\n\n`
+    + `\`\`\`muta-viz\n${JSON.stringify(trusted)}\n\`\`\``;
+  const result = viz.extract(source);
+  assert.deepEqual(result.visualizations, [trusted]);
+  assert.match(result.markdown, /\{unfinished/);
+  assert.doesNotMatch(result.markdown, /Trusted after broken opener/);
 });
 
 test("validates every supported renderer family", () => {

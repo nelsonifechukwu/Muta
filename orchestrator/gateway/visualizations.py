@@ -24,7 +24,19 @@ from orchestrator.gateway.surface_equations import (
     parse_surface_expression,
     phase_animation_expression,
 )
-from runtime.chat import ChatEngine
+from orchestrator.gateway.visualization_planner_v2 import (
+    plan_visualization_v2,
+    should_use_semantic_planner,
+)
+from orchestrator.gateway.visualization_v2 import (
+    VisualizationV2Error,
+    compile_visualization_v2,
+    validate_v2_spec,
+)
+from orchestrator.gateway.visualization_v2 import (
+    resolve_intent as resolve_v2_intent,
+)
+from runtime.chat import ChatEngine, strip_model_visualization_blocks
 from runtime.client import Generation
 
 log = logging.getLogger("muta.gateway.visualizations")
@@ -113,9 +125,41 @@ def wants_live_visual(text: str) -> bool:
     value = str(text or "")
     if _NO_VISUAL.search(value):
         return False
+    if resolve_v2_intent(value).requested:
+        return True
     return bool(_EXPLICIT_VISUAL.search(value) or _OUTPUT_IMAGE_REQUEST.search(value)) or bool(
         _EXPLANATION.search(value) and _SPATIAL_TOPIC.search(value)
     )
+
+
+def _latest_v2_spec(
+    engine: ChatEngine,
+    conversation_id: str | None,
+) -> dict[str, Any] | None:
+    """Recover the latest validated V2 artifact for an anaphoric edit or animation."""
+    if not conversation_id:
+        return None
+    getter = getattr(getattr(engine, "store", None), "get_messages", None)
+    if not callable(getter):
+        return None
+    try:
+        rows = getter(conversation_id, limit=16)
+    except Exception:
+        log.warning("could not recover the previous visualization artifact", exc_info=True)
+        return None
+    pattern = re.compile(r"```muta-viz\s*\n(\{[^`]{1,49152}\})\s*\n```", re.DOTALL)
+    for row in reversed(rows):
+        if row.get("role") != "assistant":
+            continue
+        matches = list(pattern.finditer(str(row.get("content") or "")))
+        for match in reversed(matches):
+            try:
+                candidate = json.loads(match.group(1))
+                if candidate.get("version") == 2:
+                    return validate_v2_spec(candidate)
+            except (ValueError, AttributeError, TypeError):
+                continue
+    return None
 
 
 def select_library(text: str) -> str:
@@ -391,6 +435,7 @@ def _vector_addition_animation_spec(
     first_delta = (first_xy[0] - origin_xy[0], first_xy[1] - origin_xy[1])
     second_delta = (total_xy[0] - first_xy[0], total_xy[1] - first_xy[1])
     total_delta = (total_xy[0] - origin_xy[0], total_xy[1] - origin_xy[1])
+
     def midpoint(left: float, right: float) -> float:
         return round((left + right) / 2, 3)
 
@@ -1416,12 +1461,58 @@ def generate_visualization(
     if cancel_event is not None and cancel_event.is_set():
         return None
     resolved_request = resolve_visualization_request(engine, request, conversation_id)
+    # Retain the hand-tuned shipped heart, hydrocarbon, and satellite scenes. V2 owns new
+    # families and general equations, but those established diagrams remain richer than a
+    # generic composition and are part of the saved-conversation compatibility contract.
+    if (
+        _HEART_TOPIC.search(resolved_request)
+        or _HYDROCARBON_TOPIC.search(resolved_request)
+        or _SATELLITE_TOPIC.search(resolved_request)
+        or _is_vector_addition(resolved_request)
+    ):
+        legacy = _semantic_visualization(resolved_request, request)
+        if legacy is not None:
+            return legacy
+    previous_v2 = _latest_v2_spec(engine, conversation_id)
+    v2_request = (
+        request
+        if re.fullmatch(
+            r"\s*(?:please\s+)?(?:animate(?:\s+it)?|make\s+it\s+move)[.!?]*\s*",
+            request,
+            re.IGNORECASE,
+        )
+        else resolved_request
+    )
+    try:
+        v2_spec = compile_visualization_v2(v2_request, previous_spec=previous_v2)
+    except VisualizationV2Error:
+        log.info("V2 compiler rejected an unsupported or over-budget request", exc_info=True)
+        v2_spec = None
+    # A generic request belongs to the existing constrained chart/animation compiler. V2 only
+    # takes ownership once it has selected a specific typed family; otherwise a generic four-box
+    # diagram could silently replace requested categories, values, or geometry.
+    if v2_spec is not None and v2_spec.get("family") != "concept_process":
+        return v2_spec
     semantic = _semantic_visualization(resolved_request, request)
     if semantic is not None:
         return semantic
     fallback = _fallback_diagram(resolved_request)
     if _UNSUPPORTED_VISUAL.search(resolved_request):
         log.info("visual request uses an unsupported primitive; returning a safe schematic")
+        return fallback
+    if v2_spec is not None and should_use_semantic_planner(resolved_request):
+        planned = plan_visualization_v2(
+            engine,
+            resolved_request,
+            prose,
+            cancel_event=cancel_event,
+            on_generation=on_generation,
+        )
+        if planned is not None:
+            return planned
+        if cancel_event is not None and cancel_event.is_set():
+            return None
+        log.info("bounded semantic planner exhausted its repair budget; using safe schematic")
         return fallback
     library = select_library(resolved_request)
     kind = select_kind(resolved_request, library)
@@ -1474,7 +1565,10 @@ def generate_visualization(
     try:
         messages, params = engine._fit_request(messages, params, protected_tail_messages=1)
         client = getattr(engine.client, "local", engine.client)
-        stream = client.stream_events(messages, **params)
+        stream_params = dict(params)
+        if cancel_event is not None:
+            stream_params["_muta_cancel_event"] = cancel_event
+        stream = client.stream_events(messages, **stream_params)
         content: list[str] = []
         for event, text in stream:
             if cancel_event is not None and cancel_event.is_set():
@@ -1664,6 +1758,17 @@ def _contradicts_verified_visual(prose: str, spec: dict[str, Any]) -> bool:
     return False
 
 
+def strip_model_visualization_protocol(prose: str) -> str:
+    """Remove complete model-authored visualization blocks before server serialization.
+
+    The visualization protocol is owned by the gateway. Model prose is never allowed to choose
+    which otherwise-valid artifact the browser sees, so valid, malformed, and unterminated
+    reserved-protocol tails are removed without interpreting their contents. Ordinary fenced code
+    remains.
+    """
+    return strip_model_visualization_blocks(prose)
+
+
 def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
     """Keep an explanation beside every visual, using checked copy for standard science.
 
@@ -1673,7 +1778,8 @@ def _visual_prose(prose: str, spec: dict[str, Any]) -> str:
     Unknown/custom visuals retain the model's complete prose. In both cases the diagram remains
     supporting material rather than replacing the written explanation.
     """
-    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", str(prose or "")) if part.strip()]
+    trusted_prose = strip_model_visualization_protocol(prose)
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", trusted_prose) if part.strip()]
     kept = [part for part in paragraphs if not _VISUAL_REFUSAL.search(part)]
     explanation = "\n\n".join(kept)
     verified = _verified_visual_explanation(spec)

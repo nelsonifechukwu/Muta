@@ -26,6 +26,7 @@ from orchestrator.gateway.visualizations import (
     resolve_visualization_request,
     select_kind,
     select_library,
+    strip_model_visualization_protocol,
     turn_instruction,
     visualization_schema,
     wants_live_visual,
@@ -279,6 +280,37 @@ def test_constrained_pass_uses_local_client_fitter_and_durable_protocol() -> Non
     assert reply.endswith("\n```")
 
 
+def test_gateway_owns_the_only_visualization_protocol_block() -> None:
+    prose = (
+        "Keep this explanation.\n\n"
+        "```muta-viz\n"
+        '{"version":2,"family":"pythagoras","title":"model artifact"}\n'
+        "```\n\n"
+        "$$muta-viz$$\n"
+        "```json\n{bad json}\n```\n\n"
+        "```python\nprint('ordinary teaching code')\n```\n\n"
+        "Keep this conclusion."
+    )
+
+    cleaned = strip_model_visualization_protocol(prose)
+    assert "model artifact" not in cleaned
+    assert "{bad json}" not in cleaned
+    assert "ordinary teaching code" in cleaned
+    reply = append_visualization(prose, _bar_spec())
+    assert reply.count("```muta-viz") == 1
+    assert '"kind":"bar"' in reply
+    assert "model artifact" not in reply
+    assert "ordinary teaching code" in reply
+
+    unterminated = append_visualization(
+        "Keep this explanation.\n\n```muta-viz\n{unfinished",
+        _bar_spec(),
+    )
+    assert unterminated.count("```muta-viz") == 1
+    assert "{unfinished" not in unterminated
+    assert '"kind":"bar"' in unterminated
+
+
 def test_canonical_vector_addition_does_not_depend_on_a_second_model_decode() -> None:
     local = _RecordingVisualClient({"this": "must not be used"})
     engine = _VisualEngine(local)
@@ -329,20 +361,25 @@ def test_exact_surface_generation_skips_model_for_initial_and_anaphoric_turns() 
         '"'
     )
 
+    local = _RecordingVisualClient({"this": "must not be used"})
+    engine = _VisualEngine(local)
+    initial = generate_visualization(engine, request, "A complete explanation.")
+    assert initial is not None and initial["version"] == 2
+
     class Store:
         def get_messages(self, conversation_id, limit=None):
-            assert conversation_id == "surface-chat" and limit == 8
+            assert conversation_id == "surface-chat" and limit in {8, 16}
             return [
                 {"role": "user", "content": request},
-                {"role": "assistant", "content": "The surface is drawn."},
+                {
+                    "role": "assistant",
+                    "content": append_visualization("The surface is drawn.", initial),
+                },
                 {"role": "user", "content": "animate it"},
                 {"role": "assistant", "content": "The application animates it."},
             ]
 
-    local = _RecordingVisualClient({"this": "must not be used"})
-    engine = _VisualEngine(local)
     engine.store = Store()
-    initial = generate_visualization(engine, request, "A complete explanation.")
     follow_up = generate_visualization(
         engine,
         "animate it",
@@ -355,12 +392,14 @@ def test_exact_surface_generation_skips_model_for_initial_and_anaphoric_turns() 
         "The same surface now moves through phase.",
         conversation_id="surface-chat",
     )
-    assert initial is not None and initial["objects"][0]["type"] == "surface"
-    assert follow_up is not None and follow_up["objects"][0]["animation"]["mode"] == "phase"
-    assert follow_up["objects"][0]["expression"] == initial["objects"][0]["expression"]
+    initial_layer = initial["scene"]["layers"][0]
+    follow_layer = follow_up["scene"]["layers"][0]
+    assert initial_layer["type"] == "explicit_surface"
+    assert follow_up is not None and follow_layer["animation"]["mode"] == "phase"
+    assert follow_layer["relationship"] == initial_layer["relationship"]
     assert bare_follow_up is not None
-    assert bare_follow_up["objects"][0]["animation"]["mode"] == "phase"
-    assert bare_follow_up["objects"][0]["expression"] == initial["objects"][0]["expression"]
+    assert bare_follow_up["scene"]["layers"][0]["animation"]["mode"] == "phase"
+    assert bare_follow_up["scene"]["layers"][0]["relationship"] == initial_layer["relationship"]
     assert local.calls == [] and engine.fit_calls == []
 
 
@@ -375,8 +414,29 @@ def test_exact_unicode_surface_prompt_skips_the_model_pass() -> None:
     )
 
     assert spec is not None
-    assert spec["objects"][0]["type"] == "surface"
-    assert spec["objects"][0]["expression_text"] == "z = 4·e^(−y²/4)·sin(2·x)"
+    assert spec["version"] == 2
+    assert spec["scene"]["layers"][0]["type"] == "explicit_surface"
+    assert spec["scene"]["layers"][0]["label"] == "z=4e^(-y^2/4)sin(2x)"
+    assert local.calls == [] and engine.fit_calls == []
+
+
+def test_contextual_sine_plot_skips_the_model_pass_and_reaches_v2() -> None:
+    local = _RecordingVisualClient({"this": "must not be used"})
+    engine = _VisualEngine(local)
+
+    spec = generate_visualization(
+        engine,
+        "plot sin(x)",
+        "The sine function oscillates between negative one and one.",
+    )
+
+    assert spec is not None
+    assert (spec["version"], spec["family"], spec["renderer"]) == (
+        2,
+        "explicit_curve",
+        "svg",
+    )
+    assert spec["scene"]["layers"][1]["label"] == "y=sin(x)"
     assert local.calls == [] and engine.fit_calls == []
 
 
@@ -429,7 +489,7 @@ def test_standard_science_visuals_skip_the_fallible_second_decode() -> None:
         "Draw the anatomy and circulation of a heart.": ("d3", "diagram"),
         "Show the structural formula of ethane.": ("d3", "diagram"),
         "Diagram a satellite orbiting Earth and the maths involved.": ("three", "scene3d"),
-        "Explain projectile motion with a graph.": ("d3", "line"),
+        "Explain projectile motion with a graph.": ("d3", "scene2d"),
     }
     for prompt, expected in prompts.items():
         local = _RecordingVisualClient({"this": "must not be used"})
@@ -517,6 +577,7 @@ def test_constrained_pass_falls_back_on_invalid_data_and_honours_cancellation() 
         is None
     )
     assert len(cancelled_after_decode.calls) == 1
+    assert cancelled_after_decode.calls[0][1]["_muta_cancel_event"] is cancelled
     assert cancelled_after_decode.closed is True
 
 

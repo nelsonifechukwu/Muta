@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "count": 6,
+  "cases": [
+    {
+      "id": "planner-binding-001",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "semantic_composition",
+        "title": "Mangrove food web",
+        "aria_label": "A mangrove food web with adjustable crab height.",
+        "text_fallback": "Energy flows from algae to crab to heron; the crab height control moves the crab and its links.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "crab_height",
+            "label": "Crab height",
+            "type": "range",
+            "value": 0,
+            "min": -80,
+            "max": 80,
+            "step": 10,
+            "binding": {
+              "target_label": "Crab",
+              "effect": "translate_y"
+            }
+          },
+          {
+            "id": "play",
+            "label": "Play",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "pause",
+            "label": "Pause",
+            "type": "button",
+            "value": 0
+          },
+          {
+            "id": "restart",
+            "label": "Restart",
+            "type": "button",
+            "value": 0
+          }
+        ],
+        "budget": {
+          "max_points": 512,
+          "max_triangles": 1,
+          "max_fps": 20
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "animation": {
+            "mode": "guided_reveal",
+            "duration": 4
+          },
+          "layers": [
+            {
+              "type": "axes",
+              "x_label": "trophic level",
+              "y_label": "height",
+              "grid": false
+            },
+            {
+              "type": "node",
+              "id": "algae",
+              "x": 120,
+              "y": 300,
+              "width": 110,
+              "height": 54,
+              "label": "Algae",
+              "color": "green"
+            },
+            {
+              "type": "node",
+              "id": "crab",
+              "x": 350,
+              "y": 210,
+              "width": 110,
+              "height": 54,
+              "label": "Crab",
+              "color": "orange"
+            },
+            {
+              "type": "node",
+              "id": "heron",
+              "x": 580,
+              "y": 110,
+              "width": 110,
+              "height": 54,
+              "label": "Heron",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "algae",
+              "to": "crab",
+              "arrow": true,
+              "label": "energy"
+            },
+            {
+              "type": "link",
+              "from": "crab",
+              "to": "heron",
+              "arrow": true,
+              "label": "energy"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "planner-binding-svg-curves-nodes-arrows",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "binding_matrix_svg_a",
+        "title": "SVG binding matrix A",
+        "aria_label": "A curve, node, and arrow with bounded translation and scale controls.",
+        "text_fallback": "Each control changes its labelled SVG geometry inside a stable coordinate frame.",
+        "height": 420,
+        "controls": [
+          {"id": "curve_x", "label": "Curve horizontal position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "response curve", "effect": "translate_x"}},
+          {"id": "curve_y", "label": "Curve vertical position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "response curve", "effect": "translate_y"}},
+          {"id": "curve_scale", "label": "Curve scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "response curve", "effect": "scale"}},
+          {"id": "node_x", "label": "Node horizontal position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "process node", "effect": "translate_x"}},
+          {"id": "node_y", "label": "Node vertical position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "process node", "effect": "translate_y"}},
+          {"id": "node_scale", "label": "Node scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "process node", "effect": "scale"}},
+          {"id": "arrow_x", "label": "Arrow horizontal position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "process arrow", "effect": "translate_x"}},
+          {"id": "arrow_y", "label": "Arrow vertical position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "process arrow", "effect": "translate_y"}}
+        ],
+        "budget": {"max_points": 64, "max_triangles": 1, "max_fps": 20},
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {"type": "axes", "x_label": "input", "y_label": "output", "grid": true},
+            {"type": "polyline", "label": "response curve", "points": [[0, 0], [1, 2], [2, 1]], "color": "teal"},
+            {"type": "node", "id": "process", "x": 340, "y": 180, "width": 130, "height": 56, "label": "process node", "color": "orange"},
+            {"type": "arrow", "from": [120, 300], "to": [260, 240], "label": "process arrow", "color": "blue"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "planner-binding-svg-shapes",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "binding_matrix_svg_b",
+        "title": "SVG binding matrix B",
+        "aria_label": "An arrow, circle, and rectangle with every supported bounded control effect.",
+        "text_fallback": "Translation, scale, and radius controls visibly change their labelled shapes.",
+        "height": 420,
+        "controls": [
+          {"id": "arrow_scale", "label": "Arrow scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "force arrow", "effect": "scale"}},
+          {"id": "circle_x", "label": "Circle horizontal position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "sample circle", "effect": "translate_x"}},
+          {"id": "circle_y", "label": "Circle vertical position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "sample circle", "effect": "translate_y"}},
+          {"id": "circle_scale", "label": "Circle scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "sample circle", "effect": "scale"}},
+          {"id": "circle_radius", "label": "Circle radius", "type": "range", "value": 22, "min": 10, "max": 50, "step": 2, "binding": {"target_label": "sample circle", "effect": "radius"}},
+          {"id": "rect_x", "label": "Rectangle horizontal position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "sample rectangle", "effect": "translate_x"}},
+          {"id": "rect_y", "label": "Rectangle vertical position", "type": "range", "value": 0, "min": -80, "max": 80, "step": 10, "binding": {"target_label": "sample rectangle", "effect": "translate_y"}},
+          {"id": "rect_scale", "label": "Rectangle scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "sample rectangle", "effect": "scale"}}
+        ],
+        "budget": {"max_points": 16, "max_triangles": 1, "max_fps": 20},
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {"type": "arrow", "from": [100, 310], "to": [280, 190], "label": "force arrow", "color": "blue"},
+            {"type": "circle", "x": 390, "y": 170, "r": 22, "label": "sample circle", "color": "teal"},
+            {"type": "rect", "x": 520, "y": 260, "width": 120, "height": 70, "label": "sample rectangle", "color": "orange"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "planner-binding-svg-dense",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "binding_matrix_svg_c",
+        "title": "SVG binding matrix C",
+        "aria_label": "Particles and vectors with bounded translation and scale controls.",
+        "text_fallback": "Every particles and vector-field binding changes visible SVG geometry.",
+        "height": 420,
+        "controls": [
+          {"id": "particles_x", "label": "Particles horizontal position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "sample particles", "effect": "translate_x"}},
+          {"id": "particles_y", "label": "Particles vertical position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "sample particles", "effect": "translate_y"}},
+          {"id": "particles_scale", "label": "Particles scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "sample particles", "effect": "scale"}},
+          {"id": "vectors_x", "label": "Vectors horizontal position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "sample vectors", "effect": "translate_x"}},
+          {"id": "vectors_y", "label": "Vectors vertical position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "sample vectors", "effect": "translate_y"}},
+          {"id": "vectors_scale", "label": "Vectors scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "sample vectors", "effect": "scale"}}
+        ],
+        "budget": {"max_points": 64, "max_triangles": 1, "max_fps": 20},
+        "scene": {
+          "coordinate_system": "cartesian2d",
+          "layers": [
+            {"type": "axes", "x_label": "x", "y_label": "y", "grid": true},
+            {"type": "particles", "label": "sample particles", "points": [[-1, -1], [0, 1], [1, 0]], "color": "purple"},
+            {"type": "vector_field", "label": "sample vectors", "vectors": [[-1, 0, 0.5, 0.5], [0, 1, 0.5, -0.5], [1, 0, -0.5, 0.5]], "color": "teal"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "planner-binding-canvas-curves-particles",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "canvas",
+        "kind": "simulation2d",
+        "family": "binding_matrix_canvas_a",
+        "title": "Canvas binding matrix A",
+        "aria_label": "A curve and particles with bounded translation and scale controls.",
+        "text_fallback": "Every curve and particle binding changes visible canvas geometry.",
+        "height": 420,
+        "controls": [
+          {"id": "curve_x", "label": "Curve horizontal position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "canvas curve", "effect": "translate_x"}},
+          {"id": "curve_y", "label": "Curve vertical position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "canvas curve", "effect": "translate_y"}},
+          {"id": "curve_scale", "label": "Curve scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "canvas curve", "effect": "scale"}},
+          {"id": "particles_x", "label": "Particles horizontal position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "canvas particles", "effect": "translate_x"}},
+          {"id": "particles_y", "label": "Particles vertical position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "canvas particles", "effect": "translate_y"}},
+          {"id": "particles_scale", "label": "Particles scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "canvas particles", "effect": "scale"}}
+        ],
+        "budget": {"max_points": 64, "max_triangles": 1, "max_fps": 20},
+        "scene": {
+          "coordinate_system": "cartesian2d",
+          "layers": [
+            {"type": "axes", "x_label": "x", "y_label": "y", "grid": true},
+            {"type": "polyline", "label": "canvas curve", "points": [[-2, 0], [-1, 1], [0, 0], [1, -1], [2, 0]], "color": "blue"},
+            {"type": "particles", "label": "canvas particles", "points": [[-1.5, -1], [0, 1.4], [1.5, 0.5]], "color": "orange"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "planner-binding-canvas-vectors",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "canvas",
+        "kind": "simulation2d",
+        "family": "binding_matrix_canvas_b",
+        "title": "Canvas binding matrix B",
+        "aria_label": "A vector field with bounded translation and scale controls.",
+        "text_fallback": "Every vector-field binding changes visible canvas geometry.",
+        "height": 420,
+        "controls": [
+          {"id": "vectors_x", "label": "Vectors horizontal position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "canvas vectors", "effect": "translate_x"}},
+          {"id": "vectors_y", "label": "Vectors vertical position", "type": "range", "value": 0, "min": -2, "max": 2, "step": 0.25, "binding": {"target_label": "canvas vectors", "effect": "translate_y"}},
+          {"id": "vectors_scale", "label": "Vectors scale", "type": "range", "value": 1, "min": 0.5, "max": 1.5, "step": 0.1, "binding": {"target_label": "canvas vectors", "effect": "scale"}}
+        ],
+        "budget": {"max_points": 64, "max_triangles": 1, "max_fps": 20},
+        "scene": {
+          "coordinate_system": "cartesian2d",
+          "layers": [
+            {"type": "axes", "x_label": "x", "y_label": "y", "grid": true},
+            {"type": "vector_field", "label": "canvas vectors", "vectors": [[-1, -1, 0.5, 0.25], [0, 1, -0.25, 0.5], [1, 0, 0.5, -0.5]], "color": "teal"}
+          ]
+        }
+      }
+    }
+  ]
+}

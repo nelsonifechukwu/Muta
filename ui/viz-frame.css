@@ -39,6 +39,118 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 
 #viz-stage { width: 100%; height: 100%; min-height: 240px; overflow: hidden; }
 
+#viz-stage.viz-v2-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 8px;
+  gap: 7px;
+}
+
+.viz-v2-drawing {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 180px;
+  overflow: hidden;
+  border: 1px solid var(--viz-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--viz-panel) 38%, transparent);
+}
+
+.viz-v2-drawing > svg,
+.viz-v2-drawing > canvas { display: block; width: 100%; height: 100%; }
+.viz-v2-three > canvas { touch-action: none; }
+.viz-v2-interactive-plot { touch-action: none; }
+
+.viz-v2-formula {
+  position: absolute;
+  inset: 8px auto auto 8px;
+  display: grid;
+  gap: 2px;
+  max-width: calc(100% - 16px);
+  padding: 6px 8px;
+  border: 1px solid var(--viz-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--viz-bg) 90%, transparent);
+  color: var(--viz-text);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.viz-v2-formula strong { overflow-wrap: anywhere; font-size: 12px; }
+.viz-v2-formula span { color: var(--viz-muted); }
+
+.viz-v2-state {
+  flex: 0 0 auto;
+  min-height: 18px;
+  margin: 0;
+  color: var(--viz-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.viz-v2-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: end;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px;
+  scrollbar-width: thin;
+}
+
+.viz-v2-control {
+  display: grid;
+  grid-template-columns: minmax(88px, 1fr) auto;
+  align-items: center;
+  gap: 3px 8px;
+  min-width: 142px;
+  color: var(--viz-text);
+  font-size: 11px;
+}
+
+.viz-v2-control-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viz-v2-control-value { color: var(--viz-muted); font-variant-numeric: tabular-nums; }
+.viz-v2-control input,
+.viz-v2-control select,
+.viz-v2-control button { grid-column: 1 / -1; min-height: 44px; }
+
+.viz-v2-control select,
+.viz-v2-control button {
+  padding: 6px 9px;
+  border: 1px solid var(--viz-border);
+  border-radius: 8px;
+  background: var(--viz-panel);
+  color: var(--viz-text);
+  font: inherit;
+}
+
+.viz-v2-control input:focus-visible,
+.viz-v2-control select:focus-visible,
+.viz-v2-control button:focus-visible,
+.viz-v2-drawing canvas:focus-visible,
+.viz-v2-layer:focus-visible {
+  outline: 3px solid var(--viz-1);
+  outline-offset: 2px;
+}
+
+.viz-v2-fallback {
+  flex: 0 0 auto;
+  max-height: 72px;
+  overflow: auto;
+  color: var(--viz-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.viz-v2-fallback summary { cursor: pointer; color: var(--viz-text); font-weight: 650; }
+.viz-v2-fallback p { margin: 4px 0 0; }
+
 #viz-stage > svg,
 #viz-stage > canvas { display: block; width: 100%; height: 100%; }
 #viz-stage > canvas { touch-action: none; }
@@ -133,6 +245,37 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 .viz-surface-controls button:focus-visible { outline: 2px solid var(--viz-1); outline-offset: 2px; }
 .viz-surface-controls button:disabled { cursor: default; opacity: 0.5; }
 
+.viz-view-controls {
+  position: absolute;
+  inset: auto 8px 8px auto;
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  padding: 4px;
+  border: 1px solid var(--viz-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--viz-bg) 94%, transparent);
+}
+
+.viz-view-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid var(--viz-border);
+  border-radius: 8px;
+  background: var(--viz-panel);
+  color: var(--viz-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.viz-view-controls button:hover { border-color: var(--viz-1); }
+.viz-view-controls button:focus-visible { outline: 3px solid var(--viz-1); outline-offset: 2px; }
+
 #viz-replay {
   position: absolute; inset: auto 9px 8px auto; z-index: 6;
   min-height: 32px; padding: 5px 10px; border: 1px solid var(--viz-border); border-radius: 8px;
@@ -151,13 +294,57 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 [hidden] { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
-  #viz-replay,
-  #viz-surface-controls { display: none !important; }
+  #viz-replay { display: none !important; }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 430px) {
+  #viz-stage.viz-v2-stage { padding: 6px; gap: 5px; }
+  .viz-v2-drawing { min-height: 120px; }
+  .viz-v2-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr));
+    align-items: end;
+    gap: 6px;
+    overflow-x: visible;
+  }
+  .viz-v2-control { min-width: 0; grid-template-columns: minmax(0, 1fr) auto; }
+  .viz-v2-control input,
+  .viz-v2-control select,
+  .viz-v2-control button { min-height: 44px; }
   .viz-3d-hint { inset: auto 7px 7px auto; }
   .viz-surface-equation { max-width: calc(100% - 14px); inset: 7px auto auto 7px; }
   .viz-surface-controls { right: 7px; justify-content: center; }
   .viz-surface-controls button { flex: 1 1 0; }
+  .viz-view-controls { inset: auto 6px 6px 6px; }
+  .viz-view-controls button { flex: 1 1 84px; }
+}
+
+@media (pointer: coarse), (max-width: 700px) and (max-height: 650px) {
+  .viz-v2-control input,
+  .viz-v2-control select,
+  .viz-v2-control button { min-height: 44px; }
+}
+
+@media (max-width: 430px) and (max-height: 400px) {
+  .viz-v2-drawing { min-height: 90px; }
+  .viz-v2-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    max-height: 188px;
+    overflow-y: auto;
+  }
+  .viz-v2-control {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    min-height: 44px;
+  }
+  .viz-v2-control-label { grid-column: 1; grid-row: 1; align-self: center; }
+  .viz-v2-control-value { display: none; }
+  .viz-v2-control input,
+  .viz-v2-control select,
+  .viz-v2-control button {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+  }
 }

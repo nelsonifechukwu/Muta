@@ -22,6 +22,7 @@ from orchestrator.gateway.generations import GenerationManager
 from orchestrator.gateway.ladder import DegradationLadder, GiB, Level
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
+from orchestrator.gateway.visualization_v2 import compile_visualization_v2
 from orchestrator.main import app
 from runtime.chat import AttachmentPersistenceError, ChatResult
 from runtime.client import InferenceStreamError
@@ -643,6 +644,50 @@ def test_visual_json_chat_appends_and_updates_its_exact_assistant_row(wired, mon
     assert engine.store.updated_messages == [(17, reply)]
 
 
+def test_visual_json_chat_persists_a_validated_v2_surface_on_its_owned_row(wired, monkeypatch):
+    engine, *_ = wired
+    engine.chat = lambda **_kwargs: ChatResult(
+        conversation_id="conv-v2-surface",
+        reply="The surface oscillates along x and decays away from y = 0.",
+        assistant_message_id=18,
+    )
+    spec = compile_visualization_v2("Plot z=4*exp(-y^2/4)*sin(2*x)")
+    assert spec is not None and spec["version"] == 2
+    monkeypatch.setattr(routes, "generate_visualization", lambda *_args, **_kwargs: spec)
+
+    response = client.post(
+        "/v1/chat",
+        json={"student_id": "s1", "message": "Plot z=4*exp(-y^2/4)*sin(2*x)."},
+    )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert '"version":2' in reply and '"type":"explicit_surface"' in reply
+    assert engine.store.updated_messages == [(18, reply)]
+
+
+def test_nonvisual_json_chat_removes_model_authored_visual_protocol(wired):
+    engine, *_ = wired
+    raw = (
+        "Safe prose.\n\n```muta-viz\n"
+        '{"version":2,"family":"pythagoras"}\n```\n\nSafe ending.'
+    )
+    engine.chat = lambda **_kwargs: ChatResult(
+        conversation_id="conv-untrusted-viz",
+        reply=raw,
+        assistant_message_id=19,
+    )
+
+    response = client.post(
+        "/v1/chat",
+        json={"student_id": "s1", "message": "Explain the result in words."},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["reply"] == "Safe prose.\n\nSafe ending."
+    assert engine.store.updated_messages == [(19, "Safe prose.\n\nSafe ending.")]
+
+
 def test_visual_stream_persists_owned_row_and_emits_suffix_before_done(wired, monkeypatch):
     engine, *_ = wired
 
@@ -739,6 +784,98 @@ def test_visual_stream_replaces_a_model_refusal_before_done(wired, monkeypatch):
     assert "text-based" not in frames[-2]["replace"]
     assert "```muta-viz" in frames[-2]["replace"]
     assert engine.store.updated_messages[-1] == (42, frames[-2]["replace"])
+
+
+def test_nonvisual_stream_replaces_and_persists_without_model_visual_protocol(wired):
+    engine, *_ = wired
+    raw = (
+        "Safe prose.\n\n```muta-viz\n"
+        '{"version":2,"family":"pythagoras"}\n```\n\nSafe ending.'
+    )
+
+    class UntrustedVisualEvents:
+        assistant_message_id = 43
+
+        def __init__(self):
+            self._events = iter([("content", raw)])
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return next(self._events)
+
+        def close(self):
+            return None
+
+    engine.stream_events_chat = lambda **_kwargs: (
+        "conv-untrusted-viz",
+        1,
+        UntrustedVisualEvents(),
+    )
+
+    response = client.post(
+        "/v1/tutor/chat/stream",
+        json=turn(text="Explain the result in words."),
+    )
+    frames = [
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+
+    replacements = [frame["replace"] for frame in frames if "replace" in frame]
+    assert replacements == ["Safe prose.\n\nSafe ending."]
+    assert engine.store.updated_messages[-1] == (43, replacements[0])
+
+
+def test_visual_stream_replaces_unterminated_model_opener_with_trusted_artifact(
+    wired, monkeypatch
+):
+    engine, *_ = wired
+
+    class BrokenVisualEvents:
+        assistant_message_id = 44
+
+        def __init__(self):
+            self._events = iter([("content", "Safe prose.\n\n```muta-viz\n{unfinished")])
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return next(self._events)
+
+        def close(self):
+            return None
+
+    engine.stream_events_chat = lambda **_kwargs: ("conv-broken-viz", 1, BrokenVisualEvents())
+    spec = {
+        "version": 1,
+        "library": "d3",
+        "kind": "bar",
+        "title": "Trusted fruit count",
+        "aria_label": "A trusted bar chart.",
+        "height": 300,
+        "data": [{"label": "apples", "value": 3}],
+    }
+    monkeypatch.setattr(routes, "generate_visualization", lambda *_args, **_kwargs: spec)
+
+    response = client.post(
+        "/v1/tutor/chat/stream",
+        json=turn(text="Draw a bar chart for apples."),
+    )
+    frames = [
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+
+    assert [frame["replace"] for frame in frames if "replace" in frame][-1] == "Safe prose."
+    trusted_delta = [frame["delta"] for frame in frames if "delta" in frame][-1]
+    final = engine.store.updated_messages[-1][1]
+    assert final.startswith("Safe prose.\n\n```muta-viz\n")
+    assert final.count("```muta-viz") == 1
+    assert "{unfinished" not in final
+    assert '"title":"Trusted fruit count"' in final
+    assert trusted_delta in final
+    assert engine.store.updated_messages[-1] == (44, final)
 
 
 def test_tutor_stream_lang_is_trusted_system_context_not_user_text(wired):

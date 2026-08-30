@@ -1,0 +1,1135 @@
+{
+  "schema_version": 1,
+  "set": "supplied_stem_50",
+  "count": 50,
+  "cases": [
+    {
+      "id": "stem-001",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw an interactive diagram explaining the Pythagorean theorem. Let me change the lengths of the two perpendicular sides and show how the three square areas change.",
+      "normalized_prompt": "[High school] Draw an interactive diagram explaining the Pythagorean theorem. Let me change the lengths of the two perpendicular sides and show how the three square areas change.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "pythagoras",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "a",
+          "b"
+        ],
+        "oracles": [
+          "a2_plus_b2_equals_c2",
+          "square_areas"
+        ]
+      }
+    },
+    {
+      "id": "stem-002",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Show a unit circle with a movable angle (\\theta). As I change the angle, update (\\sin\\theta), (\\cos\\theta), and the corresponding point on the circle.",
+      "normalized_prompt": "[High school] Show a unit circle with a movable angle (\\theta). As I change the angle, update (\\sin\\theta), (\\cos\\theta), and the corresponding point on the circle.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "unit_circle",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "angle"
+        ],
+        "oracles": [
+          "point_on_unit_circle",
+          "sin_cos_projection"
+        ]
+      }
+    },
+    {
+      "id": "stem-003",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Visualize how changing (a), (b), and (c) affects the parabola\n[\ny=ax^2+bx+c.\n]\nMark the vertex, roots, and axis of symmetry.",
+      "normalized_prompt": "[High school] Visualize how changing (a), (b), and (c) affects the parabola [ y=ax^2+bx+c. ] Mark the vertex, roots, and axis of symmetry.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "quadratic",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "a",
+          "b",
+          "c"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-004",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Show two straight lines\n[\ny=m_1x+c_1,\\qquad y=m_2x+c_2\n]\nand let me change their slopes and intercepts. Visually show when they intersect, become parallel, or become identical.",
+      "normalized_prompt": "[High school] Show two straight lines [ y=m_1x+c_1,\\qquad y=m_2x+c_2 ] and let me change their slopes and intercepts. Visually show when they intersect, become parallel, or become identical.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "line_intersection",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "m1",
+          "c1",
+          "m2",
+          "c2"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-005",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw a triangle with movable vertices and visually explain the relationship between its interior angles.",
+      "normalized_prompt": "[High school] Draw a triangle with movable vertices and visually explain the relationship between its interior angles.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "triangle_angles",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "vertex_a",
+          "vertex_b",
+          "vertex_c"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-006",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "university",
+      "raw_prompt": "[University] Visualize the derivative of\n[\nf(x)=x^3-3x\n]\nby letting me move a point along the curve while showing the tangent line and its slope.",
+      "normalized_prompt": "[University] Visualize the derivative of [ f(x)=x^3-3x ] by letting me move a point along the curve while showing the tangent line and its slope.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "derivative_tangent",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "x"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-007",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "university",
+      "raw_prompt": "[University] Show how a Riemann sum approximates\n[\n\\int_0^4 x^2,dx.\n]\nLet me change the number of rectangles and show the approximation approaching the exact integral.",
+      "normalized_prompt": "[University] Show how a Riemann sum approximates [ \\int_0^4 x^2,dx. ] Let me change the number of rectangles and show the approximation approaching the exact integral.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "riemann_sum",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "rectangles"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-008",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "university",
+      "raw_prompt": "[University] Visualize the gradient of\n[\nf(x,y)=x^2+y^2.\n]\nShow contour lines and gradient arrows, and let me move a point around the plane.",
+      "normalized_prompt": "[University] Visualize the gradient of [ f(x,y)=x^2+y^2. ] Show contour lines and gradient arrows, and let me move a point around the plane.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "gradient_field",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "point_x",
+          "point_y"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-009",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "university",
+      "raw_prompt": "[University] Draw the two planes\n[\nx+y+z=3\n]\nand\n[\nx-y+2z=1\n]\nin 3D and highlight their line of intersection.",
+      "normalized_prompt": "[University] Draw the two planes [ x+y+z=3 ] and [ x-y+2z=1 ] in 3D and highlight their line of intersection.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "plane_intersection",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "orbit"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-010",
+      "source": "supplied",
+      "domain": "mathematics",
+      "level": "university",
+      "raw_prompt": "[University] Visualize the eigenvectors and eigenvalues of a (2\\times2) matrix by showing how the matrix transforms a grid and which vectors keep their direction.\nMechanics and Physics",
+      "normalized_prompt": "[University] Visualize the eigenvectors and eigenvalues of a (2\\times2) matrix by showing how the matrix transforms a grid and which vectors keep their direction. Mechanics and Physics",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "linear_transform",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "matrix"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-011",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Create an interactive projectile-motion diagram. Let me change launch angle and initial velocity and show the trajectory, maximum height, range, and velocity vector.",
+      "normalized_prompt": "[High school] Create an interactive projectile-motion diagram. Let me change launch angle and initial velocity and show the trajectory, maximum height, range, and velocity vector.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "projectile",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "angle",
+          "speed"
+        ],
+        "oracles": [
+          "trajectory_endpoints",
+          "range_height_units"
+        ]
+      }
+    },
+    {
+      "id": "stem-012",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw the free-body diagram of a box on an inclined plane. Let me change the incline angle and show the normal force, gravity, friction, and resulting acceleration.",
+      "normalized_prompt": "[High school] Draw the free-body diagram of a box on an inclined plane. Let me change the incline angle and show the normal force, gravity, friction, and resulting acceleration.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "inclined_plane",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "incline"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-013",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Visualize Hooke's law using a hanging mass and spring. Let me change the spring constant and mass and show the equilibrium extension.",
+      "normalized_prompt": "[High school] Visualize Hooke's law using a hanging mass and spring. Let me change the spring constant and mass and show the equilibrium extension.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "spring_mass",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "spring_constant",
+          "mass"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-014",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Show two colliding carts on a track. Let me change their masses and velocities and visualize momentum before and after a perfectly elastic collision.",
+      "normalized_prompt": "[High school] Show two colliding carts on a track. Let me change their masses and velocities and visualize momentum before and after a perfectly elastic collision.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "elastic_collision",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "mass_1",
+          "velocity_1",
+          "mass_2",
+          "velocity_2"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-015",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Create an interactive pendulum diagram. Let me change the pendulum length and starting angle and show its motion and period.",
+      "normalized_prompt": "[High school] Create an interactive pendulum diagram. Let me change the pendulum length and starting angle and show its motion and period.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "pendulum",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "length",
+          "angle"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-016",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Show a transverse wave traveling along a string. Let me change amplitude, wavelength, and frequency and label the crest, trough, wavelength, and equilibrium position.",
+      "normalized_prompt": "[High school] Show a transverse wave traveling along a string. Let me change amplitude, wavelength, and frequency and label the crest, trough, wavelength, and equilibrium position.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "travelling_wave",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "amplitude",
+          "wavelength",
+          "frequency"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-017",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Visualize constructive and destructive interference between two waves by letting me change their phase difference.",
+      "normalized_prompt": "[High school] Visualize constructive and destructive interference between two waves by letting me change their phase difference.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "wave_interference",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "phase"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-018",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "university",
+      "raw_prompt": "[University] Draw the position, velocity, and acceleration vectors for an object undergoing uniform circular motion. Let me change the angular velocity.",
+      "normalized_prompt": "[University] Draw the position, velocity, and acceleration vectors for an object undergoing uniform circular motion. Let me change the angular velocity.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "circular_motion",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "angular_velocity"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-019",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "university",
+      "raw_prompt": "[University] Visualize simple harmonic motion simultaneously as a moving mass-spring system, a displacement-versus-time graph, and a phase-space plot.",
+      "normalized_prompt": "[University] Visualize simple harmonic motion simultaneously as a moving mass-spring system, a displacement-versus-time graph, and a phase-space plot.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "harmonic_motion",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "spring_constant",
+          "mass"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-020",
+      "source": "supplied",
+      "domain": "physics",
+      "level": "university",
+      "raw_prompt": "[University] Show a double pendulum and illustrate how slightly different initial angles can produce increasingly different trajectories.\nElectricity and Magnetism",
+      "normalized_prompt": "[University] Show a double pendulum and illustrate how slightly different initial angles can produce increasingly different trajectories. Electricity and Magnetism",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "double_pendulum",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "angle_1",
+          "angle_2"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-021",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw a simple circuit containing a battery, resistor, switch, and ammeter. Let me change the resistance and voltage and update the current using Ohm's law.",
+      "normalized_prompt": "[High school] Draw a simple circuit containing a battery, resistor, switch, and ammeter. Let me change the resistance and voltage and update the current using Ohm's law.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "ohms_law_circuit",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "voltage",
+          "resistance",
+          "switch"
+        ],
+        "oracles": [
+          "current_v_over_r",
+          "current_direction"
+        ]
+      }
+    },
+    {
+      "id": "stem-022",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "high_school",
+      "raw_prompt": "[High school] Compare resistors in series and parallel visually. Let me change the resistor values and show current and voltage distribution through each branch.",
+      "normalized_prompt": "[High school] Compare resistors in series and parallel visually. Let me change the resistor values and show current and voltage distribution through each branch.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "series_parallel_circuit",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "r1",
+          "r2",
+          "mode"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-023",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "high_school",
+      "raw_prompt": "[High school] Visualize the electric field around one positive and one negative charge. Let me move the charges and update the field lines.",
+      "normalized_prompt": "[High school] Visualize the electric field around one positive and one negative charge. Let me move the charges and update the field lines.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "electric_field_lines",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "charge_1",
+          "charge_2"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-024",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "university",
+      "raw_prompt": "[University] Show the electric field vectors produced by two point charges on a 2D plane. Let me move a test charge and display the net force vector acting on it.",
+      "normalized_prompt": "[University] Show the electric field vectors produced by two point charges on a 2D plane. Let me move a test charge and display the net force vector acting on it.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "electric_field_vectors",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "test_x",
+          "test_y"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-025",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "university",
+      "raw_prompt": "[University] Draw the magnetic field around a current-carrying straight wire and show how field direction changes when the current direction is reversed.",
+      "normalized_prompt": "[University] Draw the magnetic field around a current-carrying straight wire and show how field direction changes when the current direction is reversed.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "magnetic_field_wire",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "current_direction"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-026",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "university",
+      "raw_prompt": "[University] Visualize the charging and discharging of an RC circuit. Show the circuit alongside capacitor voltage and current graphs over time.",
+      "normalized_prompt": "[University] Visualize the charging and discharging of an RC circuit. Show the circuit alongside capacitor voltage and current graphs over time.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "rc_circuit",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "mode",
+          "resistance",
+          "capacitance"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-027",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "university",
+      "raw_prompt": "[University] Visualize an RLC circuit and show how changing (R), (L), and (C) changes its transient response.",
+      "normalized_prompt": "[University] Visualize an RLC circuit and show how changing (R), (L), and (C) changes its transient response.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "rlc_circuit",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "resistance",
+          "inductance",
+          "capacitance"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-028",
+      "source": "supplied",
+      "domain": "electromagnetism",
+      "level": "university",
+      "raw_prompt": "[University] Draw an AC sinusoidal voltage and current waveform and visually demonstrate phase lead and phase lag for resistive, capacitive, and inductive loads.\nOptics and Thermodynamics",
+      "normalized_prompt": "[University] Draw an AC sinusoidal voltage and current waveform and visually demonstrate phase lead and phase lag for resistive, capacitive, and inductive loads. Optics and Thermodynamics",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "ac_phase",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "load"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-029",
+      "source": "supplied",
+      "domain": "optics_thermodynamics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw a ray diagram for a converging lens. Let me move the object and dynamically show the resulting image, focal points, and ray paths.",
+      "normalized_prompt": "[High school] Draw a ray diagram for a converging lens. Let me move the object and dynamically show the resulting image, focal points, and ray paths.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "converging_lens",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "object_distance"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-030",
+      "source": "supplied",
+      "domain": "optics_thermodynamics",
+      "level": "high_school",
+      "raw_prompt": "[High school] Visualize refraction as light passes from air into glass. Let me change the incident angle and show the refracted angle using Snell's law.",
+      "normalized_prompt": "[High school] Visualize refraction as light passes from air into glass. Let me change the incident angle and show the refracted angle using Snell's law.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "refraction",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "incident_angle",
+          "medium"
+        ],
+        "oracles": [
+          "snell_law",
+          "normal_and_ray_direction"
+        ]
+      }
+    },
+    {
+      "id": "stem-031",
+      "source": "supplied",
+      "domain": "optics_thermodynamics",
+      "level": "university",
+      "raw_prompt": "[University] Show an ideal-gas (P)-(V) diagram. Let me change pressure, volume, and temperature while maintaining\n[\nPV=nRT.\n]",
+      "normalized_prompt": "[University] Show an ideal-gas (P)-(V) diagram. Let me change pressure, volume, and temperature while maintaining [ PV=nRT. ]",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "ideal_gas",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "pressure",
+          "volume",
+          "temperature"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-032",
+      "source": "supplied",
+      "domain": "optics_thermodynamics",
+      "level": "university",
+      "raw_prompt": "[University] Draw a Carnot cycle on a (P)-(V) diagram and animate the system through its four thermodynamic processes.\nChemistry",
+      "normalized_prompt": "[University] Draw a Carnot cycle on a (P)-(V) diagram and animate the system through its four thermodynamic processes. Chemistry",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "carnot_cycle",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "playback"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-033",
+      "source": "supplied",
+      "domain": "chemistry",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw an atom with protons, neutrons, and electrons and let me change the atomic number to see how the atomic structure changes.",
+      "normalized_prompt": "[High school] Draw an atom with protons, neutrons, and electrons and let me change the atomic number to see how the atomic structure changes.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "atom",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "atomic_number"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-034",
+      "source": "supplied",
+      "domain": "chemistry",
+      "level": "high_school",
+      "raw_prompt": "[High school] Visualize ionic bonding between sodium and chlorine by showing the transfer of an electron and the resulting ions.",
+      "normalized_prompt": "[High school] Visualize ionic bonding between sodium and chlorine by showing the transfer of an electron and the resulting ions.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "ionic_bond",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "playback"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-035",
+      "source": "supplied",
+      "domain": "chemistry",
+      "level": "high_school",
+      "raw_prompt": "[High school] Show the molecular geometry of (CH_4), (NH_3), and (H_2O), including bond angles and lone pairs.",
+      "normalized_prompt": "[High school] Show the molecular geometry of (CH_4), (NH_3), and (H_2O), including bond angles and lone pairs.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "molecular_geometry",
+        "renderer": "three",
+        "spec_kind": "scene3d",
+        "controls": [
+          "molecule"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-036",
+      "source": "supplied",
+      "domain": "chemistry",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw an energy profile for an exothermic chemical reaction and let me toggle a catalyst on and off to see how activation energy changes.",
+      "normalized_prompt": "[High school] Draw an energy profile for an exothermic chemical reaction and let me toggle a catalyst on and off to see how activation energy changes.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "reaction_profile",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "catalyst"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-037",
+      "source": "supplied",
+      "domain": "chemistry",
+      "level": "university",
+      "raw_prompt": "[University] Visualize an acid-base titration by showing the flask, burette, amount of titrant added, and the corresponding titration curve.",
+      "normalized_prompt": "[University] Visualize an acid-base titration by showing the flask, burette, amount of titrant added, and the corresponding titration curve.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "titration",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "titrant_volume"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-038",
+      "source": "supplied",
+      "domain": "chemistry",
+      "level": "university",
+      "raw_prompt": "[University] Show how molecular orbitals form from two hydrogen (1s) atomic orbitals, including bonding and antibonding orbitals.\nBiology",
+      "normalized_prompt": "[University] Show how molecular orbitals form from two hydrogen (1s) atomic orbitals, including bonding and antibonding orbitals. Biology",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "molecular_orbitals",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "orbital"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-039",
+      "source": "supplied",
+      "domain": "biology",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw a simplified animal cell and make the major organelles selectable so that selecting one highlights it and explains its function.",
+      "normalized_prompt": "[High school] Draw a simplified animal cell and make the major organelles selectable so that selecting one highlights it and explains its function.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "animal_cell",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "organelle"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-040",
+      "source": "supplied",
+      "domain": "biology",
+      "level": "high_school",
+      "raw_prompt": "[High school] Visualize mitosis step by step, showing chromosome movement through prophase, metaphase, anaphase, and telophase.",
+      "normalized_prompt": "[High school] Visualize mitosis step by step, showing chromosome movement through prophase, metaphase, anaphase, and telophase.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "mitosis",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "step"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-041",
+      "source": "supplied",
+      "domain": "biology",
+      "level": "high_school",
+      "raw_prompt": "[High school] Draw the human circulatory system in simplified form and animate the path of one red blood cell through the heart, lungs, and body.",
+      "normalized_prompt": "[High school] Draw the human circulatory system in simplified form and animate the path of one red blood cell through the heart, lungs, and body.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "circulation",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "playback"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-042",
+      "source": "supplied",
+      "domain": "biology",
+      "level": "university",
+      "raw_prompt": "[University] Visualize the action potential of a neuron. Show membrane voltage over time alongside the opening and closing of sodium and potassium channels.\nComputer Science",
+      "normalized_prompt": "[University] Visualize the action potential of a neuron. Show membrane voltage over time alongside the opening and closing of sodium and potassium channels. Computer Science",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "action_potential",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "time"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-043",
+      "source": "supplied",
+      "domain": "computer_science",
+      "level": "university",
+      "raw_prompt": "[High school / introductory university] Visualize binary search on a sorted array. Let me choose a target value and animate how the search range gets smaller after every comparison.",
+      "normalized_prompt": "[High school / introductory university] Visualize binary search on a sorted array. Let me choose a target value and animate how the search range gets smaller after every comparison.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "binary_search",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "target",
+          "step"
+        ],
+        "oracles": [
+          "interval_shrinks",
+          "target_found"
+        ]
+      }
+    },
+    {
+      "id": "stem-044",
+      "source": "supplied",
+      "domain": "computer_science",
+      "level": "university",
+      "raw_prompt": "[University] Visualize a binary search tree. Let me insert values one at a time and animate where each new node is placed.",
+      "normalized_prompt": "[University] Visualize a binary search tree. Let me insert values one at a time and animate where each new node is placed.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "binary_search_tree",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "insert",
+          "step"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-045",
+      "source": "supplied",
+      "domain": "computer_science",
+      "level": "university",
+      "raw_prompt": "[University] Show Dijkstra's shortest-path algorithm on a weighted graph. Let me select the source and destination and animate how distances are updated.",
+      "normalized_prompt": "[University] Show Dijkstra's shortest-path algorithm on a weighted graph. Let me select the source and destination and animate how distances are updated.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "dijkstra",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "source",
+          "destination",
+          "step"
+        ],
+        "oracles": [
+          "nondecreasing_settled_distance",
+          "shortest_path"
+        ]
+      }
+    },
+    {
+      "id": "stem-046",
+      "source": "supplied",
+      "domain": "computer_science",
+      "level": "university",
+      "raw_prompt": "[University] Visualize a stack and a queue side by side. Let me add and remove elements and clearly show the difference between LIFO and FIFO behavior.",
+      "normalized_prompt": "[University] Visualize a stack and a queue side by side. Let me add and remove elements and clearly show the difference between LIFO and FIFO behavior.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "stack_queue",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "operation",
+          "step"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-047",
+      "source": "supplied",
+      "domain": "computer_science",
+      "level": "university",
+      "raw_prompt": "[University] Draw a simplified CPU architecture showing the CPU, registers, cache, RAM, and SSD. Animate what happens when the CPU accesses data that is not currently in RAM.\nEngineering, Signals, Robotics and AI",
+      "normalized_prompt": "[University] Draw a simplified CPU architecture showing the CPU, registers, cache, RAM, and SSD. Animate what happens when the CPU accesses data that is not currently in RAM. Engineering, Signals, Robotics and AI",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "cpu_memory",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "step"
+        ],
+        "oracles": [
+          "semantic_relationship",
+          "labels_and_units",
+          "control_consistency"
+        ]
+      }
+    },
+    {
+      "id": "stem-048",
+      "source": "supplied",
+      "domain": "engineering_signals_robotics_ai",
+      "level": "university",
+      "raw_prompt": "[University] Visualize sampling of a continuous sine wave. Let me change the signal frequency and sampling frequency and clearly show when aliasing occurs.",
+      "normalized_prompt": "[University] Visualize sampling of a continuous sine wave. Let me change the signal frequency and sampling frequency and clearly show when aliasing occurs.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "sampling_aliasing",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "signal_frequency",
+          "sample_frequency"
+        ],
+        "oracles": [
+          "nyquist_condition",
+          "sample_locations"
+        ]
+      }
+    },
+    {
+      "id": "stem-049",
+      "source": "supplied",
+      "domain": "engineering_signals_robotics_ai",
+      "level": "university",
+      "raw_prompt": "[University] Draw a differential-drive robot with left and right wheels. Let me independently change each wheel velocity and show the resulting robot trajectory and instantaneous center of curvature.",
+      "normalized_prompt": "[University] Draw a differential-drive robot with left and right wheels. Let me independently change each wheel velocity and show the resulting robot trajectory and instantaneous center of curvature.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "differential_drive",
+        "renderer": "canvas",
+        "spec_kind": "simulation2d",
+        "controls": [
+          "left_velocity",
+          "right_velocity"
+        ],
+        "oracles": [
+          "curvature_from_wheel_speeds"
+        ]
+      }
+    },
+    {
+      "id": "stem-050",
+      "source": "supplied",
+      "domain": "engineering_signals_robotics_ai",
+      "level": "university",
+      "raw_prompt": "[University] Visualize a simple neural network with two inputs, one hidden layer, and one output. Let me change a weight and show how the activations propagate through the network and change the final output.",
+      "normalized_prompt": "[University] Visualize a simple neural network with two inputs, one hidden layer, and one output. Let me change a weight and show how the activations propagate through the network and change the final output.",
+      "expected": {
+        "intent": "interactive_visual",
+        "family": "neural_network",
+        "renderer": "svg",
+        "spec_kind": "scene2d",
+        "controls": [
+          "weight",
+          "step"
+        ],
+        "oracles": [
+          "weighted_activation_flow"
+        ]
+      }
+    }
+  ]
+}

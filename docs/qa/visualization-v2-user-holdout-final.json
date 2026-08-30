@@ -1,0 +1,6418 @@
+{
+  "schema_version": 1,
+  "phase": "post-holdout-final",
+  "revision": "working-tree",
+  "pre_holdout_candidate": {
+    "sha": "ae3cc2e1572b042a0d53ab5af4fe1143e9cb71cd",
+    "frozen_at": "2026-08-27T12:07:54+01:00"
+  },
+  "first_run": {
+    "python_sha256": "70e1c51977865a2345731d248c53ab559b0e0a53110f06fbd75a4c5bfb83f9b8",
+    "browser_sha256": "475a513a06165ec656b47932425c746a53165a295cabc65e5136a33bedb2f6be",
+    "compiled": 31,
+    "compile_failed": 19,
+    "browser_rendered": 31,
+    "browser_attempted": 31
+  },
+  "summary": {
+    "total": 50,
+    "python_passed": 50,
+    "browser_evaluated": true,
+    "browser_passed": 50,
+    "passed": 50,
+    "failed": 0,
+    "waived": 0,
+    "gate_passed": true
+  },
+  "browser_gate": {
+    "evaluated": true,
+    "inert_string_boundary": {
+      "passed": true,
+      "literal_text_fields": [
+        "δelta\n('x') <img src=x onerror=globalThis.__mutaVizSinkProbe=true>",
+        "Await f(x): 개체 P(t)는 시간에 따라 증가합니다.",
+        "export{x}; new Function('return 1')",
+        "direction arrow Await f(x)",
+        "Await P(t) <?php echo 1 ?>",
+        "selector { color:red } <?php echo 1 ?> https://example.invalid/payload.js"
+      ],
+      "event_or_resource_attributes": [],
+      "descriptive_behavior_attributes": [],
+      "child_markup_sink": false,
+      "frame_global_mutated": false,
+      "parent_global_mutated": false,
+      "render_error": ""
+    },
+    "passed": true
+  },
+  "cases": [
+    {
+      "id": "user-holdout-001",
+      "title": "Linear function",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "explicit_curve",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "max_equation_error": 0.0,
+          "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=2x+3. slope 2; y-intercept (0,3). two-dimensional plot of y=2x+3. slope 2; y-intercept (0,3).    y=2x+3   y-intercept (0,3)   slope rise/run = 2/1  "
+        }
+      },
+      "compile_ms": 8.516,
+      "browser_ms": 49.4,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-001",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 29,
+          "controls": 0,
+          "family": "explicit_curve",
+          "control_revision": 0,
+          "control_values": {},
+          "geometry_signature": 589379611,
+          "visual_state_signature": 589379611,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Two-dimensional plot of y=2x+3. Slope 2; y-intercept (0,3)."
+        },
+        "elapsed_ms": 49.4,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 0,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 29,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-002",
+      "title": "Parabola",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "explicit_curve",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "max_equation_error": 0.0,
+          "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=x^2-4x+3. vertex (2,-1); axis x=2. two-dimensional plot of y=x^2-4x+3. vertex (2,-1); axis x=2.    y=x^2-4x+3   vertex (2,-1); roots 1, 3   axis of symmetry x=2  "
+        }
+      },
+      "compile_ms": 2.646,
+      "browser_ms": 56.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-002",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 30,
+          "controls": 0,
+          "family": "explicit_curve",
+          "control_revision": 0,
+          "control_values": {},
+          "geometry_signature": 749791610,
+          "visual_state_signature": 749791610,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Two-dimensional plot of y=x^2-4x+3. Vertex (2,-1); axis x=2."
+        },
+        "elapsed_ms": 56.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 0,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 30,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-003",
+      "title": "Sine wave",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "explicit_curve",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "max_equation_error": 0.0,
+          "labels": "interactive 2d equation interactive 2d equation. two-dimensional plot of y=sin(x). amplitude about 1 and wavelength about 6.28. two-dimensional plot of y=sin(x). amplitude about 1 and wavelength about 6.28.    y=sin(x)   amplitude≈1; wavelength≈6.28; extrema and zero crossings  "
+        }
+      },
+      "compile_ms": 2.813,
+      "browser_ms": 42.8,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-003",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 30,
+          "controls": 0,
+          "family": "explicit_curve",
+          "control_revision": 0,
+          "control_values": {},
+          "geometry_signature": 663226008,
+          "visual_state_signature": 663226008,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Two-dimensional plot of y=sin(x). Amplitude about 1 and wavelength about 6.28."
+        },
+        "elapsed_ms": 42.8,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 0,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 30,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-004",
+      "title": "Circle",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "implicit_curve",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "max_circle_residual": 0.01084744471100052,
+          "point_count": 117
+        }
+      },
+      "compile_ms": 7.726,
+      "browser_ms": 98.4,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-004",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 29,
+          "controls": 0,
+          "family": "implicit_curve",
+          "control_revision": 0,
+          "control_values": {},
+          "geometry_signature": 86319476,
+          "visual_state_signature": 86319476,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Two-dimensional plot of x^2+y^2=9. Centre (0,0); radius about 3."
+        },
+        "elapsed_ms": 98.4,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 0,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 29,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-005",
+      "title": "3D sphere",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "implicit_surface",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "orbit",
+        "reset_view"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "origin_residual": 9.0,
+          "sphere_point_residual": 0.0,
+          "clipped": false
+        }
+      },
+      "compile_ms": 136.076,
+      "browser_ms": 437.3,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-005",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 576,
+          "draw_calls": 2,
+          "gpu_calls": 17,
+          "gpu_triangles": 9672,
+          "gpu_lines": 14475,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 9648,
+          "topology": {
+            "components": 1,
+            "vertices": 4826,
+            "edges": 14472,
+            "faces": 9648,
+            "euler": 2,
+            "boundary_edges": 0,
+            "nonmanifold_edges": 0,
+            "periodic_boundary_edges": 0,
+            "periodic_matched_edges": 0,
+            "periodic_unmatched_edges": 0,
+            "periodic_components": 1,
+            "periodic_function_max_delta": 0
+          },
+          "surface_diagnostics": null,
+          "family": "implicit_surface",
+          "control_revision": 2,
+          "control_values": {
+            "orbit": 1,
+            "reset_view": 1
+          },
+          "geometry_signature": 31002913,
+          "visual_state_signature": 31002913,
+          "animation_state": "paused",
+          "animation_progress": 0,
+          "observed_frame_interval_ms": 34.19999999999999,
+          "state_description": "orbit = 1; reset view = 1"
+        },
+        "elapsed_ms": 437.3,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "orbit",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          },
+          {
+            "id": "reset_view",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-006",
+      "title": "Vector addition",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "vector_addition",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "vectors": [
+            [
+              0,
+              0,
+              3,
+              2
+            ],
+            [
+              3,
+              2,
+              1,
+              4
+            ],
+            [
+              0,
+              0,
+              4,
+              6
+            ]
+          ]
+        }
+      },
+      "compile_ms": 0.297,
+      "browser_ms": 30.9,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-006",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 30,
+          "controls": 0,
+          "family": "vector_addition",
+          "control_revision": 0,
+          "control_values": {},
+          "geometry_signature": 241958,
+          "visual_state_signature": 241958,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Head-to-tail and parallelogram constructions agree: a=(3,2), b=(1,4), and a+b=(4,6)."
+        },
+        "elapsed_ms": 30.9,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 0,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 30,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-007",
+      "title": "Basic atom",
+      "domain": "chemistry",
+      "intent": "interactive visualization",
+      "family": "atom",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "atomic_number"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "shells": 3,
+                "electrons": 6,
+                "atomic_number": 6
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 1.76,
+      "browser_ms": 57.3,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-007",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 46,
+          "controls": 1,
+          "family": "atom",
+          "control_revision": 1,
+          "control_values": {
+            "atomic_number": 13
+          },
+          "geometry_signature": 170316714,
+          "visual_state_signature": 170316714,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Atomic number Z=13: 13 protons and 13 electrons arranged into bounded shells."
+        },
+        "elapsed_ms": 57.3,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "atomic_number",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 25,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-008",
+      "title": "Animal cell",
+      "domain": "biology",
+      "intent": "interactive visualization",
+      "family": "animal_cell",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "organelle"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "organelle_nodes": [
+                  "golgi",
+                  "lysosome",
+                  "mitochondrion",
+                  "nucleus",
+                  "ribosome",
+                  "rough_er"
+                ],
+                "selector": [
+                  "nucleus",
+                  "mitochondrion",
+                  "ribosome",
+                  "rough_er",
+                  "golgi",
+                  "lysosome"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.417,
+      "browser_ms": 102.0,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-008",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 15,
+          "controls": 1,
+          "family": "animal_cell",
+          "control_revision": 1,
+          "control_values": {
+            "organelle": "mitochondrion"
+          },
+          "geometry_signature": 510100,
+          "visual_state_signature": 510100,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "mitochondrion: makes ATP."
+        },
+        "elapsed_ms": 102,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "organelle",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 15,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-009",
+      "title": "Simple electric circuit",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "ohms_law_circuit",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "voltage",
+        "resistance",
+        "switch"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "current_v_over_r": {
+              "passed": true,
+              "evidence": {
+                "voltage": 12.0,
+                "resistance": 6.0,
+                "current": 2.0
+              }
+            },
+            "current_direction": {
+              "passed": true,
+              "evidence": {
+                "directed_links": 4
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.36,
+      "browser_ms": 90.5,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-009",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 14,
+          "controls": 3,
+          "family": "ohms_law_circuit",
+          "control_revision": 3,
+          "control_values": {
+            "voltage": 17.5,
+            "resistance": 17.5,
+            "switch": 1
+          },
+          "geometry_signature": 182968,
+          "visual_state_signature": 182968,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Closed switch: current I = V/R = 1.00 A (V=17.5 V, R=17.5 Ω)."
+        },
+        "elapsed_ms": 90.5,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 3,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "voltage",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "resistance",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "switch",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 14,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-010",
+      "title": "Binary representation",
+      "domain": "computer science",
+      "intent": "interactive visualization",
+      "family": "binary_representation",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "node_count": 5
+        }
+      },
+      "compile_ms": 0.292,
+      "browser_ms": 25.8,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-010",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 19,
+          "controls": 0,
+          "family": "binary_representation",
+          "control_revision": 0,
+          "control_values": {},
+          "geometry_signature": 402990,
+          "visual_state_signature": 402990,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Place values 8, 4, 2, 1 with bits 1, 1, 0, 1 give 8+4+0+1=13, so 13₁₀=1101₂."
+        },
+        "elapsed_ms": 25.8,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 0,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 19,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-011",
+      "title": "Interactive parabola",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "quadratic",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "a",
+        "b",
+        "c"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "curve_labels": [
+                  "axis of symmetry x = 0",
+                  "y = x²"
+                ],
+                "particle_labels": [
+                  "real roots",
+                  "vertex"
+                ]
+              }
+            },
+            "labels_and_units": {
+              "passed": true,
+              "evidence": {
+                "labels": [],
+                "axes": [
+                  {
+                    "type": "axes",
+                    "x_label": "x",
+                    "y_label": "y",
+                    "grid": true
+                  }
+                ]
+              }
+            },
+            "control_consistency": {
+              "passed": true,
+              "evidence": {
+                "control_ids": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "browser_check": "required"
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.75,
+      "browser_ms": 91.9,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-011",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 28,
+          "controls": 3,
+          "family": "quadratic",
+          "control_revision": 3,
+          "control_values": {
+            "a": 1.8,
+            "b": 3.7,
+            "c": 3.7
+          },
+          "geometry_signature": 28477501,
+          "visual_state_signature": 28477501,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "a=1.80, b=3.70, c=3.70; vertex (-1.03, 1.80)."
+        },
+        "elapsed_ms": 91.9,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 3,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "a",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "b",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "c",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 30,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-012",
+      "title": "Interactive unit circle",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "unit_circle",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "angle"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "point_on_unit_circle": {
+              "passed": true,
+              "evidence": {
+                "endpoint_error": 1.1102230246251565e-16,
+                "circle_error": 2.220446049250313e-16
+              }
+            },
+            "sin_cos_projection": {
+              "passed": true,
+              "evidence": {
+                "endpoint_error": 1.1102230246251565e-16,
+                "circle_error": 2.220446049250313e-16
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.801,
+      "browser_ms": 48.3,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-012",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 29,
+          "controls": 1,
+          "family": "unit_circle",
+          "control_revision": 1,
+          "control_values": {
+            "angle": 263
+          },
+          "geometry_signature": 40074797,
+          "visual_state_signature": 40074797,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "angle = 263"
+        },
+        "elapsed_ms": 48.3,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "angle",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 29,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-013",
+      "title": "3D Gaussian surface",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "explicit_surface",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "orbit",
+        "reset_view"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "sample_residuals": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "compile_ms": 2.104,
+      "browser_ms": 289.0,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-013",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 576,
+          "draw_calls": 2,
+          "gpu_calls": 17,
+          "gpu_triangles": 4632,
+          "gpu_lines": 7011,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 4608,
+          "topology": {
+            "components": 1,
+            "vertices": 2401,
+            "edges": 7008,
+            "faces": 4608,
+            "euler": 1,
+            "boundary_edges": 192,
+            "nonmanifold_edges": 0,
+            "periodic_boundary_edges": 192,
+            "periodic_matched_edges": 192,
+            "periodic_unmatched_edges": 0,
+            "periodic_components": 1,
+            "periodic_function_max_delta": 1.1600000000000001
+          },
+          "surface_diagnostics": {
+            "rejected_discontinuity_cells": 0,
+            "rejected_undefined_cells": 0,
+            "finite_triangles": 4608
+          },
+          "family": "explicit_surface",
+          "control_revision": 2,
+          "control_values": {
+            "orbit": 1,
+            "reset_view": 1
+          },
+          "geometry_signature": 30989561,
+          "visual_state_signature": 30989561,
+          "animation_state": "paused",
+          "animation_progress": 0,
+          "observed_frame_interval_ms": 33.400000000000006,
+          "state_description": "orbit = 1; reset view = 1"
+        },
+        "elapsed_ms": 289,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "orbit",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          },
+          {
+            "id": "reset_view",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-014",
+      "title": "Damped wave surface",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "explicit_surface",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "orbit",
+        "reset_view"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "sample_residuals": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "compile_ms": 2.779,
+      "browser_ms": 301.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-014",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 576,
+          "draw_calls": 2,
+          "gpu_calls": 17,
+          "gpu_triangles": 4632,
+          "gpu_lines": 7011,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 4608,
+          "topology": {
+            "components": 1,
+            "vertices": 2401,
+            "edges": 7008,
+            "faces": 4608,
+            "euler": 1,
+            "boundary_edges": 192,
+            "nonmanifold_edges": 0,
+            "periodic_boundary_edges": 192,
+            "periodic_matched_edges": 96,
+            "periodic_unmatched_edges": 96,
+            "periodic_components": 1,
+            "periodic_function_max_delta": 9.237386
+          },
+          "surface_diagnostics": {
+            "rejected_discontinuity_cells": 0,
+            "rejected_undefined_cells": 0,
+            "finite_triangles": 4608
+          },
+          "family": "explicit_surface",
+          "control_revision": 2,
+          "control_values": {
+            "orbit": 1,
+            "reset_view": 1
+          },
+          "geometry_signature": 30989906,
+          "visual_state_signature": 30989906,
+          "animation_state": "paused",
+          "animation_progress": 0,
+          "observed_frame_interval_ms": 50,
+          "state_description": "orbit = 1; reset view = 1"
+        },
+        "elapsed_ms": 301.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "orbit",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          },
+          {
+            "id": "reset_view",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-015",
+      "title": "Projectile motion",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "projectile",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "angle",
+        "speed"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "trajectory_endpoints": {
+              "passed": true,
+              "evidence": {
+                "start": [
+                  0.0,
+                  0.0
+                ],
+                "end": [
+                  40.77471967380224,
+                  0.0
+                ],
+                "axes": {
+                  "type": "axes",
+                  "x_label": "horizontal distance (m)",
+                  "y_label": "height (m)",
+                  "grid": true
+                },
+                "markers": [
+                  [
+                    20.38735983690112,
+                    10.19367991845056
+                  ],
+                  [
+                    40.77471967380224,
+                    0.0
+                  ]
+                ],
+                "marker_error": 1.7763568394002505e-15,
+                "velocity_vector": {
+                  "type": "arrow",
+                  "from": [
+                    14.271151885830783,
+                    9.276248725790008
+                  ],
+                  "to": [
+                    19.928006135323162,
+                    10.973305000637723
+                  ],
+                  "label": "instantaneous velocity",
+                  "color": "purple"
+                }
+              }
+            },
+            "range_height_units": {
+              "passed": true,
+              "evidence": {
+                "start": [
+                  0.0,
+                  0.0
+                ],
+                "end": [
+                  40.77471967380224,
+                  0.0
+                ],
+                "axes": {
+                  "type": "axes",
+                  "x_label": "horizontal distance (m)",
+                  "y_label": "height (m)",
+                  "grid": true
+                },
+                "markers": [
+                  [
+                    20.38735983690112,
+                    10.19367991845056
+                  ],
+                  [
+                    40.77471967380224,
+                    0.0
+                  ]
+                ],
+                "marker_error": 1.7763568394002505e-15,
+                "velocity_vector": {
+                  "type": "arrow",
+                  "from": [
+                    14.271151885830783,
+                    9.276248725790008
+                  ],
+                  "to": [
+                    19.928006135323162,
+                    10.973305000637723
+                  ],
+                  "label": "instantaneous velocity",
+                  "color": "purple"
+                }
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.744,
+      "browser_ms": 75.0,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-015",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 29,
+          "controls": 2,
+          "family": "projectile",
+          "control_revision": 2,
+          "control_values": {
+            "angle": 63,
+            "speed": 44
+          },
+          "geometry_signature": 1170719,
+          "visual_state_signature": 1170719,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Range 159.7 m; maximum height 78.3 m."
+        },
+        "elapsed_ms": 75,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "angle",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "speed",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 29,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-016",
+      "title": "Inclined plane",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "inclined_plane",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "incline"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "normal_dot_plane": -7.275957614183426e-12,
+                "friction_cross": -7.275957614183426e-12,
+                "resultant_cross": 3.637978807091713e-12,
+                "opposite": true,
+                "same_origin": true
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.376,
+      "browser_ms": 48.6,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-016",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 12,
+          "controls": 1,
+          "family": "inclined_plane",
+          "control_revision": 1,
+          "control_values": {
+            "incline": 45
+          },
+          "geometry_signature": 64926,
+          "visual_state_signature": 64926,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "At θ=45°, N=mg cosθ, friction μN with μ=0.2, and downhill a=max(0,g(sinθ−μcosθ))=5.55 m/s²."
+        },
+        "elapsed_ms": 48.6,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "incline",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 12,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-017",
+      "title": "Hooke's law",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "spring_mass",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "spring_constant",
+        "displacement"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "initial_restoring_force": -12
+        }
+      },
+      "compile_ms": 0.468,
+      "browser_ms": 69.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-017",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 13,
+          "controls": 2,
+          "family": "spring_mass",
+          "control_revision": 2,
+          "control_values": {
+            "spring_constant": 22,
+            "displacement": 1.4
+          },
+          "geometry_signature": 106238,
+          "visual_state_signature": 106238,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Hooke's law: k=22.00 N/m, x=1.40 m, restoring force F=−kx=-30.80 N, opposite the displacement."
+        },
+        "elapsed_ms": 69.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "spring_constant",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "displacement",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 13,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-018",
+      "title": "Ohm's law",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "ohms_law_circuit",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "voltage",
+        "resistance",
+        "switch"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "current_v_over_r": {
+              "passed": true,
+              "evidence": {
+                "voltage": 12.0,
+                "resistance": 6.0,
+                "current": 2.0
+              }
+            },
+            "current_direction": {
+              "passed": true,
+              "evidence": {
+                "directed_links": 4
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.504,
+      "browser_ms": 89.5,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-018",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 14,
+          "controls": 3,
+          "family": "ohms_law_circuit",
+          "control_revision": 3,
+          "control_values": {
+            "voltage": 17.5,
+            "resistance": 17.5,
+            "switch": 1
+          },
+          "geometry_signature": 182968,
+          "visual_state_signature": 182968,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Closed switch: current I = V/R = 1.00 A (V=17.5 V, R=17.5 Ω)."
+        },
+        "elapsed_ms": 89.5,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 3,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "voltage",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "resistance",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "switch",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 14,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-019",
+      "title": "Refraction",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "refraction",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "incident_angle",
+        "medium"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "snell_law": {
+              "passed": true,
+              "evidence": {
+                "incident_angle_rad": 0.6108652381980153,
+                "refracted_angle_rad": 0.3923753150151655,
+                "snell_residual": 2.220446049250313e-16
+              }
+            },
+            "normal_and_ray_direction": {
+              "passed": true,
+              "evidence": {
+                "labels": [
+                  "incident ray",
+                  "normal / interface",
+                  "refracted ray",
+                  "n₁ sin θ₁ = n₂ sin θ₂"
+                ],
+                "crosses_interface": true
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.383,
+      "browser_ms": 69.3,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-019",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 15,
+          "controls": 2,
+          "family": "refraction",
+          "control_revision": 2,
+          "control_values": {
+            "incident_angle": 58,
+            "medium": "water"
+          },
+          "geometry_signature": 322352,
+          "visual_state_signature": 322352,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "incident angle = 58; medium = water"
+        },
+        "elapsed_ms": 69.3,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "incident_angle",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "medium",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 15,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-020",
+      "title": "Molecular geometry",
+      "domain": "chemistry",
+      "intent": "interactive visualization",
+      "family": "molecular_geometry",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "molecule"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "central_atoms": 1,
+                "bond_vectors": 6,
+                "lone_pairs": 2,
+                "molecules": [
+                  "ch4",
+                  "nh3",
+                  "h2o",
+                  "sf6",
+                  "brf5"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.483,
+      "browser_ms": 156.9,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-020",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 576,
+          "draw_calls": 9,
+          "gpu_calls": 9,
+          "gpu_triangles": 1485,
+          "gpu_lines": 6,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 0,
+          "topology": null,
+          "surface_diagnostics": null,
+          "family": "molecular_geometry",
+          "control_revision": 1,
+          "control_values": {
+            "molecule": "nh3"
+          },
+          "geometry_signature": 9164,
+          "visual_state_signature": 9164,
+          "animation_state": "paused",
+          "animation_progress": 0,
+          "observed_frame_interval_ms": 0,
+          "state_description": "NH₃: trigonal pyramidal, about 107°."
+        },
+        "elapsed_ms": 156.9,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "molecule",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-021",
+      "title": "Derivative visualizer",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "derivative_tangent",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "x"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "x": 1.0,
+                "slope": 0.0,
+                "tangent_residual": 0.0
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.937,
+      "browser_ms": 51.0,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-021",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 27,
+          "controls": 1,
+          "family": "derivative_tangent",
+          "control_revision": 1,
+          "control_values": {
+            "x": 1.4
+          },
+          "geometry_signature": 81488190,
+          "visual_state_signature": 81488190,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "x = 1.4"
+        },
+        "elapsed_ms": 51,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "x",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 27,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-022",
+      "title": "Riemann sum",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "riemann_sum",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "rectangles"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "rectangles": 8,
+                "left_sum": 17.5,
+                "expected": 17.5
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.741,
+      "browser_ms": 47.0,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-022",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 27,
+          "controls": 1,
+          "family": "riemann_sum",
+          "control_revision": 1,
+          "control_values": {
+            "rectangles": 29
+          },
+          "geometry_signature": 138066463,
+          "visual_state_signature": 138066463,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "rectangles = 29"
+        },
+        "elapsed_ms": 47,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "rectangles",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 27,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-023",
+      "title": "Gradient field",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "gradient_linked",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "point_x",
+        "point_y"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "panel_titles": [
+            "Projected 3D surface",
+            "Linked 2D contour map"
+          ]
+        }
+      },
+      "compile_ms": 3.016,
+      "browser_ms": 79.6,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-023",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 43,
+          "controls": 2,
+          "family": "gradient_linked",
+          "control_revision": 2,
+          "control_values": {
+            "point_x": 7.3,
+            "point_y": 7.3
+          },
+          "geometry_signature": 394379084,
+          "visual_state_signature": 394379084,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Linked point (7.30, 7.30) has f=x²+y²=106.580 and gradient ∇f=(14.60, 14.60) in both views."
+        },
+        "elapsed_ms": 79.6,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "point_x",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "point_y",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 43,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-024",
+      "title": "Matrix transformation",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "linear_transform",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "matrix"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "grid_lines": 14,
+                "basis_vectors": 2,
+                "eigenvector_tests": 2,
+                "options": [
+                  "identity",
+                  "shear",
+                  "scale"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.574,
+      "browser_ms": 48.6,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-024",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 59,
+          "controls": 1,
+          "family": "linear_transform",
+          "control_revision": 1,
+          "control_values": {
+            "matrix": "shear"
+          },
+          "geometry_signature": 639284,
+          "visual_state_signature": 639284,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Shear matrix: λ=1 is repeated, but only the x-axis supplies an independent real eigenvector."
+        },
+        "elapsed_ms": 48.6,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "matrix",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 59,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-025",
+      "title": "Eigenvector visualization",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "linear_transform",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "matrix"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "grid_lines": 14,
+                "basis_vectors": 2,
+                "eigenvector_tests": 2,
+                "options": [
+                  "identity",
+                  "shear",
+                  "scale"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.452,
+      "browser_ms": 47.1,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-025",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 59,
+          "controls": 1,
+          "family": "linear_transform",
+          "control_revision": 1,
+          "control_values": {
+            "matrix": "shear"
+          },
+          "geometry_signature": 639284,
+          "visual_state_signature": 639284,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Shear matrix: λ=1 is repeated, but only the x-axis supplies an independent real eigenvector."
+        },
+        "elapsed_ms": 47.1,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "matrix",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 59,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-026",
+      "title": "Travelling wave",
+      "domain": "physics",
+      "intent": "interactive animation",
+      "family": "travelling_wave",
+      "renderer": "canvas",
+      "spec_kind": "simulation2d",
+      "controls": [
+        "amplitude",
+        "wavelength",
+        "frequency",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "markers": [
+                  [
+                    0.45225351707243144,
+                    1
+                  ],
+                  [
+                    1.4522535170724313,
+                    -1
+                  ]
+                ],
+                "amplitude": 1.0,
+                "wavelength": 2.0
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.72,
+      "browser_ms": 297.5,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-026",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "canvas",
+          "nontransparent_samples": 1035,
+          "controls": 6,
+          "family": "travelling_wave",
+          "panel_count": 1,
+          "panel_titles": [
+            "Travelling Wave"
+          ],
+          "control_revision": 6,
+          "control_values": {
+            "amplitude": 2.2,
+            "wavelength": 5.9,
+            "frequency": 3.7,
+            "play": 0,
+            "pause": 1,
+            "restart": 1,
+            "__animation_progress": 0.006237500000000001
+          },
+          "geometry_signature": 149668,
+          "visual_state_signature": 149668,
+          "animation_state": "playing",
+          "animation_progress": 0.006237500000000001,
+          "observed_frame_interval_ms": 49.900000000000006,
+          "state_description": "A=2.20, λ=5.90, f=3.70; crest and trough lie ±A from equilibrium. · ▶ 1%"
+        },
+        "elapsed_ms": 297.5,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 6,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "amplitude",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "wavelength",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "frequency",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-027",
+      "title": "Simple harmonic oscillator",
+      "domain": "physics",
+      "intent": "interactive animation",
+      "family": "harmonic_motion",
+      "renderer": "canvas",
+      "spec_kind": "simulation2d",
+      "controls": [
+        "spring_constant",
+        "mass",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "curve_labels": [
+                  "displacement versus time",
+                  "phase space velocity versus displacement",
+                  "spring and moving mass"
+                ],
+                "moving_mass": [
+                  [
+                    1,
+                    0
+                  ],
+                  [
+                    1.001,
+                    0
+                  ]
+                ],
+                "transport_controls": [
+                  "mass",
+                  "pause",
+                  "play",
+                  "restart",
+                  "spring_constant"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 1.037,
+      "browser_ms": 272.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-027",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "canvas",
+          "nontransparent_samples": 1027,
+          "controls": 5,
+          "family": "harmonic_motion",
+          "panel_count": 1,
+          "panel_titles": [
+            "Harmonic Motion"
+          ],
+          "control_revision": 5,
+          "control_values": {
+            "spring_constant": 7.3,
+            "mass": 7.3,
+            "play": 0,
+            "pause": 1,
+            "restart": 1,
+            "__animation_progress": 0.004425000000000001
+          },
+          "geometry_signature": 125390,
+          "visual_state_signature": 125390,
+          "animation_state": "playing",
+          "animation_progress": 0.004425000000000001,
+          "observed_frame_interval_ms": 35.400000000000006,
+          "state_description": "spring constant = 7.3; mass = 7.3; play = 0; pause = 1; restart = 1;   animation progress = 0.004425000000000001 · ▶ 0%"
+        },
+        "elapsed_ms": 272.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 5,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "spring_constant",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "mass",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-028",
+      "title": "Elastic collision",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "elastic_collision",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "mass_1",
+        "velocity_1",
+        "mass_2",
+        "velocity_2"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "v1": -1.8,
+                "v2": 2.2,
+                "momentum_residual": 8.881784197001252e-16,
+                "twice_energy_residual": 3.552713678800501e-15
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.385,
+      "browser_ms": 114.6,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-028",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 17,
+          "controls": 4,
+          "family": "elastic_collision",
+          "control_revision": 4,
+          "control_values": {
+            "mass_1": 6,
+            "velocity_1": 3.5,
+            "mass_2": 6,
+            "velocity_2": 3.5
+          },
+          "geometry_signature": 274079,
+          "visual_state_signature": 274079,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Elastic result: v₁=3.50, v₂=3.50; Δp=0.0e+0, ΔK=0.0e+0."
+        },
+        "elapsed_ms": 114.6,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 4,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "mass_1",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "velocity_1",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "mass_2",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "velocity_2",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 17,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-029",
+      "title": "Electric field",
+      "domain": "physics",
+      "intent": "interactive visualization",
+      "family": "electric_field_vectors",
+      "renderer": "canvas",
+      "spec_kind": "simulation2d",
+      "controls": [
+        "positive_charge_x",
+        "negative_charge_x",
+        "test_x",
+        "test_y"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "field_samples": 42,
+                "typed_probe": true
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 1.747,
+      "browser_ms": 152.3,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-029",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "canvas",
+          "nontransparent_samples": 752,
+          "controls": 4,
+          "family": "electric_field_vectors",
+          "panel_count": 1,
+          "panel_titles": [
+            "Electric Field Vectors"
+          ],
+          "control_revision": 4,
+          "control_values": {
+            "positive_charge_x": -0.9,
+            "negative_charge_x": 2.2,
+            "test_x": 1.4,
+            "test_y": 1.4
+          },
+          "geometry_signature": 20206691,
+          "visual_state_signature": 20206691,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "positive charge x = -0.9; negative charge x = 2.2; test x = 1.4; test y = 1.4"
+        },
+        "elapsed_ms": 152.3,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 4,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "positive_charge_x",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "negative_charge_x",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "test_x",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "test_y",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-030",
+      "title": "RC circuit",
+      "domain": "physics",
+      "intent": "interactive animation",
+      "family": "rc_circuit",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "mode",
+        "resistance",
+        "capacitance",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "tau": 1.6,
+                "voltage_error": 0.0,
+                "current_error": 0.0
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 1.194,
+      "browser_ms": 355.8,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-030",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 39,
+          "controls": 6,
+          "family": "rc_circuit",
+          "control_revision": 6,
+          "control_values": {
+            "mode": "discharging",
+            "resistance": 14.5,
+            "capacitance": 7.4,
+            "play": 1,
+            "pause": 0,
+            "restart": 0,
+            "__animation_progress": 0.006237500000000004
+          },
+          "geometry_signature": 169256,
+          "visual_state_signature": 169256,
+          "animation_state": "playing",
+          "animation_progress": 0.006237500000000004,
+          "observed_frame_interval_ms": 49.900000000000034,
+          "state_description": "discharging RC transient with τ=RC=21.46 display units; voltage and current share the circuit state. · ▶ 1%"
+        },
+        "elapsed_ms": 355.8,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 6,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "resistance",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "capacitance",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "mode",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 39,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-031",
+      "title": "Binary search",
+      "domain": "computer science",
+      "intent": "interactive animation",
+      "family": "binary_search",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "target",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "interval_shrinks": {
+              "passed": true,
+              "evidence": {
+                "sorted_values": [
+                  1.0,
+                  3.0,
+                  5.0,
+                  7.0,
+                  9.0,
+                  11.0,
+                  13.0
+                ],
+                "target": 11.0,
+                "intervals": [
+                  [
+                    0,
+                    6
+                  ],
+                  [
+                    4,
+                    6
+                  ]
+                ],
+                "widths": [
+                  7,
+                  3
+                ],
+                "comparisons": [
+                  7.0,
+                  11.0
+                ],
+                "found": true,
+                "controls_valid": true
+              }
+            },
+            "target_found": {
+              "passed": true,
+              "evidence": {
+                "sorted_values": [
+                  1.0,
+                  3.0,
+                  5.0,
+                  7.0,
+                  9.0,
+                  11.0,
+                  13.0
+                ],
+                "target": 11.0,
+                "intervals": [
+                  [
+                    0,
+                    6
+                  ],
+                  [
+                    4,
+                    6
+                  ]
+                ],
+                "widths": [
+                  7,
+                  3
+                ],
+                "comparisons": [
+                  7.0,
+                  11.0
+                ],
+                "found": true,
+                "controls_valid": true
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.595,
+      "browser_ms": 263.6,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-031",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 15,
+          "controls": 5,
+          "family": "binary_search",
+          "control_revision": 5,
+          "control_values": {
+            "target": "13",
+            "step": 0,
+            "play": 1,
+            "pause": 0,
+            "restart": 0,
+            "__animation_progress": 0.0065
+          },
+          "geometry_signature": 201297,
+          "visual_state_signature": 201297,
+          "animation_state": "playing",
+          "animation_progress": 0.0065,
+          "observed_frame_interval_ms": 52,
+          "state_description": "Step 0: compare target 13 with midpoint 7; discard left half, shrinking [0,6]. · ▶ 1%"
+        },
+        "elapsed_ms": 263.6,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 5,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "target",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 15,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-032",
+      "title": "Sorting algorithm",
+      "domain": "computer science",
+      "intent": "interactive visualization",
+      "family": "merge_sort",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "step"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "sorted_output": {
+              "passed": true,
+              "evidence": {
+                "required_terms": [
+                  "sorted output"
+                ],
+                "required_terms_present": true,
+                "structure": {
+                  "input": [
+                    8.0,
+                    3.0,
+                    6.0,
+                    2.0,
+                    7.0,
+                    1.0,
+                    5.0,
+                    4.0
+                  ],
+                  "output": [
+                    1.0,
+                    2.0,
+                    3.0,
+                    4.0,
+                    5.0,
+                    6.0,
+                    7.0,
+                    8.0
+                  ],
+                  "stable_identities": [
+                    [
+                      1.0,
+                      5
+                    ],
+                    [
+                      2.0,
+                      3
+                    ],
+                    [
+                      3.0,
+                      1
+                    ],
+                    [
+                      4.0,
+                      7
+                    ],
+                    [
+                      5.0,
+                      6
+                    ],
+                    [
+                      6.0,
+                      2
+                    ],
+                    [
+                      7.0,
+                      4
+                    ],
+                    [
+                      8.0,
+                      0
+                    ]
+                  ],
+                  "split_nodes": 15,
+                  "merge_nodes": 7,
+                  "stable": true
+                }
+              }
+            },
+            "stable_merge": {
+              "passed": true,
+              "evidence": {
+                "required_terms": [
+                  "stable merge"
+                ],
+                "required_terms_present": true,
+                "structure": {
+                  "input": [
+                    8.0,
+                    3.0,
+                    6.0,
+                    2.0,
+                    7.0,
+                    1.0,
+                    5.0,
+                    4.0
+                  ],
+                  "output": [
+                    1.0,
+                    2.0,
+                    3.0,
+                    4.0,
+                    5.0,
+                    6.0,
+                    7.0,
+                    8.0
+                  ],
+                  "stable_identities": [
+                    [
+                      1.0,
+                      5
+                    ],
+                    [
+                      2.0,
+                      3
+                    ],
+                    [
+                      3.0,
+                      1
+                    ],
+                    [
+                      4.0,
+                      7
+                    ],
+                    [
+                      5.0,
+                      6
+                    ],
+                    [
+                      6.0,
+                      2
+                    ],
+                    [
+                      7.0,
+                      4
+                    ],
+                    [
+                      8.0,
+                      0
+                    ]
+                  ],
+                  "split_nodes": 15,
+                  "merge_nodes": 7,
+                  "stable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 1.001,
+      "browser_ms": 96.3,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-032",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 109,
+          "controls": 1,
+          "family": "merge_sort",
+          "control_revision": 1,
+          "control_values": {
+            "step": 15
+          },
+          "geometry_signature": 6413006,
+          "visual_state_signature": 6413006,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "step = 15"
+        },
+        "elapsed_ms": 96.3,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 109,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-033",
+      "title": "Binary search tree",
+      "domain": "computer science",
+      "intent": "interactive animation",
+      "family": "binary_search_tree",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "insert",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "values": {
+                  "root": 8.0,
+                  "left": 3.0,
+                  "right": 11.0,
+                  "left_left": 1.0,
+                  "left_right": 5.0,
+                  "right_left": 9.0,
+                  "right_right": 13.0
+                },
+                "tree_edges": [
+                  [
+                    "root",
+                    "left"
+                  ],
+                  [
+                    "root",
+                    "right"
+                  ],
+                  [
+                    "left",
+                    "left_left"
+                  ],
+                  [
+                    "left",
+                    "left_right"
+                  ],
+                  [
+                    "right",
+                    "right_left"
+                  ],
+                  [
+                    "right",
+                    "right_right"
+                  ]
+                ],
+                "ordered": true,
+                "insert": 6
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.416,
+      "browser_ms": 261.1,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-033",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 31,
+          "controls": 5,
+          "family": "binary_search_tree",
+          "control_revision": 5,
+          "control_values": {
+            "insert": 11,
+            "step": 0,
+            "play": 1,
+            "pause": 0,
+            "restart": 0,
+            "__animation_progress": 0.006237500000000001
+          },
+          "geometry_signature": 706115,
+          "visual_state_signature": 706115,
+          "animation_state": "playing",
+          "animation_progress": 0.006237500000000001,
+          "observed_frame_interval_ms": 49.900000000000006,
+          "state_description": "Step 0: 11 is already in the tree; the search path is root → right and no duplicate node is added. · ▶ 1%"
+        },
+        "elapsed_ms": 261.1,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 5,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "insert",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 31,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-034",
+      "title": "Dijkstra's algorithm",
+      "domain": "computer science",
+      "intent": "interactive animation",
+      "family": "dijkstra",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "source",
+        "destination",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "nondecreasing_settled_distance": {
+              "passed": true,
+              "evidence": {
+                "nodes": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E",
+                  "F"
+                ],
+                "weighted_edges": 9,
+                "source": "A",
+                "destination": "F",
+                "path": [
+                  "A",
+                  "C",
+                  "B",
+                  "D",
+                  "E",
+                  "F"
+                ],
+                "distance": 13.0,
+                "settled_distances": [
+                  0,
+                  2.0,
+                  3.0,
+                  8.0,
+                  10.0,
+                  13.0
+                ],
+                "select_controls": true
+              }
+            },
+            "shortest_path": {
+              "passed": true,
+              "evidence": {
+                "nodes": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E",
+                  "F"
+                ],
+                "weighted_edges": 9,
+                "source": "A",
+                "destination": "F",
+                "path": [
+                  "A",
+                  "C",
+                  "B",
+                  "D",
+                  "E",
+                  "F"
+                ],
+                "distance": 13.0,
+                "settled_distances": [
+                  0,
+                  2.0,
+                  3.0,
+                  8.0,
+                  10.0,
+                  13.0
+                ],
+                "select_controls": true
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.476,
+      "browser_ms": 291.0,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-034",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 31,
+          "controls": 6,
+          "family": "dijkstra",
+          "control_revision": 6,
+          "control_values": {
+            "source": "B",
+            "destination": "A",
+            "step": 0,
+            "play": 1,
+            "pause": 0,
+            "restart": 0,
+            "__animation_progress": 0.01042925
+          },
+          "geometry_signature": 333666,
+          "visual_state_signature": 333666,
+          "animation_state": "playing",
+          "animation_progress": 0.01042925,
+          "observed_frame_interval_ms": 35,
+          "state_description": "Shortest B → C → A has total weight 3. Settled: none. · ▶ 1%"
+        },
+        "elapsed_ms": 291,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 6,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "source",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "destination",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 31,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-035",
+      "title": "Neural network",
+      "domain": "computer science",
+      "intent": "interactive visualization",
+      "family": "neural_network",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "weight",
+        "step"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "nodes": [
+            "h1",
+            "h2",
+            "h3",
+            "output",
+            "x1",
+            "x2"
+          ],
+          "edges": [
+            [
+              "h1",
+              "output"
+            ],
+            [
+              "h2",
+              "output"
+            ],
+            [
+              "h3",
+              "output"
+            ],
+            [
+              "x1",
+              "h1"
+            ],
+            [
+              "x1",
+              "h2"
+            ],
+            [
+              "x1",
+              "h3"
+            ],
+            [
+              "x2",
+              "h1"
+            ],
+            [
+              "x2",
+              "h2"
+            ],
+            [
+              "x2",
+              "h3"
+            ]
+          ],
+          "output_consistent": true
+        }
+      },
+      "compile_ms": 0.557,
+      "browser_ms": 75.6,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-035",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 31,
+          "controls": 2,
+          "family": "neural_network",
+          "control_revision": 2,
+          "control_values": {
+            "weight": 7.3,
+            "step": 3
+          },
+          "geometry_signature": 648480,
+          "visual_state_signature": 648480,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Forward step 3: x₁=0.6, x₂=0.4; h₁=ReLU(7.30x₁+0.5x₂−0.2)=4.380, h₂=0.180, h₃=0.340, and sigmoid output ŷ=0.982."
+        },
+        "elapsed_ms": 75.6,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "weight",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 31,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-036",
+      "title": "Gradient descent",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "gradient_descent",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "learning_rate",
+        "step"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "trajectory_lengths": [
+            17,
+            17
+          ]
+        }
+      },
+      "compile_ms": 3.137,
+      "browser_ms": 120.8,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-036",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 43,
+          "controls": 2,
+          "family": "gradient_descent",
+          "control_revision": 2,
+          "control_values": {
+            "learning_rate": 0.37,
+            "step": 12
+          },
+          "geometry_signature": 415225461,
+          "visual_state_signature": 415225461,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Gradient descent step 12: learning rate 0.37, point (0.000, 0.000), loss x²+2y²=0.0000; both views show the same trajectory."
+        },
+        "elapsed_ms": 120.8,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "learning_rate",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 43,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-037",
+      "title": "Differential-drive robot",
+      "domain": "robotics",
+      "intent": "interactive visualization",
+      "family": "differential_drive",
+      "renderer": "canvas",
+      "spec_kind": "simulation2d",
+      "controls": [
+        "left_velocity",
+        "right_velocity"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "curvature_from_wheel_speeds": {
+              "passed": true,
+              "evidence": {
+                "left": 1.0,
+                "right": 2.0,
+                "curvature": 0.3333333333333333
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.816,
+      "browser_ms": 103.0,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-037",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "canvas",
+          "nontransparent_samples": 1066,
+          "controls": 2,
+          "family": "differential_drive",
+          "panel_count": 1,
+          "panel_titles": [
+            "Differential Drive"
+          ],
+          "control_revision": 2,
+          "control_values": {
+            "left_velocity": 7.3,
+            "right_velocity": 7.3
+          },
+          "geometry_signature": 47244660,
+          "visual_state_signature": 47244660,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Equal wheel speeds produce a straight path; the instantaneous centre is at infinity."
+        },
+        "elapsed_ms": 103,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "left_velocity",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "right_velocity",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-038",
+      "title": "Robot arm forward kinematics",
+      "domain": "robotics",
+      "intent": "interactive visualization",
+      "family": "robot_forward_kinematics",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "joint_1",
+        "joint_2",
+        "joint_3"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "nodes": 4,
+          "links": 3
+        }
+      },
+      "compile_ms": 0.249,
+      "browser_ms": 90.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-038",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 15,
+          "controls": 3,
+          "family": "robot_forward_kinematics",
+          "control_revision": 3,
+          "control_values": {
+            "joint_1": 83,
+            "joint_2": 83,
+            "joint_3": 83
+          },
+          "geometry_signature": 180833,
+          "visual_state_signature": 180833,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Three-link forward kinematics gives end effector (63.6, 274.0) px from cumulative joint angles 83°, 83°, 83°."
+        },
+        "elapsed_ms": 90.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 3,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "joint_1",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "joint_2",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "joint_3",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 15,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-039",
+      "title": "Sampling and aliasing",
+      "domain": "signals",
+      "intent": "interactive visualization",
+      "family": "sampling_aliasing",
+      "renderer": "canvas",
+      "spec_kind": "simulation2d",
+      "controls": [
+        "signal_frequency",
+        "sample_frequency"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "nyquist_condition": {
+              "passed": true,
+              "evidence": {
+                "signal_frequency": 4.0,
+                "sample_frequency": 12.0,
+                "nyquist": true
+              }
+            },
+            "sample_locations": {
+              "passed": true,
+              "evidence": {
+                "sample_count": 13,
+                "expected_count": 13,
+                "signal_error": 8.881784197001252e-16
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 1.946,
+      "browser_ms": 97.4,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-039",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "canvas",
+          "nontransparent_samples": 1083,
+          "controls": 2,
+          "family": "sampling_aliasing",
+          "panel_count": 1,
+          "panel_titles": [
+            "Sampling Aliasing"
+          ],
+          "control_revision": 2,
+          "control_values": {
+            "signal_frequency": 14.5,
+            "sample_frequency": 29
+          },
+          "geometry_signature": 561895945,
+          "visual_state_signature": 561895945,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Nyquist condition satisfied: sampling rate is at least twice the signal frequency."
+        },
+        "elapsed_ms": 97.4,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 2,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "signal_frequency",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "sample_frequency",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-040",
+      "title": "Fourier decomposition",
+      "domain": "signals",
+      "intent": "interactive visualization",
+      "family": "fourier_series",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "terms"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "odd_harmonics": {
+              "passed": true,
+              "evidence": {
+                "absolute_peak": 1.1802045054633066,
+                "components": [
+                  "harmonic n=1",
+                  "harmonic n=3",
+                  "harmonic n=5"
+                ],
+                "gibbs_markers": [
+                  [
+                    -3.141592653589793,
+                    1.18
+                  ],
+                  [
+                    0,
+                    1.18
+                  ],
+                  [
+                    3.141592653589793,
+                    1.18
+                  ]
+                ]
+              }
+            },
+            "gibbs_overshoot": {
+              "passed": true,
+              "evidence": {
+                "absolute_peak": 1.1802045054633066,
+                "components": [
+                  "harmonic n=1",
+                  "harmonic n=3",
+                  "harmonic n=5"
+                ],
+                "gibbs_markers": [
+                  [
+                    -3.141592653589793,
+                    1.18
+                  ],
+                  [
+                    0,
+                    1.18
+                  ],
+                  [
+                    3.141592653589793,
+                    1.18
+                  ]
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 2.18,
+      "browser_ms": 85.5,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-040",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 36,
+          "controls": 1,
+          "family": "fourier_series",
+          "control_revision": 1,
+          "control_values": {
+            "terms": 11
+          },
+          "geometry_signature": 205065021,
+          "visual_state_signature": 205065021,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "terms = 11"
+        },
+        "elapsed_ms": 85.5,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "terms",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 36,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-041",
+      "title": "3D vector field",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "vector_field_3d",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "point_x",
+        "point_y",
+        "point_z"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "samples": 26,
+          "direction_error": 1.9229626863835638e-16
+        }
+      },
+      "compile_ms": 0.631,
+      "browser_ms": 404.1,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-041",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 52,
+          "draw_calls": 28,
+          "gpu_calls": 56,
+          "gpu_triangles": 1125,
+          "gpu_lines": 30,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 0,
+          "topology": null,
+          "surface_diagnostics": null,
+          "family": "vector_field_3d",
+          "control_revision": 3,
+          "control_values": {
+            "point_x": 2,
+            "point_y": 2,
+            "point_z": 2
+          },
+          "geometry_signature": 114531,
+          "visual_state_signature": 114531,
+          "animation_state": "paused",
+          "animation_progress": 0,
+          "observed_frame_interval_ms": 0,
+          "state_description": "At (2.0, 2.0, 2.0), F=(−y,x,z)=(-2.0, 2.0, 2.0); the selected arrow matches the sampled 3D field."
+        },
+        "elapsed_ms": 404.1,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 3,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "point_x",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "point_y",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "point_z",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-042",
+      "title": "Double pendulum",
+      "domain": "physics",
+      "intent": "interactive animation",
+      "family": "double_pendulum",
+      "renderer": "canvas",
+      "spec_kind": "simulation2d",
+      "controls": [
+        "angle_1",
+        "angle_2",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "initial_separation": 0.011693932848811905,
+                "late_mean_separation": 0.043396124101309844,
+                "link_length_sums": [
+                  2.0,
+                  2.0
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 2.973,
+      "browser_ms": 352.4,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-042",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "canvas",
+          "nontransparent_samples": 1106,
+          "controls": 5,
+          "family": "double_pendulum",
+          "panel_count": 1,
+          "panel_titles": [
+            "Double Pendulum"
+          ],
+          "control_revision": 5,
+          "control_values": {
+            "angle_1": 122,
+            "angle_2": 122.2,
+            "play": 0,
+            "pause": 1,
+            "restart": 1,
+            "__animation_progress": 0.0061875
+          },
+          "geometry_signature": 106128,
+          "visual_state_signature": 106128,
+          "animation_state": "playing",
+          "animation_progress": 0.0061875,
+          "observed_frame_interval_ms": 49.5,
+          "state_description": "angle 1 = 122; angle 2 = 122.2; play = 0; pause = 1; restart = 1;   animation progress = 0.0061875 · ▶ 1%"
+        },
+        "elapsed_ms": 352.4,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 5,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "angle_1",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "angle_2",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-043",
+      "title": "Lorenz attractor",
+      "domain": "dynamical systems",
+      "intent": "interactive animation",
+      "family": "lorenz_attractor",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "sigma",
+        "rho",
+        "beta",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "samples": 500,
+          "x_range": [
+            -2.6963605888455895,
+            2.322345969753982
+          ]
+        }
+      },
+      "compile_ms": 3.863,
+      "browser_ms": 749.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-043",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 24,
+          "draw_calls": 2,
+          "gpu_calls": 3,
+          "gpu_triangles": 720,
+          "gpu_lines": 9,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 0,
+          "topology": null,
+          "surface_diagnostics": null,
+          "family": "lorenz_attractor",
+          "control_revision": 6,
+          "control_values": {
+            "sigma": 16,
+            "rho": 32,
+            "beta": 3.2,
+            "play": 0,
+            "pause": 1,
+            "restart": 1,
+            "__animation_progress": 0.01225
+          },
+          "geometry_signature": 22333,
+          "visual_state_signature": 22333,
+          "animation_state": "playing",
+          "animation_progress": 0.01225,
+          "observed_frame_interval_ms": 48.09999999999991,
+          "state_description": "Lorenz system σ=16.0, ρ=32.0, β=3.200; the bounded deterministic trajectory has 500 samples across both lobes. · ▶ 1%"
+        },
+        "elapsed_ms": 749.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 6,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "sigma",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "rho",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "beta",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-044",
+      "title": "Gyroid",
+      "domain": "mathematics",
+      "intent": "interactive visualization",
+      "family": "implicit_surface",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "clip_z",
+        "orbit",
+        "reset_view"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "origin_residual": 0.0,
+          "sphere_point_residual": 0.1411200080598672,
+          "clipped": true
+        }
+      },
+      "compile_ms": 0.942,
+      "browser_ms": 666.3,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-044",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 576,
+          "draw_calls": 2,
+          "gpu_calls": 17,
+          "gpu_triangles": 26618,
+          "gpu_lines": 40363,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 26594,
+          "topology": {
+            "components": 2,
+            "vertices": 13762,
+            "edges": 40360,
+            "faces": 26594,
+            "euler": -4,
+            "boundary_edges": 938,
+            "nonmanifold_edges": 0,
+            "periodic_boundary_edges": 932,
+            "periodic_matched_edges": 932,
+            "periodic_unmatched_edges": 6,
+            "periodic_components": 1,
+            "periodic_function_max_delta": 4.440892098500626e-16
+          },
+          "surface_diagnostics": null,
+          "family": "implicit_surface",
+          "control_revision": 3,
+          "control_values": {
+            "clip_z": 1.43457568611079,
+            "orbit": 1,
+            "reset_view": 1
+          },
+          "geometry_signature": 31073379,
+          "visual_state_signature": 31073379,
+          "animation_state": "paused",
+          "animation_progress": 0,
+          "observed_frame_interval_ms": 50.10000000000002,
+          "state_description": "clip z = 1.43457568611079; orbit = 1; reset view = 1"
+        },
+        "elapsed_ms": 666.3,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 3,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "clip_z",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "orbit",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          },
+          {
+            "id": "reset_view",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-045",
+      "title": "Electromagnetic wave",
+      "domain": "physics",
+      "intent": "interactive animation",
+      "family": "electromagnetic_wave",
+      "renderer": "three",
+      "spec_kind": "scene3d",
+      "controls": [
+        "amplitude",
+        "wavelength",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "samples": 161,
+          "orthogonal": true
+        }
+      },
+      "compile_ms": 1.719,
+      "browser_ms": 544.1,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-045",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "three",
+          "nonzero_pixel_samples": 47,
+          "draw_calls": 3,
+          "gpu_calls": 5,
+          "gpu_triangles": 15,
+          "gpu_lines": 324,
+          "gpu_points": 0,
+          "gl_error": 0,
+          "triangles": 0,
+          "topology": null,
+          "surface_diagnostics": null,
+          "family": "electromagnetic_wave",
+          "control_revision": 5,
+          "control_values": {
+            "amplitude": 1.5,
+            "wavelength": 4.7,
+            "play": 0,
+            "pause": 1,
+            "restart": 1,
+            "__animation_progress": 0.0125045
+          },
+          "geometry_signature": 39588,
+          "visual_state_signature": 39588,
+          "animation_state": "playing",
+          "animation_progress": 0.0125045,
+          "observed_frame_interval_ms": 49.89999999999998,
+          "state_description": "Electromagnetic wave amplitude 1.50 and wavelength 4.70: E ⟂ B, both are perpendicular to propagation k=E×B. · ▶ 1%"
+        },
+        "elapsed_ms": 544.1,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 5,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "amplitude",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "wavelength",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-046",
+      "title": "Action potential",
+      "domain": "biology",
+      "intent": "interactive visualization",
+      "family": "action_potential",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "time"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "curve_labels": [
+                  "membrane voltage",
+                  "potassium channel conductance opens later",
+                  "sodium channel conductance opens then closes",
+                  "time probe"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.981,
+      "browser_ms": 102.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-046",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 31,
+          "controls": 1,
+          "family": "action_potential",
+          "control_revision": 1,
+          "control_values": {
+            "time": 7.3
+          },
+          "geometry_signature": 101131392,
+          "visual_state_signature": 101131392,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "time = 7.3"
+        },
+        "elapsed_ms": 102.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 1,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "time",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 31,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-047",
+      "title": "Chemical titration",
+      "domain": "chemistry",
+      "intent": "interactive animation",
+      "family": "titration",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "titrant_volume",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "semantic_relationship": {
+              "passed": true,
+              "evidence": {
+                "nodes": [
+                  "burette",
+                  "flask"
+                ],
+                "curves": [
+                  "ph curve",
+                  "selected titrant volume"
+                ],
+                "selected_volume": 25.0,
+                "curve_probe": [
+                  25.0,
+                  7.0
+                ],
+                "expected_ph": 7.0
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 1.187,
+      "browser_ms": 287.2,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-047",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 33,
+          "controls": 4,
+          "family": "titration",
+          "control_revision": 4,
+          "control_values": {
+            "titrant_volume": 36.5,
+            "play": 1,
+            "pause": 0,
+            "restart": 0,
+            "__animation_progress": 0.0062749999999999985
+          },
+          "geometry_signature": 152401,
+          "visual_state_signature": 152401,
+          "animation_state": "playing",
+          "animation_progress": 0.0062749999999999985,
+          "observed_frame_interval_ms": 50.19999999999999,
+          "state_description": "36.5 mL titrant added; curve and probe agree at pH 11.82, with equivalence near 25 mL. · ▶ 1%"
+        },
+        "elapsed_ms": 287.2,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 4,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "titrant_volume",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 33,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-048",
+      "title": "CPU memory hierarchy",
+      "domain": "computer science",
+      "intent": "interactive animation",
+      "family": "virtual_memory",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "address",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "page_offset_preserved": {
+              "passed": true,
+              "evidence": {
+                "required_terms": [
+                  "virtual address",
+                  "physical frame"
+                ],
+                "required_terms_present": true,
+                "structure": {
+                  "nodes": [
+                    "frame",
+                    "page_table",
+                    "replacement",
+                    "storage",
+                    "tlb",
+                    "virtual"
+                  ],
+                  "translation_steps": [
+                    "page fault",
+                    "page-in replacement",
+                    "page-table lookup",
+                    "preserve offset",
+                    "resident hit",
+                    "tlb miss"
+                  ]
+                }
+              }
+            },
+            "fault_path": {
+              "passed": true,
+              "evidence": {
+                "required_terms": [
+                  "page fault",
+                  "storage"
+                ],
+                "required_terms_present": true,
+                "structure": {
+                  "nodes": [
+                    "frame",
+                    "page_table",
+                    "replacement",
+                    "storage",
+                    "tlb",
+                    "virtual"
+                  ],
+                  "translation_steps": [
+                    "page fault",
+                    "page-in replacement",
+                    "page-table lookup",
+                    "preserve offset",
+                    "resident hit",
+                    "tlb miss"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 0.426,
+      "browser_ms": 260.7,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-048",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 25,
+          "controls": 5,
+          "family": "virtual_memory",
+          "control_revision": 5,
+          "control_values": {
+            "address": 186,
+            "step": 0,
+            "play": 1,
+            "pause": 0,
+            "restart": 0,
+            "__animation_progress": 0.004175000000000001
+          },
+          "geometry_signature": 404404,
+          "visual_state_signature": 404404,
+          "animation_state": "playing",
+          "animation_progress": 0.004175000000000001,
+          "observed_frame_interval_ms": 33.400000000000006,
+          "state_description": "address = 186; step = 0; play = 1; pause = 0; restart = 0;   animation progress = 0.004175000000000001 · ▶ 0%"
+        },
+        "elapsed_ms": 260.7,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 5,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "address",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 25,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-049",
+      "title": "Robot localization",
+      "domain": "robotics",
+      "intent": "interactive visualization",
+      "family": "robot_localization",
+      "renderer": "canvas",
+      "spec_kind": "simulation2d",
+      "controls": [
+        "odometry_noise",
+        "sensor_noise",
+        "step"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "odometry_mean_error": 0.27962989090469376,
+          "estimate_mean_error": 0.07829636945331428
+        }
+      },
+      "compile_ms": 1.879,
+      "browser_ms": 221.9,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-049",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "canvas",
+          "nontransparent_samples": 1030,
+          "controls": 3,
+          "family": "robot_localization",
+          "panel_count": 1,
+          "panel_titles": [
+            "Robot Localization"
+          ],
+          "control_revision": 3,
+          "control_values": {
+            "odometry_noise": 0.75,
+            "sensor_noise": 0.75,
+            "step": 44
+          },
+          "geometry_signature": 160745630,
+          "visual_state_signature": 160745630,
+          "animation_state": "static",
+          "animation_progress": 1,
+          "observed_frame_interval_ms": 0,
+          "state_description": "Localization step 44: true pose (1.40, -1.14), noisy odometry (2.46, -1.45), fused estimate (2.10, -1.11), position error 0.705."
+        },
+        "elapsed_ms": 221.9,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 3,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "odometry_noise",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "sensor_noise",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 0,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    },
+    {
+      "id": "user-holdout-050",
+      "title": "Full Kalman filter visualization",
+      "domain": "controls",
+      "intent": "interactive animation",
+      "family": "kalman_filter",
+      "renderer": "svg",
+      "spec_kind": "scene2d",
+      "controls": [
+        "noise",
+        "process_noise",
+        "step",
+        "play",
+        "pause",
+        "restart"
+      ],
+      "checks": {
+        "intent_family": true,
+        "renderer": true,
+        "controls": true,
+        "accessibility": true,
+        "semantic_oracle": true
+      },
+      "semantic_evidence": {
+        "passed": true,
+        "evidence": {
+          "shared_oracles": {
+            "covariance_contracts_on_update": {
+              "passed": true,
+              "evidence": {
+                "values": [
+                  0.5000000000000002,
+                  0.1937984496124031,
+                  0.0
+                ],
+                "variances": [
+                  1.5800000000000003,
+                  0.6124031007751939
+                ],
+                "ellipse_centres": [
+                  [
+                    0.0030864197530864083,
+                    0.5000000000000002
+                  ],
+                  [
+                    0.0030864197530864083,
+                    0.19379844961240314
+                  ]
+                ],
+                "trajectory_lengths": [
+                  21,
+                  21,
+                  21
+                ]
+              }
+            },
+            "estimate_between_prior_measurement": {
+              "passed": true,
+              "evidence": {
+                "values": [
+                  0.5000000000000002,
+                  0.1937984496124031,
+                  0.0
+                ],
+                "variances": [
+                  1.5800000000000003,
+                  0.6124031007751939
+                ],
+                "ellipse_centres": [
+                  [
+                    0.0030864197530864083,
+                    0.5000000000000002
+                  ],
+                  [
+                    0.0030864197530864083,
+                    0.19379844961240314
+                  ]
+                ],
+                "trajectory_lengths": [
+                  21,
+                  21,
+                  21
+                ]
+              }
+            }
+          }
+        }
+      },
+      "compile_ms": 2.075,
+      "browser_ms": 309.8,
+      "python_passed": true,
+      "browser_evaluated": true,
+      "browser_passed": true,
+      "browser_evidence": {
+        "id": "user-holdout-050",
+        "rendered": true,
+        "evidence": {
+          "rendered": true,
+          "renderer": "svg",
+          "primitive_count": 39,
+          "controls": 6,
+          "family": "kalman_filter",
+          "control_revision": 6,
+          "control_values": {
+            "noise": 3.7,
+            "process_noise": 0.73,
+            "step": 0,
+            "play": 1,
+            "pause": 0,
+            "restart": 0,
+            "__animation_progress": 0.006262499999999999
+          },
+          "geometry_signature": 236317,
+          "visual_state_signature": 236317,
+          "animation_state": "playing",
+          "animation_progress": 0.006262499999999999,
+          "observed_frame_interval_ms": 50.099999999999994,
+          "state_description": "Step 0, measurement noise 3.70, process noise 0.73: true position 0.00, noisy measurement 0.00, prediction 0.50 with P⁻=2.230, gain K=0.140, update 0.43 with contracted P=1.918. · ▶ 1%"
+        },
+        "elapsed_ms": 309.8,
+        "viewport": {
+          "width": 742,
+          "height": 520
+        },
+        "theme": "light",
+        "controls": 6,
+        "named_controls": true,
+        "accessible_canvas": true,
+        "interaction_changed": true,
+        "geometry_changed": true,
+        "interaction_results": [
+          {
+            "id": "noise",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "process_noise",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "step",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": false,
+            "transport": false
+          },
+          {
+            "id": "play",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": true,
+            "visual_state_changed": true,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "pause",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          },
+          {
+            "id": "restart",
+            "passed": true,
+            "revision_changed": true,
+            "state_changed": true,
+            "semantic_outcome": true,
+            "geometry_changed": false,
+            "visual_state_changed": false,
+            "animation_changed": true,
+            "transport": true
+          }
+        ],
+        "visible_semantic_geometry": {
+          "passed": true
+        },
+        "gpu_budget_respected": true,
+        "visual_primitive_count": 39,
+        "overflow": false,
+        "errors": []
+      },
+      "passed": true,
+      "error": ""
+    }
+  ]
+}

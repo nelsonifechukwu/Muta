@@ -1,0 +1,906 @@
+{
+  "schema_version": 1,
+  "checkpoint_sha": "b5e726ba184d49b57a4f025ada16b43881c9b2da",
+  "recorded_at": "2026-08-27T20:06:05+01:00",
+  "source_path": "/Users/elijahnelson/.codex/attachments/muta-bearings-heldout-2026-08-27.txt",
+  "source_sha256": "9abcdc5e7c7a252eda82f0877656db78275d3bd0b4431ecd197328dca7fd9d24",
+  "total": 15,
+  "compiled": 9,
+  "compile_failed": 6,
+  "cases": [
+    {
+      "number": 1,
+      "raw_prompt": "**Simple three-figure bearing**\n   Point (B) is on a bearing of (060^\\circ) from point (A). Draw a clear diagram showing (A), (B), the north line at (A), the clockwise angle, and the bearing (060^\\circ).",
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Concept Process",
+        "aria_label": "Interactive concept process visualization with labelled relationships and controls.",
+        "text_fallback": "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "step",
+            "label": "Step",
+            "type": "step",
+            "value": 0,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "node",
+              "id": "n0",
+              "x": 80.0,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Input",
+              "color": "teal"
+            },
+            {
+              "type": "node",
+              "id": "n1",
+              "x": 266.66666666666663,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Concept Process",
+              "color": "orange"
+            },
+            {
+              "type": "link",
+              "from": "n0",
+              "to": "n1",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n2",
+              "x": 453.3333333333333,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Relationship",
+              "color": "purple"
+            },
+            {
+              "type": "link",
+              "from": "n1",
+              "to": "n2",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n3",
+              "x": 640.0,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Outcome",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "n2",
+              "to": "n3",
+              "arrow": true,
+              "label": ""
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 2,
+      "raw_prompt": "**Cardinal direction to bearing**\n   A boat travels due southeast from a harbour. What is its three-figure bearing? Draw a compass-style diagram showing how you obtained the answer.",
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Concept Process",
+        "aria_label": "Interactive concept process visualization with labelled relationships and controls.",
+        "text_fallback": "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "step",
+            "label": "Step",
+            "type": "step",
+            "value": 0,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "node",
+              "id": "n0",
+              "x": 80.0,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Input",
+              "color": "teal"
+            },
+            {
+              "type": "node",
+              "id": "n1",
+              "x": 266.66666666666663,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Concept Process",
+              "color": "orange"
+            },
+            {
+              "type": "link",
+              "from": "n0",
+              "to": "n1",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n2",
+              "x": 453.3333333333333,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Relationship",
+              "color": "purple"
+            },
+            {
+              "type": "link",
+              "from": "n1",
+              "to": "n2",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n3",
+              "x": 640.0,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Outcome",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "n2",
+              "to": "n3",
+              "arrow": true,
+              "label": ""
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 3,
+      "raw_prompt": "**Bearing from a diagram**\n   Draw point (P) and point (Q) so that (Q) lies on a bearing of (135^\\circ) from (P). Explain visually why the angle must be measured clockwise from north rather than from east.\n\n---\n\n## Level 2 — Reverse bearings",
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Concept Process",
+        "aria_label": "Interactive concept process visualization with labelled relationships and controls.",
+        "text_fallback": "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "step",
+            "label": "Step",
+            "type": "step",
+            "value": 0,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "node",
+              "id": "n0",
+              "x": 80.0,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Input",
+              "color": "teal"
+            },
+            {
+              "type": "node",
+              "id": "n1",
+              "x": 266.66666666666663,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Concept Process",
+              "color": "orange"
+            },
+            {
+              "type": "link",
+              "from": "n0",
+              "to": "n1",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n2",
+              "x": 453.3333333333333,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Relationship",
+              "color": "purple"
+            },
+            {
+              "type": "link",
+              "from": "n1",
+              "to": "n2",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n3",
+              "x": 640.0,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Outcome",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "n2",
+              "to": "n3",
+              "arrow": true,
+              "label": ""
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 4,
+      "raw_prompt": "**Finding a reverse bearing**\n   Town (B) is on a bearing of (070^\\circ) from town (A). What is the bearing of (A) from (B)? Draw both north lines and mark both bearings.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "spec": null,
+      "error": ""
+    },
+    {
+      "number": 5,
+      "raw_prompt": "**Reverse bearing crossing (360^\\circ)**\n   A lighthouse is on a bearing of (230^\\circ) from a ship. Find the bearing of the ship from the lighthouse and show the relationship on a diagram.",
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Concept Process",
+        "aria_label": "Interactive concept process visualization with labelled relationships and controls.",
+        "text_fallback": "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "step",
+            "label": "Step",
+            "type": "step",
+            "value": 0,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "node",
+              "id": "n0",
+              "x": 80.0,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Input",
+              "color": "teal"
+            },
+            {
+              "type": "node",
+              "id": "n1",
+              "x": 266.66666666666663,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Concept Process",
+              "color": "orange"
+            },
+            {
+              "type": "link",
+              "from": "n0",
+              "to": "n1",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n2",
+              "x": 453.3333333333333,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Relationship",
+              "color": "purple"
+            },
+            {
+              "type": "link",
+              "from": "n1",
+              "to": "n2",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n3",
+              "x": 640.0,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Outcome",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "n2",
+              "to": "n3",
+              "arrow": true,
+              "label": ""
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 6,
+      "raw_prompt": "**Spot the misconception**\n   A student says, “If (B) is on a bearing of (040^\\circ) from (A), then (A) is on a bearing of (320^\\circ) from (B).” Determine whether the student is correct and use a diagram to explain your reasoning.\n\n---\n\n## Level 3 — Bearings with distance and trigonometry",
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Concept Process",
+        "aria_label": "Interactive concept process visualization with labelled relationships and controls.",
+        "text_fallback": "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "step",
+            "label": "Step",
+            "type": "step",
+            "value": 0,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "node",
+              "id": "n0",
+              "x": 80.0,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Input",
+              "color": "teal"
+            },
+            {
+              "type": "node",
+              "id": "n1",
+              "x": 266.66666666666663,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Concept Process",
+              "color": "orange"
+            },
+            {
+              "type": "link",
+              "from": "n0",
+              "to": "n1",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n2",
+              "x": 453.3333333333333,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Relationship",
+              "color": "purple"
+            },
+            {
+              "type": "link",
+              "from": "n1",
+              "to": "n2",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n3",
+              "x": 640.0,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Outcome",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "n2",
+              "to": "n3",
+              "arrow": true,
+              "label": ""
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 7,
+      "raw_prompt": "**One journey with components**\n   A plane flies (80\\text{ km}) on a bearing of (040^\\circ). Draw the journey and determine how far north and how far east of its starting point the plane finishes.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "spec": null,
+      "error": ""
+    },
+    {
+      "number": 8,
+      "raw_prompt": "**Two-leg journey**\n   A hiker walks (6\\text{ km}) on a bearing of (030^\\circ), then (8\\text{ km}) on a bearing of (120^\\circ). Draw the full route and determine the hiker's final displacement from the starting point.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "spec": null,
+      "error": ""
+    },
+    {
+      "number": 9,
+      "raw_prompt": "**Distance between two objects**\n   From a harbour (H), boat (A) is (12\\text{ km}) away on a bearing of (050^\\circ), while boat (B) is (18\\text{ km}) away on a bearing of (110^\\circ). Draw an accurate schematic and calculate the distance between the boats.\n\n---\n\n## Level 4 — Finding unknown bearings",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "spec": null,
+      "error": ""
+    },
+    {
+      "number": 10,
+      "raw_prompt": "**Coordinates to bearing**\n    Relative to point (A), point (B) is (6\\text{ km}) east and (8\\text{ km}) north. Determine the bearing of (B) from (A). Draw the north-east coordinate triangle and show how the bearing is calculated.",
+      "compiled": true,
+      "family": "basic_geometry",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "basic_geometry",
+        "title": "Basic Geometry",
+        "aria_label": "Interactive basic geometry visualization with labelled relationships and controls.",
+        "text_fallback": "Basic Geometry. Visible layers: triangle boundary.",
+        "height": 420,
+        "controls": [],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "cartesian2d",
+          "layers": [
+            {
+              "type": "axes",
+              "x_label": "x",
+              "y_label": "y",
+              "grid": true
+            },
+            {
+              "type": "polyline",
+              "label": "triangle boundary",
+              "points": [
+                [
+                  -2.5,
+                  -1.5
+                ],
+                [
+                  2.5,
+                  -1.5
+                ],
+                [
+                  0,
+                  2.5
+                ],
+                [
+                  -2.5,
+                  -1.5
+                ]
+              ],
+              "color": "orange"
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 11,
+      "raw_prompt": "**Bearing in a non-obvious quadrant**\n    A rescue station is (9\\text{ km}) west and (4\\text{ km}) south of a boat. Find the three-figure bearing of the rescue station from the boat. Your diagram must make clear why the final bearing is greater than (180^\\circ).",
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Concept Process",
+        "aria_label": "Interactive concept process visualization with labelled relationships and controls.",
+        "text_fallback": "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "step",
+            "label": "Step",
+            "type": "step",
+            "value": 0,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "node",
+              "id": "n0",
+              "x": 80.0,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Input",
+              "color": "teal"
+            },
+            {
+              "type": "node",
+              "id": "n1",
+              "x": 266.66666666666663,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Concept Process",
+              "color": "orange"
+            },
+            {
+              "type": "link",
+              "from": "n0",
+              "to": "n1",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n2",
+              "x": 453.3333333333333,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Relationship",
+              "color": "purple"
+            },
+            {
+              "type": "link",
+              "from": "n1",
+              "to": "n2",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n3",
+              "x": 640.0,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Outcome",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "n2",
+              "to": "n3",
+              "arrow": true,
+              "label": ""
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 12,
+      "raw_prompt": "**Missing bearing in a triangle**\n    (B) is (20\\text{ km}) from (A) on a bearing of (065^\\circ). Point (C) is (16\\text{ km}) from (A) on a bearing of (140^\\circ). Determine the bearing of (C) from (B). Draw all required north lines and clearly distinguish interior triangle angles from bearings.\n\n---\n\n## Level 5 — Multi-step navigation and intersection problems",
+      "compiled": true,
+      "family": "basic_geometry",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "basic_geometry",
+        "title": "Basic Geometry",
+        "aria_label": "Interactive basic geometry visualization with labelled relationships and controls.",
+        "text_fallback": "Basic Geometry. Visible layers: triangle boundary.",
+        "height": 420,
+        "controls": [],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "cartesian2d",
+          "layers": [
+            {
+              "type": "axes",
+              "x_label": "x",
+              "y_label": "y",
+              "grid": true
+            },
+            {
+              "type": "polyline",
+              "label": "triangle boundary",
+              "points": [
+                [
+                  -2.5,
+                  -1.5
+                ],
+                [
+                  2.5,
+                  -1.5
+                ],
+                [
+                  0,
+                  2.5
+                ],
+                [
+                  -2.5,
+                  -1.5
+                ]
+              ],
+              "color": "orange"
+            }
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "number": 13,
+      "raw_prompt": "**Three-leg navigation problem**\n    A ship travels:\n\n    - (30\\text{ km}) on bearing (045^\\circ),\n    - then (40\\text{ km}) on bearing (150^\\circ),\n    - then (25\\text{ km}) on bearing (250^\\circ).\n\n    Draw the complete journey and calculate the ship's final distance and bearing from its starting point.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "spec": null,
+      "error": ""
+    },
+    {
+      "number": 14,
+      "raw_prompt": "**Triangulation using two bearings**\n    Two observation stations (A) and (B) are (10\\text{ km}) apart, with (B) due east of (A). A radio tower (T) is observed on a bearing of (040^\\circ) from (A) and (320^\\circ) from (B). Draw the two bearing rays, identify their intersection, and calculate the distance from each station to the tower.",
+      "compiled": false,
+      "family": null,
+      "renderer": null,
+      "kind": null,
+      "spec": null,
+      "error": ""
+    },
+    {
+      "number": 15,
+      "raw_prompt": "**Advanced moving-object interception**\n    A rescue boat starts at harbour (H). A distressed ship is initially (24\\text{ km}) from (H) on a bearing of (060^\\circ) and then travels due south at (8\\text{ km/h}). The rescue boat can travel at (16\\text{ km/h}).\n\n    Determine the bearing the rescue boat should follow if it wants to intercept the ship as quickly as possible. Generate a diagram showing:\n\n    - the harbour,\n    - the ship's initial position,\n    - the ship's direction of travel,\n    - the interception point,\n    - the rescue boat's path,\n    - relevant distances and angles.\n\n    Explain mathematically why your chosen interception bearing works.",
+      "compiled": true,
+      "family": "concept_process",
+      "renderer": "svg",
+      "kind": "scene2d",
+      "spec": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Concept Process",
+        "aria_label": "Interactive concept process visualization with labelled relationships and controls.",
+        "text_fallback": "Concept Process. Visible layers: Input; Concept Process; Relationship; Outcome. Adjustable controls: Step.",
+        "height": 420,
+        "controls": [
+          {
+            "id": "step",
+            "label": "Step",
+            "type": "step",
+            "value": 0,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "budget": {
+          "max_points": 4096,
+          "max_triangles": 32000,
+          "max_fps": 30
+        },
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {
+              "type": "node",
+              "id": "n0",
+              "x": 80.0,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Input",
+              "color": "teal"
+            },
+            {
+              "type": "node",
+              "id": "n1",
+              "x": 266.66666666666663,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Concept Process",
+              "color": "orange"
+            },
+            {
+              "type": "link",
+              "from": "n0",
+              "to": "n1",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n2",
+              "x": 453.3333333333333,
+              "y": 170,
+              "width": 130,
+              "height": 58,
+              "label": "Relationship",
+              "color": "purple"
+            },
+            {
+              "type": "link",
+              "from": "n1",
+              "to": "n2",
+              "arrow": true,
+              "label": ""
+            },
+            {
+              "type": "node",
+              "id": "n3",
+              "x": 640.0,
+              "y": 240,
+              "width": 130,
+              "height": 58,
+              "label": "Outcome",
+              "color": "blue"
+            },
+            {
+              "type": "link",
+              "from": "n2",
+              "to": "n3",
+              "arrow": true,
+              "label": ""
+            }
+          ]
+        }
+      },
+      "error": ""
+    }
+  ]
+}
