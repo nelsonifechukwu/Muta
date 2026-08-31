@@ -261,9 +261,9 @@
       </header>
       <p class="lead">Many transformer architectures give the embedding table and the output head separate weight matrices, even though both are the same shape and often learn near-identical representations. Tying them, letting the head reuse the embedding matrix instead of storing its own copy, is a free win if the architecture supports it: no retraining, no accuracy cost, just a smaller file.</p>
 
-      <p>We reproduce our recommended file from its source quant by metadata changes alone, and ran an isolated A/B on the tied-versus-untied question. Removing the duplicate saved about 175 MB with identical ARC-Easy accuracy in both conditions, an unambiguous win we took on every candidate that supported it.</p>
+      <p>We reproduced our recommended file from its source quant using metadata changes alone, then ran an isolated A/B on the tied-versus-untied question: removing the duplicate saved about 175 MB with identical ARC-Easy accuracy in both conditions, an unambiguous win we took on every candidate that supported it.</p>
 
-<p>The tutor persona, chat template, and sampling defaults get written in through a similar scripted pass, though that one only touches metadata, not tensors, so it costs no file size at all. It gets its own full treatment in the behaviour-baking section further down, once the mechanisms that shrink the file are out of the way.</p>
+<p>The tutor persona, chat template, and sampling defaults go in through a similar scripted pass — though that one only touches metadata, not tensors, so it costs no file size at all. It gets its own full treatment in the behaviour-baking section further down, once the mechanisms that shrink the file are out of the way.</p>
     </section>
 
     <section class="chapter" id="vocabulary" aria-labelledby="vocabulary-title">
@@ -397,44 +397,37 @@
 
       <section class="method-section" id="mixed-precision">
         <p class="figure-kicker">GGUF-contained</p><h3>Mixed tensor or layer quantization</h3>
-        <p><strong>Meaning and score hypothesis.</strong> Uniform quantization treats every tensor the same; mixed precision keeps the parts most sensitive to rounding, embeddings, the output head, the final blocks, at a higher bit width while compressing the rest. It only pays off if the recovered accuracy is worth the extra bytes and the slower kernel those tensors fall back to.</p>
-        <p><strong>Artifacts and protocol.</strong> We tried it twice, on two different models. On the Qwen3 1.7B ladder, a Q3_K_M body with a Q6_K head against uniform Q3_K_M; IQ4_XS with the same higher-precision head against plain IQ4_XS. On Math-Expert, later, a Q4_0 body with a Q6_K or Q8_0 tied embedding, and separately a Q4_0 body with Q5_0 in the last four blocks.</p>
-        <p><strong>Result and narrowing.</strong> The Qwen3 head swap fell to 66% ARC-Easy, worse than uniform Q3_K_M, and the IQ4_XS variant came out slower and larger than plain IQ4_XS. Math-Expert's mixed layouts recovered no meaningful accuracy either. Reject every mixed layout we tested; uniform quantization, chosen for the kernel it runs on rather than its nominal precision, keeps winning.</p>
+        <p>Uniform quantization treats every tensor the same. Mixed precision keeps the parts most sensitive to rounding — embeddings, the output head, the final blocks — at a higher bit width while compressing the rest, and only pays off if the recovered accuracy is worth the extra bytes and the slower kernel those tensors fall back to. We tried it twice, on two different models: on the Qwen3 1.7B ladder, a Q3_K_M body with a Q6_K head against uniform Q3_K_M, and an IQ4_XS variant with the same higher-precision head against plain IQ4_XS; later, on Math-Expert, a Q4_0 body with a Q6_K or Q8_0 tied embedding, and separately a Q4_0 body with Q5_0 in the last four blocks.</p>
+        <p>None of it held up. The Qwen3 head swap fell to 66% ARC-Easy, worse than uniform Q3_K_M, and the IQ4_XS variant came out both slower and larger than plain IQ4_XS. Math-Expert's mixed layouts recovered no meaningful accuracy either. We rejected every mixed layout we tested — uniform quantization, chosen for the kernel it runs on rather than its nominal precision, kept winning.</p>
       </section>
 
       <section class="method-section" id="pruning">
         <p class="figure-kicker">GGUF-contained if supported</p><h3>Structured and unstructured pruning</h3>
-        <p><strong>Meaning and score hypothesis.</strong> Structured pruning removes whole layers or low-rank factors a dense runtime can actually skip. Unstructured pruning zeros individual weights, and only helps if the file format and kernel give you credit for the zeros.</p>
-        <p><strong>Artifacts and protocol.</strong> A Qwen control removed one layer and repeated throughput and ARC-Easy. The BitCPM branch, covered in full in the vocabulary-pruning chapter above, measured singular-value reconstruction error on its large matrices and checked whether dense GGUF storage could benefit from sparse zeros.</p>
-        <p><strong>Result and narrowing.</strong> Removing one Qwen layer gained about 3.7% decode speed but cost two ARC-Easy points, worth a full accuracy-score point under the scoring formula, a bad trade for a few percent of throughput. BitCPM's ternary matrices stayed full-rank, rank-2048 factorisation error near 0.80 before quantization, and dense GGUF storage gives unstructured zeros no credit at all. Reject every pruning branch we tested; the one pruning result we kept was vocabulary pruning, which prunes tokens rather than weights.</p>
+        <p>Structured pruning removes whole layers or low-rank factors a dense runtime can actually skip; unstructured pruning zeros individual weights, and only helps if the file format and kernel give credit for the zeros. We tested both: a Qwen control removed one layer and repeated throughput and ARC-Easy, while the BitCPM branch — covered in full in the vocabulary-pruning chapter above — measured singular-value reconstruction error on its large matrices and checked whether dense GGUF storage could benefit from sparse zeros.</p>
+        <p>Removing one Qwen layer gained about 3.7% decode speed but cost two ARC-Easy points, worth a full accuracy-score point under the scoring formula — a bad trade for a few percent of throughput. BitCPM's ternary matrices stayed full-rank, with rank-2048 factorisation error near 0.80 before quantization, and dense GGUF storage gives unstructured zeros no credit at all. We rejected every pruning branch we tested; the one pruning result we kept was vocabulary pruning, which prunes tokens rather than weights.</p>
       </section>
 
       <section class="method-section" id="smaller-architectures">
         <p class="figure-kicker">GGUF-contained</p><h3>Smaller architectures</h3>
-        <p><strong>Meaning and score hypothesis.</strong> A smaller model moves fewer weight bytes per decoded token and usually costs less RSS. It only wins if the capability it gives up is smaller than what performance and efficiency pay back.</p>
-        <p><strong>Artifacts and protocol.</strong> This is most of the story on this page, not a side branch: the four-task scale study in the second chapter, the specialist search, and the second widening further down are all, at bottom, this same question asked of a different candidate set.</p>
-        <p><strong>Result and narrowing.</strong> Promote the 0.6B–1.7B region; both roads, and every finalist this story ends with, live there. See those sections for the full results.</p>
+        <p>A smaller model moves fewer weight bytes per decoded token and usually costs less RSS — it only wins if the capability it gives up is smaller than what performance and efficiency pay back. That question isn't a side branch here; it's most of the story on this page. The four-task scale study in the second chapter, the specialist search, and the second widening further down are all, at bottom, this same question asked of a different candidate set, and all three point the same way: the 0.6B–1.7B region is where both roads, and every finalist this story ends with, actually live. See those sections for the full results.</p>
       </section>
 
       <section class="method-section" id="distillation">
         <p class="figure-kicker">GGUF-contained after training</p><h3>Distillation and fine-tuning</h3>
-        <p><strong>Meaning and score hypothesis.</strong> Distillation transfers a larger teacher's behaviour into a smaller model; fine-tuning adapts a base model to a task, here, mathematical reasoning. Either can raise accuracy without growing the file.</p>
-        <p><strong>Artifacts and protocol.</strong> Math-Expert, the specialist search's raw leader, is exactly this: a Qwen3-0.6B fine-tune on OpenMathReasoning-mini. We screened several more finished public derivatives in that same search; its provenance section records why each one that didn't make the cut fell short. We ran no new training of our own.</p>
-        <p><strong>Result and narrowing.</strong> Keep Math-Expert as a finished, tested fine-tune. Defer new training rather than submit something we can't fully validate: a GPU, a full dataset audit, and a reproducible conversion path were all missing pieces we couldn't fill in the time we had.</p>
+        <p>Distillation transfers a larger teacher's behaviour into a smaller model; fine-tuning adapts a base model to a task — here, mathematical reasoning. Either can raise accuracy without growing the file, and Math-Expert, the specialist search's raw leader, is exactly this kind of result: a Qwen3-0.6B fine-tune on OpenMathReasoning-mini. We screened several more finished public derivatives in that same search (its provenance section records why each one that didn't make the cut fell short), but ran no new training of our own.</p>
+        <p>We kept Math-Expert as a finished, tested fine-tune, and deferred new training rather than submit something we couldn't fully validate: a GPU, a full dataset audit, and a reproducible conversion path were all missing pieces we couldn't fill in the time we had.</p>
       </section>
 
       <section class="method-section" id="layout-repacking">
         <p class="figure-kicker">Stored layout plus engine-only policy</p><h3>Tensor layout, alignment, and runtime repacking</h3>
-        <p><strong>Meaning and score hypothesis.</strong> GGUF fixes how tensors are stored on disk; the engine can still repack them into a faster in-memory layout at load time. Repacking can speed up a kernel, but it costs the RSS budget to do it.</p>
-        <p><strong>Artifacts and protocol.</strong> A 4B development control compared the default runtime with repacking disabled. We also reviewed a custom alignment or packing scheme on top of that, and decided against building one.</p>
-        <p><strong>Result and narrowing.</strong> Disabling repacking cut the tested 4B footprint from about 3,236 to 602 MiB, a real product win, without a clear speed loss. An unsupported layout that fails to load doesn't get a partial score, it gets zero, so we kept the stock GGUF layout for compatibility. No-repack stays a product-only setting; it's method nine on our list, the boundary this whole story keeps running into.</p>
+        <p>GGUF fixes how tensors are stored on disk, but the engine can still repack them into a faster in-memory layout at load time. Repacking can speed up a kernel, but it costs the RSS budget to do it. A 4B development control compared the default runtime with repacking disabled; we also reviewed a custom alignment or packing scheme on top of that, and decided against building one.</p>
+        <p>Disabling repacking cut the tested 4B footprint from about 3,236 to 602 MiB, a real product win, without a clear speed loss. But an unsupported layout that fails to load doesn't get a partial score, it gets zero, so we kept the stock GGUF layout for compatibility rather than risk it. No-repack stays a product-only setting — it's method ten on our list, the boundary this whole story keeps running into.</p>
       </section>
 
       <section class="method-section" id="context-kv">
         <p class="figure-kicker">Engine-only</p><h3>Context size and KV-cache implications</h3>
-        <p><strong>Meaning and score hypothesis.</strong> Context length sets how many token states the KV cache holds. A shorter or quantized cache can save memory, but it doesn't touch the weight traffic a batch-one decode has to move every token regardless of context.</p>
-        <p><strong>Artifacts and protocol.</strong> We replaced runtime defaults with explicit context and KV limits during the runtime-tuning chapter above, which stopped memory growth and made later comparisons trustworthy. Separately, the participant profiler itself fixes the workload at a 512-token prompt and 128 generated tokens.</p>
-        <p><strong>Result and narrowing.</strong> No GGUF-level context metadata we could set would change what gets scored, so we reject context metadata as a profiler-facing lever. We keep the bounded context and KV settings we already adopted, but only as product configuration.</p>
+        <p>Context length sets how many token states the KV cache holds. A shorter or quantized cache can save memory, but it doesn't touch the weight traffic a batch-one decode has to move every token regardless of context. We'd already replaced runtime defaults with explicit context and KV limits back in the runtime-tuning chapter, which stopped memory growth and made later comparisons trustworthy — and the participant profiler fixes its own workload anyway, at a 512-token prompt and 128 generated tokens.</p>
+        <p>No GGUF-level context metadata we could set would change what gets scored, so we rejected context metadata as a profiler-facing lever. We keep the bounded context and KV settings we already adopted, but only as product configuration.</p>
       </section>
     </section>
 
@@ -831,10 +824,10 @@
 
       <aside class="design-note warning-note">
         <p class="design-note-label">Submission decision</p>
-        <p><strong>The tuned Qwen3.5 0.8B Q4_0 is the current scalar candidate.</strong> The tuned Qwen2.5 1.5B Q4_K_M replaces it only if the audit is confirmed to use the vector configuration. This is a measurement decision, not yet a submission-ready artifact decision.</p>
+        <p><strong>The tuned Qwen3.5 0.8B Q4_0 is the current scalar candidate.</strong> The tuned Qwen2.5 1.5B Q4_K_M replaces it only if the audit is confirmed to use the vector configuration. This is a measurement decision for now, not a submission-ready one.</p>
       </aside>
 
-      <p>Quantization determines the available CPU kernel; fine-tuning changes accuracy without changing that kernel. The final model choice therefore remains conditional on the evaluator's CPU configuration.</p>
+      <p>Quantization decides the available CPU kernel; fine-tuning only changes accuracy on top of it. So the final choice still comes down to which CPU configuration the evaluator actually runs.</p>
     </section>
 
     <section class="chapter" id="ledger" aria-labelledby="ledger-title">
