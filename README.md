@@ -97,6 +97,7 @@ Example: peak RAM reduction from **4 GB** to **3 GB** increases $S_{\text{eff}}$
 - Safety: no vulgar content, educational-only mode, age-appropriate calibration, misinformation handling, medical/science claim boundaries.
 
 ## 4. Pedagogy
+- See [Generative Interactive Classroom.](https://github.com/THU-MAIC/OpenMAIC)
 - Good Muta landing page
 - **Philosophy:** new tools aren't the answer — inspire first (Veritasium). AI should create curiosity, not replace it. E.g., don't open with "derivative = rate of change"; open with a speedometer in a moving car, then show that intuition powers modern AI.
 - **TARL infrastructure:** curriculum graph (prerequisite DAG — algebra → quadratics → calculus → diff. eq. → physics → ML) + a personal "learning twin" tracking mastery/misconceptions/pace per student.
