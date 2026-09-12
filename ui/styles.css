@@ -1,44 +1,16 @@
-/* Muta chat — the production book-and-speaking-dot brand system. */
-
-@font-face {
-  font-family: "Instrument Sans";
-  src: url("brand/InstrumentSans-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Instrument Sans";
-  src: url("brand/InstrumentSans-Bold.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Libre Baskerville";
-  src: url("brand/LibreBaskerville-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
+/* Muta chat — warm, quiet product chrome with the approved logo system. */
 
 :root {
   color-scheme: light;
-  --brand-forest: #1d251f;
-  --brand-ink: #171c18;
-  --brand-ivory: #f5f1e7;
-  --brand-paper: #faf9f5;
-  --brand-terracotta: #ad4f31;
-  --brand-terracotta-light: #e58c69;
-  --bg: var(--brand-paper);
-  --sidebar: var(--brand-ivory);
-  --card: #fffdf8;
-  --text: var(--brand-ink);
+  --bg: #faf9f5;
+  --sidebar: #f1ede3;
+  --card: #fffefb;
+  --text: #302d24;
   --muted: #625f57;
   --border: #dfddd4;
-  --accent: var(--brand-terracotta);
+  --accent: #ad4f31;
   --accent-soft: rgba(173, 79, 49, 0.09);
-  --accent-strong: var(--brand-terracotta);
+  --accent-strong: #ad4f31;
   --danger: #a8342a;
   --danger-fill: #a8342a;
   --on-accent: #ffffff;
@@ -82,19 +54,19 @@
   --card-highlight: #ffffff;
   --qr-bg: #ffffff;
   --record-pulse: rgba(168, 52, 42, 0.15);
-  --serif: "Libre Baskerville", Georgia, serif;
-  --sans: "Instrument Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --serif: Iowan Old Style, Baskerville, "Times New Roman", Times, serif;
+  --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #1d251f;
-  --sidebar: #171c18;
-  --card: #273129;
-  --text: #f5f1e7;
-  --muted: #c2bdb2;
-  --border: #4a554c;
+  --bg: #191815;
+  --sidebar: #211f1b;
+  --card: #292621;
+  --text: #f3efe7;
+  --muted: #bdb5a8;
+  --border: #4b463e;
   --accent: #e58c69;
   --accent-soft: rgba(229, 140, 105, 0.14);
   --accent-strong: #a94f31;

@@ -2,35 +2,13 @@
    Reading layout: left chapter rail, 660px serif measure, right margin notes.
    One ink ladder, five accents, hairline rules. No cards unless a block is a control. */
 
-@font-face {
-  font-family: "Instrument Sans";
-  src: url("brand/InstrumentSans-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Instrument Sans";
-  src: url("brand/InstrumentSans-Bold.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Libre Baskerville";
-  src: url("brand/LibreBaskerville-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
 :root {
   /* ink */
-  --bg: #faf9f5;
-  --bg-soft: #f5f1e7;
-  --bg-tint: #f0ebe0;
-  --bg-code: #f5f1e7;
-  --fg: #171c18;
+  --bg: #ffffff;
+  --bg-soft: #faf9f7;
+  --bg-tint: #f4f2ee;
+  --bg-code: #f5f3ef;
+  --fg: #282828;
   --fg1: #3c3836;
   --fg2: #504945;
   --fg3: #6b6866;
@@ -57,8 +35,8 @@
   --rejected-soft: #faeae7;
 
   /* type */
-  --serif: "Libre Baskerville", Georgia, serif;
-  --sans: "Instrument Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --serif: "Iowan Old Style", "Iowan Old Style BT", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --caption: 13px;
 

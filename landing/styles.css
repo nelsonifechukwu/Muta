@@ -1,25 +1,3 @@
-@font-face {
-  font-family: "Instrument Sans";
-  src: url("brand/InstrumentSans-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Instrument Sans";
-  src: url("brand/InstrumentSans-Bold.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Libre Baskerville";
-  src: url("brand/LibreBaskerville-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
 :root {
   color-scheme: light;
   --paper: #faf9f5;
@@ -54,8 +32,8 @@
   --menu-shadow: 0 1.2rem 2.5rem rgba(48, 45, 36, .1);
   --demo-shadow: 0 2.3rem 5rem -2.4rem rgba(48, 45, 36, .35), 0 .2rem .7rem rgba(48, 45, 36, .05);
   --soft-shadow: 0 .45rem 1.4rem rgba(48, 45, 36, .07);
-  --serif: "Libre Baskerville", Georgia, serif;
-  --sans: "Instrument Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --serif: Iowan Old Style, Baskerville, "Times New Roman", Times, serif;
+  --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   --shell: 76rem;
   --gutter: clamp(1.25rem, 4vw, 3rem);
@@ -65,13 +43,13 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #1d251f;
-  --paper-deep: #171c18;
-  --paper-warm: #32271f;
-  --card: #273129;
-  --ink: #f5f1e7;
-  --ink-soft: #c2bdb2;
-  --line: #4a554c;
+  --paper: #191815;
+  --paper-deep: #211f1b;
+  --paper-warm: #2e241f;
+  --card: #292621;
+  --ink: #f3efe7;
+  --ink-soft: #bdb5a8;
+  --line: #4b463e;
   --terracotta: #e58c69;
   --terracotta-dark: #f0a080;
   --terracotta-pale: #44271f;

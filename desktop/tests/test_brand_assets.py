@@ -91,15 +91,21 @@ def test_brand_assets_are_part_of_the_offline_ui_and_entry_pages() -> None:
     assert '<link rel="icon" href="brand/muta-favicon-32.svg" type="image/svg+xml">' in landing
 
 
-def test_product_themes_and_fonts_follow_the_brand_guide() -> None:
+def test_brand_artwork_sits_on_the_established_neutral_product_theme() -> None:
     chat_css = (UI / "styles.css").read_text(encoding="utf-8")
     landing_css = (ROOT / "landing" / "styles.css").read_text(encoding="utf-8")
     report_css = (ROOT / "muta-iq" / "dashboard" / "style.css").read_text(encoding="utf-8")
 
     for css in (chat_css, landing_css, report_css):
-        assert 'font-family: "Instrument Sans"' in css
-        assert 'font-family: "Libre Baskerville"' in css
         assert "#ad4f31" in css.lower()
+        assert 'font-family: "Instrument Sans"' not in css
+        assert 'font-family: "Libre Baskerville"' not in css
+
     for css in (chat_css, landing_css):
-        for color in ("#1d251f", "#171c18", "#f5f1e7", "#faf9f5", "#e58c69"):
+        for color in ("#191815", "#211f1b", "#292621", "#f3efe7", "#ad4f31", "#e58c69"):
             assert color in css.lower()
+        for green_wash in ("--bg: #1d251f", "--paper: #1d251f", "--card: #273129"):
+            assert green_wash not in css.lower()
+
+    for color in ("#ffffff", "#faf9f7", "#f4f2ee", "#282828"):
+        assert color in report_css.lower()

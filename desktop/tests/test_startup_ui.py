@@ -70,7 +70,9 @@ def test_fallback_startup_surface_uses_only_the_brand_message() -> None:
     assert "Muta" in html
     assert "brand/muta-stacked-on-light.svg" in html
     assert "brand/muta-stacked-on-dark.svg" in html
-    assert "InstrumentSans-Regular.ttf" in html
+    assert "ui-sans-serif, system-ui, sans-serif" in html
+    assert "InstrumentSans-Regular.ttf" not in html
+    assert "background: #191815" in html
     assert "wordmark-u" not in html and "<i></i>" not in html
     assert (
         "the personal education companion for every student at every level. powered by AI." in html

@@ -54,7 +54,16 @@ def test_chat_shell_has_localized_routes_back_to_the_landing_page():
     assert "Ask about any subject" in HTML
     assert "maths or science question" not in HTML
 
-    for token in ("#faf9f5", "#f5f1e7", "#171c18", "#1d251f", "#ad4f31", "#e58c69"):
+    for token in (
+        "#faf9f5",
+        "#f1ede3",
+        "#302d24",
+        "#191815",
+        "#211f1b",
+        "#292621",
+        "#ad4f31",
+        "#e58c69",
+    ):
         assert token in CSS
     assert ".mobile-home-link { display: inline-flex; }" in CSS
 

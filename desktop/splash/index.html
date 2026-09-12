@@ -6,9 +6,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'">
   <title>Starting Muta</title>
   <style>
-    @font-face { font-family: "Instrument Sans"; src: url("brand/InstrumentSans-Regular.ttf") format("truetype"); font-display: swap; }
-    :root { color-scheme: light dark; font: 16px/1.5 "Instrument Sans", ui-sans-serif, system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #faf9f5; color: #171c18; }
+    :root { color-scheme: light dark; font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f1e7; color: #1d251f; }
     main { width: min(520px, calc(100vw - 48px)); text-align: center; }
     .logo { display: inline-grid; width: min(190px, 44vw); line-height: 0; }
     .logo img { grid-area: 1 / 1; display: block; width: 100%; height: auto; }
@@ -16,8 +15,8 @@
     p { max-width: 480px; margin: 28px auto 0; color: #5f665f; }
     #error { margin-top: 18px; padding: 12px; border-radius: 12px; color: #8b241c; background: #f7d8d4; text-align: left; white-space: pre-wrap; }
     @media (prefers-color-scheme: dark) {
-      body { background: #1d251f; color: #f5f1e7; }
-      p { color: #c2bdb2; }
+      body { background: #191815; color: #f5f1e7; }
+      p { color: #b9b3a8; }
       .logo-light { display: none !important; }
       .logo-dark { display: block !important; }
     }

@@ -1,16 +1,8 @@
-@font-face {
-  font-family: "Instrument Sans";
-  src: url("brand/InstrumentSans-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
 :root {
   color-scheme: light;
-  --viz-bg: #faf9f5;
-  --viz-panel: #f5f1e7;
-  --viz-text: #171c18;
+  --viz-bg: #fbfaf6;
+  --viz-panel: #f3efe5;
+  --viz-text: #302d24;
   --viz-muted: #686259;
   --viz-border: #d7d3c9;
   --viz-1: #ad4f31;
@@ -19,17 +11,17 @@
   --viz-4: #7867a8;
   --viz-5: #c1872d;
   --viz-6: #4e6f9f;
-  font-family: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --viz-bg: #1d251f;
-  --viz-panel: #273129;
-  --viz-text: #f5f1e7;
+  --viz-bg: #1d1c19;
+  --viz-panel: #292722;
+  --viz-text: #f3efe7;
   --viz-muted: #beb6aa;
   --viz-border: #bdb5a8;
-  --viz-1: #e58c69;
+  --viz-1: #e08a68;
   --viz-2: #67b7ae;
   --viz-3: #9db96c;
   --viz-4: #a999d5;
