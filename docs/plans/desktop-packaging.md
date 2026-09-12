@@ -42,7 +42,7 @@ The staging script uses an allow-list, never a repository-wide copy:
 - platform-native `llama-server` plus its dependency closure;
 - desktop notices, updater public key, product manifest and build identity.
 
-It excludes top-level `bench`, `muta-iq`, `papers`, `pilot-v2`, development corpus tooling,
+It excludes top-level `bench`, `muta-iq`, `papers`, development corpus tooling,
 Docker inputs, repository metadata, tests, local databases/logs, and build caches. The
 `orchestrator.bench_metrics` runtime module remains because the product telemetry strip imports
 it; excluding top-level `bench/` must not remove that module.

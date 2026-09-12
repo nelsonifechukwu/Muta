@@ -49,7 +49,7 @@ bound); mmap soft-fault + read 32.7 GB/s (4 threads); warm mapped read 54 GB/s.
 part is ~48 ms at best (21 tok/s), so 20 tok/s leaves **no** I/O budget at all on this
 machine; at 15 tok/s (66.7 ms) the overlap budget is 18.7 ms → 18.7 ms × 1.35 GB/s =
 **~25 MB per token (1 % of the model)** — or ~130 MB (6 %) at a hypothetical 7 GB/s.
-pilot-v2 measured the same physics last week (Qwen3.5-4B, 1.5 GB streamed/token at
+The archived 2026 streaming pilot measured the same physics (Qwen3.5-4B, 1.5 GB streamed/token at
 D≈3 GB/s → 2.3 tok/s). Disk streaming cannot buy a meaningful RSS reduction at ≥15 tok/s.
 
 *Page-cache-fed streaming (residency window; the engine in `opt/llama.cpp`, see

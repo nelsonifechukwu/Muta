@@ -50,10 +50,12 @@ File: 2372 MB = 1955 MB TQ2_0 blocks (32 layers × 61.1 MB) + 247 MB `output.wei
 4. **Residency window ("partial weight streaming")**: keep a pinned set resident, stream the
    rest through a sliding W-layer window from the page cache: prefetch thread touches layer
    N+1..N+W, evict layer N−1 (macOS: `mmap(MAP_FIXED)` remap — `madvise(DONTNEED)` is
-   advisory-only on Darwin per pilot-v2 DISCOVERY; Linux: `madvise(DONTNEED)`). RSS drops by
+   advisory-only on Darwin per the archived 2026 streaming-pilot discovery; Linux:
+   `madvise(DONTNEED)`). RSS drops by
    the streamed fraction; cost = soft-fault rate. **Measure soft-fault bandwidth first** — it
-   decides how much can be streamed at ≥15 tok/s. Disk-fed streaming is out (pilot-v2: 2.3 tok/s
-   at 1.5 GB/token, D≈3 GB/s → ≤200 MB/token affordable).
+   decides how much can be streamed at ≥15 tok/s. Disk-fed streaming is out (the archived
+   streaming pilot measured 2.3 tok/s at 1.5 GB/token, D≈3 GB/s → ≤200 MB/token
+   affordable).
 5. TQ2_0 NEON kernel: ~1 vector op per weight byte (unpack shifts/ands + dotprod) → ~10 GB/s
    per P-core → 4 cores ≈ 40 GB/s ≈ 18 tok/s ceiling — it is instruction-bound at about the
    memory-bandwidth line. LUT (bitnet.cpp TL1-style) or fewer-op unpack could raise it.

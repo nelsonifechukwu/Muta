@@ -2,32 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Two lines of work: `main` and `pilot/v2`
+## Current line of work
 
 `main` carries the **3-container architecture** (Postgres + backend + nginx frontend) that
 used to live on `dev`; the plan that built it is
-`docs/plans/2026-07-25-three-container-architecture.md`. Everything below this section
-describes `main` and only `main`.
-
-`pilot/v2` is a pilot of a different approach (a patched llama.cpp `llama-duo` router:
-front/expert co-decode, verify mode, single-file model bundles, and — since 2026-08-13 —
-**weight streaming under a 2 GiB cgroup cap**: residency manager + cb_eval sliding
-window, three-tier registry, staged startup; see `pilot-v2/docs/STREAMING_IMPL_PLAN.md`
-and `pilot-v2/bench/results.md` §5). Developed in a standalone `Muta_v2` repo, folded in
-on **2026-08-11** as a root with no common ancestor, and **merged into `main` on
-2026-08-13 as a subtree at `pilot-v2/`** (full history grafted; if `origin/pilot/v2` ever
-moves again, sync with `git merge -X subtree=pilot-v2 origin/pilot/v2`). It has no
-Postgres, no `/v1` contract, and none of the rules below bind it; `pilot-v2/CLAUDE.md`
-governs work there. **The pilot was completed on 2026-08-14** — all phases through
-D (spec-decode amortizer, default K=16) and E (gates G8–G12: G8/G9/G11 PASS, G11 at
-124.9 ms cold TTFT via per-tier files, G12 managed 1.69×), C5 root-caused (aarch64
-repack kernels break the SmolLM2 front) and properly fixed (`--no-repack`, patch 0033).
-Results of record: `pilot-v2/bench/results.md` §5 and `pilot-v2/docs/POC_REPORT.md`. The dev worktree, the
-local `pilot/v2` branch, and the retired standalone repo's `.git` were all removed after
-consolidation; the llama.cpp engine lives as `pilot-v2/patches/0001–0035` plus a
-gitignored nested clone at `pilot-v2/llama.cpp` reconstructed from them (never pushed
-anywhere as a fork — that is deliberate), and the runnable state lives in the
-`muta-stream` Docker image + `muta-build`/`muta-models` volumes.
+`docs/plans/2026-07-25-three-container-architecture.md`. A completed 2026 weight-streaming
+and multi-model routing experiment was retired from the working tree; its source, patches,
+reports, and benchmark evidence remain available in Git history at subtree merge `0e543db`
+and the subsequent pilot commits.
 
 The older single-container competition build (SQLite, systemd units, flash-drive `deploy/`
 and `bundle/` tooling, the TUI and the REPL CLI) was **retired on 2026-08-05**. It is not

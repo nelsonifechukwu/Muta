@@ -281,7 +281,7 @@ desktop/src-tauri/icons/ios/
 certs/
 keys/
 
-# Linked git worktrees (e.g. pilot/v2) live here — never tracked
+# Linked git worktrees live here — never tracked
 .worktrees/
 
 # Vercel CLI link/pull artefacts for the Muta IQ report deploy (docs/report-hosting.md)
