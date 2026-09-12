@@ -26,6 +26,9 @@ rebuild only the Apple Silicon and Intel macOS offline packages for review.
 3. Build macOS arm64 and x86-64 from one exact pushed source commit using the established manual
    packaging workflow.
 4. Verify native architecture, code-signature integrity, UI/icon byte parity, model manifests,
-   archive checksums, and a flat `desktop/build/final-packages` directory.
+   archive checksums, and a commit-scoped Apple test-package directory without changing the
+   published four-platform `desktop/build/final-packages` set.
+5. Ensure the cross-architecture build selects rustup's target-aware compiler shims instead of
+   an ambient Homebrew compiler that cannot see the installed Intel standard library.
 
 Existing Linux and Windows archives remain unchanged until the user requests those rebuilds.

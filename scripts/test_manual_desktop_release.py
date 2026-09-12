@@ -132,6 +132,9 @@ def test_gateway_worker_uses_external_cargo_cache(tmp_path: Path) -> None:
     assert Path(environment["PATH"].split(worker.os.pathsep)[0]) == Path(
         worker.sys.executable
     ).absolute().parent
+    assert Path(environment["PATH"].split(worker.os.pathsep)[1]) == (
+        Path.home() / ".cargo" / "bin"
+    )
 
 
 def test_gateway_worker_does_not_resolve_venv_python_symlink(

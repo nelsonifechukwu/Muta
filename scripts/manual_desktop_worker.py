@@ -148,7 +148,13 @@ def target_environment(platform_name: str, cache_root: Path) -> dict[str, str]:
     # prepared venv (and its desktop dependencies such as huggingface_hub).
     python = Path(sys.executable).absolute()
     env["PYTHON"] = msys_path(python)
-    env["PATH"] = str(python.parent) + os.pathsep + env.get("PATH", "")
+    # Prefer rustup's shims over an ambient Homebrew rustc. The latter may be first on PATH
+    # while rustup owns the requested cross-architecture stdlib, which makes Intel macOS
+    # compilation fail with "can't find crate for core" despite the target being installed.
+    rustup_bin = Path.home() / ".cargo" / "bin"
+    env["PATH"] = os.pathsep.join(
+        (str(python.parent), str(rustup_bin), env.get("PATH", ""))
+    )
     env["MUTA_DESKTOP_TARGET_ARCH"] = target_arch
     env["MUTA_NATIVE_WORK"] = str(cache_root / "native-work" / platform_name)
     env["CARGO_TARGET_DIR"] = str(cache_root / "cargo-target" / platform_name)
