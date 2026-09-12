@@ -2,6 +2,11 @@
 
 Status: concept review only. No production asset has been changed.
 
+**Superseded by the open-book direction.** See the [current review](../muta-book-m-sweep-2026-09-12/index.html).
+The user clarified that the square beneath u carries meaning in the Igbo pronunciation of the
+name. The earlier foundation/foothold explanation below was an invented rationale and is withdrawn.
+This document and its boards remain as exploration history, not the current recommendation.
+
 ## Production blocker: clear the name first
 
 A quick landscape check found an existing African-language learning platform at

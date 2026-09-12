@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
-  "status": "review-only",
+  "status": "superseded-exploration",
+  "supersededBy": "../muta-book-m-sweep-2026-09-12/index.html",
   "date": "2026-09-12",
   "recommendedDirection": "The Foothold",
   "productionBlocker": "Clear the Muta name and device mark in intended jurisdictions before rollout.",
@@ -19,8 +20,8 @@
     "shippingNote": "Convert the approved wordmark to outlines in a separate implementation pass."
   },
   "assets": [
-    {"path": "README.md", "role": "rationale and usage specification", "sha256": "f8e75c0a64c1f8c066b77e131f7449781cfe0e3990c631c2a45d3cc042876505"},
-    {"path": "index.html", "role": "local review gallery", "sha256": "5c4a9170a1f77ab18a6098aa5072fdacad6d8592fc25e5940f7899bbc03e0e6c"},
+    {"path": "README.md", "role": "rationale and usage specification", "sha256": "43e4ab8cf27ec0d0c16f6692d9c85bed70dbad54fb45c24e4e4109f281aa64f7"},
+    {"path": "index.html", "role": "local review gallery", "sha256": "bbbabd54170cd58c56b2584b88491f9d98c65aa579b13de1d777b0d542ae5cff"},
 
     {"path": "boards/00-overview.svg", "role": "concept comparison board source", "viewBox": "0 0 1600 1000", "background": "opaque paper", "sha256": "7bb6e03cf1bc79bc1bf11272b4af0837ad8ac12f06df198cfbb26bb7edb80916"},
     {"path": "boards/00-overview.png", "role": "concept comparison board preview", "dimensions": "1600x1000", "sourceMaster": "boards/00-overview.svg", "background": "opaque paper", "sha256": "af858b62300ac6eba355185c2be86a74462e7c263a5289506cfb1fe8e28ac8af"},
