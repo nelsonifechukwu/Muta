@@ -21,9 +21,11 @@ favicon, then replace only the two macOS test packages for user review.
 
 1. Parse the production SVGs and compare their geometry and palette with the reviewed masters.
 2. Regenerate every Tauri icon derivative and inspect both 512 px and 32 px output.
-3. Run brand, UI-build, browser, Python, and packaging regression tests.
-4. Commit and push the exact source revision used for packaging.
-5. Build only macOS arm64 and x86-64 offline archives; verify signatures, architectures, embedded
+3. Include SVG assets in the content-addressed UI cache so a changed favicon can never reuse stale
+   packaged UI output.
+4. Run brand, UI-build, browser, Python, and packaging regression tests.
+5. Commit and push the exact source revision used for packaging.
+6. Build only macOS arm64 and x86-64 offline archives; verify signatures, architectures, embedded
    source identity, icon parity, model manifests, and checksums.
-6. After both new archives pass, move the superseded Mac test-build directory to Trash. Do not
+7. After both new archives pass, move the superseded Mac test-build directory to Trash. Do not
    rebuild Linux/Windows or modify GitHub releases, Google Drive, or GCP.

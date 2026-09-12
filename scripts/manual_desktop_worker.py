@@ -29,6 +29,7 @@ UI_INPUTS = (
     "ui/*.html",
     "ui/*.css",
     "ui/*.js",
+    "ui/*.svg",
     "ui/vendor/viz/*",
 )
 NATIVE_INPUTS = (

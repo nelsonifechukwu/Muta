@@ -137,6 +137,10 @@ def test_gateway_worker_uses_external_cargo_cache(tmp_path: Path) -> None:
     )
 
 
+def test_ui_cache_tracks_production_svg_assets() -> None:
+    assert "ui/*.svg" in worker.UI_INPUTS
+
+
 def test_gateway_worker_does_not_resolve_venv_python_symlink(
     tmp_path: Path, monkeypatch
 ) -> None:
