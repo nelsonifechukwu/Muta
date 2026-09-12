@@ -1,0 +1,711 @@
+{
+  "brand": "Muta",
+  "edition": 1,
+  "date": "2026-09-12",
+  "direction": "Open book + speaking dot (approved concept D)",
+  "reference": "reference/approved-concept.png",
+  "source": "Optically redrawn, font-free vector masters",
+  "production_integration": false,
+  "counts": {
+    "inventoried_files": 84,
+    "artwork_exports": 70,
+    "logo_arrangements": 5,
+    "color_treatments": 4,
+    "collateral_layouts": 4
+  },
+  "verified": [
+    "SVG XML and self-contained path artwork",
+    "Transparent logo PNGs and unclipped alpha bounds",
+    "Social export dimensions",
+    "Opaque app PNGs",
+    "Exact optical ICO frame matches",
+    "105 local gallery/document/font links"
+  ],
+  "files": [
+    {
+      "path": "BRAND-GUIDE.md",
+      "bytes": 8488,
+      "sha256": "3b9cdf8d1333bd3c440db953a5858f1f0fd721cbcde5d72340f166feee33ea59"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3433,
+      "sha256": "87958176edb714c5d9c36672fb2f30bedd62ad551847518b1dc837b8d480f58d"
+    },
+    {
+      "path": "brand-board.png",
+      "bytes": 88358,
+      "sha256": "3756eca1a976aca0595032b4559ffea807c945b39cda50c4ebe7eb5baf418a56",
+      "width": 1500,
+      "height": 1100,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "brand-board.svg",
+      "bytes": 64896,
+      "sha256": "b79029a0dbfed92ec8ac6e167cd9608943c8f52c12e3b60371c6b8ec28ced6af",
+      "viewBox": "0 0 1500 1100",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "fonts/InstrumentSans-Bold.ttf",
+      "bytes": 68084,
+      "sha256": "444f85bf1c4b0e1ce1ca624f6be54bcd832207714ccaf4ea99ee531341683bdf"
+    },
+    {
+      "path": "fonts/InstrumentSans-OFL.txt",
+      "bytes": 4402,
+      "sha256": "d772141ef2499f6fbd6780dbb1be06a1bc21817a75d4a060e7cb5262a145e12b"
+    },
+    {
+      "path": "fonts/InstrumentSans-Regular.ttf",
+      "bytes": 68028,
+      "sha256": "a22cb26e48fd79bcb01bf2fc92d36785474dce36d9c544ab0a8868c2657c4a87"
+    },
+    {
+      "path": "fonts/LibreBaskerville-OFL.txt",
+      "bytes": 4448,
+      "sha256": "516bf7fbfdbd0f0e4f50ade6a9127ad83ac7a54370bad6cf70794554569e9c4e"
+    },
+    {
+      "path": "fonts/LibreBaskerville-Regular.ttf",
+      "bytes": 147584,
+      "sha256": "2101302538d9e88adb679031c04623e4578b5745e89566284fd2c508d79acae0"
+    },
+    {
+      "path": "icons/favicon.ico",
+      "bytes": 3649,
+      "sha256": "be4ac76be6a257f959585198aeedf89f8eb6183cefdeee3dac777dc1615d5fa5",
+      "sizes": [
+        [
+          16,
+          16
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          64,
+          64
+        ]
+      ]
+    },
+    {
+      "path": "icons/muta-android-192.png",
+      "bytes": 4454,
+      "sha256": "1e1f3119f93a69a28191b43db327d099bb0c5dde2c42b065a4265c85452f8762",
+      "width": 192,
+      "height": 192,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "icons/muta-android-512.png",
+      "bytes": 12531,
+      "sha256": "13306f207d8603dd3a784da1a55b93dd006ecd813d72c11a3043627b2400a289",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "icons/muta-app-master.png",
+      "bytes": 27057,
+      "sha256": "fd7ac7fd5e2110d316cbde323650c7adc3e7b899c630c5860977cfd25299096e",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "icons/muta-app-master.svg",
+      "bytes": 956,
+      "sha256": "27a532112708e4221a9d992bcb7f330c417b352639e3794b5e0660c1900beac7",
+      "viewBox": "0 0 512 512",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-avatar-forest.png",
+      "bytes": 18739,
+      "sha256": "77eb63f1f45cfc31bffe19522605618d285705a5287f4db1a254d7b95b08ebed",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "icons/muta-avatar-forest.svg",
+      "bytes": 952,
+      "sha256": "2e676593c59ad9bad55a1bcecf865f136d75973d07b9fef21f2db22a8bb4330f",
+      "viewBox": "0 0 512 512",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-avatar-paper.png",
+      "bytes": 20848,
+      "sha256": "6c919a532b21528522b38ef2e648e2721c7a0c5ca9b20b09928d068924867ade",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "icons/muta-avatar-paper.svg",
+      "bytes": 1008,
+      "sha256": "22fbcf3452555f63bb1974580a9ee90c77b76b1490caf5d67b94fef7d3fe81e9",
+      "viewBox": "0 0 512 512",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-favicon-16.png",
+      "bytes": 386,
+      "sha256": "f38445d76e043cde56590853fa0975a6d6b1a0689039ed0f8bbcc6ea3b851367",
+      "width": 16,
+      "height": 16,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "icons/muta-favicon-16.svg",
+      "bytes": 463,
+      "sha256": "0082de440ca7f5378a301238f2a23679579f21df818d51c2656339c4fef3823e",
+      "viewBox": "0 0 16 16",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-favicon-24.png",
+      "bytes": 625,
+      "sha256": "988f986e869e7e0280c039bede17db149a0d95663a511ad8325f6afd54ef158a",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "icons/muta-favicon-24.svg",
+      "bytes": 536,
+      "sha256": "0af4e3c44c70a7dd0fd5b2a1539e7c206b427c18b7a4769a2dc0f59020ab2a01",
+      "viewBox": "0 0 32 32",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-favicon-32.png",
+      "bytes": 753,
+      "sha256": "a25b8469b5408bcd3b4e2d54564e09deaa94aa23117a378e517c2afb0aa4e5a7",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "icons/muta-favicon-32.svg",
+      "bytes": 536,
+      "sha256": "775135c3c44f6f52ca9fafdad2a21616da5a44c07b03a6d89adce00c68572bd4",
+      "viewBox": "0 0 32 32",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-favicon-48.png",
+      "bytes": 1109,
+      "sha256": "280eef60dc187200cf02623a6f5dfdddd3fb59943cc745f426c6793adf70bcde",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "icons/muta-favicon-48.svg",
+      "bytes": 536,
+      "sha256": "0dade78e84fa4a56099921bcbf3398c69b84d3451df4a806ef9f6d5d41945f5d",
+      "viewBox": "0 0 32 32",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-favicon-64.png",
+      "bytes": 1467,
+      "sha256": "fb9e74a1a1844287aed3fbc222969b101ae02a71f6364344c4205c62940bb9fc",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "icons/muta-favicon-64.svg",
+      "bytes": 536,
+      "sha256": "87acab5def45afb912ddc41eca1483fcc9848d0a95f49369a0aa76e2ca01d887",
+      "viewBox": "0 0 32 32",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "icons/muta-touch.png",
+      "bytes": 4187,
+      "sha256": "f1195b7b17298c4cd2b6b0d1caf6e6c40ca22e7281d9ebe701b1575bf9ad6b40",
+      "width": 180,
+      "height": 180,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "index.html",
+      "bytes": 19201,
+      "sha256": "5f71100d404506165297d76bd985a083cbdb538cef81a1a9a784b5fb92ee6d56"
+    },
+    {
+      "path": "logos/muta-dot-black.png",
+      "bytes": 1311,
+      "sha256": "43a3139669ec24a669c5cfe22c29337bfa168105c0a28f35729e5628f77a3c14",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-dot-black.svg",
+      "bytes": 295,
+      "sha256": "7a1b6d188283cdc2920cab22b0d5c9fd184b62ac0388755feabb977e4d5f5fe0",
+      "viewBox": "0 0 64 64",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-dot-on-dark.png",
+      "bytes": 1558,
+      "sha256": "c2a0e4304cd7fce3689ec442c0956307ca39c805b4e71365502fc55a2012d03f",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-dot-on-dark.svg",
+      "bytes": 299,
+      "sha256": "df1f9d926a7f59275d7a02ba16eece28916f91e22a7ed87abba533e2b82736a4",
+      "viewBox": "0 0 64 64",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-dot-on-light.png",
+      "bytes": 1541,
+      "sha256": "d229ba97f92bd62feb636a884842e3eda306cc965dfa814985ab3e90e79bceff",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-dot-on-light.svg",
+      "bytes": 301,
+      "sha256": "c775e1959141d389712e351426a1faddd4fa57cde0ee46b858b87e78a3e42268",
+      "viewBox": "0 0 64 64",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-dot-white.png",
+      "bytes": 1442,
+      "sha256": "8917153fa291cb12e19b2bdce477b7afe329000526fc90f1c63ce44a121f1329",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-dot-white.svg",
+      "bytes": 295,
+      "sha256": "ddb8dedbf2d7c9db314d344b231fdd86ce58bdef501f49e948304ac6bfbd45a2",
+      "viewBox": "0 0 64 64",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-horizontal-black.png",
+      "bytes": 37709,
+      "sha256": "1102fc7e675256ffad78fd38fc8c17fce77e55b5cb2f2be8728aa7f76604c2b5",
+      "width": 2000,
+      "height": 590,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-horizontal-black.svg",
+      "bytes": 3981,
+      "sha256": "a07f9b1675ae732de92eee449fd4157a27b06dcad15e3a9ea12c8ff66135d582",
+      "viewBox": "0 0 1120 330",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-horizontal-on-dark.png",
+      "bytes": 51894,
+      "sha256": "b46bb0ec081ce765d0ea2296258d74a69feb5ffd60d845b98e6982e6df186e39",
+      "width": 2000,
+      "height": 590,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-horizontal-on-dark.svg",
+      "bytes": 3930,
+      "sha256": "2d8bb5434f61f7f602d351f27648635fc8cab2b81173354af05b58a8a2606af9",
+      "viewBox": "0 0 1120 330",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-horizontal-on-light.png",
+      "bytes": 55439,
+      "sha256": "62611e09f1b2a69f8fcf063657819b502160538f5d56af6264e7400dbdf1b3bf",
+      "width": 2000,
+      "height": 590,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-horizontal-on-light.svg",
+      "bytes": 3990,
+      "sha256": "815e833d7a9972fb5c63eb6609278bbcaf1935b883fbc4e04fdf6d854e043d56",
+      "viewBox": "0 0 1120 330",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-horizontal-white.png",
+      "bytes": 43154,
+      "sha256": "83c4a0cacd1f959d20ae70e3910dc7b807b696f4dbaebfab50c2afc447440c63",
+      "width": 2000,
+      "height": 590,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-horizontal-white.svg",
+      "bytes": 3981,
+      "sha256": "2bff6bba4626a6dfa82df119e105fa7021fc256363380f48ada63cfc0f1a27ce",
+      "viewBox": "0 0 1120 330",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-stacked-black.png",
+      "bytes": 78867,
+      "sha256": "ebddf3e4025f8af2df4319681269ce5bb851366ad185ffca6a74a8d7c543e939",
+      "width": 2000,
+      "height": 2060,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-stacked-black.svg",
+      "bytes": 3979,
+      "sha256": "7b67cda95742ba82fec71e70fc8bf1b1243575093510868f79a14f8165b32f0c",
+      "viewBox": "0 0 1000 1030",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-stacked-on-dark.png",
+      "bytes": 102647,
+      "sha256": "afa5725ecf8a1eb73b6e77eef88dff8ac7bd35510faa2cc99c3c08a215462df1",
+      "width": 2000,
+      "height": 2060,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-stacked-on-dark.svg",
+      "bytes": 3928,
+      "sha256": "2e7cfc4c3976dca11dd081c9462bf944189bab9a6dc3ce45b6370e5d05c3e134",
+      "viewBox": "0 0 1000 1030",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-stacked-on-light.png",
+      "bytes": 111432,
+      "sha256": "64cc714ccf6d6b85542b0569b67a92da4d29a715a3d7b24a10d53a435f0ed914",
+      "width": 2000,
+      "height": 2060,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-stacked-on-light.svg",
+      "bytes": 3988,
+      "sha256": "ebf9e600682a08d8e633bdc1a68fa16e3ed7fb841917e2f8ce1f11c7c7357abc",
+      "viewBox": "0 0 1000 1030",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-stacked-white.png",
+      "bytes": 87195,
+      "sha256": "1fafbf5739d75606a7e6a3eb27114579ab937f78c49acf8617396c15f8e893b2",
+      "width": 2000,
+      "height": 2060,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-stacked-white.svg",
+      "bytes": 3979,
+      "sha256": "a1c25dbf0096106acbe4869cbb53cb7ac25fa81142a92ce14e727a3b7b968558",
+      "viewBox": "0 0 1000 1030",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-symbol-black.png",
+      "bytes": 23563,
+      "sha256": "6d9047363c352e833276e39607400766347124c04bb76fb29100480ceeff0edb",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-symbol-black.svg",
+      "bytes": 898,
+      "sha256": "a122640a16aee8dc6255614a6dce6322bdc6e14654fff9f1065524ad6db121c6",
+      "viewBox": "0 0 512 512",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-symbol-on-dark.png",
+      "bytes": 27861,
+      "sha256": "cfeacb3911a044451ff35fa9a4f06ee09d585ee3e8561dcb52556f165832d013",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-symbol-on-dark.svg",
+      "bytes": 847,
+      "sha256": "a68a9cefc9af710eeb46bd74a3c6b88622ebaa3f1e11c06321bb0e0cfdd73a1b",
+      "viewBox": "0 0 512 512",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-symbol-on-light.png",
+      "bytes": 34133,
+      "sha256": "6134dca24ebf5611266c282b0e2f3121982386378a70b397e6c4fc06afa8c483",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-symbol-on-light.svg",
+      "bytes": 907,
+      "sha256": "45a5bf6bfad4a37e6c14f4baf267d10961603aef37f5a434204c7718544641c8",
+      "viewBox": "0 0 512 512",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-symbol-white.png",
+      "bytes": 26106,
+      "sha256": "d2db9cac051ef8b354a7301ccd86efff65d135295807c62f0dd9b9aaf4554148",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-symbol-white.svg",
+      "bytes": 898,
+      "sha256": "f6ef6013efdc5d0467a52edff83bbde98c93a93256888a499f2ac37de5f96ea4",
+      "viewBox": "0 0 512 512",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-wordmark-black.png",
+      "bytes": 40857,
+      "sha256": "1fecd153dfe9d851b56fb466d87d3ff506b63998b82a3494b5b02c86c0aad6ad",
+      "width": 2000,
+      "height": 780,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-wordmark-black.svg",
+      "bytes": 3205,
+      "sha256": "6f3762d157d2f8e112a4af4d235a3c208457a98d112d8f636bddd90285831311",
+      "viewBox": "0 0 1000 390",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-wordmark-on-dark.png",
+      "bytes": 56306,
+      "sha256": "0929d9af1e52c731efba555d7c9cffe596a007179ed1ee1a86699a08b406cb79",
+      "width": 2000,
+      "height": 780,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-wordmark-on-dark.svg",
+      "bytes": 3209,
+      "sha256": "d5f880389bc1f22c264c201697fd02a0f3f99d55d9ddee1f7cc9dd1c972ad425",
+      "viewBox": "0 0 1000 390",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-wordmark-on-light.png",
+      "bytes": 55765,
+      "sha256": "f4251d56e2b49bb55ffc399f417bd98e32b3012d01e513d64b56d677c4f83b69",
+      "width": 2000,
+      "height": 780,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-wordmark-on-light.svg",
+      "bytes": 3211,
+      "sha256": "58fac378b0e9c6a641e50c9ca3eae8226435543b0cf5c15416141c0de5f88a35",
+      "viewBox": "0 0 1000 390",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "logos/muta-wordmark-white.png",
+      "bytes": 44870,
+      "sha256": "6de40e212e9bd657e43b1b1427498f7dfcfe12204bc7794f4341fbc4c12735b4",
+      "width": 2000,
+      "height": 780,
+      "mode": "RGBA",
+      "transparent": true
+    },
+    {
+      "path": "logos/muta-wordmark-white.svg",
+      "bytes": 3205,
+      "sha256": "cd6c2f97e41284ad5d165cd1faa08f5cd5b287aca9e7e2c3ccd2b1c162cafc9a",
+      "viewBox": "0 0 1000 390",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "reference/approved-concept.png",
+      "bytes": 1447662,
+      "sha256": "2b354af8fa91d26e78c68e8a0d1570061cb23f666e65378aad03051e2dd35bb7",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "social/header-1500x500.png",
+      "bytes": 33582,
+      "sha256": "eaec5274e54c1dd8c54b37dd5009d33ca7348f480b55c61b6d7d1e44039a83df",
+      "width": 1500,
+      "height": 500,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "social/header-1500x500.svg",
+      "bytes": 19223,
+      "sha256": "9eb96633336ba574bea60f509470be0c846f0e9469febedbda9f00d3da743f1b",
+      "viewBox": "0 0 1500 500",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "social/share-card-1200x630.png",
+      "bytes": 45187,
+      "sha256": "71df357bb486f74cea1c9ef3020896b4d953478e894b3760bbb866facf364f42",
+      "width": 1200,
+      "height": 630,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "social/share-card-1200x630.svg",
+      "bytes": 31347,
+      "sha256": "0fcfce770f940ae652ac977b10b0256034925e3a67eedf3e3934fc399cc93f8e",
+      "viewBox": "0 0 1200 630",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "social/social-square-1080x1080.png",
+      "bytes": 45921,
+      "sha256": "c3fd3abffeca64961392a8fe6d6e4c7efa619d0bc0b5cc817e1ea5381ddd8f54",
+      "width": 1080,
+      "height": 1080,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "social/social-square-1080x1080.svg",
+      "bytes": 16717,
+      "sha256": "d04bdc434b5d8669f4975af0481786a7eb2c9332cba3a375b958d0c13a2f0b31",
+      "viewBox": "0 0 1080 1080",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "social/title-background-1920x1080.png",
+      "bytes": 34276,
+      "sha256": "b82423f8015c586630d3a905290c730b4e6b90ad123af2277b0983aba1979abc",
+      "width": 1920,
+      "height": 1080,
+      "mode": "RGB",
+      "transparent": false
+    },
+    {
+      "path": "social/title-background-1920x1080.svg",
+      "bytes": 19995,
+      "sha256": "ddfbf695e79ae50f4d9ddfa19d257bada5ed6034f39e5bddc91c5fdddf07d521",
+      "viewBox": "0 0 1920 1080",
+      "live_text": false,
+      "external_dependencies": false
+    },
+    {
+      "path": "source/build_assets.py",
+      "bytes": 10542,
+      "sha256": "a723253bed5be3b19d4ede4f9e3ff6067ce6d10b5b0ed1da1be48794d5e14d63"
+    },
+    {
+      "path": "source/build_collateral.py",
+      "bytes": 3900,
+      "sha256": "fdba6a8372f8a94cadce8b6281f4d4882c84dbe22bde547dfee108987a832556"
+    },
+    {
+      "path": "source/build_manifest.py",
+      "bytes": 7154,
+      "sha256": "5eff60d1e7681798851636d85a773c281c8525f56efce4f21cea7cfbfc7cea0a"
+    },
+    {
+      "path": "tokens.css",
+      "bytes": 296,
+      "sha256": "8f97d904ca7791eff40a4a18b04c0f81aa7360252976bbb490bbc884f105eb76"
+    },
+    {
+      "path": "tokens.json",
+      "bytes": 456,
+      "sha256": "e79e8547e96d30bf0a21316f4e5b13b72dffb70fbfc8d0087b041be968e2397b"
+    }
+  ]
+}
