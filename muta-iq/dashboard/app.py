@@ -8,6 +8,7 @@ Usage: python3 app.py [port] [--no-open] [--lan]     (default port 8765)
 
 ``--lan`` listens on every local interface and automatically disables mutating API routes.
 """
+
 from __future__ import annotations
 
 import copy
@@ -28,41 +29,55 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 DASH_DIR = Path(__file__).resolve().parent
-ROOT = DASH_DIR.parent                      # submission repo root (holds metadata.json)
+ROOT = DASH_DIR.parent  # submission repo root (holds metadata.json)
 REPO_ROOT = ROOT.parent
 MODEL_DIR = ROOT / "model"
 METADATA = ROOT / "metadata.json"
 SUBMISSION = ROOT / "submission.json"
 DB_PATH = DASH_DIR / "profiler.db"
-RUNS_DIR = DASH_DIR / "runs"                # raw profiler output files (gitignored)
-CAMPAIGN_SUMMARY = Path(os.environ.get(
-    "MUTA_CAMPAIGN_SUMMARY",
-    REPO_ROOT / "bench/measurements/campaign-20260819/official-profiler/summary.json",
-))
-CAMPAIGN_PARITY = Path(os.environ.get(
-    "MUTA_CAMPAIGN_PARITY",
-    REPO_ROOT / "bench/measurements/campaign-20260819/summary.json",
-))
-CAMPAIGN_ALTERNATIVE = Path(os.environ.get(
-    "MUTA_CAMPAIGN_ALTERNATIVE",
-    REPO_ROOT / "bench/measurements/campaign-20260819/avx2-website-relative-summary.json",
-))
-CAMPAIGN_AVX2_SCORE = Path(os.environ.get(
-    "MUTA_CAMPAIGN_AVX2_SCORE",
-    REPO_ROOT / "bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json",
-))
-OVERNIGHT_SUMMARY = Path(os.environ.get(
-    "MUTA_OVERNIGHT_SUMMARY",
-    REPO_ROOT / "bench/measurements/campaign-20260820-overnight/summary.json",
-))
-MODEL_EXTENSION_SUMMARY = Path(os.environ.get(
-    "MUTA_MODEL_EXTENSION_SUMMARY",
-    REPO_ROOT / "bench/measurements/model-extension/summary.json",
-))
-FINETUNE_SUMMARY = Path(os.environ.get(
-    "MUTA_FINETUNE_SUMMARY",
-    REPO_ROOT / "model-development/finetune/results/summary.json",
-))
+RUNS_DIR = DASH_DIR / "runs"  # raw profiler output files (gitignored)
+CAMPAIGN_SUMMARY = Path(
+    os.environ.get(
+        "MUTA_CAMPAIGN_SUMMARY",
+        REPO_ROOT / "bench/measurements/campaign-20260819/official-profiler/summary.json",
+    )
+)
+CAMPAIGN_PARITY = Path(
+    os.environ.get(
+        "MUTA_CAMPAIGN_PARITY",
+        REPO_ROOT / "bench/measurements/campaign-20260819/summary.json",
+    )
+)
+CAMPAIGN_ALTERNATIVE = Path(
+    os.environ.get(
+        "MUTA_CAMPAIGN_ALTERNATIVE",
+        REPO_ROOT / "bench/measurements/campaign-20260819/avx2-website-relative-summary.json",
+    )
+)
+CAMPAIGN_AVX2_SCORE = Path(
+    os.environ.get(
+        "MUTA_CAMPAIGN_AVX2_SCORE",
+        REPO_ROOT / "bench/measurements/campaign-20260819/avx2-score-of-record/comparison.json",
+    )
+)
+OVERNIGHT_SUMMARY = Path(
+    os.environ.get(
+        "MUTA_OVERNIGHT_SUMMARY",
+        REPO_ROOT / "bench/measurements/campaign-20260820-overnight/summary.json",
+    )
+)
+MODEL_EXTENSION_SUMMARY = Path(
+    os.environ.get(
+        "MUTA_MODEL_EXTENSION_SUMMARY",
+        REPO_ROOT / "bench/measurements/model-extension/summary.json",
+    )
+)
+FINETUNE_SUMMARY = Path(
+    os.environ.get(
+        "MUTA_FINETUNE_SUMMARY",
+        REPO_ROOT / "model-development/finetune/results/summary.json",
+    )
+)
 
 # Historical archive constants. New campaign evidence is scored by bench/score.py and loaded
 # from CAMPAIGN_SUMMARY. The SQLite archive preserves its old capped fastest-local-run proxy
@@ -145,8 +160,7 @@ def extract_metrics(report: dict) -> dict:
     }
 
 
-def compute_scores(arc_score, tps, peak_rss_mb, throttled, temp_c, crashed,
-                   tps_reference) -> dict:
+def compute_scores(arc_score, tps, peak_rss_mb, throttled, temp_c, crashed, tps_reference) -> dict:
     """ADTC scoring: S_total = 0.5*S_acc + 0.3*S_perf + 0.2*S_eff - P_thermal.
 
     Historical-only calculation: S_acc is proxied by arc_easy and S_perf is
@@ -156,24 +170,43 @@ def compute_scores(arc_score, tps, peak_rss_mb, throttled, temp_c, crashed,
     A crashed/OOM run is disqualified.
     """
     if crashed:
-        return {"s_acc": None, "s_perf": None, "s_eff": None,
-                "thermal_penalty": 0, "s_total": 0.0, "disqualified": True}
+        return {
+            "s_acc": None,
+            "s_perf": None,
+            "s_eff": None,
+            "thermal_penalty": 0,
+            "s_total": 0.0,
+            "disqualified": True,
+        }
     s_acc = round(arc_score * 100, 2) if arc_score is not None else None
-    s_perf = (round(min(tps / tps_reference, 1.0) * 100, 2)
-              if tps is not None and tps_reference else None) # tps_reference could be 15 tok/s
-    s_eff = (round(max(0.0, (RAM_LIMIT_GB - peak_rss_mb / 1024) / RAM_LIMIT_GB) * 100, 2)
-             if peak_rss_mb is not None else None)
-    penalty = THERMAL_PENALTY_PTS if (throttled or (temp_c is not None and temp_c > TEMP_LIMIT_C)) else 0
+    s_perf = (
+        round(min(tps / tps_reference, 1.0) * 100, 2) if tps is not None and tps_reference else None
+    )  # tps_reference could be 15 tok/s
+    s_eff = (
+        round(max(0.0, (RAM_LIMIT_GB - peak_rss_mb / 1024) / RAM_LIMIT_GB) * 100, 2)
+        if peak_rss_mb is not None
+        else None
+    )
+    penalty = (
+        THERMAL_PENALTY_PTS if (throttled or (temp_c is not None and temp_c > TEMP_LIMIT_C)) else 0
+    )
     s_total = None
     if s_acc is not None and s_perf is not None and s_eff is not None:
         s_total = round(max(0.0, 0.5 * s_acc + 0.3 * s_perf + 0.2 * s_eff - penalty), 2)
-    return {"s_acc": s_acc, "s_perf": s_perf, "s_eff": s_eff,
-            "thermal_penalty": penalty, "s_total": s_total, "disqualified": False}
+    return {
+        "s_acc": s_acc,
+        "s_perf": s_perf,
+        "s_eff": s_eff,
+        "thermal_penalty": penalty,
+        "s_total": s_total,
+        "disqualified": False,
+    }
 
 
 # ---------------------------------------------------------------------------
 # Persistence
 # ---------------------------------------------------------------------------
+
 
 def db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -208,7 +241,8 @@ def init_db() -> None:
             "UPDATE runs SET status='failed', finished_at=?,"
             " error='Profiling interrupted: the dashboard stopped before the run finished.'"
             " WHERE status='running'",
-            (now_iso(),))
+            (now_iso(),),
+        )
 
 
 def tps_reference(conn: sqlite3.Connection) -> tuple[float | None, dict | None]:
@@ -220,11 +254,15 @@ def tps_reference(conn: sqlite3.Connection) -> tuple[float | None, dict | None]:
     """
     row = conn.execute(
         "SELECT id, model_file, tps, skip_accuracy FROM runs WHERE tps IS NOT NULL"
-        " ORDER BY tps DESC, id ASC LIMIT 1").fetchone()
+        " ORDER BY tps DESC, id ASC LIMIT 1"
+    ).fetchone()
     if row is None:
         return None, None
-    return row["tps"], {"id": row["id"], "model_file": row["model_file"],
-                        "quick": bool(row["skip_accuracy"])}
+    return row["tps"], {
+        "id": row["id"],
+        "model_file": row["model_file"],
+        "quick": bool(row["skip_accuracy"]),
+    }
 
 
 def promote_run(run_id: int) -> tuple[dict | None, str | None]:
@@ -246,18 +284,27 @@ def promote_run(run_id: int) -> tuple[dict | None, str | None]:
     return {"promoted": True, "submission": str(SUBMISSION)}, None
 
 
-def run_row_public(row: sqlite3.Row, *, tps_reference: float | None,
-                   include_report: bool = False) -> dict:
+def run_row_public(
+    row: sqlite3.Row, *, tps_reference: float | None, include_report: bool = False
+) -> dict:
     d = dict(row)
     d["skip_accuracy"] = bool(d["skip_accuracy"])
     d["oom"] = bool(d["oom"])
     for k in ("throttled", "african_claim", "budget_claim"):
         d[k] = None if d[k] is None else bool(d[k])
-    d["scores"] = compute_scores(
-        arc_score=d["arc_score"], tps=d["tps"], peak_rss_mb=d["peak_rss_mb"],
-        throttled=bool(d["throttled"]), temp_c=d["temp_c"],
-        crashed=(d["status"] == "failed"), tps_reference=tps_reference,
-    ) if d["status"] != "running" else None
+    d["scores"] = (
+        compute_scores(
+            arc_score=d["arc_score"],
+            tps=d["tps"],
+            peak_rss_mb=d["peak_rss_mb"],
+            throttled=bool(d["throttled"]),
+            temp_c=d["temp_c"],
+            crashed=(d["status"] == "failed"),
+            tps_reference=tps_reference,
+        )
+        if d["status"] != "running"
+        else None
+    )
     if not include_report:
         d.pop("report_json", None)
         d.pop("log_tail", None)
@@ -273,13 +320,17 @@ _OOM_RE = re.compile(r"MemoryError|out of memory|std::bad_alloc|Killed: 9|oom", 
 
 RUN_LOCK = threading.Lock()
 STATE_LOCK = threading.Lock()
-CURRENT: dict | None = None  # {run_id, model_file, started_mono, started_at, skip_accuracy, log, proc}
+CURRENT: dict | None = (
+    None  # {run_id, model_file, started_mono, started_at, skip_accuracy, log, proc}
+)
 
 
 def find_profiler() -> list[str]:
-    for cand in (os.environ.get("ADTC_PROFILER"),
-                 str(Path.home() / "miniforge3/envs/ai/bin/adtc-profiler"),
-                 shutil.which("adtc-profiler")):
+    for cand in (
+        os.environ.get("ADTC_PROFILER"),
+        str(Path.home() / "miniforge3/envs/ai/bin/adtc-profiler"),
+        shutil.which("adtc-profiler"),
+    ):
         if cand and Path(cand).exists():
             return [cand]
     return ["conda", "run", "--no-capture-output", "-n", "ai", "adtc-profiler"]
@@ -304,16 +355,23 @@ def start_profile(model_file: str, skip_accuracy: bool) -> tuple[int | None, str
         with db() as conn:
             cur = conn.execute(
                 "INSERT INTO runs (model_file, started_at, status, skip_accuracy) VALUES (?,?,?,?)",
-                (model_file, now_iso(), "running", int(skip_accuracy)))
+                (model_file, now_iso(), "running", int(skip_accuracy)),
+            )
             run_id = cur.lastrowid
         global CURRENT
         with STATE_LOCK:
-            CURRENT = {"run_id": run_id, "model_file": model_file,
-                       "started_mono": time.monotonic(), "started_at": now_iso(),
-                       "skip_accuracy": skip_accuracy,
-                       "log": deque(maxlen=500), "proc": None}
-        threading.Thread(target=_run_profile, args=(run_id, model_file, skip_accuracy),
-                         daemon=True).start()
+            CURRENT = {
+                "run_id": run_id,
+                "model_file": model_file,
+                "started_mono": time.monotonic(),
+                "started_at": now_iso(),
+                "skip_accuracy": skip_accuracy,
+                "log": deque(maxlen=500),
+                "proc": None,
+            }
+        threading.Thread(
+            target=_run_profile, args=(run_id, model_file, skip_accuracy), daemon=True
+        ).start()
         return run_id, None
     except Exception as exc:  # insert/thread failure: don't leave the lock held
         RUN_LOCK.release()
@@ -339,14 +397,28 @@ def _run_profile(run_id: int, model_file: str, skip_accuracy: bool) -> None:
         METADATA.write_text(json.dumps(updated_metadata(meta, model_file), indent=2) + "\n")
         _append_log(f"Prepared metadata.json for model/{model_file}")
 
-        cmd = PROFILER_CMD + ["run", "--submission", str(ROOT), "--mode", "participant",
-                              "--output", str(out_path)]
+        cmd = PROFILER_CMD + [
+            "run",
+            "--submission",
+            str(ROOT),
+            "--mode",
+            "participant",
+            "--output",
+            str(out_path),
+        ]
         if skip_accuracy:
             cmd.append("--skip-accuracy")
         _append_log("$ " + " ".join(cmd))
         env = {**os.environ, "NO_COLOR": "1", "TERM": "dumb"}
-        proc = subprocess.Popen(cmd, cwd=str(ROOT), stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True, bufsize=1, env=env)
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            env=env,
+        )
         with STATE_LOCK:
             if CURRENT is not None:
                 CURRENT["proc"] = proc
@@ -367,15 +439,23 @@ def _run_profile(run_id: int, model_file: str, skip_accuracy: bool) -> None:
             CURRENT = None
         log_text = "\n".join(log_lines)
         oom = int(bool(_OOM_RE.search(log_text)) or (exit_code is not None and exit_code < 0))
-        cols = {"finished_at": now_iso(), "exit_code": exit_code, "error": error,
-                "oom": oom, "log_tail": log_text,
-                "status": "ok" if report is not None else "failed"}
+        cols = {
+            "finished_at": now_iso(),
+            "exit_code": exit_code,
+            "error": error,
+            "oom": oom,
+            "log_tail": log_text,
+            "status": "ok" if report is not None else "failed",
+        }
         if report is not None:
             cols["report_json"] = json.dumps(report)
             m = extract_metrics(report)
             cols.update(
-                tps=m["tps"], ttft_ms=m["ttft_ms"], peak_rss_mb=m["peak_rss_mb"],
-                arc_score=m["arc_score"], arc_samples=m["arc_samples"],
+                tps=m["tps"],
+                ttft_ms=m["ttft_ms"],
+                peak_rss_mb=m["peak_rss_mb"],
+                arc_score=m["arc_score"],
+                arc_samples=m["arc_samples"],
                 temp_c=m["temp_c"],
                 throttled=None if m["throttled"] is None else int(m["throttled"]),
                 cpu_p99=m["cpu_p99"],
@@ -401,33 +481,43 @@ def cancel_current() -> bool:
 # HTTP API
 # ---------------------------------------------------------------------------
 
+
 def state_payload() -> dict:
     models = []
     disk = {p.name: p for p in MODEL_DIR.glob("*.gguf") if p.is_file()}
     with db() as conn:
         conn.execute("BEGIN")  # one snapshot for the reference and the rows
         ref_tps, ref_run = tps_reference(conn)
-        run_files = [r["model_file"] for r in
-                     conn.execute("SELECT DISTINCT model_file FROM runs").fetchall()]
+        run_files = [
+            r["model_file"] for r in conn.execute("SELECT DISTINCT model_file FROM runs").fetchall()
+        ]
         for name, present in model_listing(list(disk), run_files):
             rows = conn.execute(
                 "SELECT * FROM runs WHERE model_file=? AND status!='running' ORDER BY id DESC",
-                (name,)).fetchall()
+                (name,),
+            ).fetchall()
             runs = [run_row_public(r, tps_reference=ref_tps) for r in rows]
             latest = runs[0] if runs else None
             scored = [r for r in runs if r["scores"] and r["scores"]["s_total"] is not None]
             best = max(scored, key=lambda r: r["scores"]["s_total"], default=None)
-            models.append({
-                "file": name, "present": present,
-                "size_bytes": disk[name].stat().st_size if present else None,
-                "quant": parse_quant(name), "params": parse_params(name),
-                "runs_count": len(runs), "latest": latest, "best": best,
-            })
+            models.append(
+                {
+                    "file": name,
+                    "present": present,
+                    "size_bytes": disk[name].stat().st_size if present else None,
+                    "quant": parse_quant(name),
+                    "params": parse_params(name),
+                    "runs_count": len(runs),
+                    "latest": latest,
+                    "best": best,
+                }
+            )
     with STATE_LOCK:
         current = None
         if CURRENT is not None:
             current = {
-                "run_id": CURRENT["run_id"], "model_file": CURRENT["model_file"],
+                "run_id": CURRENT["run_id"],
+                "model_file": CURRENT["model_file"],
                 "started_at": CURRENT["started_at"],
                 "elapsed_s": round(time.monotonic() - CURRENT["started_mono"], 1),
                 "skip_accuracy": CURRENT["skip_accuracy"],
@@ -469,14 +559,19 @@ def state_payload() -> dict:
         "models": models,
         "current": current,
         "metadata": {
-            "team_id": meta.get("team_id"), "domain": meta.get("domain"),
+            "team_id": meta.get("team_id"),
+            "domain": meta.get("domain"),
             "african_alpha_claim": meta.get("african_alpha_claim"),
             "budget_laptop_claim": meta.get("budget_laptop_claim"),
             "current_model_path": (meta.get("_runtime") or {}).get("model_path"),
         },
-        "scoring": {"tps_reference": ref_tps, "tps_reference_run": ref_run,
-                    "ram_limit_gb": RAM_LIMIT_GB,
-                    "temp_limit_c": TEMP_LIMIT_C, "thermal_penalty_pts": THERMAL_PENALTY_PTS},
+        "scoring": {
+            "tps_reference": ref_tps,
+            "tps_reference_run": ref_run,
+            "ram_limit_gb": RAM_LIMIT_GB,
+            "temp_limit_c": TEMP_LIMIT_C,
+            "thermal_penalty_pts": THERMAL_PENALTY_PTS,
+        },
         "campaign": campaign,
         "campaign_parity": campaign_parity,
         "campaign_alternative": campaign_alternative,
@@ -492,6 +587,20 @@ STATIC_FILES = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/script.js": ("script.js", "application/javascript; charset=utf-8"),
+    "/brand/muta-favicon-32.svg": ("brand/muta-favicon-32.svg", "image/svg+xml"),
+    "/brand/muta-wordmark-on-light.svg": (
+        "brand/muta-wordmark-on-light.svg",
+        "image/svg+xml",
+    ),
+    "/brand/InstrumentSans-Regular.ttf": (
+        "brand/InstrumentSans-Regular.ttf",
+        "font/ttf",
+    ),
+    "/brand/InstrumentSans-Bold.ttf": ("brand/InstrumentSans-Bold.ttf", "font/ttf"),
+    "/brand/LibreBaskerville-Regular.ttf": (
+        "brand/LibreBaskerville-Regular.ttf",
+        "font/ttf",
+    ),
 }
 
 _RUN_ID_RE = re.compile(r"^/api/runs/(\d+)$")
@@ -546,7 +655,8 @@ class Handler(BaseHTTPRequestHandler):
                 ref_tps, _ = tps_reference(conn)
                 if model:
                     rows = conn.execute(
-                        "SELECT * FROM runs WHERE model_file=? ORDER BY id DESC", (model,)).fetchall()
+                        "SELECT * FROM runs WHERE model_file=? ORDER BY id DESC", (model,)
+                    ).fetchall()
                 else:
                     rows = conn.execute("SELECT * FROM runs ORDER BY id DESC").fetchall()
             return self._json({"runs": [run_row_public(r, tps_reference=ref_tps) for r in rows]})
@@ -593,7 +703,8 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             with db() as conn:
                 cur = conn.execute(
-                    "DELETE FROM runs WHERE id=? AND status!='running'", (int(m.group(1)),))
+                    "DELETE FROM runs WHERE id=? AND status!='running'", (int(m.group(1)),)
+                )
             return self._json({"deleted": cur.rowcount > 0})
         self._json({"error": "The requested dashboard route was not found."}, 404)
 

@@ -468,7 +468,7 @@ _APP_CSP = (
 )
 _VIZ_FRAME_CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; "
-    "connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; "
+    "connect-src 'none'; media-src 'none'; font-src 'self'; object-src 'none'; "
     "child-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; "
     "form-action 'none'; frame-ancestors 'self'"
 )

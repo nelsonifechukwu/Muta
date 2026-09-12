@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Muta full-bleed application icon master">
-  <title>Muta full-bleed application icon master</title>
-  <desc>An opaque forest field with an asymmetric ivory u and terracotta foothold. Apply platform masks downstream.</desc>
-  <rect width="512" height="512" fill="#1D251F"/>
-  <path d="M150 164v74c0 76 42 116 106 116s106-40 106-116V112" fill="none" stroke="#F5F1E7" stroke-width="64" stroke-linecap="square" stroke-linejoin="round"/>
-  <rect x="232" y="404" width="48" height="48" rx="4" fill="#E58C69"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Muta full-bleed application icon"><title>Muta full-bleed application icon</title><rect width="512" height="512" rx="0" fill="#1D251F"/><g transform="translate(28 22) scale(.89)"><path d="M48 109Q40 106 40 114V366Q40 373 47 370C117 350 198 357 251 396C211 351 149 329 73 335Q61 335 61 324V113Z" fill="#F5F1E7"/><path d="M464 109Q472 106 472 114V366Q472 373 465 370C395 350 314 357 261 396C301 351 363 329 439 335Q451 335 451 324V113Z" fill="#F5F1E7"/><path d="M76 64C145 69 207 92 243 126Q252 135 252 149V382C205 342 143 318 76 322Q68 322 68 314V72Q68 63 76 64Z" fill="#F5F1E7"/><path d="M269 126C313 88 376 63 436 56Q444 55 444 64V314Q444 322 436 322C369 320 307 342 260 382V149Q260 135 269 126Z" fill="#E58C69"/><path transform="translate(236 427) scale(1.0)" d="M3 0H37Q40 0 40 3V37Q40 40 37 40H10L0 47.2V3Q0 0 3 0Z" fill="#E58C69"/></g></svg>

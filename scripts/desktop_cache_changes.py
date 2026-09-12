@@ -55,7 +55,8 @@ def classify(paths: Iterable[str], *, force_all: bool = False) -> dict[str, bool
         if (
             path in UI_INPUTS
             or (path.startswith("ui/") and path.rsplit(".", 1)[-1] in {"html", "css", "js"})
-            or path.startswith("ui/vendor/viz/")
+            or path.startswith(("ui/brand/", "ui/vendor/viz/"))
+            or (path.startswith("ui/") and path.endswith(".svg"))
         ):
             result["ui"] = True
         if path in GATEWAY_INPUTS or path.startswith(

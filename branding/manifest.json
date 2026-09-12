@@ -5,7 +5,7 @@
   "direction": "Open book + speaking dot (approved concept D)",
   "reference": "reference/approved-concept.png",
   "source": "Optically redrawn, font-free vector masters",
-  "production_integration": false,
+  "production_integration": true,
   "counts": {
     "inventoried_files": 84,
     "artwork_exports": 70,
@@ -24,13 +24,13 @@
   "files": [
     {
       "path": "BRAND-GUIDE.md",
-      "bytes": 8488,
-      "sha256": "3b9cdf8d1333bd3c440db953a5858f1f0fd721cbcde5d72340f166feee33ea59"
+      "bytes": 8499,
+      "sha256": "e7f282735abc88d0a42d0780c6a4b2a7af74ca3287f48ea06445cb3c9f8f2e92"
     },
     {
       "path": "README.md",
-      "bytes": 3433,
-      "sha256": "87958176edb714c5d9c36672fb2f30bedd62ad551847518b1dc837b8d480f58d"
+      "bytes": 3480,
+      "sha256": "94555b54e51d46f0f07e445accbe120dfacc676ad1b83613636d6616b09bee04"
     },
     {
       "path": "brand-board.png",
@@ -694,8 +694,8 @@
     },
     {
       "path": "source/build_manifest.py",
-      "bytes": 7154,
-      "sha256": "5eff60d1e7681798851636d85a773c281c8525f56efce4f21cea7cfbfc7cea0a"
+      "bytes": 7758,
+      "sha256": "826fa01b7ce459172af6ed30fdf2da44179cc7ae4209d0300aec23addea50e86"
     },
     {
       "path": "tokens.css",

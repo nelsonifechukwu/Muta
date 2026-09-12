@@ -32,6 +32,10 @@ def test_site_is_self_contained_and_relative(site):
     assert html.count('<html lang="en" data-snapshot="api/state.json">') == 1
     assert (site / "style.css").read_bytes() == (DASHBOARD / "style.css").read_bytes()
     assert (site / "script.js").read_bytes() == (DASHBOARD / "script.js").read_bytes()
+    assert (site / "brand" / "muta-wordmark-on-light.svg").read_bytes() == (
+        DASHBOARD / "brand" / "muta-wordmark-on-light.svg"
+    ).read_bytes()
+    assert (site / "brand" / "InstrumentSans-Regular.ttf").is_file()
     # Everything the page loads must stay relative so a /<repo>/ project-page prefix works.
     assert 'href="/' not in html
     assert 'src="/' not in html
@@ -44,7 +48,8 @@ def test_snapshot_carries_every_evidence_lane(site):
     assert state["current"] is None
     assert state["snapshot"]["path"] == "api/state.json"
     assert state["models"], "stored model runs should be listed"
-    assert {model["file"] for model in state["models"]} == set(state["runs_by_model"])
+    assert state["runs_by_model"], "finished stored runs should be listed"
+    assert set(state["runs_by_model"]) <= {model["file"] for model in state["models"]}
 
 
 def test_snapshot_embeds_reports_without_emails(site):

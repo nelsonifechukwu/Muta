@@ -57,6 +57,7 @@ UI_FILES = (
     "viz-theme.js",
     "worklet.js",
 )
+UI_DIRECTORIES = ("brand",)
 
 DOWNLOADS = {
     "katex.tar.gz": (
@@ -129,6 +130,11 @@ def build() -> None:
         if not source.is_file():
             raise RuntimeError(f"required UI source is missing: {source}")
         shutil.copy2(source, OUTPUT / name)
+    for name in UI_DIRECTORIES:
+        source = UI / name
+        if not source.is_dir():
+            raise RuntimeError(f"required UI source directory is missing: {source}")
+        shutil.copytree(source, OUTPUT / name)
 
     vendor = OUTPUT / "vendor"
     viz_source = UI / "vendor" / "viz"
@@ -154,6 +160,24 @@ def verify() -> None:
         output = OUTPUT / name
         if not output.is_file() or sha256(output) != sha256(source):
             raise RuntimeError(f"offline UI cache is stale or corrupt: {name}")
+    for name in UI_DIRECTORIES:
+        source_root = UI / name
+        output_root = OUTPUT / name
+        source_files = sorted(
+            path.relative_to(source_root) for path in source_root.rglob("*") if path.is_file()
+        )
+        output_files = (
+            sorted(
+                path.relative_to(output_root) for path in output_root.rglob("*") if path.is_file()
+            )
+            if output_root.is_dir()
+            else []
+        )
+        if source_files != output_files:
+            raise RuntimeError(f"offline UI cache has an incomplete source directory: {name}")
+        for relative in source_files:
+            if sha256(output_root / relative) != sha256(source_root / relative):
+                raise RuntimeError(f"offline UI cache is stale or corrupt: {name}/{relative}")
 
     vendor = OUTPUT / "vendor"
     for name, expected in VIZ_HASHES.items():

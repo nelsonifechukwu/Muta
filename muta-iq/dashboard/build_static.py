@@ -41,6 +41,7 @@ HTML_TAG = '<html lang="en">'
 STAMPED_TAG = f'<html lang="en" data-snapshot="{SNAPSHOT_PATH}">'
 MARKER = ".muta-iq-site"
 STATIC_ASSETS = ("style.css", "script.js")
+STATIC_DIRECTORIES = ("brand",)
 EVIDENCE_LANES = (
     "campaign",
     "campaign_parity",
@@ -118,6 +119,8 @@ def build(out: Path = DEFAULT_OUT) -> Path:
     (out / "index.html").write_text(html.replace(HTML_TAG, STAMPED_TAG, 1))
     for name in STATIC_ASSETS:
         shutil.copy2(DASH_DIR / name, out / name)
+    for name in STATIC_DIRECTORIES:
+        shutil.copytree(DASH_DIR / name, out / name)
     (out / "api").mkdir()
     (out / SNAPSHOT_PATH).write_text(json.dumps(payload, separators=(",", ":")) + "\n")
     (out / ".nojekyll").write_text("")

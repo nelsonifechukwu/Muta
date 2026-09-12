@@ -68,7 +68,7 @@ test("resolves the saved theme before paint and updates browser chrome", () => {
   const dark = browserTheme({ stored: "dark", systemDark: false });
   assert.deepEqual({ ...dark.root.dataset }, { theme: "dark", themePreference: "dark" });
   assert.equal(dark.root.style.colorScheme, "dark");
-  assert.equal(dark.meta.content, "#191815");
+  assert.equal(dark.meta.content, "#1d251f");
   assert.equal(dark.documentEvents.length, 0, "bootstrap should not announce a user change");
 
   const invalid = browserTheme({ stored: "sepia", systemDark: true });

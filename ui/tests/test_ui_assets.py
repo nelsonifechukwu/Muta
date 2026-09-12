@@ -54,7 +54,7 @@ def test_chat_shell_has_localized_routes_back_to_the_landing_page():
     assert "Ask about any subject" in HTML
     assert "maths or science question" not in HTML
 
-    for token in ("#faf9f5", "#f1ede3", "#302d24", "#dfddd4", "#ad4f31"):
+    for token in ("#faf9f5", "#f5f1e7", "#171c18", "#1d251f", "#ad4f31", "#e58c69"):
         assert token in CSS
     assert ".mobile-home-link { display: inline-flex; }" in CSS
 
@@ -99,7 +99,7 @@ def test_release_startup_is_truthful_accessible_and_non_blocking():
     assert exact in HTML and exact in splash and f'"startup.tagline": "{exact}"' in I18N
     assert "Math.random" not in startup
     assert "Math.min(99, requested)" in startup
-    assert 'body?.ready === true' in startup
+    assert "body?.ready === true" in startup
     assert "failures >= 3" in startup
     assert 'stage: "startup.connecting", failed: true, retryable: true' in startup
     assert 'await invoke("startup_snapshot")' in startup
@@ -134,13 +134,16 @@ def test_release_copy_is_terse_localized_and_exact():
     assert '"settings.limits":' not in I18N
     assert '"settings.limits":' not in (UI / "locales.js").read_text()
     assert '"settings.limits":' not in (UI / "locale-fr.js").read_text()
-    assert '"settings.limits":' not in (UI.parent / "scripts" / "generate_ui_catalogs.py").read_text()
+    assert (
+        '"settings.limits":' not in (UI.parent / "scripts" / "generate_ui_catalogs.py").read_text()
+    )
     assert "settings.limits" not in (UI / "locale-generated.meta.json").read_text()
     assert '"model.textTutor": "Text tutor"' in I18N
     assert '"model.imageTutor": "Text and image tutor"' in I18N
-    assert 'return t(model.supports_images ? "model.imageTutor" : "model.textTutor")' in (
-        UI / "app.js"
-    ).read_text()
+    assert (
+        'return t(model.supports_images ? "model.imageTutor" : "model.textTutor")'
+        in (UI / "app.js").read_text()
+    )
 
 
 def test_offline_dist_includes_the_release_english_catalog():
@@ -148,21 +151,24 @@ def test_offline_dist_includes_the_release_english_catalog():
     assert '"release-english.js"' in builder
 
 
-def test_wordmark_uses_a_crisp_css_square_below_the_u_on_every_app_surface():
-    assert HTML.count('class="muta-wordmark" role="img" aria-label="Muta"') >= 3
-    assert 'class="muta-wordmark startup-wordmark" role="img" aria-label="Muta"' in HTML
-    assert 'class="muta-wordmark-u">u<i></i></span>' in HTML
-    mark = "".join(_blocks(".muta-wordmark-u > i"))
-    assert "position: absolute" in mark
-    assert "bottom: -0.22em" in mark
-    assert "width: 0.16em" in mark and "height: 0.16em" in mark
-    assert "background: var(--accent)" in mark
-    assert "<img" not in re.search(r'<a class="brand".*?</a>', HTML, re.DOTALL).group()
+def test_wordmark_uses_approved_light_and_dark_artwork_on_every_app_surface():
+    assert HTML.count('class="muta-logo muta-logo-wordmark" role="img" aria-label="Muta"') == 3
+    assert (
+        'class="muta-logo muta-logo-stacked startup-wordmark" role="img" aria-label="Muta"' in HTML
+    )
+    assert HTML.count('src="brand/muta-wordmark-on-light.svg"') == 3
+    assert HTML.count('src="brand/muta-wordmark-on-dark.svg"') == 3
+    assert 'src="brand/muta-stacked-on-light.svg"' in HTML
+    assert 'src="brand/muta-stacked-on-dark.svg"' in HTML
+    assert "muta-wordmark-u" not in HTML
+    assert ':root[data-theme="dark"] .muta-logo > .muta-logo-dark { display: block; }' in CSS
 
 
 def test_sidebar_delete_is_confirmation_only_with_keyboard_focus_management():
     js = (UI / "app.js").read_text()
-    row = js[js.index("function renderConversationRow(") : js.index("async function refreshSidebar(")]
+    row = js[
+        js.index("function renderConversationRow(") : js.index("async function refreshSidebar(")
+    ]
     delete_request = row[row.index('del.addEventListener("click"') : row.index("actions.append(")]
     confirm = js[
         js.index('deleteChatConfirm.addEventListener("click"') : js.index(
@@ -197,20 +203,22 @@ def test_sidebar_delete_is_confirmation_only_with_keyboard_focus_management():
 
 def test_pinned_conversations_render_first_and_remain_accessible_on_touch():
     js = (UI / "app.js").read_text()
-    refresh = js[js.index("async function refreshSidebar(") : js.index(
-        "function scheduleConversationRetry("
-    )]
+    refresh = js[
+        js.index("async function refreshSidebar(") : js.index("function scheduleConversationRetry(")
+    ]
     assert '"conversation.pinned": "Pinned"' in I18N
     assert '"conversation.pin": "Pin chat"' in I18N
     assert 'pin.setAttribute("aria-pressed", String(Boolean(c.pinned)))' in js
-    assert 'method: "PUT"' in js and '/pin`' in js
+    assert 'method: "PUT"' in js and "/pin`" in js
     assert 'if (!await refreshSidebar()) throw new Error("sidebar refresh failed")' in js
     assert "replacement?.focus()" in js
     assert "if (pinned.length)" in refresh
     assert refresh.index('conversationGroupLabel("conversation.pinned")') < refresh.index(
         "for (const conversation of chats)"
     )
-    coarse = re.search(r"@media \(hover: none\), \(pointer: coarse\)\s*\{(?P<body>.*?)\}", CSS, re.DOTALL)
+    coarse = re.search(
+        r"@media \(hover: none\), \(pointer: coarse\)\s*\{(?P<body>.*?)\}", CSS, re.DOTALL
+    )
     assert coarse and ".conv-pin, .conv-del" in coarse.group("body")
     assert "width: 44px" in coarse.group("body") and "height: 44px" in coarse.group("body")
 
@@ -225,11 +233,16 @@ def test_fenced_code_highlighting_is_local_safe_and_theme_aware():
     assert "createTextNode(part.value)" in syntax
     assert "span.textContent = part.value" in syntax
     assert "innerHTML" not in syntax and "http://" not in syntax and "https://" not in syntax
-    assert 'code.replaceChildren()' in syntax
-    assert 'copyText(source)' in syntax
+    assert "code.replaceChildren()" in syntax
+    assert "copyText(source)" in syntax
     for token in (
-        "--syntax-comment", "--syntax-keyword", "--syntax-string", "--syntax-number",
-        "--syntax-function", "--syntax-operator", "--syntax-tag",
+        "--syntax-comment",
+        "--syntax-keyword",
+        "--syntax-string",
+        "--syntax-number",
+        "--syntax-function",
+        "--syntax-operator",
+        "--syntax-tag",
     ):
         assert CSS.count(token) >= 3
 
@@ -772,7 +785,7 @@ def test_settings_exposes_persisted_parallel_chat_and_power_switches():
     assert "if (enabled) drainQueuedConversations();" in js
     assert 'src="parallel-policy.js?v=' in HTML
     assert HTML.index('src="parallel-policy.js?v=') < HTML.index('src="app.js?v=')
-    assert "restoreDraft(item);\n    return toast(t(\"reply.parallelDisabled\"));" not in js
+    assert 'restoreDraft(item);\n    return toast(t("reply.parallelDisabled"));' not in js
 
 
 def test_host_mode_uses_the_accessible_application_switch_and_exact_sidebar_copy():
@@ -945,7 +958,10 @@ def test_locale_change_relocalizes_initial_host_read_failure():
     ]
     assert "let hostReadFailed = false" in js
     assert "hostReadFailed = true" in js
-    assert 'if (hostReadFailed) $("#host-save-state").textContent = releaseT("host.readFailed")' in coordinator
+    assert (
+        'if (hostReadFailed) $("#host-save-state").textContent = releaseT("host.readFailed")'
+        in coordinator
+    )
     assert "renderHostStatus(hostStatus, { clearReadFailure: false })" in coordinator
 
 
@@ -968,7 +984,7 @@ def test_host_capacity_warning_is_shown_only_through_the_canonical_mapping():
     assert 'warning === HOST_CAPACITY_WARNING ? "host.capacityInsufficient" : null' in dynamic
     assert "window.MutaDynamicLocalization.hostWarningKey(status.warning)" in js
     assert "warningKey ? releaseT(warningKey) : status.warning" in js
-    assert "mappedWarning || releaseT(status.enabled ? \"host.on\" : \"host.off\")" in js
+    assert 'mappedWarning || releaseT(status.enabled ? "host.on" : "host.off")' in js
 
 
 def test_model_catalog_starts_after_auth_without_blocking_saved_conversations():
@@ -1172,11 +1188,11 @@ def test_muta_share_gate_is_labeled_persistent_and_role_scoped():
     assert 'aria-labelledby="host-remove-title" aria-describedby="host-remove-copy"' in HTML
     assert 'releaseT("host.removeConfirm"' in js
     assert "window.MutaConfirmDialog.create" in js
-    assert 'background: settingsModal' in js
-    assert 'surfaceError: false' in js
+    assert "background: settingsModal" in js
+    assert "surfaceError: false" in js
     confirm_dialog = (UI / "confirm-dialog.js").read_text()
     assert 'background.setAttribute("inert", "")' in confirm_dialog
-    assert 'scheduleFocus(() => cancelButton.focus())' in confirm_dialog
+    assert "scheduleFocus(() => cancelButton.focus())" in confirm_dialog
     assert 'event.key === "Escape"' in confirm_dialog
     assert "conversations, files and learning profile" in RELEASE_ENGLISH
     assert "?token=" not in js
@@ -1275,7 +1291,9 @@ def test_dark_mode_is_prepaint_persistent_complete_and_accessible():
 
     assert HTML.index('src="theme.js') < HTML.index('rel="stylesheet" href="styles.css')
     assert 'id="setting-theme"' in HTML
-    assert all(f'<option value="{value}" data-i18n=' in HTML for value in ("system", "light", "dark"))
+    assert all(
+        f'<option value="{value}" data-i18n=' in HTML for value in ("system", "light", "dark")
+    )
     assert 'data-i18n="settings.appearance"' in HTML
     assert 'data-i18n-aria-label="settings.appearance"' in HTML
     assert 'for="setting-theme"' in HTML

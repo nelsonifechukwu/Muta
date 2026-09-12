@@ -11,7 +11,7 @@ LANDING = ROOT / "landing"
 
 def _contrast(foreground: str, background: str) -> float:
     def luminance(value: str) -> float:
-        channels = [int(value[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+        channels = [int(value[index : index + 2], 16) / 255 for index in (1, 3, 5)]
         linear = [
             channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
             for channel in channels
@@ -38,8 +38,15 @@ def test_landing_bundle_is_self_contained() -> None:
     sources = re.findall(r'\b(?:src|href)="([^"]+)"', html)
     authored_assets = [value for value in sources if not value.startswith(("#", "/", "http"))]
     assert {value.split("?", 1)[0] for value in authored_assets} == {
-        "styles.css", "script.js", "theme.js"
+        "styles.css",
+        "script.js",
+        "theme.js",
+        "brand/muta-favicon-32.svg",
+        "brand/muta-wordmark-on-light.svg",
+        "brand/muta-wordmark-on-dark.svg",
     }
+    for asset in authored_assets:
+        assert (LANDING / asset.split("?", 1)[0]).is_file()
     assert html.count('content="og.png"') == 2
     assert "url(http" not in css
 
@@ -65,7 +72,9 @@ def test_landing_header_can_switch_the_shared_theme_without_entering_chat() -> N
     assert 'id="theme-toggle"' in html
     assert 'type="button" aria-label="Switch to dark mode"' in html
     assert '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' in html
-    assert html.index('id="theme-toggle"') < html.index('class="button button-small button-solid nav-launch"')
+    assert html.index('id="theme-toggle"') < html.index(
+        'class="button button-small button-solid nav-launch"'
+    )
     assert "width: 2.75rem;" in css and "height: 2.75rem;" in css
     assert ':root[data-theme="dark"] .theme-icon-moon { display: none; }' in css
     assert "window.MutaTheme?.bindToggle(themeToggle)" in script

@@ -6,7 +6,7 @@
   const STORAGE_KEY = "muta-theme";
   const VALID_PREFERENCES = new Set(["system", "light", "dark"]);
   const DARK_QUERY = "(prefers-color-scheme: dark)";
-  const THEME_COLORS = Object.freeze({ light: "#faf9f5", dark: "#191815" });
+  const THEME_COLORS = Object.freeze({ light: "#faf9f5", dark: "#1d251f" });
   let started = false;
 
   function normalizePreference(value) {

@@ -6,20 +6,26 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'">
   <title>Starting Muta</title>
   <style>
-    :root { color-scheme: light dark; font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f1e7; color: #1d251f; }
+    @font-face { font-family: "Instrument Sans"; src: url("brand/InstrumentSans-Regular.ttf") format("truetype"); font-display: swap; }
+    :root { color-scheme: light dark; font: 16px/1.5 "Instrument Sans", ui-sans-serif, system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #faf9f5; color: #171c18; }
     main { width: min(520px, calc(100vw - 48px)); text-align: center; }
-    .wordmark { display: inline-block; color: currentColor; font: 600 64px/1 Georgia, serif; letter-spacing: -.05em; }
-    .wordmark-u { position: relative; display: inline-block; }
-    .wordmark-u i { position: absolute; left: 50%; bottom: -.2em; width: .16em; height: .16em; transform: translateX(-50%); background: #ad4f31; }
+    .logo { display: inline-grid; width: min(190px, 44vw); line-height: 0; }
+    .logo img { grid-area: 1 / 1; display: block; width: 100%; height: auto; }
+    .logo-dark { display: none !important; }
     p { max-width: 480px; margin: 28px auto 0; color: #5f665f; }
     #error { margin-top: 18px; padding: 12px; border-radius: 12px; color: #8b241c; background: #f7d8d4; text-align: left; white-space: pre-wrap; }
-    @media (prefers-color-scheme: dark) { body { background:#172019; color:#f5f1e7; } p { color:#b9c0b9; } }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1d251f; color: #f5f1e7; }
+      p { color: #c2bdb2; }
+      .logo-light { display: none !important; }
+      .logo-dark { display: block !important; }
+    }
   </style>
 </head>
 <body>
   <main>
-    <div class="wordmark" role="img" aria-label="Muta"><span aria-hidden="true">M<span class="wordmark-u">u<i></i></span>ta.</span></div>
+    <span class="logo" role="img" aria-label="Muta"><img class="logo-light" src="brand/muta-stacked-on-light.svg" alt=""><img class="logo-dark" src="brand/muta-stacked-on-dark.svg" alt=""></span>
     <p id="status" role="status">the personal education companion for every student at every level. powered by AI.</p>
     <div id="error" role="alert" hidden></div>
   </main>

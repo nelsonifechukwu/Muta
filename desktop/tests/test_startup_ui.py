@@ -29,9 +29,11 @@ def test_every_direct_desktop_build_stages_the_verified_ui_export_first() -> Non
     assert builder.index('REPO_ROOT / "scripts" / "build_ui_dist.py"') < builder.index(
         'run([npm, "ci"], cwd=DESKTOP)'
     )
-    desktop_test = makefile[makefile.index("desktop-test:") : makefile.index(
-        "final-package", makefile.index("desktop-test:")
-    )]
+    desktop_test = makefile[
+        makefile.index("desktop-test:") : makefile.index(
+            "final-package", makefile.index("desktop-test:")
+        )
+    ]
     assert "scripts/build_ui_dist.py" in desktop_test
     assert desktop_test.index("scripts/build_ui_dist.py") < desktop_test.index("cargo test")
     ui_builder = (ROOT / "scripts" / "build_ui_dist.py").read_text()
@@ -53,7 +55,7 @@ def test_desktop_progress_is_monotonic_failure_aware_and_retryable() -> None:
     assert "fn retry_startup" in rust
     assert "compare_exchange(false, true" in rust
     assert "startup_snapshot, retry_startup" in rust
-    assert "body.get(\"ready\")" in rust
+    assert 'body.get("ready")' in rust
     assert "checks" in rust and "inference" in rust and "db" in rust
     assert "fn monitor_backend" in rust
     assert '"tauri://localhost/"' in rust
@@ -66,7 +68,12 @@ def test_fallback_startup_surface_uses_only_the_brand_message() -> None:
     html = (DESKTOP / "splash" / "index.html").read_text()
     script = (DESKTOP / "splash" / "splash.js").read_text()
     assert "Muta" in html
-    assert "wordmark-u" in html and "<i></i>" in html
-    assert "the personal education companion for every student at every level. powered by AI." in html
+    assert "brand/muta-stacked-on-light.svg" in html
+    assert "brand/muta-stacked-on-dark.svg" in html
+    assert "InstrumentSans-Regular.ttf" in html
+    assert "wordmark-u" not in html and "<i></i>" not in html
+    assert (
+        "the personal education companion for every student at every level. powered by AI." in html
+    )
     assert "Verifying" not in html and "Loading" not in html
     assert "backend-status" not in script

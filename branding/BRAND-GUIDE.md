@@ -1,6 +1,6 @@
 # Muta brand guide
 
-This kit develops the selected open-book and speaking-dot identity into reusable artwork. It is a brand asset package for review and use in new materials; it does not change the product's existing interface or installed app icon.
+This kit develops the selected open-book and speaking-dot identity into reusable artwork. Its approved masters are the source of truth for the product interface, installed app icon, browser icon, landing page and branded companion surfaces.
 
 ## The identity
 

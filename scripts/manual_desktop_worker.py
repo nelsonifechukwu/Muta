@@ -30,6 +30,7 @@ UI_INPUTS = (
     "ui/*.css",
     "ui/*.js",
     "ui/*.svg",
+    "ui/brand/*",
     "ui/vendor/viz/*",
 )
 NATIVE_INPUTS = (
@@ -153,9 +154,7 @@ def target_environment(platform_name: str, cache_root: Path) -> dict[str, str]:
     # while rustup owns the requested cross-architecture stdlib, which makes Intel macOS
     # compilation fail with "can't find crate for core" despite the target being installed.
     rustup_bin = Path.home() / ".cargo" / "bin"
-    env["PATH"] = os.pathsep.join(
-        (str(python.parent), str(rustup_bin), env.get("PATH", ""))
-    )
+    env["PATH"] = os.pathsep.join((str(python.parent), str(rustup_bin), env.get("PATH", "")))
     env["MUTA_DESKTOP_TARGET_ARCH"] = target_arch
     env["MUTA_NATIVE_WORK"] = str(cache_root / "native-work" / platform_name)
     env["CARGO_TARGET_DIR"] = str(cache_root / "cargo-target" / platform_name)

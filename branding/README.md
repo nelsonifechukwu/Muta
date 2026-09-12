@@ -40,4 +40,4 @@ Make geometry, typography or palette changes in [build_assets.py](source/build_a
 
 Do not hand-edit only one generated logo variant: it will drift from the others and the builder may replace it. Preserve the bundled font licenses when distributing source material.
 
-This package is a clean optical redraw of the [approved concept](reference/approved-concept.png), following [option D in the design exploration](../docs/design-reviews/muta-book-m-sweep-2026-09-12/index.html#d). Preparing this kit does not replace production assets or deploy branding changes.
+This package is a clean optical redraw of the [approved concept](reference/approved-concept.png), following [option D in the design exploration](../docs/design-reviews/muta-book-m-sweep-2026-09-12/index.html#d). The approved masters are integrated into the Muta product; edit and regenerate this kit before changing production brand assets.
