@@ -10,6 +10,7 @@ __pycache__/
 .claude
 papers/
 media/
+muta-adtc-2026/
 
 # Local agent/test scratch output
 tmp/
