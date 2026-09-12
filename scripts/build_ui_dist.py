@@ -38,6 +38,7 @@ UI_FILES = (
     "locale-manifest.js",
     "locales.js",
     "math.js",
+    "muta-icon.svg",
     "parallel-policy.js",
     "popover-position.js",
     "product-analytics.js",

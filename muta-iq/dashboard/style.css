@@ -16,6 +16,7 @@
   --fg5: #aaa49d;
   --rule: #e6e2db;
   --rule-strong: #cec8be;
+  --brand: #ad4f31;
 
   /* accents — one per evidence lane, reused everywhere */
   --official: #1b6ca8;
@@ -113,6 +114,12 @@ code { color: var(--rejected); overflow-wrap: anywhere; }
 }
 .wordmark { display: flex; align-items: baseline; gap: 9px; min-width: max-content; text-decoration: none; }
 .wordmark strong { font: 500 15px var(--serif); letter-spacing: .01em; }
+.muta-wordmark-u { position: relative; display: inline-block; }
+.muta-wordmark-u > i {
+  position: absolute; left: 50%; bottom: -.22em;
+  width: .16em; height: .16em; transform: translateX(-50%);
+  border-radius: .015em; background: var(--brand);
+}
 .wordmark small { color: var(--fg4); font: 13px var(--serif); font-style: italic; }
 .wordmark:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 .topnav { display: flex; gap: 20px; margin-left: auto; }

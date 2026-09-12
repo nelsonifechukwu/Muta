@@ -2239,499 +2239,493 @@
     },
     {
       "file": "ui/index.html",
-      "line": 101,
+      "line": 102,
       "kind": "html:data-i18n",
       "key": "model.loading"
     },
     {
       "file": "ui/index.html",
-      "line": 108,
+      "line": 109,
       "kind": "html:data-i18n",
       "key": "model.choose"
     },
     {
       "file": "ui/index.html",
-      "line": 109,
+      "line": 110,
       "kind": "html:data-i18n",
       "key": "model.runsLocal"
     },
     {
       "file": "ui/index.html",
-      "line": 112,
+      "line": 113,
       "kind": "html:data-i18n",
       "key": "model.defaultRecommended"
     },
     {
       "file": "ui/index.html",
-      "line": 119,
+      "line": 120,
       "kind": "html:data-i18n",
       "key": "startup.opening"
     },
     {
       "file": "ui/index.html",
-      "line": 120,
+      "line": 121,
       "kind": "html:data-i18n",
       "key": "startup.retry"
     },
     {
       "file": "ui/index.html",
-      "line": 122,
+      "line": 123,
       "kind": "html:data-i18n-aria-label",
       "key": "power.openSettings"
     },
     {
       "file": "ui/index.html",
-      "line": 124,
+      "line": 125,
       "kind": "html:data-i18n",
       "key": "runtime.eco"
     },
     {
       "file": "ui/index.html",
-      "line": 128,
+      "line": 129,
       "kind": "html:data-i18n-aria-label",
       "key": "nav.home"
     },
     {
       "file": "ui/index.html",
-      "line": 134,
+      "line": 135,
       "kind": "html:data-i18n",
       "key": "startup.tagline"
     },
     {
       "file": "ui/index.html",
-      "line": 137,
+      "line": 138,
       "kind": "html:data-i18n",
       "key": "empty.title"
     },
     {
       "file": "ui/index.html",
-      "line": 138,
+      "line": 139,
       "kind": "html:data-i18n",
       "key": "empty.body"
     },
     {
       "file": "ui/index.html",
-      "line": 140,
+      "line": 141,
       "kind": "html:data-i18n-aria-label",
       "key": "chat.conversation"
     },
     {
       "file": "ui/index.html",
-      "line": 146,
+      "line": 147,
       "kind": "html:data-i18n-title",
       "key": "telemetry.ramTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 148,
+      "line": 149,
       "kind": "html:data-i18n-title",
       "key": "telemetry.peakTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 150,
+      "line": 151,
       "kind": "html:data-i18n-title",
       "key": "telemetry.tempTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 152,
+      "line": 153,
       "kind": "html:data-i18n-title",
       "key": "telemetry.throttleTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 154,
+      "line": 155,
       "kind": "html:data-i18n-title",
       "key": "telemetry.tpsTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 157,
+      "line": 158,
       "kind": "html:data-i18n-aria-label",
       "key": "queue.messages"
     },
     {
       "file": "ui/index.html",
-      "line": 161,
+      "line": 162,
       "kind": "html:data-i18n-aria-label",
       "key": "resources.learningResources"
     },
     {
       "file": "ui/index.html",
-      "line": 163,
+      "line": 164,
       "kind": "html:data-i18n-aria-label",
       "key": "composer.placeholder"
     },
     {
       "file": "ui/index.html",
-      "line": 163,
+      "line": 164,
       "kind": "html:data-i18n-data-placeholder",
       "key": "composer.placeholder"
     },
     {
       "file": "ui/index.html",
-      "line": 172,
+      "line": 173,
       "kind": "html:data-i18n-aria-label",
       "key": "resources.attachPdf"
     },
     {
       "file": "ui/index.html",
-      "line": 172,
+      "line": 173,
       "kind": "html:data-i18n-title",
       "key": "resources.attachPdf"
     },
     {
       "file": "ui/index.html",
-      "line": 175,
+      "line": 176,
       "kind": "html:data-i18n-aria-label",
       "key": "composer.attachImage"
     },
     {
       "file": "ui/index.html",
-      "line": 175,
+      "line": 176,
       "kind": "html:data-i18n-title",
       "key": "composer.attachImageTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 178,
+      "line": 179,
       "kind": "html:data-i18n-aria-label",
       "key": "composer.attachAudio"
     },
     {
       "file": "ui/index.html",
-      "line": 178,
+      "line": 179,
       "kind": "html:data-i18n-title",
       "key": "composer.attachAudioTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 181,
+      "line": 182,
       "kind": "html:data-i18n-aria-label",
       "key": "voice.talk"
     },
     {
       "file": "ui/index.html",
-      "line": 181,
+      "line": 182,
       "kind": "html:data-i18n-title",
       "key": "voice.talkTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 184,
+      "line": 185,
       "kind": "html:data-i18n-aria-label",
       "key": "web.label"
     },
     {
       "file": "ui/index.html",
-      "line": 184,
+      "line": 185,
       "kind": "html:data-i18n-title",
       "key": "web.title"
     },
     {
       "file": "ui/index.html",
-      "line": 188,
+      "line": 189,
       "kind": "html:data-i18n-title",
       "key": "reason.title"
     },
     {
       "file": "ui/index.html",
-      "line": 190,
+      "line": 191,
       "kind": "html:data-i18n",
       "key": "reason.auto"
     },
     {
       "file": "ui/index.html",
-      "line": 194,
+      "line": 195,
       "kind": "html:data-i18n-aria-label",
       "key": "composer.sendMessage"
     },
     {
       "file": "ui/index.html",
-      "line": 194,
+      "line": 195,
       "kind": "html:data-i18n-title",
       "key": "composer.send"
     },
     {
       "file": "ui/index.html",
-      "line": 200,
+      "line": 201,
       "kind": "html:data-i18n",
       "key": "fineprint"
     },
     {
       "file": "ui/index.html",
-      "line": 207,
+      "line": 208,
       "kind": "html:data-i18n-aria-label",
       "key": "reason.title"
     },
     {
       "file": "ui/index.html",
-      "line": 208,
+      "line": 209,
       "kind": "html:data-i18n",
       "key": "reason.off"
     },
     {
       "file": "ui/index.html",
-      "line": 208,
+      "line": 209,
       "kind": "html:data-i18n",
       "key": "reason.offHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 209,
+      "line": 210,
       "kind": "html:data-i18n",
       "key": "reason.auto"
     },
     {
       "file": "ui/index.html",
-      "line": 209,
+      "line": 210,
       "kind": "html:data-i18n",
       "key": "reason.autoHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 210,
+      "line": 211,
       "kind": "html:data-i18n",
       "key": "reason.extended"
     },
     {
       "file": "ui/index.html",
-      "line": 210,
+      "line": 211,
       "kind": "html:data-i18n",
       "key": "reason.extendedHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 216,
+      "line": 217,
       "kind": "html:data-i18n",
       "key": "settings.title"
     },
     {
       "file": "ui/index.html",
-      "line": 217,
+      "line": 218,
       "kind": "html:data-i18n-aria-label",
       "key": "settings.close"
     },
     {
       "file": "ui/index.html",
-      "line": 220,
+      "line": 221,
       "kind": "html:data-i18n",
       "key": "settings.interface"
     },
     {
       "file": "ui/index.html",
-      "line": 223,
+      "line": 224,
       "kind": "html:data-i18n",
       "key": "settings.language"
     },
     {
       "file": "ui/index.html",
-      "line": 224,
+      "line": 225,
       "kind": "html:data-i18n",
       "key": "settings.languageHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 230,
+      "line": 231,
       "kind": "html:data-i18n",
-      "key": "settings.appearance"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 232,
-      "kind": "html:data-i18n-aria-label",
       "key": "settings.appearance"
     },
     {
       "file": "ui/index.html",
       "line": 233,
-      "kind": "html:data-i18n",
-      "key": "settings.themeSystem"
+      "kind": "html:data-i18n-aria-label",
+      "key": "settings.appearance"
     },
     {
       "file": "ui/index.html",
       "line": 234,
       "kind": "html:data-i18n",
-      "key": "settings.themeLight"
+      "key": "settings.themeSystem"
     },
     {
       "file": "ui/index.html",
       "line": 235,
       "kind": "html:data-i18n",
+      "key": "settings.themeLight"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 236,
+      "kind": "html:data-i18n",
       "key": "settings.themeDark"
     },
     {
       "file": "ui/index.html",
-      "line": 240,
+      "line": 241,
       "kind": "html:data-i18n",
       "key": "settings.general"
     },
     {
       "file": "ui/index.html",
-      "line": 243,
+      "line": 244,
       "kind": "html:data-i18n",
       "key": "settings.parallel"
     },
     {
       "file": "ui/index.html",
-      "line": 244,
+      "line": 245,
       "kind": "html:data-i18n",
       "key": "settings.parallelHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 250,
+      "line": 251,
       "kind": "html:data-i18n",
       "key": "settings.powerSection"
     },
     {
       "file": "ui/index.html",
-      "line": 253,
+      "line": 254,
       "kind": "html:data-i18n",
       "key": "settings.power"
     },
     {
       "file": "ui/index.html",
-      "line": 254,
+      "line": 255,
       "kind": "html:data-i18n",
       "key": "settings.powerHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 261,
+      "line": 262,
       "kind": "html:data-i18n",
       "key": "power.checking"
     },
     {
       "file": "ui/index.html",
-      "line": 263,
+      "line": 264,
       "kind": "html:data-i18n",
       "key": "power.checkingHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 270,
+      "line": 271,
       "kind": "html:data-release-i18n",
       "key": "host.title"
     },
     {
       "file": "ui/index.html",
-      "line": 271,
+      "line": 272,
       "kind": "html:data-release-i18n",
       "key": "host.description"
     },
     {
       "file": "ui/index.html",
-      "line": 274,
+      "line": 275,
       "kind": "html:data-release-i18n",
       "key": "host.enable"
     },
     {
       "file": "ui/index.html",
-      "line": 28,
-      "kind": "html:data-i18n",
-      "key": "access.connecting"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 280,
+      "line": 281,
       "kind": "html:data-release-i18n",
       "key": "host.memoryLimit"
     },
     {
       "file": "ui/index.html",
-      "line": 281,
+      "line": 282,
       "kind": "html:data-release-i18n",
       "key": "host.competition"
     },
     {
       "file": "ui/index.html",
-      "line": 281,
+      "line": 282,
       "kind": "html:data-release-i18n",
       "key": "host.competitionHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 282,
+      "line": 283,
       "kind": "html:data-release-i18n",
       "key": "host.system"
     },
     {
       "file": "ui/index.html",
-      "line": 282,
+      "line": 283,
       "kind": "html:data-release-i18n",
       "key": "host.systemHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 286,
+      "line": 287,
       "kind": "html:data-i18n-alt",
       "key": "host.qrAlt"
     },
     {
       "file": "ui/index.html",
-      "line": 288,
+      "line": 289,
       "kind": "html:data-release-i18n",
       "key": "host.shareAddress"
     },
     {
       "file": "ui/index.html",
-      "line": 289,
-      "kind": "html:data-release-i18n",
-      "key": "host.copy"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 289,
-      "kind": "html:data-release-i18n-aria-label",
-      "key": "host.joinUrl"
+      "line": 29,
+      "kind": "html:data-i18n",
+      "key": "access.connecting"
     },
     {
       "file": "ui/index.html",
       "line": 290,
       "kind": "html:data-release-i18n",
-      "key": "host.certificateHelp"
+      "key": "host.copy"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 290,
+      "kind": "html:data-release-i18n-aria-label",
+      "key": "host.joinUrl"
     },
     {
       "file": "ui/index.html",
       "line": 291,
       "kind": "html:data-release-i18n",
+      "key": "host.certificateHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 292,
+      "kind": "html:data-release-i18n",
       "key": "host.downloadCertificate"
     },
     {
       "file": "ui/index.html",
-      "line": 297,
+      "line": 298,
       "kind": "html:data-release-i18n",
       "key": "host.people"
     },
     {
       "file": "ui/index.html",
-      "line": 302,
+      "line": 303,
       "kind": "html:data-i18n",
       "key": "privacy.heading"
     },
     {
       "file": "ui/index.html",
-      "line": 305,
+      "line": 306,
       "kind": "html:data-i18n",
       "key": "settings.analyticsHelp"
     },
     {
       "file": "ui/index.html",
-      "line": 31,
-      "kind": "html:data-i18n",
-      "key": "access.sharedNearby"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 314,
+      "line": 315,
       "kind": "html:data-i18n",
       "key": "resources.heading"
     },
     {
       "file": "ui/index.html",
-      "line": 315,
+      "line": 316,
       "kind": "html:data-i18n",
       "key": "resources.manageHelp"
     },
@@ -2739,17 +2733,17 @@
       "file": "ui/index.html",
       "line": 32,
       "kind": "html:data-i18n",
-      "key": "access.welcome"
+      "key": "access.sharedNearby"
     },
     {
       "file": "ui/index.html",
-      "line": 326,
+      "line": 327,
       "kind": "html:data-i18n",
       "key": "conversation.deleteTitle"
     },
     {
       "file": "ui/index.html",
-      "line": 327,
+      "line": 328,
       "kind": "html:data-i18n",
       "key": "conversation.deleteDefaultBody"
     },
@@ -2757,239 +2751,245 @@
       "file": "ui/index.html",
       "line": 33,
       "kind": "html:data-i18n",
-      "key": "access.signInPrivate"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 330,
-      "kind": "html:data-i18n",
-      "key": "conversation.cancel"
+      "key": "access.welcome"
     },
     {
       "file": "ui/index.html",
       "line": 331,
       "kind": "html:data-i18n",
-      "key": "conversation.confirmDelete"
+      "key": "conversation.cancel"
     },
     {
       "file": "ui/index.html",
-      "line": 339,
-      "kind": "html:data-release-i18n",
-      "key": "host.remove"
+      "line": 332,
+      "kind": "html:data-i18n",
+      "key": "conversation.confirmDelete"
     },
     {
       "file": "ui/index.html",
       "line": 34,
       "kind": "html:data-i18n",
-      "key": "access.openSecure"
+      "key": "access.signInPrivate"
     },
     {
       "file": "ui/index.html",
-      "line": 343,
+      "line": 340,
+      "kind": "html:data-release-i18n",
+      "key": "host.remove"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 344,
       "kind": "html:data-i18n",
       "key": "conversation.cancel"
     },
     {
       "file": "ui/index.html",
-      "line": 344,
+      "line": 345,
       "kind": "html:data-i18n",
       "key": "conversation.confirmDelete"
     },
     {
       "file": "ui/index.html",
       "line": 35,
-      "kind": "html:data-i18n-aria-label",
-      "key": "access.dialog"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 352,
       "kind": "html:data-i18n",
-      "key": "privacy.eyebrow"
+      "key": "access.openSecure"
     },
     {
       "file": "ui/index.html",
       "line": 353,
       "kind": "html:data-i18n",
-      "key": "privacy.title"
+      "key": "privacy.eyebrow"
     },
     {
       "file": "ui/index.html",
       "line": 354,
       "kind": "html:data-i18n",
-      "key": "privacy.description"
+      "key": "privacy.title"
     },
     {
       "file": "ui/index.html",
-      "line": 356,
+      "line": 355,
       "kind": "html:data-i18n",
-      "key": "privacy.sends"
+      "key": "privacy.description"
     },
     {
       "file": "ui/index.html",
       "line": 357,
       "kind": "html:data-i18n",
-      "key": "privacy.neverSends"
+      "key": "privacy.sends"
     },
     {
       "file": "ui/index.html",
       "line": 358,
       "kind": "html:data-i18n",
-      "key": "privacy.saved"
+      "key": "privacy.neverSends"
     },
     {
       "file": "ui/index.html",
       "line": 359,
       "kind": "html:data-i18n",
-      "key": "privacy.change"
+      "key": "privacy.saved"
     },
     {
       "file": "ui/index.html",
       "line": 36,
-      "kind": "html:data-i18n",
-      "key": "access.login"
+      "kind": "html:data-i18n-aria-label",
+      "key": "access.dialog"
     },
     {
       "file": "ui/index.html",
-      "line": 362,
+      "line": 360,
       "kind": "html:data-i18n",
-      "key": "privacy.keepPrivate"
+      "key": "privacy.change"
     },
     {
       "file": "ui/index.html",
       "line": 363,
       "kind": "html:data-i18n",
-      "key": "privacy.shareActivity"
+      "key": "privacy.keepPrivate"
     },
     {
       "file": "ui/index.html",
-      "line": 369,
+      "line": 364,
       "kind": "html:data-i18n",
-      "key": "drop.addFile"
+      "key": "privacy.shareActivity"
     },
     {
       "file": "ui/index.html",
       "line": 37,
       "kind": "html:data-i18n",
+      "key": "access.login"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 370,
+      "kind": "html:data-i18n",
+      "key": "drop.addFile"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 38,
+      "kind": "html:data-i18n",
       "key": "access.signup"
     },
     {
       "file": "ui/index.html",
-      "line": 40,
+      "line": 41,
       "kind": "html:data-i18n",
       "key": "access.username"
     },
     {
       "file": "ui/index.html",
-      "line": 42,
+      "line": 43,
       "kind": "html:data-i18n",
       "key": "access.password"
     },
     {
       "file": "ui/index.html",
-      "line": 44,
+      "line": 45,
       "kind": "html:data-i18n",
       "key": "access.login"
     },
     {
       "file": "ui/index.html",
-      "line": 47,
+      "line": 48,
       "kind": "html:data-i18n",
       "key": "access.chooseUsername"
     },
     {
       "file": "ui/index.html",
-      "line": 49,
+      "line": 50,
       "kind": "html:data-i18n",
       "key": "access.usernameRules"
     },
     {
       "file": "ui/index.html",
-      "line": 50,
+      "line": 51,
       "kind": "html:data-i18n",
       "key": "access.choosePassword"
     },
     {
       "file": "ui/index.html",
-      "line": 52,
+      "line": 53,
       "kind": "html:data-i18n",
       "key": "access.requestJoin"
     },
     {
       "file": "ui/index.html",
-      "line": 56,
+      "line": 57,
       "kind": "html:data-i18n",
       "key": "access.requestSent"
     },
     {
       "file": "ui/index.html",
-      "line": 57,
+      "line": 58,
       "kind": "html:data-i18n",
       "key": "access.awaitApproval"
     },
     {
       "file": "ui/index.html",
-      "line": 58,
+      "line": 59,
       "kind": "html:data-i18n",
       "key": "access.otherAccount"
     },
     {
       "file": "ui/index.html",
-      "line": 66,
+      "line": 67,
       "kind": "html:data-i18n-aria-label",
       "key": "nav.showConversations"
     },
     {
       "file": "ui/index.html",
-      "line": 72,
+      "line": 73,
       "kind": "html:data-i18n-aria-label",
       "key": "nav.home"
     },
     {
       "file": "ui/index.html",
-      "line": 73,
+      "line": 74,
       "kind": "html:data-i18n",
       "key": "nav.newChat"
     },
     {
       "file": "ui/index.html",
-      "line": 73,
+      "line": 74,
       "kind": "html:data-i18n-title",
       "key": "nav.newChat"
     },
     {
       "file": "ui/index.html",
-      "line": 75,
+      "line": 76,
       "kind": "html:data-i18n-aria-label",
       "key": "nav.conversations"
     },
     {
       "file": "ui/index.html",
-      "line": 81,
+      "line": 82,
       "kind": "html:data-i18n",
       "key": "nav.aboutMuta"
     },
     {
       "file": "ui/index.html",
-      "line": 86,
+      "line": 87,
       "kind": "html:data-i18n",
       "key": "settings.title"
     },
     {
       "file": "ui/index.html",
-      "line": 90,
+      "line": 91,
       "kind": "html:data-release-i18n",
       "key": "sidebar.hostLocal"
     },
     {
       "file": "ui/index.html",
-      "line": 91,
+      "line": 92,
       "kind": "html:data-release-i18n",
       "key": "account.logout"
     },
     {
       "file": "ui/index.html",
-      "line": 93,
+      "line": 94,
       "kind": "html:data-i18n",
       "key": "runtime.offlineLocal"
     },

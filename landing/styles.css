@@ -226,7 +226,12 @@ h3 { letter-spacing: -.018em; }
   text-decoration: none;
 }
 
-.brand span { color: var(--terracotta); }
+.muta-wordmark-u { position: relative; display: inline-block; }
+.muta-wordmark-u > i {
+  position: absolute; left: 50%; bottom: -.22em;
+  width: .16em; height: .16em; transform: translateX(-50%);
+  border-radius: .015em; background: var(--terracotta);
+}
 
 .desktop-nav {
   display: flex;
