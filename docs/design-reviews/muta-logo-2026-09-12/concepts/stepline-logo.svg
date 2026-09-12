@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" role="img" aria-labelledby="title desc">
+  <title id="title">Muta Stepline logo concept</title>
+  <desc id="desc">Three rising tiles beside a geometric lowercase Muta wordmark.</desc>
+  <g transform="translate(20 70)">
+    <rect x="0" y="96" width="52" height="52" rx="7" fill="#AD4F31"/>
+    <rect x="62" y="48" width="52" height="52" rx="7" fill="#1D251F"/>
+    <rect x="124" width="52" height="52" rx="7" fill="#1D251F"/>
+  </g>
+  <text x="230" y="192" fill="#302D24" font-family="Avenir Next, Inter, Arial, sans-serif" font-size="190" font-weight="600" letter-spacing="-8">muta</text>
+</svg>

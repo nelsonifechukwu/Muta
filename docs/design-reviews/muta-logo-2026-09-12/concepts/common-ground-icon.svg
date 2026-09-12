@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Muta Common Ground concept</title>
+  <desc id="desc">Two open forms face a shared terracotta idea.</desc>
+  <rect width="512" height="512" rx="112" fill="#1D251F"/>
+  <path d="M214 126h-36c-51 0-92 41-92 92v76c0 51 41 92 92 92h36" fill="none" stroke="#F5F1E7" stroke-width="54" stroke-linecap="square"/>
+  <path d="M298 126h36c51 0 92 41 92 92v76c0 51-41 92-92 92h-36" fill="none" stroke="#F5F1E7" stroke-width="54" stroke-linecap="square"/>
+  <rect x="224" y="224" width="64" height="64" rx="7" fill="#E58C69"/>
+</svg>

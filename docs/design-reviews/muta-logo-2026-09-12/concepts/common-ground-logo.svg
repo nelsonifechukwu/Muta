@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 260" role="img" aria-labelledby="title desc">
+  <title id="title">Muta Common Ground logo concept</title>
+  <desc id="desc">Two open forms around a shared terracotta idea beside the Muta wordmark.</desc>
+  <g transform="translate(20 50)">
+    <path d="M72 0H55C25 0 0 25 0 55v50c0 30 25 55 55 55h17" fill="none" stroke="#1D251F" stroke-width="24" stroke-linecap="square"/>
+    <path d="M112 0h17c30 0 55 25 55 55v50c0 30-25 55-55 55h-17" fill="none" stroke="#1D251F" stroke-width="24" stroke-linecap="square"/>
+    <rect x="80" y="68" width="32" height="32" rx="4" fill="#AD4F31"/>
+  </g>
+  <text x="250" y="192" fill="#302D24" font-family="Iowan Old Style, Baskerville, Georgia, serif" font-size="190" font-weight="700">Muta</text>
+</svg>

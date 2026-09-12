@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Muta The Foothold identity board</title>
+  <desc id="desc">Recommended Muta wordmark, application icon, construction, palette, and small-size tests.</desc>
+  <defs>
+    <style>.sans{font-family:Inter,Avenir Next,Arial,sans-serif}.serif{font-family:Iowan Old Style,Baskerville,Georgia,serif}.eye{font-size:17px;font-weight:700;letter-spacing:3px}.h1{font-size:66px;font-weight:600;letter-spacing:-2px}.h2{font-size:28px;font-weight:600}.body{font-size:19px}.tiny{font-size:14px;font-weight:700;letter-spacing:1.5px}</style>
+  </defs>
+  <rect width="1600" height="1000" fill="#FAF9F5"/>
+  <text x="70" y="68" class="sans eye" fill="#AD4F31">A / THE FOOTHOLD / RECOMMENDED</text>
+  <text x="70" y="145" class="serif h1" fill="#302D24">Start with what you know.</text>
+  <text x="70" y="188" class="sans body" fill="#625F57">One open letter. One solid idea. A system built for recognition at every size.</text>
+
+  <g transform="translate(70 248)">
+    <rect width="330" height="330" rx="72" fill="#1D251F"/>
+    <path d="M97 107v41c0 49 27 75 68 75s68-26 68-75V73" fill="none" stroke="#F5F1E7" stroke-width="42" stroke-linecap="square" stroke-linejoin="round"/>
+    <rect x="149" y="262" width="32" height="32" rx="3" fill="#E58C69"/>
+  </g>
+
+  <g transform="translate(450 268)">
+    <text x="0" y="170" class="serif" fill="#302D24" font-size="210" font-weight="700">Muta.</text>
+    <rect x="218" y="190" width="22" height="22" rx="2" fill="#AD4F31"/>
+    <text x="4" y="255" class="sans eye" fill="#625F57">PRIMARY WORDMARK</text>
+    <text x="4" y="292" class="sans body" fill="#302D24">The square is now a foothold—not a cube, dot, or decoration.</text>
+  </g>
+
+  <g transform="translate(70 640)">
+    <text x="0" y="0" class="sans tiny" fill="#625F57">LIGHT / DARK</text>
+    <rect x="0" y="28" width="430" height="180" rx="20" fill="#FFFDF8" stroke="#DFDDD4"/>
+    <path d="M70 86v23c0 29 16 45 41 45s41-16 41-45V65" fill="none" stroke="#1D251F" stroke-width="25" stroke-linecap="square" stroke-linejoin="round"/>
+    <rect x="102" y="169" width="18" height="18" rx="2" fill="#AD4F31"/>
+    <text x="200" y="128" class="serif" fill="#302D24" font-size="74" font-weight="600">Muta.</text>
+    <rect x="650" y="28" width="430" height="180" rx="20" fill="#1D251F"/>
+    <path d="M720 86v23c0 29 16 45 41 45s41-16 41-45V65" fill="none" stroke="#F5F1E7" stroke-width="25" stroke-linecap="square" stroke-linejoin="round"/>
+    <rect x="752" y="169" width="18" height="18" rx="2" fill="#E58C69"/>
+    <text x="850" y="128" class="serif" fill="#F5F1E7" font-size="74" font-weight="600">Muta.</text>
+  </g>
+
+  <g transform="translate(1190 250)">
+    <text x="0" y="0" class="sans tiny" fill="#625F57">OPTICAL SIZES</text>
+    <rect x="0" y="30" width="260" height="260" rx="24" fill="#F1EDE3"/>
+    <g transform="translate(25 70)">
+      <rect width="96" height="96" rx="21" fill="#1D251F"/><path d="M27 31v11c0 14 8 22 21 22s21-8 21-22V22" fill="none" stroke="#F5F1E7" stroke-width="13" stroke-linecap="square"/><rect x="42" y="78" width="12" height="12" rx="1" fill="#E58C69"/>
+      <text x="48" y="124" text-anchor="middle" class="sans body" fill="#625F57">32</text>
+    </g>
+    <g transform="translate(150 85)">
+      <rect width="72" height="72" rx="16" fill="#1D251F"/><path d="M21 24v8c0 10 6 16 15 16s15-6 15-16V17" fill="none" stroke="#F5F1E7" stroke-width="10" stroke-linecap="square"/><rect x="31.5" y="58" width="9" height="9" rx="1" fill="#E58C69"/>
+      <text x="36" y="109" text-anchor="middle" class="sans body" fill="#625F57">24</text>
+    </g>
+    <g transform="translate(164 190)">
+      <rect width="48" height="48" rx="10" fill="#1D251F"/><path d="M14 16v5c0 7 4 11 10 11s10-4 10-11V11" fill="none" stroke="#F5F1E7" stroke-width="7" stroke-linecap="square"/><rect x="21" y="38" width="6" height="6" rx=".7" fill="#E58C69"/>
+      <text x="24" y="76" text-anchor="middle" class="sans body" fill="#625F57">16</text>
+    </g>
+    <text x="0" y="340" class="sans tiny" fill="#625F57">COMPLETE PALETTE</text>
+    <rect x="0" y="366" width="44" height="44" rx="9" fill="#1D251F"/><text x="54" y="384" class="sans" font-size="15" fill="#302D24">Forest</text><text x="54" y="404" class="sans" font-size="14" fill="#625F57">#1D251F</text>
+    <rect x="0" y="436" width="44" height="44" rx="9" fill="#302D24"/><text x="54" y="454" class="sans" font-size="15" fill="#302D24">Ink</text><text x="54" y="474" class="sans" font-size="14" fill="#625F57">#302D24</text>
+    <rect x="0" y="506" width="44" height="44" rx="9" fill="#AD4F31"/><text x="54" y="524" class="sans" font-size="15" fill="#302D24">Foothold</text><text x="54" y="544" class="sans" font-size="14" fill="#625F57">#AD4F31</text>
+    <rect x="170" y="366" width="44" height="44" rx="9" fill="#F5F1E7" stroke="#DFDDD4"/><text x="224" y="384" class="sans" font-size="15" fill="#302D24">Ivory</text><text x="224" y="404" class="sans" font-size="14" fill="#625F57">#F5F1E7</text>
+    <rect x="170" y="436" width="44" height="44" rx="9" fill="#FAF9F5" stroke="#DFDDD4"/><text x="224" y="454" class="sans" font-size="15" fill="#302D24">Paper</text><text x="224" y="474" class="sans" font-size="14" fill="#625F57">#FAF9F5</text>
+    <rect x="170" y="506" width="44" height="44" rx="9" fill="#E58C69"/><text x="224" y="524" class="sans" font-size="15" fill="#302D24">Foothold · dark</text><text x="224" y="544" class="sans" font-size="14" fill="#625F57">#E58C69</text>
+  </g>
+  <text x="70" y="940" class="sans body" fill="#625F57">Two shapes · one-color safe · SVG native · wordmark live text for review, outlined at production approval.</text>
+</svg>

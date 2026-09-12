@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Muta application icon preview on forest">
+  <title>Muta application icon preview on forest</title>
+  <desc>A warm ivory open u above a terracotta foothold on a forest rounded square.</desc>
+  <rect width="512" height="512" rx="112" fill="#1D251F"/>
+  <path d="M150 164v74c0 76 42 116 106 116s106-40 106-116V112" fill="none" stroke="#F5F1E7" stroke-width="64" stroke-linecap="square" stroke-linejoin="round"/>
+  <rect x="232" y="404" width="48" height="48" rx="4" fill="#E58C69"/>
+</svg>

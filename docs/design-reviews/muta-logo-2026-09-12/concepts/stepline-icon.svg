@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Muta Stepline concept</title>
+  <desc id="desc">Three offset learning tiles rise from terracotta to ivory.</desc>
+  <rect width="512" height="512" rx="112" fill="#1D251F"/>
+  <rect x="106" y="306" width="92" height="92" rx="12" fill="#E58C69"/>
+  <rect x="210" y="210" width="92" height="92" rx="12" fill="#F5F1E7"/>
+  <rect x="314" y="114" width="92" height="92" rx="12" fill="#F5F1E7"/>
+</svg>

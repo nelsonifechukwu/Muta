@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Muta Common Ground identity board</title>
+  <desc id="desc">An alternative identity using two parties around one shared idea.</desc>
+  <defs><style>.sans{font-family:Inter,Avenir Next,Arial,sans-serif}.serif{font-family:Iowan Old Style,Baskerville,Georgia,serif}.eye{font-size:17px;font-weight:700;letter-spacing:3px}.h1{font-size:66px;font-weight:600}.body{font-size:20px}.label{font-size:15px;font-weight:700;letter-spacing:2px}</style></defs>
+  <rect width="1600" height="1000" fill="#FAF9F5"/>
+  <text x="70" y="68" class="sans eye" fill="#AD4F31">C / COMMON GROUND / ALTERNATIVE</text>
+  <text x="70" y="145" class="serif h1" fill="#302D24">Meet around the idea.</text>
+  <text x="70" y="188" class="sans body" fill="#625F57">Tutor and learner stay distinct, but reasoning gives them a shared centre.</text>
+  <rect x="70" y="250" width="410" height="410" rx="90" fill="#1D251F"/>
+  <path d="M242 321h-28c-45 0-82 37-82 82v104c0 45 37 82 82 82h28" fill="none" stroke="#F5F1E7" stroke-width="46" stroke-linecap="square"/>
+  <path d="M308 321h28c45 0 82 37 82 82v104c0 45-37 82-82 82h-28" fill="none" stroke="#F5F1E7" stroke-width="46" stroke-linecap="square"/>
+  <rect x="245" y="422" width="60" height="60" rx="7" fill="#E58C69"/>
+  <g transform="translate(575 348)">
+    <g transform="translate(0 12)"><path d="M54 5H42C22 5 6 21 6 41v34c0 20 16 36 36 36h12" fill="none" stroke="#1D251F" stroke-width="14" stroke-linecap="square"/><path d="M80 5h12c20 0 36 16 36 36v34c0 20-16 36-36 36H80" fill="none" stroke="#1D251F" stroke-width="14" stroke-linecap="square"/><rect x="58" y="47" width="18" height="18" rx="2" fill="#AD4F31"/></g>
+    <text x="165" y="112" class="serif" font-size="132" font-weight="600" fill="#302D24">Muta</text>
+    <text x="168" y="168" class="sans label" fill="#625F57">SYMBOL-LED LOCKUP</text>
+  </g>
+  <line x1="70" y1="740" x2="1530" y2="740" stroke="#DFDDD4"/>
+  <g transform="translate(70 790)"><text class="sans label" fill="#625F57">STRENGTH</text><text y="42" class="sans body" fill="#302D24">Human, relational, and clearly centred on dialogue.</text></g>
+  <g transform="translate(610 790)"><text class="sans label" fill="#625F57">RISK</text><text y="42" class="sans body" fill="#302D24">Can resemble focus, scan, or capture controls.</text></g>
+  <g transform="translate(1160 790)"><text class="sans label" fill="#625F57">STATUS</text><text y="54" class="sans" font-size="44" font-weight="700" fill="#1D251F">ALT 02</text></g>
+</svg>

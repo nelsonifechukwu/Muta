@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "status": "review-only",
+  "date": "2026-09-12",
+  "recommendedDirection": "The Foothold",
+  "productionBlocker": "Clear the Muta name and device mark in intended jurisdictions before rollout.",
+  "palette": {
+    "forest": "#1D251F",
+    "ink": "#302D24",
+    "ivory": "#F5F1E7",
+    "paper": "#FAF9F5",
+    "terracotta": "#AD4F31",
+    "terracottaLight": "#E58C69"
+  },
+  "typography": {
+    "wordmarkReviewSource": "Iowan Old Style Bold 700",
+    "displayCompanion": "Iowan Old Style 600/700",
+    "interfaceCompanion": "Inter 400/500/600",
+    "shippingNote": "Convert the approved wordmark to outlines in a separate implementation pass."
+  },
+  "assets": [
+    {"path": "README.md", "role": "rationale and usage specification", "sha256": "f8e75c0a64c1f8c066b77e131f7449781cfe0e3990c631c2a45d3cc042876505"},
+    {"path": "index.html", "role": "local review gallery", "sha256": "5c4a9170a1f77ab18a6098aa5072fdacad6d8592fc25e5940f7899bbc03e0e6c"},
+
+    {"path": "boards/00-overview.svg", "role": "concept comparison board source", "viewBox": "0 0 1600 1000", "background": "opaque paper", "sha256": "7bb6e03cf1bc79bc1bf11272b4af0837ad8ac12f06df198cfbb26bb7edb80916"},
+    {"path": "boards/00-overview.png", "role": "concept comparison board preview", "dimensions": "1600x1000", "sourceMaster": "boards/00-overview.svg", "background": "opaque paper", "sha256": "af858b62300ac6eba355185c2be86a74462e7c263a5289506cfb1fe8e28ac8af"},
+    {"path": "boards/01-foothold.svg", "role": "recommended-system board source", "viewBox": "0 0 1600 1000", "background": "opaque paper", "sha256": "523e78af95f3b010068d27d2a35018af64110f74cf8d4ebc978235a6046c57ac"},
+    {"path": "boards/01-foothold.png", "role": "recommended-system board preview", "dimensions": "1600x1000", "sourceMaster": "boards/01-foothold.svg", "background": "opaque paper", "sha256": "36404d848f0e739f4a4345001a946a1eff7d9d03193f533408579c4f5e78a2ad"},
+    {"path": "boards/02-stepline.svg", "role": "alternative 01 board source", "viewBox": "0 0 1600 1000", "background": "opaque paper", "sha256": "6e5642fcd6e13a1d9b70d773109447750c0c7ede28fea4d84021be0b054639be"},
+    {"path": "boards/02-stepline.png", "role": "alternative 01 board preview", "dimensions": "1600x1000", "sourceMaster": "boards/02-stepline.svg", "background": "opaque paper", "sha256": "7daeaa990be9bd561eeafbaed0a4f043d3483d6d3ef9681524c73ace36479d5b"},
+    {"path": "boards/03-common-ground.svg", "role": "alternative 02 board source", "viewBox": "0 0 1600 1000", "background": "opaque paper", "sha256": "39ba698f2d0b825c1e9d35e662bfd6c3c49961f2acab7a517fb25768745333a5"},
+    {"path": "boards/03-common-ground.png", "role": "alternative 02 board preview", "dimensions": "1600x1000", "sourceMaster": "boards/03-common-ground.svg", "background": "opaque paper", "sha256": "2cfc5e2f3f970401f980e8cc20ce550bfff28065183e53c2d1a7886c225b70e9"},
+    {"path": "boards/04-usage.svg", "role": "clear-space, minimum-size, and misuse board source", "viewBox": "0 0 1600 1000", "background": "opaque paper", "sha256": "6008c647079273cdcdcf2d43b88fa22f5dab4a1cf5f6ad5c5e40937ef9fca458"},
+    {"path": "boards/04-usage.png", "role": "clear-space, minimum-size, and misuse board preview", "dimensions": "1600x1000", "sourceMaster": "boards/04-usage.svg", "background": "opaque paper", "sha256": "746efd99200a36ad6575b75beebda0bf873b8f462d7f4f53ed75473e34baa301"},
+
+    {"path": "recommended/muta-symbol-on-light.svg", "role": "standalone two-color mark", "viewBox": "0 0 512 512", "background": "light or paper", "sourceMaster": "recommended/muta-symbol-on-light.svg", "sha256": "c2c2e9392923aaa6cbc482b7e208e9121ed0c33415b20c860b7c2abdcd83cac7"},
+    {"path": "recommended/muta-symbol-on-dark.svg", "role": "standalone reversed two-color mark", "viewBox": "0 0 512 512", "background": "forest or dark", "sourceMaster": "recommended/muta-symbol-on-light.svg", "sha256": "7c8c2114379243af1dd5b6e68f70a83e591962d87b0acaaa7b679fcb9eaf64a3"},
+    {"path": "recommended/muta-symbol-positive-1c.svg", "role": "standalone one-color positive mark", "viewBox": "0 0 512 512", "background": "light", "sourceMaster": "recommended/muta-symbol-on-light.svg", "sha256": "f77dbf9c17ac9ba14a41699f8d237bd3ce59eebc928e86eca4e3651770daaf33"},
+    {"path": "recommended/muta-symbol-reverse-1c.svg", "role": "standalone one-color reverse mark", "viewBox": "0 0 512 512", "background": "dark", "sourceMaster": "recommended/muta-symbol-on-light.svg", "sha256": "59790612c54dc76ce940667e5be11009a9e236f10c97d3f7537dfe56b6a73638"},
+
+    {"path": "recommended/muta-wordmark-on-light.svg", "role": "primary wordmark two-color review source", "viewBox": "0 0 700 250", "background": "light or paper", "sourceMaster": "recommended/muta-wordmark-on-light.svg", "sha256": "9961c70d382ed7e926cc75ddfb8ab99e3b8bee1176735374668e48c855fd001a"},
+    {"path": "recommended/muta-wordmark-on-dark.svg", "role": "primary wordmark reversed two-color review source", "viewBox": "0 0 700 250", "background": "forest or dark", "sourceMaster": "recommended/muta-wordmark-on-light.svg", "sha256": "9fcb76efb1b025e37973c55300231272459f32f81b0847f0f6aa4033a84ef4b9"},
+    {"path": "recommended/muta-wordmark-positive-1c.svg", "role": "primary wordmark one-color positive review source", "viewBox": "0 0 700 250", "background": "light", "sourceMaster": "recommended/muta-wordmark-on-light.svg", "sha256": "5b1349c2ac785a5723e968b335e5261419cf010c8819984e4645f45e07399c37"},
+    {"path": "recommended/muta-wordmark-reverse-1c.svg", "role": "primary wordmark one-color reverse review source", "viewBox": "0 0 700 250", "background": "dark", "sourceMaster": "recommended/muta-wordmark-on-light.svg", "sha256": "0869c73539c15b94a38d180435f53847b5e6f895b5a42f97991052110f92966d"},
+
+    {"path": "recommended/muta-lockup-on-light.svg", "role": "horizontal full logo two-color review source", "viewBox": "0 0 920 260", "background": "light or paper", "sourceMaster": "recommended/muta-lockup-on-light.svg", "sha256": "ab9ff73ccb9871c2a9f30f16e2df6e22baf59361289182ddb49e2353e9948515"},
+    {"path": "recommended/muta-lockup-on-dark.svg", "role": "horizontal full logo reversed two-color review source", "viewBox": "0 0 920 260", "background": "forest or dark", "sourceMaster": "recommended/muta-lockup-on-light.svg", "sha256": "b0670c2a423ed88d66050507e0b47fcc12df61dd5cbaec1ee3fd3bd811a859d1"},
+    {"path": "recommended/muta-lockup-positive-1c.svg", "role": "horizontal full logo one-color positive review source", "viewBox": "0 0 920 260", "background": "light", "sourceMaster": "recommended/muta-lockup-on-light.svg", "sha256": "ab685eb77062276fd0c944d87ab3450db40083db54a474e17c89c41ad9620105"},
+    {"path": "recommended/muta-lockup-reverse-1c.svg", "role": "horizontal full logo one-color reverse review source", "viewBox": "0 0 920 260", "background": "dark", "sourceMaster": "recommended/muta-lockup-on-light.svg", "sha256": "c93d4bbc864183c4e2f5ead69a9aae8ed189919b22631f325705528348a119fa"},
+
+    {"path": "recommended/muta-app-icon-master.svg", "role": "full-bleed opaque application icon source", "viewBox": "0 0 512 512", "background": "opaque forest; apply platform mask downstream", "sourceMaster": "recommended/muta-app-icon-master.svg", "sha256": "6e30ed34a19e8a271546c824a407453bbe2f46c2e6976d58ac43565ea3bc2bc7"},
+    {"path": "recommended/muta-app-icon-master-1024.png", "role": "full-bleed opaque application icon raster", "dimensions": "1024x1024", "sourceMaster": "recommended/muta-app-icon-master.svg", "background": "opaque forest; verified no alpha", "sha256": "26785578d1d1490b7e360b1c3aec327fa5168af0860e63b6b4f783edafa819ca"},
+    {"path": "recommended/muta-app-icon-preview-forest.svg", "role": "rounded forest application icon review preview", "viewBox": "0 0 512 512", "background": "transparent outside preview tile", "sourceMaster": "recommended/muta-app-icon-master.svg", "sha256": "ab26d13f9c665e7fb288ce72874c2eb2d239f996d7823987f3444aa07ce6fac6"},
+    {"path": "recommended/muta-app-icon-preview-forest-512.png", "role": "rounded forest application icon raster preview", "dimensions": "512x512", "sourceMaster": "recommended/muta-app-icon-preview-forest.svg", "background": "transparent outside preview tile", "sha256": "58b2989d43c1cc2b32446398373181265d557eba055e7df0e86fb3333642805b"},
+    {"path": "recommended/muta-app-icon-preview-paper.svg", "role": "rounded paper application icon review preview", "viewBox": "0 0 512 512", "background": "transparent outside preview tile", "sourceMaster": "recommended/muta-app-icon-master.svg", "sha256": "0771d434399dc9b663618adb673f5d902de56560491cb003b81cf012d41b728d"},
+    {"path": "recommended/muta-app-icon-preview-paper-512.png", "role": "rounded paper application icon raster preview", "dimensions": "512x512", "sourceMaster": "recommended/muta-app-icon-preview-paper.svg", "background": "transparent outside preview tile", "sha256": "51c039ebc688a622e254186d4c0ff78be7b8e294494184d2e5c7b58709f070cd"},
+    {"path": "recommended/muta-adaptive-background.svg", "role": "Android adaptive background layer", "viewBox": "0 0 512 512", "background": "opaque forest", "sourceMaster": "recommended/muta-app-icon-master.svg", "sha256": "a4761fa9c895226d017a1add2fa220211b3c046c2a2a08cd1f5a41feb581d27b"},
+    {"path": "recommended/muta-adaptive-foreground.svg", "role": "Android adaptive foreground layer with safe-zone inset", "viewBox": "0 0 512 512", "background": "transparent", "sourceMaster": "recommended/muta-app-icon-master.svg", "sha256": "7b92b3f48ebd3f0445b072f145d8d032b0ba17917cfe3ae0911cb8c1f3fb4660"},
+    {"path": "recommended/muta-adaptive-monochrome.svg", "role": "Android themed-icon monochrome layer with safe-zone inset", "viewBox": "0 0 512 512", "background": "transparent", "sourceMaster": "recommended/muta-app-icon-master.svg", "sha256": "daa7298a590beb5fe7cf16f960f6f8a2225af27cb5c19da347598c5cfa4cc061"},
+
+    {"path": "recommended/muta-favicon.svg", "role": "32-unit favicon source", "viewBox": "0 0 32 32", "background": "transparent outside forest tile", "sourceMaster": "recommended/muta-favicon.svg", "sha256": "7cf16fee73a8795cc4cd8894305fac05a3e8c9c60b96ca363e3ea9496e87062d"},
+    {"path": "recommended/muta-favicon-16.svg", "role": "16-unit optically adjusted favicon source", "viewBox": "0 0 16 16", "background": "transparent outside forest tile", "sourceMaster": "recommended/muta-favicon-16.svg", "sha256": "ef0e0558a19f034427873e756c5bad5fb36caf0348394f1597239a6745148309"},
+    {"path": "recommended/muta-favicon-16.png", "role": "actual 16-pixel favicon raster", "dimensions": "16x16", "sourceMaster": "recommended/muta-favicon-16.svg", "background": "transparent outside forest tile", "sha256": "a38c5472cac14e17cd74e995f9b74f55980ce73c07e424f509f6891890a70d05"},
+    {"path": "recommended/muta-favicon-24.png", "role": "actual 24-pixel favicon raster", "dimensions": "24x24", "sourceMaster": "recommended/muta-favicon.svg", "background": "transparent outside forest tile", "sha256": "8bb7be5355bdc84c368254759ad1e474c935d86f8b289e8ed1e6c750f180fb66"},
+    {"path": "recommended/muta-favicon-32.png", "role": "actual 32-pixel favicon raster", "dimensions": "32x32", "sourceMaster": "recommended/muta-favicon.svg", "background": "transparent outside forest tile", "sha256": "5ffe3130a2e5e06ebdb06ae5452b0777e85025a740d702b719566b1d04b7a373"},
+    {"path": "recommended/muta-favicon-on-paper.svg", "role": "favicon source for paper surfaces", "viewBox": "0 0 32 32", "background": "transparent outside paper tile", "sourceMaster": "recommended/muta-favicon.svg", "sha256": "75088552352bd2ec9157e372994f335b22222f1c620a8e83f08517676e4b0720"},
+    {"path": "recommended/muta-favicon-positive-1c.svg", "role": "standalone one-color small mark", "viewBox": "0 0 32 32", "background": "transparent; place on light surface", "sourceMaster": "recommended/muta-favicon.svg", "sha256": "e37df034102a7ecc23f9d116b3af8cf40adc0ee9bfcbc4c2ffe347c49764c1fb"},
+
+    {"path": "concepts/stepline-icon.svg", "role": "alternative 01 standalone concept source", "viewBox": "0 0 512 512", "background": "self-contained forest tile", "sha256": "c77cd6ca7b0cb730feb046a541375a777805489d252b786b619d7bb1928d1ee9"},
+    {"path": "concepts/stepline-logo.svg", "role": "alternative 01 logo concept source", "viewBox": "0 0 900 260", "background": "transparent; place on light surface", "sha256": "f8f2d86e827b615ef2c0b7b197e2fd283124f16dd3c3d9d322614a90e0b40654"},
+    {"path": "concepts/common-ground-icon.svg", "role": "alternative 02 standalone concept source", "viewBox": "0 0 512 512", "background": "self-contained forest tile", "sha256": "d8f48b790e2beb9d33f2fd15d55722e7314a2818e6667fe9a4b3b858bd1cbf47"},
+    {"path": "concepts/common-ground-logo.svg", "role": "alternative 02 logo concept source", "viewBox": "0 0 980 260", "background": "transparent; place on light surface", "sha256": "56ecba294666e2c682d9c40ebd8b3e14d2512784da5792fd34f085d3d6675a45"},
+
+    {"path": "process/reference-gemini-concept.png", "role": "supplied reference retained for critique context", "dimensions": "1024x914", "sha256": "deb57b22a33df1e6b0c8583ebbb60f47654b815531b214b123b832c4938ce62c"},
+    {"path": "process/ai-symbol-exploration.png", "role": "built-in image-generation ideation output; not production art", "dimensions": "1536x1024", "sha256": "a2971e4de861d111ad78b27641edeb64cb241936f89b407277d175bc80a5a305"},
+    {"path": "process/imagegen-prompt.md", "role": "image-generation provenance and exact prompt", "sha256": "f07da26911b23d29b9b36cd9f7f052a96c3ba54050c8b0be44fb06fe3dc1414c"},
+    {"path": "process/prototype-asymmetric-u.svg", "role": "discarded construction prototype", "viewBox": "0 0 512 512", "background": "transparent", "sha256": "bf3cb40dee22ccf888536f9a565427fabdbc42745c9ccdbd89ab63f94ca75f75"}
+  ]
+}
