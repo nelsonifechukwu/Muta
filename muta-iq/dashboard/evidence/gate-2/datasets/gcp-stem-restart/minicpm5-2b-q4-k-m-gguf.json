@@ -1,0 +1,1 @@
+{"dataset":"gcp-stem-restart","model":{"id":"minicpm5-2b-q4-k-m-gguf","label":"MiniCPM5 2B Q4_K_M","artifact":"MiniCPM5-2B-Q4_K_M.gguf","rank":9},"records":[],"captured":0,"attempt":{"status":"no_capture_recorded","label":"No capture recorded","reason":"The retained attempt inventory provides no more specific execution state."}}

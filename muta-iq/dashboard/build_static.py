@@ -33,6 +33,7 @@ import shutil
 from pathlib import Path
 
 import app  # the stdlib-only dashboard server, imported for its evidence loaders
+from build_gate_two_evidence import build as build_gate_two_evidence
 
 DASH_DIR = Path(__file__).resolve().parent
 DEFAULT_OUT = app.REPO_ROOT / "site"
@@ -121,6 +122,7 @@ def build(out: Path = DEFAULT_OUT) -> Path:
         shutil.copy2(DASH_DIR / name, out / name)
     for name in STATIC_DIRECTORIES:
         shutil.copytree(DASH_DIR / name, out / name)
+    build_gate_two_evidence(out / "evidence/gate-2")
     (out / "api").mkdir()
     (out / SNAPSHOT_PATH).write_text(json.dumps(payload, separators=(",", ":")) + "\n")
     (out / ".nojekyll").write_text("")

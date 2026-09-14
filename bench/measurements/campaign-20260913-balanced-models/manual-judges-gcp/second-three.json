@@ -1,0 +1,2169 @@
+{
+  "schema_version": 2,
+  "review_type": "provisional assistant manual review",
+  "official_judge_score": false,
+  "rubric_source": "bench/judges_prompt_report.py",
+  "rubric_sha256": "b063d8c4f54a23a9e2421eeb4254bece5553427ded4fa6be2dea305182010216",
+  "prompt_suite_source": "bench/judges_prompt_suite.py",
+  "prompt_suite_sha256": "2b6a50269c59e458667c96ed0c5662b5a8a748c1e05ea29a9dfd8f9f27edceab",
+  "scope": "Thirty completed GCP scalar judges requests: three exact GGUF artifacts, ten fixed prompts each. This is a local final-output rubric, not official competition judging or the composite ADTC score.",
+  "policy": [
+    "Only student-facing final text earns points. Separate reasoning_content and text inside <think>...</think> are excluded.",
+    "A nonempty answer field containing an unclosed <think> block is classified as reasoning-only, not as a final response.",
+    "When finish_reason is length but final text has started, fulfilled criteria in that final fragment may earn points; truncation remains reported.",
+    "The prohibition criterion earns no point when no final answer exists.",
+    "Weights and criterion labels are retained from the provisional local rubric; this is not the competition judges' official scoring process.",
+    "The existing rubric's concise-response bound is 500 characters; it is not replaced with a new exact-sentence-count scoring rule. A sentence-count deviation is separately flagged.",
+    "An empty final remains a delivery failure even if correct work appears in separate reasoning. The score measures delivery under this 1,024-token protocol, not unconstrained model capability."
+  ],
+  "source_snapshot": {
+    "path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-responses.jsonl",
+    "sha256": "14cf52b26f27194bfeeeaf090fef13ca9bd455ffe2af6a0bfcd1b1e5a48bb82f",
+    "bytes": 303902,
+    "lines": 67,
+    "matched_records": 30,
+    "scope": "Exact prefix captured from a growing append-only JSONL file. Each selected record is additionally bound by its source-line SHA-256 excluding the newline."
+  },
+  "events_snapshot": {
+    "path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-events.jsonl",
+    "sha256": "eb28434771fae1c2ce57b5b20a5467440c795bae242705c0b5ddbdb5ef78e23e",
+    "bytes": 7562,
+    "lines": 13
+  },
+  "shared_execution": {
+    "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+    "server_sha256": "379d824db41143559e5524bb8a84d543666fa8ccc1541bfbc0310fb698347d43",
+    "settings": {
+      "cache_ram_mib": 256,
+      "context_size": 4096,
+      "embedded_chat_template": true,
+      "external_system_prompt": false,
+      "gpu_layers": 0,
+      "max_tokens": 1024,
+      "seed": 3407,
+      "temperature": 0,
+      "threads": 2,
+      "top_p": 1
+    }
+  },
+  "validation": {
+    "models": 3,
+    "responses": 30,
+    "unique_expected_ids": true,
+    "prompts_exact": true,
+    "events_match": true,
+    "snapshot_prefix_sha256": "14cf52b26f27194bfeeeaf090fef13ca9bd455ffe2af6a0bfcd1b1e5a48bb82f",
+    "current_raw_lines": 67,
+    "all_full_prompts_reasoning_and_finals_read": true,
+    "all_models_have_start_and_stop_events": true,
+    "per_prompt_weight_sum": 10,
+    "per_model_weight_sum": 100
+  },
+  "independent_review": {
+    "status": "completed",
+    "reviewer": "/root/audit_benchmark_protocol",
+    "scope": "Full independent reading of GCP Qwen3 automated_05 and human_02 against the shared semantic rubric.",
+    "findings": [
+      "Photosynthesis is 8/10: correct biology with final text over the established 500-character concise bound; retain the sentence-format flag.",
+      "DNA is 10/10: recipe/segment and physical storage mappings convey the required links, proteins are products, and the check question and incorrect-answer follow-up are valid."
+    ]
+  },
+  "models": [
+    {
+      "model": "Qwen3.5-2B-Q4_0.gguf",
+      "model_sha256": "cd70221bebaee0503e0f6717e174250cd7825aa88438b3aabec9ad55731d9bb1",
+      "source_path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-responses.jsonl",
+      "source_sha256": "14cf52b26f27194bfeeeaf090fef13ca9bd455ffe2af6a0bfcd1b1e5a48bb82f",
+      "source_sha256_scope": "First 303902 bytes / 67 JSONL records captured for this review; the append-only source may subsequently grow.",
+      "source_filter": {
+        "model": "Qwen3.5-2B-Q4_0.gguf"
+      },
+      "response_count": 10,
+      "finished_final_count": 1,
+      "any_final_text_count": 1,
+      "truncated_response_count": 9,
+      "reasoning_only_count": 9,
+      "automated_score": 10,
+      "human_score": 0,
+      "score": 10,
+      "max_score": 100,
+      "observations": [
+        "Only the chalk calculation reaches a final answer. The photosynthesis response is reasoning-only, unlike the completed Mac photosynthesis answer.",
+        "All five human-judge prompts exhaust the token cap before final output."
+      ],
+      "lifecycle": [
+        {
+          "source_line": 7,
+          "record_sha256": "662d5ba68a4eacdf0d2f6bf0834391b7c554d16b8efd7d94b946167c42adf49b",
+          "record": {
+            "command": [
+              "/home/elijahnelson/Muta/bench/.artifacts/llama.cpp-b10175/build/bin/llama-server",
+              "--model",
+              "/home/elijahnelson/Muta/bench/measurements/campaign-20260913-balanced-models/models/Qwen3.5-2B-Q4_0.gguf",
+              "--host",
+              "127.0.0.1",
+              "--port",
+              "18081",
+              "--ctx-size",
+              "4096",
+              "--threads",
+              "2",
+              "--n-gpu-layers",
+              "0",
+              "--cache-ram",
+              "256",
+              "--jinja"
+            ],
+            "event": "model_start",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "Qwen3.5-2B-Q4_0.gguf",
+            "model_sha256": "cd70221bebaee0503e0f6717e174250cd7825aa88438b3aabec9ad55731d9bb1",
+            "server_sha256": "379d824db41143559e5524bb8a84d543666fa8ccc1541bfbc0310fb698347d43",
+            "settings": {
+              "cache_ram_mib": 256,
+              "context_size": 4096,
+              "embedded_chat_template": true,
+              "external_system_prompt": false,
+              "gpu_layers": 0,
+              "max_tokens": 1024,
+              "seed": 3407,
+              "temperature": 0,
+              "threads": 2,
+              "top_p": 1
+            },
+            "ts": "2026-09-14T14:15:29+00:00"
+          }
+        },
+        {
+          "source_line": 8,
+          "record_sha256": "67ef10b79b5bd55b19938697574613b2f8b1eef5f997e138694f3f51fc23b54d",
+          "record": {
+            "event": "model_stop",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "Qwen3.5-2B-Q4_0.gguf",
+            "ts": "2026-09-14T14:46:16+00:00"
+          }
+        }
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "source_line": 31,
+          "record_sha256": "7ad7081c98a7532324466ca5cb607b1e649baeff67f90d647ed92da14cf4a00d",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "cfc59a645a2a5ef2af2dc16ca425c938e899e7b0dc81582ab039574a4693b039",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_characters": 0,
+          "reasoning_characters": 4615,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "source_line": 32,
+          "record_sha256": "71a4f288669b32800e288b9900ab2603901ff839d019eddf722ba561f4c0f939",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "ca1153641c64c1cdadd5daa325edd7a4a8a780bad4615fd7e3f5f5328bd92624",
+          "prompt_sha256": "ea663986f02fa14e1f5edb011c705525181c39d6caa0e68972bfe3a93efd5c78",
+          "answer_characters": 0,
+          "reasoning_characters": 2670,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "source_line": 33,
+          "record_sha256": "f8bf3c377272b71e2c68e6e064322370222dfa5fc49d34b6d997db6b91df9b35",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "12b949752eab5b078e5cb00bab86a2cba4dc2e4720b1a28a68e7963ad3951948",
+          "prompt_sha256": "c55aef82428ee19815557b4d1cbb765b9b6f0ef1abb2c7a3c00b591feae4cb57",
+          "answer_characters": 0,
+          "reasoning_characters": 3910,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "source_line": 34,
+          "record_sha256": "50d831c03989b42d3ea2766eefd6bc1248b0b964cda559bb83a518caa7d2bd0b",
+          "answer_sha256": "6518dc595ab1ec74fb59fad0985fde55736d3a8e2187d43699d4bbb4c01e6786",
+          "reasoning_sha256": "8e0f6c04c917f5c0bcdc285c3046f317de436637fe98ee8bb7ab381bdfbc12e6",
+          "prompt_sha256": "af59ed40127de06d9a08cbdf873fda5fa3c65e5ca41919097cc4e31b453f5c71",
+          "answer_characters": 102,
+          "reasoning_characters": 1454,
+          "completion_tokens": 588,
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [],
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The delivered final explicitly selects C."
+            },
+            {
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final gives ₦3,000."
+            },
+            {
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final shows six boxes multiplied by ₦500."
+            },
+            {
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final contains the option and calculation without an extended explanation."
+            }
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "source_line": 35,
+          "record_sha256": "d8769767242c4d5d04d457b88e63030ced1a24f8d741f28346b3216fbe6ee7f2",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "3f5c8314036b5745b44701322da78a2b90cec63d69fb6e96fc5b7c3413d79e8b",
+          "prompt_sha256": "d6ab6a7448a0d7787f79f0b53b57c048d85ca351525c8e5f0e92e17ebeb48d77",
+          "answer_characters": 0,
+          "reasoning_characters": 4465,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "source_line": 36,
+          "record_sha256": "5c70202915f008165a2588fde384de897588bdd5eb36ec24a86b95d8315b1a66",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "603505755def8d994620d10ab2aceea79d7ef62a89ecdff0a4c458b17fd62812",
+          "prompt_sha256": "13b978c16bbd360a4e18b4a51e36344ac313072414d911ce8a18eaf7cc9008b3",
+          "answer_characters": 0,
+          "reasoning_characters": 2802,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "source_line": 37,
+          "record_sha256": "394ecfc52f51d3dffb292821e10c7667981d5444cb4f3657de3a218b74e6ec94",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "4a379a28ed1186ba9cabc65d185fda06974f0ca7300b785a58d16fc6e1679c3f",
+          "prompt_sha256": "835c5a49aba2163c9ba096f5d17286c5ef966480f122b64d3a2ece2b5843ffe0",
+          "answer_characters": 0,
+          "reasoning_characters": 3954,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "source_line": 38,
+          "record_sha256": "61996ca1eea36a2c73abb3e6ea5856e89a4504a3f8c07cea87c892b1ceb94b10",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "71862e1fd1c8a0df0366470684cb7b8ac084d317f573f3cef4ac270104d0d663",
+          "prompt_sha256": "39e60043c7c7ff0039bef0454cde8e1a3d361a73bb26f27f6c1b69ae4c33d969",
+          "answer_characters": 0,
+          "reasoning_characters": 3505,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "source_line": 39,
+          "record_sha256": "7ee74afa2caf5e3bdfd34a55ef72b8045f4d33bc2874ed8441591ccc1793405d",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "cfc59a645a2a5ef2af2dc16ca425c938e899e7b0dc81582ab039574a4693b039",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_characters": 0,
+          "reasoning_characters": 4615,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "source_line": 40,
+          "record_sha256": "839c60b046fb2e359282e170bb8b18ca62d9d2156d8e2e36b5188ca45a886b83",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "dccfb322a11367b45f9819a0f78b9cc98df7fd99eb0c3e66404103f47220d5aa",
+          "prompt_sha256": "56edf2b9c05cf0dddeee8a799697e576bb28d775823d4b5368ac07d303a376bd",
+          "answer_characters": 0,
+          "reasoning_characters": 3436,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "model": "Qwen3-1.7B-Q4_0.gguf",
+      "model_sha256": "c876f159707a4e4f70e045106c69db15bfc935a4981706fd4f65c6e7ea1e81c5",
+      "source_path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-responses.jsonl",
+      "source_sha256": "14cf52b26f27194bfeeeaf090fef13ca9bd455ffe2af6a0bfcd1b1e5a48bb82f",
+      "source_sha256_scope": "First 303902 bytes / 67 JSONL records captured for this review; the append-only source may subsequently grow.",
+      "source_filter": {
+        "model": "Qwen3-1.7B-Q4_0.gguf"
+      },
+      "response_count": 10,
+      "finished_final_count": 3,
+      "any_final_text_count": 3,
+      "truncated_response_count": 7,
+      "reasoning_only_count": 7,
+      "automated_score": 18,
+      "human_score": 10,
+      "score": 28,
+      "max_score": 100,
+      "observations": [
+        "The chalk, photosynthesis and DNA answers finish. Seven other prompts have no final output.",
+        "The DNA final fixes the prior Mac response's information/product confusion and provides a valid corrective follow-up.",
+        "Photosynthesis is scientifically correct; the 2-point deduction concerns the established concise-response bound, not the accuracy of the process explanation."
+      ],
+      "lifecycle": [
+        {
+          "source_line": 9,
+          "record_sha256": "ff3728fb9c89b5648d081c008ba8a16129b6caa1f1ce78b893439693d7a23582",
+          "record": {
+            "command": [
+              "/home/elijahnelson/Muta/bench/.artifacts/llama.cpp-b10175/build/bin/llama-server",
+              "--model",
+              "/home/elijahnelson/Muta/bench/measurements/campaign-20260913-balanced-models/models/Qwen3-1.7B-Q4_0.gguf",
+              "--host",
+              "127.0.0.1",
+              "--port",
+              "18081",
+              "--ctx-size",
+              "4096",
+              "--threads",
+              "2",
+              "--n-gpu-layers",
+              "0",
+              "--cache-ram",
+              "256",
+              "--jinja"
+            ],
+            "event": "model_start",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "Qwen3-1.7B-Q4_0.gguf",
+            "model_sha256": "c876f159707a4e4f70e045106c69db15bfc935a4981706fd4f65c6e7ea1e81c5",
+            "server_sha256": "379d824db41143559e5524bb8a84d543666fa8ccc1541bfbc0310fb698347d43",
+            "settings": {
+              "cache_ram_mib": 256,
+              "context_size": 4096,
+              "embedded_chat_template": true,
+              "external_system_prompt": false,
+              "gpu_layers": 0,
+              "max_tokens": 1024,
+              "seed": 3407,
+              "temperature": 0,
+              "threads": 2,
+              "top_p": 1
+            },
+            "ts": "2026-09-14T14:46:21+00:00"
+          }
+        },
+        {
+          "source_line": 10,
+          "record_sha256": "633a8f10f70ebac9224aebb86e071c14ae5c1bfbef30b2ff8c00205a3a75e0a5",
+          "record": {
+            "event": "model_stop",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "Qwen3-1.7B-Q4_0.gguf",
+            "ts": "2026-09-14T15:22:20+00:00"
+          }
+        }
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "source_line": 41,
+          "record_sha256": "0b2862978302c69dc06af2d91483683a9a15406f299e1ab75117572b8f83cb53",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "2e90c59870f25e767bae94c11033415f345f6edc0f405bdb94c4d20e5434e128",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_characters": 0,
+          "reasoning_characters": 5034,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "source_line": 42,
+          "record_sha256": "21ed8e71dd5ce5894cca8a20582063b71ecb8bf93286a8bfeafc27bd1e5be228",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "576965388469b39d7d36f4d9c4a0b8004ebfbd42d145de399d8d7e2f076d6627",
+          "prompt_sha256": "ea663986f02fa14e1f5edb011c705525181c39d6caa0e68972bfe3a93efd5c78",
+          "answer_characters": 0,
+          "reasoning_characters": 4083,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "source_line": 43,
+          "record_sha256": "32aa4b449b0aae87a783dd8513be46be8582d6c8e722db9e8f68adce78f24ce2",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "6db03a7e3644eb0e0ff586ede2867644a55fa49d51e7137f880f3cc50836e3a7",
+          "prompt_sha256": "c55aef82428ee19815557b4d1cbb765b9b6f0ef1abb2c7a3c00b591feae4cb57",
+          "answer_characters": 0,
+          "reasoning_characters": 4799,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "source_line": 44,
+          "record_sha256": "a8ca94e2abbc15f4d2f296787afe4da6016d9e6cc2c92f62c59c0312da018b98",
+          "answer_sha256": "10e2a8ce845f6b40fa52d2c158a9cd23bf17dbe079da68385b5863de45028629",
+          "reasoning_sha256": "751dc07c7c635bd57470e6e8fecbc8c8ac23b4ec1109edcea2fd70cd9c1ec544",
+          "prompt_sha256": "af59ed40127de06d9a08cbdf873fda5fa3c65e5ca41919097cc4e31b453f5c71",
+          "answer_characters": 176,
+          "reasoning_characters": 1162,
+          "completion_tokens": 517,
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [],
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The delivered final explicitly selects C."
+            },
+            {
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final gives ₦3,000."
+            },
+            {
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final shows six boxes multiplied by ₦500."
+            },
+            {
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final contains the option and calculation without an extended explanation."
+            }
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "source_line": 45,
+          "record_sha256": "2b7bd869da60dfb7d6b07e6e24d9cfb2bef942076a5964dc39cb675df002a699",
+          "answer_sha256": "9f756046c790b820a1fdfe31caad08a5401759354b1f6ad23dcd4973a1c941f5",
+          "reasoning_sha256": "4bd665e7c55a966abaece28f3735103963c27360906dea265d98ebb96ef4322a",
+          "prompt_sha256": "d6ab6a7448a0d7787f79f0b53b57c048d85ca351525c8e5f0e92e17ebeb48d77",
+          "answer_characters": 518,
+          "reasoning_characters": 1569,
+          "completion_tokens": 428,
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "requested_sentence_count_exceeded",
+            "concise_limit_exceeded"
+          ],
+          "score": 8,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The delivered final explicitly selects B."
+            },
+            {
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final identifies photosynthesis."
+            },
+            {
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final connects sunlight or light energy to food/glucose or stored chemical energy."
+            },
+            {
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "The final gives four explanatory sentences and 518 characters, exceeding the existing local rubric's 500-character concise-response bound. This does not alter credit for correct biology."
+            }
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "source_line": 46,
+          "record_sha256": "a412711d9b51e1b07eab5d4d2f046c586641e903e1127f7e37025e62b0b3b371",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "b6e60052af6b56824cc59c7ae13d2d94afa9ff2914afd08a6ed4cfb49eef0f49",
+          "prompt_sha256": "13b978c16bbd360a4e18b4a51e36344ac313072414d911ce8a18eaf7cc9008b3",
+          "answer_characters": 0,
+          "reasoning_characters": 3817,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "source_line": 47,
+          "record_sha256": "84ccef0fed8c73006f2917369dcd38c79f773c67ce084d777946a5c30363a1aa",
+          "answer_sha256": "5c37f99a188e4b479f0706ceaccb72ff4bdaff947b0cbce7ea344581dcae032b",
+          "reasoning_sha256": "a0cf8d886474e46bd37ce030d8d1853c6b00fd8fa6f5968785207a94f0ec742f",
+          "prompt_sha256": "835c5a49aba2163c9ba096f5d17286c5ef966480f122b64d3a2ece2b5843ffe0",
+          "answer_characters": 1440,
+          "reasoning_characters": 3189,
+          "completion_tokens": 985,
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [],
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "The final explicitly identifies the mistaken belief that all four terms name the same thing and explains their distinct roles."
+            },
+            {
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "DNA is described as the recipe book containing the body's instructions."
+            },
+            {
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "Genes are specific recipes within the DNA recipe book, a semantic statement that genes are parts of DNA."
+            },
+            {
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "Chromosomes are physical boxes holding the genetic recipes and are subsequently called storage units; this satisfies the DNA-packaging relationship at the local rubric's introductory level."
+            },
+            {
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "Each gene recipe tells the body how to make a protein, and proteins are the resulting dishes/products."
+            },
+            {
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "Recipes within the book and dishes produced from recipes maintain the information-to-product distinction. The box/library wording is imprecise but does not reverse a biological relationship."
+            },
+            {
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "The final asks the student to map parts of a recipe book to the genetic terms."
+            },
+            {
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "The final supplies an explicit correction for the hypothetical incorrect answer that the terms are all the same."
+            }
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "source_line": 48,
+          "record_sha256": "e9bf0457f5d1778afc1acf155194ab94f8cb2e748ca293cae57eaa953da21daa",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "54f5d169e7ab5a27d9aa5fa8af8adca39e52205385ad683c598050651f397983",
+          "prompt_sha256": "39e60043c7c7ff0039bef0454cde8e1a3d361a73bb26f27f6c1b69ae4c33d969",
+          "answer_characters": 0,
+          "reasoning_characters": 2430,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "source_line": 49,
+          "record_sha256": "cac70d491c2e042b2f8521f98409f32b508bf62eb8687d04c741c8ba0f0de07a",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "2e90c59870f25e767bae94c11033415f345f6edc0f405bdb94c4d20e5434e128",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_characters": 0,
+          "reasoning_characters": 5034,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "source_line": 50,
+          "record_sha256": "c65a642033fdd23c52fed69041ab658fe7fb6de24fa52bec534919b23f931a15",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "23339a8548b9d9a03075549ab5e7cd998149ea05767f796cad6f54881b276026",
+          "prompt_sha256": "56edf2b9c05cf0dddeee8a799697e576bb28d775823d4b5368ac07d303a376bd",
+          "answer_characters": 0,
+          "reasoning_characters": 2246,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "model": "LFM2.5-2.6B-Q4_0.gguf",
+      "model_sha256": "e1a61bf937bc60726e18626e97f7ee9bfd2574d95744c2ed909de98b78006fbe",
+      "source_path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-responses.jsonl",
+      "source_sha256": "14cf52b26f27194bfeeeaf090fef13ca9bd455ffe2af6a0bfcd1b1e5a48bb82f",
+      "source_sha256_scope": "First 303902 bytes / 67 JSONL records captured for this review; the append-only source may subsequently grow.",
+      "source_filter": {
+        "model": "LFM2.5-2.6B-Q4_0.gguf"
+      },
+      "response_count": 10,
+      "finished_final_count": 2,
+      "any_final_text_count": 2,
+      "truncated_response_count": 8,
+      "reasoning_only_count": 8,
+      "automated_score": 20,
+      "human_score": 0,
+      "score": 20,
+      "max_score": 100,
+      "observations": [
+        "Both short multiple-choice answers finish and satisfy all criteria.",
+        "All eight longer prompts exhaust the token cap with no final answer."
+      ],
+      "lifecycle": [
+        {
+          "source_line": 11,
+          "record_sha256": "54b4667d497714cb962200cf5c93573e401c223bb97e1d0bea5e60293977a2d8",
+          "record": {
+            "command": [
+              "/home/elijahnelson/Muta/bench/.artifacts/llama.cpp-b10175/build/bin/llama-server",
+              "--model",
+              "/home/elijahnelson/Muta/bench/measurements/campaign-20260913-balanced-models/models/LFM2.5-2.6B-Q4_0.gguf",
+              "--host",
+              "127.0.0.1",
+              "--port",
+              "18081",
+              "--ctx-size",
+              "4096",
+              "--threads",
+              "2",
+              "--n-gpu-layers",
+              "0",
+              "--cache-ram",
+              "256",
+              "--jinja"
+            ],
+            "event": "model_start",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "LFM2.5-2.6B-Q4_0.gguf",
+            "model_sha256": "e1a61bf937bc60726e18626e97f7ee9bfd2574d95744c2ed909de98b78006fbe",
+            "server_sha256": "379d824db41143559e5524bb8a84d543666fa8ccc1541bfbc0310fb698347d43",
+            "settings": {
+              "cache_ram_mib": 256,
+              "context_size": 4096,
+              "embedded_chat_template": true,
+              "external_system_prompt": false,
+              "gpu_layers": 0,
+              "max_tokens": 1024,
+              "seed": 3407,
+              "temperature": 0,
+              "threads": 2,
+              "top_p": 1
+            },
+            "ts": "2026-09-14T15:22:28+00:00"
+          }
+        },
+        {
+          "source_line": 12,
+          "record_sha256": "3a30d1658be58f8128d0abc7eac2949599eb56c9e7832e0e5c1b5c7627dfb723",
+          "record": {
+            "event": "model_stop",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "LFM2.5-2.6B-Q4_0.gguf",
+            "ts": "2026-09-14T15:51:55+00:00"
+          }
+        }
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "source_line": 51,
+          "record_sha256": "a3b2d20c198797723c85810aca53d05de04682705a16c1efc7b4456ce7071a53",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "16c5842ca66184668fe64738c170df74ae4843919aa53ea5f9dd2a8332ccf282",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_characters": 0,
+          "reasoning_characters": 4571,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "source_line": 52,
+          "record_sha256": "1a397354c4761546660159a09047164f09b9918180165dbd62960ab9c6e22403",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "e71f804947c429c53d7654747140b5f21880e22333994d3f10f8cb270f38583a",
+          "prompt_sha256": "ea663986f02fa14e1f5edb011c705525181c39d6caa0e68972bfe3a93efd5c78",
+          "answer_characters": 0,
+          "reasoning_characters": 4456,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "source_line": 53,
+          "record_sha256": "ff41289078c378cea07191a780ffdbe89e20f781a508e6202d564df8d42eea61",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "710942a10e4735d44c4f03879df7e6f5f9ae0deae50cc164fad9888335c77ed1",
+          "prompt_sha256": "c55aef82428ee19815557b4d1cbb765b9b6f0ef1abb2c7a3c00b591feae4cb57",
+          "answer_characters": 0,
+          "reasoning_characters": 4454,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "source_line": 54,
+          "record_sha256": "bdb9e3d953425a8db274b6f68ce66e8a75927cf0fe5a08ce504ae1a3ff7e2ef6",
+          "answer_sha256": "b8f44e0886f3b0f98ca3198dad35b48da6a610bec902ebf8df8d786f81193f74",
+          "reasoning_sha256": "196e80897aab634a00c2b139cd8cec15347e63e32a1e1525b088a83db36f9732",
+          "prompt_sha256": "af59ed40127de06d9a08cbdf873fda5fa3c65e5ca41919097cc4e31b453f5c71",
+          "answer_characters": 22,
+          "reasoning_characters": 662,
+          "completion_tokens": 222,
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [],
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The delivered final explicitly selects C."
+            },
+            {
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final gives ₦3,000."
+            },
+            {
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final shows six boxes multiplied by ₦500."
+            },
+            {
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final contains the option and calculation without an extended explanation."
+            }
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "source_line": 55,
+          "record_sha256": "90c10eedacf9b56b977b296fb0e266230b5ddef2c005649d0ef6a1ad5410cb67",
+          "answer_sha256": "8e14933a6a509f16ed79b6e593e1ebf6fd35a8ec5dbaed2b3add74be7b3e0f25",
+          "reasoning_sha256": "e0b945fb8162124c79f518aa45cafed73284f6a9d781044e7ea8aaba05fe009d",
+          "prompt_sha256": "d6ab6a7448a0d7787f79f0b53b57c048d85ca351525c8e5f0e92e17ebeb48d77",
+          "answer_characters": 130,
+          "reasoning_characters": 1018,
+          "completion_tokens": 233,
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [],
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The delivered final explicitly selects B."
+            },
+            {
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final identifies photosynthesis."
+            },
+            {
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final connects sunlight or light energy to food/glucose or stored chemical energy."
+            },
+            {
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The delivered final gives the requested short explanatory sentence."
+            }
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "source_line": 56,
+          "record_sha256": "4080de8ead51d0d75d1c9699df5f1ffb1d82798c6a31b54e1f7f777240033bd5",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "17100aeb4ab5b4d4aca2dc44c5a32b758705f8089e1924740733c92f28fd56c2",
+          "prompt_sha256": "13b978c16bbd360a4e18b4a51e36344ac313072414d911ce8a18eaf7cc9008b3",
+          "answer_characters": 0,
+          "reasoning_characters": 3805,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "source_line": 57,
+          "record_sha256": "80d4d6a82b5853a4cacb997726a324726a4a021fa5f7c2379cf442bb0516a9c5",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "563d900aa39ba74ea9d30fa994087c84add318f8c6c7b0de2e744341fa0cc6d3",
+          "prompt_sha256": "835c5a49aba2163c9ba096f5d17286c5ef966480f122b64d3a2ece2b5843ffe0",
+          "answer_characters": 0,
+          "reasoning_characters": 4326,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "source_line": 58,
+          "record_sha256": "5d4c5551a9e3faf57c2728a3c4b2d82b5274d902b0ee1514d60165c22cf6176f",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "9257b8943bc11d2f28204ea688744a21f184257b0313099d39392b4ba0f86f03",
+          "prompt_sha256": "39e60043c7c7ff0039bef0454cde8e1a3d361a73bb26f27f6c1b69ae4c33d969",
+          "answer_characters": 0,
+          "reasoning_characters": 3391,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "source_line": 59,
+          "record_sha256": "966f48a230c9e305f0ace36fe9387e21d5d4aa59c2b92eaab2d1d9ba851bcca5",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "16c5842ca66184668fe64738c170df74ae4843919aa53ea5f9dd2a8332ccf282",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_characters": 0,
+          "reasoning_characters": 4571,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "source_line": 60,
+          "record_sha256": "fdf62e85382b1d95e729ac4e019eb1953d99afd75c2e2159d548860510ac09d2",
+          "answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reasoning_sha256": "dc746bfacd8573be02393b397afcb0db245fbd39764ae4089701bbf1f2aa3dbe",
+          "prompt_sha256": "56edf2b9c05cf0dddeee8a799697e576bb28d775823d4b5368ac07d303a376bd",
+          "answer_characters": 0,
+          "reasoning_characters": 2985,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "extraction": "answer as recorded; separate reasoning_content excluded; no literal think tags in answer",
+          "flags": [
+            "output_token_limit",
+            "no_final_answer"
+          ],
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            },
+            {
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was delivered before the 1,024-token cap; reasoning_content cannot satisfy this final-output criterion."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "These are provisional assistant assessments using the project's local rubric; no official judge score is claimed.",
+    "Ten prompts per model include a duplicate Two Sigma question. They are not ten independent samples.",
+    "All model runs use the exact recorded embedded templates and 1,024-token completion allowance. Higher output budgets or altered templates would be different experiments.",
+    "The GCP x86 CPU context is separate from the Mac Metal context; the two accuracy results are not pooled and no Mac throughput/RAM is substituted.",
+    "The lifecycle records establish the captured launch settings and matching model/server hashes; this grading task did not rerun inference or remeasure machine contention."
+  ]
+}

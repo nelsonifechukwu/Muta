@@ -740,6 +740,68 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   border-top: 2px solid var(--adopted) !important;
 }
 .gate-two-selection .placeholder-label { color: var(--adopted); }
+.gate-two-campaign { color: var(--fg1); }
+.gate-two-protocol-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px;
+  margin: 24px 0 8px; border-top: 1px solid var(--rule);
+}
+.gate-two-protocol-grid > div { padding: 22px 0 6px; border-bottom: 1px solid var(--rule); }
+.gate-two-protocol-grid h3 { margin: 0 0 8px; font: 600 17px/1.35 var(--serif); }
+.gate-two-protocol-grid p { margin: 0; color: var(--fg2); font-size: 15px; }
+.gate-two-figure { margin-block: 28px 32px; }
+.gate-two-figure .chart {
+  max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain;
+  scrollbar-width: thin; scrollbar-color: var(--fg5) transparent;
+}
+.gate-two-figure .chart svg { display: block; width: max(100%, 960px); height: auto; }
+.gate-two-figure figcaption { margin-top: 14px; color: var(--fg3); font: 13px/1.55 var(--sans); }
+.compact-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 12px; color: var(--fg3); font: 12px var(--sans); }
+.compact-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend-swatch { display: inline-block; width: 9px; height: 9px; }
+.legend-swatch.scalar { background: var(--parity); }
+.legend-swatch.avx2 { background: var(--avx2); }
+.legend-swatch.official { background: var(--official); }
+.legend-swatch.diagnostic { background: var(--development); }
+.gate-two-results-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gate-two-results-table th[scope="row"] { min-width: 205px; }
+.resource-results-table { min-width: 1120px; }
+.gate-two-candidate-table { min-width: 1000px; }
+.gate-two-research-table .muted-row { color: var(--fg4); background: var(--bg-soft); }
+.gate-two-evidence-note {
+  margin-top: 28px; padding: 18px 0; border-block: 1px solid var(--parity);
+  color: var(--fg2); font: 14px/1.6 var(--sans);
+}
+.gate-two-evidence-note strong { color: var(--parity); }
+.gate-two-evidence-explorer {
+  margin: 28px 0 34px; padding: 24px; background: var(--bg-soft); border: 1px solid var(--rule);
+}
+.gate-two-evidence-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.gate-two-evidence-controls label { color: var(--fg3); font: 600 11px/1.4 var(--sans); letter-spacing: .04em; text-transform: uppercase; }
+.gate-two-evidence-controls select {
+  display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 8px 30px 8px 10px;
+  color: var(--fg); background: var(--bg); border: 1px solid var(--rule-strong); border-radius: 2px;
+  font: 15px/1.3 var(--sans); letter-spacing: normal; text-transform: none;
+}
+.gate-two-evidence-controls select:disabled { color: var(--fg4); background: var(--bg-tint); }
+.gate-two-evidence-status { margin: 16px 0 0; color: var(--fg3); font: 13px/1.5 var(--sans); }
+.gate-two-evidence-view { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--rule); }
+.gate-two-evidence-meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 18px; margin: 0 0 24px; font: 13px/1.5 var(--sans); }
+.gate-two-evidence-meta dt { color: var(--fg4); }
+.gate-two-evidence-meta dd { margin: 0; color: var(--fg2); overflow-wrap: anywhere; }
+.gate-two-evidence-view section { margin-top: 22px; }
+.gate-two-evidence-view h3 { margin: 0 0 8px; color: var(--fg3); font: 600 12px/1.4 var(--sans); letter-spacing: .04em; text-transform: uppercase; }
+.gate-two-evidence-view pre {
+  max-width: 100%; max-height: 520px; overflow: auto; margin: 0; padding: 16px;
+  color: var(--fg1); background: var(--bg); border: 1px solid var(--rule);
+  font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.gate-two-evidence-view #g2-evidence-review { color: var(--fg2); font: 14px/1.55 var(--sans); }
+.gate-two-evidence-view #g2-evidence-review p { margin: 0; }
+.gate-two-evidence-view #g2-evidence-review ul { margin: 12px 0 0; padding-left: 22px; }
+.gate-two-downloads-details { font: 13px/1.5 var(--sans); }
+.gate-two-downloads-details summary { min-height: 44px; padding: 11px 0; color: var(--fg2); cursor: pointer; }
+.gate-two-downloads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding-top: 10px; }
+.gate-two-downloads a { overflow-wrap: anywhere; }
 .gate-two-source-section { color: var(--fg2); }
 .gate-two-sources {
   margin: 22px 0 0; padding-left: 34px;
@@ -794,6 +856,10 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .artifact-line { grid-template-columns: 1fr 1fr; }
 }
 
+@media (max-width: 640px) {
+  .gate-two-downloads { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 700px) {
   html { scroll-padding-top: 64px; }
   body { font-size: 16px; }
@@ -817,6 +883,16 @@ table.history { width: 100%; border-collapse: collapse; font-size: 11.5px; }
     font: 600 10px/1.4 var(--sans); letter-spacing: .06em; text-transform: uppercase;
   }
   .gate-two-command { font-size: 12px; }
+  .gate-two-protocol-grid { grid-template-columns: 1fr; }
+  .gate-two-figure .chart::before {
+    content: "Scroll chart →"; display: block; position: sticky; left: 0; width: max-content;
+    margin-bottom: 8px; color: var(--fg4);
+    font: 600 10px/1.4 var(--sans); letter-spacing: .06em; text-transform: uppercase;
+  }
+  .gate-two-evidence-explorer { padding: 18px; }
+  .gate-two-evidence-controls { grid-template-columns: 1fr; }
+  .gate-two-evidence-meta { grid-template-columns: 1fr; gap: 0; }
+  .gate-two-evidence-meta dd + dt { margin-top: 8px; }
   .gate-two-nav-footer { margin-top: 48px; padding-bottom: 48px; }
   .gate-two-footer-link { gap: 10px; }
   .gate-two-footer-link strong { max-width: 180px; font-size: 15px; }

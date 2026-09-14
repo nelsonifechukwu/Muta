@@ -1,0 +1,2099 @@
+{
+  "schema_version": 1,
+  "review_type": "provisional_assistant_manual_review",
+  "official_judge_score": false,
+  "rubric_source": "bench/judges_prompt_report.py",
+  "scope": "Four complete 10-request Mac/Metal sets. Entire answer and reasoning fields inspected manually; criteria are applied semantically, not by keyword matching.",
+  "policy": [
+    "Only student-facing final text earns points. Separate reasoning_content and text inside <think>...</think> are excluded.",
+    "A nonempty answer field containing an unclosed <think> block is classified as reasoning-only, not as a final response.",
+    "When finish_reason is length but final text has started, fulfilled criteria in that final fragment may earn points; truncation remains reported.",
+    "The prohibition criterion earns no point when no final answer exists.",
+    "Weights and criterion labels are retained from the provisional local rubric; this is not the competition judges' official scoring process."
+  ],
+  "shared_execution": {
+    "hardware_context": "apple_m4_pro_24gib_macos_metal_b10175",
+    "server_sha256": "f497d6b948174173f8159b6fa46c7b4816e2ecfd306ae9c0f7f11e6a7a79af88",
+    "settings": {
+      "cache_ram_mib": 256,
+      "context_size": 4096,
+      "embedded_chat_template": true,
+      "external_system_prompt": false,
+      "gpu_layers": 99,
+      "max_tokens": 1024,
+      "seed": 3407,
+      "temperature": 0,
+      "threads": 2,
+      "top_p": 1
+    }
+  },
+  "models": [
+    {
+      "model": "LFM2.5-1.2B-Thinking-Q4_0.gguf",
+      "model_sha256": "cbabfbf76fdb35f0fc9bc8bf175cbb25173060bc8ff14b9b7d81d3c7a84fc16f",
+      "source_path": "/Users/elijahnelson/Desktop/PROJECTS/Muta/bench/measurements/campaign-20260913-balanced-models/mac-accuracy/LFM2.5-1.2B-Thinking-Q4_0.gguf/judges/responses.jsonl",
+      "source_sha256": "1b34e6e76f24794cd620cf0e51da42146ddc7325ba2e97ee29ef0008b82b3d2f",
+      "response_count": 10,
+      "finished_final_count": 2,
+      "any_final_text_count": 3,
+      "truncated_response_count": 8,
+      "reasoning_only_count": 7,
+      "automated_score": 20,
+      "human_score": 5,
+      "score": 25,
+      "max_score": 100,
+      "observations": [
+        "Reasoning is embedded in answer using think tags, unlike the other three models.",
+        "Only the chalk and photosynthesis multiple-choice responses finish.",
+        "The DNA response exits reasoning but is cut off during its analogy, before the scientific explanation, check question, and follow-up.",
+        "All other long prompts exhaust the 1,024-token budget before a final answer."
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects C."
+            },
+            {
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response states ₦3,000."
+            },
+            {
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response explicitly multiplies 6 by 500 to obtain 3,000."
+            },
+            {
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, is concise and contains the requested calculation."
+            }
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects B."
+            },
+            {
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response identifies photosynthesis."
+            },
+            {
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response correctly links sunlight with glucose production or stored chemical energy."
+            },
+            {
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, gives one short explanatory sentence."
+            }
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "truncated_final_fragment",
+          "score": 5,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "The final fragment explicitly contrasts the different roles rather than treating the terms as synonyms."
+            },
+            {
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "The final fragment describes DNA as the blueprint for life and the plan; accepted as a simple description of hereditary instructions."
+            },
+            {
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final fragment explicitly describes DNA as a giant recipe book and genes as specific recipes inside it; accepted semantically as genes being parts of DNA, without requiring the literal word segment."
+            },
+            {
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "The final fragment calls chromosomes a team roster and pages in a DNA recipe book; it does not establish chromosomes as structures packaging DNA."
+            },
+            {
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "Calling proteins workers or chefs does not explicitly connect gene expression with protein production."
+            },
+            {
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": true,
+              "points": 1,
+              "reason": "The book, recipes and chefs give a simple organizational/functional analogy without an explicit false claim such as one gene per chromosome or proteins being genetic instructions. As for the control model, the imprecise pages mapping alone is not treated as a disqualifying error. This does not satisfy the separately scored DNA-packaging or gene-expression criteria."
+            },
+            {
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No understanding-check question appears after the closing think tag."
+            },
+            {
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No incorrect-answer follow-up appears after the closing think tag."
+            }
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "model": "LFM2.5-2.6B-Q4_0.gguf",
+      "model_sha256": "e1a61bf937bc60726e18626e97f7ee9bfd2574d95744c2ed909de98b78006fbe",
+      "source_path": "/Users/elijahnelson/Desktop/PROJECTS/Muta/bench/measurements/campaign-20260913-balanced-models/mac-accuracy/LFM2.5-2.6B-Q4_0.gguf/judges/responses.jsonl",
+      "source_sha256": "1fb656a7bbe2924c60b597572b4f30412ef952b79ae5f9ef24c2039e936fafac",
+      "response_count": 10,
+      "finished_final_count": 2,
+      "any_final_text_count": 2,
+      "truncated_response_count": 8,
+      "reasoning_only_count": 8,
+      "automated_score": 20,
+      "human_score": 0,
+      "score": 20,
+      "max_score": 100,
+      "observations": [
+        "Only the chalk and photosynthesis multiple-choice responses finish.",
+        "Eight responses exhaust the 1,024-token budget before any final answer.",
+        "The rice reasoning includes an incorrect 2,300 × 0.85 = 1,950 calculation; no final response follows.",
+        "No substantive student-facing Yorùbá explanation is produced."
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects C."
+            },
+            {
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response states ₦3,000."
+            },
+            {
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response explicitly multiplies 6 by 500 to obtain 3,000."
+            },
+            {
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, is concise and contains the requested calculation."
+            }
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects B."
+            },
+            {
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response identifies photosynthesis."
+            },
+            {
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response correctly links sunlight with glucose production or stored chemical energy."
+            },
+            {
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, gives one short explanatory sentence."
+            }
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "model": "Qwen3.5-2B-Q4_0.gguf",
+      "model_sha256": "cd70221bebaee0503e0f6717e174250cd7825aa88438b3aabec9ad55731d9bb1",
+      "source_path": "/Users/elijahnelson/Desktop/PROJECTS/Muta/bench/measurements/campaign-20260913-balanced-models/mac-accuracy/Qwen3.5-2B-Q4_0.gguf/judges/responses.jsonl",
+      "source_sha256": "b18d989bfa289317dc3a7d8de880deed2a0681da8619405e285b6c23afad57ea",
+      "response_count": 10,
+      "finished_final_count": 2,
+      "any_final_text_count": 2,
+      "truncated_response_count": 8,
+      "reasoning_only_count": 8,
+      "automated_score": 20,
+      "human_score": 0,
+      "score": 20,
+      "max_score": 100,
+      "observations": [
+        "Only the chalk and photosynthesis multiple-choice responses finish.",
+        "Eight responses exhaust the 1,024-token budget before any final answer.",
+        "Reasoning contains repeated planning/verification loops; both identical Two Sigma prompts repeat the same failure.",
+        "This is a failure under the recorded template/runtime/budget, not evidence of the model's performance with other budgets or decoding settings."
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects C."
+            },
+            {
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response states ₦3,000."
+            },
+            {
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response explicitly multiplies 6 by 500 to obtain 3,000."
+            },
+            {
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, is concise and contains the requested calculation."
+            }
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects B."
+            },
+            {
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response identifies photosynthesis."
+            },
+            {
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response correctly links sunlight with glucose production or stored chemical energy."
+            },
+            {
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, gives one short explanatory sentence."
+            }
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "model": "Qwen3.5-2B-Q4_K_M.gguf",
+      "model_sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+      "source_path": "/Users/elijahnelson/Desktop/PROJECTS/Muta/bench/measurements/campaign-20260913-balanced-models/mac-accuracy/Qwen3.5-2B-Q4_K_M.gguf/judges/responses.jsonl",
+      "source_sha256": "69d6a57b7632f5007ee04c8146ff1bd23bedf1f3db3070ef170dcb59574c1c78",
+      "response_count": 10,
+      "finished_final_count": 2,
+      "any_final_text_count": 2,
+      "truncated_response_count": 8,
+      "reasoning_only_count": 8,
+      "automated_score": 20,
+      "human_score": 0,
+      "score": 20,
+      "max_score": 100,
+      "observations": [
+        "Only the chalk and photosynthesis multiple-choice responses finish.",
+        "Eight responses exhaust the 1,024-token budget before any final answer.",
+        "Reasoning contains repeated planning/verification loops; both identical Two Sigma prompts repeat the same failure.",
+        "This is a failure under the recorded template/runtime/budget, not evidence of the model's performance with other budgets or decoding settings."
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects C."
+            },
+            {
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response states ₦3,000."
+            },
+            {
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response explicitly multiplies 6 by 500 to obtain 3,000."
+            },
+            {
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, is concise and contains the requested calculation."
+            }
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "finish_reason": "stop",
+          "final_status": "finished",
+          "score": 10,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": true,
+              "points": 4,
+              "reason": "The final response selects B."
+            },
+            {
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response identifies photosynthesis."
+            },
+            {
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final response correctly links sunlight with glucose production or stored chemical energy."
+            },
+            {
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": true,
+              "points": 2,
+              "reason": "The final answer, excluding delimited reasoning, gives one short explanatory sentence."
+            }
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "finish_reason": "length",
+          "final_status": "reasoning_only",
+          "score": 0,
+          "max_score": 10,
+          "items": [
+            {
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            },
+            {
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points": 0,
+              "reason": "No student-facing final answer was produced; unfinished reasoning is excluded from final-answer scoring."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Single deterministic completion per prompt, with one deliberately repeated Two Sigma prompt; ten prompts are not ten independent competencies.",
+    "Mac Metal responses must remain distinct from GCP scalar or vector response sets.",
+    "A 1,024-token total generation cap disproportionately limits reasoning models; these scores assess delivery under that cap, not uncapped reasoning accuracy.",
+    "The fixed local criterion weights are provisional. Scientific completeness and language quality need human educator review before submission.",
+    "No fluent Yorùbá final answer was available in these sets to validate."
+  ]
+}

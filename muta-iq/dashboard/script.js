@@ -21,11 +21,27 @@ const state = {
 
 const GATE_TWO_CHAPTERS = [
   { id: "gate-2-overview", title: "Model research" },
-  { id: "gate-2-audit", title: "Audit setup" },
+  { id: "gate-2-audit", title: "Model evaluation and ranking" },
   { id: "gate-2-experiments", title: "Experiments" },
   { id: "gate-2-validation", title: "Validation" },
   { id: "gate-2-review", title: "Reviewer questions" },
   { id: "gate-2-decision", title: "Decision" },
+];
+
+const GATE_TWO_CAMPAIGN = [
+  { label: "Qwen2.5", arc: 77.8, scalar: 67.0617, vector: 84.1383, stemStrict: 57, stemCore: 80, judge: 47, finals: 10 },
+  { label: "MiniCPM5 2B", arc: 67.6, scalar: 57.1241, vector: 71.3754, stemStrict: 17, stemCore: 35, judge: 20, finals: 2 },
+  { label: "Qwen3 1.7B", arc: 65.2, scalar: 64.8317, vector: 77.1843, stemStrict: 59, stemCore: 81, judge: 28, finals: 3 },
+  { label: "Qwen3.5 KM", arc: 65.2, scalar: 57.4536, vector: 70.9515, stemStrict: 77, stemCore: 95, judge: 20, finals: 2 },
+  { label: "Qwen3.5 Q4", arc: 65.0, scalar: 61.0746, vector: 72.9902, stemStrict: 71, stemCore: 94, judge: 10, finals: 1 },
+  { label: "MiniCPM5 1B KM", arc: 56.0, scalar: 64.8637, vector: 74.9004, stemStrict: 11, stemCore: 31, judge: 6, finals: 1 },
+  { label: "MiniCPM5 1B Q4", arc: 55.8, scalar: 75.8713, vector: 74.8643, stemStrict: 6, stemCore: 16, judge: 24, finals: 3 },
+  { label: "Nemotron", arc: 53.6, scalar: 55.2269, vector: 72.0394, stemStrict: 35, stemCore: 60, judge: 0, finals: 0 },
+  { label: "LFM 1.2B", arc: 46.0, scalar: 68.3197, vector: 69.2310, stemStrict: 41, stemCore: 53, judge: 25, finals: 2 },
+  { label: "LFM 2.6B QAD", arc: 45.4, scalar: 50.2891, vector: 55.8421, stemStrict: 60, stemCore: 75, judge: 20, finals: 2 },
+  { label: "LFM 2.6B Q4", arc: 43.6, scalar: 49.4834, vector: 54.1297, stemStrict: 52, stemCore: 60, judge: 20, finals: 2 },
+  { label: "VibeThinker", arc: 39.2, scalar: 47.6639, vector: 64.4903, stemStrict: 16, stemCore: 22, judge: 28, finals: 2 },
+  { label: "Falcon", arc: 30.4, scalar: 61.1957, vector: 63.0630, stemStrict: null, stemCore: null, judge: null, finals: null },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -209,10 +225,280 @@ function initReport() {
   renderModelFunnelChart();
   renderStreamingChart();
   renderOfficialCharts();
+  renderGateTwoCampaignCharts();
+  initGateTwoEvidence();
   renderLedger("adopted");
   renderFaq();
   updateReadingProgress();
   updateActiveChapter();
+}
+
+function renderGateTwoCampaignCharts() {
+  const arc = $("g2-arc-chart");
+  const scores = $("g2-score-chart");
+  const stem = $("g2-stem-chart");
+  const judges = $("g2-judge-score-chart");
+  const finals = $("g2-judge-finals-chart");
+  if (!arc || !scores || !stem || !judges || !finals) return;
+
+  arc.innerHTML = verticalGroupedChart(
+    [...GATE_TWO_CAMPAIGN].sort((a, b) => b.arc - a.arc),
+    [{ className: "official", value: (item) => item.arc, winner: (item) => item.label === "Qwen2.5" }],
+    { width: 1120, height: 330, max: 100, label: (item) => item.label, valueFormat: (value) => `${value.toFixed(1)}%` },
+  );
+  scores.innerHTML = verticalGroupedChart(
+    GATE_TWO_CAMPAIGN,
+    [
+      { className: "scalar", value: (item) => item.scalar, winner: (item) => item.label === "MiniCPM5 1B Q4" },
+      { className: "avx2", value: (item) => item.vector, winner: (item) => item.label === "Qwen2.5" },
+    ],
+    { width: 1120, height: 330, max: 100, label: (item) => item.label, valueFormat: (value) => value.toFixed(1) },
+  );
+  const stemModels = GATE_TWO_CAMPAIGN.filter((item) => item.stemStrict != null)
+    .sort((a, b) => b.stemStrict - a.stemStrict);
+  stem.innerHTML = verticalGroupedChart(
+    stemModels,
+    [
+      { className: "official", value: (item) => item.stemStrict, winner: (item) => item.label === "Qwen3.5 KM" },
+      { className: "diagnostic", value: (item) => item.stemCore, winner: (item) => item.label === "Qwen3.5 KM" },
+    ],
+    { width: 1040, height: 330, max: 100, label: (item) => item.label, valueFormat: (value) => value.toFixed(0) },
+  );
+  const judgeModels = GATE_TWO_CAMPAIGN.filter((item) => item.judge != null)
+    .sort((a, b) => b.judge - a.judge);
+  judges.innerHTML = verticalGroupedChart(
+    judgeModels,
+    [{ className: "official", value: (item) => item.judge, winner: (item) => item.label === "Qwen2.5" }],
+    { width: 1040, height: 330, max: 100, label: (item) => item.label, valueFormat: (value) => value.toFixed(0) },
+  );
+  finals.innerHTML = verticalGroupedChart(
+    judgeModels,
+    [{ className: "diagnostic", value: (item) => item.finals, winner: (item) => item.label === "Qwen2.5" }],
+    { width: 1040, height: 330, max: 10, ticks: [0, 2, 4, 6, 8, 10], label: (item) => item.label, valueFormat: (value) => value.toFixed(0) },
+  );
+}
+
+function appendEvidenceMeta(list, label, value) {
+  const term = document.createElement("dt");
+  const detail = document.createElement("dd");
+  term.textContent = label;
+  detail.textContent = value == null || value === "" ? "Unavailable" : String(value);
+  list.append(term, detail);
+}
+
+function createEvidenceRequestGuard() {
+  let sequence = 0;
+  return {
+    begin() {
+      sequence += 1;
+      return sequence;
+    },
+    isCurrent(requestId) {
+      return requestId === sequence;
+    },
+  };
+}
+
+function renderGateTwoEvidenceRecord(payload, record) {
+  const view = $("g2-evidence-view");
+  const meta = $("g2-evidence-meta");
+  const question = $("g2-evidence-question");
+  const answer = $("g2-evidence-answer");
+  const reasoning = $("g2-evidence-reasoning");
+  const review = $("g2-evidence-review");
+  meta.replaceChildren();
+  review.replaceChildren();
+  appendEvidenceMeta(meta, "Model", payload.model.label);
+
+  if (payload.aggregate) {
+    const aggregate = payload.aggregate;
+    appendEvidenceMeta(meta, "Benchmark", `${aggregate.benchmark} · ${aggregate.metric}`);
+    appendEvidenceMeta(meta, "Sample", `n=${aggregate.samples}`);
+    appendEvidenceMeta(meta, "Accuracy", `${aggregate.accuracy_percent}%`);
+    appendEvidenceMeta(meta, "95% CI", `${aggregate.ci95_low_percent}–${aggregate.ci95_high_percent}%`);
+    question.textContent = "Per-item prompts were not retained.";
+    answer.textContent = "Per-item model choices and log-likelihoods were not retained.";
+    reasoning.textContent = "Not part of the ARC-Easy likelihood evaluation archive.";
+    review.textContent = aggregate.limitation;
+    view.hidden = false;
+    return;
+  }
+
+  appendEvidenceMeta(meta, "Prompt", record.id);
+  appendEvidenceMeta(meta, "Finish reason", record.finish_reason);
+  appendEvidenceMeta(meta, "Generated tokens", record.generated_tokens ?? record.usage?.completion_tokens);
+  if (record.review?.final_output_status != null) {
+    appendEvidenceMeta(meta, "Final output status", record.review.final_output_status);
+  }
+  if (record.expected != null) appendEvidenceMeta(meta, "Expected", record.expected);
+  if (record.selected != null) appendEvidenceMeta(meta, "Selected", record.selected);
+  question.textContent = record.text || "Prompt text unavailable in this retained record.";
+  answer.textContent = record.answer || "No delivered answer text.";
+  reasoning.textContent = record.reasoning_content || "No separate reasoning field was returned. Inline <think> text, when present, remains unedited in the answer above.";
+
+  const assessment = record.review;
+  if (assessment) {
+    const summary = document.createElement("p");
+    if (assessment.score != null) summary.textContent = `Rubric score: ${assessment.score}/${assessment.max_score}. ${assessment.reason || ""}`;
+    else summary.textContent = `Strict pass: ${assessment.strict_pass ? "yes" : "no"}. Core answer correct: ${assessment.core_answer_correct ? "yes" : "no"}. ${assessment.reason || ""}`;
+    review.append(summary);
+    if (assessment.criteria?.length) {
+      const list = document.createElement("ul");
+      assessment.criteria.forEach((criterion) => {
+        const item = document.createElement("li");
+        item.textContent = `${criterion.passed ? "Pass" : "Fail"}: ${criterion.criterion} (${criterion.points_awarded}/${criterion.weight})`;
+        list.append(item);
+      });
+      review.append(list);
+    }
+  } else {
+    const note = document.createElement("p");
+    note.textContent = record.correct == null
+      ? "No source-bound manual grade is attached to this retained capture."
+      : `Original option-parser result: ${record.correct ? "correct" : "incorrect"}. This is not a later semantic review.`;
+    review.append(note);
+  }
+  view.hidden = false;
+}
+
+async function initGateTwoEvidence() {
+  const datasetSelect = $("g2-evidence-dataset");
+  const modelSelect = $("g2-evidence-model");
+  const promptSelect = $("g2-evidence-prompt");
+  const status = $("g2-evidence-status");
+  const view = $("g2-evidence-view");
+  const rawDownloads = $("g2-raw-downloads");
+  const rawDownloadsSummary = $("g2-raw-downloads-summary");
+  if (!datasetSelect || !modelSelect || !promptSelect || !status) return;
+
+  let manifest;
+  let currentPayload;
+  const requestGuard = createEvidenceRequestGuard();
+  try {
+    const response = await fetch("evidence/gate-2/index.json");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    manifest = await response.json();
+  } catch (error) {
+    datasetSelect.replaceChildren();
+    datasetSelect.disabled = true;
+    status.textContent = `The response archive could not be loaded (${error.message}). Open the report through its local server or published static site.`;
+    return;
+  }
+
+  datasetSelect.replaceChildren();
+  manifest.datasets.forEach((dataset) => {
+    const option = document.createElement("option");
+    option.value = dataset.id;
+    option.textContent = dataset.label;
+    datasetSelect.append(option);
+  });
+  if (rawDownloads) {
+    rawDownloads.replaceChildren();
+    manifest.downloads.forEach((download) => {
+      const link = document.createElement("a");
+      link.href = `evidence/gate-2/${download.path}`;
+      link.download = "";
+      link.textContent = download.label;
+      rawDownloads.append(link);
+    });
+    if (rawDownloadsSummary) {
+      rawDownloadsSummary.textContent = `Browse ${manifest.downloads.length} published source files`;
+    }
+  }
+
+  async function loadModel() {
+    const requestId = requestGuard.begin();
+    const datasetId = datasetSelect.value;
+    const modelId = modelSelect.value;
+    const dataset = manifest.datasets.find((item) => item.id === datasetSelect.value);
+    const model = dataset.models.find((item) => item.id === modelSelect.value);
+    if (!model) return;
+    currentPayload = null;
+    promptSelect.replaceChildren();
+    promptSelect.disabled = true;
+    view.hidden = true;
+    status.textContent = `Loading ${model.label}…`;
+    let response;
+    let payload;
+    try {
+      response = await fetch(`evidence/gate-2/${model.path}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      payload = await response.json();
+    } catch (error) {
+      if (requestGuard.isCurrent(requestId)) {
+        status.textContent = `The selected evidence file could not be loaded (${error.message}).`;
+      }
+      return;
+    }
+    if (
+      !requestGuard.isCurrent(requestId)
+      || datasetSelect.value !== datasetId
+      || modelSelect.value !== modelId
+    ) return;
+    currentPayload = payload;
+    promptSelect.replaceChildren();
+    if (currentPayload.aggregate) {
+      const option = document.createElement("option");
+      option.value = "aggregate";
+      option.textContent = "Aggregate result only";
+      promptSelect.append(option);
+      promptSelect.disabled = true;
+      renderGateTwoEvidenceRecord(currentPayload, null);
+      status.textContent = `${model.label}: aggregate ARC-Easy-500 result; per-item answers unavailable.`;
+      return;
+    }
+    if (!currentPayload.records.length) {
+      const option = document.createElement("option");
+      option.textContent = "No captured prompts";
+      promptSelect.append(option);
+      promptSelect.disabled = true;
+      view.hidden = true;
+      const attempt = currentPayload.attempt || model.attempt;
+      status.textContent = `${model.label}: ${attempt?.label || "no capture recorded"}.${attempt?.reason ? ` ${attempt.reason}` : ""}`;
+      return;
+    }
+    currentPayload.records.forEach((record, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = `${record.id}${record.title ? ` · ${record.title}` : ""}`;
+      promptSelect.append(option);
+    });
+    promptSelect.disabled = false;
+    renderGateTwoEvidenceRecord(currentPayload, currentPayload.records[0]);
+    status.textContent = `${model.label}: ${currentPayload.records.length} retained response${currentPayload.records.length === 1 ? "" : "s"}.`;
+  }
+
+  function loadDataset() {
+    requestGuard.begin();
+    currentPayload = null;
+    promptSelect.replaceChildren();
+    promptSelect.disabled = true;
+    view.hidden = true;
+    const dataset = manifest.datasets.find((item) => item.id === datasetSelect.value);
+    modelSelect.replaceChildren();
+    dataset.models.forEach((model) => {
+      const option = document.createElement("option");
+      option.value = model.id;
+      const coverage = dataset.kind === "aggregate"
+        ? "aggregate"
+        : model.captured
+          ? `${model.captured} captured · ${model.attempt?.label || "capture recorded"}`
+          : model.attempt?.label || "No capture recorded";
+      option.textContent = `${model.label} · ${coverage}`;
+      modelSelect.append(option);
+    });
+    modelSelect.disabled = false;
+    status.textContent = dataset.description;
+    loadModel();
+  }
+
+  datasetSelect.addEventListener("change", loadDataset);
+  modelSelect.addEventListener("change", loadModel);
+  promptSelect.addEventListener("change", () => {
+    const record = currentPayload?.records?.[Number(promptSelect.value)];
+    if (record) renderGateTwoEvidenceRecord(currentPayload, record);
+  });
+  loadDataset();
 }
 
 function initContentsGates() {

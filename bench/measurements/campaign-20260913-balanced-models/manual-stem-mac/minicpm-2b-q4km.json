@@ -1,0 +1,2043 @@
+{
+  "schema_version": 1,
+  "assessment_type": "Manual semantic audit by an AI assistant; not an official ADTC grade",
+  "model": "MiniCPM5-2B-Q4_K_M.gguf",
+  "model_sha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+  "source": {
+    "path": "bench/measurements/campaign-20260913-balanced-models/mac-accuracy/MiniCPM5-2B-Q4_K_M.gguf/stem/responses.jsonl",
+    "sha256": "afeabf3cdb05a8eb7fb774f4e4eaa9461dba5458372cd17e23b058f52b585a09",
+    "event_path": "bench/measurements/campaign-20260913-balanced-models/mac-accuracy/MiniCPM5-2B-Q4_K_M.gguf/stem/events.jsonl",
+    "event_sha256": "47419b79d7dfdcd0400326a81b1e5bfbf967d4334d75bec031e0d17f85e7aa9d",
+    "config_path": "bench/measurements/campaign-20260913-balanced-models/mac-accuracy/MiniCPM5-2B-Q4_K_M.gguf/stem/config.json",
+    "config_sha256": "12dc41283250ca18c6c700a87cbec5060652d81252babac80e5c487f93b2b0ca",
+    "prompt_suite_path": "bench/stem_prompt_suite.py",
+    "prompt_suite_sha256": "9d40d48c0ce2a2484fde45dfc75fa550123d7a70f7edef5c2c7978c21ecfe4a2",
+    "normalized_prompts_sha256": "fe46f2446e334caa0fd151402fe9a61d4ccb109dac52faffe7366afceba353f8",
+    "policy_path": "report.md",
+    "policy_sha256": "b05dd397b1c4a8ccd0fb28728602a64ff3a696f31b99fd08ecdd4fd93ca7868a",
+    "filter": {
+      "model": "MiniCPM5-2B-Q4_K_M.gguf",
+      "model_sha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd"
+    },
+    "matched_records": 100,
+    "all_ids_verified": true
+  },
+  "provenance": {
+    "server_sha256": "f497d6b948174173f8159b6fa46c7b4816e2ecfd306ae9c0f7f11e6a7a79af88",
+    "hardware_context": "apple_m4_pro_24gib_macos_metal_b10175",
+    "server_identity": {
+      "identity_method": "verified_binary_hash_with_operator_supplied_source_revision",
+      "source_revision": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+      "version_output": "version: 0 (unknown)\nbuilt with AppleClang 17.0.0.17000603 for Darwin arm64\n"
+    },
+    "source_artifact": {
+      "model": "MiniCPM5 2B Q4_K_M",
+      "role": "challenger",
+      "source_repository": "openbmb/MiniCPM5-2B-GGUF",
+      "source_revision": "2079a22f3beaa4e306449978533478fe0522f4b3",
+      "source_artifact": "MiniCPM5-2B-Q4_K_M.gguf",
+      "source_bytes": 1561318368,
+      "source_sha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+      "test_artifact": "MiniCPM5-2B-Q4_K_M.gguf",
+      "test_bytes": 1561318368,
+      "test_sha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+      "quantization": "Q4_K_M",
+      "license": "Apache-2.0",
+      "runtime_gate": "pass"
+    },
+    "logged_settings": {
+      "threads": 2,
+      "gpu_layers": 99,
+      "cache_ram_mib": 256,
+      "context_size": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "max_tokens": {
+        "multiple_choice": 256,
+        "written": 512
+      },
+      "embedded_chat_template": false,
+      "external_system_prompt": false,
+      "cache_prompt": false,
+      "server_command": [
+        "/private/tmp/muta-mac-b10175.TVLIow/build/bin/llama-server",
+        "--model",
+        "/Users/elijahnelson/Desktop/PROJECTS/Muta/bench/.artifacts/mac-balanced-models/MiniCPM5-2B-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18083",
+        "--ctx-size",
+        "2048",
+        "--threads",
+        "2",
+        "--n-gpu-layers",
+        "99",
+        "--cache-ram",
+        "256"
+      ],
+      "model_start": "2026-09-14T13:20:44+00:00",
+      "model_stop": "2026-09-14T13:25:58+00:00",
+      "runner_sha256": "f5f4cafca09e06a0c2f8c50ccdad20308a2b879ed6ba0e1ff00d8f24e2f38289"
+    },
+    "missing_metadata": [
+      "The archive-built server reports version 0 (unknown); the source revision is an operator-supplied declaration paired with a verified executable hash, not independently identified by --version.",
+      "Requested GPU layers are recorded, but actual layer placement and continuous host isolation are not proven by response rows.",
+      "This Mac Metal accuracy-only screen is not a GCP scalar/vector throughput or RSS benchmark.",
+      "The source contains returned completion text, not hidden internal reasoning."
+    ],
+    "comparison_boundary": "Mac Metal accuracy-only raw-completion screen, not GCP scalar/vector throughput or RSS evidence. Do not pool hardware contexts.",
+    "response_review": "All 100 returned texts reviewed in full; no judgments transferred from non-identical responses or another model."
+  },
+  "policy": [
+    "Inspect the complete returned response for each exact prompt; do not use the selected-option regex as a semantic grade.",
+    "Strict pass requires the correct main answer, correct requested reasoning/calculation, every substantive requested component, and no unresolved material contradiction or factual error in supporting text.",
+    "A uniquely identifying correct option value can pass without its letter; retain a missing_option_letter flag. An explicitly wrong option label fails strict grading.",
+    "When a prompt explicitly requests a check, require numerical back-checking, substitution, or a distinct correct numerical method. A derivation alone, repetition of it, or a bare claim that it checks out is insufficient.",
+    "A self-correction can pass when the incorrect claim is resolved and the final conclusion is clear. A correct final sentence alone does not erase unretracted conflicting explanations.",
+    "Core-answer correctness is a separate, non-composite diagnostic: the main numerical result or scientific conclusion is correct, irrespective of omitted verification or faulty supporting claims. It is not a strict pass and does not establish tutoring quality.",
+    "A token-limit finish is not automatically wrong if the complete requested answer already appears. Repetition and length-format excess are flagged, not independently deducted. Missing substantive material at the limit fails.",
+    "This is an analyst-defined binary audit of a raw-completion stress test, not a chat-template evaluation, official benchmark accuracy, panel grade, or competition score.",
+    "Unsafe advice fails a requested safety component even when a safe alternative is also offered.",
+    "A check may verify a substantive intermediate constraint through inverse arithmetic, substitution or a distinct numerical method; it need not recheck every substep. Repeating the same derivation is not an independent check.",
+    "Review-boundary flags expose discretionary decisions; review_resolved marks an adjudicated decision. Others retain their stated provisional binary value."
+  ],
+  "review_resolution": {
+    "S08": "Root material-error adjudication: Selects the Sun but only restates that Earth orbits it rather than the other options; no substantive explanation is supplied.",
+    "S26": "Root material-error adjudication: Correctly explains mass-independent acceleration using F/m, but twice claims the student confuses weight with gravitational force although these are the same quantity in its explanation.",
+    "S27": "Root material-error adjudication: Describes faster molecules escaping with energy, but never connects the cooling to energy taken from the pupil's skin.",
+    "S40": "Root material-error adjudication: Rejects dominance determining frequency but treats Hardy–Weinberg as its determining cause and never clearly distinguishes phenotype expression from transmission probability.",
+    "S34": "Root material-error adjudication: Rejects distance as the cause, identifies axial tilt and gives the hemispheres' opposite summer timing. Awkward direct-rays wording is not a material error."
+  },
+  "totals": {
+    "math_multiple_choice": {
+      "strict_pass": 9,
+      "core_correct": 13,
+      "total": 25
+    },
+    "math_written": {
+      "strict_pass": 4,
+      "core_correct": 9,
+      "total": 25
+    },
+    "science_multiple_choice": {
+      "strict_pass": 1,
+      "core_correct": 3,
+      "total": 25
+    },
+    "science_written": {
+      "strict_pass": 3,
+      "core_correct": 10,
+      "total": 25
+    },
+    "overall": {
+      "strict_pass": 17,
+      "core_correct": 35,
+      "total": 100
+    }
+  },
+  "original_option_parser": {
+    "correct": 10,
+    "total": 50,
+    "math_correct": 8,
+    "science_correct": 2,
+    "note": "Preserved original recorded option-parser flags; not a semantic or tutoring-quality grade."
+  },
+  "format_notes": {
+    "missing_option_letters": [
+      "M17",
+      "M19",
+      "M20"
+    ],
+    "output_token_limit_count": 78,
+    "empty_responses": [
+      "M48",
+      "S31"
+    ],
+    "word_and_sentence_limits": "Length and repetition are format-only. Complete answers can pass before truncation; absent substantive components cannot."
+  },
+  "results": [
+    {
+      "id": "M01",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 1,
+      "response_sha256": "de64e852d2dafd887787637169c9856bd4cb0dcd52187f1028229569267dfaf3",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other shopping questions without answering the chalk-cost question.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M02",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 2,
+      "response_sha256": "42fc1adbb98231e0b6eaa7bf5e8ba18056ae17c5c2922279ae03a88bded165a6",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other arithmetic questions without answering the exercise-book cost.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M03",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 3,
+      "response_sha256": "04caf051899858dfccd0929a612235d65f475ea8a12ae5a0491943f050229591",
+      "original_selected": "D",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and calculates 36 ÷ 6 = 6.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M04",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 4,
+      "response_sha256": "dc9df7c8a232491bb34eeaba553e0bc1e781a461ac2c689de3aa85becc60f1d1",
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and calculates 60 × 3 = 180 km.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M05",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 5,
+      "response_sha256": "c0f180ef106400798788ad50d5148ac57c51f1ccceaf3176d1d9059e1118ef82",
+      "original_selected": "C",
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Calculates area 40 m² correctly but repeatedly selects C, 26 m².",
+      "flags": [
+        "contradiction",
+        "wrong_option_letter",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M06",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "eos",
+      "generated_tokens": 54,
+      "source_line": 6,
+      "response_sha256": "80b82f2ccd2e958c22691f353ba83c11925f0cd37b7fa11a89807603d36f2e81",
+      "original_selected": "B",
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Selects B, 10 after incorrectly dividing the correct quarter by two again.",
+      "flags": [
+        "wrong_answer"
+      ]
+    },
+    {
+      "id": "M07",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 7,
+      "response_sha256": "f09f020d2414153d84356d56392e09229b1407f520e34c84f0f9d68bf6e06d8d",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other price questions without calculating Chidi's change.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M08",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 8,
+      "response_sha256": "772fc8a50ae136a9afb5254ff0768edc2d6c8079cf39a1a5fe3de04215efbee7",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other class-count questions without answering 18 + 22.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M09",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 9,
+      "response_sha256": "a5542a7a9019ce3b84568c2470b450bd0a5d2e29ec6ab6ef4a7eeb304f087628",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other spoilage questions without answering the mango question.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M10",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 10,
+      "response_sha256": "3645e01edcc9f6c69cc6564f6e62b6fd797fc762219c76b21aceed629ddefaeb",
+      "original_selected": "A",
+      "original_correct": true,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Names A, 8 litres but changes four containers to three and gives contradictory working 3 × 2 = 6.",
+      "flags": [
+        "contradiction",
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M11",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "eos",
+      "generated_tokens": 52,
+      "source_line": 11,
+      "response_sha256": "cca6739ed0012348aea9fdf11d078911fbb4756b9b8ebb9dc63663f09c0ecbdd",
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and computes 2,000 × 15% = ₦300.",
+      "flags": []
+    },
+    {
+      "id": "M12",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 12,
+      "response_sha256": "395ee9ade5796735ed5211c50d63bf1d1ab4e0fb92ef6766fed459a91ddde118",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Reverses the red:blue ratio and gives 10 blue beads instead of 15.",
+      "flags": [
+        "wrong_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M13",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "eos",
+      "generated_tokens": 57,
+      "source_line": 13,
+      "response_sha256": "74f89a195c1bbfa2aef0d9bb69b0d52e58f00a8c7b2f49b3ed099da9e246c274",
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and correctly computes ₦10,000 × 5% × 2 = ₦1,000.",
+      "flags": []
+    },
+    {
+      "id": "M14",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 14,
+      "response_sha256": "8abe2f7c9bc6ecf5b2d55dd8d3473d013fbb370cbea83c5fdf106cdd35bc5f19",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates unrelated arithmetic questions without giving the requested mean.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M15",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "eos",
+      "generated_tokens": 62,
+      "source_line": 15,
+      "response_sha256": "17f7c5b849b27b3a524550bbf5846dee78d52f7578eed48f8c2512cdad031e20",
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and computes 2 × (9 + 4) = 26 m.",
+      "flags": []
+    },
+    {
+      "id": "M16",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 16,
+      "response_sha256": "6e99adb40fc333b257f92ff5eccfbd86c5af9b16adc0a3064c8c62ca8ef90173",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Repeats empty final-answer headings without solving x.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M17",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 17,
+      "response_sha256": "e55b5785a4d50fccdf88c7beb07790e525b871cf21a4042707d253260f779024",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Gives the correct 90 without an option letter, but no requested calculation.",
+      "flags": [
+        "missing_option_letter",
+        "missing_requested_calculation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M18",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 18,
+      "response_sha256": "e469cdf5efc1d85e236a326cdf25b6bec7859a93ea7d25145736ee57a4fef2fc",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Only enumerates integers; gives no conversion answer.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M19",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 19,
+      "response_sha256": "6d720f93c4aa56348fe92271234c2b4e33e2eb327c275574688c08625c6f3ddc",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly gives 25% without its option letter but supplies no calculation.",
+      "flags": [
+        "missing_option_letter",
+        "missing_requested_calculation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M20",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 20,
+      "response_sha256": "9cdb6ebef146b54edca4cccdc3d4c93fe7ec8c348ba78f91c9681dc3fa30b076",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Calculates 150 ÷ 3 = 50 km/h, uniquely identifying C without its letter.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M21",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "eos",
+      "generated_tokens": 66,
+      "source_line": 21,
+      "response_sha256": "c576c061cf0a064d7e0079b7dc4c86fec57d8907460497ec53d24108a336cf28",
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and correctly computes 3/(3 + 7) = 3/10.",
+      "flags": []
+    },
+    {
+      "id": "M22",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 22,
+      "response_sha256": "1cc78f2c125a9934794a3d0eb4d49c3ebd435645217a86322fb433bf34692675",
+      "original_selected": "D",
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and calculates 180 − (50 + 60) = 70°; subsequent separate examples have correct numerical answers.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M23",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 23,
+      "response_sha256": "c0f83e37cfcba8bde68888a9d86b99f99199d6a2c447bba0e059b28f29498d72",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other shape questions without answering the square's side length.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M24",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "eos",
+      "generated_tokens": 111,
+      "source_line": 24,
+      "response_sha256": "82e8f5827e323633c9047dfb5014e288390d07473c924ff0d398fde578c1f258",
+      "original_selected": "C",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C, lists factors correctly and identifies the greatest shared value 6.",
+      "flags": []
+    },
+    {
+      "id": "M25",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 25,
+      "response_sha256": "2721b39a340381f76ac062cec35941ae16d80792bc81753b954bc0db8f2c17ea",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Repeats the question and generates further sequences without selecting or calculating a next term.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M26",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦400 each; cost ₦15,000; target revenue ₦18,000; 45 sold",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 26,
+      "response_sha256": "714a903e32db8a3e50593e2ea4c3842fdc6c84d77c20130343143ea0348bacb9",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly derives ₦400 per tuber but gives no requested check before switching to share-trading examples.",
+      "flags": [
+        "missing_requested_check",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M27",
+      "subject": "math",
+      "format": "written",
+      "expected": "4 GB",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 27,
+      "response_sha256": "df8f695381d5a828ea6f75d5158ab3be0291ec695a16af2f20d907612ff77494",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other data-use questions without answering this one.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M28",
+      "subject": "math",
+      "format": "written",
+      "expected": "Bisi 12; Ada 24",
+      "finish_reason": "eos",
+      "generated_tokens": 439,
+      "source_line": 28,
+      "response_sha256": "c3450c7d86ee484f869e6e77928c5c05b4a00ca8864b65122a3cd5e87d7cd042",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Finds Ada 24 and Bisi 12 and explicitly checks their sum is 36.",
+      "flags": []
+    },
+    {
+      "id": "M29",
+      "subject": "math",
+      "format": "written",
+      "expected": "discount ₦600; new price ₦4,400",
+      "finish_reason": "eos",
+      "generated_tokens": 193,
+      "source_line": 29,
+      "response_sha256": "ca59f516f4fdecb872524e711097dcc1978217af5b8602ce9169e2a8d097a019",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly derives discount ₦600 and new price ₦4,400; the check only asserts correctness and restates the original percentage.",
+      "flags": [
+        "missing_requested_check"
+      ]
+    },
+    {
+      "id": "M30",
+      "subject": "math",
+      "format": "written",
+      "expected": "96 L",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 30,
+      "response_sha256": "ac3c24c6c35ab6dcd3722898ea54df2d4227431941c0a6cd10abcbf1342bd9fc",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other arithmetic questions without calculating the remaining water.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M31",
+      "subject": "math",
+      "format": "written",
+      "expected": "distribute 2 to both terms; 2x + 6; both equal 14 at x = 4",
+      "finish_reason": "eos",
+      "generated_tokens": 448,
+      "source_line": 31,
+      "response_sha256": "400b64b8f890ee90c073a3ac1bcc3778d890b0fb8e8dc67536dfb66f03f07e92",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates lesson/website recommendations and other exercises without correcting the expansion.",
+      "flags": [
+        "missing_answer"
+      ]
+    },
+    {
+      "id": "M32",
+      "subject": "math",
+      "format": "written",
+      "expected": "1/4 unused",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 32,
+      "response_sha256": "6520ec24806236f9739b18932152d6afde5c7e89759549956455be2ee19be2b8",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other problems without finding the unused farm fraction.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M33",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦300",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 33,
+      "response_sha256": "b68d92784ba09ca9ad2ee668f54e72a5ab332021ff0bb56f266175f22d0660e4",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Changes two notebooks to five, derives negative ₦900 and falsely declares the problem inconsistent.",
+      "flags": [
+        "wrong_answer",
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M34",
+      "subject": "math",
+      "format": "written",
+      "expected": "n(n + 1); next 30",
+      "finish_reason": "eos",
+      "generated_tokens": 436,
+      "source_line": 34,
+      "response_sha256": "7ea4b81dd804d27f00d3e438e90b9ce6e9aae47958a760f7f25c5fe3e06894b1",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Produces a lesson plan and other sequence exercises without giving the rule or next term.",
+      "flags": [
+        "missing_answer"
+      ]
+    },
+    {
+      "id": "M35",
+      "subject": "math",
+      "format": "written",
+      "expected": "10 cups",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 35,
+      "response_sha256": "0105e58e4405cafae7843eba27c3386b79a12b8f484dc56ae6fbe02c2a3de55f",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other ratio questions without answering flour needed for 25 loaves.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M36",
+      "subject": "math",
+      "format": "written",
+      "expected": "interest ₦6,000; total ₦56,000",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 36,
+      "response_sha256": "de51d3e4df2dc7d18e7599d048519a021119345c296b676e2cb0a7fdc4ff1088",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Repeats the interest question in numbered steps without calculating interest or total.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M37",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦30,000",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 37,
+      "response_sha256": "5f6a29d5ebbc81bbe535d505ad9766334a2e95ee53343eb6f89eefab3db0d683",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates pay questions without finding the original amount.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M38",
+      "subject": "math",
+      "format": "written",
+      "expected": "circumference 44 m; area 154 m²",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 38,
+      "response_sha256": "fad3dff094cbe02fbed78acac2d996e4bc899d5f6fcc77c2c5d697ff260c6c31",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other garden questions without calculating the requested circumference and area.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M39",
+      "subject": "math",
+      "format": "written",
+      "expected": "10 m",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 39,
+      "response_sha256": "5f9da5bc8bb0fbba5cff534d4aa6cd3d6376fd9515bd4ad2622d8d21f0667239",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Lists instructions to calculate and verify, but performs neither and gives no ladder length.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M40",
+      "subject": "math",
+      "format": "written",
+      "expected": "7/10",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 40,
+      "response_sha256": "b6891eed32924778b641e8d8e306dac12c0a848ffd68f32f3650e6ef70504124",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Counts 7 non-blue among 10 counters, gives 7/10 and confirms by the complementary probability.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M41",
+      "subject": "math",
+      "format": "written",
+      "expected": "90",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 41,
+      "response_sha256": "be08aca1440ee0d3bcf67b09804e9a43bd802ac72166292dd04777ac7409057a",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other missing-score questions without solving the supplied mean problem.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M42",
+      "subject": "math",
+      "format": "written",
+      "expected": "4 meals; ₦600 remains",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 42,
+      "response_sha256": "fd6f0eb1f9a68d608e40ceea41583fe2a9873e49b87a78bb814c4b97f2207500",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Only repeats the budget question without giving meals or money remaining.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M43",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦86,000",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 43,
+      "response_sha256": "9195f62383641b8bcc8c0c70cad4dbd763e733af41e5a4de327e88c08d16c688",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other questions without computing the cement and delivery cost.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M44",
+      "subject": "math",
+      "format": "written",
+      "expected": "median 7; mode 7",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 44,
+      "response_sha256": "93ceb91dd0363963f45d48a94cb2ddde281e8e00a53cf0a9084486c6424c7c21",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly gives median and mode 7, but adds an incorrect coefficient of variation of 0.5 and repeats unsupported statistics.",
+      "flags": [
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M45",
+      "subject": "math",
+      "format": "written",
+      "expected": "correct; 20; one quarter",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 45,
+      "response_sha256": "e25859e59fef432147c7cda2afbbca8d80660e361a0d17c36f7a08a12f506e33",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "States the student's 20 is correct but supplies no calculation or explanation of what 25% means.",
+      "flags": [
+        "missing_requested_calculation",
+        "missing_requested_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M46",
+      "subject": "math",
+      "format": "written",
+      "expected": "36 km",
+      "finish_reason": "eos",
+      "generated_tokens": 143,
+      "source_line": 46,
+      "response_sha256": "e9e42cebad0c9bb304ac3e0d4d1d69d8b4fb119bb12ccbdf941a7916d003dcbb",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly computes 7.2 cm × 5 km/cm = 36 km.",
+      "flags": []
+    },
+    {
+      "id": "M47",
+      "subject": "math",
+      "format": "written",
+      "expected": "720 L",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 47,
+      "response_sha256": "4db0ddb48f7f491c43eeef4b9336e80389a9830afe0ce6d8c587ca8a469609c6",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other pump/garden questions without the requested total volume.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M48",
+      "subject": "math",
+      "format": "written",
+      "expected": "x = 8; both sides 30",
+      "finish_reason": "eos",
+      "generated_tokens": 1,
+      "source_line": 48,
+      "response_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Returns an empty response.",
+      "flags": [
+        "empty_response"
+      ]
+    },
+    {
+      "id": "M49",
+      "subject": "math",
+      "format": "written",
+      "expected": "74 m²",
+      "finish_reason": "eos",
+      "generated_tokens": 284,
+      "source_line": 49,
+      "response_sha256": "2adeb26c909dfc909a29381be0f06688bc9cc385cac6e619592ec29ee780f57b",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Calculates floor 80 m² minus platform 6 m² to obtain 74 m².",
+      "flags": []
+    },
+    {
+      "id": "M50",
+      "subject": "math",
+      "format": "written",
+      "expected": "square implies rectangle; converse false; nonsquare rectangle such as 2 by 3",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 50,
+      "response_sha256": "d7d81b63e7b8412be4c9213cf6acb508b86c85a69d7a821649338a1ad71698f4",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Identifies the true implication and false converse but never supplies a counterexample, and explicitly reverses valid and invalid modus-ponens patterns.",
+      "flags": [
+        "missing_requested_components",
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S01",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 51,
+      "response_sha256": "f79291c52b30d9885c437bf8a97a5abe1cbd37be124b849d49731f2ecb68a3b7",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other plant questions without answering how sunlight makes food.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S02",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 52,
+      "response_sha256": "e61ec855b5c064705c7b401226d74eb9fee0e698e42e9cd088481dd32fd9d4e3",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other health questions without identifying the blood-pumping organ.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S03",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 53,
+      "response_sha256": "d8c11a5a0d2ade02419a06f41227edcf086be6c621972fe48157cdb0f8341310",
+      "original_selected": "B",
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Selects condensation while correctly describing it as the reverse of the requested change; never identifies evaporation.",
+      "flags": [
+        "wrong_answer",
+        "contradiction",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S04",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 54,
+      "response_sha256": "428251a4da9c4b5613a93499c99076c443be44db9d003a7a3053ae9aab688214",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other respiration questions without naming oxygen for the supplied question.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S05",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 55,
+      "response_sha256": "4b2f78d1176dafcb12a9e3eb566af2503ffd9f653d9dfd93e9970f80844436dc",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates battery questions without answering the gravity question.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S06",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 56,
+      "response_sha256": "948e46201b3367a0cd0f79479e911e08859841be13e2d26971a7d7dfdd11962e",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates photosynthesis questions without identifying roots.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S07",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 57,
+      "response_sha256": "a71c2872320b353f2b9fde5ff8aad9884da6b27a3f3529d599a5c28463af2fdb",
+      "original_selected": "D",
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Gives sea-level 100°C but repeatedly adds the false claim that mountain water boils at 212°C.",
+      "flags": [
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S08",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 58,
+      "response_sha256": "9537616510155099b683780527c7c4d76f70b8cd3168fb01c1af1a9be2036dcb",
+      "original_selected": "D",
+      "original_correct": true,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Selects the Sun but only restates that Earth orbits it rather than the other options; no substantive explanation is supplied.",
+      "flags": [
+        "missing_requested_explanation",
+        "review_boundary",
+        "output_token_limit",
+        "review_resolved"
+      ]
+    },
+    {
+      "id": "S09",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 59,
+      "response_sha256": "cca931bcd9d749d824417169bd36dc8acbf459d4ac9d740e211652d040c4ee51",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other simple-machine questions without identifying the inclined plane.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S10",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 60,
+      "response_sha256": "e0cc132f40c034142216440c1ba2229f69abe5c5e433e3509c93f8b57f305aa2",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates health questions without naming red blood cells.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S11",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 61,
+      "response_sha256": "bf666263ee31d0100c31013c1bb5518d25e2069124a9d14d30daf1a22abf0498",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Only repeats the question and all options without selecting or explaining a unit.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S12",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 62,
+      "response_sha256": "5eca49b7a8272473172ea91349dbd0d38e0b978d7a649b087e5902df5f3b1fc6",
+      "original_selected": "D",
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Selects stays blue while its explanation also says acid turns blue litmus red; the contradiction is unresolved.",
+      "flags": [
+        "wrong_answer",
+        "contradiction",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S13",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 63,
+      "response_sha256": "5e17396660d5d350504a48c57677e63001775c24aa3d47c1fb8954ca9b057dac",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other electricity questions without identifying Newton's second law.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S14",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 64,
+      "response_sha256": "0abaecbc7b547077048bdcd99840df7bb63d54b792811c1f8500057d75c5aea9",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other cell questions without naming the mitochondrion.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S15",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 65,
+      "response_sha256": "3346e858d12f8db88773cb6a41f6f77d16bd2e797ada6a4b5f6b6297d273ee20",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates health questions without answering the photosynthesis gas question.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S16",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 66,
+      "response_sha256": "a3d989197ad50ad87dd6c5e447e74ac4cac17311dbf105531134e6c785937cff",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates sound-speed questions without identifying vacuum as the medium in which sound cannot travel.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S17",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 67,
+      "response_sha256": "e6014075d4938097920290213704b12f0dda58a2befa5584829575ec96222f98",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates spring/thermodynamics questions without defining density.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S18",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 68,
+      "response_sha256": "5e5d989ae860beb49e5b599ecb7d1de95de76f4bcb44bb954b87483769b167e3",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates chemical-property questions without identifying carbon.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S19",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 69,
+      "response_sha256": "361745e6cf2ee4433c53108a235a1562c4462b49ec1561984a65543c03382ee2",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Asks about a nonexistent S in H₂O instead of supplying a correct formula and explanation for water.",
+      "flags": [
+        "missing_answer",
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S20",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 70,
+      "response_sha256": "bd5931002c437ad23b65753cc6aa9d4eedea6d3c5cba7f8b78722bd873094630",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates sustainability questions without selecting solar energy.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S21",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 71,
+      "response_sha256": "cb2b4a5aff6e2299b2fbac9fc28b1df657fecc8a2b2e17ac7c08676ad46a9426",
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects ovum and explains its release during ovulation.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S22",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 72,
+      "response_sha256": "07df68d4ea0f1c6f335f3795f36cd101c3f7209bf1ea4acf4698cc9f1a5f23ff",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates atmosphere questions without identifying the troposphere.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S23",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 73,
+      "response_sha256": "7d968c072d33b91afb26dfa7c1238080c70d311f150f3cdde86eef79da3ffa6b",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates fire-safety questions without identifying oxygen and water for rusting.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S24",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 74,
+      "response_sha256": "d02edaa2f0152659cdc928135b4ddb9efc2ad1ffd7c496a81ab3d326440b7543",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates temperature/energy questions without identifying strongest conduction in solids.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S25",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 75,
+      "response_sha256": "703224d5c9a8c7de20a393c4f037bd35f6d7bfe8203b6a9a1a524fee801564d8",
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates unrelated pH questions without naming neutral pH 7.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S26",
+      "subject": "science",
+      "format": "written",
+      "expected": "gravity force is larger but free-fall acceleration is equal without appreciable drag; compare simultaneous drop",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 76,
+      "response_sha256": "eb373a0c961c350bee9fc1f5ae63714992a1f582e2fb023db85b362701c09362",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly explains mass-independent acceleration using F/m, but twice claims the student confuses weight with gravitational force although these are the same quantity in its explanation.",
+      "flags": [
+        "erroneous_explanation",
+        "review_boundary",
+        "output_token_limit",
+        "review_resolved"
+      ]
+    },
+    {
+      "id": "S27",
+      "subject": "science",
+      "format": "written",
+      "expected": "higher-energy molecules escape and remove energy from the skin",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 77,
+      "response_sha256": "a0ec5c9fd9998f9476dd326a5dfcf985e9c12d1e43475fabd670a69b7eab5353",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Describes faster molecules escaping with energy, but never connects the cooling to energy taken from the pupil's skin.",
+      "flags": [
+        "missing_requested_explanation",
+        "review_boundary",
+        "output_token_limit",
+        "review_resolved"
+      ]
+    },
+    {
+      "id": "S28",
+      "subject": "science",
+      "format": "written",
+      "expected": "series circuit opens and both go off; parallel branch remains complete",
+      "finish_reason": "eos",
+      "generated_tokens": 247,
+      "source_line": 78,
+      "response_sha256": "c39d139d2b7ed8c69bdf01ad013f93afeb1d84c2ef0ac1fd8b35ddcab4936b22",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Gives wrong resistance/current changes after removal and claims unequal voltage drops in parallel; never gives correct on/off behavior.",
+      "flags": [
+        "wrong_answer",
+        "erroneous_explanation"
+      ]
+    },
+    {
+      "id": "S29",
+      "subject": "science",
+      "format": "written",
+      "expected": "destarch; cover part; expose; iodine test; exposed part blue-black",
+      "finish_reason": "eos",
+      "generated_tokens": 126,
+      "source_line": 79,
+      "response_sha256": "d70cb7c9072580f4a36f3d3af919a4508a65a46d6578eb4b11962de5a49cb2db",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "States the correct light requirement for starch production but provides no experiment, control or starch-test observations.",
+      "flags": [
+        "missing_requested_components"
+      ]
+    },
+    {
+      "id": "S30",
+      "subject": "science",
+      "format": "written",
+      "expected": "floating depends on average density and buoyancy, not weight alone",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 80,
+      "response_sha256": "1382ca2cafe42968fe4fd8de59e6da2064ebd583960bc10418cafeb8c1d951f0",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other buoyancy questions with false premises rather than explaining density/upthrust and a counterexample.",
+      "flags": [
+        "missing_answer",
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S31",
+      "subject": "science",
+      "format": "written",
+      "expected": "colds are usually viral; antibiotics treat susceptible bacterial infections",
+      "finish_reason": "eos",
+      "generated_tokens": 1,
+      "source_line": 81,
+      "response_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Returns an empty response.",
+      "flags": [
+        "empty_response"
+      ]
+    },
+    {
+      "id": "S32",
+      "subject": "science",
+      "format": "written",
+      "expected": "lower pressure and oxygen partial pressure; increased ventilation compensates",
+      "finish_reason": "eos",
+      "generated_tokens": 435,
+      "source_line": 82,
+      "response_sha256": "9d9780c20db1b88c1391a68fb0aedf0bf5867a62949d0cb6998aa4702fbec397",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Recognizes increased breathing compensates for reduced oxygen, but omits the requested pressure mechanism and attributes the response to increased oxygen demand.",
+      "flags": [
+        "missing_requested_components",
+        "erroneous_explanation"
+      ]
+    },
+    {
+      "id": "S33",
+      "subject": "science",
+      "format": "written",
+      "expected": "same temperature possible; metal conducts heat from hand faster",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 83,
+      "response_sha256": "1bc46a3e16e7e4a3946b02f85ada78da0174973b20e1ff11d1bd13006dce995d",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other heat-transfer questions without explaining why equal-temperature metal feels colder.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S34",
+      "subject": "science",
+      "format": "written",
+      "expected": "axial tilt changes sunlight angle/day length; hemispheres have opposite seasons",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 84,
+      "response_sha256": "d1392f4a7f0d34d60ff169ce90c0a1cadaa76f2ac472680a4478e44621b6f18c",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Rejects distance as the cause, identifies axial tilt and gives the hemispheres' opposite summer timing. Awkward direct-rays wording is not a material error.",
+      "flags": [
+        "review_boundary",
+        "output_token_limit",
+        "review_resolved"
+      ]
+    },
+    {
+      "id": "S35",
+      "subject": "science",
+      "format": "written",
+      "expected": "2 A; then 1 A by Ohm's law",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 85,
+      "response_sha256": "241f32fdf9e1037a627d2484166b98a548a420b57567f2f70387f2a4ca6b0c48",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Calculates 2 A then 1 A at fixed voltage and gives correct supporting power and resistance relations.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S36",
+      "subject": "science",
+      "format": "written",
+      "expected": "dissolving physical and reversible; burning chemical with new substances",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 86,
+      "response_sha256": "7deebc0f5146483ed64f820bfc185ceb9a247abbfb304bc883d75143cdab1a3c",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Repeats classifications to be performed but never classifies sugar dissolving or burning.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S37",
+      "subject": "science",
+      "format": "written",
+      "expected": "mass conserved; escaping gas can reduce measured mass in open container",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 87,
+      "response_sha256": "9b312002cdcffe4d3ecc20fc3c2b4b30c888f5ba7d4558739f998742afc01ba5",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other chemistry questions with false numerical premises rather than explaining conservation of mass.",
+      "flags": [
+        "missing_answer",
+        "erroneous_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S38",
+      "subject": "science",
+      "format": "written",
+      "expected": "neutralization; sodium chloride and water; pH falls toward 7",
+      "finish_reason": "eos",
+      "generated_tokens": 488,
+      "source_line": 88,
+      "response_sha256": "b9f229b670f830772346a1ceaf71d539d5be00c153c58ec4769f6cb6e4044f66",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Reverses the acid-into-base pH trend, says excess acid increases pH and omits the required products.",
+      "flags": [
+        "wrong_answer",
+        "erroneous_explanation"
+      ]
+    },
+    {
+      "id": "S39",
+      "subject": "science",
+      "format": "written",
+      "expected": "transpiration temporarily exceeds uptake; stomatal response and lower evening loss restore turgor",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 89,
+      "response_sha256": "bde12d37b2fafa0b1d606f335cb724039191ea6309b1a8bc7be55524eecf4628",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other plant questions without explaining the stated midday wilt and evening recovery.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S40",
+      "subject": "science",
+      "format": "written",
+      "expected": "dominance concerns heterozygote phenotype; allele transmission frequency depends on population processes",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 90,
+      "response_sha256": "b2a91b01e4be50e612b213bd682efdb7eb8a1b94d070ed94b24053cb8bcf6ebc",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Rejects dominance determining frequency but treats Hardy–Weinberg as its determining cause and never clearly distinguishes phenotype expression from transmission probability.",
+      "flags": [
+        "erroneous_explanation",
+        "missing_requested_explanation",
+        "review_boundary",
+        "output_token_limit",
+        "review_resolved"
+      ]
+    },
+    {
+      "id": "S41",
+      "subject": "science",
+      "format": "written",
+      "expected": "fewer grasshoppers reduce energy available to frogs, then snakes",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 91,
+      "response_sha256": "50c20dd20d5e33bed45cdd1a6d7eb20f90ee9024894d74d359b470f2a2cb6942",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Invents a different grasshopper scenario, claims frog numbers are unaffected and gives no correct downstream energy explanation.",
+      "flags": [
+        "wrong_answer",
+        "missing_requested_components",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S42",
+      "subject": "science",
+      "format": "written",
+      "expected": "fertilizer amount independent; growth dependent; control other conditions; repeat for reliability",
+      "finish_reason": "eos",
+      "generated_tokens": 174,
+      "source_line": 92,
+      "response_sha256": "ea9c77cae6eb78d9d43c485ff66c9fc99a7b0cd690a9a635b903ea07352d6e63",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Gives instructions to analyze results and extend a future experiment, not the requested variables, controls and repeats.",
+      "flags": [
+        "missing_requested_components"
+      ]
+    },
+    {
+      "id": "S43",
+      "subject": "science",
+      "format": "written",
+      "expected": "4 m/s²; speed rises by 4 m/s each second",
+      "finish_reason": "eos",
+      "generated_tokens": 358,
+      "source_line": 93,
+      "response_sha256": "408f945319c2d6e83a2eee22c4dd5b2db1b85d474c6e96037ccbbe4a21a028bd",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Calculates 4 m/s², then inconsistently says speed increases by 8 m/s in the second second and 12 m/s in the third.",
+      "flags": [
+        "contradiction",
+        "erroneous_explanation"
+      ]
+    },
+    {
+      "id": "S44",
+      "subject": "science",
+      "format": "written",
+      "expected": "same force over smaller area produces greater pressure",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 94,
+      "response_sha256": "61ef483436086ca8718ce71f52b95f8c25220eb336d5d66f95d4522ba5485b07",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates other physics questions without explaining sharp-blade pressure.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S45",
+      "subject": "science",
+      "format": "written",
+      "expected": "water lowers resistance and permits greater current; dry hands/turn off power",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 95,
+      "response_sha256": "53b853241ffc18d45970111b2976b1d3a3c56c4f79a5b429bbfee3eef5987217",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates electrical-safety questions without explaining wet-skin resistance/current or giving the requested action.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S46",
+      "subject": "science",
+      "format": "written",
+      "expected": "phases show changing visible illuminated fraction; Earth's shadow causes lunar eclipse",
+      "finish_reason": "eos",
+      "generated_tokens": 316,
+      "source_line": 96,
+      "response_sha256": "753d4a8f499f27604846661b3832e870022d955a67977d15868868507b238bce",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Provides only a new-Moon hint before unrelated exercises; omits the phase mechanism and lunar-eclipse explanation.",
+      "flags": [
+        "missing_requested_components"
+      ]
+    },
+    {
+      "id": "S47",
+      "subject": "science",
+      "format": "written",
+      "expected": "lower atmospheric pressure means vapour pressure reaches it at a lower temperature",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 97,
+      "response_sha256": "8515bb27f90dba217a3ed4aab894b0b3bc96da559d803dae4a77fb1c76da13d3",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Explains lower atmospheric pressure and vapour-pressure equality at a lower boiling temperature; later measurement examples add no definite contradictory result.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S48",
+      "subject": "science",
+      "format": "written",
+      "expected": "photosynthesis stores light energy in glucose; respiration releases usable energy; complementary reactants/products",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 98,
+      "response_sha256": "9363f20bdb893b6ec25c4c55d8cd0e9e68355590849e7778f6cef4ef3f6cb86e",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Discusses ATP and respiration but omits the required photosynthesis comparison, complete reactants/products and their linkage.",
+      "flags": [
+        "missing_requested_components",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S49",
+      "subject": "science",
+      "format": "written",
+      "expected": "vaccination primes antigen-specific response and memory; it is not an immediate cure",
+      "finish_reason": "eos",
+      "generated_tokens": 494,
+      "source_line": 99,
+      "response_sha256": "64bf70e8de1ff8121e7336d922e8102fc4e5e931e3bdcc8221bc7d85f720529a",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Explains adaptive memory and future responses but corrects a different claim about vaccines causing disease, never addressing the requested immediate-cure claim.",
+      "flags": [
+        "missing_requested_components"
+      ]
+    },
+    {
+      "id": "S50",
+      "subject": "science",
+      "format": "written",
+      "expected": "Plasmodium transmitted by infected female Anopheles mosquito; prevent mosquito bites or breeding",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 100,
+      "response_sha256": "8eb421ad470ffa70ca2ca7fc6029d0767a4a71f016de7eced0e0b0c76b66cffe",
+      "original_selected": null,
+      "original_correct": null,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Generates unrelated sunlight questions without answering malaria cause, transmission or prevention.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"dataset":"gcp-stem-restart","model":{"id":"qwen3-1-7b-q4-0-gguf","label":"Qwen3 1.7B Q4_0","artifact":"Qwen3-1.7B-Q4_0.gguf","rank":5},"records":[],"captured":0,"attempt":{"status":"no_capture_recorded","label":"No capture recorded","reason":"The retained attempt inventory provides no more specific execution state."}}

@@ -1,0 +1,1 @@
+{"dataset":"gcp-stem-vector","model":{"id":"falcon-h1r-0-6b-q4-k-m-gguf","label":"Falcon-H1-Tiny-R 0.6B Q4_K_M","artifact":"Falcon-H1R-0.6B-Q4_K_M.gguf","rank":6},"records":[],"captured":0,"attempt":{"status":"failed","label":"Failed; no response","reason":"The retained attempt inventory records a runtime failure before any response was captured."}}

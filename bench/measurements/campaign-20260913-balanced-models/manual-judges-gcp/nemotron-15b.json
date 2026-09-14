@@ -1,0 +1,866 @@
+{
+  "schema_version": 2,
+  "review_type": "provisional assistant manual review",
+  "official_judge_score": false,
+  "rubric_source": "bench/judges_prompt_report.py",
+  "rubric_sha256": "b063d8c4f54a23a9e2421eeb4254bece5553427ded4fa6be2dea305182010216",
+  "prompt_suite_source": "bench/judges_prompt_suite.py",
+  "prompt_suite_sha256": "2b6a50269c59e458667c96ed0c5662b5a8a748c1e05ea29a9dfd8f9f27edceab",
+  "artifact_manifest_source": "bench/measurements/campaign-20260913-balanced-models/artifacts.csv",
+  "artifact_manifest_sha256": "58df4d99502db00ff36706c6b53879dac9505f88bee4899a4c79437725a29784",
+  "scope": "Ten completed OpenReasoning Nemotron 1.5B Q4_K_M GCP scalar judge-prompt requests. This fixed-budget local rubric is not official judging, ARC-Easy accuracy or the composite ADTC score.",
+  "policy": [
+    "All ten exact prompts, full answer fields including inline reasoning, and all separate reasoning_content fields were read in two untruncated five-record batches.",
+    "Only substantive delivered final text outside think blocks earns criterion points. These ten answer fields never close their inline thinking block.",
+    "Every original rubric criterion label and weight is retained. No-final responses receive zero on every criterion, including error-avoidance criteria.",
+    "A substantive partial final could receive completed-criterion credit, but none occurs in this set.",
+    "The 1,024-token output allowance includes reasoning and is a local campaign setting, not an asserted official competition judge limit.",
+    "A zero delivery score does not mean all intermediate calculations are wrong or that unconstrained capability was measured.",
+    "The proportional-model prompt appears twice; ten retained positions contain nine unique wordings.",
+    "GCP scalar assessments remain separate from Mac Metal results."
+  ],
+  "source_snapshot": {
+    "path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-responses.jsonl",
+    "sha256": "acf72e89dc9de772ac8fa38493a5a103d44c7c579d1b2ba8f687d2eabb77b544",
+    "bytes": 585190,
+    "lines": 125,
+    "matched_records": 10,
+    "scope": "Exact captured prefix of a growing append-only JSONL file; individual record hashes exclude newline."
+  },
+  "events_snapshot": {
+    "path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-events.jsonl",
+    "sha256": "0f3f2ca3a972099e0fa52f2da76552975c6a349278a31d38122958d5d16b4557",
+    "bytes": 14651,
+    "lines": 27
+  },
+  "shared_execution": {
+    "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+    "server_sha256": "379d824db41143559e5524bb8a84d543666fa8ccc1541bfbc0310fb698347d43",
+    "settings": {
+      "cache_ram_mib": 256,
+      "context_size": 4096,
+      "embedded_chat_template": true,
+      "external_system_prompt": false,
+      "gpu_layers": 0,
+      "max_tokens": 1024,
+      "seed": 3407,
+      "temperature": 0.0,
+      "threads": 2,
+      "top_p": 1.0
+    }
+  },
+  "validation": {
+    "models": 1,
+    "responses": 10,
+    "unique_expected_ids": true,
+    "prompts_exact": true,
+    "model_hashes_match_artifact_manifest": true,
+    "events_match": true,
+    "all_full_prompts_reasoning_and_finals_read": true,
+    "all_models_have_start_and_stop_events": true,
+    "per_prompt_weight_sum": 10,
+    "per_model_weight_sum": 100
+  },
+  "independent_review": {
+    "status": "completed",
+    "reviewer": "/root/grade_lfm_qwen35",
+    "scope": "Independent judgment without reading the primary ledger: all ten exact prompts, all ten complete raw answer fields in three untruncated outputs, and all separate reasoning fields were read.",
+    "findings": [
+      "Every answer starts with one literal think tag, has no closing think tag and contains no text outside the reasoning block; every separate reasoning field is empty.",
+      "All ten responses terminate by length at 1,024 completion tokens: zero finished finals, zero partial finals, ten reasoning-only outputs and ten truncated responses.",
+      "All criteria receive zero under the unchanged delivered-final policy. Correct drafts and final-answer wording inside an unclosed reasoning block are not delivered final text."
+    ]
+  },
+  "models": [
+    {
+      "model": "nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf",
+      "model_sha256": "7c39e6fa1f335bec37e51404d104b47de0b80aafeaae534080aa8c2e11c71101",
+      "manifest_entry": {
+        "license": "CC-BY-4.0",
+        "model": "OpenReasoning Nemotron 1.5B Q4_K_M",
+        "quantization": "Q4_K_M",
+        "role": "challenger",
+        "runtime_gate": "pass",
+        "source_artifact": "nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf",
+        "source_bytes": "986046784",
+        "source_repository": "bartowski/nvidia_OpenReasoning-Nemotron-1.5B-GGUF",
+        "source_revision": "9b6c802caafdc99c2924ddb374c5a5995f0bb2f1",
+        "source_sha256": "7c39e6fa1f335bec37e51404d104b47de0b80aafeaae534080aa8c2e11c71101",
+        "test_artifact": "nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf",
+        "test_bytes": "986046784",
+        "test_sha256": "7c39e6fa1f335bec37e51404d104b47de0b80aafeaae534080aa8c2e11c71101"
+      },
+      "source_path": "bench/measurements/campaign-20260913-balanced-models/raw/judges-responses.jsonl",
+      "source_sha256": "acf72e89dc9de772ac8fa38493a5a103d44c7c579d1b2ba8f687d2eabb77b544",
+      "source_sha256_scope": "First 585190 bytes / 125 records captured for this review; source may grow.",
+      "source_filter": {
+        "model": "nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf"
+      },
+      "response_count": 10,
+      "finished_final_count": 0,
+      "partial_final_count": 0,
+      "any_final_text_count": 0,
+      "truncated_response_count": 10,
+      "reasoning_only_count": 10,
+      "automated_score": 0,
+      "human_score": 0,
+      "score": 0,
+      "max_score": 100,
+      "observations": [
+        "All ten requests completed at the 1,024-token allowance; none delivered a final or substantive partial final.",
+        "Every nonempty answer field contains an unclosed literal think block. All separately returned reasoning fields are empty.",
+        "Correct intermediate work exists, including the ODE solution, chalk calculation and average-speed calculation. It is not credited under the unchanged delivered-final-only rubric.",
+        "The zero is a local fixed-budget delivery result, not a claim of zero mathematical knowledge or an official competition disqualification.",
+        "No Mac assessment or performance result is substituted for this GCP scalar evidence."
+      ],
+      "lifecycle": [
+        {
+          "source_line": 26,
+          "record_sha256": "7e27681315630b477225eb1e8d6220154ec10a9ad525ab9a3de722f245013399",
+          "record": {
+            "command": [
+              "/home/elijahnelson/Muta/bench/.artifacts/llama.cpp-b10175/build/bin/llama-server",
+              "--model",
+              "/home/elijahnelson/Muta/bench/measurements/campaign-20260913-balanced-models/models/nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf",
+              "--host",
+              "127.0.0.1",
+              "--port",
+              "18081",
+              "--ctx-size",
+              "4096",
+              "--threads",
+              "2",
+              "--n-gpu-layers",
+              "0",
+              "--cache-ram",
+              "256",
+              "--jinja"
+            ],
+            "event": "model_start",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf",
+            "model_sha256": "7c39e6fa1f335bec37e51404d104b47de0b80aafeaae534080aa8c2e11c71101",
+            "server_sha256": "379d824db41143559e5524bb8a84d543666fa8ccc1541bfbc0310fb698347d43",
+            "settings": {
+              "cache_ram_mib": 256,
+              "context_size": 4096,
+              "embedded_chat_template": true,
+              "external_system_prompt": false,
+              "gpu_layers": 0,
+              "max_tokens": 1024,
+              "seed": 3407,
+              "temperature": 0.0,
+              "threads": 2,
+              "top_p": 1.0
+            },
+            "ts": "2026-09-14T19:32:20+00:00"
+          }
+        },
+        {
+          "source_line": 27,
+          "record_sha256": "1f4f29c7ba31badfb18d1ca5593ceeee7db36086099e7d82c57850c0aa7b54b7",
+          "record": {
+            "event": "model_stop",
+            "hardware_context": "x86_cloud_proxy_gcp_n2_custom_4_8192_2c4t_scalar_b10175",
+            "model": "nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf",
+            "ts": "2026-09-14T20:16:20+00:00"
+          }
+        }
+      ],
+      "prompts": [
+        {
+          "id": "automated_01",
+          "source": "automated",
+          "title": "Two Sigma proportional model",
+          "source_line": 116,
+          "record_sha256": "5f308e971e7749198a97f8bfa1d354612091579a8e3ab929b3617bc2cb1b89bd",
+          "canonical_record_sha256": "d09f7e2d82328306e7a16392ff7ee79974f7d4354c88e3e07e04f99cc0660c2f",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_sha256": "67b0fab63dc523e82bb68c484f7d3e3fbec7727a0de9fe9c89cda75c7bab0d52",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 4331,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The proportional equation and limit statements occur only inside an unclosed inline reasoning block. No final model is delivered; every final-answer criterion receives zero.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "automated_02",
+          "source": "automated",
+          "title": "Mastery differential equation",
+          "source_line": 117,
+          "record_sha256": "db5221ae711f9fa0119b0ab5da1a30ed327f3c67d16e2876cda81d2bab5fbd28",
+          "canonical_record_sha256": "7629f28109d1690c8e12376a98c47e5102e30ae7d663615ddb140bfbb13f9e2f",
+          "prompt_sha256": "ea663986f02fa14e1f5edb011c705525181c39d6caa0e68972bfe3a93efd5c78",
+          "answer_sha256": "705241d3c244c79146334ab11d0a84168905c3f27e04cbcbac5460aaef7e6de3",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 3572,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "gives S(t) = T + (S(0) - T)e^(-kt)",
+              "weight": 4,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "applies the initial condition",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "states convergence to T for positive k",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "connects the ceiling or rate to individual learning",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "relates one-to-one gains to the difficulty of scaling tutoring",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The correct ODE solution and initial-condition derivation remain inside unclosed inline reasoning, followed by a confused scaling discussion. No final solution or scaling explanation is delivered.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "automated_03",
+          "source": "automated",
+          "title": "Offline LLM capacity",
+          "source_line": 118,
+          "record_sha256": "e0bd3bb51c2f449551e5722d38692709fcfc473a4cbd149191baefabc310c63e",
+          "canonical_record_sha256": "4e6b5de620363e8c28e901d36c02e2c37fb02c0b160a53b47130d3b8594af1a1",
+          "prompt_sha256": "c55aef82428ee19815557b4d1cbb765b9b6f0ef1abb2c7a3c00b591feae4cb57",
+          "answer_sha256": "9fde8bcdf255345f9a20301c0bc510e7e46c6a78d19e651d56a781984606cccf",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 4092,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "recognizes that parameter count is underdetermined",
+              "weight": 4,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "computes the 200 ms operation budget as 8 × 10^11",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "requires an output-length assumption",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "requires operations per parameter per generated token",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "does not treat two tokens per character as enough to size the model",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The response repeats inconsistent dimensional calculations within unclosed inline reasoning. It delivers no final capacity analysis, so no criterion earns credit.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "automated_04",
+          "source": "automated",
+          "title": "Lagos chalk calculation",
+          "source_line": 119,
+          "record_sha256": "d39a1900e3a501464451a83eb982be404dd9b6842ca0acf7792751a8f00ec2b3",
+          "canonical_record_sha256": "64e43c74f35ac9b3f2df289126d4bfb5b9345f98b4f24fe6e79b51b0823ebed4",
+          "prompt_sha256": "af59ed40127de06d9a08cbdf873fda5fa3c65e5ca41919097cc4e31b453f5c71",
+          "answer_sha256": "c121163fc6608a76878a62f4e083119fe3686c2cfc688f0f93c7d48e5be66612",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 3306,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "selects option C",
+              "weight": 4,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "gives ₦3,000",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "shows 6 × 500 = 3,000",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "keeps the requested answer concise",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The correct 6 × 500 = 3,000 calculation and option C are repeatedly drafted inside unclosed inline reasoning. They never become delivered final text before the local cap.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "automated_05",
+          "source": "automated",
+          "title": "Photosynthesis multiple choice",
+          "source_line": 120,
+          "record_sha256": "d8a043977995b281f91ce0f414978401a119cbf66dcce42b51b3b17876df7669",
+          "canonical_record_sha256": "0d8613f3ed1d96e7f460cc5eb8306e2594a2bfb64990f6ee9b53df6b70bfcecc",
+          "prompt_sha256": "d6ab6a7448a0d7787f79f0b53b57c048d85ca351525c8e5f0e92e17ebeb48d77",
+          "answer_sha256": "1f08c0b15e2877d4d503e098adf3c8e99b599187fdbc46556b0ab8a86614a8ef",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 4955,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "selects option B",
+              "weight": 4,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "identifies photosynthesis",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "explains conversion of light into stored chemical energy or food",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "keeps the requested explanation concise",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "Correct option B and photosynthesis explanations are drafted inside unclosed inline reasoning, alongside incorrect descriptions of other processes. No final choice or explanation is delivered.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "human_01",
+          "source": "human judge",
+          "title": "Average-speed misconception",
+          "source_line": 121,
+          "record_sha256": "36d3c539457fa54015898df445618289527e68c02d0ea4c214afaae6e662cbfb",
+          "canonical_record_sha256": "5f6f280e7383badfdd8d9ac5ea239ea503cccd0472d868503badb148a75a70d3",
+          "prompt_sha256": "13b978c16bbd360a4e18b4a51e36344ac313072414d911ce8a18eaf7cc9008b3",
+          "answer_sha256": "6bd110747ecc55d0925bad8bc023b554c0c5c5f8ac176c5abf97ea1a5c08a46a",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 3197,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "gives 53.3 km/h",
+              "weight": 3,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "computes 1.5 h, 0.75 h, and 2.25 h",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "uses total distance divided by total time",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "explains why the arithmetic mean fails for equal distances",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "includes an intuitive second example",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c6",
+              "criterion": "teaches a future recognition rule",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The correct segment times, 53.33 km/h calculation and second example remain inside unclosed inline reasoning. No final tutoring response is delivered.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "human_02",
+          "source": "human judge",
+          "title": "DNA genes chromosomes and proteins",
+          "source_line": 122,
+          "record_sha256": "119d1c2a6e48f925bb2b2d33e2c74a4ca401feeff5a6beecb407966a2237035e",
+          "canonical_record_sha256": "84272c10f93c0026b6ec2eb6dbbaa80cda1d2479657800a25de089d1e10b64af",
+          "prompt_sha256": "835c5a49aba2163c9ba096f5d17286c5ef966480f122b64d3a2ece2b5843ffe0",
+          "answer_sha256": "3254039c710417b55a0871b3d583497f62ef7ba1d14522824159afe3ecd369ac",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 5117,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "identifies the misconception that the terms are not synonyms",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "describes DNA as genetic information or material",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "defines a gene as a segment of DNA",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "states that chromosomes package DNA",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "connects gene expression to proteins",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c6",
+              "criterion": "uses a simple analogy without a flagged scientific error",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c7",
+              "criterion": "asks a check question",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c8",
+              "criterion": "provides a response for an incorrect student answer",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The response repeatedly considers competing analogies inside an unclosed inline reasoning block. No final explanation, check question or corrective follow-up is delivered.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "human_03",
+          "source": "human judge",
+          "title": "Bilingual photosynthesis tutoring",
+          "source_line": 123,
+          "record_sha256": "5f4dd54a63ce08696bf4aa34159e092077ae12c29dcefa0c93bb29046dfc147f",
+          "canonical_record_sha256": "5a052aba34cad1db717c94475e89e06e08943201b3821424645e9887c8da0b17",
+          "prompt_sha256": "39e60043c7c7ff0039bef0454cde8e1a3d361a73bb26f27f6c1b69ae4c33d969",
+          "answer_sha256": "6ed8b2e9bfbe19f016b9d301d4e3ead6dbce2242e5a295c18b2c54e9b0a68f62",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 3640,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "includes all six required scientific terms",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "correctly states the inputs and outputs",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "states that chlorophyll absorbs or captures light",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "contains a substantive Yorùbá explanation",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "uses a West African everyday example",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c6",
+              "criterion": "ends with English and Yorùbá understanding questions",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The English scientific terms and repeated uncertainty about Yorùbá vocabulary remain inside unclosed inline reasoning. No bilingual final explanation or quiz is delivered.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "human_04",
+          "source": "human judge",
+          "title": "Two Sigma model repeat",
+          "source_line": 124,
+          "record_sha256": "236ddcff4d3b18d66b29c755472998952c594bc707eb12a57c440887c6de9317",
+          "canonical_record_sha256": "bd8316f542d3c10c17be12535ae928cafeea97da172136ce2c1cbf013b0ad64c",
+          "prompt_sha256": "c3608a17f2e061efef46c503a8ea9bb5a02787defc6e43b9e5df51d253fa79e4",
+          "answer_sha256": "0fcdd1a7488e6e0bf3c288121bc223f00af3638f2e85145106fe9508ec94280a",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 3898,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "states direct proportionality R = kP",
+              "weight": 3,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "as personalization tends to zero the rate tends to zero",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "as personalization tends to infinity the linear rate is unbounded",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "defines the variables and positive proportionality constant",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "does not invent a square-root-of-two constant or Kahneman attribution",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "The equation, limits and proposed boxed formatting remain inside unclosed inline reasoning. Phrases such as final answer within that block are drafts, not delivered final text.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        },
+        {
+          "id": "human_05",
+          "source": "human judge",
+          "title": "Onitsha rice profit",
+          "source_line": 125,
+          "record_sha256": "41c48a379c1b33cf260ca5635e896d3842d1f498d64749529f565355591334f4",
+          "canonical_record_sha256": "c1d88f02e6b5972999ed35aed38dd9dd0592f962a51c79538a11603e188ce6ba",
+          "prompt_sha256": "56edf2b9c05cf0dddeee8a799697e576bb28d775823d4b5368ac07d303a376bd",
+          "answer_sha256": "64c0a1fadba185bfb73a846ccb1386902853a14d33094e5832886a36af3115e0",
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "final_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "answer_characters": 1969,
+          "reasoning_characters": 0,
+          "final_characters": 0,
+          "completion_tokens": 1024,
+          "finish_reason": "length",
+          "final_output_status": "absent",
+          "score": 0,
+          "max_score": 10,
+          "passed_criteria": [],
+          "criteria": [
+            {
+              "criterion_id": "c1",
+              "criterion": "computes total cost as ₦74,000",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c2",
+              "criterion": "identifies 15 kg remaining",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c3",
+              "criterion": "reduces the price to ₦1,955 per kg",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c4",
+              "criterion": "computes batch revenues ₦57,500 and ₦29,325",
+              "weight": 2,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c5",
+              "criterion": "computes total revenue as ₦86,825",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c6",
+              "criterion": "computes profit as ₦12,825",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c7",
+              "criterion": "computes percentage profit as 17.3%",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            },
+            {
+              "criterion_id": "c8",
+              "criterion": "checks by a genuinely different method",
+              "weight": 1,
+              "passed": false,
+              "points_awarded": 0
+            }
+          ],
+          "reason": "Intermediate cost, revenue and profit calculations remain inside unclosed inline reasoning, including a mistaken substitution of yen for the supplied naira currency. No final revenue, profit, percentage or independent check is delivered.",
+          "flags": [
+            "inline_reasoning_excluded",
+            "reasoning_only",
+            "unclosed_think_block",
+            "local_token_limit"
+          ]
+        }
+      ]
+    }
+  ]
+}

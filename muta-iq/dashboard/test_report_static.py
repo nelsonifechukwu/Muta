@@ -1,7 +1,9 @@
 """Static safeguards for the report's evidence labels and profiler controls."""
 
+import csv
 import json
 import re
+import subprocess
 from pathlib import Path
 
 DASHBOARD = Path(__file__).resolve().parent
@@ -142,7 +144,7 @@ def test_contents_numbers_match_the_rendered_chapter_numbers() -> None:
 def test_active_contents_location_is_exposed_accessibly() -> None:
     script = (DASHBOARD / "script.js").read_text()
 
-    assert '#gate-1-content a[href^=\'#\']' in script
+    assert "#gate-1-content a[href^='#']" in script
     assert 'link.setAttribute("aria-current", "location")' in script
     assert 'link.setAttribute("aria-current", "page")' in script
     assert 'link.removeAttribute("aria-current")' in script
@@ -161,7 +163,7 @@ def test_gate_tabs_toggle_their_nested_chapter_lists() -> None:
     assert 'toggle.setAttribute("aria-expanded", String(!expanded))' in script
     assert "content.hidden = expanded" in script
     assert 'gate.classList.toggle("contents-gate-collapsed", expanded)' in script
-    assert 'content.querySelector("a[href^=\'#\']")' in script
+    assert "content.querySelector(\"a[href^='#']\")" in script
     assert "routeReportFromHash(false, true)" in script
     assert "location.hash = firstHash" in script
     assert "function routeReportFromHash(moveFocus = true, forceScroll = false)" in script
@@ -186,9 +188,7 @@ def test_gate_two_is_a_deep_linked_chapter_sequence() -> None:
     ]
 
     gate_two_toc = html.split('id="gate-2-content"', 1)[1].split("</ol>", 1)[0]
-    toc_entries = re.findall(
-        r'<a href="#([^"]+)" data-chapter="([^"]+)">([^<]+)</a>', gate_two_toc
-    )
+    toc_entries = re.findall(r'<a href="#([^"]+)" data-chapter="([^"]+)">([^<]+)</a>', gate_two_toc)
     page_entries = re.findall(
         r'<section class="gate-two-page" id="([^"]+)" '
         r'data-gate-two-number="([^"]+)" data-gate-two-title="([^"]+)"[^>]*>\s*'
@@ -204,7 +204,7 @@ def test_gate_two_is_a_deep_linked_chapter_sequence() -> None:
     assert [entry[3] for entry in page_entries] == ["1", "2", "3", "4", "5", "6"]
     assert 'id="gate-2-report"' in html
     assert 'addEventListener("hashchange", () => routeReportFromHash(true))' in script
-    assert 'location.hash.slice(1)' in script
+    assert "location.hash.slice(1)" in script
     assert 'requestedTarget?.closest(".gate-two-page")' in script
     assert "requestedTarget.scrollIntoView" in script
     assert "moveFocus && atChapterStart" in script
@@ -226,7 +226,7 @@ def test_gate_two_has_matching_header_and_footer_navigation() -> None:
     assert "prev: GATE_TWO_CHAPTERS[chapterIndex - 1]" in script
     assert "next: GATE_TWO_CHAPTERS[chapterIndex + 1]" in script
     assert "link.hidden = !chapter" in script
-    assert 'link.href = `#${chapter.id}`' in script
+    assert "link.href = `#${chapter.id}`" in script
 
 
 def test_initial_hash_restoration_cannot_capture_a_later_gate_two_route() -> None:
@@ -243,12 +243,10 @@ def test_gate_two_research_precedes_the_remaining_placeholders() -> None:
     html = (DASHBOARD / "index.html").read_text()
     css = (DASHBOARD / "style.css").read_text()
     gate_two = html.split('id="gate-2-report"', 1)[1].split("</article>", 1)[0]
-    research = gate_two.split('id="gate-2-overview"', 1)[1].split(
-        'id="gate-2-audit"', 1
-    )[0]
+    research = gate_two.split('id="gate-2-overview"', 1)[1].split('id="gate-2-audit"', 1)[0]
 
     assert "Gate 1 qualified Muta for the next stage" in research
-    assert "no Gate 2 model has been selected" in research
+    assert "the next chapter records the completed comparison" in research
     assert "Small STEM models for an 8 GB laptop" in research
     assert "This is not a controlled leaderboard." in research
     assert "No model was executed on the target laptop." in research
@@ -270,8 +268,7 @@ def test_gate_two_research_precedes_the_remaining_placeholders() -> None:
     ]
     tables = re.findall(r"<table[^>]*>(.*?)</table>", research, flags=re.DOTALL)
     assert [
-        (table.count("<tr"), len(re.findall(r"<(?:th|td)(?:\s|>)", table)))
-        for table in tables
+        (table.count("<tr"), len(re.findall(r"<(?:th|td)(?:\s|>)", table))) for table in tables
     ] == [(10, 60), (9, 36), (10, 30), (3, 9), (7, 28)]
     assert tuple(re.findall(r'href="(https?://[^"]+)"', research)) == GATE_TWO_RESEARCH_URLS
     assert research.count('id="g2-source-') == 35
@@ -281,8 +278,176 @@ def test_gate_two_research_precedes_the_remaining_placeholders() -> None:
     assert "gate-two-placeholder" not in research
     assert "overscroll-behavior-inline: contain" in css
     assert 'content: "Scroll table →"' in css
-    assert gate_two.count("No Gate 2 measurements are reported yet.") == 5
-    assert "No Gate 2 selection has been made" in gate_two
+    assert "Model evaluation and ranking" in gate_two
+    assert "Continue with fine-tuned Muta Tutor Qwen2.5 1.5B Q4_K_M" in gate_two
+
+
+def test_gate_two_campaign_reports_complete_field_and_protocol_boundaries() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+    chapter = html.split('id="gate-2-audit"', 1)[1].split('id="gate-2-experiments"', 1)[0]
+
+    assert 'data-gate-two-title="Model evaluation and ranking"' in html
+    assert '{ id: "gate-2-audit", title: "Model evaluation and ranking" }' in script
+    assert "Thirteen GGUF artifacts completed" in chapter
+    assert "Spark-X2.5 1.7B" in chapter
+    assert "Excluded: unsupported architecture" in chapter
+    assert "five <code>llama-bench</code> repetitions" in chapter
+    assert "One shared <code>acc_norm</code> result per artifact" in chapter
+    assert "not a scalar/vector accuracy pair" in chapter
+    assert "45 MiB Python-root allowance" in chapter
+    assert "not end-to-end official-profiler scores" in chapter
+    assert "Per-question ARC answers are unavailable" in chapter
+    assert "no item IDs, documents, options, targets, predictions, or log-likelihoods" in chapter
+
+    for name in (
+        "Muta Tutor Qwen2.5 1.5B",
+        "LFM2.5 1.2B Thinking",
+        "MiniCPM5 1B",
+        "Qwen3.5 2B",
+        "Qwen3 1.7B",
+        "LFM2.5 2.6B",
+        "Spark-X2.5 1.7B",
+        "MiniCPM5 2B",
+        "LFM2.5 2.6B QAD",
+        "VibeThinker 1.5B",
+        "Falcon-H1-Tiny-R 0.6B",
+        "OpenReasoning Nemotron 1.5B",
+    ):
+        assert name in chapter
+
+
+def test_gate_two_charts_tables_and_accessible_summaries_agree() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+    chapter = html.split('id="gate-2-audit"', 1)[1].split('id="gate-2-experiments"', 1)[0]
+
+    for element_id in (
+        "g2-arc-chart",
+        "g2-score-chart",
+        "g2-stem-chart",
+        "g2-judge-score-chart",
+        "g2-judge-finals-chart",
+    ):
+        assert f'id="{element_id}"' in chapter
+        assert f'$("{element_id}")' in script
+
+    assert "77.8%" in chapter and "73.95–81.22%" in chapter
+    assert "75.8713" in chapter and "84.1383" in chapter
+    assert "77</strong></td><td><strong>95" in chapter
+    assert "47</strong></td>" in chapter
+    assert "Nemotron completed all ten" in chapter
+    assert "reviewed 0/100" in chapter
+    assert chapter.count("Failed; unranked") >= 1
+    assert "Falcon has no STEM responses" in chapter
+
+
+def test_gate_two_chart_constants_match_campaign_results() -> None:
+    script = (DASHBOARD / "script.js").read_text()
+    block = script.split("const GATE_TWO_CAMPAIGN = [", 1)[1].split("];", 1)[0]
+    parsed = {}
+    for match in re.finditer(
+        r'\{ label: "([^"]+)", arc: ([\d.]+), scalar: ([\d.]+), '
+        r"vector: ([\d.]+), stemStrict: ([\d.]+|null), stemCore: ([\d.]+|null), "
+        r"judge: ([\d.]+|null), finals: ([\d.]+|null) \}",
+        block,
+    ):
+        parsed[match.group(1)] = [
+            None if value == "null" else float(value) for value in match.groups()[1:]
+        ]
+    labels = {
+        "MiniCPM5 1B pure Q4_0": "MiniCPM5 1B Q4",
+        "LFM2.5 1.2B Thinking Q4_0": "LFM 1.2B",
+        "Muta Tutor Qwen2.5 1.5B Q4_K_M": "Qwen2.5",
+        "MiniCPM5 1B Q4_K_M": "MiniCPM5 1B KM",
+        "Qwen3 1.7B Q4_0": "Qwen3 1.7B",
+        "Falcon-H1-Tiny-R 0.6B Q4_K_M": "Falcon",
+        "Qwen3.5 2B Q4_0": "Qwen3.5 Q4",
+        "Qwen3.5 2B Q4_K_M": "Qwen3.5 KM",
+        "MiniCPM5 2B Q4_K_M": "MiniCPM5 2B",
+        "OpenReasoning Nemotron 1.5B Q4_K_M": "Nemotron",
+        "LFM2.5 2.6B QAD-Q4_0": "LFM 2.6B QAD",
+        "LFM2.5 2.6B Q4_0": "LFM 2.6B Q4",
+        "VibeThinker 1.5B Q4_K_M": "VibeThinker",
+    }
+    results_path = REPOSITORY / "bench/measurements/campaign-20260913-balanced-models/results.csv"
+    with results_path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert set(parsed) == set(labels.values())
+    for row in rows:
+        values = parsed[labels[row["model"]]]
+        expected = [
+            float(row["accuracy_percent"]),
+            float(row["s_total"]),
+            float(row["vector_s_total"]),
+            float(row["mac_stem_manual_strict_passes"])
+            if row["mac_stem_manual_strict_passes"]
+            else None,
+            float(row["mac_stem_manual_core_correct"])
+            if row["mac_stem_manual_core_correct"]
+            else None,
+            float(row["gcp_scalar_judges_provisional_manual_score"])
+            if row["gcp_scalar_judges_provisional_manual_score"]
+            else None,
+            float(row["gcp_scalar_judges_finished_final"])
+            if row["gcp_scalar_judges_finished_final"]
+            else None,
+        ]
+        assert values == expected
+
+
+def test_gate_two_response_explorer_uses_safe_lazy_text_rendering() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+
+    for element_id in (
+        "g2-evidence-dataset",
+        "g2-evidence-model",
+        "g2-evidence-prompt",
+        "g2-evidence-question",
+        "g2-evidence-answer",
+        "g2-evidence-reasoning",
+        "g2-evidence-review",
+    ):
+        assert f'id="{element_id}"' in html
+    assert 'fetch("evidence/gate-2/index.json")' in script
+    assert "fetch(`evidence/gate-2/${model.path}`)" in script
+    assert "question.textContent =" in script
+    assert "answer.textContent =" in script
+    assert "reasoning.textContent =" in script
+    assert "review.replaceChildren()" in script
+    assert "review.innerHTML" not in script
+    assert 'appendEvidenceMeta(meta, "Final output status"' in script
+    assert 'id="g2-raw-downloads"' in html
+    assert "manifest.downloads.forEach" in script
+    assert "function createEvidenceRequestGuard()" in script
+    assert "requestGuard.isCurrent(requestId)" in script
+    assert "view.hidden = true" in script
+
+
+def test_gate_two_request_guard_rejects_a_slow_stale_fetch() -> None:
+    script = (DASHBOARD / "script.js").read_text()
+    guard = (
+        "function createEvidenceRequestGuard()"
+        + script.split("function createEvidenceRequestGuard()", 1)[1].split(
+            "\n\nfunction renderGateTwoEvidenceRecord", 1
+        )[0]
+    )
+    program = f"""
+{guard}
+const requestGuard = createEvidenceRequestGuard();
+const applied = [];
+async function delayedSelection(name, delay) {{
+  const requestId = requestGuard.begin();
+  await new Promise((resolve) => setTimeout(resolve, delay));
+  if (requestGuard.isCurrent(requestId)) applied.push(name);
+}}
+Promise.all([delayedSelection("old", 25), delayedSelection("new", 0)]).then(() => {{
+  if (JSON.stringify(applied) !== JSON.stringify(["new"])) process.exit(1);
+}});
+"""
+    subprocess.run(["node", "-e", program], check=True)
 
 
 def test_gate_one_chapters_scroll_while_gate_two_and_recommendation_stay_fixed() -> None:
@@ -351,16 +516,27 @@ def test_previous_packaged_artifact_diagram_uses_tensor_identity_control() -> No
     assert "Qwen3.5 source quant" in html
     assert "320 model tensors compared" in html
     assert "all tensor payloads identical" in html
-    assert "The previous packaged Qwen3.5 model differed from its source quant only in GGUF metadata" in html
-    assert "The tuned finalist must receive and revalidate the same policy before submission" in html
+    assert (
+        "The previous packaged Qwen3.5 model differed from its source quant only in GGUF metadata"
+        in html
+    )
+    assert (
+        "The tuned finalist must receive and revalidate the same policy before submission" in html
+    )
 
 
 def test_all_current_visual_defaults_use_the_current_campaign_decision() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
 
-    assert '{ name: "Fine-tuned Qwen3.5 0.8B", gb: 0.48, acc: 70.2, lane: "audit", selected: true }' in script
-    assert '{ name: "Fine-tuned Qwen2.5 1.5B", gb: 0.92, acc: 77.8, lane: "audit", leader: true }' in script
+    assert (
+        '{ name: "Fine-tuned Qwen3.5 0.8B", gb: 0.48, acc: 70.2, lane: "audit", selected: true }'
+        in script
+    )
+    assert (
+        '{ name: "Fine-tuned Qwen2.5 1.5B", gb: 0.92, acc: 77.8, lane: "audit", leader: true }'
+        in script
+    )
     assert 'Qwen3 1.7B Q4_K_M", gb: 0.96, acc: 72, lane: "audit", selected: true' not in script
     assert "84.1387" in html
     assert "Vector leader, n=500" in html
@@ -383,9 +559,7 @@ def test_current_comparison_is_the_complete_eight_model_screen() -> None:
     section = html.split('id="second-search"', 1)[1].split(
         '<section class="chapter" id="behaviour"', 1
     )[0]
-    table_block = section.split('id="model-extension-score-chart"', 1)[1].split(
-        "</details>", 1
-    )[0]
+    table_block = section.split('id="model-extension-score-chart"', 1)[1].split("</details>", 1)[0]
 
     assert 'id="second-search"' in html
     for item in comparison["models"]:
@@ -541,10 +715,14 @@ def test_visible_report_uses_plain_scalar_vector_language() -> None:
         "the  vector configuration  is a portable simd build with avx2, fma, and f16c enabled"
         in visible_html
     )
-    after_definition = visible_html.split("from here on, this page just says scalar and vector", 1)[1]
+    after_definition = visible_html.split("from here on, this page just says scalar and vector", 1)[
+        1
+    ]
     # The isa-policy build-flag badges (AVX2/FMA/F16C ON, NATIVE/AVX-512 OFF) are literal
     # compiler-flag names, not narrative prose, so they're allowed to keep appearing.
-    prose_after_definition = re.sub(r"avx2\s+on|fma\s+on|f16c\s+on|native\s+off|avx-512\s+off", " ", after_definition)
+    prose_after_definition = re.sub(
+        r"avx2\s+on|fma\s+on|f16c\s+on|native\s+off|avx-512\s+off", " ", after_definition
+    )
     assert "avx2" not in prose_after_definition
 
 
@@ -576,7 +754,9 @@ def test_combined_all_models_chart_spans_both_explorations() -> None:
 
     assert 'id="all-models-score-chart"' in html
     assert "Every paired model, scalar versus vector" in html
-    assert "function renderCombinedComparison(ladderModels, extensionModels, finetuneModels)" in script
+    assert (
+        "function renderCombinedComparison(ladderModels, extensionModels, finetuneModels)" in script
+    )
     assert "renderCombinedComparison(ladderModels, extensionModels, finetuneModels)" in script
     assert 'group: "First exploration"' in script
     assert 'group: "Second exploration"' in script

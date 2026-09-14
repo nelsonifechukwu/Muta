@@ -1,0 +1,1 @@
+{"dataset":"gcp-stem-vector","model":{"id":"nvidia-openreasoning-nemotron-1-5b-q4-k-m-gguf","label":"OpenReasoning Nemotron 1.5B Q4_K_M","artifact":"nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf","rank":10},"records":[],"captured":0,"attempt":{"status":"not_reached","label":"Not reached","reason":"The retained attempt inventory records that this model was not reached."}}

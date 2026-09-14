@@ -1,0 +1,44 @@
+{
+  "stage": "judges",
+  "model": "LFM2.5-2.6B-QAD-Q4_0.gguf",
+  "model_sha256": "a247afd6414918eac8e520a9e6137dc271235461ecbe1180462221d5b8d40b03",
+  "model_bytes": 1593894944,
+  "source": {
+    "model": "LFM2.5 2.6B QAD-Q4_0",
+    "role": "challenger",
+    "source_repository": "LiquidAI/LFM2.5-2.6B-GGUF",
+    "source_revision": "84022ce711b28455e8c4fc364ce68c00cf995875",
+    "source_artifact": "LFM2.5-2.6B-QAD-Q4_0.gguf",
+    "source_bytes": 1593894944,
+    "source_sha256": "a247afd6414918eac8e520a9e6137dc271235461ecbe1180462221d5b8d40b03",
+    "test_artifact": "LFM2.5-2.6B-QAD-Q4_0.gguf",
+    "test_bytes": 1593894944,
+    "test_sha256": "a247afd6414918eac8e520a9e6137dc271235461ecbe1180462221d5b8d40b03",
+    "quantization": "QAD-Q4_0",
+    "license": "LFM Open License v1.0",
+    "runtime_gate": "pass"
+  },
+  "server": "/private/tmp/muta-mac-b10175.TVLIow/build/bin/llama-server",
+  "server_sha256": "f497d6b948174173f8159b6fa46c7b4816e2ecfd306ae9c0f7f11e6a7a79af88",
+  "server_provenance": {
+    "identity_method": "verified_binary_hash_with_operator_supplied_source_revision",
+    "source_revision": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+    "version_output": "version: 0 (unknown)\nbuilt with AppleClang 17.0.0.17000603 for Darwin arm64\n"
+  },
+  "runner_sha256": "5444b9a6e4a0432626c7da57c1f3f1efd487658981d763036f2fab35272295f6",
+  "prompts_sha256": "11887cc7f27ca879a5e98a96ffe2f977e248dee1576abf0906762df0773c7663",
+  "hardware_context": "apple_m4_pro_24gib_macos_metal_b10175",
+  "settings": {
+    "threads": 2,
+    "gpu_layers": 99,
+    "cache_ram_mib": 256,
+    "context_size": 4096,
+    "temperature": 0.0,
+    "seed": 3407,
+    "max_tokens": 1024,
+    "embedded_chat_template": true,
+    "external_system_prompt": false,
+    "top_p": 1.0
+  },
+  "port": 18083
+}

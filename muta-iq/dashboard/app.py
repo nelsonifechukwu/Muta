@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import json
+import mimetypes
 import os
 import re
 import shutil
@@ -78,6 +79,7 @@ FINETUNE_SUMMARY = Path(
         REPO_ROOT / "model-development/finetune/results/summary.json",
     )
 )
+GATE_TWO_EVIDENCE_DIR = DASH_DIR / "evidence/gate-2"
 
 # Historical archive constants. New campaign evidence is scored by bench/score.py and loaded
 # from CAMPAIGN_SUMMARY. The SQLite archive preserves its old capped fastest-local-run proxy
@@ -646,6 +648,25 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        if url.path.startswith("/evidence/gate-2/"):
+            relative = url.path.removeprefix("/evidence/gate-2/")
+            root = GATE_TWO_EVIDENCE_DIR.resolve()
+            target = (root / relative).resolve()
+            if target.is_dir():
+                target = target / "index.html"
+            if root not in target.parents or not target.is_file():
+                return self._json({"error": "The requested evidence file was not found."}, 404)
+            body = target.read_bytes()
+            ctype = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+            if ctype in {"application/json", "text/csv", "text/markdown", "text/plain"}:
+                ctype += "; charset=utf-8"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if url.path == "/api/state":
             return self._json(state_payload())
         if url.path == "/api/runs":
@@ -718,9 +739,12 @@ def server_options(args: list[str]) -> tuple[str, int, bool, bool]:
 
 
 def main() -> None:
+    from build_gate_two_evidence import build as build_gate_two_evidence
+
     host, port, open_browser, read_only = server_options(sys.argv[1:])
     RUNS_DIR.mkdir(exist_ok=True)
     init_db()
+    build_gate_two_evidence(GATE_TWO_EVIDENCE_DIR)
     server = ThreadingHTTPServer((host, port), Handler)
     server.read_only = read_only
     url = f"http://127.0.0.1:{port}"

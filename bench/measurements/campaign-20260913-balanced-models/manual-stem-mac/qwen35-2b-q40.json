@@ -1,0 +1,2204 @@
+{
+  "schema_version": 1,
+  "assessment_type": "Manual semantic audit by an AI assistant; not an official ADTC grade",
+  "model": "Qwen3.5-2B-Q4_0.gguf",
+  "model_sha256": "cd70221bebaee0503e0f6717e174250cd7825aa88438b3aabec9ad55731d9bb1",
+  "source": {
+    "path": "bench/measurements/campaign-20260913-balanced-models/mac-accuracy/Qwen3.5-2B-Q4_0.gguf/stem/responses.jsonl",
+    "sha256": "7ee53fb4e291ccde55d0d663194673dff67c58f43e130c421ef60a023bcad380",
+    "event_path": "bench/measurements/campaign-20260913-balanced-models/mac-accuracy/Qwen3.5-2B-Q4_0.gguf/stem/events.jsonl",
+    "event_sha256": "e1233375707eadb7f388d15b7b41b5e79321ac0d7a8b300a7227d2e64b0a3d2c",
+    "config_path": "bench/measurements/campaign-20260913-balanced-models/mac-accuracy/Qwen3.5-2B-Q4_0.gguf/stem/config.json",
+    "config_sha256": "6f74bd028c58be4f3f738f3b1f32b57974c8bf7a6234a7010159e2d6509778cb",
+    "prompt_suite_path": "bench/stem_prompt_suite.py",
+    "prompt_suite_sha256": "9d40d48c0ce2a2484fde45dfc75fa550123d7a70f7edef5c2c7978c21ecfe4a2",
+    "policy_path": "report.md",
+    "policy_sha256": "b05dd397b1c4a8ccd0fb28728602a64ff3a696f31b99fd08ecdd4fd93ca7868a",
+    "filter": {
+      "model": "Qwen3.5-2B-Q4_0.gguf",
+      "model_sha256": "cd70221bebaee0503e0f6717e174250cd7825aa88438b3aabec9ad55731d9bb1"
+    },
+    "matched_records": 100,
+    "all_ids_verified": true
+  },
+  "provenance": {
+    "server_sha256": "f497d6b948174173f8159b6fa46c7b4816e2ecfd306ae9c0f7f11e6a7a79af88",
+    "hardware_context": "apple_m4_pro_24gib_macos_metal_b10175",
+    "logged_settings": {
+      "threads": 2,
+      "gpu_layers": 99,
+      "cache_ram_mib": 256,
+      "context_size": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "max_tokens": {
+        "multiple_choice": 256,
+        "written": 512
+      },
+      "embedded_chat_template": false,
+      "external_system_prompt": false,
+      "cache_prompt": false,
+      "endpoint": "/completion",
+      "server_command": [
+        "/private/tmp/muta-mac-b10175.TVLIow/build/bin/llama-server",
+        "--model",
+        "/Users/elijahnelson/Desktop/PROJECTS/Muta/bench/.artifacts/mac-balanced-models/Qwen3.5-2B-Q4_0.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18083",
+        "--ctx-size",
+        "2048",
+        "--threads",
+        "2",
+        "--n-gpu-layers",
+        "99",
+        "--cache-ram",
+        "256"
+      ]
+    },
+    "server_provenance": {
+      "identity_method": "verified_binary_hash_with_operator_supplied_source_revision",
+      "source_revision": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+      "version_output": "version: 0 (unknown)\nbuilt with AppleClang 17.0.0.17000603 for Darwin arm64\n"
+    },
+    "recorded_runner_sha256": "f5f4cafca09e06a0c2f8c50ccdad20308a2b879ed6ba0e1ff00d8f24e2f38289",
+    "recorded_prompts_sha256": "fe46f2446e334caa0fd151402fe9a61d4ccb109dac52faffe7366afceba353f8",
+    "missing_metadata": [
+      "Per-response rows omit the full settings object; settings are taken from this batch's config.json and model_start event.",
+      "This review adds no GCP throughput, RAM, official panel or official-profiler result."
+    ]
+  },
+  "policy": [
+    "Inspect the complete returned response for each exact prompt; do not use the selected-option regex as a semantic grade.",
+    "Strict pass requires the correct main answer, correct requested reasoning/calculation, every substantive requested component, and no unresolved material contradiction or factual error in supporting text.",
+    "A uniquely identifying correct option value can pass without its letter; retain a missing_option_letter flag. An explicitly wrong option label fails strict grading.",
+    "When a prompt explicitly requests a check, require a genuinely distinct numerical method or a numerical inverse/back-check/substitution. A single derivation, repetition of it, or a bare claim that it checks out is insufficient.",
+    "A self-correction can pass when the incorrect claim is resolved and the final conclusion is clear. A correct final sentence alone does not erase unretracted conflicting explanations.",
+    "Core-answer correctness is a separate, non-composite diagnostic: the main numerical result or scientific conclusion is correct, irrespective of omitted verification or faulty supporting claims. It is not a strict pass and does not establish tutoring quality.",
+    "A token-limit finish is not automatically wrong if the complete requested answer already appears. Repetition and length-format excess are flagged, not independently deducted. Missing substantive material at the limit fails.",
+    "This is an analyst-defined binary audit of a raw-completion stress test, not a chat-template evaluation, official benchmark accuracy, panel grade, or competition score.",
+    "Review-boundary flags identify discretionary explanation/safety judgments for a second reviewer; the stated provisional binary decision remains visible rather than being silently omitted.",
+    "Assess all returned raw-completion text, including literal <think> blocks and text preceding </think>. This differs from the judges chat test's final-answer-only policy.",
+    "An actual inverse check of a relevant intermediate constraint can satisfy a requested check; independently checking every substep is not required."
+  ],
+  "totals": {
+    "math_multiple_choice": {
+      "strict_pass": 23,
+      "core_correct": 24,
+      "total": 25
+    },
+    "math_written": {
+      "strict_pass": 20,
+      "core_correct": 23,
+      "total": 25
+    },
+    "science_multiple_choice": {
+      "strict_pass": 21,
+      "core_correct": 25,
+      "total": 25
+    },
+    "science_written": {
+      "strict_pass": 7,
+      "core_correct": 22,
+      "total": 25
+    },
+    "overall": {
+      "strict_pass": 71,
+      "core_correct": 94,
+      "total": 100
+    }
+  },
+  "original_option_parser": {
+    "correct": 11,
+    "total": 50,
+    "math_correct": 6,
+    "science_correct": 5,
+    "note": "Preserved stored regex option flags, not this manual semantic grade."
+  },
+  "format_notes": {
+    "missing_option_letters": [
+      "M08",
+      "M13",
+      "M14",
+      "M15",
+      "S04",
+      "S05",
+      "S18",
+      "S22",
+      "S23",
+      "S24"
+    ],
+    "output_token_limit_count": 92,
+    "empty_response_count": 0,
+    "unclosed_raw_think_count": 67,
+    "word_and_sentence_limits": "Formatting diagnostics are separate from substantive grading."
+  },
+  "results": [
+    {
+      "id": "M01",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 1,
+      "response_sha256": "926861aa430004d95b0d4c953e5650cfb60b182619d7fcc2501e71f7f483e961",
+      "record_sha256": "031c2b87c697b2b9e55da3b06f21c63d805461bc6b0cd9d16254cc524f5a42f7",
+      "word_count": 118,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and calculates 6 × 500 = ₦3,000.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M02",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 2,
+      "response_sha256": "610baba00a254734503ec9af982c72dfa81ba345676078ecc6fe13f29081696d",
+      "record_sha256": "3bcc33a099e47b11ba413a3e478643514e4cc82bfcd1670439176920d17d0552",
+      "word_count": 124,
+      "original_selected": "C",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and calculates 8 × 250 = ₦2,000; repeated question text does not change the answer.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M03",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "eos",
+      "generated_tokens": 126,
+      "source_line": 3,
+      "response_sha256": "93818f764ca46baf791e1475426718ea77b8ee999687c30ed1e06fdf179bb45d",
+      "record_sha256": "57f76540f0c7184df5063108ae4e6ea449534a8592b052de2771fd9ec98f498e",
+      "word_count": 86,
+      "original_selected": "D",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and calculates 36 ÷ 6 = 6.",
+      "flags": []
+    },
+    {
+      "id": "M04",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 4,
+      "response_sha256": "75f4bc2a8533db961d4e39074ce3a29f4044eae32304c3c72d67eec9488575be",
+      "record_sha256": "6f30f2ac77933e0f2486f7a75c838c24f1cc8c28c87578544ea1bcbbd467bc21",
+      "word_count": 118,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and calculates 60 × 3 = 180 km.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M05",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 5,
+      "response_sha256": "9bdffa640cd07f4f19a2d7b9dcd659ce33013bae3040d0d737efb1174f84c7a7",
+      "record_sha256": "84b33eded560efae79480228ee30e1db62ace07f78459e7c220a0d154ee8a5e9",
+      "word_count": 159,
+      "original_selected": "D",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and calculates 8 × 5 = 40 m².",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M06",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 6,
+      "response_sha256": "513f1fc3d3124457fa8796d94fafb6cb00f0ffd85f2c5092ee5641592bdd0987",
+      "record_sha256": "fd38ee2c4d57335d0c1f58a4b9388590266638e7eae5b208d7dc76cda3214df6",
+      "word_count": 107,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies A as the match and calculates 80 ÷ 4 = 20.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M07",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 7,
+      "response_sha256": "982e5178074f64a7dbdac6dab3df14a01b982239d026e0fdfc4dcad8e41afe15",
+      "record_sha256": "fb8fcb6698ad01ecba5ceb558335fbeb7e44d786721fa1c544266e1067f02e67",
+      "word_count": 102,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C after calculating cost 1,800 and change 5,000 − 1,800 = ₦3,200.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M08",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 8,
+      "response_sha256": "c7044c21a32cb7d6692a0f5517e1eb8be89ae56ba6468b97023d1580799a1ccf",
+      "record_sha256": "af9de4fcd4ace303430546c06a9560624c340658062b0a3821d4491aaf8eebc9",
+      "word_count": 127,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Calculates 18 + 22 = 40, uniquely identifying B, but stops before selecting the letter.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M09",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 9,
+      "response_sha256": "8024cc8649206203601267e7bec27b973bfed871241222756dca182ac228054c",
+      "record_sha256": "fd8a389d9e4bb196e985da88714134fd3b1bfb3539332a202fb767e328570d19",
+      "word_count": 125,
+      "original_selected": "D",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and calculates 15 − 3 = 12.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M10",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 10,
+      "response_sha256": "25443445bdcba8348a7f85e912d4e98b5a42c7b34c76ee0098e1392fe82e9fdc",
+      "record_sha256": "9c26183d18f5d2be82332d834f92b7e497d0c3345331f504b9b4c97ee4093faa",
+      "word_count": 134,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies A as the match and calculates 4 × 2 = 8 litres.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M11",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 11,
+      "response_sha256": "ac2598fd56b88e4415fb611ef714aaca20c421b939bb07968447417796f1dc4f",
+      "record_sha256": "d1eb74fd04320923249242ec48a13bef8ff5ee7e99beac244cc36d3805d6a608",
+      "word_count": 107,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and calculates 2,000 × 0.15 = ₦300.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M12",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "eos",
+      "generated_tokens": 186,
+      "source_line": 12,
+      "response_sha256": "f055385b7c1a7481e77cad5009f05b1cbcc609b4738e1bc9b926ec091f481fc2",
+      "record_sha256": "bd8d31e003e62449a5f043e1a59d61217d690eea09861b787fd0153e867465cf",
+      "word_count": 109,
+      "original_selected": "B",
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Calculates 15 blue beads and ends with C, but an unretracted opening 'Correct Option: B' conflicts with that answer.",
+      "flags": [
+        "contradictory_option_labels",
+        "review_boundary"
+      ]
+    },
+    {
+      "id": "M13",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 13,
+      "response_sha256": "fd509dc1936bca7de4699ee37463fa7a135fcdb834e1cf2b3ddb7d89e10efad2",
+      "record_sha256": "3f1602bb91683ae7e33135850dfaa0fb8c392b7bd098776983cf4b1163f2ab60",
+      "word_count": 112,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly computes 10,000 × 0.05 × 2 = ₦1,000 but stops while listing options without selecting B.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M14",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 14,
+      "response_sha256": "1c4f5f67621d1f22f87f565ae69821ee1366a709955d106b28d19c19e5e8e1aa",
+      "record_sha256": "c1bfcb4bf2f1be45bd8dcf3344b83f5495df1301156541f05686b90b3ba780ef",
+      "word_count": 110,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly computes (12 + 15 + 18)/3 = 15 but stops before selecting B.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M15",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 15,
+      "response_sha256": "39eed34e3015cd5832f9a92d3ad7787285e78c5e3025e0340743f110b28dacf0",
+      "record_sha256": "46edabcc90ac1d442c182c581a3ea816885f8ad2bef1a5ff09a5c5f0ffa0f005",
+      "word_count": 123,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly computes 2 × (9 + 4) = 26 m but stops before selecting B.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M16",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 16,
+      "response_sha256": "fb0a02243ef1b2b09ad2243143bc9248a1a7f0cbde2ae31498599b5068fd0c09",
+      "record_sha256": "50217e5e48f627e6d12440bfa19a9ee8e471665577c0d93049263d0c29ac8808",
+      "word_count": 114,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies C as correct and solves x = (20 − 5)/3 = 5.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M17",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 17,
+      "response_sha256": "b0c4e9d56f0123929a136e8bfc7c2f173e6d4598ca3c1fd8fed0013da52e99b0",
+      "record_sha256": "24518eab21ca038815a541b4cfad847bb2cb4408f801835ae59e20eea075ffe7",
+      "word_count": 104,
+      "original_selected": "C",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and computes 120 ÷ 4 × 3 = 90.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M18",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 18,
+      "response_sha256": "c53d62c86c78f920eb1ee28106ed315cd1bcf219bba05481ee383aeb8c38043d",
+      "record_sha256": "3ea4833188b017d803b615fd24319f938fd73f40b9b2e0dc1e43bf42ece484a5",
+      "word_count": 95,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and computes 2.5 × 1,000 = 2,500 m.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M19",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 19,
+      "response_sha256": "e8377f24551fd1265edddf241337cec43f003112efcf6ed5170e40ccdf865aff",
+      "record_sha256": "f71929fecc50441877a8d674399c8f0bbe8d4f20965d4f205e44ddbdeacfb43d",
+      "word_count": 125,
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and computes (1,000 − 800)/800 × 100 = 25%.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "M20",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 20,
+      "response_sha256": "0e4d14dc805704f6651fcf5c0f5b06660dd3fef9fb692bb77fb0349719e23b77",
+      "record_sha256": "750d0683a35e15fb1a543ea629a8807f2cb61dab3835d2075a64dab1dbad367c",
+      "word_count": 119,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and computes 150/3 = 50 km/h.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M21",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 21,
+      "response_sha256": "af7453a13af808f00bd9c2a133e765db55abe5f5924791f53699edbd5e0f1a57",
+      "record_sha256": "1d622a36db0f89b214139c1fd02c9858da091647c0a056e40228e975df86c680",
+      "word_count": 136,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and computes 3/(3 + 7) = 3/10.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M22",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 22,
+      "response_sha256": "d8a896f29f35467c39e2ca21a6e5ddabab7dbc2d0968cce32145a2d2e20a5e93",
+      "record_sha256": "a9836150384cecffbdb1a3e83bdab3e2566ba221d85995893d84e242c7e15262",
+      "word_count": 118,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and computes 180 − 50 − 60 = 70°.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M23",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 23,
+      "response_sha256": "851a508d9ba7a084fe27ec1d6db944c3cb09e2e63c6f9c903ca42547ca06b08f",
+      "record_sha256": "da36bcb2d4de49803bcf18eb0bdf7999adbd4c75693ddf67d9111c1c6e665830",
+      "word_count": 132,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects A and computes √144 = 12 cm.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M24",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 24,
+      "response_sha256": "4ce27378917788befc530c2f5c580f6fee6eca4d37657b1449bd2e1e04832636",
+      "record_sha256": "73e96f5b26ed743797aca542ec40caab46f389ef6e8dbbade7357476d7d787a9",
+      "word_count": 116,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Lists factors but reaches the token limit before identifying the highest common factor or selecting C.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M25",
+      "subject": "math",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 25,
+      "response_sha256": "2dbe5b3adc2218bb5781cee89d55cc291c5f925169d7d44643ccd3112b07827c",
+      "record_sha256": "7fe3eb04be8d569d3b43d8332864f627f8eafcf70338705bb27026db3f52e8d7",
+      "word_count": 144,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and establishes the common difference 3, giving 14 + 3 = 17.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "M26",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦400 each; cost ₦15,000; target revenue ₦18,000; 45 sold",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 26,
+      "response_sha256": "5844ac8b770d1cc1a90de39b87ff8f24d98c86cd1bec8e012c086dc909831747",
+      "record_sha256": "fc12e783b97b5ded64d6a5cef7e0eaa7ba734b6a15b184db786e8a498250daae",
+      "word_count": 245,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Derives ₦400 per tuber and checks the target profit by the inverse calculations 18,000 − 15,000 = 3,000 and 3,000/15,000 × 100 = 20%.",
+      "flags": [
+        "reviewed_check_boundary",
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M27",
+      "subject": "math",
+      "format": "written",
+      "expected": "4 GB",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 27,
+      "response_sha256": "182ec353b52c80b2d26b0da8e887ab92c433b5b4544b8d4ad7c2e62f472b2941",
+      "record_sha256": "5e141594f0bc4e54c6fea4cde952b3a485760d94fdf09dc494ccda206e75aa69",
+      "word_count": 302,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Calculates 25 − 3 × 7 = 4 GB and back-checks 21 + 4 = 25.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M28",
+      "subject": "math",
+      "format": "written",
+      "expected": "Bisi 12; Ada 24",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 28,
+      "response_sha256": "b609307d18b7fdb6b59358e45b5eb347a81fd3291b410915d115ad0f282875c1",
+      "record_sha256": "8f28dfd6fb4ed491eef6701b7fd82253b3cce60977a6d115b976baa25f077f40",
+      "word_count": 297,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Derives Bisi 12 and Ada 24 and verifies their sum 12 + 24 = 36.",
+      "flags": [
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M29",
+      "subject": "math",
+      "format": "written",
+      "expected": "discount ₦600; new price ₦4,400",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 29,
+      "response_sha256": "a8416865a587fd75310ab549979b1c58db1a85070f61b254aeb24521fd72f929",
+      "record_sha256": "2389bddf16d8f5bbe3ab472cf47cd2002590a70cafb5e58e0b4cd830ecb5490a",
+      "word_count": 203,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Computes ₦600 discount and ₦4,400 price, checking 4,400 + 600 = 5,000.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M30",
+      "subject": "math",
+      "format": "written",
+      "expected": "96 L",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 30,
+      "response_sha256": "0c1bc900a6715455fa49ea9b3650444903b8610ee6af95095b4cd4d74e5202b5",
+      "record_sha256": "168a77331cda92a631736ff93b21016bfa9b56c7a97d013a20d88792e7a3b1b7",
+      "word_count": 233,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Computes 96 L remaining, but the labelled check merely repeats 120 − 24 = 96; no independent numerical check is supplied.",
+      "flags": [
+        "missing_requested_check",
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M31",
+      "subject": "math",
+      "format": "written",
+      "expected": "distribute 2 to both terms; 2x + 6; both equal 14 at x = 4",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 31,
+      "response_sha256": "f8d930ec89b57ff4496ea16ebf703edd07becdcaa9ef8b8840061e7a9d13443f",
+      "record_sha256": "37d0f226f700f3cb9e0dbc3b0c1f6d781d5b7d5beb5e9e1b51c6a0467fd7adb4",
+      "word_count": 256,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies failure to multiply the constant by 2, gives 2x + 6, and verifies both original and corrected forms equal 14 at x = 4.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M32",
+      "subject": "math",
+      "format": "written",
+      "expected": "1/4 unused",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 32,
+      "response_sha256": "c15cbd9481b0547396ab60e671ef7e3a7a17e57fbe1f45625aba65cdb1fe5bac",
+      "record_sha256": "d75ad291934362518bee2ab238acbebf76a254c6be2b3051a92ad6cbe88d93cb",
+      "word_count": 238,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly calculates beans as 1/12 of the whole field and unused land as 1 − 3/4 = 1/4.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M33",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦300",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 33,
+      "response_sha256": "4c11def1cdee3bec28747b783db0e11e215811fae101556bd8c4f0c381cb14a0",
+      "record_sha256": "f771dd77b1d6f9560e20bffd90504ce4b247be73c97f0dbf830ccaba075f2d57",
+      "word_count": 173,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Solves the pen price as ₦300 and substitutes it into 2 × 400 + 300 = 1,100.",
+      "flags": [
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M34",
+      "subject": "math",
+      "format": "written",
+      "expected": "n(n + 1); next 30",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 34,
+      "response_sha256": "864b8277176e06d62e75d8b872936a4e5653d8917adee44adb31c7495bfc74f0",
+      "record_sha256": "d7bd79a961056da9ef93891a0bb78139b9253e07c1472b5c289bdd6d48b98319",
+      "word_count": 211,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Recognizes increasing differences but never gives the next term or a completed rule before the limit.",
+      "flags": [
+        "missing_answer",
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M35",
+      "subject": "math",
+      "format": "written",
+      "expected": "10 cups",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 35,
+      "response_sha256": "c8a3b4484d017fd45bb284b966ee639b0b38146b72315c0fc1ca4e7a794a5788",
+      "record_sha256": "9c24e407c2f3be9fc61dd0329c95f952c4e90c7a80baae7bf9a7d0b96efbe29f",
+      "word_count": 246,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Sets up 4/10 = x/25, solves x = 10, and checks both numerical ratios reduce to 2/5.",
+      "flags": [
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M36",
+      "subject": "math",
+      "format": "written",
+      "expected": "interest ₦6,000; total ₦56,000",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 36,
+      "response_sha256": "2891477217064125cd75947a893c0bccff944e4bcf9123e22eb80d47fcdb08d3",
+      "record_sha256": "6cfc1b7cd32fede88ec97d5d8f4925e881ecb093358f59bd43820b66721096cf",
+      "word_count": 231,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Uses 18 months = 1.5 years to obtain ₦6,000 interest and ₦56,000 total.",
+      "flags": [
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M37",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦30,000",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 37,
+      "response_sha256": "979c9f27c7ce1325cbd25e5708cc95db154b0195acaf23ad1f07765566762637",
+      "record_sha256": "abdfe1b2e6008de45f9ff723d284739ddf81a9557bbb07183188726c276f8d2c",
+      "word_count": 231,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Solves original pay ₦30,000 and back-checks 30,000 + 0.20 × 30,000 = 36,000.",
+      "flags": [
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M38",
+      "subject": "math",
+      "format": "written",
+      "expected": "circumference 44 m; area 154 m²",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 38,
+      "response_sha256": "94ac9cd4f0abcc06b526896114b556e00b5c8538389dc73820754ff1f5d40114",
+      "record_sha256": "d8a887081a6298567093fd63afbf70799bd068f3ef86015133e02c571fe26ae8",
+      "word_count": 213,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Incorrectly gives circumference 308 m by multiplying by radius twice after cancelling the denominator; the area 154 m² alone is correct.",
+      "flags": [
+        "incorrect_core_answer",
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M39",
+      "subject": "math",
+      "format": "written",
+      "expected": "10 m",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 39,
+      "response_sha256": "97afff9d56dc775778db814b164391a190680ca067b6128165c0aff3f1a79e96",
+      "record_sha256": "db58c4db0f8c061379e8ae3d56fa2561aeb7047258e7d889614aceea63eb4012",
+      "word_count": 230,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Finds 10 m and explicitly verifies 8² + 6² = 10².",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M40",
+      "subject": "math",
+      "format": "written",
+      "expected": "7/10",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 40,
+      "response_sha256": "519bb124717696c80baf3c822fb34deb60f0b165c3381d66570f495ea0aa27ae",
+      "record_sha256": "5bf4fa9a344902aaad07eb057f36cde175bc51d4e00e679beb58ef93d392d38e",
+      "word_count": 308,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly calculates 7 non-blue counters out of 10 and probability 7/10.",
+      "flags": [
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M41",
+      "subject": "math",
+      "format": "written",
+      "expected": "90",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 41,
+      "response_sha256": "65b5e1c855d34c3e037e48de9f7d4d1d283427f876e200d4aa900c09373eb6ab",
+      "record_sha256": "f89ee8ee7e218be3e7dcd0b787125b9213929c3e14830032a5c9eb0e20a3198b",
+      "word_count": 245,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Finds the fourth score 90 and verifies (60 + 70 + 80 + 90)/4 = 75.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M42",
+      "subject": "math",
+      "format": "written",
+      "expected": "4 meals; ₦600 remains",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 42,
+      "response_sha256": "17d44a4e171a120dc24f1a33c6c8a05e6ab9464747eb37db327676dd6a210449",
+      "record_sha256": "bc03499a7721811a713ea3bceeaf497650956356a74f0c672706b154f0d2db97",
+      "word_count": 206,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Calculates floor(3,800/800) = 4 meals and ₦600 remaining.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M43",
+      "subject": "math",
+      "format": "written",
+      "expected": "₦86,000",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 43,
+      "response_sha256": "cd9e989f25b86479f371f95e11b6af14a1f2191765a2872ed4b56ebfe27e287d",
+      "record_sha256": "0e82f36d59eb3922dc2708c57bb1008ee9023c3c077882f502de664612ad88c2",
+      "word_count": 199,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly computes ₦86,000, but the labelled check repeats the same multiplication/addition rather than checking the result independently.",
+      "flags": [
+        "missing_requested_check",
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M44",
+      "subject": "math",
+      "format": "written",
+      "expected": "median 7; mode 7",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 44,
+      "response_sha256": "e9dc58140ec662e0aa08229ea5ab45b3e8df66f1ef60ca477f94dee24e37242e",
+      "record_sha256": "e4f958cd4905272cec0b8a3b4c35c66d16d42b958e2b2002d4d62cf7be41677d",
+      "word_count": 286,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly gives median 7 and mode 7, distinguishing middle position from highest frequency.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M45",
+      "subject": "math",
+      "format": "written",
+      "expected": "correct; 20; one quarter",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 45,
+      "response_sha256": "6395cf72c9af6961f9862c08935ccc437e649ebf8ece5c3ab0e78e9e4456a3e6",
+      "record_sha256": "b011db4feb8c6a42cd5a254583b38a82e2e2802c4801d93ef707b824505b52bf",
+      "word_count": 228,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Confirms the student is correct, computes 80 × 0.25 = 20, and explains 25% as one quarter.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M46",
+      "subject": "math",
+      "format": "written",
+      "expected": "36 km",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 46,
+      "response_sha256": "15834814a07df7c46566df9cf9da8f1b6ba09a641cde421ac9764e2623a95281",
+      "record_sha256": "09df10fc94eed274bcbb1558b169b4accf9eca78a6365b80dd207aa700173c30",
+      "word_count": 249,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly multiplies 7.2 cm by 5 km/cm to obtain 36 km.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M47",
+      "subject": "math",
+      "format": "written",
+      "expected": "720 L",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 47,
+      "response_sha256": "c79b85c78c1e44660daf0340cc824b3de495e317c1efea8a3083808c0645c9e5",
+      "record_sha256": "bc69fafba66008e1cc53fd90eda68984684c5a7a337f656211006a27907b212d",
+      "word_count": 262,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly computes 4 × 15 × 12 = 720 litres, with units.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M48",
+      "subject": "math",
+      "format": "written",
+      "expected": "x = 8; both sides 30",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 48,
+      "response_sha256": "bc3d7d4e924af881d417960e3c7c40aa0c1174662428a7114c828cbcebdc7c6c",
+      "record_sha256": "09c9bdac3f28fd85474c115af13cdf533e99c128f16dbcb6cc7eae5e61d2a72d",
+      "word_count": 302,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Solves x = 8 and substitutes into both sides to get 30; additional invented examples are correct and do not contradict this result.",
+      "flags": [
+        "unrequested_extra_examples",
+        "output_token_limit",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M49",
+      "subject": "math",
+      "format": "written",
+      "expected": "74 m²",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 49,
+      "response_sha256": "df7318be0cad71ab4494599372024937cea4601f369c660e7c12c3e0ebdd077b",
+      "record_sha256": "94b77922d92596d37ae6fa9cbbbed223e0026cf34b85e1636de1a3ed387482c6",
+      "word_count": 244,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly subtracts the 6 m² platform from the 80 m² floor, obtaining 74 m².",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "M50",
+      "subject": "math",
+      "format": "written",
+      "expected": "square implies rectangle; converse false; nonsquare rectangle such as 2 by 3",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 50,
+      "response_sha256": "d673ed6e050191a2576dcf86197a2f75b34747593565e1af889e920d50b63fee",
+      "record_sha256": "d44b3005060073daac689db9bbd61ed5907cb841f6082c81ff898939220bb899",
+      "word_count": 314,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly rejects the converse, distinguishes subset from superset, and gives a 2×4 counterexample, but repeatedly mislabels the error as the fallacy of the undistributed middle.",
+      "flags": [
+        "review_boundary",
+        "incorrect_supporting_explanation",
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "word_limit_exceeded"
+      ]
+    },
+    {
+      "id": "S01",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 51,
+      "response_sha256": "3a860a1d8a91a62eb74446649f7116f0cb80737a03740bbff8497f2eff10b08c",
+      "record_sha256": "f11dcf1d58bb53f1b216b0923fe1410ce236ebf384a74e9b1b56246dd950f103",
+      "word_count": 164,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Identifies photosynthesis correctly, but incorrectly describes respiration as consuming energy and releasing energy in the form of carbon dioxide and water.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S02",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 52,
+      "response_sha256": "c784d674c00958ffadd13af7782a8e136231488f112b312115e80db7cd3f591f",
+      "record_sha256": "26e3d5c33c215b5d4bd1b574bddde4fbcf8583e98f645e95869e78e0ccdcd105",
+      "word_count": 160,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and explains the heart pumps blood to distribute oxygen/nutrients and remove waste.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S03",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 53,
+      "response_sha256": "9b4a7e2d689886ec1d7f570a61a6665a36bef34ab01e599ed4d379a9208fad33",
+      "record_sha256": "871161563edee6a0577faa6972f8ea6b37ac8d10e00855267c55356766974b1a",
+      "word_count": 131,
+      "original_selected": "D",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and correctly contrasts evaporation with freezing, condensation and melting.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S04",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 54,
+      "response_sha256": "e158ebdc84fbdf64d8afa8b4b31625b0696c55027126da40a10c59774b10edbe",
+      "record_sha256": "5434047fa4396aca90318e1e37cad353e93d281ec7d61d85f94ccb919b7c7afb",
+      "word_count": 148,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies oxygen as essential to aerobic production of ATP and distinguishes the other gases.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S05",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 55,
+      "response_sha256": "de4e0b4fe7c7197d36d56ea940ecdcd6f81d67c241fe7de186f35f8b7d9730c1",
+      "record_sha256": "d395e736dd84040df168d91e835b1a6abf8ac21ded4f893b08299e5e33a1d4d9",
+      "word_count": 167,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies gravity and explains attraction between masses toward Earth's centre.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S06",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 56,
+      "response_sha256": "6dd31099281715b5dce51b5163d4f5ee88e2fdf82cf0dbb4c3fd978ca8fe2863",
+      "record_sha256": "a89f78e4ccbefb310a177990837e46bce0722eb10ca64fab5785d07cab480a7d",
+      "word_count": 166,
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and describes roots absorbing water/minerals and transporting them through the plant.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S07",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 57,
+      "response_sha256": "8786c52b325961c3bf0c99ff75a63fe677f0934fc80f80d288a2d00354c9bf21",
+      "record_sha256": "ffc2fed385b8124f545634900b5561fec94ad06b3909e3b7541891f5d9281426",
+      "word_count": 126,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Selects C and gives 100°C at standard pressure, but also calls 50°C room temperature and treats the 212°C distractor as the Fahrenheit boiling point.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S08",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 58,
+      "response_sha256": "f704c1c7bc291ca5949c68b7aca22b259e2d49bbb9a1458e124e14c198c0ba75",
+      "record_sha256": "64f2c9032220d0796976c2df718cd85c6587e7b78d779cf20b0b934b0c8edc83",
+      "word_count": 140,
+      "original_selected": "D",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and explains the Sun's gravitational attraction causes Earth's orbit.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S09",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 59,
+      "response_sha256": "061b66b03756cc93d9af89b9d66d990da8cc334871530fd4b033ae21b0e5acea",
+      "record_sha256": "a8bed04dbfb3a80473fc1ba91b304fe67d1b7f115b579676edcb68871eacca6a",
+      "word_count": 159,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects A and explains a tilted flat surface, substantively contrasting lever, pulley and wheel-and-axle mechanisms; no mandatory force-reduction keyword is required.",
+      "flags": [
+        "review_boundary",
+        "output_token_limit",
+        "unclosed_raw_think_marker",
+        "reviewed_explanation_boundary"
+      ]
+    },
+    {
+      "id": "S10",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 60,
+      "response_sha256": "507d25ccdfe692cdd599c96aaf63027092396a170077f33be7607299b66fc440",
+      "record_sha256": "8668d24ee0f3faf92814cc0414f102efb06f1ec4b53a2409fcd60e25e4ac6547",
+      "word_count": 152,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies C and explains haemoglobin in red cells binds oxygen.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S11",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 61,
+      "response_sha256": "d88275e461c7688a293cf4fbdbd0df8ab10ff05579a61652dc9d368748e0beb9",
+      "record_sha256": "7bb55664dd69c3a05c23c6c9018e97a410e2b80bb3069f0cfd217951ef9dff82",
+      "word_count": 145,
+      "original_selected": "C",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and correctly distinguishes current's ampere from voltage's volt, power's watt and resistance's ohm.",
+      "flags": [
+        "review_boundary",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S12",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 62,
+      "response_sha256": "f492ec2d536d19f3ca9ff82485d0b0677a16dedef8b16f9c0d3ebf7c02febd19",
+      "record_sha256": "4c6b0b691df5d7d0e37bae4bda21c7c1fcae17eeb0c56776f7cd77ac937583f0",
+      "word_count": 139,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Selects A/red, but incorrectly says blue litmus turns green at neutrality and purple in base.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S13",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 63,
+      "response_sha256": "c4319c731c8187774932df9464e9629b5f3c24fe20ac37f21c854da6d713f4a3",
+      "record_sha256": "7d0d03d34e510085c00c89d3d059c57e804136c8ea5478867083835d6977d096",
+      "word_count": 151,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and explains F = ma as Newton's second law, correctly distinguishing the other laws.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S14",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 64,
+      "response_sha256": "7999c94c11702ff19f838dc475a72658020688c6fc470106e5fed9abe480a9d6",
+      "record_sha256": "f3b30fa510fe9519e694d1c315768250b6e6d8a6c33fc9601a2e98337f774f25",
+      "word_count": 131,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and explains mitochondria release usable energy through cellular respiration.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S15",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 65,
+      "response_sha256": "f49ab556f054b2e5cac992af57f7003e90fd4b74f3409164a22762579f918287",
+      "record_sha256": "e1d4eb4c9b1b19024230ef0a7b79cd2255c43ca8c6c0921f8f0b8110a3fcef30",
+      "word_count": 127,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly identifies oxygen release, but the supporting discussion falsely says plants absorb nitrogen gas.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S16",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 66,
+      "response_sha256": "06afb3f4fbc99d324b798635ba7de8ccce0a1c7684816f5c62dceb00f346e57a",
+      "record_sha256": "642267aed64711f827bf9fadab297f51145bc55b93cce0626415d23d3660b21a",
+      "word_count": 154,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and explains sound requires particles to transmit vibrations, absent in vacuum.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S17",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 67,
+      "response_sha256": "9f36ca0ef7df54435f04522860ee934d474a61864b08c9c42d4a5c8dff2c7030",
+      "record_sha256": "220c05efcaf3ca4209de028562a71a2ba32ac351e14e9179db310411eabefdca",
+      "word_count": 142,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies B and defines density as mass per unit volume.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S18",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 68,
+      "response_sha256": "44d4a343dd65e167ee53f76baff6850ea6a21a4b89202c055841257cf59d40d0",
+      "record_sha256": "40f9ba0dbdf1b42b00ca893dcd24e6632bce0b6e66ba46d3a0b80abda3a88c1c",
+      "word_count": 122,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Corrects the initial oxygen/6 claim by explicitly listing carbon6 and oxygen8, and explains atomic number6 means six protons; no option is finally selected.",
+      "flags": [
+        "missing_option_letter",
+        "resolved_self_correction",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S19",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 69,
+      "response_sha256": "0989a1846aeadd0788def9e717a06d7555f7105d64c81036aaa7121f9fd36ebd",
+      "record_sha256": "fe747b75082b7823d3487e8886681e865a87392b71bf3dfd2cddc2d6dcc50c22",
+      "word_count": 133,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and describes hydrogen/oxygen in the two-to-one atomic ratio.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S20",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "D",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 70,
+      "response_sha256": "ccdc2c25c00188301f1c4f6d5a7281065ba0435a64e660d87faca7beaf40fb3d",
+      "record_sha256": "25afb2a634adc7f1183530969a433ac91d8bdde9b8e7c8a1459d027ebb471de5",
+      "word_count": 137,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects D and explains sunlight is naturally replenished unlike fossil fuels.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S21",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "B",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 71,
+      "response_sha256": "695222b9beb3b0bf25f797c905c400f950575c903e7ecc7cffe6167da6643f1c",
+      "record_sha256": "ef5b1e697ba628a4a2ead7b05bbfe35f74e352f423a7b4c5d80fac46e56a06c8",
+      "word_count": 137,
+      "original_selected": "B",
+      "original_correct": true,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects B and distinguishes ovum/egg, sperm, zygote and embryo, including fertilization.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S22",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 72,
+      "response_sha256": "f053119bc5d59097f2527078a06885df7fdfcfd70625989f1f06fe7f9bdd4954",
+      "record_sha256": "fe619df0ea49f1a0db13d065ce64a3a712ec668249794ce75eea25868786f763",
+      "word_count": 137,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies the troposphere as the lowest layer containing the bulk of air and weather systems.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S23",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "A",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 73,
+      "response_sha256": "d87eceb0fc40239236e51dd3205cd8af0380e0fc36c4dbdb1eb5f74f638ad034",
+      "record_sha256": "d96a03b213c06cdf5096e773489203e552592499ff1c476d07b16dc261d5cbca",
+      "word_count": 122,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly describes rust as hydrated iron oxide formed from iron, oxygen and water; no option is finally selected.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S24",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 74,
+      "response_sha256": "98485a037022b250d0f081ccc4b2e08579eabca2718121a23b91e995db121ce2",
+      "record_sha256": "e2a626d4ddb23e72f413dd9f6b8c993e5ae93e83e868d7cf3a7e2f1877fd98b8",
+      "word_count": 153,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Identifies tightly packed solids and explains efficient transfer through collisions/lattice vibrations; no option is finally selected.",
+      "flags": [
+        "missing_option_letter",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S25",
+      "subject": "science",
+      "format": "multiple_choice",
+      "expected": "C",
+      "finish_reason": "limit",
+      "generated_tokens": 256,
+      "source_line": 75,
+      "response_sha256": "f7b817b4981febb9ffdf53431596b2b2496c1fc4136226b3110f00f23c906b05",
+      "record_sha256": "71df103a64716f9a33d23836e4215cf9b5c5a1b081de945b930b7ae0de46f68d",
+      "word_count": 139,
+      "original_selected": null,
+      "original_correct": false,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Selects C and explains pH7 by the standard pure-water context and acidic/alkaline ranges.",
+      "flags": [
+        "review_boundary",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S26",
+      "subject": "science",
+      "format": "written",
+      "expected": "gravity force is larger but free-fall acceleration is equal without appreciable drag; compare simultaneous drop",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 76,
+      "response_sha256": "6de212b6b28d38f54dd903a9921556b3c8367db3e34bb04a8c146a9bb6f94299",
+      "record_sha256": "7a8bb7e21bd0772f75532d0d1d6d2f5c2eb160ffa3d32c38bf514ed4121c6765",
+      "word_count": 313,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Initially states equal vacuum acceleration, then explicitly reverses that claim and says heavier objects fall faster in vacuum; no test observation is completed.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "contradiction",
+        "incorrect_core_answer",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S27",
+      "subject": "science",
+      "format": "written",
+      "expected": "higher-energy molecules escape and remove energy from the skin",
+      "finish_reason": "eos",
+      "generated_tokens": 373,
+      "source_line": 77,
+      "response_sha256": "210eeaa82ffd04bce335f9e50ce8e42ea25a026a4bc00816f98fb5fba762fc0e",
+      "record_sha256": "a25ac38a9ac701b6cc55f8f46edabfecd4d5dbede20c89149a14a38b7b2656ef",
+      "word_count": 275,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Explains evaporation removes heat from skin and that higher-energy molecules escape, lowering the remaining liquid's average energy.",
+      "flags": []
+    },
+    {
+      "id": "S28",
+      "subject": "science",
+      "format": "written",
+      "expected": "series circuit opens and both go off; parallel branch remains complete",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 78,
+      "response_sha256": "4f1ef52f2ecd6331f58295be0429f988602c88851f0c226181285926c5f62d1e",
+      "record_sha256": "44de3cfad51ed60f57175fb26dbadb3fc001e2e8dd6dcfa56300e8f255d8de44",
+      "word_count": 287,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "Correctly explains removal opens the series circuit, but loops before addressing the parallel circuit.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "missing_required_components",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S29",
+      "subject": "science",
+      "format": "written",
+      "expected": "destarch; cover part; expose; iodine test; exposed part blue-black",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 79,
+      "response_sha256": "9902a3dfc0761786343f6e4486eeb4c54048de0db20ac4d3b27bbe2301adc5b5",
+      "record_sha256": "e4429070751c6e1cdc44e082514e76470ca27245448d9f422e540a8bd21bfdda",
+      "word_count": 314,
+      "strict_pass": false,
+      "core_answer_correct": false,
+      "reason": "The proposed experiment lacks common prior destarching and completed expected observations, incorrectly substitutes dilute potassium iodide for iodine, and claims darkness stops starch reacting with iodine.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "missing_required_components",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S30",
+      "subject": "science",
+      "format": "written",
+      "expected": "floating depends on average density and buoyancy, not weight alone",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 80,
+      "response_sha256": "6cfa4d6ae9a13cbfa7261b8c432273bfc5977572e69376a9dd379f8677f6437a",
+      "record_sha256": "dbcbb8a10545fb706eb7a5d6c82a47e6c2c62f0e6ef98d715885ae742f2e4db8",
+      "word_count": 332,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Gives correct average-density and upthrust principles, but its lead-compression example is misleading and does not supply a sound heavy-floating/light-sinking comparison.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "review_boundary",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S31",
+      "subject": "science",
+      "format": "written",
+      "expected": "colds are usually viral; antibiotics treat susceptible bacterial infections",
+      "finish_reason": "eos",
+      "generated_tokens": 306,
+      "source_line": 81,
+      "response_sha256": "1b5a6b4b390a9cda3631f2db07378753ab2b30b1c187f0a750eeee67a6ddbd08",
+      "record_sha256": "7d02f6879bdd6b6a28d4b5c539ffe853dcf8c7450bb006701f6826ee44fbacc5",
+      "word_count": 231,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly distinguishes viral colds from bacterial infections, but incorrectly claims antibiotics may shorten cold symptoms by preventing secondary infection and conflates influenza with the common cold.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "unsafe_medical_advice"
+      ]
+    },
+    {
+      "id": "S32",
+      "subject": "science",
+      "format": "written",
+      "expected": "lower pressure and oxygen partial pressure; increased ventilation compensates",
+      "finish_reason": "eos",
+      "generated_tokens": 376,
+      "source_line": 82,
+      "response_sha256": "3ffb49716d0f6d052554d7f4209ce40e93b8ecb5f6683a906f25a44b0c2b6eb3",
+      "record_sha256": "b16b15133c794a6231e1efd15925b8b059e2f47ab5f7e9eebf884063b8d769d6",
+      "word_count": 283,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Explains lower pressure and fewer oxygen molecules per litre reduce oxygen availability, causing compensatory faster/deeper breathing.",
+      "flags": []
+    },
+    {
+      "id": "S33",
+      "subject": "science",
+      "format": "written",
+      "expected": "same temperature possible; metal conducts heat from hand faster",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 83,
+      "response_sha256": "2a118a3d54f2716b6e89c786474a7c838f5392abf5db2a04475b6e5d57dc669e",
+      "record_sha256": "2263f72ac3de52180308ad5102d1fb708a36e3481c1307edaa2ec07155f0e5f0",
+      "word_count": 331,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly states the spoons can share temperature, but explains the cold sensation using room-air transfer rather than heat from the hand and contradicts its equilibrium premise.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "review_boundary",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S34",
+      "subject": "science",
+      "format": "written",
+      "expected": "axial tilt changes sunlight angle/day length; hemispheres have opposite seasons",
+      "finish_reason": "eos",
+      "generated_tokens": 247,
+      "source_line": 84,
+      "response_sha256": "3c8418f0ca1a3843721e5a5bb23fdd3f0f40b02e9f17c37719416e4607682aa1",
+      "record_sha256": "db60552338fb83aa77cb1813ef7aa312c7850cdbeaedd4ac74c05c30c511354f",
+      "word_count": 187,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Gives axial tilt/direct sunlight as the cause, but its hemispheric observation says the Sun is overhead at Capricorn and lowest in the sky during southern summer.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "review_boundary"
+      ]
+    },
+    {
+      "id": "S35",
+      "subject": "science",
+      "format": "written",
+      "expected": "2 A; then 1 A by Ohm's law",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 85,
+      "response_sha256": "ea36806ebf840e552314655fd5f9d018157b7e10ed109d42eb0040259edb63f9",
+      "record_sha256": "70d5056e371514cf5cdfb52e0b1d57f243e5ba80a886938214b4b0e36df89a31",
+      "word_count": 219,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Calculates 2 A and 1 A and explains inverse proportionality at fixed voltage.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S36",
+      "subject": "science",
+      "format": "written",
+      "expected": "dissolving physical and reversible; burning chemical with new substances",
+      "finish_reason": "eos",
+      "generated_tokens": 484,
+      "source_line": 86,
+      "response_sha256": "d9ce68d7b6b303678a5dbb6e9fb58e942622d0f9f92ba98fc18436f62b6ef1cb",
+      "record_sha256": "3b4ee208571863a81ab9f71af6cba4a15e3d401bb2bc0cb8b710d55cdac676c1",
+      "word_count": 313,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly classifies dissolving/burning and supports the distinction with intact molecules/recoverability versus new combustion substances. Root review accepted strict pass: the supplementary lack-of-colour-change evidence is weak, but 'indicates' is not a categorical false law sufficient to invalidate this otherwise correct introductory explanation.",
+      "flags": [
+        "weak_supplementary_evidence",
+        "review_boundary"
+      ]
+    },
+    {
+      "id": "S37",
+      "subject": "science",
+      "format": "written",
+      "expected": "mass conserved; escaping gas can reduce measured mass in open container",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 87,
+      "response_sha256": "226f9ec41e3010a7f2181771232294dddafc049066df0d4a060aab12840aed38",
+      "record_sha256": "fda270d4e4e79ec99365ece7e4bc9e0e56e7bd6ddc27d15dd976b2474603066a",
+      "word_count": 356,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly explains conservation in a closed flask and escaping gas, but falsely says CaO + H₂O produces liquid water and treats condensation of a product as creating extra measured mass.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S38",
+      "subject": "science",
+      "format": "written",
+      "expected": "neutralization; sodium chloride and water; pH falls toward 7",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 88,
+      "response_sha256": "5ed61faec1f042fea2d3a0bda05e082fdf531ae926d36612b11621a00910c496",
+      "record_sha256": "81accd6cbafbb27e579a793f119273736a5383ecb512a116887f44e2a46e8320",
+      "word_count": 297,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly names neutralization, NaCl/water and falling pH, but contradicts its own excess-acid account by calling pH7 the lowest point of the titration curve.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S39",
+      "subject": "science",
+      "format": "written",
+      "expected": "transpiration temporarily exceeds uptake; stomatal response and lower evening loss restore turgor",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 89,
+      "response_sha256": "dc3e61649b0213ae63b0a8d248f26f76af3f08f978a86d78accf267417b2eec9",
+      "record_sha256": "0f90ab0c5d3b4872cb3d3b207a8985f11961ff997aa087f5aaa025b9825ffc40",
+      "word_count": 380,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Initially gives transpiration exceeding replacement, but later falsely substitutes dry soil for the explicitly wet soil, and never completes evening recovery or stomatal response.",
+      "flags": [
+        "missing_required_components",
+        "incorrect_supporting_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S40",
+      "subject": "science",
+      "format": "written",
+      "expected": "dominance concerns heterozygote phenotype; allele transmission frequency depends on population processes",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 90,
+      "response_sha256": "f75ab7f356b9a086b732237c2008b80c40b2ec1bb69f2a61e4b030bf175603ac",
+      "record_sha256": "3f17cfb58a7db6f7fb59f27e822842e26b0fe2abb4d010b0a3458024958f914b",
+      "word_count": 335,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly distinguishes dominance as phenotype from allele frequency and explains selection/equilibrium, but does not address the requested distinction from probability of inheritance.",
+      "flags": [
+        "missing_required_components",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S41",
+      "subject": "science",
+      "format": "written",
+      "expected": "fewer grasshoppers reduce energy available to frogs, then snakes",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 91,
+      "response_sha256": "bb0575baf29f6c2f7ae0616e9c3070d82b226d24d8e19b423d9f03a0175ab63b",
+      "record_sha256": "5c3b2740156e88fa1d16e3c426c220bd07717682045bf1851175234306bf5b34",
+      "word_count": 290,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly predicts fewer frogs then fewer snakes and explains reduced food/energy transfer through trophic levels.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S42",
+      "subject": "science",
+      "format": "written",
+      "expected": "fertilizer amount independent; growth dependent; control other conditions; repeat for reliability",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 92,
+      "response_sha256": "c2a7c53b9f35d631c2468e67db9f7057a354f0bca09d221efb31c0e53b7c2cd7",
+      "record_sha256": "950db0bb4fc077969d106c598df221078a0e0395161c76399adf6692276c86c1",
+      "word_count": 354,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Supplies fertilizer IV, growth DV, controls and repeats, but falsely declares a result invalid merely because an effect appears in one trial but not another.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "review_boundary",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S43",
+      "subject": "science",
+      "format": "written",
+      "expected": "4 m/s²; speed rises by 4 m/s each second",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 93,
+      "response_sha256": "615ee234b8267aab5088809f365a5cd38a7e00acbdac522db37b01fda5cfe36e",
+      "record_sha256": "8f7994313dade7dae42e2383a2d5562c61687447d900b2d9a45cf7738f480b6a",
+      "word_count": 267,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly calculates (20 − 0)/5 = 4 m/s² and explains a 4 m/s speed increase each second.",
+      "flags": [
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    },
+    {
+      "id": "S44",
+      "subject": "science",
+      "format": "written",
+      "expected": "same force over smaller area produces greater pressure",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 94,
+      "response_sha256": "8e546cb7d4a250c2fe8d8e49db1c834a9580a2ed44f3466ca691bc644b8708bb",
+      "record_sha256": "ab0304f923f52b810f0b5b26c37d5e8f3e858afdd78f0926c38b423220e08f5b",
+      "word_count": 350,
+      "strict_pass": true,
+      "core_answer_correct": true,
+      "reason": "Correctly uses P = F/A to explain greater pressure from the sharp knife's smaller contact area under the same force.",
+      "flags": [
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S45",
+      "subject": "science",
+      "format": "written",
+      "expected": "water lowers resistance and permits greater current; dry hands/turn off power",
+      "finish_reason": "eos",
+      "generated_tokens": 349,
+      "source_line": 95,
+      "response_sha256": "96d44e0db22e7d9507042364ec94f86c1d341da5579f5fe1e69517992edac852",
+      "record_sha256": "f8b57d837a652a0f6c0bbe61e059d78186c9b002949035c57be94ff7135fa3d1",
+      "word_count": 240,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly states wet skin lowers resistance/increases current, but contradicts dry-skin resistance and understates dry-contact danger; ordinary rubber soles/mats or a tool are unsafe substitutes for drying hands or de-energizing.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "unsafe_safety_advice"
+      ]
+    },
+    {
+      "id": "S46",
+      "subject": "science",
+      "format": "written",
+      "expected": "phases show changing visible illuminated fraction; Earth's shadow causes lunar eclipse",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 96,
+      "response_sha256": "cb9d8adfddeb620946bcdd0e151b7d702845ffc4025ae31ac1f5139328e9ae19",
+      "record_sha256": "35e0ea48177a2e97638a1b16d371489869033503425fb96666f13078211791dc",
+      "word_count": 364,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly explains changing visible illuminated fractions and identifies lunar eclipse, but falsely restricts Earth's shadow to solstices and says it lasts two or three days.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S47",
+      "subject": "science",
+      "format": "written",
+      "expected": "lower atmospheric pressure means vapour pressure reaches it at a lower temperature",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 97,
+      "response_sha256": "7351eb83ca09ca6067949397ca3fdd7567353b1ad677733f93ec48a7da4a42a0",
+      "record_sha256": "4de67a4aab0fdc1616c7ba12725e639f430019a943ef701b16a6adf9c557a6d9",
+      "word_count": 352,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Gives the correct vapour-pressure/external-pressure explanation, but its example assigns 80 kPa to 3,000 m, materially above the approximately 70 kPa standard-atmosphere value.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "review_boundary",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S48",
+      "subject": "science",
+      "format": "written",
+      "expected": "photosynthesis stores light energy in glucose; respiration releases usable energy; complementary reactants/products",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 98,
+      "response_sha256": "b23335c7e3dae10cd4394c31846fdc223abc8a3100b0563900e3fda0b2a8204c",
+      "record_sha256": "7ed9593ff9e533c43a8e4a698d58fe79903106a612b153dde23a516070479178",
+      "word_count": 292,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly identifies light-energy storage and respiration's release with complementary substances, but reverses both free-energy signs and wrongly calls the overall processes reversible.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S49",
+      "subject": "science",
+      "format": "written",
+      "expected": "vaccination primes antigen-specific response and memory; it is not an immediate cure",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 99,
+      "response_sha256": "27420b66d2ba7872244aad9c4407dfadcd974aa737b2ca46a720d1e9bfbfc811",
+      "record_sha256": "a432bd5989d3791636038e82790616501dae0b7804970da3ae855d67d9056633",
+      "word_count": 382,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly explains antigen-specific adaptive responses and immune memory rather than immediate cure, but falsely says creation of memory distinguishes vaccination from natural infection.",
+      "flags": [
+        "incorrect_supporting_explanation",
+        "review_boundary",
+        "output_token_limit"
+      ]
+    },
+    {
+      "id": "S50",
+      "subject": "science",
+      "format": "written",
+      "expected": "Plasmodium transmitted by infected female Anopheles mosquito; prevent mosquito bites or breeding",
+      "finish_reason": "limit",
+      "generated_tokens": 512,
+      "source_line": 100,
+      "response_sha256": "b0036b3296a84c88dd866806ce066d32a60173e948ed07fce9e68df0cf416e42",
+      "record_sha256": "cda7ca3a144c2dfcdc15ff5c843a8565e729c804edc5aa36f7b11dacd9b305fc",
+      "word_count": 327,
+      "strict_pass": false,
+      "core_answer_correct": true,
+      "reason": "Correctly identifies Plasmodium and infected female Anopheles bites, but stops before giving any requested prevention method.",
+      "flags": [
+        "missing_required_components",
+        "output_token_limit",
+        "unclosed_raw_think_marker"
+      ]
+    }
+  ],
+  "official_panel_score": false,
+  "independent_review": {
+    "status": "focused_independent_review_completed",
+    "scope": "The primary assessor read all 100 full responses; independent reviewers examined selected disputed cases and shared grading boundaries, not all 100 responses independently.",
+    "reviewed_decisions": [
+      "Root confirmed Q4_0 M26 inverse profit/rate check is valid.",
+      "Independent grader confirmed Q4_0 M12 contradictory labels and M50 incorrect named fallacy fail strict grading.",
+      "Independent grader confirmed S11 and S25 pass: relevant unit/pH contrasts satisfy the explanation requirement without mandatory technical keywords.",
+      "Root and independent grader confirmed S09 passes: it substantively contrasts the other simple-machine mechanisms, beyond repeating the ramp definition.",
+      "Root clarified that a distinct numerical method can satisfy a requested check, as can inverse arithmetic or substitution; repeated derivations alone cannot.",
+      "Independent grader confirmed M43 still fails strict grading after that clarification: the later bare product and addition repeat the partial-products derivation without showing a distinct verification method.",
+      "A second independent grader read full S34, S36, S42, S47 and S49 responses; confirmed S34/S42/S47/S49 strict failures with core credit. Root adjudicated S36 as a strict pass because its correct substantive evidence meets the prompt despite weak supplementary colour-change evidence."
+    ],
+    "supporting_sources": [
+      {
+        "url": "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/earth-atmosphere-equation-metric/",
+        "verified_by": "grading assistant",
+        "relevance": "NASA's metric tropospheric curve gives approximately 70.2 kPa at 3,000 m, checking the S47 claim of 80 kPa."
+      }
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "stage": "stem",
+  "model": "VibeThinker-1.5B-q4_k_m.gguf",
+  "model_sha256": "3df5dae7a65dfd426c8dc58d97ed1247af4b669bc2674c5f9b2b34103b01e164",
+  "model_bytes": 1117320960,
+  "source": {
+    "model": "VibeThinker 1.5B Q4_K_M",
+    "role": "challenger",
+    "source_repository": "sirunchained/VibeThinker-1.5B-gguf",
+    "source_revision": "d6a1e0f48176eeaf69b616f7c1a22dc915cbf11c",
+    "source_artifact": "VibeThinker-1.5B-q4_k_m.gguf",
+    "source_bytes": 1117320960,
+    "source_sha256": "3df5dae7a65dfd426c8dc58d97ed1247af4b669bc2674c5f9b2b34103b01e164",
+    "test_artifact": "VibeThinker-1.5B-q4_k_m.gguf",
+    "test_bytes": 1117320960,
+    "test_sha256": "3df5dae7a65dfd426c8dc58d97ed1247af4b669bc2674c5f9b2b34103b01e164",
+    "quantization": "Q4_K_M",
+    "license": "MIT",
+    "runtime_gate": "pass"
+  },
+  "server": "/private/tmp/muta-mac-b10175.TVLIow/build/bin/llama-server",
+  "server_sha256": "f497d6b948174173f8159b6fa46c7b4816e2ecfd306ae9c0f7f11e6a7a79af88",
+  "server_provenance": {
+    "identity_method": "verified_binary_hash_with_operator_supplied_source_revision",
+    "source_revision": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+    "version_output": "version: 0 (unknown)\nbuilt with AppleClang 17.0.0.17000603 for Darwin arm64\n"
+  },
+  "runner_sha256": "f5f4cafca09e06a0c2f8c50ccdad20308a2b879ed6ba0e1ff00d8f24e2f38289",
+  "prompts_sha256": "fe46f2446e334caa0fd151402fe9a61d4ccb109dac52faffe7366afceba353f8",
+  "hardware_context": "apple_m4_pro_24gib_macos_metal_b10175",
+  "settings": {
+    "threads": 2,
+    "gpu_layers": 99,
+    "cache_ram_mib": 256,
+    "context_size": 2048,
+    "temperature": 0.0,
+    "seed": 42,
+    "max_tokens": {
+      "multiple_choice": 256,
+      "written": 512
+    },
+    "embedded_chat_template": false,
+    "external_system_prompt": false,
+    "cache_prompt": false
+  },
+  "port": 18083
+}

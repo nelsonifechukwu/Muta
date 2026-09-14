@@ -64,7 +64,7 @@
           </button>
           <ol class="contents-list" id="gate-2-content" aria-label="Gate 2 chapters" hidden>
             <li><a href="#gate-2-overview" data-chapter="01">Model research</a></li>
-            <li><a href="#gate-2-audit" data-chapter="02">Audit setup</a></li>
+            <li><a href="#gate-2-audit" data-chapter="02">Model evaluation and ranking</a></li>
             <li><a href="#gate-2-experiments" data-chapter="03">Experiments</a></li>
             <li><a href="#gate-2-validation" data-chapter="04">Validation</a></li>
             <li><a href="#gate-2-review" data-chapter="05">Reviewer questions</a></li>
@@ -961,7 +961,7 @@
       <section class="gate-two-page" id="gate-2-overview" data-gate-two-number="01" data-gate-two-title="Model research">
         <p class="gate-two-eyebrow">Gate 2 · Chapter 1</p>
         <h1 tabindex="-1">Model research</h1>
-        <p class="gate-two-dek">Gate 1 qualified Muta for the next stage while exposing the limits of optimizing mainly for speed and memory. Gate 2 therefore begins with an open compact-STEM search: the research below defines the candidates and measurements for the next controlled campaign, but no Gate 2 model has been selected.</p>
+        <p class="gate-two-dek">Gate 1 qualified Muta for the next stage while exposing the limits of optimizing mainly for speed and memory. Gate 2 therefore began with an open compact-STEM search. The research below defined the candidate field; the next chapter records the completed comparison and the model selected for continued development.</p>
 
         <div class="gate-two-research">
           <header class="gate-two-research-head">
@@ -1156,14 +1156,238 @@
         </div>
       </section>
 
-      <section class="gate-two-page" id="gate-2-audit" data-gate-two-number="02" data-gate-two-title="Audit setup" hidden>
+      <section class="gate-two-page" id="gate-2-audit" data-gate-two-number="02" data-gate-two-title="Model evaluation and ranking" hidden>
         <p class="gate-two-eyebrow">Gate 2 · Chapter 2</p>
-        <h1 tabindex="-1">Audit setup</h1>
-        <p class="gate-two-dek">This chapter will make the evaluation conditions explicit before any result is compared.</p>
-        <div class="gate-two-placeholder">
-          <p class="placeholder-label">Protocol placeholder</p>
-          <h2>Hardware, tasks, and acceptance checks</h2>
-          <p>No Gate 2 measurements are reported yet. The completed chapter will record the physical target, runtime configuration, prompts, task samples, repetitions, and failure conditions used by every comparable run.</p>
+        <h1 tabindex="-1">Model evaluation and ranking</h1>
+        <p class="gate-two-dek">The desk research produced a broader set of small models, but published benchmark claims could not answer the question I actually had: which artifact could teach reliably within Muta’s CPU and memory constraints? I therefore tested the executable field on the same resource proxies, then replayed both general STEM work and the prompts that had exposed Gate 1 failures.</p>
+
+        <div class="gate-two-campaign">
+          <section class="gate-two-research-section" aria-labelledby="g2-campaign-question">
+            <p class="placeholder-label">Completed controlled campaign</p>
+            <h2 id="g2-campaign-question">From benchmark promise to usable answers</h2>
+            <p>Thirteen GGUF artifacts completed performance and ARC-Easy-500 measurement. Twelve also completed a matched 100-prompt STEM battery and both ten-prompt Gate 1 replays. A fourteenth candidate, Spark-X2.5 1.7B, could not load in the pinned runtime and was excluded before measurement. It is recorded as runtime-excluded, not assigned zeros.</p>
+            <p>The tests answer different questions. ARC-Easy estimates broad multiple-choice knowledge through option likelihood. The STEM battery checks the complete raw completion on a balanced set of mathematics and science prompts. The Gate 1 replay checks only the answer delivered to the user, using the exact failure cases from the earlier judging feedback. I kept these rankings separate because a model can know an answer, expose it only inside unfinished reasoning, or fail to present it in a usable tutoring response.</p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-candidates">
+            <h2 id="g2-candidates">Candidate field</h2>
+            <p>The field includes general-purpose compact models, reasoning specialists, two quantization controls, and the fine-tuned Gate 1 model as a control. File size below is the GGUF size, not inference memory.</p>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Gate 2 candidate inventory; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table gate-two-candidate-table">
+                <thead><tr><th>Model</th><th>Role</th><th>Quantization</th><th>File</th><th>Licence</th><th>Runtime gate</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row"><strong>Muta Tutor Qwen2.5 1.5B</strong></th><td>Gate 1 control</td><td>Q4_K_M</td><td>986 MB</td><td>Apache-2.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>LFM2.5 1.2B Thinking</strong></th><td>Challenger</td><td>Q4_0</td><td>696 MB</td><td>LFM Open License v1.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>MiniCPM5 1B</strong></th><td>Challenger</td><td>pure Q4_0</td><td>613 MB</td><td>Apache-2.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>Qwen3.5 2B</strong></th><td>Challenger</td><td>Q4_0</td><td>1,215 MB</td><td>Apache-2.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>Qwen3 1.7B</strong></th><td>Challenger</td><td>Q4_0</td><td>1,057 MB</td><td>Apache-2.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>LFM2.5 2.6B</strong></th><td>Challenger</td><td>Q4_0</td><td>1,594 MB</td><td>LFM Open License v1.0</td><td>Measured</td></tr>
+                  <tr class="muted-row"><th scope="row"><strong>Spark-X2.5 1.7B</strong></th><td>Architecture watchlist</td><td>Q4_K_M</td><td>1,107 MB</td><td>Apache-2.0</td><td>Excluded: unsupported architecture</td></tr>
+                  <tr><th scope="row"><strong>MiniCPM5 2B</strong></th><td>Challenger</td><td>Q4_K_M</td><td>1,561 MB</td><td>Apache-2.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>LFM2.5 2.6B QAD</strong></th><td>Challenger</td><td>QAD-Q4_0</td><td>1,594 MB</td><td>LFM Open License v1.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>MiniCPM5 1B</strong></th><td>Quantization control</td><td>Q4_K_M</td><td>688 MB</td><td>Apache-2.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>Qwen3.5 2B</strong></th><td>Quantization control</td><td>Q4_K_M</td><td>1,281 MB</td><td>Apache-2.0</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>VibeThinker 1.5B</strong></th><td>Challenger</td><td>Q4_K_M</td><td>1,117 MB</td><td>MIT</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>Falcon-H1-Tiny-R 0.6B</strong></th><td>Challenger</td><td>Q4_K_M</td><td>374 MB</td><td>Falcon LLM License</td><td>Measured</td></tr>
+                  <tr><th scope="row"><strong>OpenReasoning Nemotron 1.5B</strong></th><td>Challenger</td><td>Q4_K_M</td><td>986 MB</td><td>CC-BY-4.0</td><td>Measured</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-protocol">
+            <h2 id="g2-protocol">Protocol and evidence boundaries</h2>
+            <p><strong>Scalar</strong> uses the supplied profiler configuration already defined in Gate 1; this does not prove that every emitted CPU instruction is scalar. <strong>Vector</strong> uses the corresponding portable SIMD configuration on the same two physical GCP cores. Scalar is the primary resource protocol and vector is a secondary CPU proxy.</p>
+            <div class="gate-two-protocol-grid">
+              <div>
+                <h3>Performance and memory</h3>
+                <p>Each artifact ran five <code>llama-bench</code> repetitions at pp512 and tg128 with two threads and no GPU. RSS is measured across the benchmark process tree. The reconstructed profiler estimate adds a fixed 45 MiB Python-root allowance.</p>
+              </div>
+              <div>
+                <h3>ARC-Easy-500</h3>
+                <p>One shared <code>acc_norm</code> result per artifact came from the official profiler’s separately compiled accuracy path. It is not a scalar/vector accuracy pair and does not execute chat answers.</p>
+              </div>
+              <div>
+                <h3>100-prompt STEM battery</h3>
+                <p>The matched Mac M4 Pro run used Metal offload with 99 GPU layers, 50 mathematics and 50 science prompts evenly split between multiple-choice and written responses, context 2,048, temperature 0, seed 42, two CPU threads, and 256/512 output tokens. It used raw completion without the embedded chat template.</p>
+              </div>
+              <div>
+                <h3>Ten-prompt Gate 1 replay</h3>
+                <p>Five automated and five human-judge prompts ran on GCP scalar with two CPU threads and no GPU. The paired Mac M4 Pro replay used Metal offload with 99 GPU layers. Both used context 4,096, a 256 MiB host prompt-cache cap, temperature 0, seed 3407, top-p 1, 1,024 output tokens, and the embedded chat template without an external system prompt.</p>
+              </div>
+            </div>
+            <p>The GCP host had four logical CPUs, two physical cores, and about 8 GiB RAM. It is a controlled cloud proxy, not the physical submission laptop. Package temperature was unavailable, so the reconstructed totals apply no thermal penalty. They are not end-to-end official-profiler scores.</p>
+            <p class="gate-two-equation">Reconstructed total = 0.50 × ARC-Easy + 0.30 × min(tg128 / 15, 1) × 100 + 0.20 × (7 GiB − estimated RSS) / 7 GiB × 100.</p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-arc-heading">
+            <h2 id="g2-arc-heading">ARC-Easy-500: the control retains the strongest knowledge proxy</h2>
+            <p>Muta Tutor Qwen2.5 records 77.8%, with a 95% Wilson interval of 73.95–81.22%. MiniCPM5 2B is second at 67.6%; Qwen3 1.7B and Qwen3.5 Q4_K_M are tied at 65.2%. The result supports Qwen2.5 as the strongest candidate on this particular likelihood-based task, not as a general tutoring verdict.</p>
+            <figure class="wide-figure gate-two-figure" aria-labelledby="g2-arc-caption">
+              <div class="chart vertical-chart" id="g2-arc-chart"></div>
+              <figcaption id="g2-arc-caption"><strong>ARC-Easy accuracy, n=500.</strong> All thirteen executable artifacts use the same official-profiler accuracy path. Bars show <code>acc_norm</code>; exact confidence intervals are in the table below.</figcaption>
+              <p class="sr-only">Muta Tutor Qwen2.5 leads at 77.8%. MiniCPM5 2B follows at 67.6%. Qwen3 and Qwen3.5 Q4_K_M are tied at 65.2%. Falcon is lowest at 30.4%.</p>
+            </figure>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="ARC-Easy-500 exact results; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table gate-two-results-table">
+                <thead><tr><th>Model</th><th>Accuracy</th><th>95% CI</th><th>Samples</th></tr></thead>
+                <tbody>
+                  <tr class="selected-row"><th scope="row"><strong>Muta Tutor Qwen2.5 1.5B Q4_K_M</strong></th><td>77.8%</td><td>73.95–81.22%</td><td>500</td></tr>
+                  <tr><th scope="row">MiniCPM5 2B Q4_K_M</th><td>67.6%</td><td>63.38–71.55%</td><td>500</td></tr>
+                  <tr><th scope="row">Qwen3 1.7B Q4_0</th><td>65.2%</td><td>60.92–69.25%</td><td>500</td></tr>
+                  <tr><th scope="row">Qwen3.5 2B Q4_K_M</th><td>65.2%</td><td>60.92–69.25%</td><td>500</td></tr>
+                  <tr><th scope="row">Qwen3.5 2B Q4_0</th><td>65.0%</td><td>60.72–69.05%</td><td>500</td></tr>
+                  <tr><th scope="row">MiniCPM5 1B Q4_K_M</th><td>56.0%</td><td>51.62–60.29%</td><td>500</td></tr>
+                  <tr><th scope="row">MiniCPM5 1B pure Q4_0</th><td>55.8%</td><td>51.42–60.09%</td><td>500</td></tr>
+                  <tr><th scope="row">OpenReasoning Nemotron 1.5B Q4_K_M</th><td>53.6%</td><td>49.22–57.93%</td><td>500</td></tr>
+                  <tr><th scope="row">LFM2.5 1.2B Thinking Q4_0</th><td>46.0%</td><td>41.68–50.38%</td><td>500</td></tr>
+                  <tr><th scope="row">LFM2.5 2.6B QAD-Q4_0</th><td>45.4%</td><td>41.09–49.78%</td><td>500</td></tr>
+                  <tr><th scope="row">LFM2.5 2.6B Q4_0</th><td>43.6%</td><td>39.32–47.98%</td><td>500</td></tr>
+                  <tr><th scope="row">VibeThinker 1.5B Q4_K_M</th><td>39.2%</td><td>35.02–43.55%</td><td>500</td></tr>
+                  <tr><th scope="row">Falcon-H1-Tiny-R 0.6B Q4_K_M</th><td>30.4%</td><td>26.53–34.57%</td><td>500</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <aside class="gate-two-evidence-note" aria-label="ARC response evidence limitation">
+              <strong>Per-question ARC answers are unavailable.</strong> The retained <code>accuracy.jsonl</code> has thirteen aggregate rows with sample counts and task metrics, but no item IDs, documents, options, targets, predictions, or log-likelihoods. The local archive and read-only VM audit found no separate sample file. Reconstructing 6,500 model choices would require a new instrumented run; this report does not invent them.
+            </aside>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-resource-heading">
+            <h2 id="g2-resource-heading">Resource score: two CPU configurations produce different leaders</h2>
+            <p>MiniCPM5 1B pure Q4_0 leads the scalar reconstruction at 75.8713 because its 18.3038 tok/s decode reaches the performance cap while estimated RSS remains 727.1 MiB. Under vector execution, Muta Tutor Qwen2.5 leads at 84.1383. Its accuracy has not changed between the two bars: only measured throughput and RSS change.</p>
+            <figure class="wide-figure gate-two-figure" aria-labelledby="g2-score-caption">
+              <div class="legend compact-legend" aria-label="Chart legend"><span><i class="legend-swatch scalar"></i>Scalar</span><span><i class="legend-swatch avx2"></i>Vector</span></div>
+              <div class="chart vertical-chart" id="g2-score-chart"></div>
+              <figcaption id="g2-score-caption"><strong>Reconstructed competition-score proxy.</strong> Scalar and vector use separately measured five-repeat tg128 and process-tree RSS, with the same ARC-Easy-500 accuracy for each artifact. Temperature is unavailable and no penalty is applied.</figcaption>
+              <p class="sr-only">MiniCPM5 1B pure Q4_0 leads scalar at 75.8713. Muta Tutor Qwen2.5 leads vector at 84.1383. These are reconstructed proxies rather than complete official-profiler runs.</p>
+            </figure>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Resource proxy results for all thirteen artifacts; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table gate-two-results-table resource-results-table">
+                <thead><tr><th>Model</th><th>Scalar pp512 / tg128</th><th>Scalar RSS measured / estimated</th><th>Scalar total</th><th>Vector pp512 / tg128</th><th>Vector RSS measured / estimated</th><th>Vector total</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row">MiniCPM5 1B pure Q4_0</th><td>29.7586 / 18.3038</td><td>682.1 / 727.1 MiB</td><td><strong>75.8713</strong></td><td>95.6728 / 30.8010</td><td>1,043.0 / 1,088.0 MiB</td><td>74.8643</td></tr>
+                  <tr><th scope="row">LFM2.5 1.2B Thinking Q4_0</th><td>21.0637 / 13.7819</td><td>759.3 / 804.3 MiB</td><td>68.3197</td><td>67.7881 / 23.7017</td><td>1,305.8 / 1,350.8 MiB</td><td>69.2310</td></tr>
+                  <tr class="selected-row"><th scope="row"><strong>Muta Tutor Qwen2.5 1.5B Q4_K_M</strong></th><td>7.8080 / 5.6393</td><td>1,072.1 / 1,117.1 MiB</td><td>67.0617</td><td>61.6019 / 17.2784</td><td>1,661.6 / 1,706.6 MiB</td><td><strong>84.1383</strong></td></tr>
+                  <tr><th scope="row">MiniCPM5 1B Q4_K_M</th><td>14.6566 / 9.5460</td><td>753.6 / 798.6 MiB</td><td>64.8637</td><td>112.7986 / 27.7206</td><td>1,065.9 / 1,110.9 MiB</td><td>74.9004</td></tr>
+                  <tr><th scope="row">Qwen3 1.7B Q4_0</th><td>13.6418 / 7.8070</td><td>1,167.2 / 1,212.2 MiB</td><td>64.8317</td><td>44.7098 / 15.3858</td><td>1,896.0 / 1,941.0 MiB</td><td>77.1843</td></tr>
+                  <tr><th scope="row">Falcon-H1-Tiny-R 0.6B Q4_K_M</th><td>17.2442 / 13.6919</td><td>452.5 / 497.5 MiB</td><td>61.1957</td><td>119.3438 / 35.7896</td><td>720.9 / 765.9 MiB</td><td>63.0630</td></tr>
+                  <tr><th scope="row">Qwen3.5 2B Q4_0</th><td>12.6073 / 6.1956</td><td>1,322.9 / 1,367.9 MiB</td><td>61.0746</td><td>42.4621 / 13.0953</td><td>1,998.0 / 2,043.0 MiB</td><td>72.9902</td></tr>
+                  <tr><th scope="row">Qwen3.5 2B Q4_K_M</th><td>7.0812 / 4.4225</td><td>1,385.5 / 1,430.5 MiB</td><td>57.4536</td><td>40.3176 / 11.8554</td><td>1,875.8 / 1,920.8 MiB</td><td>70.9515</td></tr>
+                  <tr><th scope="row">MiniCPM5 2B Q4_K_M</th><td>5.0992 / 3.9663</td><td>1,606.7 / 1,651.7 MiB</td><td>57.1241</td><td>40.1444 / 12.3598</td><td>2,515.5 / 2,560.5 MiB</td><td>71.3754</td></tr>
+                  <tr><th scope="row">OpenReasoning Nemotron 1.5B Q4_K_M</th><td>7.7721 / 5.7720</td><td>1,072.2 / 1,117.2 MiB</td><td>55.2269</td><td>60.4724 / 17.1991</td><td>1,661.2 / 1,706.2 MiB</td><td>72.0394</td></tr>
+                  <tr><th scope="row">LFM2.5 2.6B QAD-Q4_0</th><td>8.8444 / 6.1789</td><td>1,664.1 / 1,709.1 MiB</td><td>50.2891</td><td>28.9718 / 10.7653</td><td>2,961.4 / 3,006.4 MiB</td><td>55.8421</td></tr>
+                  <tr><th scope="row">LFM2.5 2.6B Q4_0</th><td>8.8536 / 6.2264</td><td>1,664.4 / 1,709.4 MiB</td><td>49.4834</td><td>28.8601 / 10.3592</td><td>2,961.5 / 3,006.5 MiB</td><td>54.1297</td></tr>
+                  <tr><th scope="row">VibeThinker 1.5B Q4_K_M</th><td>7.8076 / 5.7652</td><td>1,197.4 / 1,242.4 MiB</td><td>47.6639</td><td>60.2514 / 16.7253</td><td>1,786.3 / 1,831.3 MiB</td><td>64.4903</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-stem-heading">
+            <h2 id="g2-stem-heading">The STEM battery changes the ranking</h2>
+            <p>Qwen3.5 2B Q4_K_M leads the matched Mac screen with 77 strict passes and 95 centrally correct answers. Its Q4_0 sibling follows at 71/94. Muta Tutor Qwen2.5 places fifth on strict completion at 57 and fourth on central correctness at 80. The gap matters: it shows that many answers contain the right core result but fail the complete-response policy through contradictory working, formatting, unfinished planning, or missing requested explanation.</p>
+            <figure class="wide-figure gate-two-figure" aria-labelledby="g2-stem-caption">
+              <div class="legend compact-legend" aria-label="Chart legend"><span><i class="legend-swatch official"></i>Strict complete pass</span><span><i class="legend-swatch diagnostic"></i>Core answer correct</span></div>
+              <div class="chart vertical-chart" id="g2-stem-chart"></div>
+              <figcaption id="g2-stem-caption"><strong>Matched Mac STEM battery, 100 prompts.</strong> All returned raw-completion text is graded. Falcon has no STEM responses and is omitted rather than plotted as zero.</figcaption>
+              <p class="sr-only">Qwen3.5 Q4_K_M leads with 77 strict passes and 95 core-correct responses. Qwen3.5 Q4_0 follows at 71 and 94. Qwen2.5 records 57 and 80. Falcon is unranked because it produced no responses.</p>
+            </figure>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Matched Mac STEM results; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table gate-two-results-table">
+                <thead><tr><th>Rank</th><th>Model</th><th>Strict pass</th><th>Core correct</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><th scope="row">Qwen3.5 2B Q4_K_M</th><td><strong>77</strong></td><td><strong>95</strong></td></tr>
+                  <tr><td>2</td><th scope="row">Qwen3.5 2B Q4_0</th><td>71</td><td>94</td></tr>
+                  <tr><td>3</td><th scope="row">LFM2.5 2.6B QAD-Q4_0</th><td>60</td><td>75</td></tr>
+                  <tr><td>4</td><th scope="row">Qwen3 1.7B Q4_0</th><td>59</td><td>81</td></tr>
+                  <tr class="selected-row"><td>5</td><th scope="row"><strong>Muta Tutor Qwen2.5 1.5B Q4_K_M</strong></th><td>57</td><td>80</td></tr>
+                  <tr><td>6</td><th scope="row">LFM2.5 2.6B Q4_0</th><td>52</td><td>60</td></tr>
+                  <tr><td>7</td><th scope="row">LFM2.5 1.2B Thinking Q4_0</th><td>41</td><td>53</td></tr>
+                  <tr><td>8</td><th scope="row">OpenReasoning Nemotron 1.5B Q4_K_M</th><td>35</td><td>60</td></tr>
+                  <tr><td>9</td><th scope="row">MiniCPM5 2B Q4_K_M</th><td>17</td><td>35</td></tr>
+                  <tr><td>10</td><th scope="row">VibeThinker 1.5B Q4_K_M</th><td>16</td><td>22</td></tr>
+                  <tr><td>11</td><th scope="row">MiniCPM5 1B Q4_K_M</th><td>11</td><td>31</td></tr>
+                  <tr><td>12</td><th scope="row">MiniCPM5 1B pure Q4_0</th><td>6</td><td>16</td></tr>
+                  <tr class="muted-row"><td>—</td><th scope="row">Falcon-H1-Tiny-R 0.6B Q4_K_M</th><td colspan="2">No Mac STEM responses; unranked</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>The earlier GCP STEM captures do not enlarge this ranking. They comprise nine complete original scalar sets, a 35-prompt Qwen3.5 fragment, a separate overlapping 28-prompt restart, and complete vector sets only for Qwen3.5 Q4_K_M and VibeThinker. They remain accessible in the response explorer as distinct attempts.</p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-judge-heading">
+            <h2 id="g2-judge-heading">The Gate 1 replay tests whether the answer reaches the student</h2>
+            <p>The known ten-prompt replay is small and includes the Two Sigma prompt twice, so it is not an unseen or independent benchmark. It is still useful because the prompts reproduce the exact presentation failures that mattered in Gate 1. Only final text earns rubric points; separate reasoning and unclosed thinking do not.</p>
+            <p>Muta Tutor Qwen2.5 leads the GCP scalar replay at 47/100 and is the only model to deliver a finished final answer on all ten prompts. It is not uniformly strong: the model earns 8/10 on proportionality, 1/10 on the mastery differential equation, 0/10 on the underdetermined capacity problem, 2/10 on the chalk calculation, 10/10 on photosynthesis, then 3/10, 6/10, 0/10, 8/10, and 9/10 across the five human-judge prompts. The selection therefore retains visible weaknesses rather than treating 47 as a pass mark.</p>
+            <figure class="wide-figure gate-two-figure" aria-labelledby="g2-judge-caption">
+              <div class="chart vertical-chart" id="g2-judge-score-chart"></div>
+              <figcaption id="g2-judge-caption"><strong>GCP scalar Gate 1 replay, local rubric points out of 100.</strong> Falcon returned five responses before a parser failure and remains unranked. Nemotron completed all ten, but unclosed thinking left no creditable final output and therefore produces a reviewed 0/100.</figcaption>
+              <p class="sr-only">Qwen2.5 leads at 47 points. Qwen3 and VibeThinker tie at 28. LFM1.2 scores 25. Nemotron has a reviewed zero. Falcon is unranked after a partial failed run.</p>
+            </figure>
+            <figure class="wide-figure gate-two-figure" aria-labelledby="g2-finals-caption">
+              <div class="chart vertical-chart" id="g2-judge-finals-chart"></div>
+              <figcaption id="g2-finals-caption"><strong>Finished final answers out of ten.</strong> This chart separates response delivery from rubric quality. A finished answer can still be wrong; an absent final answer earns no Gate 1 rubric credit.</figcaption>
+              <p class="sr-only">Qwen2.5 finishes ten of ten answers. Qwen3 finishes three. Six models finish two. Qwen3.5 Q4_0 and MiniCPM5 1B Q4_K_M finish one. Nemotron finishes none. Falcon is omitted because the run failed.</p>
+            </figure>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="GCP scalar Gate 1 replay results; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table gate-two-results-table">
+                <thead><tr><th>Rank</th><th>Model</th><th>Captured</th><th>Finished finals</th><th>Rubric score</th></tr></thead>
+                <tbody>
+                  <tr class="selected-row"><td>1</td><th scope="row"><strong>Muta Tutor Qwen2.5 1.5B Q4_K_M</strong></th><td>10/10</td><td><strong>10</strong></td><td><strong>47</strong></td></tr>
+                  <tr><td>2</td><th scope="row">Qwen3 1.7B Q4_0</th><td>10/10</td><td>3</td><td>28</td></tr>
+                  <tr><td>2</td><th scope="row">VibeThinker 1.5B Q4_K_M</th><td>10/10</td><td>2</td><td>28</td></tr>
+                  <tr><td>4</td><th scope="row">LFM2.5 1.2B Thinking Q4_0</th><td>10/10</td><td>2</td><td>25</td></tr>
+                  <tr><td>5</td><th scope="row">MiniCPM5 1B pure Q4_0</th><td>10/10</td><td>3</td><td>24</td></tr>
+                  <tr><td>6</td><th scope="row">LFM2.5 2.6B Q4_0</th><td>10/10</td><td>2</td><td>20</td></tr>
+                  <tr><td>6</td><th scope="row">LFM2.5 2.6B QAD-Q4_0</th><td>10/10</td><td>2</td><td>20</td></tr>
+                  <tr><td>6</td><th scope="row">MiniCPM5 2B Q4_K_M</th><td>10/10</td><td>2</td><td>20</td></tr>
+                  <tr><td>6</td><th scope="row">Qwen3.5 2B Q4_K_M</th><td>10/10</td><td>2</td><td>20</td></tr>
+                  <tr><td>10</td><th scope="row">Qwen3.5 2B Q4_0</th><td>10/10</td><td>1</td><td>10</td></tr>
+                  <tr><td>11</td><th scope="row">MiniCPM5 1B Q4_K_M</th><td>10/10</td><td>1</td><td>6</td></tr>
+                  <tr><td>12</td><th scope="row">OpenReasoning Nemotron 1.5B Q4_K_M</th><td>10/10</td><td>0</td><td>0</td></tr>
+                  <tr class="muted-row"><td>—</td><th scope="row">Falcon-H1-Tiny-R 0.6B Q4_K_M</th><td>5/10</td><td>0</td><td>Failed; unranked</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>The paired Mac replay is supplementary development evidence. It completes for the same twelve models, while Falcon stops after three responses. Its ranking is not substituted into the GCP scalar result because backend behavior differs.</p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-selection-heading">
+            <h2 id="g2-selection-heading">Why the model with the best single proxy is not automatically selected</h2>
+            <p>Three leaders emerge. MiniCPM5 1B pure Q4_0 has the best scalar resource reconstruction, but only 6 strict STEM passes and 24 Gate 1 rubric points. Qwen3.5 2B Q4_K_M has the strongest raw-completion STEM result, but it finishes only two of ten GCP chat answers and scores 20/100. Muta Tutor Qwen2.5 combines the strongest ARC result, the highest GCP Gate 1 score, complete final-answer delivery, and the best vector reconstruction.</p>
+            <p>That balance is enough to promote one development path, not enough to certify a submission. Qwen2.5 still needs stronger written reasoning, a verified multilingual tutoring check, repeated physical-target measurement including temperature, and final licence and eligibility review.</p>
+            <div class="gate-two-selection">
+              <p class="placeholder-label">Development decision</p>
+              <h3>Continue with fine-tuned Muta Tutor Qwen2.5 1.5B Q4_K_M</h3>
+              <p>Qwen2.5 remains the Gate 2 control for fine-tuning and product validation. Qwen3.5 Q4_K_M is retained as the behavior challenger because of its STEM result. Neither conclusion is a guarantee of competition success, and the physical target can still change the runtime decision.</p>
+            </div>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-responses-heading">
+            <h2 id="g2-responses-heading">Read the retained responses</h2>
+            <p>The explorer loads one model and one test at a time, so the full archive does not delay the report. It preserves prompt text, unedited answer text, separate reasoning where the runtime returned it, completion state, and the manual rubric decision. ARC-Easy is aggregate-only for the limitation described above.</p>
+            <div class="gate-two-evidence-explorer" id="g2-evidence-explorer">
+              <div class="gate-two-evidence-controls">
+                <label for="g2-evidence-dataset">Test<select id="g2-evidence-dataset"><option>Loading evidence…</option></select></label>
+                <label for="g2-evidence-model">Model<select id="g2-evidence-model" disabled><option>Select a test</option></select></label>
+                <label for="g2-evidence-prompt">Prompt<select id="g2-evidence-prompt" disabled><option>Select a model</option></select></label>
+              </div>
+              <p class="gate-two-evidence-status" id="g2-evidence-status" aria-live="polite">Loading the evidence index…</p>
+              <div class="gate-two-evidence-view" id="g2-evidence-view" hidden>
+                <dl class="gate-two-evidence-meta" id="g2-evidence-meta"></dl>
+                <section><h3>Prompt</h3><pre id="g2-evidence-question"></pre></section>
+                <section><h3>Answer delivered by the model</h3><pre id="g2-evidence-answer"></pre></section>
+                <section><h3>Separate reasoning</h3><pre id="g2-evidence-reasoning"></pre></section>
+                <section><h3>Assessment</h3><div id="g2-evidence-review"></div></section>
+              </div>
+            </div>
+            <h3>Raw campaign files</h3>
+            <details class="gate-two-downloads-details">
+              <summary id="g2-raw-downloads-summary">Browse the published source files</summary>
+              <div class="gate-two-downloads" id="g2-raw-downloads"><span>Loading the published file index…</span></div>
+            </details>
+          </section>
         </div>
       </section>
 
@@ -1174,7 +1398,7 @@
         <div class="gate-two-placeholder">
           <p class="placeholder-label">Evidence placeholder</p>
           <h2>One comparable result at a time</h2>
-          <p>No Gate 2 measurements are reported yet. Results will appear here only after their artifacts, evaluation protocol, throughput, memory, and accuracy evidence can be traced to retained runs.</p>
+          <p>The first Gate 2 comparison is complete in the preceding chapter. This section is reserved for post-selection training, quantization, template, and runtime experiments that have not yet produced comparable retained results.</p>
         </div>
       </section>
 
@@ -1185,7 +1409,7 @@
         <div class="gate-two-placeholder">
           <p class="placeholder-label">Validation placeholder</p>
           <h2>Separate screening from confirmation</h2>
-          <p>No Gate 2 measurements are reported yet. This chapter will distinguish exploratory screens from larger-sample checks and will label any unmatched comparison rather than treating it as equivalent evidence.</p>
+          <p>The candidate screen uses ARC-Easy-500 and retained behavior suites, but physical-target validation has not yet been completed. This chapter will hold repeated laptop measurements, temperature, multilingual checks, and post-training confirmation.</p>
         </div>
       </section>
 
@@ -1196,7 +1420,7 @@
         <div class="gate-two-placeholder">
           <p class="placeholder-label">Review placeholder</p>
           <h2>Questions before conclusions</h2>
-          <p>No Gate 2 measurements are reported yet. This space will cover reproducibility, missing comparisons, submission-boundary constraints, accessibility, and any disagreement between raw evidence and the rendered report.</p>
+          <p>The model-evaluation chapter records its current evidence limits. This section remains open for the next independent review of reproducibility, submission boundaries, accessibility, and disagreements between source files and the rendered report.</p>
         </div>
       </section>
 
@@ -1206,8 +1430,8 @@
         <p class="gate-two-dek">This chapter will state what advances, what is held back, and which uncertainties remain before the next gate.</p>
         <div class="gate-two-placeholder">
           <p class="placeholder-label">Decision placeholder</p>
-          <h2>No Gate 2 selection has been made</h2>
-          <p>No Gate 2 measurements are reported yet. A recommendation will be added only after the retained evidence supports a runtime-specific choice and the required physical-target and tutor-behaviour checks have passed.</p>
+          <h2>Qwen2.5 advances to continued development</h2>
+          <p>The balanced campaign promotes fine-tuned Muta Tutor Qwen2.5 1.5B Q4_K_M as the Gate 2 control. Final submission selection remains conditional on post-training behavior checks and repeated physical-target measurement.</p>
         </div>
       </section>
     </div>
@@ -1218,7 +1442,7 @@
         <span><span class="gate-two-footer-direction">Previous</span><strong data-gate-two-adjacent-title>Model research</strong></span>
       </a>
       <a id="gate-2-footer-next" class="gate-two-footer-link next" href="#gate-2-audit" data-gate-two-direction="next">
-        <span><span class="gate-two-footer-direction">Next</span><strong data-gate-two-adjacent-title>Audit setup</strong></span>
+        <span><span class="gate-two-footer-direction">Next</span><strong data-gate-two-adjacent-title>Model evaluation and ranking</strong></span>
         <span class="gate-two-footer-arrow" aria-hidden="true">→</span>
       </a>
     </nav>
