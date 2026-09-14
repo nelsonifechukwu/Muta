@@ -29,28 +29,50 @@
 <main id="report" class="report-layout">
   <aside class="contents" aria-label="Report chapters">
     <p class="contents-label">Contents</p>
-    <ol>
-      <li><a href="#overview">Why we're here</a></li>
-      <li><a href="#competition">The competition</a></li>
-      <li><a href="#paths">Two roads</a></li>
-      <li><a href="#methods">Ten optimization methods</a></li>
-      <li><a href="#quantization">Quantization</a></li>
-      <li><a href="#dedup">Cutting the duplicate head</a></li>
-      <li><a href="#vocabulary">Pruning the vocabulary</a></li>
-      <li><a href="#streaming">Weight streaming</a></li>
-      <li><a href="#runtime">Tuning the runtime</a></li>
-      <li><a href="#remaining-methods">Six smaller questions</a></li>
-      <li><a href="#scoreboard">The first scoreboard</a></li>
-      <li><a href="#instruction-set">Finding the real CPU</a></li>
-      <li><a href="#search">Widening the search</a></li>
-      <li><a href="#second-search">A second widening</a></li>
-      <li><a href="#behaviour">Teaching the file to behave</a></li>
-      <li><a href="#finetuning">Fine-tuning the finalists</a></li>
-      <li><a href="#current-state">Where we've landed</a></li>
-      <li><a href="#ledger">Every experiment</a></li>
-      <li><a href="#faq">Challenge requirements</a></li>
-      <li><a href="#profiler">Profiler workspace</a></li>
-    </ol>
+    <div class="contents-gate-panel">
+      <ol class="contents-gates">
+        <li class="contents-gate contents-gate-collapsed">
+          <button class="contents-gate-toggle" type="button" aria-expanded="false" aria-controls="gate-1-content">
+            <span class="contents-gate-label">Gate 1</span>
+          </button>
+          <ol class="contents-list" id="gate-1-content" aria-label="Gate 1 chapters" hidden>
+            <li><a href="#overview" data-chapter="">Why we're here</a></li>
+            <li><a href="#competition" data-chapter="01">The competition</a></li>
+            <li><a href="#paths" data-chapter="02">Two roads</a></li>
+            <li><a href="#methods" data-chapter="03">Ten optimization methods</a></li>
+            <li><a href="#quantization" data-chapter="04">Quantization</a></li>
+            <li><a href="#dedup" data-chapter="05">Cutting the duplicate head</a></li>
+            <li><a href="#vocabulary" data-chapter="06">Pruning the vocabulary</a></li>
+            <li><a href="#streaming" data-chapter="07">Weight streaming</a></li>
+            <li><a href="#runtime" data-chapter="08">Tuning the runtime</a></li>
+            <li><a href="#remaining-methods" data-chapter="09">Six smaller questions</a></li>
+            <li><a href="#scoreboard" data-chapter="10">The first scoreboard</a></li>
+            <li><a href="#instruction-set" data-chapter="11">Finding the real CPU</a></li>
+            <li><a href="#search" data-chapter="12">Widening the search</a></li>
+            <li><a href="#second-search" data-chapter="13">A second widening</a></li>
+            <li><a href="#behaviour" data-chapter="14">Teaching the file to behave</a></li>
+            <li><a href="#finetuning" data-chapter="15">Fine-tuning the finalists</a></li>
+            <li><a href="#current-state" data-chapter="16">Where we've landed</a></li>
+            <li><a href="#ledger" data-chapter="17">Every experiment</a></li>
+            <li><a href="#faq" data-chapter="18">Challenge requirements</a></li>
+            <li><a href="#profiler" data-chapter="A">Profiler workspace</a></li>
+          </ol>
+        </li>
+        <li class="contents-gate contents-gate-collapsed">
+          <button class="contents-gate-toggle" type="button" aria-expanded="false" aria-controls="gate-2-content">
+            <span class="contents-gate-label">Gate 2</span>
+          </button>
+          <ol class="contents-list" id="gate-2-content" aria-label="Gate 2 chapters" hidden>
+            <li><a href="#gate-2-overview" data-chapter="01">Direction</a></li>
+            <li><a href="#gate-2-audit" data-chapter="02">Audit setup</a></li>
+            <li><a href="#gate-2-experiments" data-chapter="03">Experiments</a></li>
+            <li><a href="#gate-2-validation" data-chapter="04">Validation</a></li>
+            <li><a href="#gate-2-review" data-chapter="05">Reviewer questions</a></li>
+            <li><a href="#gate-2-decision" data-chapter="06">Decision</a></li>
+          </ol>
+        </li>
+      </ol>
+    </div>
     <div class="contents-note">
       <span class="status-dot official"></span>
       Current recommendation<br>
@@ -58,7 +80,7 @@
     </div>
   </aside>
 
-  <article class="report-article">
+  <article class="report-article gate-one-report" id="gate-1-report">
     <header class="hero" id="overview">
       <p class="eyebrow">The story of a competition entry</p>
       <h1>Teaching a model to teach</h1>
@@ -922,7 +944,97 @@
     <footer class="report-footer">
       <p><strong>Muta IQ</strong> · Offline adaptive tutoring for maths and scientific reasoning.</p>
       <p>We keep the full methods and raw measurements in the repository benchmark archive.</p>
+      <a class="gate-two-entry" href="#gate-2-overview">Continue to Gate 2 <span aria-hidden="true">→</span></a>
     </footer>
+  </article>
+
+  <article class="report-article gate-two-report" id="gate-2-report" aria-label="Gate 2 report" hidden>
+    <nav class="gate-two-nav gate-two-nav-top" aria-label="Gate 2 chapter navigation">
+      <a class="gate-two-back" href="#overview"><span aria-hidden="true">←</span> Gate 1 report</a>
+      <div class="gate-two-nav-pair">
+        <a id="gate-2-top-prev" class="gate-two-step" href="#gate-2-overview" data-gate-two-direction="prev"><span aria-hidden="true">←</span> Prev</a>
+        <a id="gate-2-top-next" class="gate-two-step" href="#gate-2-audit" data-gate-two-direction="next">Next <span aria-hidden="true">→</span></a>
+      </div>
+    </nav>
+
+    <div class="gate-two-pages">
+      <section class="gate-two-page" id="gate-2-overview" data-gate-two-number="01" data-gate-two-title="Direction">
+        <p class="gate-two-eyebrow">Gate 2 · Chapter 1</p>
+        <h1 tabindex="-1">Direction</h1>
+        <p class="gate-two-dek">This chapter will explain the question Gate 2 asks, the evidence it requires, and how that changes the next phase of Muta IQ.</p>
+        <div class="gate-two-placeholder">
+          <p class="placeholder-label">Reserved for Gate 2</p>
+          <h2>The next selection problem will begin here</h2>
+          <p>No Gate 2 measurements are reported yet. This space will define the target, decision criteria, and starting candidate set once the next experiment protocol is fixed.</p>
+        </div>
+      </section>
+
+      <section class="gate-two-page" id="gate-2-audit" data-gate-two-number="02" data-gate-two-title="Audit setup" hidden>
+        <p class="gate-two-eyebrow">Gate 2 · Chapter 2</p>
+        <h1 tabindex="-1">Audit setup</h1>
+        <p class="gate-two-dek">This chapter will make the evaluation conditions explicit before any result is compared.</p>
+        <div class="gate-two-placeholder">
+          <p class="placeholder-label">Protocol placeholder</p>
+          <h2>Hardware, tasks, and acceptance checks</h2>
+          <p>No Gate 2 measurements are reported yet. The completed chapter will record the physical target, runtime configuration, prompts, task samples, repetitions, and failure conditions used by every comparable run.</p>
+        </div>
+      </section>
+
+      <section class="gate-two-page" id="gate-2-experiments" data-gate-two-number="03" data-gate-two-title="Experiments" hidden>
+        <p class="gate-two-eyebrow">Gate 2 · Chapter 3</p>
+        <h1 tabindex="-1">Experiments</h1>
+        <p class="gate-two-dek">This chapter will connect each proposed change to a controlled test and a decision about the candidate field.</p>
+        <div class="gate-two-placeholder">
+          <p class="placeholder-label">Evidence placeholder</p>
+          <h2>One comparable result at a time</h2>
+          <p>No Gate 2 measurements are reported yet. Results will appear here only after their artifacts, evaluation protocol, throughput, memory, and accuracy evidence can be traced to retained runs.</p>
+        </div>
+      </section>
+
+      <section class="gate-two-page" id="gate-2-validation" data-gate-two-number="04" data-gate-two-title="Validation" hidden>
+        <p class="gate-two-eyebrow">Gate 2 · Chapter 4</p>
+        <h1 tabindex="-1">Validation</h1>
+        <p class="gate-two-dek">This chapter will test whether screened gains persist under larger samples and the physical submission constraints.</p>
+        <div class="gate-two-placeholder">
+          <p class="placeholder-label">Validation placeholder</p>
+          <h2>Separate screening from confirmation</h2>
+          <p>No Gate 2 measurements are reported yet. This chapter will distinguish exploratory screens from larger-sample checks and will label any unmatched comparison rather than treating it as equivalent evidence.</p>
+        </div>
+      </section>
+
+      <section class="gate-two-page" id="gate-2-review" data-gate-two-number="05" data-gate-two-title="Reviewer questions" hidden>
+        <p class="gate-two-eyebrow">Gate 2 · Chapter 5</p>
+        <h1 tabindex="-1">Reviewer questions</h1>
+        <p class="gate-two-dek">This chapter will collect the claims most likely to fail under independent review and show the evidence used to resolve them.</p>
+        <div class="gate-two-placeholder">
+          <p class="placeholder-label">Review placeholder</p>
+          <h2>Questions before conclusions</h2>
+          <p>No Gate 2 measurements are reported yet. This space will cover reproducibility, missing comparisons, submission-boundary constraints, accessibility, and any disagreement between raw evidence and the rendered report.</p>
+        </div>
+      </section>
+
+      <section class="gate-two-page" id="gate-2-decision" data-gate-two-number="06" data-gate-two-title="Decision" hidden>
+        <p class="gate-two-eyebrow">Gate 2 · Chapter 6</p>
+        <h1 tabindex="-1">Decision</h1>
+        <p class="gate-two-dek">This chapter will state what advances, what is held back, and which uncertainties remain before the next gate.</p>
+        <div class="gate-two-placeholder">
+          <p class="placeholder-label">Decision placeholder</p>
+          <h2>No Gate 2 selection has been made</h2>
+          <p>No Gate 2 measurements are reported yet. A recommendation will be added only after the retained evidence supports a runtime-specific choice and the required physical-target and tutor-behaviour checks have passed.</p>
+        </div>
+      </section>
+    </div>
+
+    <nav class="gate-two-nav gate-two-nav-footer" aria-label="Adjacent Gate 2 chapters">
+      <a id="gate-2-footer-prev" class="gate-two-footer-link previous" href="#gate-2-overview" data-gate-two-direction="prev">
+        <span class="gate-two-footer-arrow" aria-hidden="true">←</span>
+        <span><span class="gate-two-footer-direction">Previous</span><strong data-gate-two-adjacent-title>Direction</strong></span>
+      </a>
+      <a id="gate-2-footer-next" class="gate-two-footer-link next" href="#gate-2-audit" data-gate-two-direction="next">
+        <span><span class="gate-two-footer-direction">Next</span><strong data-gate-two-adjacent-title>Audit setup</strong></span>
+        <span class="gate-two-footer-arrow" aria-hidden="true">→</span>
+      </a>
+    </nav>
   </article>
 </main>
 

@@ -15,8 +15,18 @@ const state = {
   pollAt: 0,                // Date.now() of last successful poll
   timer: null,
   modalReturnFocus: null,
+  initialHash: location.hash,
   hashRestored: false,
 };
+
+const GATE_TWO_CHAPTERS = [
+  { id: "gate-2-overview", title: "Direction" },
+  { id: "gate-2-audit", title: "Audit setup" },
+  { id: "gate-2-experiments", title: "Experiments" },
+  { id: "gate-2-validation", title: "Validation" },
+  { id: "gate-2-review", title: "Reviewer questions" },
+  { id: "gate-2-decision", title: "Decision" },
+];
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
@@ -193,6 +203,8 @@ function verticalGroupedChart(items, series, options = {}) {
 }
 
 function initReport() {
+  initContentsGates();
+  routeReportFromHash(false);
   renderRuntimeChart();
   renderModelFunnelChart();
   renderStreamingChart();
@@ -201,6 +213,103 @@ function initReport() {
   renderFaq();
   updateReadingProgress();
   updateActiveChapter();
+}
+
+function initContentsGates() {
+  document.querySelectorAll(".contents-gate-toggle").forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const content = $(toggle.getAttribute("aria-controls"));
+      const gate = toggle.closest(".contents-gate");
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!expanded));
+      content.hidden = expanded;
+      gate.classList.toggle("contents-gate-collapsed", expanded);
+      if (!expanded) {
+        const activeLink = content.querySelector("a.active");
+        if (activeLink) keepContentsLinkVisible(activeLink);
+      }
+    });
+  });
+}
+
+function routeReportFromHash(moveFocus = true) {
+  const hashId = location.hash.slice(1);
+  const chapterIndex = GATE_TWO_CHAPTERS.findIndex((chapter) => chapter.id === hashId);
+  const showingGateTwo = chapterIndex !== -1;
+  const gateOneReport = $("gate-1-report");
+  const gateTwoReport = $("gate-2-report");
+
+  gateOneReport.hidden = showingGateTwo;
+  gateTwoReport.hidden = !showingGateTwo;
+
+  if (showingGateTwo) {
+    const chapter = GATE_TWO_CHAPTERS[chapterIndex];
+    document.querySelectorAll(".gate-two-page").forEach((page) => {
+      page.hidden = page.id !== chapter.id;
+    });
+    updateGateTwoNavigation(chapterIndex);
+    updateGateTwoContents(chapter.id);
+    gateTwoReport.setAttribute("aria-label", `Gate 2, ${chapter.title}`);
+    document.title = `${chapter.title} — Gate 2 — Muta IQ`;
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      if (moveFocus) $(chapter.id).querySelector("h1").focus({ preventScroll: true });
+      updateReadingProgress();
+    });
+    return;
+  }
+
+  document.title = "Muta IQ — Experiment report";
+  document.querySelectorAll("#gate-2-content a").forEach((link) => {
+    link.classList.remove("active");
+    link.removeAttribute("aria-current");
+  });
+  updateActiveChapter();
+
+  if (moveFocus && hashId) {
+    requestAnimationFrame(() => {
+      const target = $(hashId);
+      if (target) target.scrollIntoView({ behavior: "auto", block: "start" });
+      updateReadingProgress();
+    });
+  }
+}
+
+function updateGateTwoNavigation(chapterIndex) {
+  const adjacent = {
+    prev: GATE_TWO_CHAPTERS[chapterIndex - 1],
+    next: GATE_TWO_CHAPTERS[chapterIndex + 1],
+  };
+
+  document.querySelectorAll("[data-gate-two-direction]").forEach((link) => {
+    const direction = link.dataset.gateTwoDirection;
+    const chapter = adjacent[direction];
+    link.hidden = !chapter;
+    if (!chapter) {
+      link.removeAttribute("href");
+      link.removeAttribute("aria-label");
+      return;
+    }
+    link.href = `#${chapter.id}`;
+    link.setAttribute("aria-label", `${direction === "prev" ? "Previous" : "Next"} chapter: ${chapter.title}`);
+    const title = link.querySelector("[data-gate-two-adjacent-title]");
+    if (title) title.textContent = chapter.title;
+  });
+}
+
+function updateGateTwoContents(chapterId) {
+  document.querySelectorAll("#gate-1-content a").forEach((link) => {
+    link.classList.remove("active");
+    link.removeAttribute("aria-current");
+  });
+  document.querySelectorAll("#gate-2-content a").forEach((link) => {
+    const isActive = link.getAttribute("href") === `#${chapterId}`;
+    link.classList.toggle("active", isActive);
+    if (isActive) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+    if (isActive && !link.closest("[hidden]")) keepContentsLinkVisible(link);
+  });
 }
 
 function renderRuntimeChart() {
@@ -327,11 +436,28 @@ function updateReadingProgress() {
 }
 
 function updateActiveChapter() {
-  const links = [...document.querySelectorAll(".contents a")];
+  if (!$("gate-2-report").hidden) return;
+  const links = [...document.querySelectorAll("#gate-1-content a[href^='#']")];
   const sections = links.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
   let active = sections[0];
   for (const section of sections) if (section.getBoundingClientRect().top <= 140) active = section;
-  links.forEach((link) => link.classList.toggle("active", active && link.getAttribute("href") === `#${active.id}`));
+  links.forEach((link) => {
+    const isActive = active && link.getAttribute("href") === `#${active.id}`;
+    const wasActive = link.classList.contains("active");
+    link.classList.toggle("active", isActive);
+    if (isActive) link.setAttribute("aria-current", "location");
+    else link.removeAttribute("aria-current");
+    if (isActive && !wasActive && !link.closest("[hidden]")) keepContentsLinkVisible(link);
+  });
+}
+
+function keepContentsLinkVisible(link) {
+  const panel = link.closest(".contents-list");
+  if (!panel) return;
+  const panelRect = panel.getBoundingClientRect();
+  const linkRect = link.getBoundingClientRect();
+  if (linkRect.top < panelRect.top) panel.scrollTop -= panelRect.top - linkRect.top + 4;
+  else if (linkRect.bottom > panelRect.bottom) panel.scrollTop += linkRect.bottom - panelRect.bottom + 4;
 }
 
 // ---------------------------------------------------------------- polling
@@ -404,10 +530,13 @@ function render() {
 }
 
 function restoreInitialHash() {
-  if (state.hashRestored || !location.hash) return;
-  const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
-  if (!target) return;
+  if (state.hashRestored) return;
   state.hashRestored = true;
+  if (!state.initialHash) return;
+  const initialId = decodeURIComponent(state.initialHash.slice(1));
+  if (GATE_TWO_CHAPTERS.some((chapter) => chapter.id === initialId)) return;
+  const target = document.getElementById(initialId);
+  if (!target) return;
   requestAnimationFrame(() => requestAnimationFrame(() => target.scrollIntoView()));
 }
 
@@ -1214,6 +1343,7 @@ document.addEventListener("click", (ev) => {
 });
 addEventListener("scroll", () => { updateReadingProgress(); updateActiveChapter(); }, { passive: true });
 addEventListener("resize", updateReadingProgress);
+addEventListener("hashchange", () => routeReportFromHash(true));
 
 // chart tooltip
 document.addEventListener("mousemove", (ev) => {

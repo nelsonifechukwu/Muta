@@ -46,6 +46,176 @@ def test_report_names_all_evidence_lanes() -> None:
         assert label in html or label in script
 
 
+def test_contents_separates_completed_gate_one_from_gate_two_chapters() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    contents = html.split('<aside class="contents"', 1)[1].split("</aside>", 1)[0]
+    gate_one = contents.split('aria-controls="gate-1-content"', 1)[1].split(
+        'aria-controls="gate-2-content"', 1
+    )[0]
+    gate_two = contents.split('aria-controls="gate-2-content"', 1)[1].split("</ol>", 1)[0]
+
+    assert '<div class="contents-gate-panel">' in contents
+    assert '<ol class="contents-gates">' in contents
+    assert ">Gate 1</span>" in contents
+    assert ">Gate 2</span>" in contents
+    assert 'id="gate-1-content" aria-label="Gate 1 chapters" hidden>' in gate_one
+    assert 'id="gate-2-content" aria-label="Gate 2 chapters" hidden>' in gate_two
+    assert gate_one.count('<a href="#') == 20
+    assert contents.index('aria-controls="gate-2-content"') < contents.index('id="contents-winner"')
+    assert gate_two.count('<a href="#gate-2-') == 6
+
+
+def test_contents_numbers_match_the_rendered_chapter_numbers() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    gate_one = html.split('id="gate-1-content"', 1)[1].split("</ol>", 1)[0]
+    toc_pairs = re.findall(r'<a href="#([^"]+)" data-chapter="([^"]*)">', gate_one)
+    expected_pairs = [
+        ("overview", ""),
+        ("competition", "01"),
+        ("paths", "02"),
+        ("methods", "03"),
+        ("quantization", "04"),
+        ("dedup", "05"),
+        ("vocabulary", "06"),
+        ("streaming", "07"),
+        ("runtime", "08"),
+        ("remaining-methods", "09"),
+        ("scoreboard", "10"),
+        ("instruction-set", "11"),
+        ("search", "12"),
+        ("second-search", "13"),
+        ("behaviour", "14"),
+        ("finetuning", "15"),
+        ("current-state", "16"),
+        ("ledger", "17"),
+        ("faq", "18"),
+        ("profiler", "A"),
+    ]
+
+    assert toc_pairs == expected_pairs
+    assert len({section_id for section_id, _ in toc_pairs}) == len(toc_pairs)
+    for section_id, toc_number in toc_pairs[1:]:
+        section = html.split(f'id="{section_id}"', 1)[1]
+        rendered_number = re.search(r'<span class="chapter-number">([^<]+)</span>', section)
+        assert rendered_number is not None
+        assert toc_number == rendered_number.group(1)
+
+
+def test_active_contents_location_is_exposed_accessibly() -> None:
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert '#gate-1-content a[href^=\'#\']' in script
+    assert 'link.setAttribute("aria-current", "location")' in script
+    assert 'link.setAttribute("aria-current", "page")' in script
+    assert 'link.removeAttribute("aria-current")' in script
+    assert "keepContentsLinkVisible(link)" in script
+
+
+def test_gate_tabs_toggle_their_nested_chapter_lists() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert html.count('class="contents-gate-toggle"') == 2
+    assert html.count('<li class="contents-gate contents-gate-collapsed">') == 2
+    assert 'aria-expanded="false" aria-controls="gate-1-content"' in html
+    assert 'aria-expanded="false" aria-controls="gate-2-content"' in html
+    assert "function initContentsGates()" in script
+    assert 'toggle.setAttribute("aria-expanded", String(!expanded))' in script
+    assert "content.hidden = expanded" in script
+    assert 'gate.classList.toggle("contents-gate-collapsed", expanded)' in script
+
+
+def test_gate_two_is_a_deep_linked_chapter_sequence() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+    chapter_ids = [
+        "gate-2-overview",
+        "gate-2-audit",
+        "gate-2-experiments",
+        "gate-2-validation",
+        "gate-2-review",
+        "gate-2-decision",
+    ]
+
+    gate_two_toc = html.split('id="gate-2-content"', 1)[1].split("</ol>", 1)[0]
+    toc_entries = re.findall(
+        r'<a href="#([^"]+)" data-chapter="([^"]+)">([^<]+)</a>', gate_two_toc
+    )
+    page_entries = re.findall(
+        r'<section class="gate-two-page" id="([^"]+)" '
+        r'data-gate-two-number="([^"]+)" data-gate-two-title="([^"]+)"[^>]*>\s*'
+        r'<p class="gate-two-eyebrow">Gate 2 · Chapter ([1-6])</p>',
+        html,
+    )
+
+    assert [entry[0] for entry in toc_entries] == chapter_ids
+    assert [entry[0] for entry in page_entries] == chapter_ids
+    assert [entry[1] for entry in toc_entries] == ["01", "02", "03", "04", "05", "06"]
+    assert [entry[1] for entry in page_entries] == ["01", "02", "03", "04", "05", "06"]
+    assert [entry[2] for entry in toc_entries] == [entry[2] for entry in page_entries]
+    assert [entry[3] for entry in page_entries] == ["1", "2", "3", "4", "5", "6"]
+    assert 'id="gate-2-report"' in html
+    assert 'addEventListener("hashchange", () => routeReportFromHash(true))' in script
+    assert 'location.hash.slice(1)' in script
+    assert "history.replaceState" not in script
+    assert "location.replace" not in script
+
+
+def test_gate_two_has_matching_header_and_footer_navigation() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert 'class="gate-two-nav gate-two-nav-top"' in html
+    assert 'class="gate-two-nav gate-two-nav-footer"' in html
+    assert html.count('data-gate-two-direction="prev"') == 2
+    assert html.count('data-gate-two-direction="next"') == 2
+    assert html.count("data-gate-two-adjacent-title") == 2
+    assert 'href="#overview"' in html
+    assert "function updateGateTwoNavigation(chapterIndex)" in script
+    assert "prev: GATE_TWO_CHAPTERS[chapterIndex - 1]" in script
+    assert "next: GATE_TWO_CHAPTERS[chapterIndex + 1]" in script
+    assert "link.hidden = !chapter" in script
+    assert 'link.href = `#${chapter.id}`' in script
+
+
+def test_initial_hash_restoration_cannot_capture_a_later_gate_two_route() -> None:
+    script = (DASHBOARD / "script.js").read_text()
+
+    assert "initialHash: location.hash" in script
+    assert "if (!state.initialHash) return" in script
+    assert "decodeURIComponent(state.initialHash.slice(1))" in script
+    assert "state.hashRestored = true" in script
+    assert "decodeURIComponent(location.hash.slice(1))" not in script
+
+
+def test_gate_two_placeholders_do_not_claim_unavailable_results() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    gate_two = html.split('id="gate-2-report"', 1)[1].split("</article>", 1)[0]
+
+    assert gate_two.count("No Gate 2 measurements are reported yet.") == 6
+    assert "No Gate 2 selection has been made" in gate_two
+
+
+def test_gate_one_chapters_scroll_while_gate_two_and_recommendation_stay_fixed() -> None:
+    css = (DASHBOARD / "style.css").read_text()
+    contents_rule = css.split(".contents {", 1)[1].split("}", 1)[0]
+    gate_panel_rule = css.split(".contents-gate-panel {", 1)[1].split("}", 1)[0]
+    gate_one_rule = css.split("#gate-1-content {", 1)[1].split("}", 1)[0]
+    gate_two_rule = css.split(".contents-gate + .contents-gate {", 1)[1].split("}", 1)[0]
+    collapsed_gate_two_rule = css.split(
+        ".contents-gate:first-child.contents-gate-collapsed + .contents-gate {", 1
+    )[1].split("}", 1)[0]
+    note_rule = css.split(".contents-note {", 1)[1].split("}", 1)[0]
+
+    assert "height: calc(100vh - 72px)" in contents_rule
+    assert "overflow: hidden" in contents_rule
+    assert "overflow: hidden" in gate_panel_rule
+    assert "overflow-y: auto" in gate_one_rule
+    assert "margin-top: auto" in gate_two_rule
+    assert "margin-top: 0" in collapsed_gate_two_rule
+    assert "flex: 0 0 auto" in note_rule
+
+
 def test_operational_profiler_controls_remain_present() -> None:
     html = (DASHBOARD / "index.html").read_text()
 
@@ -177,12 +347,11 @@ def test_remaining_methods_chapter_covers_all_six_topics() -> None:
         "context-kv",
     ):
         assert f'id="{method_id}"' in remaining
-    for phrase in (
-        "Meaning and score hypothesis",
-        "Artifacts and protocol",
-        "Result and narrowing",
-    ):
-        assert remaining.count(phrase) == 6
+        method = remaining.split(f'id="{method_id}"', 1)[1].split("</section>", 1)[0]
+        assert 'class="figure-kicker"' in method
+        assert "<h3>" in method
+        # A scope label plus prose that either carries the result or points to its full section.
+        assert method.count("<p") >= 2
 
 
 def test_historical_dual_regime_chart_and_current_choice_are_explicit() -> None:
