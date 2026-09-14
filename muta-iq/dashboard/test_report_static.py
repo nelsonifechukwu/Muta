@@ -123,6 +123,16 @@ def test_gate_tabs_toggle_their_nested_chapter_lists() -> None:
     assert 'toggle.setAttribute("aria-expanded", String(!expanded))' in script
     assert "content.hidden = expanded" in script
     assert 'gate.classList.toggle("contents-gate-collapsed", expanded)' in script
+    assert 'content.querySelector("a[href^=\'#\']")' in script
+    assert "routeReportFromHash(false, true)" in script
+    assert "location.hash = firstHash" in script
+    assert "function routeReportFromHash(moveFocus = true, forceScroll = false)" in script
+    assert "if ((moveFocus || forceScroll) && hashId)" in script
+
+    gate_one = html.split('id="gate-1-content"', 1)[1].split("</ol>", 1)[0]
+    gate_two = html.split('id="gate-2-content"', 1)[1].split("</ol>", 1)[0]
+    assert re.search(r'<a href="#overview"[^>]*>Why we\'re here</a>', gate_one)
+    assert re.search(r'<a href="#gate-2-overview"[^>]*>Direction</a>', gate_two)
 
 
 def test_gate_two_is_a_deep_linked_chapter_sequence() -> None:

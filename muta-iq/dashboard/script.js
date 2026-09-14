@@ -228,11 +228,16 @@ function initContentsGates() {
         const activeLink = content.querySelector("a.active");
         if (activeLink) keepContentsLinkVisible(activeLink);
       }
+      const firstChapter = content.querySelector("a[href^='#']");
+      if (!firstChapter) return;
+      const firstHash = firstChapter.getAttribute("href");
+      if (location.hash === firstHash) routeReportFromHash(false, true);
+      else location.hash = firstHash;
     });
   });
 }
 
-function routeReportFromHash(moveFocus = true) {
+function routeReportFromHash(moveFocus = true, forceScroll = false) {
   const hashId = location.hash.slice(1);
   const chapterIndex = GATE_TWO_CHAPTERS.findIndex((chapter) => chapter.id === hashId);
   const showingGateTwo = chapterIndex !== -1;
@@ -267,7 +272,7 @@ function routeReportFromHash(moveFocus = true) {
   });
   updateActiveChapter();
 
-  if (moveFocus && hashId) {
+  if ((moveFocus || forceScroll) && hashId) {
     requestAnimationFrame(() => {
       const target = $(hashId);
       if (target) target.scrollIntoView({ behavior: "auto", block: "start" });

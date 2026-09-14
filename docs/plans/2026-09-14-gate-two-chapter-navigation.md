@@ -7,6 +7,7 @@ Introduce Gate 2 as a separate, chapter-based reading sequence inside the existi
 ## Interaction contract
 
 - Keep both Gate groups collapsed on initial load and after refresh.
+- Treat each Gate header as a shortcut to the first chapter in that Gate while retaining its expand/collapse control.
 - Keep Gate 2 immediately below Gate 1 when Gate 1 is collapsed, and pinned above the current recommendation while Gate 1's children scroll when Gate 1 is expanded.
 - Give each Gate 2 chapter a stable hash URL so browser back/forward navigation works normally.
 - Show the active Gate 2 chapter in the table of contents when its group is opened.
