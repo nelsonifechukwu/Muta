@@ -14,13 +14,6 @@ name: vercel
 on:
   push:
     branches: [main]
-    paths:
-      - muta-iq/dashboard/**
-      - muta-iq/metadata.json
-      - bench/measurements/**
-      - vercel.json
-      - scripts/deploy_report_vercel.sh
-      - .github/workflows/vercel.yml
   workflow_dispatch:
 
 permissions:

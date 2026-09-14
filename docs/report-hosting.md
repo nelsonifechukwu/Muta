@@ -28,7 +28,7 @@ Git integration the project builds the same way there (the build image has `pyth
 
 ### Deploying on push
 
-Three routes exist; as of 2026-08-25 only the manual one works end to end, because the two
+Three routes exist; as of 2026-09-14 only the manual one works end to end, because the two
 automatic ones each wait on something only the repository owner (`nelsonifechukwu`) can do.
 
 1. **Vercel Git integration (recommended).** Vercel clones the repository on every push and
@@ -44,24 +44,21 @@ automatic ones each wait on something only the repository owner (`nelsonifechukw
    `Muta`; then from the repository root `vercel git connect` (or Vercel dashboard → project
    `muta-iq` → Settings → Git → Connect). The project settings are already correct for this
    (framework `null`, the build command, output `site`).
-2. **GitHub Actions → Vercel** (`.github/workflows/vercel.yml`). On pushes to `main` that
-   touch the report inputs it runs the dashboard tests, then `scripts/deploy_report_vercel.sh`
-   with `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` (identifiers, in the workflow) and the
-   **`VERCEL_TOKEN` repository secret** (create at https://vercel.com/account/tokens, then
-   `gh secret set VERCEL_TOKEN -R nelsonifechukwu/Muta`; the workflow fails with a clear
-   message while it is missing). **Blocked until GitHub Actions works on this repository:**
-   GitHub Actions has *never* started here. All 200 runs in the repository's history, from
-   the first push after `ci.yml` was added on 2026-08-08 to today, ended in
-   `startup_failure` attributed to a deleted `BuildFailed` placeholder workflow, while the
-   five real workflow files — which all parse, are plain blobs, and are not touched by the
-   LFS rules in `.gitattributes` — get no runs at all. A repo-wide pattern like that is not
-   a workflow-file error; it is an account-level block on the owner (`nelsonifechukwu`)
-   side, which a collaborator without admin rights cannot inspect (the repository's
-   Actions-permissions API answers 404 to this account). Owner checks, in order: repository
-   Settings → Actions → General (Actions permissions must allow workflows); account
-   Settings → Billing and plans → Actions (a private repository consumes paid minutes and
-   the desktop macOS builds are billed at 10×, so a spending limit of 0 or a failed payment
-   blocks every run); and if both look fine, GitHub Support with a run URL.
+2. **GitHub Actions → Vercel** (`.github/workflows/vercel.yml`). On every push to `main`
+   (since 2026-09-14; it used to filter on the report inputs) it runs the dashboard tests,
+   then `scripts/deploy_report_vercel.sh` with `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`
+   (identifiers, in the workflow) and the **`VERCEL_TOKEN` repository secret** (create at
+   https://vercel.com/account/tokens, then `gh secret set VERCEL_TOKEN -R
+   nelsonifechukwu/Muta`; the workflow fails with a clear message while it is missing). The
+   token must be a dashboard-created account token: the Vercel CLI's own login token expires
+   within hours, and the CLI login cannot mint tokens through the API ("Cannot create tokens
+   for this app"). **Blocked until the owner clears a billing lock:** since the repository
+   went public (2026-09-01) runs are queued on every push, but each job fails in ~3 s with the
+   annotation *"The job was not started because your account is locked due to a billing
+   issue."* No workflow edit can get past that; the owner must fix account Settings →
+   Billing and plans (a failed payment or spending limit), after which public-repository
+   `ubuntu-latest` minutes are free. Before 2026-09-01 the symptom was different — every run
+   was a `startup_failure` on a deleted `BuildFailed` placeholder workflow.
 3. **Manual** — `make vercel` from a linked checkout, as above. This is how every deploy so
    far was made.
 
