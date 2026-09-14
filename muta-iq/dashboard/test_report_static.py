@@ -7,6 +7,44 @@ from pathlib import Path
 DASHBOARD = Path(__file__).resolve().parent
 REPOSITORY = DASHBOARD.parents[1]
 
+GATE_TWO_RESEARCH_URLS = (
+    "https://huggingface.co/openbmb/MiniCPM5-2B",
+    "https://huggingface.co/openbmb/MiniCPM5-2B-GGUF/tree/main",
+    "https://huggingface.co/LiquidAI/LFM2.5-2.6B",
+    "https://www.liquid.ai/blog/lfm2-5-2-6b",
+    "https://www.liquid.ai/blog/qad",
+    "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/tree/main",
+    "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking",
+    "https://www.liquid.ai/blog/lfm2-5-1-2b-thinking-on-device-reasoning-under-1gb",
+    "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking-GGUF/tree/main",
+    "https://huggingface.co/Qwen/Qwen3.5-2B",
+    "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/tree/main",
+    "https://huggingface.co/openbmb/MiniCPM5-1B",
+    "https://raw.githubusercontent.com/OpenBMB/MiniCPM/main/assets/minicpm5/public_leaderboard_en.png",
+    "https://huggingface.co/openbmb/MiniCPM5-1B-GGUF/tree/main",
+    "https://huggingface.co/WeiboAI/VibeThinker-1.5B",
+    "https://huggingface.co/DevQuasar/WeiboAI.VibeThinker-1.5B-GGUF/tree/main",
+    "https://tiiuae-tiny-h1-blogpost.hf.space/",
+    "https://huggingface.co/tiiuae/Falcon-H1-Tiny-R-0.6B-GGUF/tree/main",
+    "https://huggingface.co/nvidia/OpenReasoning-Nemotron-1.5B",
+    "https://huggingface.co/WeiboAI/VibeThinker-3B",
+    "https://huggingface.co/Qwen/Qwen3.5-4B",
+    "https://huggingface.co/ibm-granite/granite-4.2-3b",
+    "https://huggingface.co/mistralai/Ministral-3-3B-Reasoning-2512",
+    "https://huggingface.co/microsoft/Phi-4-mini-reasoning",
+    "https://huggingface.co/HuggingFaceTB/SmolLM3-3B",
+    "https://huggingface.co/facebook/MobileLLM-R1.5-950M",
+    "https://huggingface.co/IFM/K2-Horizon-0.9B",
+    "https://qwenlm.github.io/blog/qwen2.5-math/",
+    "https://huggingface.co/agentica-org/DeepScaleR-1.5B-Preview",
+    "https://huggingface.co/microsoft/Phi-4-mini-flash-reasoning",
+    "https://huggingface.co/google/gemma-4-E2B-it",
+    "https://github.com/ggml-org/llama.cpp/blob/master/tools/llama-bench/README.md",
+    "https://local-ai-zone.github.io/",
+    "https://huggingface.co/LiquidAI/LFM2-350M-Math",
+    "https://artificialanalysis.ai/models/minicpm5-2b",
+)
+
 
 def test_report_uses_direct_technical_prose() -> None:
     html = (DASHBOARD / "index.html").read_text()
@@ -132,7 +170,7 @@ def test_gate_tabs_toggle_their_nested_chapter_lists() -> None:
     gate_one = html.split('id="gate-1-content"', 1)[1].split("</ol>", 1)[0]
     gate_two = html.split('id="gate-2-content"', 1)[1].split("</ol>", 1)[0]
     assert re.search(r'<a href="#overview"[^>]*>Why we\'re here</a>', gate_one)
-    assert re.search(r'<a href="#gate-2-overview"[^>]*>Direction</a>', gate_two)
+    assert re.search(r'<a href="#gate-2-overview"[^>]*>Model research</a>', gate_two)
 
 
 def test_gate_two_is_a_deep_linked_chapter_sequence() -> None:
@@ -167,6 +205,9 @@ def test_gate_two_is_a_deep_linked_chapter_sequence() -> None:
     assert 'id="gate-2-report"' in html
     assert 'addEventListener("hashchange", () => routeReportFromHash(true))' in script
     assert 'location.hash.slice(1)' in script
+    assert 'requestedTarget?.closest(".gate-two-page")' in script
+    assert "requestedTarget.scrollIntoView" in script
+    assert "moveFocus && atChapterStart" in script
     assert "history.replaceState" not in script
     assert "location.replace" not in script
 
@@ -198,11 +239,49 @@ def test_initial_hash_restoration_cannot_capture_a_later_gate_two_route() -> Non
     assert "decodeURIComponent(location.hash.slice(1))" not in script
 
 
-def test_gate_two_placeholders_do_not_claim_unavailable_results() -> None:
+def test_gate_two_research_precedes_the_remaining_placeholders() -> None:
     html = (DASHBOARD / "index.html").read_text()
+    css = (DASHBOARD / "style.css").read_text()
     gate_two = html.split('id="gate-2-report"', 1)[1].split("</article>", 1)[0]
+    research = gate_two.split('id="gate-2-overview"', 1)[1].split(
+        'id="gate-2-audit"', 1
+    )[0]
 
-    assert gate_two.count("No Gate 2 measurements are reported yet.") == 6
+    assert "Gate 1 qualified Muta for the next stage" in research
+    assert "no Gate 2 model has been selected" in research
+    assert "Small STEM models for an 8 GB laptop" in research
+    assert "This is not a controlled leaderboard." in research
+    assert "No model was executed on the target laptop." in research
+    assert "correct completed answers within the chosen latency budget" in research
+    assert re.findall(r"<h[23][^>]*>([^<]+)</h[23]>", research) == [
+        "Small STEM models for an 8 GB laptop",
+        "Decision",
+        "Scope and evidence",
+        "Ranked practical shortlist",
+        "Benchmark evidence ledger",
+        "Verified weight files",
+        "Quantization choice",
+        "What published speed measurements establish",
+        "Quality-first stretch candidates",
+        "Other screened candidates",
+        "Laptop evaluation protocol",
+        "Selection rule",
+        "Sources",
+    ]
+    tables = re.findall(r"<table[^>]*>(.*?)</table>", research, flags=re.DOTALL)
+    assert [
+        (table.count("<tr"), len(re.findall(r"<(?:th|td)(?:\s|>)", table)))
+        for table in tables
+    ] == [(10, 60), (9, 36), (10, 30), (3, 9), (7, 28)]
+    assert tuple(re.findall(r'href="(https?://[^"]+)"', research)) == GATE_TWO_RESEARCH_URLS
+    assert research.count('id="g2-source-') == 35
+    assert research.count('class="editorial-table gate-two-research-table') == 5
+    assert research.count('<th scope="row">') == 34
+    assert 'class="selected-row"' not in research
+    assert "gate-two-placeholder" not in research
+    assert "overscroll-behavior-inline: contain" in css
+    assert 'content: "Scroll table →"' in css
+    assert gate_two.count("No Gate 2 measurements are reported yet.") == 5
     assert "No Gate 2 selection has been made" in gate_two
 
 

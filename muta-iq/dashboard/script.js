@@ -20,7 +20,7 @@ const state = {
 };
 
 const GATE_TWO_CHAPTERS = [
-  { id: "gate-2-overview", title: "Direction" },
+  { id: "gate-2-overview", title: "Model research" },
   { id: "gate-2-audit", title: "Audit setup" },
   { id: "gate-2-experiments", title: "Experiments" },
   { id: "gate-2-validation", title: "Validation" },
@@ -239,7 +239,10 @@ function initContentsGates() {
 
 function routeReportFromHash(moveFocus = true, forceScroll = false) {
   const hashId = location.hash.slice(1);
-  const chapterIndex = GATE_TWO_CHAPTERS.findIndex((chapter) => chapter.id === hashId);
+  const requestedTarget = hashId ? $(hashId) : null;
+  const requestedGateTwoPage = requestedTarget?.closest(".gate-two-page");
+  const requestedChapterId = requestedGateTwoPage?.id || hashId;
+  const chapterIndex = GATE_TWO_CHAPTERS.findIndex((chapter) => chapter.id === requestedChapterId);
   const showingGateTwo = chapterIndex !== -1;
   const gateOneReport = $("gate-1-report");
   const gateTwoReport = $("gate-2-report");
@@ -258,8 +261,10 @@ function routeReportFromHash(moveFocus = true, forceScroll = false) {
     document.title = `${chapter.title} — Gate 2 — Muta IQ`;
 
     requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "auto" });
-      if (moveFocus) $(chapter.id).querySelector("h1").focus({ preventScroll: true });
+      const atChapterStart = hashId === chapter.id;
+      if (atChapterStart) window.scrollTo({ top: 0, behavior: "auto" });
+      else if (requestedTarget) requestedTarget.scrollIntoView({ behavior: "auto", block: "start" });
+      if (moveFocus && atChapterStart) $(chapter.id).querySelector("h1").focus({ preventScroll: true });
       updateReadingProgress();
     });
     return;

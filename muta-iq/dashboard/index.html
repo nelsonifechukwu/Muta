@@ -63,7 +63,7 @@
             <span class="contents-gate-label">Gate 2</span>
           </button>
           <ol class="contents-list" id="gate-2-content" aria-label="Gate 2 chapters" hidden>
-            <li><a href="#gate-2-overview" data-chapter="01">Direction</a></li>
+            <li><a href="#gate-2-overview" data-chapter="01">Model research</a></li>
             <li><a href="#gate-2-audit" data-chapter="02">Audit setup</a></li>
             <li><a href="#gate-2-experiments" data-chapter="03">Experiments</a></li>
             <li><a href="#gate-2-validation" data-chapter="04">Validation</a></li>
@@ -958,14 +958,201 @@
     </nav>
 
     <div class="gate-two-pages">
-      <section class="gate-two-page" id="gate-2-overview" data-gate-two-number="01" data-gate-two-title="Direction">
+      <section class="gate-two-page" id="gate-2-overview" data-gate-two-number="01" data-gate-two-title="Model research">
         <p class="gate-two-eyebrow">Gate 2 · Chapter 1</p>
-        <h1 tabindex="-1">Direction</h1>
-        <p class="gate-two-dek">This chapter will explain the question Gate 2 asks, the evidence it requires, and how that changes the next phase of Muta IQ.</p>
-        <div class="gate-two-placeholder">
-          <p class="placeholder-label">Reserved for Gate 2</p>
-          <h2>The next selection problem will begin here</h2>
-          <p>No Gate 2 measurements are reported yet. This space will define the target, decision criteria, and starting candidate set once the next experiment protocol is fixed.</p>
+        <h1 tabindex="-1">Model research</h1>
+        <p class="gate-two-dek">Gate 1 qualified Muta for the next stage while exposing the limits of optimizing mainly for speed and memory. Gate 2 therefore begins with an open compact-STEM search: the research below defines the candidates and measurements for the next controlled campaign, but no Gate 2 model has been selected.</p>
+
+        <div class="gate-two-research">
+          <header class="gate-two-research-head">
+            <p class="placeholder-label">Desk research · not target-laptop measurements</p>
+            <h2>Small STEM models for an 8 GB laptop</h2>
+          </header>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-decision">
+            <h2 id="g2-research-decision">Decision</h2>
+            <p><strong>The first balanced-STEM candidates to benchmark are MiniCPM5-2B, LFM2.5-2.6B, and LFM2.5-1.2B-Thinking.</strong> MiniCPM is the capability-first candidate; the 2.6B Liquid model is an efficiency-and-knowledge compromise; the 1.2B Thinking model is the low-memory, speed-first baseline. For mathematics-only experiments, add VibeThinker-1.5B and Falcon-H1-Tiny-R-0.6B. These are deployment priorities, not a claim that one checkpoint dominates every task. <sup><a href="#g2-source-1" aria-label="Source 1">[1]</a></sup> <sup><a href="#g2-source-3" aria-label="Source 3">[3]</a></sup> <sup><a href="#g2-source-7" aria-label="Source 7">[7]</a></sup> <sup><a href="#g2-source-15" aria-label="Source 15">[15]</a></sup> <sup><a href="#g2-source-17" aria-label="Source 17">[17]</a></sup></p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-scope">
+            <h2 id="g2-research-scope">Scope and evidence</h2>
+            <p>This assessment covers the publicly accessible information retained in the supplied research snapshot. Assumptions are CPU-only, text-only inference, one concurrent request, quantized GGUF weights, and an initial context of roughly 4,096 tokens. No exact laptop CPU, RAM bandwidth, power limit, operating-system memory use, or local model measurement was available. No model was executed on the target laptop.</p>
+            <p><strong>An 8 GB capacity limit cannot establish a tokens-per-second result.</strong> Speed classes below are qualitative feasibility judgments, not measured throughput ranges. Published tests used specific hardware, runtimes, quantizations, context lengths, and workloads. Context, threading, and quantization must be held explicit when comparing results. <sup><a href="#g2-source-4" aria-label="Source 4">[4]</a></sup> <sup><a href="#g2-source-8" aria-label="Source 8">[8]</a></sup> <sup><a href="#g2-source-32" aria-label="Source 32">[32]</a></sup></p>
+            <p>Local AI Zone was inspected as a discovery resource. Its dynamic model table did not expose a complete machine-readable inventory in the accessible page; its presence is not evidence that every entry was audited. Rankings instead rely on developer model cards, actual GGUF repositories, research reports, and selected evaluation-provider pages. <sup><a href="#g2-source-33" aria-label="Source 33">[33]</a></sup></p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-shortlist">
+            <h2 id="g2-research-shortlist">Ranked practical shortlist</h2>
+            <p>Ratings summarize the strength of the available evidence within the compact-model class, not reliability guarantees. A 5 / 5 rating does not mean frontier-model performance. “Unproven” means insufficient broad-science evidence, not demonstrated inability. Ranking prioritizes combined STEM capability subject to a local throughput gate; a slower candidate must be demoted after measurement.</p>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Ranked practical shortlist; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table research-table-wide">
+                <thead><tr><th>Rank / model</th><th>Size</th><th>Math</th><th>Science / STEM</th><th>Expected speed class</th><th>Assessment</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row"><strong>1. MiniCPM5-2B, Q4_K_M</strong></th><td>2.52B total</td><td>5 / 5</td><td>5 / 5</td><td>10–15 plausible, CPU-dependent</td><td>Capability-first candidate; depth makes measurement essential. <sup><a href="#g2-source-1" aria-label="Source 1">[1]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>2. LFM2.5-2.6B, QAD-Q4_0</strong></th><td>2.6B class</td><td>4 / 5</td><td>4 / 5</td><td>Promising efficiency class; verify 10–15 locally</td><td>Strong balance of scientific evidence and edge inference. <sup><a href="#g2-source-3" aria-label="Source 3">[3]</a></sup> <sup><a href="#g2-source-4" aria-label="Source 4">[4]</a></sup> <sup><a href="#g2-source-5" aria-label="Source 5">[5]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>3. LFM2.5-1.2B-Thinking, Q4_0</strong></th><td>1.17B</td><td>4 / 5</td><td>2 / 5</td><td>Strong speed-first candidate</td><td>Lowest-risk starting point for modest CPU and RAM; the knowledge limitation matters. <sup><a href="#g2-source-7" aria-label="Source 7">[7]</a></sup> <sup><a href="#g2-source-8" aria-label="Source 8">[8]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>4. Qwen3.5-2B, Q4_K_M</strong></th><td>2B language model</td><td>3 / 5</td><td>4 / 5</td><td>10–15 plausible, CPU-dependent</td><td>Useful broad-STEM reference, not the sole small-model option. <sup><a href="#g2-source-10" aria-label="Source 10">[10]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>5. MiniCPM5-1B, Q4_K_M</strong></th><td>1.08B total</td><td>4 / 5</td><td>2 / 5</td><td>Strong small-model candidate</td><td>Attractive mathematics-to-size trade-off; weaker science evidence. <sup><a href="#g2-source-12" aria-label="Source 12">[12]</a></sup> <sup><a href="#g2-source-13" aria-label="Source 13">[13]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>6. VibeThinker-1.5B, Q4_K_M</strong></th><td>1.5B class</td><td>5 / 5</td><td>Unproven</td><td>Small decode workload; long-answer risk</td><td>Competition-math specialist, not a default science tutor. <sup><a href="#g2-source-15" aria-label="Source 15">[15]</a></sup> <sup><a href="#g2-source-16" aria-label="Source 16">[16]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>7. Falcon-H1-Tiny-R-0.6B, Q4_K_M</strong></th><td>0.6B</td><td>5 / 5</td><td>Unproven</td><td>Tiny weights; long-answer risk</td><td>Outstanding reported math per parameter; not necessarily low latency. <sup><a href="#g2-source-17" aria-label="Source 17">[17]</a></sup> <sup><a href="#g2-source-18" aria-label="Source 18">[18]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>8. OpenReasoning-Nemotron-1.5B, Q4-class</strong></th><td>1.5B</td><td>4 / 5</td><td>2 / 5</td><td>Small decode workload; long-answer risk</td><td>Secondary reasoning baseline. <sup><a href="#g2-source-19" aria-label="Source 19">[19]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>9. Qwen3-1.7B, Q4-class</strong></th><td>1.7B</td><td>3 / 5</td><td>3 / 5</td><td>Useful small-model baseline</td><td>Retain as a control rather than assume newest is faster. <sup><a href="#g2-source-25" aria-label="Source 25">[25]</a></sup></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-ledger">
+            <h2 id="g2-research-ledger">Benchmark evidence ledger</h2>
+            <p><strong>This is not a controlled leaderboard.</strong> Different sources use different prompts, sampling, repeat counts, output budgets, and model precision. Scores are percentages. An average of single-attempt results across repeated runs is not the same as choosing the best of multiple answers.</p>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Published benchmark evidence ledger; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table">
+                <thead><tr><th>Model</th><th>Reported mathematics result</th><th>Scientific result</th><th>Qualification</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row"><strong>MiniCPM5-2B</strong></th><td>MATH-500 94.6; AIME 2025 86.5; AIME 2026 86.5</td><td>GPQA Diamond 70.2</td><td>OpenBMB table; GPQA attributed there to Artificial Analysis. Not a Q4, short-budget result. <sup><a href="#g2-source-1" aria-label="Source 1">[1]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>LFM2.5-2.6B</strong></th><td>AIME 2025 51.87 in Liquid’s card; 41.9 in OpenBMB’s reproduced comparison</td><td>GPQA Diamond 55.8 in OpenBMB’s cited comparison</td><td>The math discrepancy illustrates protocol sensitivity. <sup><a href="#g2-source-1" aria-label="Source 1">[1]</a></sup> <sup><a href="#g2-source-3" aria-label="Source 3">[3]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>LFM2.5-1.2B-Thinking</strong></th><td>MATH-500 87.96; AIME 2025 31.73</td><td>GPQA Diamond 37.86</td><td>Publisher evaluation; not guaranteed Q4_0 performance. <sup><a href="#g2-source-7" aria-label="Source 7">[7]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>Qwen3.5-2B</strong></th><td>HMMT February 2025 22.9</td><td>GPQA 51.6 in Qwen’s table</td><td>Do not relabel HMMT as AIME. <sup><a href="#g2-source-10" aria-label="Source 10">[10]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>MiniCPM5-1B</strong></th><td>MATH-500 91.60; AIME 2025 40.42</td><td>GPQA Diamond 26.26</td><td>OpenBMB’s published comparison image. <sup><a href="#g2-source-13" aria-label="Source 13">[13]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>VibeThinker-1.5B</strong></th><td>AIME 2024 80.3; AIME 2025 74.4</td><td>Not established in the inspected evidence</td><td>Developer explicitly recommends competition math and algorithmic coding. <sup><a href="#g2-source-15" aria-label="Source 15">[15]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>Falcon-H1-Tiny-R-0.6B</strong></th><td>MATH-500 94.0; AIME 2025 pass@1 67.3</td><td>Not established in the inspected evidence</td><td>These are single-sample results, not its separate pass@16 figures. <sup><a href="#g2-source-17" aria-label="Source 17">[17]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>OpenReasoning-Nemotron-1.5B</strong></th><td>AIME 2024 55.5; AIME 2025 45.6</td><td>GPQA 31.6</td><td>NVIDIA model-card results. <sup><a href="#g2-source-19" aria-label="Source 19">[19]</a></sup></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>MiniCPM5-2B uses a standard Llama-compatible architecture. Its name refers approximately to non-embedding parameters: the complete model has 2,516,756,480 parameters and 42 layers. Its higher capability is therefore a reason to test it, not evidence that its speed matches an arbitrary 2B model. <sup><a href="#g2-source-1" aria-label="Source 1">[1]</a></sup> <sup><a href="#g2-source-35" aria-label="Source 35">[35]</a></sup></p>
+            <p>A mathematics benchmark mainly establishes performance on those mathematical tasks. Selecting an everyday science tutor additionally requires testing factual accuracy, explanations, uncertainty, physical units, and multi-turn consistency. This is why the tiny mathematics specialists are not automatically ranked first overall.</p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-files">
+            <h2 id="g2-research-files">Verified weight files</h2>
+            <p>Sizes are rounded decimal file sizes from the listed repositories, <strong>not total inference RAM</strong>. A community conversion is not a new independently trained model. Different converters may choose different tensor precisions even under similar quantization labels.</p>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Verified model weight files; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table">
+                <thead><tr><th>Model / file selection</th><th>Download size</th><th>Repository provenance</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row"><strong>MiniCPM5-2B Q4_K_M</strong></th><td>1.56 GB</td><td>Official OpenBMB. <sup><a href="#g2-source-2" aria-label="Source 2">[2]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>LFM2.5-2.6B QAD-Q4_0</strong></th><td>1.59 GB</td><td>Official Liquid AI. <sup><a href="#g2-source-6" aria-label="Source 6">[6]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>LFM2.5-2.6B Q4_K_M</strong></th><td>1.67 GB</td><td>Official Liquid AI. <sup><a href="#g2-source-6" aria-label="Source 6">[6]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>LFM2.5-1.2B-Thinking Q4_0</strong></th><td>696 MB</td><td>Official Liquid AI. <sup><a href="#g2-source-9" aria-label="Source 9">[9]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>LFM2.5-1.2B-Thinking Q4_K_M</strong></th><td>731 MB</td><td>Official Liquid AI. <sup><a href="#g2-source-9" aria-label="Source 9">[9]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>Qwen3.5-2B Q4_K_M</strong></th><td>1.28 GB</td><td>Unsloth conversion; text weights, not the optional vision component. <sup><a href="#g2-source-11" aria-label="Source 11">[11]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>MiniCPM5-1B Q4_K_M</strong></th><td>688 MB</td><td>Official OpenBMB. <sup><a href="#g2-source-14" aria-label="Source 14">[14]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>VibeThinker-1.5B Q4_K_M</strong></th><td>1.12 GB</td><td>DevQuasar community conversion. <sup><a href="#g2-source-16" aria-label="Source 16">[16]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>Falcon-H1-Tiny-R-0.6B Q4_K_M</strong></th><td>374 MB</td><td>Official TII. <sup><a href="#g2-source-18" aria-label="Source 18">[18]</a></sup></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h3>Quantization choice</h3>
+            <p>For <strong>LFM2.5-1.2B-Thinking</strong>, compare Q4_0 with Q4_K_M rather than assuming the latter is always preferable. The 35 MB saving is small, but quantization also affects kernel efficiency. Liquid’s published CPU performance for this Thinking model used Q4_0. <sup><a href="#g2-source-8" aria-label="Source 8">[8]</a></sup> <sup><a href="#g2-source-9" aria-label="Source 9">[9]</a></sup></p>
+            <p><strong>QAD-Q4_0 is a different consideration.</strong> Liquid’s quantization-aware distillation release covers the 2.6B model and selected smaller checkpoints, including 1.2B-Instruct; it does not list 1.2B-Thinking. Do not apply a QAD quality claim to an ordinary Q4_0 Thinking file. <sup><a href="#g2-source-5" aria-label="Source 5">[5]</a></sup></p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-speed">
+            <h2 id="g2-research-speed">What published speed measurements establish</h2>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Published model speed measurements; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table">
+                <thead><tr><th>Model</th><th>Hardware / setup</th><th>Published decode throughput</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row"><strong>LFM2.5-1.2B-Thinking</strong></th><td>Ryzen AI Max 395 CPU; llama.cpp Q4_0; 1k prefill and 100-token decode workload</td><td>235 tok/s; 853 MB reported memory. <sup><a href="#g2-source-8" aria-label="Source 8">[8]</a></sup></td></tr>
+                  <tr><th scope="row"><strong>LFM2.5-2.6B</strong></th><td>Ryzen AI Max+ 395 CPU; publisher Q4_K_M, 4k-context comparison</td><td>113 tok/s; under 2.5 GB reported memory. <sup><a href="#g2-source-4" aria-label="Source 4">[4]</a></sup></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>These are high-end hardware results, not forecasts for a budget laptop. The different workloads also prevent treating the two numbers as a clean speed ratio. Conversely, parameter count alone cannot prove that every 3–4B model misses 10–15 tok/s.</p>
+            <p class="gate-two-equation"><strong>Answer time</strong> = load or queue time + prompt processing time + (reasoning tokens + answer tokens) / decode rate</p>
+            <p>At 10–15 tok/s, 600 generated tokens require 40–60 seconds, 2,000 require 133–200 seconds, and 8,000 require about 9–13 minutes, before other overhead. These are arithmetic examples, not predicted average responses. Falcon’s training report describes mean generations falling toward 8k tokens in that training setting; this is a warning to measure output length, not a claim that every tutoring answer is 8k. <sup><a href="#g2-source-17" aria-label="Source 17">[17]</a></sup></p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-stretch">
+            <h2 id="g2-research-stretch">Quality-first stretch candidates</h2>
+            <p>These belong in the evaluation only after the smaller candidates are measured. Quantized weights can be feasible in 8 GB, but operational headroom and throughput remain CPU- and context-dependent.</p>
+            <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Quality-first stretch candidates; scroll horizontally to view all columns" tabindex="0">
+              <table class="editorial-table gate-two-research-table">
+                <thead><tr><th>Model</th><th>Size class</th><th>Why it is relevant</th><th>Reason not to make it the initial low-end default</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row"><strong>VibeThinker-3B</strong></th><td>3B</td><td>Reported AIME 2026 94.3 and GPQA 70.2. <sup><a href="#g2-source-20" aria-label="Source 20">[20]</a></sup></td><td>Potentially extensive reasoning; latency must be tested.</td></tr>
+                  <tr><th scope="row"><strong>Qwen3.5-4B</strong></th><td>4B language</td><td>GPQA Diamond 76.2; strong broad-STEM candidate. <sup><a href="#g2-source-21" aria-label="Source 21">[21]</a></sup></td><td>Larger inference workload than the main shortlist.</td></tr>
+                  <tr><th scope="row"><strong>Granite-4.2-3B</strong></th><td>3B</td><td>AIME 2025 78.33; GPQA 54.80; low-effort reasoning option. <sup><a href="#g2-source-22" aria-label="Source 22">[22]</a></sup></td><td>An option to test, not established fast on the target CPU.</td></tr>
+                  <tr><th scope="row"><strong>Ministral-3-3B-Reasoning-2512</strong></th><td>3B class</td><td>AIME 2025 72.1; GPQA Diamond 53.4. <sup><a href="#g2-source-23" aria-label="Source 23">[23]</a></sup></td><td>Same hardware uncertainty; distinguish reasoning from instruct checkpoint.</td></tr>
+                  <tr><th scope="row"><strong>Phi-4-mini-reasoning</strong></th><td>3.8B</td><td>MATH-500 94.6 and GPQA 52.0 in its model card. <sup><a href="#g2-source-24" aria-label="Source 24">[24]</a></sup></td><td>Useful math baseline; no longer an uncontested tiny-model winner.</td></tr>
+                  <tr><th scope="row"><strong>SmolLM3-3B</strong></th><td>3B</td><td>Thinking-mode AIME 2025 36.7; GPQA 41.7. <sup><a href="#g2-source-25" aria-label="Source 25">[25]</a></sup></td><td>Less compelling STEM evidence for its size than newer alternatives.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-other">
+            <h2 id="g2-research-other">Other screened candidates</h2>
+            <p><strong>Qwen2.5-Math-1.5B-Instruct:</strong> still a useful tool-assisted mathematics baseline. The frequently quoted 79.7 score is on MATH with tool-integrated reasoning; it must not be compared directly with unassisted MATH-500 scores. It is not the evidence-based automatic “best tiny math model” in this wider shortlist. <sup><a href="#g2-source-28" aria-label="Source 28">[28]</a></sup></p>
+            <p><strong>DeepScaleR-1.5B-Preview:</strong> an alternative to the original DeepSeek-R1-Distill-Qwen-1.5B, reporting AIME 2024 43.1 and MATH-500 87.8. Worth retaining as an experimental baseline rather than a first deployment choice. <sup><a href="#g2-source-29" aria-label="Source 29">[29]</a></sup></p>
+            <p><strong>MobileLLM-R1.5-950M:</strong> mathematically interesting, but its model card labels a FAIR noncommercial license. That warrants a separate licensing decision before considering it for a commercial tutoring product. <sup><a href="#g2-source-26" aria-label="Source 26">[26]</a></sup></p>
+            <p><strong>K2-Horizon-0.9B:</strong> competitive tiny mathematics results, but its reported GPQA 27.3 does not establish a stronger broad-science option. <sup><a href="#g2-source-27" aria-label="Source 27">[27]</a></sup></p>
+            <p><strong>LFM2-350M-Math:</strong> a genuinely smaller English mathematics specialist. Its positioning does not establish general science coverage; keep it in a narrow-task experiment, not as the sole tutor. <sup><a href="#g2-source-34" aria-label="Source 34">[34]</a></sup></p>
+            <p><strong>Phi-4-mini-flash-reasoning:</strong> the “flash” name and published GPU speedups are not CPU throughput evidence. The official implementation and performance discussion center on GPU-oriented inference; verify a functioning local CPU backend before including it operationally. <sup><a href="#g2-source-30" aria-label="Source 30">[30]</a></sup></p>
+            <p><strong>Gemma-4-E2B-it:</strong> the effective-size label is not a statement that only 2B weights must be stored. Its deployment footprint needs to be checked against the actual conversion, not inferred from the name. Liquid’s comparison shows materially higher memory use than its 2.6B model. <sup><a href="#g2-source-4" aria-label="Source 4">[4]</a></sup> <sup><a href="#g2-source-31" aria-label="Source 31">[31]</a></sup></p>
+            <p>Likewise, a mixture-of-experts model advertised as “A1B” or “A3B” still has a total-weight storage requirement. Do not equate active parameters with resident-memory needs when selecting a comfortable 8 GB configuration.</p>
+          </section>
+
+          <section class="gate-two-research-section" aria-labelledby="g2-research-protocol">
+            <h2 id="g2-research-protocol">Laptop evaluation protocol</h2>
+            <p>Begin with one loaded model, one request, text-only mode, a 4,096-token context, and the developer’s actual chat template. Use appropriate publisher sampling defaults instead of assuming one temperature or a universal <code>/no_think</code> command applies to every model. Compare a default-quality run with a deployment-budget run, and label truncated answers as failures rather than scoring incomplete reasoning as correct.</p>
+            <p>A current llama.cpp synthetic benchmark can vary CPU threads and existing context depth:</p>
+            <pre class="gate-two-command" aria-label="Example llama-bench command"><code>./llama-bench -m /path/to/model.gguf -ngl 0 -p 512 -n 128 \
+  -d 0,2048 -t 2,4 -r 3</code></pre>
+            <p>The path is a placeholder. Select thread counts supported by the laptop. Inspect the <strong>tg</strong> rows for decode rate and the <strong>pp</strong> rows for prompt processing. The benchmark excludes tokenization and sampling overhead; use real application requests for time-to-first-token and time-to-complete-answer. <sup><a href="#g2-source-32" aria-label="Source 32">[32]</a></sup></p>
+            <p>Suggested evaluation: 60 held-out questions, comprising 20 mathematics questions, 20 physics, chemistry, biology, or engineering questions, 10 unit or numerical-error traps, and 10 multi-turn tutoring interactions. Include both easy explanations and hard problems. Run stochastic cases multiple times. Record correctness, explanation quality, refusal or uncertainty quality, output tokens, decode speed, first-token latency, final-answer latency, peak process memory, and system swapping.</p>
+            <p>For a deployment gate, require the chosen throughput floor on sustained runs with representative context, not just an empty prompt. Rank the passing models by <strong>correct completed answers within the chosen latency budget</strong>. An explicit initial output cap can be 512–1,024 tokens for ordinary questions, with a separately labeled longer mode; this is an experimental policy and may lower accuracy on difficult reasoning tasks.</p>
+            <p>Arithmetic and symbolic tools should be judged on two separate outcomes: whether the model formulated the right problem, and whether the tool solved that formulation correctly. A calculator cannot repair an incorrect physical assumption or an incorrectly constructed equation. For science tutoring, a compact model plus curated local reference material is an architectural option to test, not a guarantee of factual accuracy.</p>
+          </section>
+
+          <section class="gate-two-research-section gate-two-selection" aria-labelledby="g2-research-rule">
+            <p class="placeholder-label">What advances to measurement</p>
+            <h2 id="g2-research-rule">Selection rule</h2>
+            <p>Benchmark <strong>MiniCPM5-2B against LFM2.5-2.6B</strong> for a single balanced-STEM default. Keep <strong>LFM2.5-1.2B-Thinking Q4_0</strong> as the speed-and-memory fallback. Add <strong>VibeThinker-1.5B or Falcon-H1-Tiny-R-0.6B</strong> only when a separate mathematics mode can tolerate longer reasoning. Re-rank after measuring actual CPU throughput and correct-answer latency. This recommendation deliberately does not claim that small weight files alone satisfy the interactive-tutoring requirement.</p>
+          </section>
+
+          <section class="gate-two-research-section gate-two-source-section" aria-labelledby="g2-research-sources">
+            <h2 id="g2-research-sources">Sources</h2>
+            <p>These are the sources retained with the supplied research snapshot. Dynamic model repositories and evaluation pages may change. The model, quantization, and software revision should therefore be pinned for reproducible local testing.</p>
+            <ol class="gate-two-sources">
+              <li id="g2-source-1"><strong>OpenBMB.</strong> <a href="https://huggingface.co/openbmb/MiniCPM5-2B">MiniCPM5-2B model card</a>.</li>
+              <li id="g2-source-2"><strong>OpenBMB.</strong> <a href="https://huggingface.co/openbmb/MiniCPM5-2B-GGUF/tree/main">MiniCPM5-2B official GGUF files</a>.</li>
+              <li id="g2-source-3"><strong>Liquid AI.</strong> <a href="https://huggingface.co/LiquidAI/LFM2.5-2.6B">LFM2.5-2.6B model card</a>.</li>
+              <li id="g2-source-4"><strong>Liquid AI.</strong> <a href="https://www.liquid.ai/blog/lfm2-5-2-6b">LFM2.5-2.6B: Deploy Agents Everywhere</a>.</li>
+              <li id="g2-source-5"><strong>Liquid AI.</strong> <a href="https://www.liquid.ai/blog/qad">Quantization-Aware Distillation for Edge Deployment</a>.</li>
+              <li id="g2-source-6"><strong>Liquid AI.</strong> <a href="https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/tree/main">LFM2.5-2.6B official GGUF files</a>.</li>
+              <li id="g2-source-7"><strong>Liquid AI.</strong> <a href="https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking">LFM2.5-1.2B-Thinking model card</a>.</li>
+              <li id="g2-source-8"><strong>Liquid AI.</strong> <a href="https://www.liquid.ai/blog/lfm2-5-1-2b-thinking-on-device-reasoning-under-1gb">LFM2.5-1.2B-Thinking: On-Device Reasoning Under 1GB</a>.</li>
+              <li id="g2-source-9"><strong>Liquid AI.</strong> <a href="https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking-GGUF/tree/main">LFM2.5-1.2B-Thinking official GGUF files</a>.</li>
+              <li id="g2-source-10"><strong>Qwen.</strong> <a href="https://huggingface.co/Qwen/Qwen3.5-2B">Qwen3.5-2B model card</a>.</li>
+              <li id="g2-source-11"><strong>Unsloth.</strong> <a href="https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/tree/main">Qwen3.5-2B GGUF files</a>.</li>
+              <li id="g2-source-12"><strong>OpenBMB.</strong> <a href="https://huggingface.co/openbmb/MiniCPM5-1B">MiniCPM5-1B model card</a>.</li>
+              <li id="g2-source-13"><strong>OpenBMB.</strong> <a href="https://raw.githubusercontent.com/OpenBMB/MiniCPM/main/assets/minicpm5/public_leaderboard_en.png">MiniCPM5-1B published benchmark table</a>.</li>
+              <li id="g2-source-14"><strong>OpenBMB.</strong> <a href="https://huggingface.co/openbmb/MiniCPM5-1B-GGUF/tree/main">MiniCPM5-1B official GGUF files</a>.</li>
+              <li id="g2-source-15"><strong>WeiboAI.</strong> <a href="https://huggingface.co/WeiboAI/VibeThinker-1.5B">VibeThinker-1.5B model card</a>.</li>
+              <li id="g2-source-16"><strong>DevQuasar.</strong> <a href="https://huggingface.co/DevQuasar/WeiboAI.VibeThinker-1.5B-GGUF/tree/main">VibeThinker-1.5B community GGUF files</a>.</li>
+              <li id="g2-source-17"><strong>Technology Innovation Institute.</strong> <a href="https://tiiuae-tiny-h1-blogpost.hf.space/">Falcon-H1-Tiny research report; Tiny-R section</a>.</li>
+              <li id="g2-source-18"><strong>Technology Innovation Institute.</strong> <a href="https://huggingface.co/tiiuae/Falcon-H1-Tiny-R-0.6B-GGUF/tree/main">Falcon-H1-Tiny-R-0.6B official GGUF files</a>.</li>
+              <li id="g2-source-19"><strong>NVIDIA.</strong> <a href="https://huggingface.co/nvidia/OpenReasoning-Nemotron-1.5B">OpenReasoning-Nemotron-1.5B model card</a>.</li>
+              <li id="g2-source-20"><strong>WeiboAI.</strong> <a href="https://huggingface.co/WeiboAI/VibeThinker-3B">VibeThinker-3B model card</a>.</li>
+              <li id="g2-source-21"><strong>Qwen.</strong> <a href="https://huggingface.co/Qwen/Qwen3.5-4B">Qwen3.5-4B model card</a>.</li>
+              <li id="g2-source-22"><strong>IBM.</strong> <a href="https://huggingface.co/ibm-granite/granite-4.2-3b">Granite-4.2-3B model card</a>.</li>
+              <li id="g2-source-23"><strong>Mistral AI.</strong> <a href="https://huggingface.co/mistralai/Ministral-3-3B-Reasoning-2512">Ministral-3-3B-Reasoning-2512 model card</a>.</li>
+              <li id="g2-source-24"><strong>Microsoft.</strong> <a href="https://huggingface.co/microsoft/Phi-4-mini-reasoning">Phi-4-mini-reasoning model card</a>.</li>
+              <li id="g2-source-25"><strong>Hugging Face.</strong> <a href="https://huggingface.co/HuggingFaceTB/SmolLM3-3B">SmolLM3-3B model card</a>.</li>
+              <li id="g2-source-26"><strong>Meta.</strong> <a href="https://huggingface.co/facebook/MobileLLM-R1.5-950M">MobileLLM-R1.5-950M model card and license label</a>.</li>
+              <li id="g2-source-27"><strong>IFM.</strong> <a href="https://huggingface.co/IFM/K2-Horizon-0.9B">K2-Horizon-0.9B model card</a>.</li>
+              <li id="g2-source-28"><strong>Qwen.</strong> <a href="https://qwenlm.github.io/blog/qwen2.5-math/">Qwen2.5-Math release report</a>.</li>
+              <li id="g2-source-29"><strong>Agentica.</strong> <a href="https://huggingface.co/agentica-org/DeepScaleR-1.5B-Preview">DeepScaleR-1.5B-Preview model card</a>.</li>
+              <li id="g2-source-30"><strong>Microsoft.</strong> <a href="https://huggingface.co/microsoft/Phi-4-mini-flash-reasoning">Phi-4-mini-flash-reasoning model card</a>.</li>
+              <li id="g2-source-31"><strong>Google.</strong> <a href="https://huggingface.co/google/gemma-4-E2B-it">Gemma-4-E2B-it model card</a>.</li>
+              <li id="g2-source-32"><strong>ggml-org.</strong> <a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/llama-bench/README.md">llama-bench documentation</a>.</li>
+              <li id="g2-source-33"><strong>Local AI Zone.</strong> <a href="https://local-ai-zone.github.io/">GGUF model discovery directory</a>.</li>
+              <li id="g2-source-34"><strong>Liquid AI.</strong> <a href="https://huggingface.co/LiquidAI/LFM2-350M-Math">LFM2-350M-Math model card</a>.</li>
+              <li id="g2-source-35"><strong>Artificial Analysis.</strong> <a href="https://artificialanalysis.ai/models/minicpm5-2b">MiniCPM5-2B evaluation and release information</a>.</li>
+            </ol>
+          </section>
         </div>
       </section>
 
@@ -1028,7 +1215,7 @@
     <nav class="gate-two-nav gate-two-nav-footer" aria-label="Adjacent Gate 2 chapters">
       <a id="gate-2-footer-prev" class="gate-two-footer-link previous" href="#gate-2-overview" data-gate-two-direction="prev">
         <span class="gate-two-footer-arrow" aria-hidden="true">←</span>
-        <span><span class="gate-two-footer-direction">Previous</span><strong data-gate-two-adjacent-title>Direction</strong></span>
+        <span><span class="gate-two-footer-direction">Previous</span><strong data-gate-two-adjacent-title>Model research</strong></span>
       </a>
       <a id="gate-2-footer-next" class="gate-two-footer-link next" href="#gate-2-audit" data-gate-two-direction="next">
         <span><span class="gate-two-footer-direction">Next</span><strong data-gate-two-adjacent-title>Audit setup</strong></span>

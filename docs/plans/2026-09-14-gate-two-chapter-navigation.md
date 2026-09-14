@@ -14,14 +14,14 @@ Introduce Gate 2 as a separate, chapter-based reading sequence inside the existi
 - Provide a clear route back to the Gate 1 report and an accessible Gate 2 entry point at narrow widths where the table of contents is hidden.
 - Use real links for navigation, visible focus states, descriptive labels, and no gesture-only interaction.
 
-## Placeholder scope
+## Chapter scope
 
-Create six empty-evidence chapters: direction, audit setup, experiments, validation, reviewer questions, and decision. Each chapter will describe only the kind of material it will eventually contain and will explicitly state that Gate 2 measurements have not yet been added. No benchmark value, conclusion, or competition claim will be invented.
+Create six chapters: model research, audit setup, experiments, validation, reviewer questions, and decision. The first chapter opens the Gate 2 investigation with the supplied compact-STEM model research, including its complete evidence qualifications, deployment caveats, evaluation protocol, and sources. The remaining chapters describe only the material they will eventually contain and explicitly state that Gate 2 measurements have not yet been added. No benchmark value, conclusion, or competition claim will be invented.
 
 ## Implementation
 
 1. Add the six Gate 2 child links to the table of contents.
-2. Add a sibling Gate 2 article with a chapter header, reserved-content panel, and paired header/footer navigation.
+2. Add a sibling Gate 2 article with a chapter header, the complete compact-STEM research in chapter one, reserved-content panels for the remaining chapters, and paired header/footer navigation.
 3. Route between Gate 1 and Gate 2 from the URL hash, preserving browser history and focusing the selected chapter heading after an in-page navigation.
 4. Update responsive styles so the long-form layout remains readable at desktop and phone widths.
 5. Extend static tests for chapter order, deep links, navigation landmarks, endpoint behavior, and placeholder evidence language.
@@ -30,7 +30,7 @@ Create six empty-evidence chapters: direction, audit setup, experiments, validat
 
 - Run the complete dashboard test suite and JavaScript syntax check.
 - Inspect the diff for preserved profiler controls and unrelated artifacts.
-- Render and exercise the report at desktop and phone widths, including keyboard focus, browser back/forward, first/last chapter controls, and both Gate collapse states.
+- Render and exercise the report at desktop and phone widths, including keyboard focus, browser back/forward, first/last chapter controls, both Gate collapse states, and horizontal containment for every research table.
 - Submit the result to the existing adversarial reviewer and resolve any functional, responsive, or accessibility findings.
 
 The user explicitly excluded the `no-ai-slop` skill from this work, so it will not be used.
