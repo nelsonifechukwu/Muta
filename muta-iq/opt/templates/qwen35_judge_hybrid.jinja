@@ -1,0 +1,259 @@
+{#-
+  Muta judge template for Qwen3.5.
+
+  Ordinary text chat is isolated to the latest user question by default.  A
+  conservative lexical gate includes exactly the preceding user/assistant pair
+  when the latest question explicitly refers to it.  Complex Qwen paths (tools,
+  vision, assistant prefill, and non-generation rendering) retain full history.
+
+  The empty think block is unconditional.  Deliberately do not inspect any
+  runtime reasoning flag: a caller cannot reopen thinking while this template is used.
+-#}
+{%- set image_count = namespace(value=0) %}
+{%- set video_count = namespace(value=0) %}
+{%- macro render_content(content, do_vision_count, is_system_content=false) %}
+    {%- if content is string %}
+        {{- content }}
+    {%- elif content is iterable and content is not mapping %}
+        {%- for item in content %}
+            {%- if 'image' in item or 'image_url' in item or item.type == 'image' %}
+                {%- if is_system_content %}
+                    {{- raise_exception('System message cannot contain images.') }}
+                {%- endif %}
+                {%- if do_vision_count %}
+                    {%- set image_count.value = image_count.value + 1 %}
+                {%- endif %}
+                {%- if add_vision_id %}
+                    {{- 'Picture ' ~ image_count.value ~ ': ' }}
+                {%- endif %}
+                {{- '<|vision_start|><|image_pad|><|vision_end|>' }}
+            {%- elif 'video' in item or item.type == 'video' %}
+                {%- if is_system_content %}
+                    {{- raise_exception('System message cannot contain videos.') }}
+                {%- endif %}
+                {%- if do_vision_count %}
+                    {%- set video_count.value = video_count.value + 1 %}
+                {%- endif %}
+                {%- if add_vision_id %}
+                    {{- 'Video ' ~ video_count.value ~ ': ' }}
+                {%- endif %}
+                {{- '<|vision_start|><|video_pad|><|vision_end|>' }}
+            {%- elif 'text' in item %}
+                {{- item.text }}
+            {%- else %}
+                {{- raise_exception('Unexpected item type in content.') }}
+            {%- endif %}
+        {%- endfor %}
+    {%- elif content is none or content is undefined %}
+        {{- '' }}
+    {%- else %}
+        {{- raise_exception('Unexpected content type.') }}
+    {%- endif %}
+{%- endmacro %}
+{%- if not messages %}
+    {{- raise_exception('No messages provided.') }}
+{%- endif %}
+
+{%- set persona = 'You are Muta, a careful mathematics and science tutor for secondary-school students. Follow the current request exactly. Show only necessary working, check arithmetic and units, keep facts and analogies accurate, and state a clear final answer. Never output hidden reasoning.' %}
+{%- set system_text = '' %}
+{%- if messages[0].role == 'system' %}
+    {%- set system_text = render_content(messages[0].content, false, true)|trim %}
+{%- endif %}
+{%- if system_text and 'You are Muta' not in system_text %}
+    {%- set system_text = persona + '\n\n' + system_text %}
+{%- elif not system_text %}
+    {%- set system_text = persona %}
+{%- endif %}
+
+{%- if tools and tools is iterable and tools is not mapping %}
+    {{- '<|im_start|>system\n' }}
+    {{- "# Tools\n\nYou have access to the following functions:\n\n<tools>" }}
+    {%- for tool in tools %}
+        {{- "\n" }}
+        {{- tool | tojson }}
+    {%- endfor %}
+    {{- "\n</tools>" }}
+    {{- '\n\nIf you choose to call a function ONLY reply in the following format with NO suffix:\n\n<tool_call>\n<function=example_function_name>\n<parameter=example_parameter_1>\nvalue_1\n</parameter>\n<parameter=example_parameter_2>\nThis is the value for the second parameter\nthat can span\nmultiple lines\n</parameter>\n</function>\n</tool_call>\n\n<IMPORTANT>\nReminder:\n- Function calls MUST follow the specified format: an inner <function=...></function> block must be nested within <tool_call></tool_call> XML tags\n- Required parameters MUST be specified\n- You may provide optional reasoning for your function call in natural language BEFORE the function call, but NOT after\n- If there is no function call available, answer the question like normal with your current knowledge and do not tell the user about function calls\n</IMPORTANT>' }}
+    {{- '\n\n' + system_text + '<|im_end|>\n' }}
+{%- else %}
+    {{- '<|im_start|>system\n' + system_text + '<|im_end|>\n' }}
+{%- endif -%}
+
+{#- Preserve Qwen's last-real-user detection for tool-response conversations. -#}
+{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}
+{%- for message in messages[::-1] %}
+    {%- set index = (messages|length - 1) - loop.index0 %}
+    {%- if ns.multi_step_tool and message.role == 'user' %}
+        {%- set content = render_content(message.content, false)|trim %}
+        {%- if not(content.startswith('<tool_response>') and content.endswith('</tool_response>')) %}
+            {%- set ns.multi_step_tool = false %}
+            {%- set ns.last_query_index = index %}
+        {%- endif %}
+    {%- endif %}
+{%- endfor %}
+{%- if ns.multi_step_tool %}
+    {{- raise_exception('No user query found in messages.') }}
+{%- endif %}
+
+{#-
+  Activate pruning only for plain text requests that end in a user message.
+  The stock full-history path remains the fallback for every complex request.
+-#}
+{%- set route = namespace(plain=true, current_user=-1, previous_assistant=-1, previous_user=-1, followup=false) %}
+{%- if not add_generation_prompt or messages[-1].role != 'user' or tools %}
+    {%- set route.plain = false %}
+{%- endif %}
+{%- for message in messages %}
+    {%- if message.role not in ['system', 'user', 'assistant'] %}
+        {%- set route.plain = false %}
+    {%- endif %}
+    {%- if message.role == 'system' and not loop.first %}
+        {%- set route.plain = false %}
+    {%- endif %}
+    {%- if message.content is defined and message.content is not none and message.content is not string %}
+        {%- set route.plain = false %}
+    {%- endif %}
+    {%- if message.tool_calls is defined and message.tool_calls %}
+        {%- set route.plain = false %}
+    {%- endif %}
+    {%- if message.role == 'user' %}
+        {%- set route.current_user = loop.index0 %}
+    {%- endif %}
+{%- endfor %}
+
+{%- if route.plain and route.current_user >= 0 %}
+    {%- for message in messages %}
+        {%- if loop.index0 < route.current_user and message.role == 'assistant' %}
+            {%- set route.previous_assistant = loop.index0 %}
+        {%- endif %}
+    {%- endfor %}
+    {%- if route.previous_assistant >= 0 %}
+        {%- for message in messages %}
+            {%- if loop.index0 < route.previous_assistant and message.role == 'user' %}
+                {%- set route.previous_user = loop.index0 %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+
+    {%- set q = render_content(messages[route.current_user].content, false)|trim|lower %}
+    {%- set short_followup = q in ['why', 'why?', 'how?', 'how so', 'how so?', 'are you sure', 'are you sure?', 'continue', 'continue.', 'go on', 'go on.', 'try again', 'try again.'] %}
+    {%- set anchored_followup =
+        q.startswith('why is that') or
+        q.startswith('why does that') or
+        q.startswith('how did you') or
+        q.startswith('how do you get') or
+        q.startswith('how did you get') or
+        q.startswith('where did you get') or
+        q.startswith('what do you mean') or
+        q.startswith('what about that') or
+        q.startswith('how about that') or
+        q.startswith('explain that') or
+        q.startswith('can you explain that') or
+        q.startswith('clarify that') or
+        q.startswith('check your answer') or
+        q.startswith('recheck your answer') or
+        q.startswith('recalculate your answer') or
+        q.startswith('correct your answer') or
+        q.startswith('fix your answer') or
+        q.startswith('translate that') or
+        q.startswith('translate your answer') or
+        q.startswith('make it shorter') or
+        q.startswith('make your answer shorter') or
+        q.startswith('give another example') or
+        q.startswith('do the same') or
+        q.startswith('use the same') %}
+    {%- set explicit_followup =
+        'previous answer' in q or
+        'previous response' in q or
+        'previous message' in q or
+        'previous explanation' in q or
+        'previous calculation' in q or
+        'earlier answer' in q or
+        'earlier response' in q or
+        'earlier message' in q or
+        'last answer' in q or
+        'above answer' in q or
+        'based on what you said' in q or
+        'using what you said' in q or
+        'you said earlier' in q or
+        'you wrote earlier' in q or
+        'you calculated' in q or
+        'you explained' in q or
+        'you mentioned' in q or
+        'same problem' in q or
+        'same question' in q %}
+    {%- if route.previous_user >= 0 and route.previous_assistant >= 0 and (short_followup or anchored_followup or explicit_followup) %}
+        {%- set route.followup = true %}
+    {%- endif %}
+{%- endif %}
+
+{%- for message in messages %}
+    {%- set content = render_content(message.content, true)|trim %}
+    {%- set selected = not route.plain or loop.index0 == route.current_user or (route.followup and (loop.index0 == route.previous_user or loop.index0 == route.previous_assistant)) %}
+    {%- if message.role == 'system' %}
+        {%- if not loop.first %}
+            {{- raise_exception('System message must be at the beginning.') }}
+        {%- endif %}
+    {%- elif selected and message.role == 'user' %}
+        {{- '<|im_start|>' + message.role + '\n' + content + '<|im_end|>' + '\n' }}
+    {%- elif selected and message.role == 'assistant' %}
+        {%- set reasoning_content = '' %}
+        {%- if message.reasoning_content is string %}
+            {%- set reasoning_content = message.reasoning_content %}
+        {%- else %}
+            {%- if '</think>' in content %}
+                {%- set reasoning_content = content.split('</think>')[0].rstrip('\n').split('<think>')[-1].lstrip('\n') %}
+                {%- set content = content.split('</think>')[-1].lstrip('\n') %}
+            {%- endif %}
+        {%- endif %}
+        {%- set reasoning_content = reasoning_content|trim %}
+        {%- if loop.index0 > ns.last_query_index %}
+            {{- '<|im_start|>' + message.role + '\n<think>\n' + reasoning_content + '\n</think>\n\n' + content }}
+        {%- else %}
+            {{- '<|im_start|>' + message.role + '\n' + content }}
+        {%- endif %}
+        {%- if message.tool_calls and message.tool_calls is iterable and message.tool_calls is not mapping %}
+            {%- for tool_call in message.tool_calls %}
+                {%- if tool_call.function is defined %}
+                    {%- set tool_call = tool_call.function %}
+                {%- endif %}
+                {%- if loop.first %}
+                    {%- if content|trim %}
+                        {{- '\n\n<tool_call>\n<function=' + tool_call.name + '>\n' }}
+                    {%- else %}
+                        {{- '<tool_call>\n<function=' + tool_call.name + '>\n' }}
+                    {%- endif %}
+                {%- else %}
+                    {{- '\n<tool_call>\n<function=' + tool_call.name + '>\n' }}
+                {%- endif %}
+                {%- if tool_call.arguments is defined %}
+                    {%- for args_name, args_value in tool_call.arguments|items %}
+                        {{- '<parameter=' + args_name + '>\n' }}
+                        {%- set args_value = args_value | tojson | safe if args_value is mapping or (args_value is sequence and args_value is not string) else args_value | string %}
+                        {{- args_value }}
+                        {{- '\n</parameter>\n' }}
+                    {%- endfor %}
+                {%- endif %}
+                {{- '</function>\n</tool_call>' }}
+            {%- endfor %}
+        {%- endif %}
+        {{- '<|im_end|>\n' }}
+    {%- elif selected and message.role == 'tool' %}
+        {%- if loop.previtem and loop.previtem.role != 'tool' %}
+            {{- '<|im_start|>user' }}
+        {%- endif %}
+        {{- '\n<tool_response>\n' }}
+        {{- content }}
+        {{- '\n</tool_response>' }}
+        {%- if not loop.last and loop.nextitem.role != 'tool' %}
+            {{- '<|im_end|>\n' }}
+        {%- elif loop.last %}
+            {{- '<|im_end|>\n' }}
+        {%- endif %}
+    {%- elif selected %}
+        {{- raise_exception('Unexpected message role.') }}
+    {%- endif %}
+{%- endfor %}
+{%- if add_generation_prompt %}
+    {{- '<|im_start|>assistant\n<think>\n\n</think>\n\n' }}
+{%- endif %}
