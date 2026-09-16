@@ -1,0 +1,8 @@
+model	result	exit_code
+MiniCPM5-2B-Q4_K_M.gguf	pass	0
+LFM2.5-2.6B-QAD-Q4_0.gguf	pass	0
+MiniCPM5-1B-Q4_K_M.gguf	pass	0
+Qwen3.5-2B-Q4_K_M.gguf	pass	0
+VibeThinker-1.5B-q4_k_m.gguf	pass	0
+Falcon-H1R-0.6B-Q4_K_M.gguf	pass	0
+nvidia_OpenReasoning-Nemotron-1.5B-Q4_K_M.gguf	pass	0

@@ -1,0 +1,19 @@
+MiniCPM5-1B source
+repository: openbmb/MiniCPM5-1B-GGUF
+revision: 3d55fac80935ae6456986ad2384b5cbcc4d6c948
+artifact: MiniCPM5-1B-F16.gguf
+bytes: 2166551936
+sha256: 68c40b08b1242754a107b9510af89aa75b10c75843ca7844643c70956b7f1e3d
+
+Quantizer
+llama.cpp build: 1 (48d22e2), GNU 11.4.0, Linux x86_64
+binary sha256: dea1cace012c3e6ed7589fa2cab130497859156c7233c4958363c7d72d5a31d7
+command: llama-quantize --pure MiniCPM5-1B-F16.gguf MiniCPM5-1B-Q4_0.gguf Q4_0
+
+MiniCPM5-1B test artifact
+artifact: MiniCPM5-1B-Q4_0.gguf
+bytes: 613250432
+sha256: 1e92f54e9255240420fc8756fc90c75556aea43ca76237d36f2b77f10d3771b2
+tensor types: Q4_0 = 170; F32 = 49
+token_embd.weight: Q4_0
+output.weight: Q4_0
