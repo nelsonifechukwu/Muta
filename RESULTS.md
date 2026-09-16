@@ -27,6 +27,97 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-09-16 — semi-final re-test of both Hugging Face finalists on the reference audit image
+
+**Why:** Round 1 results arrived (`ADTC2026_310_Muta.pdf`: Accuracy 39.20, Performance 56.00,
+Efficiency 90.65, Total 54.53 for the 0.8B submission). Both published checkpoints were re-measured
+under the organisers' own tooling so the semi-final choice rests on like-for-like numbers.
+
+**Hardware context:** `x86 cloud proxy` — GCP `muta-vm` (`n2-custom-4-8192`: 2 cores / 4 threads,
+Intel Xeon @ 2.80 GHz, 7.8 GiB, no swap, Ubuntu 22.04). Otherwise idle: the one stale login
+session was terminated, no containers were running, load 0.00 at start. Not the physical
+target laptop. Thermal sensors unavailable (`core_temp_c_peak: null`, recorded as unknown).
+
+**Exact configuration (score-of-record path):**
+- Profiler: upstream `adtc-profiler` HEAD `ac2e137` (2026-08-15), built from its own
+  `Dockerfile` → image `sha256:b83ff230b398…` (llama.cpp **b10175, scalar build** — NATIVE, AVX,
+  AVX2, AVX-512, FMA, F16C all OFF; python 3.11-slim; lm-eval 0.4.13; llama-cpp-python wheel).
+- Invocation, per model, exactly the README audit recipe:
+  `docker run --rm --memory=7.5g -v <sub>:/submission:ro -v <art>:/artifacts adtc-profiler:latest
+  run --submission /submission --mode audit --output /artifacts/audit-<m>.json --seed 42`
+  (llama-bench `-p 512 -n 128 -ngl 0`, default thread count; arc_easy limit 50; one run each,
+  sequential, nothing else on the box).
+- Submissions: the Round-1 `metadata.json` from `iitimii/muta-adtc-2026` (team `muta`, 28-language
+  scope, tp_001 chalk / tp_002 photosynthesis), with only the `model` block changed per file.
+- Models, downloaded from Hugging Face and sha256-verified against the repo manifests:
+  `timiiowolabi/Muta-Tutor-Qwen3.5-0.8B-ADTC-GGUF/Muta-Tutor-Qwen3.5-0.8B-Q4_0.gguf`
+  (512,977,376 B, `552de22f…3ff26`) and
+  `timiiowolabi/Muta-Tutor-Qwen2.5-1.5B-ADTC-GGUF/Muta-Tutor-Qwen2.5-1.5B-Q4_K_M.gguf`
+  (986,048,128 B, `a750d00d…2e1eb`).
+
+**Profiler results (`bench/measurements/semifinal-20260916/audit-*.json`):**
+
+| Model | tg128 tok/s | TTFT (pp512) | peak RSS | steady RSS | ARC-Easy-50 (acc_norm) | CPU p99 | throttled | params (claim) |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| Muta-Tutor-Qwen3.5-0.8B Q4_0 | **13.42** | 14.6 s | **670.78 MB** | 626.33 MB | **0.70** | 54.7 % | no | 772.8 M (800M) ✓ |
+| Muta-Tutor-Qwen2.5-1.5B Q4_K_M | 5.77 | 65.6 s | 1099.54 MB | 1020.08 MB | **0.84** | 72.9 % | no | 1.544 B (1.54B) ✓ |
+
+Round 1's published component scores imply the organisers measured the 0.8B at **8.4 tok/s and
+≈655 MB peak** (S_perf 56.00 → 0.56 × 15; S_eff 90.65 → (1 − 0.9065) × 7 GB). Our peak RSS
+reproduces theirs within 2.5 %; their throughput was 37 % lower than this proxy, so their VM is
+slower than `muta-vm` and every S_perf below must be read as an upper bound.
+
+**Judges' prompts (accuracy proxy):** all ten prompts in the PDF — the five automated LLM-judged
+prompts (three organiser domain prompts + the team's two test prompts) and the five human-judge
+questions — were answered by each model through `llama-server` from the *same* image
+(`--jinja --reasoning-format none -c 4096 -ngl 0`, greedy: temperature 0, seed 42,
+`max_tokens 1536`). Every response was graded 0–10 by a fresh-context LLM judge (Claude, blind
+labels A/B, same calibration across all sets) against
+`bench/measurements/semifinal-20260916/rubric.md`, which carries worked reference answers;
+accuracy % = mean × 10. This is an internal proxy for the organisers' unpublished rubric, not
+their number. The 0.8B was run twice: with its chat-template default (thinking on — the state
+Round 1's automated prompts were clearly run in, and where it never closed `</think>` within the
+budget on 8/10 prompts) and with `enable_thinking: false` (the state Round 1's human-judge
+answers were clearly produced in). Qwen2.5 has no thinking mode.
+
+| Model / condition | auto_1–5 | judge_1–5 | judge-prompt % | complete answers |
+|---|---|---|---:|---:|
+| 0.8B, thinking on | 0, 1, 0, 10, 10 | 0, 0, 1, 0, 0 | **22.0** | 2 / 10 |
+| 0.8B, thinking off | 3, 1, 0, 10, 10 | 1, 3, 1, 3, 2 | **34.0** | 7 / 10 |
+| 1.5B | 4, 2, 1, **0**, 10 | 1, 6, 1, 7, 6 | **38.0** | 10 / 10 |
+
+Notable: the 1.5B answered the team's own chalk test prompt (tp_001) **"B. ₦2,500"** — wrong,
+with no calculation; both 0.8B runs got it right. Neither model produced any Yorùbá (the 1.5B
+copied its English; the 0.8B emitted one nonsense token 95 times). The 1.5B was the only one of
+the three runs to get a full multi-step calculation right (judge_5: ₦86,825 / ₦12,825 / 17.3 %),
+and it still contradicted itself in the "check by another method" step. The 0.8B's thinking-off
+failure mode is confident fabrication (invented attributions, constants and data); with
+thinking on it is loops that never leave `<think>`. Under greedy decoding the 1.5B gave
+different text for the identical auto_1/judge_4 prompt (prompt-cache state); the 0.8B's were
+byte-identical.
+
+**ADTC total (`0.50·S_acc + 0.30·min(TPS/15,1)·100 + 0.20·max(0,(7−peak_GB)/7)·100 − 10·throttled`,
+cross-checked against `bench/score.py`; `scores.json`):**
+
+| Model / accuracy source | S_acc | S_perf | S_eff | P_thermal | **S_total** |
+|---|---:|---:|---:|---:|---:|
+| 0.8B — ARC-Easy-50 | 70.0 | 89.47 | 90.42 | 0 | **79.92** |
+| 0.8B — judges' prompts, thinking on | 22.0 | 89.47 | 90.42 | 0 | **55.92** |
+| 0.8B — judges' prompts, thinking off | 34.0 | 89.47 | 90.42 | 0 | **61.92** |
+| 1.5B — ARC-Easy-50 | 84.0 | 38.47 | 84.29 | 0 | **70.40** |
+| 1.5B — judges' prompts | 38.0 | 38.47 | 84.29 | 0 | **47.40** |
+| *Round 1, organisers, 0.8B* | *39.20* | *56.00* | *90.65* | *0* | ***54.53*** |
+
+The 1.5B's 14-point ARC lead and 16-point judge-prompt lead cannot pay for its scalar-build
+decode rate: at 5.77 tok/s it forfeits 15.3 S_total points on throughput alone (0.3 × 51), so
+the 0.8B wins under every accuracy source measured here. On the organisers' slower VM the 0.8B's
+own S_perf was already only 56, and the 1.5B would land near 0.43 × 56 ≈ 24.
+
+**Artifacts:** `bench/measurements/semifinal-20260916/` — audit JSONs, all three response sets,
+three grade files with per-prompt rationale, `scores.json`, `prompts.json`, `rubric.md`, both
+`metadata.json`, the exact scripts (`scripts/`), and every VM log (`logs/`). VM workspace:
+`muta-vm:~/adtc-semis/` (image retained; no containers left running).
+
 ## 2026-08-20 — overnight model, quantization and template search
 
 **Current recommendation:** `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`, 507,156,160 bytes,

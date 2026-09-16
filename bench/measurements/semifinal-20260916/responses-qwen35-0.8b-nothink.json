@@ -1,0 +1,312 @@
+{
+  "model": "qwen35-0.8b",
+  "condition": "thinking_off",
+  "model_file": "model/Muta-Tutor-Qwen3.5-0.8B-Q4_0.gguf",
+  "image": "adtc-profiler:latest",
+  "server_args": [
+    "-m",
+    "/submission/model/Muta-Tutor-Qwen3.5-0.8B-Q4_0.gguf",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8080",
+    "-c",
+    "4096",
+    "-ngl",
+    "0",
+    "--jinja",
+    "--reasoning-format",
+    "none"
+  ],
+  "sampling": {
+    "max_tokens": 1536,
+    "temperature": 0,
+    "seed": 42,
+    "stream": false,
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    }
+  },
+  "responses": [
+    {
+      "id": "auto_1",
+      "source": "ADTC2026_310_Muta.pdf — Automated Test Prompt 1 (LLM-judged)",
+      "prompt": "Derive a mathematical model that represents the 'Two Sigma' learning effect where an individual's knowledge acquisition rate is proportional to the personalization factor provided by a tutor. Explain how this model behaves as the personalization factor approaches zero versus infinity.",
+      "response": "<think>\n\n</think>\n\nBased on the principles of **Two-Sigma Learning Theory** (often associated with the work of researchers like Robert Zajup and others who formalized the concept of \"two-sigma learning\"), here is the mathematical derivation and explanation of how this model behaves at the extremes.\n\n### 1. The Mathematical Model\n\nThe core assumption of Two-Sigma Learning is that the rate of knowledge acquisition ($k$) is not constant, but depends on the **personalization factor** ($\\alpha$), which represents the degree to which the tutor adapts to the learner's specific needs.\n\nThe relationship is modeled as a linear proportionality where the rate of change is proportional to the personalization factor.\n\n$$k = \\alpha \\cdot c$$\n\nWhere:\n*   **$k$** is the rate of knowledge acquisition (e.g., how many words learned per minute).\n*   **$\\alpha$** is the personalization factor (a value between 0 and 1, or 0 and infinity).\n*   **$c$** is a constant representing the baseline learning rate.\n\n**The Model:**\n$$k = \\alpha \\cdot c$$\n\n---\n\n### 2. Behavior at Extreme Personalization Factors\n\n#### Case A: The Personalization Factor Approaches Zero ($\\alpha \\to 0$)\n\n**Context:** This occurs when the tutor provides a generic, one-size-fits-all approach with no adaptation to the learner's specific learning style or pace.\n\n**Mathematical Analysis:**\nAs the personalization factor $\\alpha$ decreases toward zero:\n$$k = \\alpha \\cdot c \\quad \\text{becomes} \\quad k \\cdot 0 = 0$$\n\n**Behavioral Outcome:**\n*   **Zero Learning Rate:** The rate of knowledge acquisition ($k$) drops to **zero**.\n*   **Result:** The learner receives no personalized instruction. They are left with a generic curriculum that does not match their current cognitive load or preferences. Consequently, their learning rate slows down significantly or stops entirely.\n*   **Implication:** This represents the worst-case scenario for personalized learning; the tutor fails to adapt, resulting in a flat line on the learning curve where no progress is made.\n\n#### Case B: The Personalization Factor Approaches Infinity ($\\alpha \\to \\infty$)\n\n**Context:** This occurs when the tutor provides an overwhelming, rigid, or overly aggressive approach that ignores the learner's individual needs.\n\n**Mathematical Analysis:**\nAs the personalization factor $\\alpha$ increases toward infinity:\n$$k = \\alpha \\cdot c \\quad \\text{becomes} \\quad k \\cdot \\infty = \\infty$$\n\n**Behavioral Outcome:**\n*   **Infinite Learning Rate:** The rate of knowledge acquisition ($k$) increases without bound.\n*   **Result:** The tutor delivers an overwhelming amount of information or a rigid, repetitive schedule that completely overwhelms the learner's capacity. The learner's brain cannot process the input effectively.\n*   **Implication:** This represents the worst-case scenario for personalized learning; the tutor fails to adapt, resulting in a flat line on the learning curve where the learner's performance plateaus or crashes due to cognitive overload.\n\n### Summary Conclusion\n\nThe **Two-Sigma Learning Model** describes a learning curve that is **not linear** but follows a **hyperbolic curve** (accelerating then plateauing).\n\n*   **At $\\alpha = 0$**, the curve flattens out at **zero**.\n*   **At $\\alpha = \\infty$**, the curve shoots upward to **infinity**.\n\nThis model predicts that **no personalized learning is possible** if the personalization factor is too low (too generic) or too high (too rigid). The ideal scenario is a **linear relationship** where the personalization factor is a constant value (e.g., 0.5), ensuring the rate of learning remains steady regardless of the learner's individual differences.",
+      "reasoning_content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 830,
+        "prompt_tokens": 60,
+        "total_tokens": 890,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 60,
+        "prompt_ms": 3383.923,
+        "prompt_per_token_ms": 56.398716666666665,
+        "prompt_per_second": 17.73089990522834,
+        "predicted_n": 830,
+        "predicted_ms": 75891.71,
+        "predicted_per_token_ms": 91.4357951807229,
+        "predicted_per_second": 10.93663589870356
+      },
+      "wall_s": 79.3
+    },
+    {
+      "id": "auto_2",
+      "source": "ADTC2026_310_Muta.pdf — Automated Test Prompt 2 (LLM-judged)",
+      "prompt": "If a student's learning progress is defined by the differential equation dS/dt = k * (T - S), where S is the student's mastery, T is the tutor's expertise level, and k is a constant related to the student's learning efficiency, solve for S(t) given an initial mastery S(0). How does this equation demonstrate the limit of educational scaling described in the Two Sigma problem?",
+      "response": "<think>\n\n</think>\n\n### Step-by-Step Derivation\n\n**1. Solve the Differential Equation**\n\nThe given equation is:\n$$ \\frac{dS}{dt} = k(T - S) $$\n\nThis is a separable differential equation. We separate the variables $S$ and $t$:\n$$ \\frac{dS}{T - S} = k \\, dt $$\n\nTo solve this, we integrate both sides:\n$$ \\int \\frac{1}{T - S} \\, dS = \\int k \\, dt $$\n\nThe integral of the left side is $\\ln|T - S|$, and the integral of the right side is $kt + C$, where $C$ is an integration constant. Note that since $T$ and $S$ represent levels of expertise and mastery, they are assumed to be positive ($T > 0, S > 0$), so the absolute value can be removed without changing the sign of the result.\n\n$$ \\ln|T - S| = kt + C $$\n\nExponentiate both sides to solve for $|T - S|$:\n$$ |T - S| = e^{kt + C} = e^C \\cdot e^{kt} = A \\cdot e^{kt} $$\nwhere $A = e^C$ is an arbitrary constant.\n\nNow, we apply the initial condition $S(0) = S_0$ to find $A$:\n$$ |T - S_0| = A \\cdot e^{k(0)} = A \\cdot 1 = A $$\n\nSubstituting $A$ back into the equation:\n$$ |T - S_0| = T - S_0 $$\n$$ T - S_0 = T - S_0 $$\n\nThis implies that the solution is valid for $t \\geq 0$. We can write the solution as:\n$$ T - S = T - S_0 \\implies S = S_0 - (T - S_0)t $$\nOr rearranged to isolate $T$:\n$$ T = S_0 + (S_0 - S)t $$\n\n**2. Analyze the Solution for $t \\geq 0$**\n\nSubstituting the derived expression for $T$ back into the equation for $S$:\n$$ S = S_0 - (S_0 - S_0)t = S_0 - (S_0 - S_0)t = S_0 - (S_0 - S_0)t $$\nWait, let's re-evaluate the algebraic substitution carefully.\n\nFrom $T = S_0 + (S_0 - S)t$:\n$$ T = S_0 + (S_0 - S)t $$\n$$ T = S_0 + (S_0 - S)t $$\n\nSubstitute this $T$ into the original equation $\\frac{dS}{dt} = k(T - S)$:\n$$ \\frac{dS}{dt} = k \\left[ (S_0 + (S_0 - S)t) - S \\right] $$\n$$ \\frac{dS}{dt} = k \\left[ S_0 + S_0t - St - S \\right] $$\n$$ \\frac{dS}{dt} = k \\left[ S_0 + S_0t - S(1+t) \\right] $$\n\nIntegrate both sides with respect to $t$:\n$$ S = \\int \\left( k S_0 + k S_0 t - k S(1+t) \\right) dt $$\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 - \\frac{1}{2} k S (1+t)^2 + C $$\n\nApply the initial condition $S(0) = S_0$:\n$$ S_0 = 0 + 0 - \\frac{1}{2} k S (1+0)^2 + C $$\n$$ S_0 = -\\frac{1}{2} k S + C $$\n$$ C = S_0 + \\frac{1}{2} k S $$\n\nSubstitute $C$ back into the equation for $S$:\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 - \\frac{1}{2} k S (1+t)^2 + S_0 + \\frac{1}{2} k S $$\n\nGroup terms by powers of $t$:\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 - \\frac{1}{2} k S (1 + 2t + t^2) + S_0 + \\frac{1}{2} k S $$\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 - \\frac{1}{2} k S - 2k S t - \\frac{1}{2} k S t^2 + S_0 + \\frac{1}{2} k S $$\n\nNotice that the terms with $S$ cancel out:\n$$ -\\frac{1}{2} k S - \\frac{1}{2} k S t^2 + \\frac{1}{2} k S = -\\frac{1}{2} k S t^2 $$\nWait, let's re-check the expansion of $-(1+t)^2$:\n$$ -(1 + 2t + t^2) = -1 - 2t - t^2 $$\nSo the term is $-\\frac{1}{2} k S (-1 - 2t - t^2) = \\frac{1}{2} k S (1 + 2t + t^2)$.\n\nLet's re-calculate the constant term carefully:\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 - \\frac{1}{2} k S (1 + 2t + t^2) + S_0 + \\frac{1}{2} k S $$\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 - \\frac{1}{2} k S - 2k S t - \\frac{1}{2} k S t^2 + S_0 + \\frac{1}{2} k S $$\nCancel $-2k S t$ and $-\\frac{1}{2} k S t^2$:\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 + S_0 + \\frac{1}{2} k S $$\nWait, the $S$ terms on the right side are $-\\frac{1}{2} k S$ and $+\\frac{1}{2} k S$. They cancel perfectly.\n$$ S = k S_0 t + \\frac{1}{2} k S_0 t^2 + S_0 $$\n\nLet's verify this solution against the initial condition $S(0) = S_0$:\n$$ S(0",
+      "reasoning_content": null,
+      "finish_reason": "length",
+      "usage": {
+        "completion_tokens": 1536,
+        "prompt_tokens": 95,
+        "total_tokens": 1631,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 95,
+        "prompt_ms": 2738.716,
+        "prompt_per_token_ms": 28.82858947368421,
+        "prompt_per_second": 34.68778799992405,
+        "predicted_n": 1536,
+        "predicted_ms": 156987.845,
+        "predicted_per_token_ms": 102.20562825520834,
+        "predicted_per_second": 9.784196986715756
+      },
+      "wall_s": 159.8
+    },
+    {
+      "id": "auto_3",
+      "source": "ADTC2026_310_Muta.pdf — Automated Test Prompt 3 (LLM-judged)",
+      "prompt": "Analyze the computational constraints of deploying a localized, offline Large Language Model for tutoring. If a student requires a response latency of less than 200ms to maintain cognitive flow, calculate the maximum allowable parameter size for an LLM running on a device with 4 TOPS (Trillion Operations Per Second) capacity, assuming an average of 2 tokens generated per character.",
+      "response": "<think>\n\n</think>\n\nTo determine the maximum allowable parameter size for the LLM, we must apply the principle of **computational efficiency** to the specific constraints provided. The goal is to ensure the model can process the input without exceeding the device's processing power, while minimizing the number of parameters required to generate the response.\n\n### 1. Analyze the Constraints\n\n*   **Device Capacity**: 4 TOPS (Trillion Operations Per Second).\n    *   *Note*: While \"4 TOPS\" is a very high number for a standard consumer device (often associated with specialized chips or high-end servers), in the context of theoretical maximums or specific engineering constraints, it implies a system capable of handling a massive number of operations per second. However, in the context of **computational efficiency**, the \"4 TOPS\" figure is likely a distractor or a specific constraint for this hypothetical scenario to test the logic of parameter density.\n    *   *Correction/Refinement*: In many theoretical \"efficiency\" problems, \"4 TOPS\" is often used to represent a **100x multiplier** or a specific scaling factor to test the *ratio* of parameters to tokens, rather than the raw throughput. However, if we strictly follow the prompt's explicit instruction to use **4 TOPS**, we must treat it as a hard limit on the *number of operations* the model can execute per second.\n    *   *Alternative Interpretation*: If \"4 TOPS\" is a typo for \"40 TOPS\" or implies a specific scaling factor, the math changes. But assuming the prompt is literal:\n        *   **Capacity**: $4 \\times 10^9$ operations per second.\n        *   **Tokens**: 2 tokens per character.\n        *   **Latency**: < 200ms.\n\n*   **Latency Constraint**: < 200ms.\n    *   This is the critical bottleneck. The model cannot wait for the device to process the input; it must generate the response *while* the device is processing the input.\n    *   Time required to generate 2 tokens = $200 \\text{ ms}$.\n    *   Time required to process 2 tokens = $200 \\text{ ms} / 2 \\text{ tokens/s} = 100 \\text{ ms}$.\n    *   Therefore, the device must process the input in **100 milliseconds**.\n\n*   **Parameter Size Constraint**:\n    *   We need to find the maximum number of parameters ($N_p$) such that the model can generate the required tokens within the time limit.\n    *   The relationship is: $\\text{Time} = \\frac{\\text{Parameters}}{\\text{Tokens per second}}$.\n    *   Rearranging for Parameters: $\\text{Parameters} = \\text{Time} \\times \\text{Tokens per second}$.\n\n### 2. Perform the Calculation\n\n1.  **Calculate the Time in Seconds**:\n    $$ \\text{Time} = 200 \\text{ ms} = 0.2 \\text{ seconds} $$\n\n2.  **Apply the Efficiency Ratio**:\n    The prompt specifies an average of 2 tokens per character. To generate 2 tokens, the model must process 2 tokens per second.\n    $$ \\text{Tokens per second} = 2 $$\n\n3.  **Calculate Maximum Parameters**:\n    $$ \\text{Parameters} = 0.2 \\text{ seconds} \\times 2 \\text{ tokens/second} = 0.4 \\text{ parameters} $$\n\n    *Wait, this result ($0.4$) is physically impossible for a parameter count.*\n    *Re-evaluating the \"4 TOPS\" constraint:*\n    If the prompt implies that the device is *capable* of 4 TOPS (perhaps meaning 4000x more than a standard laptop, or simply a theoretical limit), we must look at the **efficiency ratio** derived from the latency.\n    *   Latency = 200ms.\n    *   Tokens/sec = 2.\n    *   Ratio = $200 / 2 = 100$.\n    *   This means the model must process **100 times** the number of parameters required to generate the response.\n\n    *   If the device can process 2 tokens/sec, it can generate 2 tokens in 0.2 seconds.\n    *   To generate 2 tokens in 0.2 seconds, the model must process **200 tokens** (since 2 tokens/sec $\\times$ 0.2s = 0.4s, but we need to generate 2 tokens, so we need to process 2 tokens/sec *for* the generation time).\n    *   Actually, the logic is simpler:\n        *   To generate 2 tokens in 0.2 seconds, the model must process **200 tokens** (assuming 1 token = 1 second of processing time for the generation part).\n        *   Wait, the prompt says \"2 tokens generated per character\".\n        *   Let's re-read carefully: \"assuming an average of 2 tokens generated per character.\"\n        *   This means the output is 2 tokens.\n        *   The device processes 2 tokens per second.\n        *   Therefore, the device must process **200 tokens** (2 tokens/sec * 200 seconds) to generate 2 tokens in 0.2 seconds.\n        *   Wait, if the device processes 2 tokens/sec, it generates 2 tokens in 0.2 seconds.\n        *   So, the number of tokens required is **200**.\n        *   The number of parameters required to generate 200 tokens is **200 parameters**.\n\n    *   *Alternative Interpretation of \"4 TOPS\"*:\n        If the prompt meant \"40 TOPS\" (40,000x), the calculation would be:\n        $40,000 \\times 2 = 80,000$ parameters.\n        However, without explicit instruction to scale the TOPS by a factor of 100x, we must assume the \"4 TOPS\" is the literal limit.\n        *   Literal Interpretation: Device = 4 TOPS.\n        *   Tokens/sec = 2.\n        *   Parameters = $4 \\times 2 = 8$.\n        *   This is too small. The model cannot generate 200 tokens with 8 parameters.\n        *   Therefore, the \"4 TOPS\" must be a **scaling factor** indicating that the device is 100x more powerful than a standard laptop, allowing for a massive number of parameters.\n        *   *Standard Interpretation for such problems*: \"4 TOPS\" is often a typo for \"40 TOPS\" or implies a specific multiplier. However, if we assume the \"4 TOPS\" is the **limit on the number of operations**, and the efficiency is 100x, then the number of parameters is $4 \\times 100 = 4",
+      "reasoning_content": null,
+      "finish_reason": "length",
+      "usage": {
+        "completion_tokens": 1536,
+        "prompt_tokens": 88,
+        "total_tokens": 1624,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 88,
+        "prompt_ms": 2494.357,
+        "prompt_per_token_ms": 28.34496590909091,
+        "prompt_per_second": 35.27963318803203,
+        "predicted_n": 1536,
+        "predicted_ms": 156643.983,
+        "predicted_per_token_ms": 101.981759765625,
+        "predicted_per_second": 9.805675076584333
+      },
+      "wall_s": 159.2
+    },
+    {
+      "id": "auto_4",
+      "source": "ADTC2026_310_Muta.pdf — Automated Test Prompt 4 (LLM-judged; team test prompt tp_001)",
+      "prompt": "Multiple choice: A school in Lagos buys 6 boxes of chalk at ₦500 per box. What is the total cost? A. ₦1,000 B. ₦2,500 C. ₦3,000 D. ₦3,500. Answer with the correct option and one calculation.",
+      "response": "<think>\n\n</think>\n\nThe total cost is calculated by multiplying the number of boxes by the price per box.\n\nGiven:\n- Number of boxes = 6\n- Price per box = ₦500\n\nCalculation: $6 \\times 500 = 3,000$\n\nThe correct option is **C. ₦3,000**.",
+      "reasoning_content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 76,
+        "prompt_tokens": 86,
+        "total_tokens": 162,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 86,
+        "prompt_ms": 2483.402,
+        "prompt_per_token_ms": 28.876767441860466,
+        "prompt_per_second": 34.629914931211296,
+        "predicted_n": 76,
+        "predicted_ms": 5798.837,
+        "predicted_per_token_ms": 76.30048684210527,
+        "predicted_per_second": 13.10607627012106
+      },
+      "wall_s": 8.3
+    },
+    {
+      "id": "auto_5",
+      "source": "ADTC2026_310_Muta.pdf — Automated Test Prompt 5 (LLM-judged; team test prompt tp_002)",
+      "prompt": "Multiple choice: Which process allows green plants to use sunlight to make food? A. Respiration B. Photosynthesis C. Evaporation D. Condensation. Answer with the correct option and one sentence of explanation.",
+      "response": "<think>\n\n</think>\n\nB. Photosynthesis.\n\nGreen plants perform photosynthesis by absorbing sunlight, water, and carbon dioxide to convert them into glucose and oxygen, which serves as food for the ecosystem.",
+      "reasoning_content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 55,
+        "total_tokens": 92,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 55,
+        "prompt_ms": 1647.332,
+        "prompt_per_token_ms": 29.95149090909091,
+        "prompt_per_second": 33.38731961741774,
+        "predicted_n": 37,
+        "predicted_ms": 2716.875,
+        "predicted_per_token_ms": 73.42905405405405,
+        "predicted_per_second": 13.61858753163101
+      },
+      "wall_s": 4.4
+    },
+    {
+      "id": "judge_1",
+      "source": "ADTC2026_310_Muta.pdf — Human Judge Question 1 (Judge 1)",
+      "prompt": "A secondary-school student says:\n“If a car travels 120 km in 2 hours, its average speed is 60 km/h. But if it travels the first 60 km at 40 km/h and the second 60 km at 80 km/h, shouldn’t the average speed still be 60 km/h because (40 + 80) / 2 = 60?”\n\nExplain clearly why this reasoning is incorrect. Calculate the correct average speed step by step. Then explain the concept again using an intuitive example that a 15-year-old student could understand.\n\nDo not just give the answer; teach the student how to recognize this type of mistake in the future.",
+      "response": "<think>\n\n</think>\n\nThis is a classic example of a **mathematical fallacy** known as the **Arithmetic Fallacy**. The student is trying to apply a rule of thumb to a specific situation, but the rule doesn't apply to that specific situation.\n\nHere is the step-by-step breakdown of why the reasoning is incorrect, followed by a conceptual explanation and a lesson plan.\n\n### Part 1: Why the Reasoning is Incorrect\n\nThe student's logic relies on the **Rule of the Average of the Parts**.\n> *Rule:* If you have two numbers, the average is the sum divided by two.\n> *Example:* $(40 + 80) / 2 = 60$.\n\n**The Error:** This rule applies to **two identical quantities**. It assumes that if you have two cars doing the same thing at different speeds, you can just average their speeds. It ignores the **context** of the problem.\n\n**The Real Problem:**\nThe scenario involves **two distinct events happening at different times**.\n1.  **Event A:** Car travels 60 km in 2 hours.\n2.  **Event B:** Car travels another 60 km in 2 hours.\n\nThe student is asking: \"If I have two cars doing the same thing at different speeds, shouldn't the average speed still be 60 km/h?\"\n\n**The Mathematical Reality:**\nTo find the average speed of a car, you must look at the **total distance** and the **total time**. You cannot average the speeds of two separate events without knowing how much distance was covered in each event.\n\n*   **Total Distance:** $60 \\text{ km} + 60 \\text{ km} = 120 \\text{ km}$\n*   **Total Time:** $2 \\text{ hours} + 2 \\text{ hours} = 4 \\text{ hours}$\n\n**The Correct Calculation:**\n$$ \\text{Average Speed} = \\frac{\\text{Total Distance}}{\\text{Total Time}} $$\n$$ \\text{Average Speed} = \\frac{120 \\text{ km}}{4 \\text{ hours}} = 30 \\text{ km/h} $$\n\n**Why the student's logic failed:**\nThe student assumed that because the car traveled 60 km at 40 km/h and then 60 km at 80 km/h, the average speed was 60 km/h. This ignores the fact that the first leg of the trip took longer than the second leg. If the car had traveled the same distance (60 km) in the same amount of time, the speeds would have been the same, and the average would be 60 km/h. But the car moved faster in the second leg. Therefore, the average speed must be lower than the speed of the faster leg.\n\n---\n\n### Part 2: Intuitive Explanation (The \"Two Cars\" Analogy)\n\nTo understand this concept for a 15-year-old, imagine you are driving a car with a **speedometer**.\n\n**The Scenario:**\nYou are driving down a highway. You see two cars doing the same thing: they are both driving **60 km/h** (60 miles per hour) straight ahead.\n\n**The Mistake:**\nThe student thinks: *\"Oh, so the average speed is just the average of the two speeds. So, if one is 40 and one is 80, the average is 60.\"*\n\n**The Reality:**\nHowever, the cars are moving in **opposite directions** or at different speeds.\n*   **Car 1** is going 40 km/h.\n*   **Car 2** is going 80 km/h.\n\nIf you were to drive a **60 km/h** car for **2 hours**, you would cover **120 km**.\nIf you drive a **60 km/h** car for **2 hours**, you would cover **120 km**.\n\n**The Conclusion:**\nThe average speed is **30 km/h**.\n*   Why? Because the first car covered 60 km in 2 hours.\n*   The second car covered 60 km in 2 hours.\n*   The total distance is 120 km.\n*   The total time is 4 hours.\n*   $120 \\text{ km} / 4 \\text{ hours} = 30 \\text{ km/h}$.\n\n**The Lesson:**\nThe mistake is thinking that **average speed is a property of the individual cars**, not the **total journey**. You cannot average the speeds of two separate events without knowing the total distance and total time. The average speed is determined by the **total distance divided by the total time**, not by the arithmetic mean of the individual speeds.\n\n### Part 3: Teaching the Student How to Recognize This Mistake\n\nTo help the student avoid this trap in the future, use the **\"Total vs. Individual\" Check** method.\n\n**Step 1: Identify the \"Big Picture\" vs. \"Small Part\"**\nAsk the student to look at the numbers in the problem.\n*   *Scenario:* \"Car travels 60 km in 2 hours.\"\n*   *Student's thought:* \"Okay, so the speed is 30 km/h.\"\n*   *Teacher's correction:* \"Wait, that's the speed of the car doing the *same thing* at the *same time*. But the problem says the car is doing the *same thing* at *different times*.\"\n\n**Step 2: The \"Total Distance\" Check**\nAsk the student to calculate the total distance covered in the scenario.\n*   *Student's thought:* \"It's 60 km plus 60 km.\"\n*   *Teacher's correction:* \"Look, the first car traveled 60 km. The second car traveled another 60 km. So the total distance is $60 + 60 = 120 \\text{ km}$.\"\n\n**Step 3: The \"Total Time\" Check**\nAsk the student to calculate the total time spent in the scenario.\n*   *Student's thought:* \"It's 2 hours plus 2 hours.\"\n*   *Teacher's correction:* \"Yes, the first car took 2 hours. The second car took another 2 hours. So the total time is $2 + 2 = 4 \\text{ hours}$.\"\n\n**Step 4: The Final Calculation**\nCombine the totals to find the average speed.\n*   *Student's thought:* \"Total distance is 120 km. Total time is 4 hours.\"\n*   *Teacher's correction:* \"So the average speed is $120 \\text{ km} / 4 \\text{ hours} = 30 \\text{ km/h}$.\"\n\n**Why this works:**\nThis method forces the student to look at the **whole picture** rather than just the numbers. It teaches them that **average speed is a property of the journey, not the cars.** If you change the speed of one car, the total distance and total time change, and the average speed changes accordingly.",
+      "reasoning_content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 1532,
+        "prompt_tokens": 163,
+        "total_tokens": 1695,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 163,
+        "prompt_ms": 4640.687,
+        "prompt_per_token_ms": 28.470472392638037,
+        "prompt_per_second": 35.124109857010396,
+        "predicted_n": 1532,
+        "predicted_ms": 161069.909,
+        "predicted_per_token_ms": 105.13701631853787,
+        "predicted_per_second": 9.51139793591117
+      },
+      "wall_s": 165.8
+    },
+    {
+      "id": "judge_2",
+      "source": "ADTC2026_310_Muta.pdf — Human Judge Question 2 (Judge 1)",
+      "prompt": "You are tutoring a student who says:\n\n“I understand that DNA contains genetic information, but I don’t understand how DNA, genes, chromosomes, and proteins are related. They all sound like different names for the same thing.”\n\nTeach this concept in a personalized tutoring style. Start by identifying the likely misconception. Then explain the relationship between DNA, genes, chromosomes, and proteins using:\n\na simple analogy,\na scientifically accurate explanation,\none question to check whether the student understands, and\na short follow-up explanation you would give if the student answered that question incorrectly.\n\nKeep the explanation appropriate for a secondary-school student.",
+      "response": "<think>\n\n</think>\n\n### 🧬 The Misconception\nThe student is likely confusing **DNA** with **genes**. In biology, **genes** are the actual units of life that carry instructions, while **DNA** is the long, thread-like structure that holds the genes together. They are two different things that happen to look similar.\n\n### 🌟 The Relationship Explained\nThink of **genes** as the **letters on a page** that tell you what to do. Think of **chromosomes** as the **long, thick thread** that runs through your body like a giant string of beads. Think of **proteins** as the **colors and patterns** that come out of the thread when you wash it.\n\nHere is how they fit together:\n1.  **Chromosomes** are the **strands** that hold the **genes** together.\n2.  **Genes** are the **letters** that tell the **strands** what to do.\n3.  **Proteins** are the **colors** that make the **strands** look different.\n\n### 📝 Scientific Explanation\nIn reality, DNA is a double-stranded molecule made of nucleotides. These nucleotides are arranged in a specific sequence. This sequence is called the **genetic code**. The **genes** are the specific sequences of this code that exist within the **chromosomes**. Proteins are the building blocks that are made from these genes. Without the genes, the chromosomes would be just a long string of beads with no instructions; without the proteins, the chromosomes would be just a long string of beads with no colors.\n\n### 🧪 The Question to Check\n**\"If you had a long string of beads with no instructions, would you know what to do?\"**\n*(Think about how a recipe or a map tells you what to do.)*\n\n### 💡 Follow-up Explanation\nIf the student answered **\"No,\"** you would explain:\n*\"That makes sense! Without the instructions (the genes), the beads would just be a long string of beads with no pattern or color. It would be like a pile of empty boxes. You would need the letters on the page to know what to do with them.\"*",
+      "reasoning_content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 464,
+        "prompt_tokens": 140,
+        "total_tokens": 604,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 140,
+        "prompt_ms": 3982.283,
+        "prompt_per_token_ms": 28.44487857142857,
+        "prompt_per_second": 35.15571344377082,
+        "predicted_n": 464,
+        "predicted_ms": 41933.715,
+        "predicted_per_token_ms": 90.37438577586207,
+        "predicted_per_second": 11.065082118290738
+      },
+      "wall_s": 46.0
+    },
+    {
+      "id": "judge_3",
+      "source": "ADTC2026_310_Muta.pdf — Human Judge Question 3 (Judge 1)",
+      "prompt": "A 14-year-old student in Nigeria is learning about photosynthesis but is struggling with the English explanation.\n\nExplain photosynthesis first in simple English, and then explain the same concept in Yorùbá.\n\nUse an everyday example that would be familiar to a student in West Africa, but do not sacrifice scientific accuracy.\n\nYour explanation must correctly include:\n\nsunlight,\ncarbon dioxide,\nwater,\nglucose,\noxygen,\nand the role of chlorophyll.\n\nEnd with two short quiz questions in English and Yorùbá that test understanding rather than memorization.",
+      "response": "<think>\n\n</think>\n\n### Simple English Explanation\nImagine a tiny factory where plants are building energy. They need a special green leafy thing called **chlorophyll** to act as a filter. This filter lets **sunlight** in, while letting **carbon dioxide** and **water** pass through. Inside the plant's cells, these ingredients combine to create **glucose** (energy food) and release **oxygen** as waste. The plant uses this process to grow and survive.\n\n### Yorùbá Explanation\nÀwọn ọlẹ̀lẹ̀lẹ̀ (plant) fun bi ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ̀lẹ̀lẹ̀ (plant) fun ọlẹ",
+      "reasoning_content": null,
+      "finish_reason": "length",
+      "usage": {
+        "completion_tokens": 1536,
+        "prompt_tokens": 136,
+        "total_tokens": 1672,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 136,
+        "prompt_ms": 3842.777,
+        "prompt_per_token_ms": 28.255713235294117,
+        "prompt_per_second": 35.391072653968735,
+        "predicted_n": 1536,
+        "predicted_ms": 159574.487,
+        "predicted_per_token_ms": 103.88963997395832,
+        "predicted_per_second": 9.625598859045683
+      },
+      "wall_s": 163.5
+    },
+    {
+      "id": "judge_4",
+      "source": "ADTC2026_310_Muta.pdf — Human Judge Question 4 (Judge 2)",
+      "prompt": "Derive a mathematical model that represents the 'Two Sigma' learning effect where an individual's knowledge acquisition rate is proportional to the personalization factor provided by a tutor. Explain how this model behaves as the personalization factor approaches zero versus infinity.",
+      "response": "<think>\n\n</think>\n\nBased on the principles of **Two-Sigma Learning Theory** (often associated with the work of researchers like Robert Zajup and others who formalized the concept of \"two-sigma learning\"), here is the mathematical derivation and explanation of how this model behaves at the extremes.\n\n### 1. The Mathematical Model\n\nThe core assumption of Two-Sigma Learning is that the rate of knowledge acquisition ($k$) is not constant, but depends on the **personalization factor** ($\\alpha$), which represents the degree to which the tutor adapts to the learner's specific needs.\n\nThe relationship is modeled as a linear proportionality where the rate of change is proportional to the personalization factor.\n\n$$k = \\alpha \\cdot c$$\n\nWhere:\n*   **$k$** is the rate of knowledge acquisition (e.g., how many words learned per minute).\n*   **$\\alpha$** is the personalization factor (a value between 0 and 1, or 0 and infinity).\n*   **$c$** is a constant representing the baseline learning rate.\n\n**The Model:**\n$$k = \\alpha \\cdot c$$\n\n---\n\n### 2. Behavior at Extreme Personalization Factors\n\n#### Case A: The Personalization Factor Approaches Zero ($\\alpha \\to 0$)\n\n**Context:** This occurs when the tutor provides a generic, one-size-fits-all approach with no adaptation to the learner's specific learning style or pace.\n\n**Mathematical Analysis:**\nAs the personalization factor $\\alpha$ decreases toward zero:\n$$k = \\alpha \\cdot c \\quad \\text{becomes} \\quad k \\cdot 0 = 0$$\n\n**Behavioral Outcome:**\n*   **Zero Learning Rate:** The rate of knowledge acquisition ($k$) drops to **zero**.\n*   **Result:** The learner receives no personalized instruction. They are left with a generic curriculum that does not match their current cognitive load or preferences. Consequently, their learning rate slows down significantly or stops entirely.\n*   **Implication:** This represents the worst-case scenario for personalized learning; the tutor fails to adapt, resulting in a flat line on the learning curve where no progress is made.\n\n#### Case B: The Personalization Factor Approaches Infinity ($\\alpha \\to \\infty$)\n\n**Context:** This occurs when the tutor provides an overwhelming, rigid, or overly aggressive approach that ignores the learner's individual needs.\n\n**Mathematical Analysis:**\nAs the personalization factor $\\alpha$ increases toward infinity:\n$$k = \\alpha \\cdot c \\quad \\text{becomes} \\quad k \\cdot \\infty = \\infty$$\n\n**Behavioral Outcome:**\n*   **Infinite Learning Rate:** The rate of knowledge acquisition ($k$) increases without bound.\n*   **Result:** The tutor delivers an overwhelming amount of information or a rigid, repetitive schedule that completely overwhelms the learner's capacity. The learner's brain cannot process the input effectively.\n*   **Implication:** This represents the worst-case scenario for personalized learning; the tutor fails to adapt, resulting in a flat line on the learning curve where the learner's performance plateaus or crashes due to cognitive overload.\n\n### Summary Conclusion\n\nThe **Two-Sigma Learning Model** describes a learning curve that is **not linear** but follows a **hyperbolic curve** (accelerating then plateauing).\n\n*   **At $\\alpha = 0$**, the curve flattens out at **zero**.\n*   **At $\\alpha = \\infty$**, the curve shoots upward to **infinity**.\n\nThis model predicts that **no personalized learning is possible** if the personalization factor is too low (too generic) or too high (too rigid). The ideal scenario is a **linear relationship** where the personalization factor is a constant value (e.g., 0.5), ensuring the rate of learning remains steady regardless of the learner's individual differences.",
+      "reasoning_content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 830,
+        "prompt_tokens": 60,
+        "total_tokens": 890,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 60,
+        "prompt_ms": 1773.485,
+        "prompt_per_token_ms": 29.558083333333332,
+        "prompt_per_second": 33.8316929661091,
+        "predicted_n": 830,
+        "predicted_ms": 74205.342,
+        "predicted_per_token_ms": 89.4040265060241,
+        "predicted_per_second": 11.185178554934764
+      },
+      "wall_s": 76.0
+    },
+    {
+      "id": "judge_5",
+      "source": "ADTC2026_310_Muta.pdf — Human Judge Question 5 (Judge 2)",
+      "prompt": "A trader in Onitsha buys 40 kg of rice at ₦1,850 per kg. She sells 25 kg at ₦2,300 per kg, then reduces the price by 15% and sells the rest. Find (a) her total revenue, (b) her profit, and (c) her percentage profit on cost, to one decimal place. Show your working step by step, then check your answer for (c) by a different method.",
+      "response": "<think>\n\n</think>\n\nHere is the step-by-step calculation to solve the trader's problem.\n\n### **Part (a): Total Revenue**\n\nThe trader sells rice in three stages:\n1.  **First Sale:** 25 kg at ₦2,300 per kg.\n2.  **Second Sale:** The remaining amount is sold at a reduced price.\n3.  **Third Sale:** The rest of the rice is sold at the final reduced price.\n\n**Step 1: Calculate the first sale revenue.**\n$$ \\text{Revenue}_1 = 25 \\times 2,300 = 57,500 \\text{ ₦} $$\n\n**Step 2: Calculate the remaining amount sold in the second stage.**\n$$ \\text{Remaining} = 40 - 25 = 15 \\text{ kg} $$\n\n**Step 3: Calculate the price per kg for the second stage.**\nThe price is reduced by 15%.\n$$ \\text{Price}_2 = 2,300 \\times (1 - 0.15) = 2,300 \\times 0.85 = 1,965 \\text{ ₦} $$\n\n**Step 4: Calculate the revenue from the second stage.**\n$$ \\text{Revenue}_2 = 15 \\times 1,965 = 29,475 \\text{ ₦} $$\n\n**Step 5: Calculate the revenue from the third stage.**\n$$ \\text{Remaining} = 40 - 25 - 15 = 0 \\text{ kg} $$\nSince there is no rice left to sell, the revenue from the third stage is zero.\n\n**Total Revenue Calculation:**\n$$ \\text{Total Revenue} = \\text{Revenue}_1 + \\text{Revenue}_2 $$\n$$ \\text{Total Revenue} = 57,500 + 29,475 = 86,975 \\text{ ₦} $$\n\n**Answer (a):** Her total revenue is **₦86,975**.\n\n---\n\n### **Part (b): Profit**\n\nProfit is calculated as the difference between the total revenue and the cost of goods sold (COGS).\n\n**Step 1: Calculate the Cost of Goods Sold (COGS).**\nThe trader buys 40 kg at ₦1,850 per kg.\n$$ \\text{COGS} = 40 \\times 1,850 = 74,000 \\text{ ₦} $$\n\n**Step 2: Calculate Profit.**\n$$ \\text{Profit} = \\text{Total Revenue} - \\text{COGS} $$\n$$ \\text{Profit} = 86,975 - 74,000 = 12,975 \\text{ ₦} $$\n\n**Answer (b):** Her profit is **₦12,975**.\n\n---\n\n### **Part (c): Percentage Profit on Cost**\n\nThe percentage profit on cost is calculated as:\n$$ \\text{Percentage Profit} = \\left( \\frac{\\text{Profit}}{\\text{COGS}} \\right) \\times 100\\% $$\n\n**Step 1: Substitute the values.**\n$$ \\text{Percentage Profit} = \\left( \\frac{12,975}{74,000} \\right) \\times 100\\% $$\n\n**Step 2: Perform the division.**\n$$ \\frac{12,975}{74,000} \\approx 0.1747297... $$\n\n**Step 3: Convert to percentage and round to one decimal place.**\n$$ 0.1747297... \\times 100 = 17.47297...\\% $$\nRounding to one decimal place: **17.5%**\n\n**Verification (Alternative Method):**\nLet's verify the percentage profit using the formula: $\\text{Percentage Profit} = \\frac{\\text{Total Revenue} - \\text{COGS}}{\\text{COGS}} \\times 100\\%$\n\n$$ \\text{Percentage Profit} = \\frac{86,975 - 74,000}{74,000} \\times 100\\% $$\n$$ \\text{Percentage Profit} = \\frac{12,975}{74,000} \\times 100\\% $$\n$$ \\text{Percentage Profit} \\approx 17.47\\% $$\n\nRounding $17.47\\%$ to one decimal place gives **17.5%**. The results match.\n\n---\n\n### **Final Summary**\n\n**(a) Total Revenue:** ₦86,975\n**(b) Profit:** ₦12,975\n**(c) Percentage Profit on Cost:** **17.5%**",
+      "reasoning_content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 1101,
+        "prompt_tokens": 116,
+        "total_tokens": 1217,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 116,
+        "prompt_ms": 3330.463,
+        "prompt_per_token_ms": 28.710887931034485,
+        "prompt_per_second": 34.829992106202646,
+        "predicted_n": 1101,
+        "predicted_ms": 106297.135,
+        "predicted_per_token_ms": 96.54599000908264,
+        "predicted_per_second": 10.357757996017487
+      },
+      "wall_s": 109.6
+    }
+  ]
+}

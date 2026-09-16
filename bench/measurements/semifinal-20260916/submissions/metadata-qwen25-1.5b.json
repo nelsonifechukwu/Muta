@@ -1,0 +1,66 @@
+{
+  "team_id": "muta",
+  "domain": "math_scientific_reasoning",
+  "language_scope": [
+    "en",
+    "aa",
+    "af",
+    "am",
+    "ar",
+    "bem",
+    "din",
+    "ff",
+    "ha",
+    "ig",
+    "kg",
+    "mg",
+    "ny",
+    "rn",
+    "rw",
+    "sn",
+    "so",
+    "ss",
+    "st",
+    "sw",
+    "tn",
+    "xh",
+    "yo",
+    "zu",
+    "es",
+    "fr",
+    "pt",
+    "de"
+  ],
+  "african_alpha_claim": true,
+  "budget_laptop_claim": true,
+  "submitter": {
+    "name": "Nelson Elijah",
+    "email": "nelson.ifechukwu@gmail.com",
+    "github_handle": "nelsonifechukwu"
+  },
+  "cross_disciplinary_pairing": {
+    "discipline": "education",
+    "load_bearing": true,
+    "description": "Muta: an offline tutor that teaches African students at every level to reason through maths and science problems"
+  },
+  "test_prompts": [
+    {
+      "prompt_id": "tp_001",
+      "prompt": "Multiple choice: A school in Lagos buys 6 boxes of chalk at ₦500 per box. What is the total cost? A. ₦1,000 B. ₦2,500 C. ₦3,000 D. ₦3,500. Answer with the correct option and one calculation."
+    },
+    {
+      "prompt_id": "tp_002",
+      "prompt": "Multiple choice: Which process allows green plants to use sunlight to make food? A. Respiration B. Photosynthesis C. Evaporation D. Condensation. Answer with the correct option and one sentence of explanation."
+    }
+  ],
+  "model": {
+    "name": "Muta-Tutor-Qwen2.5-1.5B-Q4_K_M.gguf",
+    "runtime": "llama.cpp",
+    "quantization": "GGUF Q4_K_M",
+    "parameters_estimate": "1.54B",
+    "packaging": "binary_bundle"
+  },
+  "_runtime": {
+    "model_path": "model/Muta-Tutor-Qwen2.5-1.5B-Q4_K_M.gguf"
+  }
+}
