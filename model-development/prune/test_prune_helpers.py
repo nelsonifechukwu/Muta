@@ -228,3 +228,45 @@ def test_verdict_requires_both_totals_gsm8k_and_fraud_check():
     assert score_candidates.verdict(good, published)["promote"] is True
     bad = dict(good, gsm8k_40=0.40)
     assert score_candidates.verdict(bad, published)["promote"] is False
+
+
+prune_hf_layers = _load("prune_hf_layers")  # torch is imported inside its functions
+
+
+def test_prune_model_keeps_the_right_layer_objects_and_still_runs():
+    torch = pytest.importorskip("torch")  # inside the test, never at module level
+    pytest.importorskip("transformers")
+    from transformers import Qwen2Config, Qwen2ForCausalLM
+
+    config = Qwen2Config(
+        hidden_size=32,
+        intermediate_size=64,
+        num_hidden_layers=4,
+        num_attention_heads=4,
+        num_key_value_heads=2,
+        vocab_size=128,
+        max_position_embeddings=64,
+        tie_word_embeddings=True,
+    )
+    torch.manual_seed(0)
+    model = Qwen2ForCausalLM(config).eval()
+    original = list(model.model.layers)
+    kept = prune_hf_layers.prune_model(model, drop=[1, 2])
+    assert kept == [0, 3]
+    assert model.config.num_hidden_layers == 2
+    assert model.model.layers[0] is original[0] and model.model.layers[1] is original[3]
+    assert model.model.layers[1].self_attn.layer_idx == 1
+    ids = torch.tensor([[1, 2, 3, 4]])
+    with torch.no_grad():
+        logits = model(input_ids=ids, use_cache=False).logits
+    assert logits.shape == (1, 4, 128) and torch.isfinite(logits).all()
+
+
+accuracy_battery = _load("accuracy_battery")
+
+
+def test_parse_tasks_splits_name_and_limit():
+    assert accuracy_battery.parse_tasks("arc_easy:500, gsm8k:40") == [
+        ("arc_easy", 500),
+        ("gsm8k", 40),
+    ]
