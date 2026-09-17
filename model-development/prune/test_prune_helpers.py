@@ -178,7 +178,9 @@ def test_build_metadata_replaces_only_the_model_block_and_runtime_path():
     base = {"team_id": "muta", "model": {"name": "old", "runtime": "llama.cpp",
             "quantization": "GGUF Q4_K_M", "parameters_estimate": "1.54B",
             "packaging": "binary_bundle"}, "_runtime": {"model_path": "model/old.gguf"}}
-    meta = screen_metadata.build_metadata(base, "unhealed-21L-contiguous.gguf", 1_216_129_536, "GGUF Q4_K_M")
+    meta = screen_metadata.build_metadata(
+        base, "unhealed-21L-contiguous.gguf", 1_216_129_536, "GGUF Q4_K_M"
+    )
     assert meta["team_id"] == "muta"
     assert meta["model"] == {"name": "unhealed-21L-contiguous.gguf", "runtime": "llama.cpp",
                              "quantization": "GGUF Q4_K_M", "parameters_estimate": "1.22B",

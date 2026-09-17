@@ -59,7 +59,8 @@ def main() -> None:
         else:
             shutil.copy2(args.gguf, target)
     meta = build_metadata(base, args.gguf.name, params, args.quantization)
-    (args.out / "metadata.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    text = json.dumps(meta, indent=2, ensure_ascii=False) + "\n"
+    (args.out / "metadata.json").write_text(text, encoding="utf-8")
     print(json.dumps(meta["model"], indent=2))
 
 
