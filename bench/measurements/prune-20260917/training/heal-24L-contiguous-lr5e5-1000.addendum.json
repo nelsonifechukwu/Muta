@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "run": "heal-24L-contiguous-lr5e5-1000",
+  "note": "Recorded post hoc from checkpoints/*/trainer_state.json: this run was trained before train_lora.py recorded these fields.",
+  "global_step": 1000,
+  "best_model_checkpoint": "checkpoint-1000",
+  "best_metric": 1.6446726322174072,
+  "eval_history": [
+    {
+      "step": 250,
+      "eval_loss": 1.7102477550506592
+    },
+    {
+      "step": 500,
+      "eval_loss": 1.661482334136963
+    },
+    {
+      "step": 750,
+      "eval_loss": 1.6472221612930298
+    },
+    {
+      "step": 1000,
+      "eval_loss": 1.6446726322174072
+    }
+  ],
+  "recorded_at": "2026-09-17T19:57:25+00:00"
+}

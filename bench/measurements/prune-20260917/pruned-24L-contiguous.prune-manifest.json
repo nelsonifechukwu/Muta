@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "source": "runs-prune/tutor-28L/merged_16bit",
+  "drop": [
+    12,
+    13,
+    14,
+    15
+  ],
+  "kept_layers": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27
+  ],
+  "num_hidden_layers": 24,
+  "params_count": 1356523008,
+  "bi_json": "../../bench/measurements/prune-20260917/bi-tutor-28L-merged.json",
+  "bi_sha256": "c28904b934e5037a882fb3ca8c11d99b5912ed46cae30a61c02254aa51feabce"
+}

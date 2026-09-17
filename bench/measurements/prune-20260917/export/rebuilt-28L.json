@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source_dir": "runs-prune/tutor-28L/merged_16bit",
+  "artifact": "runs-prune/tutor-28L/tutor-28L-Q4_K_M.gguf",
+  "params_count": 1543714304,
+  "bytes": 986047968,
+  "sha256": "1fce28cdc30eebb269209346b72d8df32a1467ce92b31cad0dd5acc4418b4b30",
+  "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+  "llama_cpp_tag": "b10175",
+  "quantization": "Q4_K_M",
+  "tensor_types": [
+    "F32",
+    "Q4_K",
+    "Q6_K"
+  ]
+}

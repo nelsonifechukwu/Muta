@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "source_dir": "runs-prune/heal-24L-contiguous-lr5e5-1000/merged_16bit",
+  "artifact": "runs-prune/heal-24L-contiguous-lr5e5-1000/heal-24L-contiguous-lr5e5-1000-Q4_K_M.gguf",
+  "params_count": 1356523008,
+  "block_count": 24,
+  "tensor_types": [
+    "F32",
+    "Q4_K",
+    "Q6_K"
+  ],
+  "bytes": 873380640,
+  "sha256": "dd12a91de0604236a0fd7c60b2cd9df96fd0ba62f5b5018d8615a0fbee69e6b8",
+  "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+  "llama_cpp_tag": "b10175",
+  "quantization": "Q4_K_M"
+}

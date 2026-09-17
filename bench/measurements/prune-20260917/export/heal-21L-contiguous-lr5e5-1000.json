@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "source_dir": "runs-prune/heal-21L-contiguous-lr5e5-1000/merged_16bit",
+  "artifact": "runs-prune/heal-21L-contiguous-lr5e5-1000/heal-21L-contiguous-lr5e5-1000-Q4_K_M.gguf",
+  "params_count": 1216129536,
+  "block_count": 21,
+  "tensor_types": [
+    "F32",
+    "Q4_K",
+    "Q6_K"
+  ],
+  "bytes": 787055360,
+  "sha256": "3affae72caf68124c05433fd38ddad48cb6664f3c63da55ee6297e389675afca",
+  "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+  "llama_cpp_tag": "b10175",
+  "quantization": "Q4_K_M"
+}

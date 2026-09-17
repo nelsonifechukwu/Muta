@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "source_dir": "runs-prune/control-28L-hybrid-lr5e5-1000/merged_16bit",
+  "artifact": "runs-prune/control-28L-hybrid-lr5e5-1000/control-28L-hybrid-lr5e5-1000-Q4_K_M.gguf",
+  "params_count": 1543714304,
+  "block_count": 28,
+  "tensor_types": [
+    "F32",
+    "Q4_K",
+    "Q6_K"
+  ],
+  "bytes": 986047968,
+  "sha256": "c908f7187bebb90e39ac4549f30e5329a40712b6a72cf694a3ae04d0545ea4a2",
+  "llama_cpp_commit": "60bccc3763395e01b039aa1ddeacc8cc0ea69f70",
+  "llama_cpp_tag": "b10175",
+  "quantization": "Q4_K_M"
+}
