@@ -58,3 +58,32 @@ def test_select_lowest_bi_respects_protections_and_sorts_ascending():
 def test_renumber_plan_and_kept_indices_preserve_order():
     assert layer_selection.kept_layer_indices(4, [1, 2]) == [0, 3]
     assert layer_selection.renumber_plan(4, [1, 2]) == {0: 0, 3: 1}
+
+
+calibration = _load("calibration")
+
+
+def test_render_text_uses_lm_eval_boundary_for_raw_and_chatml_for_chat():
+    raw = {"mode": "raw", "prompt": "Q: 2+2?\nAnswer:", "completion": "4", "source": "arc"}
+    assert calibration.render_text(raw) == "Q: 2+2?\nAnswer: 4"
+    chat = {"mode": "chat", "prompt": "hi", "completion": "hello", "source": "gsm8k"}
+    assert calibration.render_text(chat) == (
+        "<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\nhello<|im_end|>"
+    )
+
+
+def test_stratified_sample_is_deterministic_and_balanced():
+    rows = [{"source": s, "text": f"{s}{i}"} for s in ("a", "b") for i in range(10)]
+    first = calibration.stratified_sample(rows, per_source=3, seed=3407)
+    second = calibration.stratified_sample(rows, per_source=3, seed=3407)
+    assert first == second
+    assert sorted(r["source"] for r in first) == ["a", "a", "a", "b", "b", "b"]
+
+
+def test_contaminated_detects_exact_and_high_ngram_overlap_only():
+    banned = ["A trader in Onitsha buys 40 kg of rice at ₦1,850 per kg."]
+    assert calibration.contaminated("x " + banned[0] + " y", banned)
+    # Not an exact substring (first word differs) but 6 of the phrase's 7 eight-grams survive.
+    near = "One trader in Onitsha buys 40 kg of rice at ₦1,850 per kg."
+    assert calibration.contaminated(near, banned)
+    assert not calibration.contaminated("A farmer sells 3 goats for 40,000 naira.", banned)

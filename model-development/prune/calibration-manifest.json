@@ -1,0 +1,27 @@
+{
+  "banned_count": 12,
+  "banned_files": [
+    "../../bench/measurements/semifinal-20260916/prompts.json",
+    "../../muta-iq/metadata.json"
+  ],
+  "output": {
+    "path": "calibration.jsonl",
+    "sha256": "393138be2dc01f2d5ab6d68681db60c6db2ca203f5c05f1c0af72fcacefd62f0"
+  },
+  "per_source": 22,
+  "rows": 132,
+  "schema_version": 1,
+  "seed": 3407,
+  "sources": [
+    "arc_challenge_train",
+    "arc_easy_train",
+    "gsm8k_train",
+    "openr1_verified_math_train",
+    "qasc_train",
+    "verified_african_arithmetic"
+  ],
+  "train": {
+    "path": "../finetune/data-metric-licensed-hybrid/train.jsonl",
+    "sha256": "d70dfe0e0126489a3abc4c0370875aee4c398539dda21c8412558f9756de2090"
+  }
+}
