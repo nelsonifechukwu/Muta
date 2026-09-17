@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "name": "muta-stem-sft-v2",
+  "seed": 3407,
+  "warehouse_target_rows": 2500000,
+  "warehouse_allocations": {
+    "muta_verified_stem_v2": 1085000,
+    "deepmind_mathematics": 1052000,
+    "template_gsm": 350000,
+    "licensed_anchors": 13000
+  },
+  "recommended_sft_target_rows": 300000,
+  "recommended_sft_allocations": {
+    "muta_verified_stem_v2": 280000,
+    "deepmind_mathematics": 20000
+  },
+  "recommended_sft_allocation_decision": {
+    "version": "quality-first-after-exact-row-audit-2026-09-17",
+    "supersedes": "260K local + 20K DeepMind + 10K TemplateGSM + 5K QASC + 5K GSM8K",
+    "reason": "The initial exact-row audits and independent adversarial reviews found systematic semantic, language, ambiguity, arithmetic, and story-equation defects in TemplateGSM, QASC, and GSM8K, including false approvals and a refill checker that missed known-bad reserve rows. Their 20K planned slots are replaced by native verified rows while preserving the removed source allocation's subject margins (+15K mathematics, +5K integrated science) and pedagogy margins (+15K worked solution, +5K concise answer). A 243-row paired redistribution respects the one-row-per-canonical-task capacity limit without weakening that deduplication gate.",
+    "template_gsm_selected_rows": 0,
+    "qasc_selected_rows": 0,
+    "gsm8k_selected_rows": 0,
+    "replacement_margin_rows": {
+      "subject :: mathematics": 15000,
+      "subject :: integrated_science": 5000,
+      "pedagogy :: worked_solution": 15000,
+      "pedagogy :: concise_answer": 5000
+    },
+    "replacement_joint_cell_deltas_from_balanced_260k_native_baseline": {
+      "muta_verified_stem_v2 :: mathematics :: worked_solution": 14757,
+      "muta_verified_stem_v2 :: mathematics :: concise_answer": 243,
+      "muta_verified_stem_v2 :: integrated_science :: worked_solution": 243,
+      "muta_verified_stem_v2 :: integrated_science :: concise_answer": 4757
+    },
+    "local_cell_quota_method": "Nearest-integer independence matrix for the archived 260K native residual, preserving positive coverage in all 25 subject-by-pedagogy cells, then add the documented 20K marginal replacement with a 243-row 2-by-2 redistribution required by the canonical-task cap.",
+    "overall_subject_and_pedagogy_targets_unchanged": true
+  },
+  "recommended_sft_local_cell_quotas": {
+    "biology :: concise_answer": 808,
+    "biology :: exam_marking_scheme": 9692,
+    "biology :: misconception_correction": 9692,
+    "biology :: socratic_hint": 4846,
+    "biology :: worked_solution": 16962,
+    "chemistry :: concise_answer": 808,
+    "chemistry :: exam_marking_scheme": 9692,
+    "chemistry :: misconception_correction": 9692,
+    "chemistry :: socratic_hint": 4846,
+    "chemistry :: worked_solution": 16962,
+    "integrated_science :: concise_answer": 4892,
+    "integrated_science :: exam_marking_scheme": 1615,
+    "integrated_science :: misconception_correction": 1615,
+    "integrated_science :: socratic_hint": 808,
+    "integrated_science :: worked_solution": 3070,
+    "mathematics :: concise_answer": 2454,
+    "mathematics :: exam_marking_scheme": 26539,
+    "mathematics :: misconception_correction": 26539,
+    "mathematics :: socratic_hint": 13269,
+    "mathematics :: worked_solution": 61199,
+    "physics :: concise_answer": 1038,
+    "physics :: exam_marking_scheme": 12462,
+    "physics :: misconception_correction": 12462,
+    "physics :: socratic_hint": 6231,
+    "physics :: worked_solution": 21807
+  },
+  "local_generation_subject_targets": {
+    "mathematics": 0.25,
+    "physics": 0.27,
+    "chemistry": 0.21,
+    "biology": 0.21,
+    "integrated_science": 0.06
+  },
+  "local_generation_pedagogy_targets": {
+    "worked_solution": 0.4,
+    "exam_marking_scheme": 0.2,
+    "misconception_correction": 0.2,
+    "socratic_hint": 0.1,
+    "concise_answer": 0.1
+  },
+  "recommended_sft_subject_targets": {
+    "mathematics": 0.5,
+    "physics": 0.18,
+    "chemistry": 0.14,
+    "biology": 0.14,
+    "integrated_science": 0.04
+  },
+  "recommended_sft_pedagogy_targets": {
+    "worked_solution": 0.4,
+    "exam_marking_scheme": 0.2,
+    "misconception_correction": 0.2,
+    "socratic_hint": 0.1,
+    "concise_answer": 0.1
+  },
+  "limits": {
+    "max_prompt_chars": 6000,
+    "max_completion_chars": 6000,
+    "max_rows_per_external_template_in_sft": 40,
+    "max_rows_per_source_task_in_sft": 1,
+    "template_holdout_fraction": 0.02,
+    "shard_rows": 25000
+  },
+  "training_note": "The 2.5M warehouse is a diversity/coverage pool, not a balanced training file: open bulk sources make the warehouse mathematics-heavy. TemplateGSM, QASC, and GSM8K remain preserved as audit evidence but contribute zero rows to the recommended SFT view after the 2026-09-17 exact-row audits found systematic quality defects and independent adversaries falsified provisional approvals. Their former 20K allocation is replaced by natively verified Muta rows with the same aggregate subject and pedagogy margins; a documented 243-row paired joint-cell redistribution respects the canonical-task cap while keeping all 25 native cells positive. Nemotron Science is candidate-only and contributes zero rows after a level audit found advanced medical content passing keyword filters. Materialize a separate 300K SFT view that solves the declared overall subject and pedagogy targets globally, caps each canonical task at one selected row, and excludes template_holdout clusters. Expand external sources only when a stronger reusable exact-row verifier and identical held-out tutoring prompts prove that the added rows help."
+}

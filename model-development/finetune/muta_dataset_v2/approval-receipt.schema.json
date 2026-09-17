@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://muta.local/schemas/sft-approval-receipt-v1.json",
+  "title": "Muta SFT approval receipt v1",
+  "description": "A content-addressed review-decision attestation for one immutable candidate-warehouse row or semantic cluster. The review_method must truthfully identify whether the process was human, model-assisted, deterministic, or a documented combination; the receipt is not a cryptographic reviewer signature. For a semantic-cluster target, record_content_sha256 is the selector's ordered aggregate digest for every record in that source/cluster in warehouse order. A cluster attestation never authorizes individual rows unless a separate source policy explicitly permits it; current audit-gated sources require exact row receipts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "receipt_id",
+    "warehouse_dataset_fingerprint_sha256",
+    "target_type",
+    "source_id",
+    "record_content_sha256",
+    "decision",
+    "reviewer",
+    "review_method",
+    "reviewed_at",
+    "rubric_version",
+    "rubric_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "receipt_id": {"type": "string", "pattern": "^muta_approval_v1_[0-9a-f]{24}$"},
+    "warehouse_dataset_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "target_type": {"enum": ["record", "semantic_cluster"]},
+    "source_id": {"type": "string", "minLength": 1},
+    "record_id": {"type": "string", "minLength": 1},
+    "semantic_cluster_id": {"type": "string", "minLength": 1},
+    "record_content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decision": {"enum": ["approved", "rejected"]},
+    "reviewer": {"type": "string", "minLength": 1},
+    "review_method": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "reviewed_at": {"type": "string", "format": "date-time"},
+    "rubric_version": {"type": "string", "minLength": 1},
+    "rubric_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "oneOf": [
+    {
+      "properties": {"target_type": {"const": "record"}},
+      "required": ["record_id"],
+      "not": {"required": ["semantic_cluster_id"]}
+    },
+    {
+      "properties": {"target_type": {"const": "semantic_cluster"}},
+      "required": ["semantic_cluster_id"],
+      "not": {"required": ["record_id"]}
+    }
+  ]
+}

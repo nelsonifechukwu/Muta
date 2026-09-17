@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://muta.local/schemas/stem-sft-v2.json",
+  "title": "Muta STEM SFT v2 record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "prompt",
+    "completion",
+    "messages",
+    "answer",
+    "subject",
+    "topic",
+    "difficulty",
+    "format",
+    "pedagogy",
+    "language",
+    "mode",
+    "split",
+    "curriculum",
+    "provenance",
+    "verification",
+    "contamination"
+  ],
+  "properties": {
+    "id": {"type": "string", "pattern": "^muta2_[0-9a-f]{24}$"},
+    "prompt": {"type": "string", "minLength": 1, "maxLength": 6000},
+    "completion": {"type": "string", "minLength": 1, "maxLength": 6000},
+    "messages": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["role", "content"],
+          "properties": {
+            "role": {"const": "user"},
+            "content": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["role", "content"],
+          "properties": {
+            "role": {"const": "assistant"},
+            "content": {"type": "string", "minLength": 1}
+          }
+        }
+      ]
+    },
+    "answer": {"type": "string", "minLength": 1, "maxLength": 512},
+    "subject": {
+      "enum": ["mathematics", "physics", "chemistry", "biology", "integrated_science"]
+    },
+    "topic": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+    "difficulty": {"enum": ["foundation", "standard", "advanced"]},
+    "format": {
+      "enum": ["free_response", "multiple_choice", "misconception", "socratic"]
+    },
+    "pedagogy": {
+      "enum": [
+        "worked_solution",
+        "exam_marking_scheme",
+        "misconception_correction",
+        "socratic_hint",
+        "concise_answer"
+      ]
+    },
+    "language": {"const": "en"},
+    "mode": {"enum": ["chat", "raw"]},
+    "split": {"enum": ["train", "template_holdout", "review"]},
+    "curriculum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["country", "authority", "version", "exam_era", "alignment"],
+      "properties": {
+        "country": {"type": "string", "minLength": 1},
+        "authority": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "exam_era": {"type": "string", "minLength": 1},
+        "alignment": {"type": "string", "minLength": 1}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "source_revision",
+        "source_split",
+        "source_row_id",
+        "semantic_cluster_id",
+        "license",
+        "synthetic",
+        "transform"
+      ],
+      "properties": {
+        "source_id": {"type": "string"},
+        "source_revision": {"type": "string"},
+        "source_split": {"type": "string", "minLength": 1},
+        "source_row_id": {"type": "string"},
+        "semantic_cluster_id": {"type": "string", "minLength": 1},
+        "license": {"type": "string"},
+        "synthetic": {"type": "boolean"},
+        "transform": {"type": "string"}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "method",
+        "expected",
+        "observed",
+        "verifier_version",
+        "training_eligible"
+      ],
+      "properties": {
+        "status": {
+          "enum": ["programmatic", "source_verified", "human_reviewed", "silver_pending_audit", "model_assisted_reviewed"]
+        },
+        "method": {"type": "string"},
+        "expected": {"type": "string"},
+        "observed": {"type": "string"},
+        "verifier_version": {"type": "string"},
+        "training_eligible": {"type": "boolean"}
+      }
+    },
+    "contamination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_task_sha256", "normalized_prompt_sha256", "holdout_checked", "max_holdout_5gram_similarity"],
+      "properties": {
+        "source_task_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "normalized_prompt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "holdout_checked": {"type": "boolean"},
+        "max_holdout_5gram_similarity": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "tokenization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tokenizer_id",
+        "tokenizer_revision",
+        "chat_template_sha256",
+        "sequence_tokens",
+        "max_sequence_tokens",
+        "within_limit"
+      ],
+      "properties": {
+        "tokenizer_id": {"const": "Qwen/Qwen2.5-1.5B-Instruct"},
+        "tokenizer_revision": {"const": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"},
+        "chat_template_sha256": {
+          "const": "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f"
+        },
+        "sequence_tokens": {"type": "integer", "minimum": 1},
+        "max_sequence_tokens": {"type": "integer", "minimum": 1, "maximum": 1024},
+        "within_limit": {"const": true}
+      }
+    }
+  }
+}
