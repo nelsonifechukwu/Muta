@@ -163,3 +163,24 @@ def test_prune_gguf_roundtrip_drops_layers_and_rewrites_block_count(tmp_path):
     assert float(tensors["blk.1.attn_q.weight"].data.reshape(-1)[0]) == 3.0  # old layer 3
     assert manifest["kept_layers"] == [0, 3]
     assert manifest["params_count"] == 32 + 2 * 16 + 4
+
+
+screen_metadata = _load("screen_metadata")
+
+
+def test_parameter_estimate_label_rounds_like_the_profiler_expects():
+    assert screen_metadata.parameter_estimate_label(1_543_714_304) == "1.54B"
+    assert screen_metadata.parameter_estimate_label(1_216_129_536) == "1.22B"
+    assert screen_metadata.parameter_estimate_label(752_393_024) == "752M"
+
+
+def test_build_metadata_replaces_only_the_model_block_and_runtime_path():
+    base = {"team_id": "muta", "model": {"name": "old", "runtime": "llama.cpp",
+            "quantization": "GGUF Q4_K_M", "parameters_estimate": "1.54B",
+            "packaging": "binary_bundle"}, "_runtime": {"model_path": "model/old.gguf"}}
+    meta = screen_metadata.build_metadata(base, "unhealed-21L-contiguous.gguf", 1_216_129_536, "GGUF Q4_K_M")
+    assert meta["team_id"] == "muta"
+    assert meta["model"] == {"name": "unhealed-21L-contiguous.gguf", "runtime": "llama.cpp",
+                             "quantization": "GGUF Q4_K_M", "parameters_estimate": "1.22B",
+                             "packaging": "binary_bundle"}
+    assert meta["_runtime"] == {"model_path": "model/unhealed-21L-contiguous.gguf"}
