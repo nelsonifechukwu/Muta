@@ -87,3 +87,30 @@ def test_contaminated_detects_exact_and_high_ngram_overlap_only():
     near = "One trader in Onitsha buys 40 kg of rice at ₦1,850 per kg."
     assert calibration.contaminated(near, banned)
     assert not calibration.contaminated("A farmer sells 3 goats for 40,000 naira.", banned)
+
+
+block_influence = _load("block_influence")
+
+
+def test_accumulate_and_finalize_rank_the_identity_layer_lowest():
+    # 4 layers on 3 tokens of hidden size 2. Layer 1 is the identity (BI 0);
+    # layers 0, 2 rotate by 90°; layer 3 rotates by 45°.
+    t = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
+    rot90 = np.array([[0.0, -1.0], [1.0, 0.0]])
+    rot45 = np.array([[np.cos(np.pi / 4), -np.sin(np.pi / 4)], [np.sin(np.pi / 4), np.cos(np.pi / 4)]])
+    x0 = t
+    x1 = x0 @ rot90.T
+    x2 = x1
+    x3 = x2 @ rot90.T
+    x4 = x3 @ rot45.T
+    stats = block_influence.new_stats(n_layers=4, blocks=[2])
+    block_influence.accumulate(stats, [x0, x1, x2, x3], [x1, x2, x3, x4], blocks=[2])
+    result = block_influence.finalize(stats, blocks=[2], protect_first=0, protect_last=0)
+    assert result["bi"][1] == pytest.approx(0.0, abs=1e-6)
+    assert result["bi"][0] == pytest.approx(1.0)
+    assert result["bi"][3] == pytest.approx(1 - np.cos(np.pi / 4))
+    # 2-blocks: start 1 = layers 1,2 → x1→x3 is 90° (0.5); start 0 → x0→x2 is 90° (0.5);
+    # start 2 → x2→x4 is 135° (0.75). Ties resolve to the lowest start.
+    assert result["block_distance"]["2"]["2"] == pytest.approx(0.75)
+    assert result["selections"]["contiguous"]["2"] == [0, 1]
+    assert result["selections"]["lowest_bi"]["2"] == [1, 3]
