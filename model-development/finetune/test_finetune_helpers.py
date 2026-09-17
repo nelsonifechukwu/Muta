@@ -268,3 +268,13 @@ def test_resolve_revision_maps_local_to_none_and_keeps_hashes():
     assert train_lora.resolve_revision("989aa7980e4cf806f80c7fef2b1adb7bc71aa306") == (
         "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
     )
+
+
+def test_local_source_provenance_records_config_hash_and_prune_manifest(tmp_path):
+    (tmp_path / "config.json").write_text('{"num_hidden_layers": 21}')
+    (tmp_path / "prune-manifest.json").write_text('{"drop": [12, 13]}')
+    assert train_lora.local_source_provenance("Qwen/Qwen2.5-1.5B-Instruct", "989aa7") is None
+    prov = train_lora.local_source_provenance(str(tmp_path), "local")
+    assert prov["path"] == str(tmp_path)
+    assert prov["config_sha256"] == train_lora.sha256_file(tmp_path / "config.json")
+    assert prov["prune_manifest"] == {"drop": [12, 13]}

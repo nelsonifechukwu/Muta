@@ -10,24 +10,6 @@ TAG=$(git -C "$LLAMA_DIR" describe --tags --exact-match 2>/dev/null || git -C "$
 "$PY" "$LLAMA_DIR/convert_hf_to_gguf.py" "$MERGED" --outtype f16 --outfile "$OUT-f16.gguf"
 "$LLAMA_DIR/build/bin/llama-quantize" "$OUT-f16.gguf" "$OUT-Q4_K_M.gguf" Q4_K_M 8
 rm -f "$OUT-f16.gguf"
-"$PY" - "$OUT-Q4_K_M.gguf" "$LLAMA_DIR" "$MERGED" > "$OUT.export-manifest.json" <<'PY'
-import hashlib, json, os, subprocess, sys
-sys.path.insert(0, sys.argv[2] + "/gguf-py")
-import numpy as np
-from gguf import GGUFReader
-path, llama_dir, merged = sys.argv[1:4]
-reader = GGUFReader(path)
-params = int(sum(int(np.prod(t.shape)) for t in reader.tensors))
-digest = hashlib.sha256()
-with open(path, "rb") as fh:
-    for chunk in iter(lambda: fh.read(1 << 24), b""):
-        digest.update(chunk)
-commit = subprocess.check_output(["git", "-C", llama_dir, "rev-parse", "HEAD"], text=True).strip()
-json.dump({"schema_version": 1, "source_dir": merged, "artifact": path, "params_count": params,
-           "bytes": os.path.getsize(path), "sha256": digest.hexdigest(),
-           "llama_cpp_commit": commit, "llama_cpp_tag": "b10175", "quantization": "Q4_K_M",
-           "tensor_types": sorted({t.tensor_type.name for t in reader.tensors})},
-          sys.stdout, indent=2)
-sys.stdout.write("\n")
-PY
+"$PY" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/gguf_manifest.py" --gguf "$OUT-Q4_K_M.gguf" \
+  --llama-dir "$LLAMA_DIR" --source-dir "$MERGED" --out "$OUT.export-manifest.json" > /dev/null
 cat "$OUT.export-manifest.json"

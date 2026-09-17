@@ -69,6 +69,21 @@ def resolve_revision(value: str) -> str | None:
     return None if value == "local" else value
 
 
+def local_source_provenance(model: str, revision: str) -> dict | None:
+    """For `--revision local`, pin what was trained: config hash and any prune manifest."""
+    if resolve_revision(revision) is not None:
+        return None
+    source = Path(model)
+    provenance: dict = {"path": str(source)}
+    config = source / "config.json"
+    if config.is_file():
+        provenance["config_sha256"] = sha256_file(config)
+    prune_manifest = source / "prune-manifest.json"
+    if prune_manifest.is_file():
+        provenance["prune_manifest"] = json.loads(prune_manifest.read_text(encoding="utf-8"))
+    return provenance
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
@@ -273,6 +288,7 @@ def main() -> None:
         "schema_version": 1,
         "model": args.model,
         "revision": args.revision,
+        "local_source": local_source_provenance(args.model, args.revision),
         "seed": args.seed,
         "max_length": args.max_length,
         "epochs": args.epochs,
@@ -301,6 +317,11 @@ def main() -> None:
         "validation_rows": len(tokenized["validation"]),
         "train_metrics": result.metrics,
         "validation_metrics": evaluation,
+        # load_best_model_at_end reloads the best eval_loss checkpoint before merging, so the
+        # merged weights are from best_model_checkpoint, not necessarily the final step.
+        "global_step": trainer.state.global_step,
+        "best_model_checkpoint": trainer.state.best_model_checkpoint,
+        "best_metric": trainer.state.best_metric,
         "elapsed_seconds": round(time.time() - started, 3),
         "python": platform.python_version(),
         "torch": torch.__version__,

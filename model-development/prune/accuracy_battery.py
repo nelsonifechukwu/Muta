@@ -13,6 +13,7 @@ audit's. Usage (on muta-vm):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -22,7 +23,18 @@ def parse_tasks(spec: str) -> list[tuple[str, int]]:
     for item in spec.split(","):
         name, limit = item.split(":")
         out.append((name.strip(), int(limit)))
+    names = [name for name, _ in out]
+    if len(set(names)) != len(names):
+        raise ValueError(f"duplicate task names in {spec!r}; results are keyed by task")
     return out
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 24), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def main() -> None:
@@ -34,12 +46,22 @@ def main() -> None:
     args = parser.parse_args()
     from adtc_profiler import accuracy
 
-    result: dict = {"model": str(args.model), "seed": args.seed}
-    for task, limit in parse_tasks(args.tasks):
+    tasks = parse_tasks(args.tasks)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    result: dict = {
+        "model": str(args.model),
+        "model_sha256": sha256_file(args.model),
+        "seed": args.seed,
+        "tasks_requested": [f"{task}:{limit}" for task, limit in tasks],
+        "complete": False,
+    }
+    for task, limit in tasks:
         row = accuracy.run_benchmark(args.model, task=task, limit=limit, seed=args.seed)
         result[task] = row
         print(json.dumps(row), flush=True)
         args.output.write_text(json.dumps(result, indent=2) + "\n")
+    result["complete"] = True
+    args.output.write_text(json.dumps(result, indent=2) + "\n")
 
 
 if __name__ == "__main__":

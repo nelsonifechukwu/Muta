@@ -260,6 +260,11 @@ def test_prune_model_keeps_the_right_layer_objects_and_still_runs():
     with torch.no_grad():
         logits = model(input_ids=ids, use_cache=False).logits
     assert logits.shape == (1, 4, 128) and torch.isfinite(logits).all()
+    # The KV cache is indexed by self_attn.layer_idx: a stale index would write past 2 layers.
+    with torch.no_grad():
+        out = model(input_ids=ids[:, :2], use_cache=True)
+        out = model(input_ids=ids[:, 2:], past_key_values=out.past_key_values, use_cache=True)
+    assert len(out.past_key_values) == 2 and out.past_key_values.get_seq_length() == 4
 
 
 accuracy_battery = _load("accuracy_battery")
@@ -270,3 +275,27 @@ def test_parse_tasks_splits_name_and_limit():
         ("arc_easy", 500),
         ("gsm8k", 40),
     ]
+
+
+def test_parse_tasks_rejects_duplicate_task_names():
+    with pytest.raises(ValueError):
+        accuracy_battery.parse_tasks("arc_easy:50,arc_easy:500")
+
+
+gguf_manifest = _load("gguf_manifest")
+
+
+def test_gguf_manifest_describe_counts_params_depth_and_types(tmp_path):
+    gguf = pytest.importorskip("gguf")
+    path = tmp_path / "tiny.gguf"
+    writer = gguf.GGUFWriter(str(path), "qwen2")
+    writer.add_block_count(2)
+    writer.add_tensor("token_embd.weight", np.zeros((8, 4), dtype=np.float32))
+    writer.add_tensor("blk.0.attn_q.weight", np.zeros((4, 4), dtype=np.float16))
+    writer.add_tensor("blk.1.attn_q.weight", np.zeros((4, 4), dtype=np.float16))
+    writer.write_header_to_file()
+    writer.write_kv_data_to_file()
+    writer.write_tensors_to_file()
+    writer.close()
+    info = gguf_manifest.describe(path)
+    assert info == {"params_count": 64, "block_count": 2, "tensor_types": ["F16", "F32"]}
