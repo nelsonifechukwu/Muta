@@ -73,7 +73,8 @@ ENV PIP_RETRIES=10 \
 # a C++ toolchain this stage deliberately lacks — fail loudly instead of compiling for an hour.
 COPY pyproject.toml /app/pyproject.toml
 RUN python3.10 -m pip install --no-cache-dir --upgrade pip \
-    && python3.10 -m pip install --no-cache-dir --only-binary=:all: "sherpa-onnx>=1.10" \
+    && python3.10 -m pip install --no-cache-dir --only-binary=:all: \
+        "sherpa-onnx==1.13.8" "sherpa-onnx-core==1.13.8" \
     && python3.10 -m pip install --no-cache-dir tomli \
     && python3.10 -c "import tomli; d = tomli.load(open('pyproject.toml','rb'))['project']; \
 print('\n'.join(d['dependencies'] + d['optional-dependencies']['dev']))" > /tmp/reqs.txt \

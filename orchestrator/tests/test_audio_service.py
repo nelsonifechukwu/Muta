@@ -164,6 +164,23 @@ def test_capabilities_report_what_the_ui_may_offer():
     assert client.get("/health").json()["status"] == "ok", "audio absent is not audio broken"
 
 
+def test_real_engines_load_at_startup_not_during_app_construction(monkeypatch):
+    calls = []
+
+    def fake_load(audio_config):
+        calls.append(audio_config)
+        return NullAsr("test engine"), NullTts("test engine")
+
+    monkeypatch.setattr("orchestrator.audio.service.load_engines", fake_load)
+    app = create_app(config())
+    assert calls == [], "importing or constructing the service must not enter native code"
+
+    with TestClient(app) as client:
+        assert client.get("/capabilities").status_code == 200
+
+    assert len(calls) == 1
+
+
 # --- configuration ------------------------------------------------------------------------
 
 
@@ -175,7 +192,9 @@ def test_shipped_audio_yaml_parses_and_carries_the_policy_numbers():
     assert cfg.asr.vad.max_utterance_seconds == 90.0
     assert cfg.asr.chunk_seconds == 0.2 and cfg.asr.sample_rate == 16000
     assert cfg.tts.engine == "piper"  # D5: Piper is the default everywhere
-    assert cfg.resolve("models/tts/piper") == __import__("pathlib").Path("/opt/tutor/models/tts/piper")
+    assert cfg.resolve("models/tts/piper") == __import__("pathlib").Path(
+        "/opt/tutor/models/tts/piper"
+    )
 
 
 def test_missing_config_file_yields_working_defaults(tmp_path):

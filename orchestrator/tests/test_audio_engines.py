@@ -57,6 +57,9 @@ def _fake_sherpa(record: dict) -> types.ModuleType:
 def test_sherpa_tts_uses_tokens_txt_and_data_dir(monkeypatch, tmp_path):
     # The old code passed the voice's .onnx.json as tokens= and no data_dir — a real bug.
     record: dict = {}
+    monkeypatch.setattr(
+        "orchestrator.audio.engines.metadata.version", lambda _distribution: "1.13.8"
+    )
     monkeypatch.setitem(sys.modules, "sherpa_onnx", _fake_sherpa(record))
     voice_dir = tmp_path / "models/tts/piper"
     voice_dir.mkdir(parents=True)
@@ -68,6 +71,27 @@ def test_sherpa_tts_uses_tokens_txt_and_data_dir(monkeypatch, tmp_path):
     assert tts.available
     assert record["vits"]["tokens"].endswith("tokens.txt")
     assert record["vits"]["data_dir"].endswith("espeak-ng-data")
+
+
+def test_sherpa_wrapper_core_mismatch_stops_before_native_constructor(monkeypatch, tmp_path):
+    versions = {"sherpa-onnx": "1.13.8", "sherpa-onnx-core": "1.13.6"}
+    monkeypatch.setattr(
+        "orchestrator.audio.engines.metadata.version", lambda distribution: versions[distribution]
+    )
+
+    class _RecognizerThatMustNotLoad:
+        @staticmethod
+        def from_moonshine(**_kwargs):
+            raise AssertionError("an ABI mismatch must be rejected before native construction")
+
+    fake_sherpa = types.ModuleType("sherpa_onnx")
+    fake_sherpa.OfflineRecognizer = _RecognizerThatMustNotLoad
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", fake_sherpa)
+    (tmp_path / "models/asr/moonshine-tiny-en-int8").mkdir(parents=True)
+
+    asr = SherpaAsr(AudioConfig.load(DEFAULT_CONFIG, root=tmp_path))
+
+    assert asr.available is False
 
 
 def test_silero_vad_degrades_without_sherpa(monkeypatch, tmp_path):

@@ -12,8 +12,8 @@ from fastapi import FastAPI
 from contracts.models import HealthResponse
 
 
-def make_service(name: str) -> FastAPI:
-    app = FastAPI(title=f"muta-{name}", version="0.1.0")
+def make_service(name: str, *, lifespan=None) -> FastAPI:
+    app = FastAPI(title=f"muta-{name}", version="0.1.0", lifespan=lifespan)
 
     @app.get("/health", response_model=HealthResponse, tags=["ops"])
     def health() -> HealthResponse:

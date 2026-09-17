@@ -14,11 +14,42 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from importlib import metadata
 from typing import Protocol
 
 from orchestrator.audio.config import AudioConfig
 
 log = logging.getLogger("muta.audio")
+
+
+def _load_sherpa():
+    """Import sherpa only when its split Python/native packages have the same ABI version.
+
+    Recent macOS wheels split the Python wrapper (`sherpa-onnx`) from the native libraries
+    (`sherpa-onnx-core`). A stale core can import successfully and then segfault inside a
+    constructor, which Python cannot catch. Refuse that combination before native code runs.
+    Older monolithic wheels do not install a separate core distribution and remain valid.
+    """
+    try:
+        wrapper_version = metadata.version("sherpa-onnx")
+    except metadata.PackageNotFoundError:
+        return None
+    try:
+        core_version = metadata.version("sherpa-onnx-core")
+    except metadata.PackageNotFoundError:
+        core_version = None
+    if core_version is not None and core_version != wrapper_version:
+        log.error(
+            "sherpa-onnx wrapper/core mismatch (%s != %s) — audio disabled before native load",
+            wrapper_version,
+            core_version,
+        )
+        return None
+    try:
+        import sherpa_onnx
+    except ImportError:
+        return None
+    return sherpa_onnx
 
 
 @dataclass
@@ -91,9 +122,8 @@ class SherpaAsr:
     _stream: object | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
-        try:
-            import sherpa_onnx
-        except ImportError:
+        sherpa_onnx = _load_sherpa()
+        if sherpa_onnx is None:
             log.info("sherpa-onnx unavailable — ASR degrades to text-only input")
             return
         model_dir = self.config.resolve(self.config.asr.model_dir)
@@ -187,9 +217,8 @@ class SherpaTts:
 
     def __post_init__(self) -> None:
         self.sample_rate = self.config.tts.sample_rate
-        try:
-            import sherpa_onnx
-        except ImportError:
+        sherpa_onnx = _load_sherpa()
+        if sherpa_onnx is None:
             log.info("sherpa-onnx unavailable — replies will be text-only")
             return
         voice = self.config.tts.voice_for("en")
@@ -248,9 +277,8 @@ class SileroVad:
     _vad: object | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
-        try:
-            import sherpa_onnx
-        except ImportError:
+        sherpa_onnx = _load_sherpa()
+        if sherpa_onnx is None:
             log.info("sherpa-onnx unavailable — VAD falls back to the energy endpointer")
             return
         model = self.config.resolve(self.config.asr.vad.model)

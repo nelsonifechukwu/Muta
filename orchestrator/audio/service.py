@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import json
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from orchestrator._common import make_service
 from orchestrator.audio.config import AudioConfig
-from orchestrator.audio.engines import AsrEngine, TtsEngine, load_engines
+from orchestrator.audio.engines import AsrEngine, NullAsr, NullTts, TtsEngine, load_engines
 from orchestrator.audio.mathspeech import to_speech
 from orchestrator.audio.vad import Endpointer
 
@@ -37,22 +38,31 @@ def create_app(
     tts: TtsEngine | None = None,
 ) -> FastAPI:
     config = config or AudioConfig.load()
-    if asr is None or tts is None:
-        loaded_asr, loaded_tts = load_engines(config)
-        asr = asr or loaded_asr
-        tts = tts or loaded_tts
+    configured_asr = asr
+    configured_tts = tts
+    runtime_asr: AsrEngine = asr or NullAsr("audio engine loads during application startup")
+    runtime_tts: TtsEngine = tts or NullTts("audio engine loads during application startup")
 
-    app = make_service("audio")
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        nonlocal runtime_asr, runtime_tts
+        if configured_asr is None or configured_tts is None:
+            loaded_asr, loaded_tts = load_engines(config)
+            runtime_asr = configured_asr or loaded_asr
+            runtime_tts = configured_tts or loaded_tts
+        yield
+
+    app = make_service("audio", lifespan=lifespan)
 
     @app.get("/capabilities", tags=["ops"])
     def capabilities() -> dict:
         """What the gateway asks before offering a microphone button. Absent engines are a
         capability answer, never a 500 — the text tutor works either way (C-7)."""
         return {
-            "asr": {"available": asr.available, "sample_rate": config.asr.sample_rate},
+            "asr": {"available": runtime_asr.available, "sample_rate": config.asr.sample_rate},
             "tts": {
-                "available": tts.available,
-                "sample_rate": tts.sample_rate,
+                "available": runtime_tts.available,
+                "sample_rate": runtime_tts.sample_rate,
                 "languages": sorted(config.tts.voices),
                 "engine": config.tts.engine,
             },
@@ -65,9 +75,11 @@ def create_app(
             trailing_silence_seconds=config.asr.vad.trailing_silence_seconds,
             max_utterance_seconds=config.asr.vad.max_utterance_seconds,
         )
-        asr.reset()
-        if not asr.available:
-            await socket.send_text(json.dumps({"error": "asr-unavailable", "fallback": "type your question"}))
+        runtime_asr.reset()
+        if not runtime_asr.available:
+            await socket.send_text(
+                json.dumps({"error": "asr-unavailable", "fallback": "type your question"})
+            )
             await socket.close()
             return
         last_partial = ""
@@ -75,7 +87,7 @@ def create_app(
             while True:
                 frame = await socket.receive_bytes()
                 seconds = len(frame) / 2 / config.asr.sample_rate  # 16-bit mono
-                partial = asr.accept(frame)
+                partial = runtime_asr.accept(frame)
                 # Speech detection comes from the audio, never from "the recogniser has text":
                 # a partial transcript persists across silent frames, so using it here means
                 # the utterance never endpoints and the student waits forever.
@@ -84,7 +96,7 @@ def create_app(
                     last_partial = partial.text
                     await socket.send_text(json.dumps({"partial": partial.text}))
                 if endpointer.accept(seconds, is_speech=is_speech):
-                    final = asr.finalize()
+                    final = runtime_asr.finalize()
                     await socket.send_text(
                         json.dumps(
                             {
@@ -98,7 +110,7 @@ def create_app(
                         )
                     )
                     endpointer.reset()
-                    asr.reset()
+                    runtime_asr.reset()
                     last_partial = ""
         except WebSocketDisconnect:
             return
@@ -111,13 +123,15 @@ def create_app(
                 request = json.loads(await socket.receive_text())
                 text = str(request.get("text", ""))
                 language = str(request.get("language", "en"))
-                if not tts.available or config.tts.voice_for(language) is None:
+                if not runtime_tts.available or config.tts.voice_for(language) is None:
                     await socket.send_text(
-                        json.dumps({"error": "voice-unavailable", "language": language, "text": text})
+                        json.dumps(
+                            {"error": "voice-unavailable", "language": language, "text": text}
+                        )
                     )
                     continue
                 for sentence in to_speech(text, language=language):
-                    for chunk in tts.synthesize(sentence.text, language=language):
+                    for chunk in runtime_tts.synthesize(sentence.text, language=language):
                         await socket.send_bytes(chunk)
                     await socket.send_text(json.dumps({"sentence": sentence.text}))
                 await socket.send_text(json.dumps({"done": True}))
@@ -133,7 +147,8 @@ def _is_loud(frame: bytes, threshold: int = 500) -> bool:
     if not frame:
         return False
     peak = max(
-        abs(int.from_bytes(frame[i : i + 2], "little", signed=True)) for i in range(0, len(frame) - 1, 2)
+        abs(int.from_bytes(frame[i : i + 2], "little", signed=True))
+        for i in range(0, len(frame) - 1, 2)
     )
     return peak > threshold
 
@@ -147,7 +162,7 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO)
     import os
 
-    port = int(os.environ.get("TUTOR_ASR_PORT", 8084))
+    port = int(os.environ.get("TUTOR_ASR_PORT", "8084"))
     uvicorn.run(app, host="127.0.0.1", port=port)
     return 0
 
