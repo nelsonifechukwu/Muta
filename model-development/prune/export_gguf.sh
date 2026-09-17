@@ -26,7 +26,7 @@ commit = subprocess.check_output(["git", "-C", llama_dir, "rev-parse", "HEAD"], 
 json.dump({"schema_version": 1, "source_dir": merged, "artifact": path, "params_count": params,
            "bytes": os.path.getsize(path), "sha256": digest.hexdigest(),
            "llama_cpp_commit": commit, "llama_cpp_tag": "b10175", "quantization": "Q4_K_M",
-           "tensor_types": sorted({str(t.tensor_type).split(".")[-1] for t in reader.tensors})},
+           "tensor_types": sorted({t.tensor_type.name for t in reader.tensors})},
           sys.stdout, indent=2)
 sys.stdout.write("\n")
 PY
