@@ -27,6 +27,65 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-09-17 — depth-pruning screen (unhealed ladder)
+
+**Why:** Tasks 1–5 built a Block-Influence layer ranking, a byte-exact GGUF layer-dropper, and
+eight unhealed pruned candidates (2 policies × 4 depths) off the semi-final's chosen
+Qwen2.5-1.5B checkpoint. This entry scores that screen against the published 28-layer control
+under the ADTC exchange rate and picks the depths that go on to healing.
+
+**Hardware context:** `x86 cloud proxy` — GCP `muta-vm` (`n2-custom-4-8192`: 2 cores / 4
+threads, Intel Xeon @ 2.80 GHz, 7.8 GiB, no swap). Same profiler image as the 2026-09-16
+semi-final re-test: `bench/measurements/prune-20260917/image-id.txt` →
+`sha256:b83ff230b3984fe2d6e2b91edb92702eae727c07b6b56a970c4e1158f8c73674`. The BI ranking
+itself ran in float32 on this same VM, over the 132-row calibration set (19,304 tokens);
+`bench/measurements/prune-20260917/bi-qwen25-1.5b-instruct-base.json` is the record.
+
+**BI ranking summary (28 layers, `protect_first=2, protect_last=1`):** the three lowest-BI
+(most redundant) layers are **25** (BI 0.0394), **26** (BI 0.0404), and **24** (BI 0.0468) —
+all deep, pre-final-block layers, consistent with the mid/late-stack redundancy the method
+expects. The `contiguous`-policy blocks selected by minimum block-distance: n=4 → layers
+`[12,13,14,15]`; n=7 → `[9..15]`; n=9 → `[8..16]`; n=11 → `[8..18]` — all centred in the same
+mid-stack region rather than at the lowest-BI singletons, which is exactly why the screen
+carries two policies (`contiguous` vs `lowest_bi`) per depth rather than one.
+
+**Screen results (unhealed candidates vs. the published 28L control; `score_candidates.py`,
+`bench/measurements/prune-20260917/screen-scores.json`):**
+
+| Layers | Policy | tok/s | TTFT (pp512) | Peak RSS | ARC-Easy-50 | S_perf | S_eff | S_total(arc50) | Break-even |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 28 (control) | published | 5.77 | 65.6 s | 1099.54 MB | 0.84 | 38.47 | 84.29 | **70.40** | — |
+| 24 | contiguous | 6.50 | 55.6 s | 993.03 MB | 0.76 | 43.33 | 85.81 | **68.16** | 3.52 |
+| 24 | lowest_bi | 6.55 | 55.5 s | 986.49 MB | 0.60 | 43.67 | 85.91 | **60.28** | 3.77 |
+| 21 | contiguous | 7.10 | 48.7 s | 912.32 MB | 0.64 | 47.33 | 86.97 | **63.59** | 6.39 |
+| 21 | lowest_bi | 7.29 | 48.3 s | 905.74 MB | 0.60 | 48.60 | 87.06 | **61.99** | 7.19 |
+| 19 | contiguous | 7.81 | 44.2 s | 855.86 MB | 0.52 | 52.07 | 87.77 | **59.17** | 9.55 |
+| 19 | lowest_bi | 7.86 | 43.9 s | 850.94 MB | 0.52 | 52.40 | 87.84 | **59.29** | 9.78 |
+| 17 | contiguous | 8.41 | 39.0 s | 802.71 MB | 0.48 | 56.07 | 88.53 | **58.53** | 12.26 |
+| 17 | lowest_bi | 8.56 | 38.7 s | 796.18 MB | 0.40 | 57.07 | 88.63 | **54.85** | 12.90 |
+
+Break-even is the ARC-Easy-50 points a candidate may lose to the control and still tie it on
+S_total (`break_even_accuracy_loss`); `shortlist()` keeps a depth only if its measured loss is
+within 2× that floor. Every one of the eight candidates fails: even the closest,
+24L-contiguous, loses 8.0 ARC-50 points against a 7.05-point ceiling (2 × 3.52). Unhealed
+pruning trades far more accuracy than its tok/s and RAM gains are worth — expected, since these
+checkpoints have had no fine-tuning to recover from the layer drop — so `shortlist()` on this
+screen returns `[]`.
+
+**Fallback (per the plan's Step 5):** an empty shortlist does not stop the campaign — the
+screen is a floor, and healing is the experiment. Healing proceeds on **21L** and **24L**,
+taking the better policy at each depth by unhealed `S_total_arc50`: **24L-contiguous** (68.16
+vs. lowest_bi's 60.28) and **21L-contiguous** (63.59 vs. lowest_bi's 61.99) — `contiguous`
+wins at both depths on this screen. 17L and 19L are dropped: even their better policies
+(19L-lowest_bi 59.29, 17L-contiguous 58.53) trail every surviving control comparison by a
+wider margin than 21L/24L do, and the plan caps healing at two depths.
+
+One caveat before reading any of these numbers as portable: the organisers' Round-1 VM
+measured decode speed at ≈0.63× this VM's (2026-09-16 entry), so every ΔS_perf above — and
+every break-even figure derived from it — shrinks by that factor on their hardware.
+
+---
+
 ## 2026-09-16 — semi-final re-test of both Hugging Face finalists on the reference audit image
 
 **Why:** Round 1 results arrived (`ADTC2026_310_Muta.pdf`: Accuracy 39.20, Performance 56.00,

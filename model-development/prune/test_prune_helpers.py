@@ -186,3 +186,45 @@ def test_build_metadata_replaces_only_the_model_block_and_runtime_path():
                              "quantization": "GGUF Q4_K_M", "parameters_estimate": "1.22B",
                              "packaging": "binary_bundle"}
     assert meta["_runtime"] == {"model_path": "model/unhealed-21L-contiguous.gguf"}
+
+
+score_candidates = _load("score_candidates")
+
+
+def _audit(tps, peak, arc):
+    return {"throughput": {"tokens_per_second_generation": tps, "first_token_latency_ms": 1.0},
+            "memory": {"peak_rss_mb": peak, "steady_state_rss_mb": peak},
+            "accuracy": [{"benchmark": "arc_easy", "samples": 50, "score": arc}],
+            "cpu_thermal": {"core_temp_c_peak": None, "throttled": False, "cpu_percent_p99": 70.0},
+            "model_info": {"params_count": 1, "params_match": True}}
+
+
+def test_break_even_matches_the_exchange_rates():
+    control = score_candidates.row_from_audit("control", _audit(5.77, 1099.54, 0.84))
+    cand = score_candidates.row_from_audit("21L", _audit(7.32, 885.5, 0.70))
+    # ΔS_perf = (7.32-5.77)/15*100 = 10.33 → ×0.3 = 3.10
+    # ΔS_eff = (1099.54-885.5)/7000*100 = 3.06 → ×0.2 = 0.61
+    assert score_candidates.break_even_accuracy_loss(control, cand) == pytest.approx(7.42, abs=0.01)
+    assert cand["S_total_arc50"] == pytest.approx(0.5 * 70 + 0.3 * 48.8 + 0.2 * 87.35, abs=0.05)
+
+
+def test_shortlist_keeps_depths_whose_floor_is_within_twice_break_even():
+    control = score_candidates.row_from_audit("control", _audit(5.77, 1099.54, 0.84))
+    rows = [
+        score_candidates.row_from_audit("unhealed-24L-contiguous", _audit(6.57, 977.0, 0.82)),
+        score_candidates.row_from_audit("unhealed-21L-contiguous", _audit(7.32, 885.5, 0.72)),
+        score_candidates.row_from_audit("unhealed-21L-lowest_bi", _audit(7.30, 885.5, 0.66)),
+        score_candidates.row_from_audit("unhealed-17L-contiguous", _audit(8.66, 764.0, 0.40)),
+    ]
+    picked = score_candidates.shortlist(rows, control, max_depths=2)
+    # 17L fails the 2×break-even floor (loss 44 > 27); 21L-lowest_bi loses to 21L-contiguous
+    # (same depth, lower total); survivors rank by unhealed S_total: 24L (71.35) then 21L (68.11).
+    assert [r["name"] for r in picked] == ["unhealed-24L-contiguous", "unhealed-21L-contiguous"]
+
+
+def test_verdict_requires_both_totals_gsm8k_and_fraud_check():
+    published = {"S_total_arc500": 70.0, "S_total_judge": 47.0, "gsm8k_40": 0.50}
+    good = {"S_total_arc500": 71.5, "S_total_judge": 48.5, "gsm8k_40": 0.47, "params_match": True}
+    assert score_candidates.verdict(good, published)["promote"] is True
+    bad = dict(good, gsm8k_40=0.40)
+    assert score_candidates.verdict(bad, published)["promote"] is False

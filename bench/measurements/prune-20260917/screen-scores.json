@@ -1,0 +1,113 @@
+{
+  "control": {
+    "name": "published-28L",
+    "layers": 28,
+    "tps": 5.77,
+    "peak_rss_mb": 1099.54,
+    "throttled": false,
+    "params_match": true,
+    "arc_easy_50": 84.0,
+    "S_perf": 38.47,
+    "S_eff": 84.29,
+    "S_total_arc50": 70.4
+  },
+  "rows": [
+    {
+      "name": "unhealed-17L-contiguous",
+      "layers": 17,
+      "tps": 8.41,
+      "peak_rss_mb": 802.71,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 48.0,
+      "S_perf": 56.07,
+      "S_eff": 88.53,
+      "S_total_arc50": 58.53
+    },
+    {
+      "name": "unhealed-17L-lowest_bi",
+      "layers": 17,
+      "tps": 8.56,
+      "peak_rss_mb": 796.18,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 40.0,
+      "S_perf": 57.07,
+      "S_eff": 88.63,
+      "S_total_arc50": 54.85
+    },
+    {
+      "name": "unhealed-19L-contiguous",
+      "layers": 19,
+      "tps": 7.81,
+      "peak_rss_mb": 855.86,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 52.0,
+      "S_perf": 52.07,
+      "S_eff": 87.77,
+      "S_total_arc50": 59.17
+    },
+    {
+      "name": "unhealed-19L-lowest_bi",
+      "layers": 19,
+      "tps": 7.86,
+      "peak_rss_mb": 850.94,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 52.0,
+      "S_perf": 52.4,
+      "S_eff": 87.84,
+      "S_total_arc50": 59.29
+    },
+    {
+      "name": "unhealed-21L-contiguous",
+      "layers": 21,
+      "tps": 7.1,
+      "peak_rss_mb": 912.32,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 64.0,
+      "S_perf": 47.33,
+      "S_eff": 86.97,
+      "S_total_arc50": 63.59
+    },
+    {
+      "name": "unhealed-21L-lowest_bi",
+      "layers": 21,
+      "tps": 7.29,
+      "peak_rss_mb": 905.74,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 60.0,
+      "S_perf": 48.6,
+      "S_eff": 87.06,
+      "S_total_arc50": 61.99
+    },
+    {
+      "name": "unhealed-24L-contiguous",
+      "layers": 24,
+      "tps": 6.5,
+      "peak_rss_mb": 993.03,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 76.0,
+      "S_perf": 43.33,
+      "S_eff": 85.81,
+      "S_total_arc50": 68.16
+    },
+    {
+      "name": "unhealed-24L-lowest_bi",
+      "layers": 24,
+      "tps": 6.55,
+      "peak_rss_mb": 986.49,
+      "throttled": false,
+      "params_match": true,
+      "arc_easy_50": 60.0,
+      "S_perf": 43.67,
+      "S_eff": 85.91,
+      "S_total_arc50": 60.28
+    }
+  ],
+  "shortlist": []
+}
