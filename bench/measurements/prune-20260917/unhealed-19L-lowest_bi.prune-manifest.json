@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "source": {
+    "path": "/home/oxowolabi/adtc-semis/subs/qwen25-1.5b/model/Muta-Tutor-Qwen2.5-1.5B-Q4_K_M.gguf",
+    "sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb",
+    "block_count": 28
+  },
+  "drop": [
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    24,
+    25,
+    26
+  ],
+  "kept_layers": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    27
+  ],
+  "block_count": 19,
+  "tensors": 230,
+  "params_count": 1122533888,
+  "bytes": 730721888,
+  "sha256": "230e39a216f518c39fd8e1d0b7167583b39fac1ede66033e9e9b737a5026abfb"
+}

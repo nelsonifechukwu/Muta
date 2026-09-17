@@ -114,3 +114,52 @@ def test_accumulate_and_finalize_rank_the_identity_layer_lowest():
     assert result["block_distance"]["2"]["2"] == pytest.approx(0.75)
     assert result["selections"]["contiguous"]["2"] == [0, 1]
     assert result["selections"]["lowest_bi"]["2"] == [1, 3]
+
+
+prune_gguf_layers = _load("prune_gguf_layers")  # imports gguf lazily, so loading is safe
+
+
+def test_plan_tensor_names_renumbers_blocks_and_keeps_globals():
+    names = ["token_embd.weight", "blk.0.attn_q.weight", "blk.1.attn_q.weight",
+             "blk.2.attn_q.weight", "blk.3.attn_q.weight", "output_norm.weight"]
+    plan = prune_gguf_layers.plan_tensor_names(names, 4, [1, 2])
+    assert plan == [
+        ("token_embd.weight", "token_embd.weight"),
+        ("blk.0.attn_q.weight", "blk.0.attn_q.weight"),
+        ("blk.3.attn_q.weight", "blk.1.attn_q.weight"),
+        ("output_norm.weight", "output_norm.weight"),
+    ]
+
+
+def test_params_from_shapes_multiplies_dims():
+    assert prune_gguf_layers.params_from_shapes([(8, 4), (4,), (2, 3, 5)]) == 32 + 4 + 30
+
+
+def test_prune_gguf_roundtrip_drops_layers_and_rewrites_block_count(tmp_path):
+    pytest.importorskip("gguf")  # inside the test: a missing dep must not skip the whole module
+    from gguf import GGUFReader, GGUFWriter
+
+    src = tmp_path / "tiny.gguf"
+    writer = GGUFWriter(str(src), "qwen2")
+    writer.add_block_count(4)
+    writer.add_uint32("qwen2.embedding_length", 4)
+    writer.add_tensor("token_embd.weight", np.arange(32, dtype=np.float32).reshape(8, 4))
+    for i in range(4):
+        writer.add_tensor(f"blk.{i}.attn_q.weight", np.full((4, 4), float(i), dtype=np.float32))
+    writer.add_tensor("output_norm.weight", np.ones(4, dtype=np.float32))
+    writer.write_header_to_file()
+    writer.write_kv_data_to_file()
+    writer.write_tensors_to_file()
+    writer.close()
+
+    dst = tmp_path / "pruned.gguf"
+    manifest = prune_gguf_layers.prune(src, dst, drop=[1, 2])
+    reader = GGUFReader(str(dst))
+    field = reader.fields["qwen2.block_count"]
+    assert int(field.parts[field.data[0]][0]) == 2
+    tensors = {t.name: t for t in reader.tensors}
+    assert set(tensors) == {"token_embd.weight", "blk.0.attn_q.weight", "blk.1.attn_q.weight",
+                            "output_norm.weight"}
+    assert float(tensors["blk.1.attn_q.weight"].data.reshape(-1)[0]) == 3.0  # old layer 3
+    assert manifest["kept_layers"] == [0, 3]
+    assert manifest["params_count"] == 32 + 2 * 16 + 4
