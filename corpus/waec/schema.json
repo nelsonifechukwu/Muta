@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://muta.local/schemas/waec-question.schema.json",
+  "title": "Muta WAEC study question",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_id",
+    "exam_board",
+    "year",
+    "subject",
+    "question_number",
+    "question_text",
+    "options",
+    "correct_answer",
+    "worked_solution",
+    "topic_tags",
+    "difficulty",
+    "marking_scheme",
+    "examiner_observation",
+    "paper",
+    "session",
+    "source",
+    "assets",
+    "extraction_warnings",
+    "content_status",
+    "answer_status",
+    "generated_solution"
+  ],
+  "properties": {
+    "record_id": {"type": "string", "minLength": 12},
+    "exam_board": {"const": "WAEC/WASSCE"},
+    "year": {"type": ["integer", "null"], "minimum": 1950, "maximum": 2100},
+    "subject": {
+      "enum": ["mathematics", "physics", "chemistry", "biology", "science"]
+    },
+    "question_number": {"type": "string", "minLength": 1},
+    "question_text": {"type": "string"},
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "text"],
+        "properties": {
+          "label": {"type": "string"},
+          "text": {"type": "string"}
+        }
+      }
+    },
+    "correct_answer": {"type": ["string", "null"]},
+    "worked_solution": {"type": ["string", "null"]},
+    "topic_tags": {"type": "array", "items": {"type": "string"}},
+    "difficulty": {"type": ["string", "null"]},
+    "marking_scheme": {"type": ["string", "null"]},
+    "examiner_observation": {"type": ["string", "null"]},
+    "marks": {"type": ["integer", "null"], "minimum": 0},
+    "paper": {"type": ["string", "null"]},
+    "session": {"type": ["string", "null"]},
+    "question_format": {"enum": ["multiple_choice", "free_response", "practical", "unknown"]},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publisher", "page_url", "question_url", "answer_url", "source_type", "copyright_notice", "retrieved_at"],
+      "properties": {
+        "publisher": {"type": "string"},
+        "page_url": {"type": "string", "format": "uri"},
+        "question_url": {"type": ["string", "null"], "format": "uri"},
+        "answer_url": {"type": ["string", "null"], "format": "uri"},
+        "source_type": {"enum": ["waec_html", "cheetah_pdf"]},
+        "copyright_notice": {"type": "string"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "local_question_file": {"type": ["string", "null"]},
+        "local_answer_file": {"type": ["string", "null"]}
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url", "local_path", "role", "sha256"],
+        "properties": {
+          "url": {"type": "string", "format": "uri"},
+          "local_path": {"type": ["string", "null"]},
+          "role": {"enum": ["question", "answer"]},
+          "sha256": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "extraction_warnings": {"type": "array", "items": {"type": "string"}},
+    "content_status": {"enum": ["complete", "needs_visual_review", "incomplete"]},
+    "answer_status": {"enum": ["published", "missing", "generated_unverified", "generated_verified"]},
+    "generated_solution": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "model", "generated_at", "verification"],
+          "properties": {
+            "text": {"type": "string"},
+            "model": {"type": "string"},
+            "generated_at": {"type": "string", "format": "date-time"},
+            "verification": {"enum": ["unverified", "symbolic", "published_answer", "human"]}
+          }
+        }
+      ]
+    }
+  }
+}

@@ -236,6 +236,15 @@ __marimo__/
 data/
 # licensed past-paper PDFs — never committed (see corpus/sources.md)
 corpus/raw/
+# Private/rights-restricted exam material and review ledgers. The public repository
+# carries the collectors, schemas, audit code, and provenance summaries—not the
+# source-derived question/answer text or project-owner private-use attestations.
+corpus/waec/questions.jsonl
+corpus/waec/manifest.json
+corpus/waec/*review*.jsonl
+corpus/waec/private-training-*.json
+corpus/build_cheetah_review_*.py
+model-development/finetune/muta_dataset_v2/WAEC_*_APPROVED_IDS.jsonl
 # compiled / downloaded llama.cpp binaries
 runtime/build/
 # downloaded model weights (provisioned via runtime, not committed)
@@ -261,6 +270,7 @@ bench/.venv-profiler/
 bench/adtc-profiler/
 # generated measurement artifacts: submission.json, runs.jsonl, synthesized submission dir
 bench/.artifacts/
+bench/**/.queue.lock
 # local or remote fine-tuning outputs; keep only scripts and manifests in git
 model-development/finetune/runs/
 model-development/finetune/runs-metric/
