@@ -57,6 +57,9 @@ Modified: `model-development/finetune/train_lora.py` (accept `--revision local`)
 
 Measurements land in `bench/measurements/prune-20260917/` (audit JSONs, BI JSON, manifests, grades, `scores.json`). Docs: `docs/depth-pruning.md`, `RESULTS.md`, `bench/optimization-log.md`.
 
+
+> **Executed 2026-09-17 with two recorded deviations.** Task 7 Step 7: the merged BF16 tutor was not retrained — the original run (`~/muta-finetune/runs-metric/qwen25-bf16-r16-licensed-mcq-lr2e5-500/merged_16bit` on the A100 host) whose GGUF is byte-identical to the published file (sha256 `a750d00d…`) was used directly and exported through b10175 as the same-export control (`rebuilt-28L`, sha256 `1fce28cd…`). Task 8 Step 5: the contiguous n=7 window differs on the tutor (12–18 vs 9–15 on the base; block distances 0.19788 vs 0.19791), so 21L-contiguous was pruned with the tutor ranking as the plan prescribes. Tasks 1–6 were executed on 2026-09-17 00:20–04:50 (commits f0e9727…2e540af), Tasks 7–9 from 16:00 (commits 90ab2bc…81951f3).
+
 ---
 
 ### Task 1: Pure layer-selection math
@@ -70,7 +73,7 @@ Measurements land in `bench/measurements/prune-20260917/` (audit JSONs, BI JSON,
 **Interfaces:**
 - Produces: `cosine_rows(a, b) -> np.ndarray`, `block_influence(layer_in, layer_out) -> float`, `angular_distance(x_a, x_b) -> float`, `select_contiguous(block_distance: dict[int, float], n: int, n_layers: int, protect_first: int, protect_last: int) -> list[int]`, `select_lowest_bi(bi: list[float], n: int, protect_first: int, protect_last: int) -> list[int]`, `renumber_plan(n_layers: int, drop: list[int]) -> dict[int, int]`, `kept_layer_indices(n_layers: int, drop: list[int]) -> list[int]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # model-development/prune/test_prune_helpers.py
@@ -136,12 +139,12 @@ def test_renumber_plan_and_kept_indices_preserve_order():
     assert layer_selection.renumber_plan(4, [1, 2]) == {0: 0, 3: 1}
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: FAIL — `FileNotFoundError` for `layer_selection.py`.
 
-- [ ] **Step 3: Implement the helpers**
+- [x] **Step 3: Implement the helpers**
 
 ```python
 # model-development/prune/layer_selection.py
@@ -233,12 +236,12 @@ def renumber_plan(n_layers: int, drop: list[int]) -> dict[int, int]:
     return {old: new for new, old in enumerate(kept_layer_indices(n_layers, drop))}
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: 6 passed.
 
-- [ ] **Step 5: Write the README and commit**
+- [x] **Step 5: Write the README and commit**
 
 ```markdown
 # Depth pruning (Block Influence / angular distance)
@@ -269,7 +272,7 @@ git commit -m "feat(prune): layer-selection math for BI / angular-distance depth
 - Consumes: `model-development/finetune/train_lora.py::join_raw_prompt_completion(prompt, completion)`; `data-metric-licensed-hybrid/train.jsonl` rows `{"mode": "raw"|"chat", "prompt", "completion", "source"}` (built by `build_metric_dataset.py --profile licensed-hybrid`).
 - Produces: `render_text(row: dict) -> str`, `stratified_sample(rows: list[dict], per_source: int, seed: int) -> list[dict]`, `normalize(text: str) -> str`, `contaminated(text: str, banned: list[str], ngram: int = 8, threshold: float = 0.5) -> bool`; CLI writes `calibration.jsonl` (`{"source", "text"}` lines) and `calibration-manifest.json`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # append to model-development/prune/test_prune_helpers.py
@@ -302,12 +305,12 @@ def test_contaminated_detects_exact_and_high_ngram_overlap_only():
     assert not calibration.contaminated("A farmer sells 3 goats for 40,000 naira.", banned)
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v -k "render or stratified or contaminated"`
 Expected: FAIL — `calibration.py` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # model-development/prune/calibration.py
@@ -437,12 +440,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: 9 passed.
 
-- [ ] **Step 5: Build the healing data and the calibration file (one-time, network)**
+- [x] **Step 5: Build the healing data and the calibration file (one-time, network)**
 
 ```bash
 cd model-development/finetune
@@ -458,7 +461,7 @@ cd ../prune
 ```
 Expected: manifest prints `rows: 132` (6 sources × 22) and no contamination exit. If the train sha256 differs from the recorded manifest, stop: the upstream dataset revision moved and the healing data is no longer the recorded one.
 
-- [ ] **Step 6: Commit (manifest only; data stays untracked)**
+- [x] **Step 6: Commit (manifest only; data stays untracked)**
 
 ```bash
 git add model-development/prune/calibration.py model-development/prune/test_prune_helpers.py \
@@ -479,7 +482,7 @@ git commit -m "feat(prune): calibration sampler with judge/test-prompt contamina
 - Consumes: `layer_selection.*`, `calibration.jsonl`.
 - Produces: `accumulate(stats: dict, ins: list[np.ndarray], outs: list[np.ndarray], blocks: list[int]) -> None`, `finalize(stats: dict, blocks: list[int], protect_first: int, protect_last: int) -> dict`; CLI writes `bi-<tag>.json` with keys `n_layers`, `bi` (list), `block_distance` (`{n: {start: d}}`), `selections` (`{"contiguous": {n: [...]}, "lowest_bi": {n: [...]}}`), `calibration` (sha256, rows, tokens), `model`, `revision`, `dtype`.
 
-- [ ] **Step 1: Write the failing tests (pure accumulation, no torch)**
+- [x] **Step 1: Write the failing tests (pure accumulation, no torch)**
 
 ```python
 # append to model-development/prune/test_prune_helpers.py
@@ -510,12 +513,12 @@ def test_accumulate_and_finalize_rank_the_identity_layer_lowest():
     assert result["selections"]["lowest_bi"]["2"] == [1, 3]
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v -k accumulate`
 Expected: FAIL — `block_influence.py` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # model-development/prune/block_influence.py
@@ -689,12 +692,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: 10 passed.
 
-- [ ] **Step 5: Run the ranking on the pinned base (CPU)**
+- [x] **Step 5: Run the ranking on the pinned base (CPU)**
 
 ```bash
 cd model-development/prune
@@ -706,7 +709,7 @@ python3 -m venv .venv-cpu && .venv-cpu/bin/pip install -q torch transformers==5.
 ```
 Expected: 132 sequences processed; the JSON lists 28 BI values. Sanity checks before continuing: BI for layers 0–1 is among the highest; the contiguous `7`-block lies inside layers 2–26; the `lowest_bi` and `contiguous` sets for n=7 overlap in ≥3 layers (if they are disjoint, print both and continue — Stage B screens both policies anyway).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add model-development/prune/block_influence.py model-development/prune/test_prune_helpers.py \
@@ -726,7 +729,7 @@ git commit -m "feat(prune): Block Influence + angular-distance ranking of Qwen2.
 - Consumes: `layer_selection.renumber_plan`, `bi-*.json` selections, the published GGUF.
 - Produces: `plan_tensor_names(names: list[str], n_layers: int, drop: list[int]) -> list[tuple[str, str]]`, `params_from_shapes(shapes: list[tuple[int, ...]]) -> int`; CLI `prune_gguf_layers.py IN.gguf OUT.gguf --drop 8,9,10 [--name-suffix]` writing `OUT.gguf` and `OUT.prune-manifest.json` (`drop`, `kept_layers`, `params_count`, `bytes`, `sha256`, `source_sha256`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # append to model-development/prune/test_prune_helpers.py
@@ -779,12 +782,12 @@ def test_prune_gguf_roundtrip_drops_layers_and_rewrites_block_count(tmp_path):
     assert manifest["params_count"] == 32 + 2 * 16 + 4
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `python3 -m pip install -q gguf && python3 -m pytest model-development/prune/test_prune_helpers.py -v -k "gguf or plan_tensor or params_from"`
 Expected: FAIL — `prune_gguf_layers.py` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # model-development/prune/prune_gguf_layers.py
@@ -915,12 +918,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: 13 passed.
 
-- [ ] **Step 5: Build the unhealed ladder from the published GGUF, on muta-vm (the file is already there; avoids a 6 GB upload)**
+- [x] **Step 5: Build the unhealed ladder from the published GGUF, on muta-vm (the file is already there; avoids a 6 GB upload)**
 
 ```bash
 gcloud compute ssh muta-vm --zone=us-west1-b --project=muta-adtc --command='mkdir -p ~/adtc-prune/candidates ~/adtc-prune/tools && python3 -m pip install -q --user gguf numpy'
@@ -930,14 +933,14 @@ gcloud compute ssh muta-vm --zone=us-west1-b --project=muta-adtc --command='cd ~
 ```
 Expected: the sha256 printed is `a750d00d…2e1eb`; 8 GGUFs; each `*-21L-*` is ≈ 986 − 7×30.5 ≈ 772 MB; manifests show `block_count` 24/21/19/17 and `params_count` = 1,543,714,304 − n × 46,797,824. Copy the eight `*.prune-manifest.json` files back into `bench/measurements/prune-20260917/`.
 
-- [ ] **Step 6: Load-and-generate check on the reference image (muta-vm)**
+- [x] **Step 6: Load-and-generate check on the reference image (muta-vm)**
 
 ```bash
 gcloud compute ssh muta-vm --zone=us-west1-b --project=muta-adtc --command='for f in ~/adtc-prune/candidates/*.gguf; do echo "== $f"; sudo docker run --rm -v ~/adtc-prune/candidates:/c:ro --entrypoint llama-cli adtc-profiler:latest -m /c/$(basename $f) -p "What is 25% of 80?" -n 32 --temp 0 -no-cnv 2>/dev/null | tail -2; done'
 ```
 Expected: every file loads (`print_info: n_layer = 21` etc.) and emits text; for 17L the text may already be degraded — that is information, not failure. A load error means the renumbering is wrong: stop and fix before Task 5.
 
-- [ ] **Step 7: Cross-check one candidate against llama-quantize `--prune-layers`**
+- [x] **Step 7: Cross-check one candidate against llama-quantize `--prune-layers`**
 
 ```bash
 gcloud compute ssh muta-vm --zone=us-west1-b --project=muta-adtc --command='L=/home/elijahnelson/Muta/bench/.artifacts/llama.cpp-b10175; sudo cmake --build $L/build --target llama-quantize -j2 >/dev/null && DROP=$(python3 -c "import json; print(\",\".join(map(str, json.load(open(\"$HOME/adtc-prune/candidates/unhealed-21L-contiguous.prune-manifest.json\"))[\"drop\"])))") && sudo $L/build/bin/llama-quantize --prune-layers $DROP ~/adtc-semis/subs/qwen25-1.5b/model/Muta-Tutor-Qwen2.5-1.5B-Q4_K_M.gguf /tmp/xcheck-21L.gguf copy 2 2>&1 | tail -3; sudo python3 - <<EOF
@@ -950,7 +953,7 @@ EOF'
 ```
 Expected: `names equal: True`, `bytes equal: True`. If `llama-quantize` refuses a quantized input with `COPY`, record that in `docs/depth-pruning.md` and rely on Step 6 plus the unit tests.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add model-development/prune/prune_gguf_layers.py model-development/prune/test_prune_helpers.py
@@ -971,7 +974,7 @@ git commit -m "feat(prune): byte-exact GGUF layer removal with block renumbering
 - Consumes: `bench/measurements/semifinal-20260916/submissions/metadata-qwen25-1.5b.json` (Round-1 claims), `*.prune-manifest.json`.
 - Produces: `parameter_estimate_label(params: int) -> str`, `build_metadata(base: dict, model_file: str, params: int, quantization: str) -> dict`; `run_screen.sh` producing `audit-<candidate>.json` per submission directory.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # append to model-development/prune/test_prune_helpers.py
@@ -996,12 +999,12 @@ def test_build_metadata_replaces_only_the_model_block_and_runtime_path():
     assert meta["_runtime"] == {"model_path": "model/unhealed-21L-contiguous.gguf"}
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v -k "estimate_label or build_metadata"`
 Expected: FAIL — `screen_metadata.py` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # model-development/prune/screen_metadata.py
@@ -1069,12 +1072,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: 15 passed.
 
-- [ ] **Step 5: Write the screen runner (runs on muta-vm)**
+- [x] **Step 5: Write the screen runner (runs on muta-vm)**
 
 ```bash
 # model-development/prune/run_screen.sh
@@ -1100,7 +1103,7 @@ done
 echo "SCREEN_DONE $(ts)"
 ```
 
-- [ ] **Step 6: Build submission dirs and run the screen**
+- [x] **Step 6: Build submission dirs and run the screen**
 
 ```bash
 gcloud compute scp model-development/prune/screen_metadata.py model-development/prune/run_screen.sh muta-vm:~/adtc-prune/ --zone=us-west1-b --project=muta-adtc
@@ -1109,7 +1112,7 @@ gcloud compute ssh muta-vm --zone=us-west1-b --project=muta-adtc --command='chmo
 ```
 Expected: 8 audits, each ≈ 5–11 min, all `✓ wrote`. Poll `tail ~/adtc-prune/logs/screen.log` until `SCREEN_DONE`; then copy `~/adtc-prune/artifacts/audit-*.json` into `bench/measurements/prune-20260917/`. Every audit must report `params_match: true`; a `false` means Task 5's label is wrong for that file.
 
-- [ ] **Step 7: Commit the measurements**
+- [x] **Step 7: Commit the measurements**
 
 ```bash
 git add model-development/prune/screen_metadata.py model-development/prune/run_screen.sh \
@@ -1131,7 +1134,7 @@ git commit -m "feat(prune): unhealed depth-pruning screen on the reference audit
 - Consumes: `bench/score.py::score(accuracy, tps_actual, peak_rss_gb, max_temp_c, throttled, label)`; audit JSONs; optional `judge-grades-<name>.json` (`{"scores": {...}}`) and `battery-<name>.json` (Task 10).
 - Produces: `row_from_audit(name: str, audit: dict) -> dict`, `break_even_accuracy_loss(control: dict, candidate: dict) -> float`, `shortlist(rows: list[dict], control: dict, max_depths: int = 2) -> list[dict]`, `verdict(candidate: dict, published: dict) -> dict`; CLI `score_candidates.py --dir DIR --control audit-published-28L.json [--gate] --out scores.json`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # append to model-development/prune/test_prune_helpers.py
@@ -1176,12 +1179,12 @@ def test_verdict_requires_both_totals_gsm8k_and_fraud_check():
     assert score_candidates.verdict(bad, published)["promote"] is False
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v -k "break_even or shortlist or verdict"`
 Expected: FAIL — `score_candidates.py` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # model-development/prune/score_candidates.py
@@ -1330,12 +1333,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: 18 passed.
 
-- [ ] **Step 5: Score the screen and record the shortlist**
+- [x] **Step 5: Score the screen and record the shortlist**
 
 ```bash
 python3 model-development/prune/score_candidates.py --dir bench/measurements/prune-20260917 \
@@ -1344,7 +1347,7 @@ python3 model-development/prune/score_candidates.py --dir bench/measurements/pru
 ```
 Expected: a table of 8 rows and a shortlist of ≤2 depths. If the shortlist is empty (every prune's ARC-50 floor exceeds 2× break-even), still heal `21L` and `24L` with the better policy at each depth — the screen is a floor, and healing is the experiment — and say so in the RESULTS entry.
 
-- [ ] **Step 6: RESULTS.md entry for Stage A+B and commit**
+- [x] **Step 6: RESULTS.md entry for Stage A+B and commit**
 
 Add a `## 2026-09-17 — depth-pruning screen (unhealed ladder)` entry to `RESULTS.md` above the previous entry with: hardware context (`x86 cloud proxy`, `muta-vm`, reference image id), the BI ranking summary (top-3 lowest-BI layers, the contiguous blocks), the 8-row table (layers, policy, tok/s, TTFT, peak RSS, ARC-Easy-50, S_perf, S_eff, S_total_arc50, break-even), the shortlist and the reason. Then:
 
@@ -1367,7 +1370,7 @@ git commit -m "feat(prune): exchange-rate scoring, healing shortlist, screen res
 - Consumes: `model-development/finetune/setup_gpu_env.sh`, `requirements-gpu.txt`, `run_metric_sweep.sh`'s recorded recipe for `qwen25-bf16-r16-licensed-mcq-lr2e5-500`.
 - Produces: `train_lora.resolve_revision(value: str) -> str | None`; `export_gguf.sh MERGED_DIR OUT_PREFIX` → `OUT_PREFIX-Q4_K_M.gguf` + `OUT_PREFIX.export-manifest.json` (`params_count`, `bytes`, `sha256`, `llama_cpp_commit`); `runs-prune/tutor-28L/merged_16bit/` (the rebuilt base).
 
-- [ ] **Step 1: Write the failing test for local revisions**
+- [x] **Step 1: Write the failing test for local revisions**
 
 ```python
 # append to model-development/finetune/test_finetune_helpers.py
@@ -1378,12 +1381,12 @@ def test_resolve_revision_maps_local_to_none_and_keeps_hashes():
     )
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest model-development/finetune/test_finetune_helpers.py -v -k resolve_revision`
 Expected: FAIL — `AttributeError: module has no attribute 'resolve_revision'`.
 
-- [ ] **Step 3: Implement in `train_lora.py`**
+- [x] **Step 3: Implement in `train_lora.py`**
 
 Add after `sha256_file`:
 ```python
@@ -1399,12 +1402,12 @@ and change the two call sites:
 ```
 and in the manifest keep `"revision": args.revision` (so `local` is recorded verbatim). Update the `--revision` help: `help="HF revision hash, or 'local' for a checkpoint directory"`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m pytest model-development/finetune/test_finetune_helpers.py -v`
 Expected: all pass (the existing suite plus the new test).
 
-- [ ] **Step 5: Write the pinned export script**
+- [x] **Step 5: Write the pinned export script**
 
 ```bash
 # model-development/prune/export_gguf.sh
@@ -1439,7 +1442,7 @@ PY
 cat "$OUT.export-manifest.json"
 ```
 
-- [ ] **Step 6: Provision the GPU host and the environment**
+- [x] **Step 6: Provision the GPU host and the environment**
 
 Reuse the previously supplied A100-40GB host if it still exists (`ssh` in; `nvidia-smi` shows `NVIDIA A100-SXM4-40GB`, PyTorch 2.7, CUDA 12.8). Otherwise create one on GCP:
 
@@ -1464,7 +1467,7 @@ cd ~/llama.cpp-b10175 && cmake -B build -DGGML_NATIVE=OFF -DBUILD_SHARED_LIBS=OF
 ~/Muta/model-development/finetune/.venv/bin/pip install -q gguf sentencepiece
 ```
 
-- [ ] **Step 7: Rebuild the merged tutor (the model we prune) and validate it**
+- [x] **Step 7: Rebuild the merged tutor (the model we prune) and validate it**
 
 ```bash
 cd ~/Muta/model-development/finetune
@@ -1481,7 +1484,7 @@ gcloud compute ssh muta-vm --zone=us-west1-b --project=muta-adtc --command='cd ~
 ```
 Expected: `audit-rebuilt-28L.json` with ARC-Easy-50 within ±0.04 of 0.84 and tok/s within ±5 % of 5.77 — this is the control every healed candidate is compared with. If it misses, do not proceed: the export path differs from the published one and Task 11's comparison would be confounded.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add model-development/finetune/train_lora.py model-development/finetune/test_finetune_helpers.py \
@@ -1502,7 +1505,7 @@ git commit -m "feat(prune): local-checkpoint training and pinned b10175 GGUF exp
 - Consumes: `layer_selection.kept_layer_indices`, `runs-prune/tutor-28L/merged_16bit/`, the shortlist from `screen-scores.json`.
 - Produces: `prune_model(model, drop: list[int])` (in place; returns kept indices), CLI `prune_hf_layers.py --source DIR --drop 8,9,… --output DIR [--bi bi.json]` writing the checkpoint plus `prune-manifest.json`.
 
-- [ ] **Step 1: Write the failing test (tiny random Qwen2, CPU)**
+- [x] **Step 1: Write the failing test (tiny random Qwen2, CPU)**
 
 ```python
 # append to model-development/prune/test_prune_helpers.py
@@ -1531,12 +1534,12 @@ def test_prune_model_keeps_the_right_layer_objects_and_still_runs():
     assert logits.shape == (1, 4, 128) and torch.isfinite(logits).all()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `model-development/prune/.venv-cpu/bin/python -m pytest model-development/prune/test_prune_helpers.py -v -k prune_model`
 Expected: FAIL — `prune_hf_layers.py` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # model-development/prune/prune_hf_layers.py
@@ -1623,12 +1626,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `model-development/prune/.venv-cpu/bin/python -m pytest model-development/prune/test_prune_helpers.py -v`
 Expected: 19 passed.
 
-- [ ] **Step 5: Re-rank on the rebuilt tutor (GPU host, seconds) and compare with the base ranking**
+- [x] **Step 5: Re-rank on the rebuilt tutor (GPU host, seconds) and compare with the base ranking**
 
 ```bash
 cd ~/Muta/model-development/prune
@@ -1646,7 +1649,7 @@ EOF
 ```
 Expected: identical sets (the LoRA delta is rank-16 and small). If a shortlisted set differs, **use the tutor ranking** for Task 8 Step 6 and note the difference in RESULTS.md; the Stage B floor for that depth was measured on a slightly different set and is stated as such.
 
-- [ ] **Step 6: Prune the tutor checkpoint for each shortlisted depth**
+- [x] **Step 6: Prune the tutor checkpoint for each shortlisted depth**
 
 ```bash
 BI=../../bench/measurements/prune-20260917/bi-tutor-28L-merged.json
@@ -1658,7 +1661,7 @@ done
 ```
 Expected: one directory per shortlisted candidate with `config.json` `num_hidden_layers` = 21/24/… and `prune-manifest.json` `params_count` = 1,543,714,304 − dropped × 46,797,824.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add model-development/prune/prune_hf_layers.py model-development/prune/test_prune_helpers.py \
@@ -1678,7 +1681,7 @@ git commit -m "feat(prune): HF layer removal for healing; BI re-ranked on the me
 - Consumes: `train_lora.py --revision local`, `export_gguf.sh`, `runs-prune/pruned-*`, `runs-prune/tutor-28L/merged_16bit`.
 - Produces: `runs-prune/<run>/merged_16bit/`, `runs-prune/<run>/<run>-Q4_K_M.gguf`, `<run>.export-manifest.json` for: `control-28L-hybrid-lr5e5-1000`, `heal-<spec>-lr5e5-1000` per shortlisted spec, `heal-<best spec>-lr2e5-1000`.
 
-- [ ] **Step 1: Write the sweep runner**
+- [x] **Step 1: Write the sweep runner**
 
 ```bash
 # model-development/prune/run_heal_sweep.sh
@@ -1721,12 +1724,12 @@ heal "heal-$BEST-lr2e5-1000" "$RUNS/pruned-$BEST" 2e-5 1000
 echo "HEAL_DONE $(date -u +%FT%TZ)"
 ```
 
-- [ ] **Step 2: Dry-check the script's argument handling**
+- [x] **Step 2: Dry-check the script's argument handling**
 
 Run: `bash -n model-development/prune/run_heal_sweep.sh && SPECS="" BEST="" LLAMA_DIR=x bash model-development/prune/run_heal_sweep.sh; echo "exit=$?"`
 Expected: `bash -n` is silent; the run prints the `SPECS` usage error and exits non-zero without touching the GPU.
 
-- [ ] **Step 3: Run the sweep (GPU host)**
+- [x] **Step 3: Run the sweep (GPU host)**
 
 ```bash
 cd ~/Muta/model-development/prune
@@ -1734,7 +1737,7 @@ SPECS="21L-contiguous 24L-contiguous" BEST="21L-contiguous" LLAMA_DIR=~/llama.cp
 ```
 (Substitute the shortlist names from Task 6.) Expected wall-clock: 1000 steps ≈ 18 min per run on an A100 (the recorded 500-step run took 544 s) — four runs ≈ 75 min, pruned runs faster. Each run ends with `PASS`, a `training-manifest.json`, and an export manifest whose `params_count` equals the pruned checkpoint's. Validation `eval_loss` on licensed-hybrid: record all; a healed 21L loss more than 0.25 nats above the 28L control's is a warning sign, not a stop.
 
-- [ ] **Step 4: Collect manifests and ship GGUFs to muta-vm**
+- [x] **Step 4: Collect manifests and ship GGUFs to muta-vm**
 
 ```bash
 mkdir -p ~/Muta/bench/measurements/prune-20260917/{training,export}
@@ -1743,7 +1746,7 @@ gcloud compute scp runs-prune/*/*-Q4_K_M.gguf runs-prune/*/*.export-manifest.jso
 ```
 Then delete the GPU instance if it was created for this task (`gcloud compute instances delete muta-gpu --zone=us-central1-a`) — after confirming the GGUFs' sha256 on `muta-vm` match the manifests.
 
-- [ ] **Step 5: Commit manifests (weights stay untracked)**
+- [x] **Step 5: Commit manifests (weights stay untracked)**
 
 ```bash
 git add model-development/prune/run_heal_sweep.sh bench/measurements/prune-20260917/training bench/measurements/prune-20260917/export
