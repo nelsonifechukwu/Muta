@@ -64,10 +64,17 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def resolve_revision(value: str) -> str | None:
+    """`--revision local` means a local checkpoint directory: pass no revision to HF."""
+    return None if value == "local" else value
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
-    parser.add_argument("--revision", required=True)
+    parser.add_argument(
+        "--revision", required=True, help="HF revision hash, or 'local' for a checkpoint directory"
+    )
     parser.add_argument("--train", type=Path, required=True)
     parser.add_argument("--validation", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -110,7 +117,7 @@ def main() -> None:
     torch.manual_seed(args.seed)
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=args.model,
-        revision=args.revision,
+        revision=resolve_revision(args.revision),
         max_seq_length=args.max_length,
         load_in_4bit=args.qlora,
         load_in_16bit=not args.qlora,

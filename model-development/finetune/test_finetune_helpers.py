@@ -261,3 +261,10 @@ def test_metric_mcq_uses_profiler_prompt_shape_and_answer_text():
 def test_metric_source_licenses_are_explicit_including_unknowns():
     assert build_metric_dataset.SOURCE_LICENSES["allenai/qasc"] == "CC-BY-4.0"
     assert build_metric_dataset.SOURCE_LICENSES["allenai/openbookqa"] == "unknown"
+
+
+def test_resolve_revision_maps_local_to_none_and_keeps_hashes():
+    assert train_lora.resolve_revision("local") is None
+    assert train_lora.resolve_revision("989aa7980e4cf806f80c7fef2b1adb7bc71aa306") == (
+        "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+    )
