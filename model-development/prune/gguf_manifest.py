@@ -56,7 +56,7 @@ def main() -> None:
     git = ["git", "-C", str(args.llama_dir)]
     commit = subprocess.check_output([*git, "rev-parse", "HEAD"], text=True).strip()
     tag = subprocess.run(
-        [*git, "describe", "--tags", "--exact-match"], text=True, capture_output=True
+        [*git, "describe", "--tags", "--exact-match"], text=True, capture_output=True, check=False
     ).stdout.strip()
     manifest = {
         "schema_version": 1,
