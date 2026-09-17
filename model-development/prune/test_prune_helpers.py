@@ -97,7 +97,9 @@ def test_accumulate_and_finalize_rank_the_identity_layer_lowest():
     # layers 0, 2 rotate by 90°; layer 3 rotates by 45°.
     t = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
     rot90 = np.array([[0.0, -1.0], [1.0, 0.0]])
-    rot45 = np.array([[np.cos(np.pi / 4), -np.sin(np.pi / 4)], [np.sin(np.pi / 4), np.cos(np.pi / 4)]])
+    rot45 = np.array(
+        [[np.cos(np.pi / 4), -np.sin(np.pi / 4)], [np.sin(np.pi / 4), np.cos(np.pi / 4)]]
+    )
     x0 = t
     x1 = x0 @ rot90.T
     x2 = x1
@@ -120,8 +122,14 @@ prune_gguf_layers = _load("prune_gguf_layers")  # imports gguf lazily, so loadin
 
 
 def test_plan_tensor_names_renumbers_blocks_and_keeps_globals():
-    names = ["token_embd.weight", "blk.0.attn_q.weight", "blk.1.attn_q.weight",
-             "blk.2.attn_q.weight", "blk.3.attn_q.weight", "output_norm.weight"]
+    names = [
+        "token_embd.weight",
+        "blk.0.attn_q.weight",
+        "blk.1.attn_q.weight",
+        "blk.2.attn_q.weight",
+        "blk.3.attn_q.weight",
+        "output_norm.weight",
+    ]
     plan = prune_gguf_layers.plan_tensor_names(names, 4, [1, 2])
     assert plan == [
         ("token_embd.weight", "token_embd.weight"),
@@ -158,8 +166,12 @@ def test_prune_gguf_roundtrip_drops_layers_and_rewrites_block_count(tmp_path):
     field = reader.fields["qwen2.block_count"]
     assert int(field.parts[field.data[0]][0]) == 2
     tensors = {t.name: t for t in reader.tensors}
-    assert set(tensors) == {"token_embd.weight", "blk.0.attn_q.weight", "blk.1.attn_q.weight",
-                            "output_norm.weight"}
+    assert set(tensors) == {
+        "token_embd.weight",
+        "blk.0.attn_q.weight",
+        "blk.1.attn_q.weight",
+        "output_norm.weight",
+    }
     assert float(tensors["blk.1.attn_q.weight"].data.reshape(-1)[0]) == 3.0  # old layer 3
     assert manifest["kept_layers"] == [0, 3]
     assert manifest["params_count"] == 32 + 2 * 16 + 4
@@ -175,16 +187,28 @@ def test_parameter_estimate_label_rounds_like_the_profiler_expects():
 
 
 def test_build_metadata_replaces_only_the_model_block_and_runtime_path():
-    base = {"team_id": "muta", "model": {"name": "old", "runtime": "llama.cpp",
-            "quantization": "GGUF Q4_K_M", "parameters_estimate": "1.54B",
-            "packaging": "binary_bundle"}, "_runtime": {"model_path": "model/old.gguf"}}
+    base = {
+        "team_id": "muta",
+        "model": {
+            "name": "old",
+            "runtime": "llama.cpp",
+            "quantization": "GGUF Q4_K_M",
+            "parameters_estimate": "1.54B",
+            "packaging": "binary_bundle",
+        },
+        "_runtime": {"model_path": "model/old.gguf"},
+    }
     meta = screen_metadata.build_metadata(
         base, "unhealed-21L-contiguous.gguf", 1_216_129_536, "GGUF Q4_K_M"
     )
     assert meta["team_id"] == "muta"
-    assert meta["model"] == {"name": "unhealed-21L-contiguous.gguf", "runtime": "llama.cpp",
-                             "quantization": "GGUF Q4_K_M", "parameters_estimate": "1.22B",
-                             "packaging": "binary_bundle"}
+    assert meta["model"] == {
+        "name": "unhealed-21L-contiguous.gguf",
+        "runtime": "llama.cpp",
+        "quantization": "GGUF Q4_K_M",
+        "parameters_estimate": "1.22B",
+        "packaging": "binary_bundle",
+    }
     assert meta["_runtime"] == {"model_path": "model/unhealed-21L-contiguous.gguf"}
 
 
@@ -192,11 +216,13 @@ score_candidates = _load("score_candidates")
 
 
 def _audit(tps, peak, arc):
-    return {"throughput": {"tokens_per_second_generation": tps, "first_token_latency_ms": 1.0},
-            "memory": {"peak_rss_mb": peak, "steady_state_rss_mb": peak},
-            "accuracy": [{"benchmark": "arc_easy", "samples": 50, "score": arc}],
-            "cpu_thermal": {"core_temp_c_peak": None, "throttled": False, "cpu_percent_p99": 70.0},
-            "model_info": {"params_count": 1, "params_match": True}}
+    return {
+        "throughput": {"tokens_per_second_generation": tps, "first_token_latency_ms": 1.0},
+        "memory": {"peak_rss_mb": peak, "steady_state_rss_mb": peak},
+        "accuracy": [{"benchmark": "arc_easy", "samples": 50, "score": arc}],
+        "cpu_thermal": {"core_temp_c_peak": None, "throttled": False, "cpu_percent_p99": 70.0},
+        "model_info": {"params_count": 1, "params_match": True},
+    }
 
 
 def test_break_even_matches_the_exchange_rates():
@@ -299,3 +325,29 @@ def test_gguf_manifest_describe_counts_params_depth_and_types(tmp_path):
     writer.close()
     info = gguf_manifest.describe(path)
     assert info == {"params_count": 64, "block_count": 2, "tensor_types": ["F16", "F32"]}
+
+
+def test_pick_metric_prefers_acc_norm_and_finds_exact_match_behind_sample_len():
+    arc = {
+        "alias": "arc_easy",
+        "acc,none": 0.7,
+        "acc_norm,none": 0.736,
+        "acc_norm_stderr,none": 0.02,
+    }
+    assert accuracy_battery.pick_metric(arc) == (0.736, "acc_norm,none")
+    gsm = {
+        "alias": "gsm8k",
+        "sample_len,none": 40.0,
+        "exact_match,strict-match": 0.3,
+        "exact_match_stderr,strict-match": 0.07,
+        "exact_match,flexible-extract": 0.35,
+    }
+    assert accuracy_battery.pick_metric(gsm) == (0.35, "exact_match,flexible-extract")
+    with pytest.raises(ValueError):
+        accuracy_battery.pick_metric({"alias": "x", "sample_len,none": 40.0})
+    assert accuracy_battery.numeric_metrics(gsm) == {
+        "sample_len,none": 40.0,
+        "exact_match,strict-match": 0.3,
+        "exact_match_stderr,strict-match": 0.07,
+        "exact_match,flexible-extract": 0.35,
+    }
