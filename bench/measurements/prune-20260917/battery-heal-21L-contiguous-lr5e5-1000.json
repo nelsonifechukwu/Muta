@@ -1,0 +1,35 @@
+{
+  "model": "/w/subs/heal-21L-contiguous-lr5e5-1000/model/heal-21L-contiguous-lr5e5-1000-Q4_K_M.gguf",
+  "model_sha256": "3affae72caf68124c05433fd38ddad48cb6664f3c63da55ee6297e389675afca",
+  "seed": 42,
+  "tasks_requested": [
+    "arc_easy:500",
+    "arc_challenge:100",
+    "gsm8k:40"
+  ],
+  "complete": true,
+  "arc_easy": {
+    "benchmark": "arc_easy",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 500,
+    "score": 0.72,
+    "metric": "acc_norm"
+  },
+  "arc_challenge": {
+    "benchmark": "arc_challenge",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 100,
+    "score": 0.37,
+    "metric": "acc_norm"
+  },
+  "gsm8k": {
+    "benchmark": "gsm8k",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 40,
+    "score": 40.0,
+    "metric": "sample_len"
+  }
+}

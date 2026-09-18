@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.1.0",
+  "profiler_version": "adtc-profiler 0.1.0",
+  "submission": {
+    "team_id": "muta",
+    "domain": "math_scientific_reasoning",
+    "language_scope": [
+      "en",
+      "aa",
+      "af",
+      "am",
+      "ar",
+      "bem",
+      "din",
+      "ff",
+      "ha",
+      "ig",
+      "kg",
+      "mg",
+      "ny",
+      "rn",
+      "rw",
+      "sn",
+      "so",
+      "ss",
+      "st",
+      "sw",
+      "tn",
+      "xh",
+      "yo",
+      "zu",
+      "es",
+      "fr",
+      "pt",
+      "de"
+    ],
+    "african_alpha_claim": true,
+    "budget_laptop_claim": true,
+    "submitter": {
+      "name": "Nelson Elijah",
+      "email": "nelson.ifechukwu@gmail.com",
+      "github_handle": "nelsonifechukwu"
+    },
+    "cross_disciplinary_pairing": {
+      "discipline": "education",
+      "load_bearing": true,
+      "description": "Muta: an offline tutor that teaches African students at every level to reason through maths and science problems"
+    },
+    "test_prompts": [
+      {
+        "prompt_id": "tp_001",
+        "prompt": "Multiple choice: A school in Lagos buys 6 boxes of chalk at ₦500 per box. What is the total cost? A. ₦1,000 B. ₦2,500 C. ₦3,000 D. ₦3,500. Answer with the correct option and one calculation."
+      },
+      {
+        "prompt_id": "tp_002",
+        "prompt": "Multiple choice: Which process allows green plants to use sunlight to make food? A. Respiration B. Photosynthesis C. Evaporation D. Condensation. Answer with the correct option and one sentence of explanation."
+      }
+    ],
+    "model": {
+      "name": "heal-21L-contiguous-lr5e5-1000-Q4_K_M.gguf",
+      "runtime": "llama.cpp",
+      "quantization": "GGUF Q4_K_M",
+      "parameters_estimate": "1.22B",
+      "packaging": "binary_bundle"
+    }
+  },
+  "environment": {
+    "measured_on": "audit_cloud_vm",
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.80GHz",
+    "ram_gb": 7.8,
+    "gpu": "none",
+    "os": "Debian GNU/Linux 13 (trixie)"
+  },
+  "throughput": {
+    "tokens_per_second_generation": 7.15,
+    "first_token_latency_ms": 48432.59,
+    "prompt_tokens": 512,
+    "generated_tokens": 128
+  },
+  "memory": {
+    "peak_rss_mb": 903.94,
+    "steady_state_rss_mb": 832.2,
+    "peak_vms_mb": 1349.32
+  },
+  "accuracy": [
+    {
+      "benchmark": "arc_easy",
+      "dataset_version": "lm-eval-harness",
+      "language": "en",
+      "samples": 50,
+      "score": 0.78,
+      "metric": "acc_norm"
+    }
+  ],
+  "cpu_thermal": {
+    "cpu_percent_p99": 75.7,
+    "core_temp_c_peak": null,
+    "throttled": false
+  },
+  "reproducibility": {
+    "git_commit_sha": "000000000000",
+    "docker_image_digest": "unknown",
+    "random_seed": 42
+  },
+  "model_info": {
+    "params_count": 1216129536,
+    "context_length": 32768,
+    "architecture": "qwen2",
+    "claimed_params_estimate": "1.22B",
+    "params_match": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "model": "/w/subs/heal-24L-contiguous-lr5e5-1000/model/heal-24L-contiguous-lr5e5-1000-Q4_K_M.gguf",
+  "model_sha256": "dd12a91de0604236a0fd7c60b2cd9df96fd0ba62f5b5018d8615a0fbee69e6b8",
+  "seed": 42,
+  "tasks_requested": [
+    "arc_easy:500",
+    "arc_challenge:100",
+    "gsm8k:40"
+  ],
+  "complete": true,
+  "arc_easy": {
+    "benchmark": "arc_easy",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 500,
+    "score": 0.736,
+    "metric": "acc_norm"
+  },
+  "arc_challenge": {
+    "benchmark": "arc_challenge",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 100,
+    "score": 0.48,
+    "metric": "acc_norm"
+  },
+  "gsm8k": {
+    "benchmark": "gsm8k",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 40,
+    "score": 40.0,
+    "metric": "sample_len"
+  }
+}

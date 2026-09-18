@@ -1,0 +1,71 @@
+{
+  "model": "/w/subs/published-28L/model/Muta-Tutor-Qwen2.5-1.5B-Q4_K_M.gguf",
+  "model_sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb",
+  "seed": 42,
+  "tasks_requested": [
+    "arc_easy:500",
+    "arc_challenge:100",
+    "gsm8k:40"
+  ],
+  "complete": true,
+  "arc_easy": {
+    "benchmark": "arc_easy",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 500,
+    "score": 0.78,
+    "metric": "acc_norm",
+    "metric_key": "acc_norm,none",
+    "metrics": {
+      "sample_len": 500.0,
+      "acc,none": 0.768,
+      "acc_stderr,none": 0.01889619359195206,
+      "acc_norm,none": 0.78,
+      "acc_norm_stderr,none": 0.018544211375820324
+    },
+    "profiler_pick": {
+      "score": 0.78,
+      "metric": "acc_norm"
+    }
+  },
+  "arc_challenge": {
+    "benchmark": "arc_challenge",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 100,
+    "score": 0.48,
+    "metric": "acc_norm",
+    "metric_key": "acc_norm,none",
+    "metrics": {
+      "sample_len": 100.0,
+      "acc,none": 0.42,
+      "acc_stderr,none": 0.049604496374885836,
+      "acc_norm,none": 0.48,
+      "acc_norm_stderr,none": 0.050211673156867795
+    },
+    "profiler_pick": {
+      "score": 0.48,
+      "metric": "acc_norm"
+    }
+  },
+  "gsm8k": {
+    "benchmark": "gsm8k",
+    "dataset_version": "lm-eval-harness",
+    "language": "en",
+    "samples": 40,
+    "score": 0.45,
+    "metric": "exact_match",
+    "metric_key": "exact_match,flexible-extract",
+    "metrics": {
+      "sample_len": 40.0,
+      "exact_match,strict-match": 0.425,
+      "exact_match_stderr,strict-match": 0.07915823166939517,
+      "exact_match,flexible-extract": 0.45,
+      "exact_match_stderr,flexible-extract": 0.07966275068156915
+    },
+    "profiler_pick": {
+      "score": 40.0,
+      "metric": "sample_len"
+    }
+  }
+}
