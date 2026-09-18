@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 import sys
@@ -62,6 +63,11 @@ class FakeCuda:
         return 32_000
 
 
+class FakeControl:
+    should_evaluate = False
+    should_save = False
+
+
 def _row():
     return {"id": "row-1", "mode": "chat", "prompt": "p", "completion": "c"}
 
@@ -77,6 +83,143 @@ def test_cuda_memory_receipt_uses_exact_byte_counters():
         "peak_allocated_bytes": 31_000,
         "peak_reserved_bytes": 32_000,
     }
+
+
+def test_parse_milestone_steps_requires_unique_ascending_positive_values():
+    assert round2.parse_milestone_steps("1174,2347,4693") == (1174, 2347, 4693)
+    for value in ("", "1,,2", "0,2", "2,1", "1,1", "one,2"):
+        with pytest.raises(argparse.ArgumentTypeError):
+            round2.parse_milestone_steps(value)
+
+
+def test_milestone_control_only_requests_eval_and_save_at_exact_steps():
+    untouched = round2.apply_milestone_control(
+        step=75,
+        milestones=(25, 50, 100),
+        control=FakeControl(),
+    )
+    assert not untouched.should_evaluate
+    assert not untouched.should_save
+    selected = round2.apply_milestone_control(
+        step=50,
+        milestones=(25, 50, 100),
+        control=FakeControl(),
+    )
+    assert selected.should_evaluate
+    assert selected.should_save
+
+
+def test_milestone_evidence_accepts_save_total_limit_rotation():
+    round2.validate_milestone_evidence(
+        milestones=(25, 50, 75, 100),
+        observed_eval_steps=[25, 50, 75, 100],
+        session_save_steps=[25, 50, 75, 100],
+        surviving_checkpoint_steps=[50, 75, 100],
+        resume_step=None,
+        planned_steps=100,
+    )
+
+
+def test_milestone_evidence_requires_only_post_resume_save_callbacks():
+    round2.validate_milestone_evidence(
+        milestones=(25, 50, 75, 100),
+        observed_eval_steps=[25, 50, 75, 100],
+        session_save_steps=[75, 100],
+        surviving_checkpoint_steps=[50, 75, 100],
+        resume_step=50,
+        planned_steps=100,
+    )
+    with pytest.raises(RuntimeError, match="save callbacks"):
+        round2.validate_milestone_evidence(
+            milestones=(25, 50, 75, 100),
+            observed_eval_steps=[25, 50, 75, 100],
+            session_save_steps=[100],
+            surviving_checkpoint_steps=[50, 75, 100],
+            resume_step=50,
+            planned_steps=100,
+        )
+
+
+def test_campaign_config_receipt_refuses_changed_config(tmp_path):
+    config = tmp_path / "campaign.json"
+    config.write_text("{}")
+    digest = round2.sha256_file(config)
+    assert round2._campaign_config_receipt(config, expected_sha256=digest)["sha256"] == digest
+    config.write_text('{"changed": true}')
+    with pytest.raises(round2.CampaignInputError, match="SHA-256 mismatch"):
+        round2._campaign_config_receipt(config, expected_sha256=digest)
+
+
+def test_checkpoint_must_be_a_complete_direct_child_of_run(tmp_path):
+    root = tmp_path / "checkpoints"
+    checkpoint = root / "checkpoint-25"
+    checkpoint.mkdir(parents=True)
+    (checkpoint / "trainer_state.json").write_text("{}")
+    assert round2._checkpoint_step(checkpoint, checkpoint_root=root) == 25
+    outside = tmp_path / "other" / "checkpoint-25"
+    outside.mkdir(parents=True)
+    (outside / "trainer_state.json").write_text("{}")
+    with pytest.raises(round2.CampaignInputError, match="outside this run"):
+        round2._checkpoint_step(outside, checkpoint_root=root)
+
+
+def test_checkpoint_inventory_refuses_partial_save(tmp_path):
+    root = tmp_path / "checkpoints"
+    complete = root / "checkpoint-25"
+    complete.mkdir(parents=True)
+    (complete / "trainer_state.json").write_text("{}")
+    partial = root / "checkpoint-50"
+    partial.mkdir()
+    with pytest.raises(round2.CampaignInputError, match="incomplete checkpoint evidence"):
+        round2._complete_checkpoint_steps(root)
+    (partial / "trainer_state.json").write_text("{}")
+    assert round2._complete_checkpoint_steps(root) == [25, 50]
+
+
+def test_run_directory_lock_refuses_concurrent_trainer(tmp_path):
+    with (
+        round2._exclusive_run_lock(tmp_path),
+        pytest.raises(RuntimeError, match="another trainer"),
+        round2._exclusive_run_lock(tmp_path),
+    ):
+        pass
+
+
+def test_final_adapter_is_bound_to_best_checkpoint(tmp_path):
+    checkpoint = tmp_path / "checkpoints" / "checkpoint-50"
+    checkpoint.mkdir(parents=True)
+    (checkpoint / "trainer_state.json").write_text("{}")
+    (checkpoint / "adapter_model.safetensors").write_bytes(b"best")
+    (checkpoint / "adapter_config.json").write_bytes(b"config")
+    adapter = tmp_path / "adapter"
+    adapter.mkdir()
+    (adapter / "adapter_model.safetensors").write_bytes(b"best")
+    (adapter / "adapter_config.json").write_bytes(b"config")
+    state = type(
+        "State",
+        (),
+        {"best_model_checkpoint": str(checkpoint), "best_metric": 1.25},
+    )()
+    trainer = type("Trainer", (), {"state": state})()
+    receipt = round2._selected_adapter_receipt(
+        trainer=trainer,
+        output=tmp_path,
+        adapter_dir=adapter,
+        milestones=(25, 50, 100),
+    )
+    assert receipt["best_checkpoint_step"] == 50
+    assert receipt["policy"] == "minimum_eval_loss"
+    assert receipt["final_adapter_config_sha256"] == round2.sha256_file(
+        adapter / "adapter_config.json"
+    )
+    (adapter / "adapter_model.safetensors").write_bytes(b"last-not-best")
+    with pytest.raises(RuntimeError, match="do not match"):
+        round2._selected_adapter_receipt(
+            trainer=trainer,
+            output=tmp_path,
+            adapter_dir=adapter,
+            milestones=(25, 50, 100),
+        )
 
 
 def test_completion_mask_contains_only_assistant_tokens():

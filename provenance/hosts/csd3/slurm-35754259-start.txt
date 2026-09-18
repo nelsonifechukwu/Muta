@@ -1,0 +1,34 @@
+JobId=35754259 JobName=muta-r2-pilot-4g
+   SLUID=s8QHM2S8FZHE00
+   UserId=ein21(49198) GroupId=ein21(49217) MCS_label=N/A
+   Priority=10000 Nice=0 Account=mlmi-ein21-sl2-gpu QOS=intr
+   JobState=RUNNING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   DerivedExitCode=0:0
+   RunTime=00:00:09 TimeLimit=00:30:00 TimeMin=N/A
+   SubmitTime=2026-09-18T04:20:52 EligibleTime=2026-09-18T04:20:52
+   AccrueTime=2026-09-18T04:20:52
+   StartTime=2026-09-18T04:21:17 EndTime=2026-09-18T04:51:17 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-09-18T04:21:17 Scheduler=Main
+   Partition=ampere AllocNode:Sid=login-q-1:3325124
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=gpu-q-23
+   BatchHost=gpu-q-23
+   NumNodes=1 NumCPUs=128 NumTasks=4 CPUs/Task=9 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=32,mem=256G,node=1,billing=32,gres/gpu=4
+   AllocTRES=cpu=128,mem=256G,node=1,billing=128,gres/gpu=4
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   JOB_GRES=gpu:nvidia_a100:4
+     Nodes=gpu-q-23 CPU_IDs=0-127 Mem=262144 GRES=gpu:nvidia_a100:4(IDX:0-3)
+   MinCPUsNode=36 MinMemoryNode=256G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=NO Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/rds/user/ein21/hpc-work/muta-round2/training/slurm/train-round2-pilots-4gpu.sbatch
+   SubmitLine=sbatch --parsable /rds/user/ein21/hpc-work/muta-round2/training/slurm/train-round2-pilots-4gpu.sbatch
+   WorkDir=/home/ein21
+   StdErr=/rds/user/ein21/hpc-work/muta-round2/logs/muta-r2-pilot-4g-35754259.err
+   StdIn=/dev/null
+   StdOut=/rds/user/ein21/hpc-work/muta-round2/logs/muta-r2-pilot-4g-35754259.out
+   TresPerNode=gres/gpu:4
+   TresPerTask=cpu=8
+

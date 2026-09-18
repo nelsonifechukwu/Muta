@@ -1,0 +1,174 @@
+{
+  "rows": [
+    {
+      "adapter_model_sha256": "4fb5928a9dcfa7512e6df2b36c973aeccb21cb89890d1f2e8c19b82a9b3df117",
+      "adapter_tree_sha256": "5f7fc5691fa3a95d7a730f3e601927aa338c958fa404bf122e7dcfe39bda81a7",
+      "best_checkpoint_step": 313,
+      "best_eval_loss": 0.2170596420764923,
+      "candidate": "warm-r16-lr2e5",
+      "elapsed_seconds": 696.747,
+      "final_eval_loss": 0.2170596420764923,
+      "git_commit": "a48eeae987c9f4d5ae190b7a24714d0f67770297",
+      "global_step": 313,
+      "learning_rate": 2e-05,
+      "peak_training_allocated_bytes": 20840740352,
+      "peak_training_reserved_bytes": 21315452928,
+      "post_training_eval": {
+        "eval_loss": 0.2170596420764923,
+        "step": 313
+      },
+      "rank": 16,
+      "scheduled_evals": [
+        {
+          "eval_loss": 0.5751186609268188,
+          "step": 100
+        },
+        {
+          "eval_loss": 0.2650516629219055,
+          "step": 200
+        },
+        {
+          "eval_loss": 0.21717318892478943,
+          "step": 300
+        },
+        {
+          "eval_loss": 0.2170596420764923,
+          "step": 313
+        }
+      ],
+      "train_loss": 0.5380689214212826,
+      "train_runtime_seconds": 650.0708,
+      "train_samples_per_second": 30.766,
+      "training_manifest_sha256": "2be2ae18ed644d61e83e8b4b7120d3af38c8d703662ee44235629e0b01a92a97",
+      "verified": true
+    },
+    {
+      "adapter_model_sha256": "0625bd1811dde89c0704ddce90eb77bac8d5e9c65484843ae721d9ef4b7dbfe0",
+      "adapter_tree_sha256": "eedae2da530769a2d2b261bcec6ac11006210c3b068f0ce592e0ad02e781d311",
+      "best_checkpoint_step": 313,
+      "best_eval_loss": 0.5780092477798462,
+      "candidate": "warm-r16-lr1e5",
+      "elapsed_seconds": 696.617,
+      "final_eval_loss": 0.5780092477798462,
+      "git_commit": "a48eeae987c9f4d5ae190b7a24714d0f67770297",
+      "global_step": 313,
+      "learning_rate": 1e-05,
+      "peak_training_allocated_bytes": 20840740352,
+      "peak_training_reserved_bytes": 21315452928,
+      "post_training_eval": {
+        "eval_loss": 0.5780092477798462,
+        "step": 313
+      },
+      "rank": 16,
+      "scheduled_evals": [
+        {
+          "eval_loss": 0.9453438520431519,
+          "step": 100
+        },
+        {
+          "eval_loss": 0.6284356713294983,
+          "step": 200
+        },
+        {
+          "eval_loss": 0.5781265497207642,
+          "step": 300
+        },
+        {
+          "eval_loss": 0.5780092477798462,
+          "step": 313
+        }
+      ],
+      "train_loss": 0.8575709871590709,
+      "train_runtime_seconds": 650.8321,
+      "train_samples_per_second": 30.73,
+      "training_manifest_sha256": "bf08259c64979360bce2e0f3f71c3508ce43e822eb5b4aea365e6ebefb02c098",
+      "verified": true
+    },
+    {
+      "adapter_model_sha256": "4b1b487032875a348cb80e716f0a12e8ab6431487528c053772850591a419d24",
+      "adapter_tree_sha256": "4ec07d3668e9a772573c7f6553319760af00fb28cc1c8743a3c8fe5ce97a0aff",
+      "best_checkpoint_step": 313,
+      "best_eval_loss": 0.9617626667022705,
+      "candidate": "warm-r16-lr5e6",
+      "elapsed_seconds": 696.759,
+      "final_eval_loss": 0.9617626667022705,
+      "git_commit": "a48eeae987c9f4d5ae190b7a24714d0f67770297",
+      "global_step": 313,
+      "learning_rate": 5e-06,
+      "peak_training_allocated_bytes": 20840740352,
+      "peak_training_reserved_bytes": 21315452928,
+      "post_training_eval": {
+        "eval_loss": 0.9617626667022705,
+        "step": 313
+      },
+      "rank": 16,
+      "scheduled_evals": [
+        {
+          "eval_loss": 1.2031965255737305,
+          "step": 100
+        },
+        {
+          "eval_loss": 1.0072091817855835,
+          "step": 200
+        },
+        {
+          "eval_loss": 0.9618672132492065,
+          "step": 300
+        },
+        {
+          "eval_loss": 0.9617626667022705,
+          "step": 313
+        }
+      ],
+      "train_loss": 1.15316592390164,
+      "train_runtime_seconds": 650.1006,
+      "train_samples_per_second": 30.764,
+      "training_manifest_sha256": "6ec33e9cbcba01c86d775977a35bf6f791f46ee110d167db1fb46c8815a3cb6c",
+      "verified": true
+    },
+    {
+      "adapter_model_sha256": "be97f726db28a183c6312160a669d04c42d780441942f094f3063f7274484db8",
+      "adapter_tree_sha256": "8b91481fcf971f20e35141cdd53ae85b9b37cf13298fb3c5321ec91c5c8a18d8",
+      "best_checkpoint_step": 313,
+      "best_eval_loss": 1.151685357093811,
+      "candidate": "warm-r8-lr5e6",
+      "elapsed_seconds": 696.733,
+      "final_eval_loss": 1.151685357093811,
+      "git_commit": "a48eeae987c9f4d5ae190b7a24714d0f67770297",
+      "global_step": 313,
+      "learning_rate": 5e-06,
+      "peak_training_allocated_bytes": 20785804800,
+      "peak_training_reserved_bytes": 21221081088,
+      "post_training_eval": {
+        "eval_loss": 1.151685357093811,
+        "step": 313
+      },
+      "rank": 8,
+      "scheduled_evals": [
+        {
+          "eval_loss": 1.3435758352279663,
+          "step": 100
+        },
+        {
+          "eval_loss": 1.1831589937210083,
+          "step": 200
+        },
+        {
+          "eval_loss": 1.1518441438674927,
+          "step": 300
+        },
+        {
+          "eval_loss": 1.151685357093811,
+          "step": 313
+        }
+      ],
+      "train_loss": 1.2959805311867223,
+      "train_runtime_seconds": 649.1364,
+      "train_samples_per_second": 30.81,
+      "training_manifest_sha256": "d5f1be618c10899fdb4cda9e5c6c7c03e1830a2ff6983a5bb02f7411656d8536",
+      "verified": true
+    }
+  ],
+  "schema_version": 1,
+  "slurm_job_id": "35754294"
+}

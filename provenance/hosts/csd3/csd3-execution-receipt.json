@@ -1,0 +1,85 @@
+{
+  "allocated_gpu_hours_total": 1.3755555555555556,
+  "attempts": [
+    {
+      "allocated_gpu_hours": 0.0,
+      "elapsed_seconds": 0,
+      "job_id": "35754176",
+      "note": "Low-priority array cancelled before allocation after the accepted intr job began running.",
+      "qos": "gpu1",
+      "shape": "array[0-3], 1 GPU/task",
+      "state": "CANCELLED"
+    },
+    {
+      "allocated_gpu_hours": 0.13777777777777778,
+      "cancellation_command": "scancel 35754259",
+      "cancellation_reason": "First 4-GPU wrapper let each exclusive srun step inherit the full 256 GiB job memory request, serializing the four pilots. Cancelled intentionally after diagnosis; no training checkpoint existed.",
+      "elapsed_seconds": 124,
+      "job_id": "35754259",
+      "partial_artifact": "runs/failed-system-35754259-warm-r16-lr1e5",
+      "qos": "intr",
+      "shape": "1 node, 4 GPUs",
+      "state": "CANCELLED by UID 49198",
+      "wrapper_sha256": "19913d10f1ee4bceffd4d8ec0ca43a98258d25ce419e697ef187d60372a0ec24"
+    },
+    {
+      "allocated_gpu_hours": 1.2377777777777779,
+      "elapsed_seconds": 1114,
+      "exit_code": "0:0",
+      "job_id": "35754294",
+      "qos": "intr",
+      "shape": "1 node, 4 GPUs; four exclusive 60 GiB/8 CPU steps",
+      "state": "COMPLETED",
+      "time_limit_seconds": 1620,
+      "wrapper_artifact": {
+        "bytes": 2076,
+        "path": "provenance/hosts/csd3/slurm-35754294-batch-script.sbatch",
+        "sha256": "fee32a461e24419bec7da287924990f93c1e606d2d3701f8e97c2749c3cecb2d"
+      },
+      "wrapper_sha256": "fee32a461e24419bec7da287924990f93c1e606d2d3701f8e97c2749c3cecb2d"
+    }
+  ],
+  "created_utc": "2026-09-18T03:46:29.024819+00:00",
+  "evidence_files": [
+    "provenance/hosts/csd3/slurm-submission-cancellation-receipt.txt",
+    "provenance/hosts/csd3/slurm-35754259-before-cancel.txt",
+    "provenance/hosts/csd3/slurm-35754259-cancel-receipt.txt",
+    "provenance/hosts/csd3/slurm-35754294-final.txt"
+  ],
+  "gpu_hour_budget": 2.0,
+  "host": "gpu-q-23",
+  "known_execution_deviations": [
+    "The submitted batch script recorded exact 64/64/1 batch arguments but predated the later --protocol-deviation CLI binding.",
+    "The submitted batch script used the trainer's shared default Unsloth compile cache; all four runs nevertheless completed and passed the independent artifact compiler."
+  ],
+  "protocol_deviation": {
+    "direct_cli_binding_in_submitted_script": false,
+    "pre_result_decision_evidence": "The staging receipt was created before this job and records the exact 64/64/1 hardware override against frozen config SHA-256 35eb48a88b7958f856eb757b1ef05f8022fd238d9465ec770b0d2ff54d14ad23.",
+    "receipt_path": "provenance/calibration/oracle-b64-20260918/protocol-deviation.json",
+    "receipt_sha256": "2b969338ae14e4bc184db8eec41d752a0040a2958058b981a750765438cd342e"
+  },
+  "results": {
+    "all_verified": true,
+    "completed_candidates": 4,
+    "csv": {
+      "path": "/rds/user/ein21/hpc-work/muta-round2/provenance/csd3-pilot-summary.csv",
+      "sha256": "8e8407aaad9e94278d8cebac9fcca3bc70bd074dc22d473917567b298df9e400"
+    },
+    "json": {
+      "path": "/rds/user/ein21/hpc-work/muta-round2/provenance/csd3-pilot-summary.json",
+      "sha256": "738ae3f5a337f3208a0fa26bf8b15b54a59be57c5a03e7b396c53d2a3cd6023d"
+    },
+    "local_corrected_json": {
+      "correction": "Separated the duplicate explicit post-training evaluation from the four scheduled evaluations; no metric value changed.",
+      "path": "provenance/hosts/csd3/csd3-pilot-summary.json",
+      "sha256": "d4fec2c810f36ff3593d77f4176ddc1b0c6871b0d23d1efc06dbd038962da835"
+    }
+  },
+  "schema_version": 1,
+  "staging_receipt": {
+    "bytes": 9348,
+    "path": "/rds/user/ein21/hpc-work/muta-round2/provenance/csd3-staging-receipt.json",
+    "sha256": "6c91b1a659023b6d97f018e14685e24f295fb4f34dffbf05deac3d3f28096ded"
+  },
+  "training_repo_commit": "a48eeae987c9f4d5ae190b7a24714d0f67770297"
+}

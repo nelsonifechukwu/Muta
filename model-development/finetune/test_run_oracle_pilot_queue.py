@@ -50,30 +50,28 @@ def _args(tmp_path):
         batch_size=32,
         eval_batch_size=None,
         gradient_accumulation=2,
+        protocol_deviation=None,
         dataloader_workers=8,
     )
 
 
 def test_candidate_selection_defaults_to_oracle_config_order():
-    assert queue.select_candidate_ids(
-        _config(), host_filter="oracle", requested=None
-    ) == ["oracle-a", "oracle-b"]
+    assert queue.select_candidate_ids(_config(), host_filter="oracle", requested=None) == [
+        "oracle-a",
+        "oracle-b",
+    ]
 
 
 def test_candidate_selection_refuses_wrong_host():
     with pytest.raises(ValueError, match="do not belong"):
-        queue.select_candidate_ids(
-            _config(), host_filter="oracle", requested=["csd3-a"]
-        )
+        queue.select_candidate_ids(_config(), host_filter="oracle", requested=["csd3-a"])
 
 
 def test_latest_checkpoint_requires_trainer_state_and_uses_highest_step(tmp_path):
     for name in ("checkpoint-9", "checkpoint-100", "checkpoint-invalid"):
         (tmp_path / "checkpoints" / name).mkdir(parents=True)
     (tmp_path / "checkpoints" / "checkpoint-9" / "trainer_state.json").write_text("{}")
-    (tmp_path / "checkpoints" / "checkpoint-100" / "trainer_state.json").write_text(
-        "{}"
-    )
+    (tmp_path / "checkpoints" / "checkpoint-100" / "trainer_state.json").write_text("{}")
     assert queue.latest_checkpoint(tmp_path).name == "checkpoint-100"
 
 

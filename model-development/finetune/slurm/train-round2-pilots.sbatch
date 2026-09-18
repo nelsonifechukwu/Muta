@@ -28,6 +28,7 @@ export HF_HOME="$MUTA_WORK/cache/huggingface"
 export TOKENIZERS_PARALLELISM=false
 export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export UNSLOTH_COMPILE_LOCATION="$MUTA_WORK/cache/unsloth-${SLURM_ARRAY_TASK_ID}"
 
 source "$MUTA_WORK/env/bin/activate"
 
@@ -42,6 +43,7 @@ srun --unbuffered python "$MUTA_WORK/training/launch_round2.py" \
   --dataset-manifest "$MUTA_WORK/data/muta-stem-v2-sft-300k/manifest.json" \
   --validation-manifest "$MUTA_WORK/data/round2-dev-5000/manifest.json" \
   --output-root "$MUTA_WORK/runs/pilots" \
+  --protocol-deviation "$MUTA_WORK/calibration/oracle-b64-20260918/protocol-deviation.json" \
   --batch-size 64 \
   --eval-batch-size 64 \
   --gradient-accumulation 1 \

@@ -1,0 +1,177 @@
+{
+  "base_lineage": "/rds/user/ein21/hpc-work/muta-round2/lineage/incumbent-recovery.json",
+  "batch_size": 64,
+  "campaign_io_sha256": "ded88829f91109eb6664d3cf177cde7a8c9665cab731204213ab33047b8fe121",
+  "dataloader_workers": 8,
+  "dataset": {
+    "dataset_fingerprint_sha256": "037edf28cccff62d90c23e2d6caf56b9998dea6928080f98af2a513f9f92910e",
+    "manifest_path": "/rds/user/ein21/hpc-work/muta-round2/data/muta-stem-v2-sft-300k/manifest.json",
+    "manifest_sha256": "93b7dbcbad72350e099d8951effcbc9a253693dc364b25ffc165102a6e844f4e",
+    "row_count": 300350,
+    "shards": [
+      {
+        "bytes": 67687739,
+        "path": "part-00000.jsonl",
+        "rows": 25000,
+        "sha256": "4640a201fb729650d73b371bb35de1dc898d2334f7f76af864a67ce9c6d6b2f1"
+      },
+      {
+        "bytes": 60424563,
+        "path": "part-00001.jsonl",
+        "rows": 25000,
+        "sha256": "ce778cc9a0f59cdabaf68dff228ad8ac80d3a740cdf9924d9307acff78569dda"
+      },
+      {
+        "bytes": 66360072,
+        "path": "part-00002.jsonl",
+        "rows": 25000,
+        "sha256": "94e7fa72cd4c715241fa9a4e119c2a7b5b076cacac492ba0333227e523353643"
+      },
+      {
+        "bytes": 62842881,
+        "path": "part-00003.jsonl",
+        "rows": 25000,
+        "sha256": "da294b457e6c06266fc608a82581b9ed11c007d51b66a2c1d07fd45055e382d6"
+      },
+      {
+        "bytes": 68257605,
+        "path": "part-00004.jsonl",
+        "rows": 25000,
+        "sha256": "3f2207562d5e435c46fdb5a961dc6c1c223056b528bec5be40f764ff3aab01ce"
+      },
+      {
+        "bytes": 64169191,
+        "path": "part-00005.jsonl",
+        "rows": 25000,
+        "sha256": "772a2e483849156836a44199ef1acdaddefd2ce944f906326c8a30274f135aa8"
+      },
+      {
+        "bytes": 63856555,
+        "path": "part-00006.jsonl",
+        "rows": 25000,
+        "sha256": "7f1755035c36723a04c2e808ca17d439dabd681fe42d89bcb6ef849eb62a45a2"
+      },
+      {
+        "bytes": 66590047,
+        "path": "part-00007.jsonl",
+        "rows": 25000,
+        "sha256": "aed590e62510afb960a34df9db965bad475781ef84014c87de1b709840c15184"
+      },
+      {
+        "bytes": 64782768,
+        "path": "part-00008.jsonl",
+        "rows": 25000,
+        "sha256": "1294ae40409d45657a42b0b4e2c03f1827cd0bb884dffb9e2037dfd9b2b5a59c"
+      },
+      {
+        "bytes": 69842629,
+        "path": "part-00009.jsonl",
+        "rows": 25000,
+        "sha256": "2586ec448656a1746170e376e4fb049917bf0b9eabe2a5cc304ac708cc51a9d9"
+      },
+      {
+        "bytes": 65315098,
+        "path": "part-00010.jsonl",
+        "rows": 25000,
+        "sha256": "9b13f65d1a60da270a38803384c80cd96b63550af97cb9953fe0725b001dc09f"
+      },
+      {
+        "bytes": 54307774,
+        "path": "part-00011.jsonl",
+        "rows": 25000,
+        "sha256": "60440aac97e55949ae85472a81c2b5b9161b8df3e43a93510721311e49507ea0"
+      },
+      {
+        "bytes": 296036,
+        "path": "part-00012-private-waec-e1720e95858d.jsonl",
+        "rows": 47,
+        "sha256": "c165a0e0f7ede07b9e2843aef5ac714c88b45dbdfd73f99d733d3b35b115bb4e"
+      },
+      {
+        "bytes": 1716873,
+        "path": "part-00013-private-waec-363447d90421.jsonl",
+        "rows": 303,
+        "sha256": "9514e87da6237cd0f2dd9b6f73d19d7ba447ea83ecfb333cf45e8778f22648c6"
+      }
+    ]
+  },
+  "dataset_manifest": "/rds/user/ein21/hpc-work/muta-round2/data/muta-stem-v2-sft-300k/manifest.json",
+  "epochs": 1.0,
+  "eval_batch_size": 64,
+  "eval_steps": 100,
+  "git": {
+    "available": true,
+    "commit": "a48eeae987c9f4d5ae190b7a24714d0f67770297",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "dirty": false,
+    "status": []
+  },
+  "gradient_accumulation": 1,
+  "learning_rate": 2e-05,
+  "lineage": "warm",
+  "lineage_receipt_sha256": "27c21acb1425511f0cb013283a522afe69409aa25c91412946b040b89fc43354",
+  "logging_steps": 5,
+  "lora_alpha": 16,
+  "max_length": 512,
+  "max_steps": -1,
+  "model": "/rds/user/ein21/hpc-work/muta-round2/bases/incumbent-muta-merged",
+  "output": "/rds/user/ein21/hpc-work/muta-round2/runs/pilots/warm-r16-lr2e5",
+  "packages": {
+    "accelerate": "1.14.0",
+    "bitsandbytes": "0.50.1",
+    "datasets": "4.3.0",
+    "huggingface-hub": "1.32.0",
+    "matplotlib": "3.10.7",
+    "numpy": "2.1.2",
+    "peft": "0.20.0",
+    "safetensors": "0.8.0",
+    "torch": "2.5.1+cu121",
+    "transformers": "5.5.0",
+    "triton": "3.1.0",
+    "trl": "0.24.0",
+    "unsloth": "2026.8.19",
+    "xformers": "0.0.28.post3"
+  },
+  "pilot_rows": 20000,
+  "private_policy": "include",
+  "rank": 16,
+  "resume_from_checkpoint": null,
+  "run_name": "warm-r16-lr2e5",
+  "save_steps": 100,
+  "script_sha256": "10506d597a80110b2dedab395b0ce059697ef7c2703851a839b9f6c2ff106416",
+  "seed": 3407,
+  "tokenizer": {
+    "files": {
+      "tokenizer.json": {
+        "bytes": 7031645,
+        "path": "/rds/user/ein21/hpc-work/muta-round2/bases/upstream-qwen25/tokenizer.json",
+        "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+      },
+      "tokenizer_config.json": {
+        "bytes": 7305,
+        "path": "/rds/user/ein21/hpc-work/muta-round2/bases/upstream-qwen25/tokenizer_config.json",
+        "sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583"
+      }
+    },
+    "lineage_receipt_sha256": "e92c17e795759007127c8a52783f29e7f2a8a0d438c3fc9fc1e5fa4af5dfe9e6"
+  },
+  "tokenizer_lineage": "/rds/user/ein21/hpc-work/muta-round2/lineage/upstream-base.json",
+  "validation": {
+    "dataset_fingerprint_sha256": "c056e1744fe148f847354527aa7c7caf6b1fc24fec509f9834d700345e68cc8b",
+    "manifest_path": "/rds/user/ein21/hpc-work/muta-round2/data/round2-dev-5000/manifest.json",
+    "manifest_sha256": "2bbde7545eef5ddd531705e6e71ebc09321e3c7bfbb371ec89ed471696dda301",
+    "row_count": 5000,
+    "shards": [
+      {
+        "bytes": 12901290,
+        "path": "dev.jsonl",
+        "rows": 5000,
+        "sha256": "ca7d182a4536c9fabee8eacd38b34ac1428370c4324cb846a58de6dd8b3e8237"
+      }
+    ]
+  },
+  "validation_manifest": "/rds/user/ein21/hpc-work/muta-round2/data/round2-dev-5000/manifest.json",
+  "validation_rows": null,
+  "warmup_ratio": 0.03,
+  "weight_decay": 0.0
+}

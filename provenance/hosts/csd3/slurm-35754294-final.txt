@@ -1,0 +1,2 @@
+JobID|JobName|QOS|State|ExitCode|Elapsed|Timelimit|AllocTRES|NodeList
+35754294|muta-r2-pilot-4g|intr|COMPLETED|0:0|00:18:34|00:27:00|billing=128,cpu=128,gres/gpu=4,mem=256G,node=1|gpu-q-23

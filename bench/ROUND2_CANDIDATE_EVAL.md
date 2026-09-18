@@ -65,6 +65,14 @@ python -m bench.round2_candidate_eval \
 Omitting `--prompt-id` runs all ten recovered Gate 1 prompts. If IDs are supplied,
 at least two unique IDs are required. Greedy decoding, seed 3407, thinking disabled,
 and the exact prompt-set digest are recorded for every response.
+Run from a clean committed checkout. Repository status is captured before the
+evidence directory is created, and the promotion gate rejects dirty evaluation
+receipts.
+
+HF and PEFT candidates are evaluated in BF16, while the incumbent is its exact
+quantized GGUF. Use this run for matched-prompt quality screening; do not interpret
+the mixed-backend wall times as an apples-to-apples performance result. Re-run the
+final promoted model after merge and identical GGUF quantization for the final table.
 
 ## Evidence written
 
@@ -90,3 +98,10 @@ python -m bench.judges_prompt_report \
   --csv provenance/evaluation/RUN/gate1-rubric-recheck.csv \
   --report provenance/evaluation/RUN/gate1-rubric-report.md
 ```
+
+The full-run promotion builder requires a completed judges-prompt evidence directory. It
+rechecks the terminal and inventory hashes, every pilot adapter digest, each
+per-candidate response digest, and the identical ordered prompt sequence before it
+will freeze promoted candidates. It also requires each adapter to be evaluated on
+its receipted training base and binds the HF control to the clean base and the GGUF
+control to the incumbent hash recorded in the warm lineage.

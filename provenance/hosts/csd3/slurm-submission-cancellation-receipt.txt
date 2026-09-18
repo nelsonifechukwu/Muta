@@ -1,0 +1,3 @@
+JobID|JobName|QOS|State|Elapsed|Timelimit|AllocTRES|NodeList
+35754176_[0-3%4]|muta-r2-pilot|gpu1|CANCELLED by 49198|00:00:00|00:30:00||None assigned
+35754259|muta-r2-pilot-4g|intr|RUNNING|00:00:11|00:30:00|billing=128,cpu=128,gres/gpu=4,mem=256G,node=1|gpu-q-23

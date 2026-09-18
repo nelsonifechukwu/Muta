@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "campaign_id": "muta-round2-20260918",
+  "created_utc": "2026-09-18T03:19:16Z",
+  "approved_before_candidate_results": true,
+  "frozen_pilot_config": {
+    "path": "../../configs/pilot-sweep.json",
+    "sha256": "35eb48a88b7958f856eb757b1ef05f8022fd238d9465ec770b0d2ff54d14ad23"
+  },
+  "scope": "hardware-only microbatch calibration; no candidate-specific result was inspected",
+  "configured": {
+    "batch_size": 16,
+    "eval_batch_size": 16,
+    "gradient_accumulation": 4,
+    "global_batch_per_gpu": 64
+  },
+  "allowed_actual": {
+    "batch_size": 64,
+    "eval_batch_size": 64,
+    "gradient_accumulation": 1,
+    "global_batch_per_gpu": 64
+  },
+  "unchanged_treatment_fields": [
+    "lineage",
+    "rank",
+    "learning_rate",
+    "dataset",
+    "validation",
+    "max_length",
+    "epochs",
+    "warmup_ratio",
+    "weight_decay",
+    "seed"
+  ],
+  "calibration": {
+    "run_name": "calibration-warm-r16-b64",
+    "completed_utc": "2026-09-18T02:51:31Z",
+    "steps": 10,
+    "batch_size": 64,
+    "eval_batch_size": 16,
+    "gradient_accumulation": 1,
+    "global_batch_per_gpu": 64,
+    "max_observed_memory_used_mib": 8057,
+    "max_observed_memory_used_gib": 7.8681640625,
+    "max_observed_gpu_utilization_percent": 100,
+    "max_observed_power_draw_w": 394.08,
+    "gpu_samples_columns": [
+      "timestamp",
+      "memory_used_mib",
+      "utilization_gpu_percent",
+      "power_draw_w"
+    ]
+  },
+  "evidence": {
+    "COMPLETED.json": {
+      "bytes": 182,
+      "sha256": "624a991e672bd436e0247eaa3f05b5ffd5cc20df8a3ad22f6820d327ba8db201"
+    },
+    "gpu-samples.csv": {
+      "bytes": 3196,
+      "sha256": "ea7fe5cc05b39d1a23d0d7d33723cf20ab4b5acf0cc8653b353eef8065321f1f"
+    },
+    "loss-curve.png": {
+      "bytes": 70480,
+      "sha256": "d6207e6fa2517d52de3e82e8bef480f496470f468e8dee28ad2d585150dcd5c4"
+    },
+    "loss-curve.svg": {
+      "bytes": 27799,
+      "sha256": "bd6b348ce4e4a5e6248e9fef02d03ef5ec7cc312fb7cb18aa08d786c3cafd836"
+    },
+    "metrics.csv": {
+      "bytes": 1146,
+      "sha256": "844c9fa273c292b24a45b382954e36563a3b168ab8f655fb8b175c2941b7f761"
+    },
+    "metrics.jsonl": {
+      "bytes": 1770,
+      "sha256": "cc72af86d805221724c5b348e5e491bd5340a771881452f9e28cb15313ef6648"
+    },
+    "resolved-config.json": {
+      "bytes": 6273,
+      "sha256": "6a406c5412c0b2500da29fed7202980d8854818d8e17c7e7813a54d9673f4b10"
+    },
+    "training-manifest.json": {
+      "bytes": 15370,
+      "sha256": "7f89d4ca8c901c9484f34c18f85dfd3dd9f4e80bc1f94b582c1ae9061ccc22d0"
+    }
+  }
+}

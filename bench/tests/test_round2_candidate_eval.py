@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import bench.round2_candidate_eval as candidate_eval
 from bench.judges_prompt_report import evaluate, load_names, read_jsonl
 from bench.round2_candidate_eval import (
     EvaluationInputError,
@@ -48,6 +49,20 @@ class FirstCandidateFails(FakeBackend):
         if self.candidate["id"] == "candidate-0":
             raise RuntimeError("injected load failure")
         return self
+
+
+class InvalidGenerationResult(FakeBackend):
+    def generate(self, prompt, *, max_new_tokens):
+        result = super().generate(prompt, max_new_tokens=max_new_tokens)
+        return GenerationResult(
+            answer=None,
+            reasoning_content=result.reasoning_content,
+            finish_reason=result.finish_reason,
+            generated_tokens=result.generated_tokens,
+            raw_bytes=result.raw_bytes,
+            raw_media_type=result.raw_media_type,
+            backend_details=result.backend_details,
+        )
 
 
 def _gguf_manifest(tmp_path: Path, *, count: int = 2) -> Path:
@@ -108,10 +123,14 @@ def test_campaign_saves_exact_outputs_and_is_directly_consumable_by_judge_report
     assert len(rows) == 20
     assert len({row["prompt_set_sha256"] for row in rows}) == 1
     assert [row["id"] for row in rows[:10]] == [row.id for row in select_prompts("judges", None)]
-    assert [row["text"] for row in rows[:10]] == [row.text for row in select_prompts("judges", None)]
+    assert [row["text"] for row in rows[:10]] == [
+        row.text for row in select_prompts("judges", None)
+    ]
     first = rows[0]
     expected_model_hash = file_identity(tmp_path / "model-0.gguf")["sha256"]
     assert first["model_sha256"] == expected_model_hash
+    assert first["model_identity_kind"] == "gguf_file_sha256"
+    assert first["server_sha256"] == file_identity(tmp_path / "llama-server")["sha256"]
     raw_path = output / "candidates" / first["candidate_id"] / first["raw_output"]["path"]
     assert raw_path.read_bytes().startswith(b"RAW::candidate-0::automated_01")
 
@@ -146,6 +165,30 @@ def test_existing_output_directory_is_never_appended_or_reused(tmp_path):
     assert sentinel.read_text() == "unchanged"
 
 
+def test_runtime_receipt_is_captured_before_output_tree_exists(tmp_path, monkeypatch):
+    manifest = _gguf_manifest(tmp_path, count=1)
+    output = tmp_path / "evaluation"
+
+    def runtime_receipt():
+        assert not output.exists()
+        return {"git": {"available": True, "dirty": False}}
+
+    monkeypatch.setattr(candidate_eval, "_runtime_receipt", runtime_receipt)
+    run_campaign(
+        manifest,
+        output,
+        suite="judges",
+        prompt_ids=["automated_01", "automated_02"],
+        max_new_tokens=16,
+        port=18180,
+        gpu_layers=0,
+        threads=1,
+        context_size=512,
+        backend_factory=FakeBackend,
+    )
+    assert json.loads((output / "run.json").read_text())["runtime"]["git"]["dirty"] is False
+
+
 def test_failure_is_receipted_and_does_not_hide_later_candidates(tmp_path):
     manifest = _gguf_manifest(tmp_path)
     output = tmp_path / "evaluation"
@@ -167,6 +210,26 @@ def test_failure_is_receipted_and_does_not_hide_later_candidates(tmp_path):
     assert (output / "FAILED.json").is_file()
     assert (output / "candidates/candidate-0/error.json").is_file()
     assert len(read_jsonl(output / "candidates/candidate-1/responses.jsonl")) == 2
+
+
+def test_invalid_backend_result_is_a_receipted_candidate_failure(tmp_path):
+    manifest = _gguf_manifest(tmp_path, count=1)
+    output = tmp_path / "evaluation"
+    summaries = run_campaign(
+        manifest,
+        output,
+        suite="judges",
+        prompt_ids=["automated_01", "automated_02"],
+        max_new_tokens=16,
+        port=18180,
+        gpu_layers=0,
+        threads=1,
+        context_size=512,
+        backend_factory=InvalidGenerationResult,
+    )
+    assert summaries[0]["status"] == "failed"
+    assert "answer is not text" in summaries[0]["error"]
+    assert (output / "FAILED.json").is_file()
 
 
 def test_requires_two_unique_known_prompts():
@@ -200,6 +263,31 @@ def test_hash_mismatch_fails_before_output_directory_creation(tmp_path):
     assert not output.exists()
 
 
+def test_duplicate_candidate_model_identity_fails_before_inference(tmp_path):
+    manifest_path = _gguf_manifest(tmp_path)
+    payload = json.loads(manifest_path.read_text())
+    payload["candidates"][1]["model"] = payload["candidates"][0]["model"]
+    payload["candidates"][1]["expected"]["model_sha256"] = payload["candidates"][0]["expected"][
+        "model_sha256"
+    ]
+    manifest_path.write_text(json.dumps(payload))
+    output = tmp_path / "evaluation"
+    with pytest.raises(EvaluationInputError, match="duplicate candidate model identity"):
+        run_campaign(
+            manifest_path,
+            output,
+            suite="judges",
+            prompt_ids=["automated_01", "automated_02"],
+            max_new_tokens=16,
+            port=18180,
+            gpu_layers=0,
+            threads=1,
+            context_size=512,
+            backend_factory=FakeBackend,
+        )
+    assert not output.exists()
+
+
 def test_hf_and_peft_artifact_trees_are_verified(tmp_path):
     for directory, filename in [
         (tmp_path / "base", "model.safetensors"),
@@ -208,6 +296,7 @@ def test_hf_and_peft_artifact_trees_are_verified(tmp_path):
     ]:
         directory.mkdir()
         (directory / filename).write_text(directory.name)
+    (tmp_path / "adapter" / "adapter_config.json").write_text('{"r": 16}\n')
     base_hash = tree_identity(tmp_path / "base")["tree_sha256"]
     adapter_hash = tree_identity(tmp_path / "adapter")["tree_sha256"]
     tokenizer_hash = tree_identity(tmp_path / "tokenizer")["tree_sha256"]
@@ -248,3 +337,44 @@ def test_hf_and_peft_artifact_trees_are_verified(tmp_path):
     identities = [verify_candidate(candidate, cache) for candidate in manifest["candidates"]]
     assert [identity["backend"] for identity in identities] == ["hf", "peft"]
     assert identities[1]["observed"]["adapter"]["tree_sha256"] == adapter_hash
+
+
+def test_peft_identity_requires_inference_relevant_adapter_config(tmp_path):
+    for directory, filename in [
+        (tmp_path / "base", "model.safetensors"),
+        (tmp_path / "adapter", "adapter_model.safetensors"),
+        (tmp_path / "tokenizer", "tokenizer.json"),
+    ]:
+        directory.mkdir()
+        (directory / filename).write_text(directory.name)
+    manifest_path = tmp_path / "peft.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "candidates": [
+                    {
+                        "id": "candidate",
+                        "backend": "peft",
+                        "base_model": "base",
+                        "adapter": "adapter",
+                        "tokenizer": "tokenizer",
+                        "expected": {
+                            "base_model_tree_sha256": tree_identity(tmp_path / "base")[
+                                "tree_sha256"
+                            ],
+                            "adapter_tree_sha256": tree_identity(tmp_path / "adapter")[
+                                "tree_sha256"
+                            ],
+                            "tokenizer_tree_sha256": tree_identity(tmp_path / "tokenizer")[
+                                "tree_sha256"
+                            ],
+                        },
+                    }
+                ],
+            }
+        )
+    )
+    candidate = load_candidate_manifest(manifest_path)["candidates"][0]
+    with pytest.raises(EvaluationInputError, match="adapter lacks"):
+        verify_candidate(candidate, {})

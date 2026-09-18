@@ -32,9 +32,7 @@ def select_candidate_ids(
         raise ValueError(f"unknown candidate IDs: {', '.join(unknown)}")
     wrong_host = sorted(set(requested) - set(eligible))
     if wrong_host:
-        raise ValueError(
-            f"candidates do not belong to host {host_filter}: {', '.join(wrong_host)}"
-        )
+        raise ValueError(f"candidates do not belong to host {host_filter}: {', '.join(wrong_host)}")
     if len(set(requested)) != len(requested):
         raise ValueError("requested candidate IDs must be unique")
     return requested
@@ -103,6 +101,8 @@ def build_launcher_command(
         "--dataloader-workers",
         str(args.dataloader_workers),
     ]
+    if args.protocol_deviation is not None:
+        command.extend(["--protocol-deviation", str(args.protocol_deviation)])
     for option, value in (
         ("--batch-size", args.batch_size),
         ("--eval-batch-size", args.eval_batch_size),
@@ -117,9 +117,7 @@ def build_launcher_command(
 
 def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(temporary, path)
 
 
@@ -230,6 +228,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--eval-batch-size", type=int)
     parser.add_argument("--gradient-accumulation", type=int)
+    parser.add_argument("--protocol-deviation", type=Path)
     parser.add_argument("--dataloader-workers", type=int, default=4)
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--stop-on-error", action="store_true")

@@ -5,11 +5,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
+
+from campaign_io import sha256_file
+from compile_round2_pilots import (
+    PilotResultError,
+    _batch_settings,
+    _verify_protocol_deviation,
+    validate_pilot_config,
+)
 
 
 def select_candidate(
@@ -32,8 +42,39 @@ def select_candidate(
     return candidates[candidate_index]
 
 
-def build_command(args, config: dict[str, Any], candidate: dict[str, Any]) -> list[str]:
+def build_command(
+    args,
+    config: dict[str, Any],
+    candidate: dict[str, Any],
+    *,
+    config_sha256: str,
+    protocol_deviation: dict[str, Any] | None,
+) -> list[str]:
     shared = config["shared"]
+    configured_batch = _batch_settings(config)
+    actual_batch = {
+        "batch_size": (
+            configured_batch["batch_size"] if args.batch_size is None else args.batch_size
+        ),
+        "eval_batch_size": (
+            configured_batch["eval_batch_size"]
+            if args.eval_batch_size is None
+            else args.eval_batch_size
+        ),
+        "gradient_accumulation": (
+            configured_batch["gradient_accumulation"]
+            if args.gradient_accumulation is None
+            else args.gradient_accumulation
+        ),
+    }
+    actual_batch["global_batch_per_gpu"] = (
+        actual_batch["batch_size"] * actual_batch["gradient_accumulation"]
+    )
+    allowed_batch = protocol_deviation["actual"] if protocol_deviation else configured_batch
+    if actual_batch != allowed_batch:
+        raise PilotResultError(
+            f"pilot batch treatment {actual_batch} is not frozen/approved {allowed_batch}"
+        )
     model = args.clean_base if candidate["lineage"] == "clean" else args.warm_base
     lineage = args.clean_lineage if candidate["lineage"] == "clean" else args.warm_lineage
     output = args.output_root / candidate["id"]
@@ -52,8 +93,16 @@ def build_command(args, config: dict[str, Any], candidate: dict[str, Any]) -> li
         candidate["lineage"],
         "--dataset-manifest",
         str(args.dataset_manifest),
+        "--expected-dataset-fingerprint",
+        str(config["dataset"]["fingerprint_sha256"]),
         "--validation-manifest",
         str(args.validation_manifest),
+        "--expected-validation-fingerprint",
+        str(config["validation"]["fingerprint_sha256"]),
+        "--campaign-config",
+        str(args.config.resolve()),
+        "--expected-campaign-config-sha256",
+        config_sha256,
         "--output",
         str(output),
         "--run-name",
@@ -69,11 +118,11 @@ def build_command(args, config: dict[str, Any], candidate: dict[str, Any]) -> li
         "--lora-alpha",
         str(candidate["rank"]),
         "--batch-size",
-        str(args.batch_size or shared["batch_size"]),
+        str(actual_batch["batch_size"]),
         "--eval-batch-size",
-        str(args.eval_batch_size or args.batch_size or shared["batch_size"]),
+        str(actual_batch["eval_batch_size"]),
         "--gradient-accumulation",
-        str(args.gradient_accumulation or shared["gradient_accumulation"]),
+        str(actual_batch["gradient_accumulation"]),
         "--warmup-ratio",
         str(shared["warmup_ratio"]),
         "--weight-decay",
@@ -86,6 +135,17 @@ def build_command(args, config: dict[str, Any], candidate: dict[str, Any]) -> li
         str(shared["logging_steps"]),
         "--pilot-rows",
         str(config["dataset"]["pilot_rows"]),
+        "--expected-train-rows",
+        str(config["dataset"]["pilot_rows"]),
+        "--expected-validation-rows",
+        str(config["validation"]["rows"]),
+        "--expected-planned-steps",
+        str(
+            math.ceil(
+                math.ceil(config["dataset"]["pilot_rows"] / actual_batch["global_batch_per_gpu"])
+                * float(shared["epochs"])
+            )
+        ),
         "--private-policy",
         config["dataset"]["private_policy"],
         "--seed",
@@ -116,34 +176,52 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--eval-batch-size", type=int)
     parser.add_argument("--gradient-accumulation", type=int)
+    parser.add_argument("--protocol-deviation", type=Path)
     parser.add_argument("--dataloader-workers", type=int, default=4)
     parser.add_argument("--resume-from-checkpoint", type=Path)
     args = parser.parse_args()
 
     config = json.loads(args.config.read_text(encoding="utf-8"))
+    validate_pilot_config(config)
+    config_sha256 = sha256_file(args.config)
+    protocol_deviation = _verify_protocol_deviation(
+        args.protocol_deviation,
+        config_path=args.config.resolve(),
+        config=config,
+    )
     candidate = select_candidate(
         config,
         candidate_id=args.candidate_id,
         candidate_index=args.candidate_index,
         host_filter=args.host_filter,
     )
-    command = build_command(args, config, candidate)
+    command = build_command(
+        args,
+        config,
+        candidate,
+        config_sha256=config_sha256,
+        protocol_deviation=protocol_deviation,
+    )
     output = args.output_root / candidate["id"]
     output.mkdir(parents=True, exist_ok=True)
-    (output / "launch-command.json").write_text(
-        json.dumps(
+    launch_receipts = output / "launch-receipts"
+    launch_receipts.mkdir(exist_ok=True)
+    launch_path = launch_receipts / f"launch-{time.time_ns()}-{os.getpid()}.json"
+    with launch_path.open("x", encoding="utf-8") as handle:
+        json.dump(
             {
                 "argv": command,
                 "candidate": candidate,
                 "config": str(args.config.resolve()),
                 "config_bytes": args.config.stat().st_size,
+                "config_sha256": config_sha256,
+                "protocol_deviation": protocol_deviation,
             },
+            handle,
             indent=2,
             sort_keys=True,
         )
-        + "\n",
-        encoding="utf-8",
-    )
+        handle.write("\n")
     environment = os.environ.copy()
     environment.setdefault("TOKENIZERS_PARALLELISM", "false")
     environment.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")

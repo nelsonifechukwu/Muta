@@ -5,6 +5,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
@@ -23,12 +25,18 @@ launcher = _load("launch_round2")
 
 def _config():
     return {
-        "dataset": {"pilot_rows": 20, "private_policy": "include"},
+        "dataset": {
+            "pilot_rows": 20,
+            "private_policy": "include",
+            "fingerprint_sha256": "a" * 64,
+        },
+        "validation": {"rows": 5, "fingerprint_sha256": "b" * 64},
         "shared": {
             "max_length": 512,
             "epochs": 1.0,
             "batch_size": 16,
             "gradient_accumulation": 4,
+            "global_batch_per_gpu": 64,
             "warmup_ratio": 0.03,
             "weight_decay": 0.0,
             "eval_steps": 10,
@@ -72,13 +80,20 @@ def test_command_uses_correct_lineage_and_frozen_hyperparameters(tmp_path):
         dataset_manifest=Path("manifest.json"),
         validation_manifest=Path("dev-manifest.json"),
         output_root=tmp_path,
+        config=tmp_path / "pilot.json",
         batch_size=None,
         eval_batch_size=None,
         gradient_accumulation=None,
         dataloader_workers=4,
         resume_from_checkpoint=None,
     )
-    command = launcher.build_command(args, _config(), _config()["candidates"][1])
+    command = launcher.build_command(
+        args,
+        _config(),
+        _config()["candidates"][1],
+        config_sha256="c" * 64,
+        protocol_deviation=None,
+    )
     joined = " ".join(command)
     assert "--model warm-base" in joined
     assert "--lineage warm" in joined
@@ -86,3 +101,62 @@ def test_command_uses_correct_lineage_and_frozen_hyperparameters(tmp_path):
     assert "--rank 8" in joined
     assert "--learning-rate 5e-06" in joined
     assert "--pilot-rows 20" in joined
+    assert "--expected-planned-steps 1" in joined
+    assert "--expected-campaign-config-sha256 " + "c" * 64 in joined
+
+
+def test_zero_batch_override_is_rejected_not_silently_ignored(tmp_path):
+    args = argparse.Namespace(
+        python=Path("python"),
+        clean_base=Path("clean-base"),
+        warm_base=Path("warm-base"),
+        clean_lineage=Path("clean.json"),
+        warm_lineage=Path("warm.json"),
+        dataset_manifest=Path("manifest.json"),
+        validation_manifest=Path("dev-manifest.json"),
+        output_root=tmp_path,
+        config=tmp_path / "pilot.json",
+        batch_size=0,
+        eval_batch_size=None,
+        gradient_accumulation=None,
+        dataloader_workers=4,
+        resume_from_checkpoint=None,
+    )
+    with pytest.raises(launcher.PilotResultError, match="not frozen/approved"):
+        launcher.build_command(
+            args,
+            _config(),
+            _config()["candidates"][0],
+            config_sha256="c" * 64,
+            protocol_deviation=None,
+        )
+
+
+def test_expected_steps_include_frozen_epoch_count(tmp_path):
+    config = _config()
+    config["shared"]["epochs"] = 1.5
+    args = argparse.Namespace(
+        python=Path("python"),
+        clean_base=Path("clean-base"),
+        warm_base=Path("warm-base"),
+        clean_lineage=Path("clean.json"),
+        warm_lineage=Path("warm.json"),
+        dataset_manifest=Path("manifest.json"),
+        validation_manifest=Path("dev-manifest.json"),
+        output_root=tmp_path,
+        config=tmp_path / "pilot.json",
+        batch_size=None,
+        eval_batch_size=None,
+        gradient_accumulation=None,
+        dataloader_workers=4,
+        resume_from_checkpoint=None,
+    )
+    command = launcher.build_command(
+        args,
+        config,
+        config["candidates"][0],
+        config_sha256="c" * 64,
+        protocol_deviation=None,
+    )
+    joined = " ".join(command)
+    assert "--expected-planned-steps 2" in joined

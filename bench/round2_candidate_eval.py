@@ -254,6 +254,8 @@ def load_candidate_manifest(path: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise EvaluationInputError(f"cannot read candidate manifest: {path}") from exc
+    if not isinstance(payload, dict):
+        raise EvaluationInputError("candidate manifest root is not an object")
     if payload.get("schema_version") != SCHEMA_VERSION:
         raise EvaluationInputError(f"candidate manifest schema must be {SCHEMA_VERSION}")
     candidates = payload.get("candidates")
@@ -332,6 +334,13 @@ def verify_candidate(
                 f"{actual_hash} != {expected_hash}"
             )
         observed[field] = identity
+    if backend == "peft":
+        adapter_files = {row["path"]: row["sha256"] for row in observed["adapter"].get("files", [])}
+        required_adapter_files = {"adapter_model.safetensors", "adapter_config.json"}
+        if not required_adapter_files.issubset(adapter_files):
+            raise EvaluationInputError(
+                f"candidate {candidate['id']} adapter lacks weights or adapter_config.json"
+            )
     return {
         "candidate_id": candidate["id"],
         "backend": backend,
@@ -353,10 +362,46 @@ def candidate_content_sha256(identity: dict[str, Any]) -> str:
             {
                 "backend": "peft",
                 "base_model_tree_sha256": observed["base_model"]["tree_sha256"],
-                "adapter_tree_sha256": observed["adapter"]["tree_sha256"],
+                "adapter_model_sha256": next(
+                    row["sha256"]
+                    for row in observed["adapter"]["files"]
+                    if row["path"] == "adapter_model.safetensors"
+                ),
+                "adapter_config_sha256": next(
+                    row["sha256"]
+                    for row in observed["adapter"]["files"]
+                    if row["path"] == "adapter_config.json"
+                ),
             }
         )
     )
+
+
+def candidate_identity_kind(backend: str) -> str:
+    return {
+        "gguf": "gguf_file_sha256",
+        "hf": "huggingface_model_tree_sha256",
+        "peft": "sha256_of_base_tree_adapter_weights_and_config",
+    }[backend]
+
+
+def validate_generation_result(result: Any) -> GenerationResult:
+    if not isinstance(result, GenerationResult):
+        raise TypeError("backend did not return GenerationResult")
+    for field in ("answer", "reasoning_content", "finish_reason", "raw_media_type"):
+        if not isinstance(getattr(result, field), str):
+            raise TypeError(f"generation {field} is not text")
+    if (
+        isinstance(result.generated_tokens, bool)
+        or not isinstance(result.generated_tokens, int)
+        or result.generated_tokens < 0
+    ):
+        raise TypeError("generation token count is not a non-negative integer")
+    if not isinstance(result.raw_bytes, bytes) or not result.raw_bytes:
+        raise TypeError("generation raw output is not non-empty bytes")
+    if not isinstance(result.backend_details, dict):
+        raise TypeError("generation backend details are not an object")
+    return result
 
 
 def request_bytes(url: str, payload: dict[str, Any] | None, timeout: float) -> bytes:
@@ -609,6 +654,11 @@ class HuggingFaceBackend:
                     "num_beams": 1,
                     "seed": SEED,
                 },
+                "runtime": {
+                    "device": str(device),
+                    "model_dtype": str(self.model.get_input_embeddings().weight.dtype),
+                    "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
+                },
                 "generation_wall_s": round(time.monotonic() - started, 6),
             },
         )
@@ -654,15 +704,37 @@ def _runtime_receipt() -> dict[str, Any]:
             capture_output=True,
             text=True,
         ).stdout.splitlines()
-        git = {"available": True, "commit": git_commit, "dirty": bool(git_status), "status": git_status}
+        git = {
+            "available": True,
+            "commit": git_commit,
+            "dirty": bool(git_status),
+            "status": git_status,
+        }
     except (OSError, subprocess.CalledProcessError):
         git = {"available": False}
+    accelerator: dict[str, Any] = {"available": False}
+    try:
+        import torch
+
+        accelerator = {
+            "available": torch.cuda.is_available(),
+            "torch": torch.__version__,
+            "cuda": torch.version.cuda,
+            "devices": (
+                [torch.cuda.get_device_name(index) for index in range(torch.cuda.device_count())]
+                if torch.cuda.is_available()
+                else []
+            ),
+        }
+    except ImportError:
+        pass
     return {
         "created_at": now(),
         "hostname": socket.gethostname(),
         "platform": platform.platform(),
         "python": sys.version,
         "packages": packages,
+        "accelerator": accelerator,
         "git": git,
         "script": {
             "path": str(Path(__file__).resolve()),
@@ -683,11 +755,12 @@ def response_row(
     prompt_set_sha256: str,
     result: GenerationResult,
     *,
+    server_sha256: str | None,
     ordinal: int,
     raw_relative_path: str,
     wall_s: float,
 ) -> dict[str, Any]:
-    return {
+    row = {
         "schema_version": SCHEMA_VERSION,
         "candidate_id": candidate["id"],
         "candidate_backend": candidate["backend"],
@@ -695,6 +768,7 @@ def response_row(
         # bench/judges_prompt_report.py without rewriting the saved model output.
         "model": candidate["id"],
         "model_sha256": candidate_identity_sha256,
+        "model_identity_kind": candidate_identity_kind(candidate["backend"]),
         "id": prompt.id,
         "source": prompt.source,
         "title": prompt.title,
@@ -726,6 +800,9 @@ def response_row(
             "enable_thinking": False,
         },
     }
+    if server_sha256 is not None:
+        row["server_sha256"] = server_sha256
+    return row
 
 
 def summarize_candidate(
@@ -750,8 +827,7 @@ def summarize_candidate(
     else:
         multiple_choice = [row for row in rows if row["prompt"]["format"] == "multiple_choice"]
         stem_mc_correct = sum(
-            selected_option(row["answer"]) == row["prompt"]["expected"]
-            for row in multiple_choice
+            selected_option(row["answer"]) == row["prompt"]["expected"] for row in multiple_choice
         )
         stem_mc_total = len([prompt for prompt in prompts if prompt.format == "multiple_choice"])
     return {
@@ -854,6 +930,11 @@ def write_summary(output: Path, rows: list[dict[str, Any]], suite: str) -> None:
                 "Scores are screening aids. Judge keyword-rubric scores require manual "
                 "adjudication; written STEM responses are retained ungraded."
             ),
+            (
+                "HF/PEFT candidates run in BF16 while the incumbent control is its exact "
+                "quantized GGUF; wall time is diagnostic, not an apples-to-apples "
+                "performance comparison."
+            ),
             "",
         ]
     )
@@ -882,8 +963,21 @@ def run_campaign(
     identity_cache: dict[tuple[str, str], dict[str, Any]] = {}
     for candidate in manifest["candidates"]:
         identities[candidate["id"]] = verify_candidate(candidate, identity_cache)
+    content_owners: dict[str, str] = {}
+    for candidate in manifest["candidates"]:
+        digest = candidate_content_sha256(identities[candidate["id"]])
+        if digest in content_owners:
+            raise EvaluationInputError(
+                "duplicate candidate model identity: "
+                f"{content_owners[digest]} and {candidate['id']}"
+            )
+        content_owners[digest] = candidate["id"]
 
     output = output.resolve()
+    # Receipt the repository before creating the evaluation tree.  Capturing
+    # status afterward would mark an in-repository evidence output as its own
+    # uncommitted change and make every otherwise clean run unpromotable.
+    runtime_receipt = _runtime_receipt()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.mkdir(exist_ok=False)
     manifest_snapshot = output / "candidate-manifest.json"
@@ -912,7 +1006,7 @@ def run_campaign(
                 "gguf_port": port,
                 "enable_thinking": False,
             },
-            "runtime": _runtime_receipt(),
+            "runtime": runtime_receipt,
         },
     )
 
@@ -925,7 +1019,11 @@ def run_campaign(
         candidate_identity_sha = candidate_content_sha256(identity)
         write_json_exclusive(
             candidate_dir / "identity.json",
-            {**identity, "candidate_identity_sha256": candidate_identity_sha},
+            {
+                **identity,
+                "candidate_identity_sha256": candidate_identity_sha,
+                "candidate_identity_kind": candidate_identity_kind(candidate["backend"]),
+            },
         )
         rows: list[dict[str, Any]] = []
         error = None
@@ -943,7 +1041,9 @@ def run_campaign(
                 with backend:
                     for ordinal, prompt in enumerate(prompts, 1):
                         started = time.monotonic()
-                        result = backend.generate(prompt, max_new_tokens=max_new_tokens)
+                        result = validate_generation_result(
+                            backend.generate(prompt, max_new_tokens=max_new_tokens)
+                        )
                         wall_s = time.monotonic() - started
                         raw_path = candidate_dir / "raw" / f"{ordinal:03d}-{prompt.id}.bin"
                         write_bytes_exclusive(raw_path, result.raw_bytes)
@@ -953,6 +1053,11 @@ def run_campaign(
                             prompt,
                             prompt_set_sha,
                             result,
+                            server_sha256=(
+                                identity["observed"]["server"]["sha256"]
+                                if candidate["backend"] == "gguf"
+                                else None
+                            ),
                             ordinal=ordinal,
                             raw_relative_path=raw_path.relative_to(candidate_dir).as_posix(),
                             wall_s=wall_s,
@@ -1006,7 +1111,9 @@ def run_campaign(
         )
         write_judge_csv(output / "gate1-rubric.csv", judge_summary)
     write_json_exclusive(output / "artifact-inventory.json", output_inventory(output))
-    terminal = "COMPLETED.json" if all(row["status"] == "complete" for row in summaries) else "FAILED.json"
+    terminal = (
+        "COMPLETED.json" if all(row["status"] == "complete" for row in summaries) else "FAILED.json"
+    )
     write_json_exclusive(
         output / terminal,
         {
