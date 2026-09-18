@@ -42,6 +42,7 @@ srun --unbuffered python "$MUTA_WORK/training/launch_round2.py" \
   --dataset-manifest "$MUTA_WORK/data/muta-stem-v2-sft-300k/manifest.json" \
   --validation-manifest "$MUTA_WORK/data/round2-dev-5000/manifest.json" \
   --output-root "$MUTA_WORK/runs/pilots" \
-  --batch-size 16 \
-  --gradient-accumulation 4 \
+  --batch-size 64 \
+  --eval-batch-size 64 \
+  --gradient-accumulation 1 \
   --dataloader-workers 8
