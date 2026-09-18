@@ -1,0 +1,22 @@
+[
+  {
+    "expected": "rubric",
+    "format": "written",
+    "id": "automated_04",
+    "source": "automated",
+    "subject": "mixed",
+    "suite": "judges",
+    "text": "Multiple choice: A school in Lagos buys 6 boxes of chalk at ₦500 per box. What is the total cost? A. ₦1,000 B. ₦2,500 C. ₦3,000 D. ₦3,500. Answer with the correct option and one calculation.",
+    "title": "Lagos chalk calculation"
+  },
+  {
+    "expected": "rubric",
+    "format": "written",
+    "id": "automated_05",
+    "source": "automated",
+    "subject": "mixed",
+    "suite": "judges",
+    "text": "Multiple choice: Which process allows green plants to use sunlight to make food? A. Respiration B. Photosynthesis C. Evaporation D. Condensation. Answer with the correct option and one sentence of explanation.",
+    "title": "Photosynthesis multiple choice"
+  }
+]

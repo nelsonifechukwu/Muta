@@ -1,0 +1,8 @@
+{
+  "aggregate_responses_sha256": "6a94d24c30bf7bd35555e6a73633f69f852800e5677668fc1fac60b7d1032281",
+  "artifact_inventory_sha256": "889778056d3c0bfcbd20e21fec6a3d1e61b359b878b35d259eb4ed3e19042116",
+  "status": "completed",
+  "summary_csv_sha256": "6fe4a4aadb5c5609e40b97c63fcb11c424d50b87e34400e60b3c53864cd31dab",
+  "summary_markdown_sha256": "082ad1c579f9fb79f3662fd481232821cfd68e1bd398b9902040810d1a30b1af",
+  "ts": "2026-09-18T10:18:10+00:00"
+}

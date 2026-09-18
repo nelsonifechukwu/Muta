@@ -1,0 +1,17 @@
+{
+  "backend": "gguf",
+  "candidate_id": "incumbent-muta",
+  "error": "",
+  "expected_prompts": 2,
+  "judge_max": 20,
+  "judge_score": 12,
+  "mean_generated_tokens": 32.0,
+  "mean_wall_s": 2.548,
+  "nonempty": 2,
+  "prompts": 2,
+  "responses_sha256": "c7eb8050fe97b53eca6a88046148c7018809948bdb3e013460080079082d24c4",
+  "status": "complete",
+  "stem_mc_correct": "",
+  "stem_mc_total": "",
+  "truncated": 0
+}

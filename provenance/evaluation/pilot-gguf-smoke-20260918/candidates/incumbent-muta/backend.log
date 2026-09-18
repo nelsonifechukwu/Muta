@@ -1,0 +1,27 @@
+0.00.021.967 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.022.474 W srv  llama_server: -----------------
+0.00.022.481 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.022.481 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.022.481 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.022.482 W srv  llama_server: -----------------
+0.00.023.772 I srv    load_model: loading model '/home/ubuntu/muta-finetune/runs-metric/qwen25-bf16-r16-licensed-mcq-lr2e5-500/gguf_gguf/Qwen2.5-1.5B-Instruct.Q4_K_M.gguf'
+0.00.536.228 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.599.975 I cmn          init: llama threadpool init, n_threads = 2
+0.01.732.496 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 4096, kv_unified = 'false'
+0.01.738.271 I srv  llama_server: model loaded
+0.01.738.283 I srv  llama_server: listening on http://127.0.0.1:18380
+0.02.028.076 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.02.028.164 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.04.230.121 I slot print_timing: id  0 | task 0 | prompt eval time =    1802.36 ms /   108 tokens (   16.69 ms per token,    59.92 tokens per second)
+0.04.230.130 I slot print_timing: id  0 | task 0 |        eval time =     399.57 ms /    11 tokens (   39.96 ms per token,    25.03 tokens per second)
+0.04.230.130 I slot print_timing: id  0 | task 0 |       total time =    2201.93 ms /   119 tokens
+0.04.230.136 I slot print_timing: id  0 | task 0 |    graphs reused =         10
+0.04.230.183 I slot      release: id  0 | task 0 | stop processing: n_tokens = 118, truncated = 0
+0.04.243.959 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.375 (> 0.100 thold), f_keep = 0.229
+0.04.246.722 I slot launch_slot_: id  0 | task 12 | processing task, is_child = 0
+0.07.127.430 I slot print_timing: id  0 | task 12 | prompt eval time =     796.81 ms /    45 tokens (   17.71 ms per token,    56.47 tokens per second)
+0.07.127.439 I slot print_timing: id  0 | task 12 |        eval time =    2083.87 ms /    53 tokens (   40.07 ms per token,    24.95 tokens per second)
+0.07.127.439 I slot print_timing: id  0 | task 12 |       total time =    2880.69 ms /    98 tokens
+0.07.127.440 I slot print_timing: id  0 | task 12 |    graphs reused =         61
+0.07.127.468 I slot      release: id  0 | task 12 | stop processing: n_tokens = 124, truncated = 0
+0.07.134.894 I srv    operator(): operator(): cleaning up before exit...

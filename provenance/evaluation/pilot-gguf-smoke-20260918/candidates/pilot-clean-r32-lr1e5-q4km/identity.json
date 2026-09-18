@@ -1,0 +1,30 @@
+{
+  "backend": "gguf",
+  "candidate_id": "pilot-clean-r32-lr1e5-q4km",
+  "candidate_identity_kind": "gguf_file_sha256",
+  "candidate_identity_sha256": "ce82fdf54bc46e737f92f90e6788b9d6f777eb3e94185d624d042763cdb533fb",
+  "expected": {
+    "model_sha256": "ce82fdf54bc46e737f92f90e6788b9d6f777eb3e94185d624d042763cdb533fb",
+    "server_sha256": "6a749492e30e2e360bc76f9be018a56588b2df5f03a437ec27b39a1f2434fdd4"
+  },
+  "metadata": {
+    "llama_server_runtime_receipt": {
+      "path": "/lambda/nfs/awf-tmp/muta/campaign-20260918/configs/llama-server-runtime-receipt.json",
+      "sha256": "cdec8e6eea076d3fa8c52e3114e46a004c66ce1c1c97d04383ae0c23e0081670"
+    },
+    "status": "pilot_export",
+    "training_rows": 20000
+  },
+  "observed": {
+    "model": {
+      "bytes": 986047968,
+      "path": "/lambda/nfs/awf-tmp/muta/campaign-20260918/exports/pilot-clean-r32-lr1e5/Muta-Round2-Pilot-Clean-R32-LR1e5-20k-Q4_K_M.gguf",
+      "sha256": "ce82fdf54bc46e737f92f90e6788b9d6f777eb3e94185d624d042763cdb533fb"
+    },
+    "server": {
+      "bytes": 14600,
+      "path": "/home/ubuntu/.unsloth/llama.cpp/llama-server",
+      "sha256": "6a749492e30e2e360bc76f9be018a56588b2df5f03a437ec27b39a1f2434fdd4"
+    }
+  }
+}

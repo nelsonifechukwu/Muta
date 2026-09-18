@@ -1,0 +1,17 @@
+{
+  "backend": "gguf",
+  "candidate_id": "pilot-clean-r32-lr1e5-q4km",
+  "error": "",
+  "expected_prompts": 2,
+  "judge_max": 20,
+  "judge_score": 16,
+  "mean_generated_tokens": 24.5,
+  "mean_wall_s": 2.275,
+  "nonempty": 2,
+  "prompts": 2,
+  "responses_sha256": "7fba1f76c0ba4891ef0336ba5d9b6d39304c221c3ce51008742d49b2b5c3f914",
+  "status": "complete",
+  "stem_mc_correct": "",
+  "stem_mc_total": "",
+  "truncated": 0
+}

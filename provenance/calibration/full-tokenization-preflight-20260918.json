@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "Captured stdout from read-only full-dataset tokenizer preflight",
+  "host": "ubuntu@129.213.31.157",
+  "exec_session_id": 80004,
+  "repo_commit": "07df66bb26da69da69242aac34ee6b588d7f2d4a",
+  "method": {
+    "dataset_verifier": "campaign_io.verify_dataset_manifest",
+    "row_projection": "train_lora_round2.projected_jsonl_rows",
+    "tokenization": "train_lora_round2.tokenize_chat_row",
+    "tokenizer": "/lambda/nfs/awf-tmp/muta/campaign-20260918/bases/upstream-qwen25",
+    "max_length": 512,
+    "use_fast": true,
+    "fix_mistral_regex": true,
+    "workers": 7,
+    "cuda_visible_devices": ""
+  },
+  "result": {
+    "kind": "full_training_tokenization_preflight",
+    "dataset_fingerprint": "037edf28cccff62d90c23e2d6caf56b9998dea6928080f98af2a513f9f92910e",
+    "rows": 300350,
+    "max_sequence_tokens": 459,
+    "sequence_tokens": 48837785,
+    "assistant_tokens": 25106185,
+    "error_count": 0,
+    "elapsed_seconds": 40.41817855834961,
+    "shards": [
+      {
+        "shard": "part-00000.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 4344477,
+        "assistant_tokens": 2146517,
+        "max_sequence_tokens": 223,
+        "errors": []
+      },
+      {
+        "shard": "part-00001.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 3656501,
+        "assistant_tokens": 1954989,
+        "max_sequence_tokens": 169,
+        "errors": []
+      },
+      {
+        "shard": "part-00002.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 3972692,
+        "assistant_tokens": 1891369,
+        "max_sequence_tokens": 215,
+        "errors": []
+      },
+      {
+        "shard": "part-00003.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 3882059,
+        "assistant_tokens": 2055754,
+        "max_sequence_tokens": 205,
+        "errors": []
+      },
+      {
+        "shard": "part-00004.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 4473706,
+        "assistant_tokens": 2319426,
+        "max_sequence_tokens": 275,
+        "errors": []
+      },
+      {
+        "shard": "part-00005.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 3841556,
+        "assistant_tokens": 1798136,
+        "max_sequence_tokens": 196,
+        "errors": []
+      },
+      {
+        "shard": "part-00006.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 4055505,
+        "assistant_tokens": 2153542,
+        "max_sequence_tokens": 212,
+        "errors": []
+      },
+      {
+        "shard": "part-00007.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 4259768,
+        "assistant_tokens": 2161012,
+        "max_sequence_tokens": 212,
+        "errors": []
+      },
+      {
+        "shard": "part-00008.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 4096251,
+        "assistant_tokens": 2125811,
+        "max_sequence_tokens": 199,
+        "errors": []
+      },
+      {
+        "shard": "part-00009.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 5742135,
+        "assistant_tokens": 3754873,
+        "max_sequence_tokens": 300,
+        "errors": []
+      },
+      {
+        "shard": "part-00010.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 3995876,
+        "assistant_tokens": 1921483,
+        "max_sequence_tokens": 238,
+        "errors": []
+      },
+      {
+        "shard": "part-00011.jsonl",
+        "rows": 25000,
+        "sequence_tokens": 2455314,
+        "assistant_tokens": 793546,
+        "max_sequence_tokens": 289,
+        "errors": []
+      },
+      {
+        "shard": "part-00012-private-waec-e1720e95858d.jsonl",
+        "rows": 47,
+        "sequence_tokens": 9910,
+        "assistant_tokens": 6258,
+        "max_sequence_tokens": 444,
+        "errors": []
+      },
+      {
+        "shard": "part-00013-private-waec-363447d90421.jsonl",
+        "rows": 303,
+        "sequence_tokens": 52035,
+        "assistant_tokens": 23469,
+        "max_sequence_tokens": 459,
+        "errors": []
+      }
+    ]
+  }
+}

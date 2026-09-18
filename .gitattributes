@@ -3,3 +3,6 @@
 *.gguf  filter=lfs diff=lfs merge=lfs -text
 *.bin   filter=lfs diff=lfs merge=lfs -text
 *.faiss filter=lfs diff=lfs merge=lfs -text
+
+# Small literal evaluation responses are provenance, not model weights.
+provenance/evaluation/**/raw/*.bin -filter -diff -merge -text

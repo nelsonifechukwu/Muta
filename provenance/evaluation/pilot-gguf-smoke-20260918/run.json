@@ -1,0 +1,52 @@
+{
+  "campaign_id": "muta-round2-pilot-gguf-smoke-20260918",
+  "candidate_manifest": {
+    "path": "/lambda/nfs/awf-tmp/muta/campaign-20260918/configs/pilot-gguf-smoke-candidates.json",
+    "sha256": "a9a44d9a7f7842413f30e9f02bc1604666a4c5af60e0c6dd63673723f864bdf2",
+    "snapshot": "candidate-manifest.json"
+  },
+  "prompt_count": 2,
+  "prompt_set_sha256": "cd009b6aaa87d9c99667d68fd03573d5bd872d217cf10b97da901533f16fd532",
+  "prompt_suite": "judges",
+  "runtime": {
+    "accelerator": {
+      "available": false,
+      "cuda": "12.8",
+      "devices": [],
+      "torch": "2.7.0"
+    },
+    "created_at": "2026-09-18T10:17:55+00:00",
+    "git": {
+      "available": true,
+      "commit": "07df66bb26da69da69242aac34ee6b588d7f2d4a",
+      "dirty": false,
+      "status": []
+    },
+    "hostname": "129-213-31-157",
+    "packages": {
+      "accelerate": "1.14.0",
+      "peft": "0.20.0",
+      "safetensors": "0.8.0",
+      "torch": "2.7.0",
+      "transformers": "5.5.0"
+    },
+    "platform": "Linux-6.8.0-1046-nvidia-x86_64-with-glibc2.39",
+    "python": "3.12.3 (main, Jan 22 2026, 20:57:42) [GCC 13.3.0]",
+    "script": {
+      "path": "/lambda/nfs/awf-tmp/muta/campaign-20260918/repo/bench/round2_candidate_eval.py",
+      "sha256": "e8d8344029ea2db281791241b16e754c01d0c3a8d96f63038698abaf2f335192"
+    },
+    "slurm": {}
+  },
+  "schema_version": 1,
+  "settings": {
+    "context_size": 4096,
+    "deterministic_decoding": "greedy",
+    "enable_thinking": false,
+    "gguf_gpu_layers": 0,
+    "gguf_port": 18380,
+    "gguf_threads": 2,
+    "max_new_tokens": 1024,
+    "seed": 3407
+  }
+}

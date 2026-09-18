@@ -1,0 +1,3 @@
+test_artifact,model
+incumbent-muta,Incumbent Muta Q4_K_M
+pilot-clean-r32-lr1e5-q4km,20K-row clean pilot r32 lr1e-5 Q4_K_M

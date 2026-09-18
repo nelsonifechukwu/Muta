@@ -1,0 +1,3 @@
+rank,model,prompts_completed,status,hardware_context,truncated_responses,empty_final_responses,automated_prompt_score,human_judge_prompt_score,judge_prompt_total,model_sha256
+,20K-row clean pilot r32 lr1e-5 Q4_K_M,2,incomplete,129-213-31-157,0,0,16,0,16,ce82fdf54bc46e737f92f90e6788b9d6f777eb3e94185d624d042763cdb533fb
+,Incumbent Muta Q4_K_M,2,incomplete,129-213-31-157,0,0,12,0,12,a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb

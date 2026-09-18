@@ -1,0 +1,28 @@
+{
+  "backend": "gguf",
+  "candidate_id": "incumbent-muta",
+  "candidate_identity_kind": "gguf_file_sha256",
+  "candidate_identity_sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb",
+  "expected": {
+    "model_sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb",
+    "server_sha256": "6a749492e30e2e360bc76f9be018a56588b2df5f03a437ec27b39a1f2434fdd4"
+  },
+  "metadata": {
+    "llama_server_runtime_receipt": {
+      "path": "/lambda/nfs/awf-tmp/muta/campaign-20260918/configs/llama-server-runtime-receipt.json",
+      "sha256": "cdec8e6eea076d3fa8c52e3114e46a004c66ce1c1c97d04383ae0c23e0081670"
+    }
+  },
+  "observed": {
+    "model": {
+      "bytes": 986048128,
+      "path": "/home/ubuntu/muta-finetune/runs-metric/qwen25-bf16-r16-licensed-mcq-lr2e5-500/gguf_gguf/Qwen2.5-1.5B-Instruct.Q4_K_M.gguf",
+      "sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb"
+    },
+    "server": {
+      "bytes": 14600,
+      "path": "/home/ubuntu/.unsloth/llama.cpp/llama-server",
+      "sha256": "6a749492e30e2e360bc76f9be018a56588b2df5f03a437ec27b39a1f2434fdd4"
+    }
+  }
+}
