@@ -31,8 +31,52 @@ class FakeTokenizer:
         return [1, 2, 3] if len(messages) == 1 else self.full
 
 
+class FakeCuda:
+    @staticmethod
+    def current_device():
+        return 2
+
+    @staticmethod
+    def get_device_properties(device):
+        assert device == 2
+        return type("Properties", (), {"name": "Fake A100", "total_memory": 40_000})()
+
+    @staticmethod
+    def memory_allocated(device):
+        assert device == 2
+        return 11_000
+
+    @staticmethod
+    def memory_reserved(device):
+        assert device == 2
+        return 12_000
+
+    @staticmethod
+    def max_memory_allocated(device):
+        assert device == 2
+        return 31_000
+
+    @staticmethod
+    def max_memory_reserved(device):
+        assert device == 2
+        return 32_000
+
+
 def _row():
     return {"id": "row-1", "mode": "chat", "prompt": "p", "completion": "c"}
+
+
+def test_cuda_memory_receipt_uses_exact_byte_counters():
+    torch = type("FakeTorch", (), {"cuda": FakeCuda})()
+    assert round2._cuda_memory_receipt(torch) == {
+        "device_index": 2,
+        "device_name": "Fake A100",
+        "device_total_bytes": 40_000,
+        "current_allocated_bytes": 11_000,
+        "current_reserved_bytes": 12_000,
+        "peak_allocated_bytes": 31_000,
+        "peak_reserved_bytes": 32_000,
+    }
 
 
 def test_completion_mask_contains_only_assistant_tokens():

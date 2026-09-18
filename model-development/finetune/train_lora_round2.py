@@ -253,6 +253,21 @@ def _id_digest(ids: list[str]) -> str:
     return hashlib.sha256("\n".join(ids).encode()).hexdigest()
 
 
+def _cuda_memory_receipt(torch_module) -> dict[str, int | str]:
+    """Capture allocator counters in bytes without relying on human-formatted logs."""
+    device = torch_module.cuda.current_device()
+    properties = torch_module.cuda.get_device_properties(device)
+    return {
+        "device_index": device,
+        "device_name": properties.name,
+        "device_total_bytes": properties.total_memory,
+        "current_allocated_bytes": torch_module.cuda.memory_allocated(device),
+        "current_reserved_bytes": torch_module.cuda.memory_reserved(device),
+        "peak_allocated_bytes": torch_module.cuda.max_memory_allocated(device),
+        "peak_reserved_bytes": torch_module.cuda.max_memory_reserved(device),
+    }
+
+
 def tokenize_chat_row(row, *, tokenizer, max_length: int) -> dict[str, list[int] | int]:
     """Apply the model template and mask every non-assistant token."""
     if row.get("mode") != "chat":
@@ -296,6 +311,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if (output / "COMPLETED.json").exists():
         raise FileExistsError(f"completed run already exists: {output}")
 
+    # Unsloth otherwise writes generated modules into the current working tree,
+    # making the immutable Git receipt appear dirty.  Sibling runs deliberately
+    # share one cache outside the repository.
+    os.environ.setdefault(
+        "UNSLOTH_COMPILE_LOCATION",
+        str(output.parent / ".unsloth-compiled-cache"),
+    )
+
     script_dir = Path(__file__).resolve().parent
     repo = script_dir.parents[1]
     dataset = verify_dataset_manifest(args.dataset_manifest)
@@ -324,8 +347,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     _json_write(output / "resolved-config.json", resolved)
     _json_write(
         output / "RUNNING.json",
-        {"run_name": args.run_name, "started_unix": time.time()},
+        {
+            "run_name": args.run_name,
+            "started_unix": time.time(),
+            "hostname": platform.node(),
+            "pid": os.getpid(),
+        },
     )
+    (output / "FAILED.json").unlink(missing_ok=True)
 
     random.seed(args.seed)
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -496,13 +525,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         eval_dataset=tokenized["validation"],
         data_collator=collator,
     )
+    torch.cuda.synchronize()
+    gpu_memory_before_training = _cuda_memory_receipt(torch)
+    torch.cuda.reset_peak_memory_stats()
     started = time.time()
     result = trainer.train(
         resume_from_checkpoint=(
             str(args.resume_from_checkpoint) if args.resume_from_checkpoint else None
         )
     )
+    torch.cuda.synchronize()
+    gpu_memory_training = _cuda_memory_receipt(torch)
+    torch.cuda.reset_peak_memory_stats()
     evaluation = trainer.evaluate()
+    torch.cuda.synchronize()
+    gpu_memory_evaluation = _cuda_memory_receipt(torch)
     trainer.save_state()
 
     adapter_dir = output / "adapter"
@@ -558,6 +595,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "trainer_global_step": trainer.state.global_step,
         "trainer_epoch": trainer.state.epoch,
         "elapsed_seconds": round(time.time() - started, 3),
+        "gpu_memory": {
+            "before_training": gpu_memory_before_training,
+            "training": gpu_memory_training,
+            "final_evaluation": gpu_memory_evaluation,
+        },
         "environment": {
             "hostname": platform.node(),
             "platform": platform.platform(),
@@ -566,6 +608,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "cuda": torch.version.cuda,
             "gpu": torch.cuda.get_device_name(0),
             "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+            "unsloth_compile_location": os.environ.get("UNSLOTH_COMPILE_LOCATION"),
             "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
             "slurm_array_job_id": os.environ.get("SLURM_ARRAY_JOB_ID"),
             "slurm_array_task_id": os.environ.get("SLURM_ARRAY_TASK_ID"),
@@ -599,6 +642,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     }
     _json_write(output / "COMPLETED.json", completed)
     (output / "RUNNING.json").unlink(missing_ok=True)
+    (output / "FAILED.json").unlink(missing_ok=True)
     return training_manifest
 
 
