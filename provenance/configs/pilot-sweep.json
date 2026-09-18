@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "campaign_id": "muta-round2-20260918",
+  "frozen_before_results": true,
+  "dataset": {
+    "rows": 300350,
+    "fingerprint_sha256": "037edf28cccff62d90c23e2d6caf56b9998dea6928080f98af2a513f9f92910e",
+    "pilot_rows": 20000,
+    "private_policy": "include"
+  },
+  "validation": {
+    "rows": 5000,
+    "fingerprint_sha256": "c056e1744fe148f847354527aa7c7caf6b1fc24fec509f9834d700345e68cc8b"
+  },
+  "shared": {
+    "training_method": "BF16 LoRA",
+    "max_length": 512,
+    "epochs": 1.0,
+    "batch_size": 16,
+    "gradient_accumulation": 4,
+    "global_batch_per_gpu": 64,
+    "warmup_ratio": 0.03,
+    "weight_decay": 0.0,
+    "seed": 3407,
+    "eval_steps": 100,
+    "save_steps": 100,
+    "logging_steps": 5,
+    "completion_only_loss": true
+  },
+  "candidates": [
+    {
+      "id": "clean-r16-lr1e5",
+      "lineage": "clean",
+      "rank": 16,
+      "learning_rate": 1e-5,
+      "preferred_host": "oracle"
+    },
+    {
+      "id": "clean-r32-lr1e5",
+      "lineage": "clean",
+      "rank": 32,
+      "learning_rate": 1e-5,
+      "preferred_host": "oracle"
+    },
+    {
+      "id": "warm-r8-lr5e6",
+      "lineage": "warm",
+      "rank": 8,
+      "learning_rate": 5e-6,
+      "preferred_host": "csd3"
+    },
+    {
+      "id": "warm-r16-lr5e6",
+      "lineage": "warm",
+      "rank": 16,
+      "learning_rate": 5e-6,
+      "preferred_host": "csd3"
+    },
+    {
+      "id": "warm-r16-lr1e5",
+      "lineage": "warm",
+      "rank": 16,
+      "learning_rate": 1e-5,
+      "preferred_host": "csd3"
+    },
+    {
+      "id": "warm-r16-lr2e5",
+      "lineage": "warm",
+      "rank": 16,
+      "learning_rate": 2e-5,
+      "preferred_host": "csd3"
+    },
+    {
+      "id": "warm-r32-lr5e6",
+      "lineage": "warm",
+      "rank": 32,
+      "learning_rate": 5e-6,
+      "preferred_host": "oracle"
+    },
+    {
+      "id": "warm-r32-lr1e5",
+      "lineage": "warm",
+      "rank": 32,
+      "learning_rate": 1e-5,
+      "preferred_host": "oracle"
+    }
+  ],
+  "promotion": {
+    "full_runs": ["best_clean", "best_warm", "rights_clean_ablation"],
+    "minimum_controls": ["upstream_qwen", "incumbent_muta"],
+    "metrics": [
+      "validation_loss",
+      "arc_easy_500",
+      "stem_100_core",
+      "stem_100_written",
+      "gate1_judge_rubric",
+      "format_and_stop_pass_rate"
+    ],
+    "judge_prompts_may_change_hyperparameters": false
+  }
+}

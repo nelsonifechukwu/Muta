@@ -1,0 +1,75 @@
+{
+  "collector": {
+    "bytes": 3937,
+    "path": "/lambda/nfs/awf-tmp/muta/campaign-20260918/provenance/collect_lineage.py",
+    "sha256": "cb974a5a58e449553c204d16d7cd93f39372d5814e1f371f0e16a6433c39d652"
+  },
+  "created_unix": 1789697538.546577,
+  "host": "129-213-31-157",
+  "lineage": "clean",
+  "schema_version": 1,
+  "training_base": {
+    "bytes": 3098973447,
+    "file_count": 10,
+    "files": [
+      {
+        "bytes": 1519,
+        "path": ".gitattributes",
+        "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+      },
+      {
+        "bytes": 11343,
+        "path": "LICENSE",
+        "sha256": "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e"
+      },
+      {
+        "bytes": 4917,
+        "path": "README.md",
+        "sha256": "2e1bcd8bd964728a820be709fa0f7b9dd54817a94fd2254c535df70c5e67fada"
+      },
+      {
+        "bytes": 660,
+        "path": "config.json",
+        "sha256": "98d2ff8cc47488d08a2b0b3acf4eb99ef210779b42bd48605f6b8e36acdbf670"
+      },
+      {
+        "bytes": 242,
+        "path": "generation_config.json",
+        "sha256": "e558847a8b4402616f1273797b015104dc266fe4b520056fca88823ba8f8ebe6"
+      },
+      {
+        "bytes": 1671839,
+        "path": "merges.txt",
+        "sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3"
+      },
+      {
+        "bytes": 3087467144,
+        "path": "model.safetensors",
+        "sha256": "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee"
+      },
+      {
+        "bytes": 7031645,
+        "path": "tokenizer.json",
+        "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+      },
+      {
+        "bytes": 7305,
+        "path": "tokenizer_config.json",
+        "sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583"
+      },
+      {
+        "bytes": 2776833,
+        "path": "vocab.json",
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    ],
+    "root": "/lambda/nfs/awf-tmp/muta/campaign-20260918/bases/upstream-qwen25",
+    "tree_sha256": "ae1baefcdac4c037b545696abffc1bd07824c109572163664333b5a5c0dda892"
+  },
+  "upstream": {
+    "license": "Apache-2.0",
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "model_safetensors_sha256": "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee",
+    "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+  }
+}
