@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -21,6 +22,13 @@ from runtime.gguf import GGUFError, read_metadata
 from runtime.server import LlamaServer
 
 log = logging.getLogger("muta.runtime.model_catalog")
+
+
+_GENERIC_CUSTOM_MODEL_NAME = re.compile(
+    r"^(?:merged(?:\s+model)?(?:\s+(?:b?f16|f32))?|model|untitled(?:\s+model)?|"
+    r"exported(?:\s+model)?|gguf)$",
+    re.IGNORECASE,
+)
 
 
 class ModelSwitchError(RuntimeError):
@@ -572,7 +580,15 @@ class ModelManager:
     def _custom_label(path: Path, metadata: Any) -> str:
         raw = metadata.kv.get("general.name") or metadata.kv.get("general.basename")
         if isinstance(raw, str) and raw.strip():
-            return raw.strip()[:96]
+            embedded = " ".join(raw.split())
+            if not _GENERIC_CUSTOM_MODEL_NAME.fullmatch(embedded):
+                return embedded[:96]
+            # Merge/export pipelines frequently leave names such as "Merged Bf16" in the
+            # GGUF metadata. That is not an identity a user can match to the file they added.
+            # Keep the exact filename stem in this case, including useful run/quantization tags.
+            filename = path.stem.strip()
+            if filename:
+                return filename[:96]
         label = path.stem.replace("_", " ").replace("-", " ")
         return " ".join(label.split())[:96] or "Custom GGUF"
 

@@ -450,6 +450,19 @@ def test_discovers_and_switches_operator_added_gguf_without_catalog_edit(tmp_pat
     assert manager.cfg.model_path == model
 
 
+def test_custom_model_uses_filename_when_embedded_name_is_generic(tmp_path):
+    custom = tmp_path / "models" / "custom"
+    custom.mkdir(parents=True)
+    model = custom / "Muta-Round2-Pilot-warm-r16-lr5e6-20k-Q4_K_M.gguf"
+    model.write_bytes(_gguf("Merged Bf16"))
+    manager = _manager(tmp_path)
+
+    added = next(item for item in manager.status()["models"] if item["user_added"])
+
+    assert added["label"] == "Muta-Round2-Pilot-warm-r16-lr5e6-20k-Q4_K_M"
+    assert added["available"] is True
+
+
 def test_custom_catalog_refresh_ignores_invalid_files_and_symlinks(tmp_path):
     manager = _manager(tmp_path)
     custom = tmp_path / "models" / "custom"
