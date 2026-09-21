@@ -65,8 +65,8 @@
           <ol class="contents-list" id="gate-2-content" aria-label="Gate 2 chapters" hidden>
             <li><a href="#gate-2-overview" data-chapter="01">Model research</a></li>
             <li><a href="#gate-2-audit" data-chapter="02">Model evaluation and ranking</a></li>
-            <li><a href="#gate-2-experiments" data-chapter="03">Experiments</a></li>
-            <li><a href="#gate-2-validation" data-chapter="04">Validation</a></li>
+            <li><a href="#gate-2-experiments" data-chapter="03">Improving Accuracy: Model fine-tuning</a></li>
+            <li><a href="#gate-2-validation" data-chapter="04">Improving Accuracy while maximizing performance and efficiency</a></li>
             <li><a href="#gate-2-review" data-chapter="05">Reviewer questions</a></li>
             <li><a href="#gate-2-decision" data-chapter="06">Decision</a></li>
           </ol>
@@ -1391,25 +1391,170 @@
         </div>
       </section>
 
-      <section class="gate-two-page" id="gate-2-experiments" data-gate-two-number="03" data-gate-two-title="Experiments" hidden>
+      <section class="gate-two-page" id="gate-2-experiments" data-gate-two-number="03" data-gate-two-title="Improving Accuracy: Model fine-tuning" hidden>
         <p class="gate-two-eyebrow">Gate 2 · Chapter 3</p>
-        <h1 tabindex="-1">Experiments</h1>
-        <p class="gate-two-dek">This chapter will connect each proposed change to a controlled test and a decision about the candidate field.</p>
-        <div class="gate-two-placeholder">
-          <p class="placeholder-label">Evidence placeholder</p>
-          <h2>One comparable result at a time</h2>
-          <p>The first Gate 2 comparison is complete in the preceding chapter. This section is reserved for post-selection training, quantization, template, and runtime experiments that have not yet produced comparable retained results.</p>
+        <h1 tabindex="-1">Improving Accuracy: Model fine-tuning</h1>
+        <p class="gate-two-dek">Fine-tuning was treated as a sequence of controlled interventions: freeze the data and lineage, train small pilots, expand only guarded candidates, export identical GGUFs, and compare them against unchanged controls.</p>
+
+        <div class="gate-two-research-section" id="g2-exp-overview">
+          <h2>What the campaign was designed to answer</h2>
+          <p>The Gate 1 judges exposed failures that a narrow answer benchmark could miss: unfinished reasoning, wrong units, arithmetic drift, weak explanations, unsafe analogies, and poor adaptation to a learner. The Gate 2 campaign therefore measured both answer correctness and tutoring behaviour. The target was a small science-and-mathematics tutor, not a past-question lookup engine.</p>
+          <div class="gate-two-protocol-grid">
+            <div><h3>Method</h3><p>BF16 LoRA was the executed method. QLoRA was retained as a preregistered memory-control branch, but no completed QLoRA result is in the evidence ledger.</p></div>
+            <div><h3>Lineage</h3><p>Runs were separated into fresh Qwen, recovered Muta, warm-pilot continuation, and a native DeepSeek control. A parent, adapter, optimizer state, schedule and host were recorded for every run.</p></div>
+            <div><h3>Controls</h3><p>Previous Muta, untouched Qwen2.5, historical warm, and untouched DeepSeek were kept beside the trained candidates. Controls were not silently replaced by a fine-tuned file.</p></div>
+            <div><h3>Evidence boundary</h3><p>Loss is a development signal. It is not an accuracy score, a tutoring grade, or an ADTC CPU result. Host and backend effects are reported separately from hyperparameters.</p></div>
+          </div>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-data">
+          <h2>Data, verification and provenance</h2>
+          <p>The larger private corpus contained 300,350 verified rows for the full-data runs. Its text remains private because source rights and competition-use terms were not equivalent to redistribution rights. The science-tutor release was a separate, reviewed mixture designed around conceptual understanding, quantitative reasoning, experiments, misconception repair, adaptive dialogue, scientific judgment and accessible explanations across mathematics, physics, chemistry, biology and Earth science.</p>
+          <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Fine-tuning data splits" tabindex="0">
+            <table class="editorial-table gate-two-research-table gate-two-results-table">
+              <thead><tr><th>Artifact</th><th>Rows</th><th>Use</th><th>Boundary</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Private full-data artifact</th><td>300,350</td><td>Three BF16 LoRA runs</td><td>Private; not published</td></tr>
+                <tr><th scope="row">Science-tutor train</th><td>8,002</td><td>Four pilots; P2 refinement</td><td>Reviewed and frozen</td></tr>
+                <tr><th scope="row">Science-tutor development</th><td>1,577</td><td>Selection and regression guards</td><td>Separate from final holdout</td></tr>
+                <tr><th scope="row">Science-tutor final holdout</th><td>1,591</td><td>Held-out science comparison</td><td>Sealed before finalist testing</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Candidate materials included source-screened science and dialogue resources, exam-style STEM material, and teacher-model drafts. Drafts were not treated as truth: calculations were recomputed; unsupported, contradictory, malformed, or unresolved examples were rejected. Distillation-style sources were quarantined unless a row passed the final manifest and verification rules. The separate 100-item STEM evaluation set (50 mathematics, 50 science) was published privately as <a href="https://huggingface.co/datasets/timiiowolabi/Muta-STEM-100">Muta-STEM-100</a>; it contains no model responses.</p>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-pilots">
+          <h2>Twenty-thousand-row pilot sweep</h2>
+          <p>Eight pilots used 20,000 training rows and 5,000 validation rows, 313 optimizer steps, effective batch 64, a 512-token maximum sequence, seed 3407, warmup/cosine scheduling, rank-specific α, dropout 0, and attention/MLP projection targets. Four started from fresh Qwen weights; four started from the recovered Muta parent.</p>
+          <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Eight 20K pilot losses" tabindex="0">
+            <table class="editorial-table gate-two-research-table gate-two-results-table">
+              <thead><tr><th>Pilot</th><th>Init.</th><th>Rank</th><th>LR</th><th>Final dev loss</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">warm-r16-lr2e5</th><td>Muta</td><td>16</td><td>2 × 10⁻⁵</td><td>0.217060</td></tr>
+                <tr><th scope="row">warm-r32-lr1e5</th><td>Muta</td><td>32</td><td>1 × 10⁻⁵</td><td>0.339828</td></tr>
+                <tr><th scope="row">clean-r32-lr1e5</th><td>Qwen</td><td>32</td><td>1 × 10⁻⁵</td><td>0.346829</td></tr>
+                <tr><th scope="row">warm-r16-lr1e5</th><td>Muta</td><td>16</td><td>1 × 10⁻⁵</td><td>0.578009</td></tr>
+                <tr><th scope="row">clean-r16-lr1e5</th><td>Qwen</td><td>16</td><td>1 × 10⁻⁵</td><td>0.593257</td></tr>
+                <tr><th scope="row">warm-r32-lr5e6</th><td>Muta</td><td>32</td><td>5 × 10⁻⁶</td><td>0.685911</td></tr>
+                <tr><th scope="row">warm-r16-lr5e6</th><td>Muta</td><td>16</td><td>5 × 10⁻⁶</td><td>0.961763</td></tr>
+                <tr><th scope="row">warm-r8-lr5e6</th><td>Muta</td><td>8</td><td>5 × 10⁻⁶</td><td>1.151685</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The warm-r16-lr5e6 lineage was selected for the full-data comparison as a practical lineage decision, not as proof that its lower pilot loss made it the best tutor. The complete pilot loss gallery is retained in the repository at <code>provenance/results/all-training-loss-curves-20260919/eight-pilots.svg</code>.</p>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-full">
+          <h2>Full-data fine-tuning</h2>
+          <p>Three full runs used the same verified 300,350-row private artifact. The selected checkpoint was step 4693. Each run was followed through adapter verification, merge, quantization and a single-copy Mac delivery; the resulting GGUFs were tested with the same request set.</p>
+          <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Full-data fine-tuning runs" tabindex="0">
+            <table class="editorial-table gate-two-research-table gate-two-results-table">
+              <thead><tr><th>Run</th><th>Initialization</th><th>Rank / LR</th><th>Final dev loss</th><th>Disposition</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Clean</th><td>Fresh Qwen2.5-1.5B-Instruct</td><td>16 / 1 × 10⁻⁵</td><td>0.018999</td><td>Exported</td></tr>
+                <tr><th scope="row">Warm</th><td>Recovered Muta parent</td><td>16 / 5 × 10⁻⁶</td><td>0.022473</td><td>Exported</td></tr>
+                <tr><th scope="row">Pilot continuation</th><td>Exact warm-r16-lr5e6 adapter; fresh optimizer/schedule</td><td>16 / 5 × 10⁻⁶</td><td>0.022921</td><td>Exported</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Loss fell sharply in the larger runs, but the values are not directly comparable with the 20K pilot losses because the data volume, stage, host and training history changed. The clean, warm and continuation curves remain available under <code>provenance/training/full-best-*/loss-curve.svg</code>.</p>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-science">
+          <h2>Science-tutor pilots and guarded refinement</h2>
+          <p>The science release tested whether the model could tutor rather than only match answers. Four candidates trained for 126 steps on the same 8,002 rows:</p>
+          <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Science tutor pilots" tabindex="0">
+            <table class="editorial-table gate-two-research-table gate-two-results-table">
+              <thead><tr><th>Pilot</th><th>Parent</th><th>Tokenizer / masking</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">P1</th><td>Untouched Qwen</td><td>Fresh LoRA</td><td>Completed</td></tr>
+                <tr><th scope="row">P2</th><td>Original Muta</td><td>Fresh LoRA</td><td>Completed</td></tr>
+                <tr><th scope="row">P3</th><td>Historical warm pilot</td><td>Fresh optimizer/schedule</td><td>Completed</td></tr>
+                <tr><th scope="row">P4</th><td>DeepSeek-R1-Distill-Qwen-1.5B</td><td>Native tokenizer and masking</td><td>Completed</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Development selection used 12 candidate checkpoints × 72 prompts: 64 mathematics/science multiple-choice items and 8 tutoring cases. P1-end had the highest unguarded point score but failed the preregistered regression guard. P2-half alone advanced:</p>
+          <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Science pilot development selection" tabindex="0">
+            <table class="editorial-table gate-two-research-table gate-two-results-table">
+              <thead><tr><th>Candidate</th><th>M / 64</th><th>S / 32</th><th>T / 32</th><th>Index</th><th>Decision</th></tr></thead>
+              <tbody>
+                <tr class="selected-row"><th scope="row"><strong>P2-half</strong></th><td>52</td><td>17</td><td>24</td><td>72.66%</td><td><strong>Advance</strong></td></tr>
+                <tr><th scope="row">P1-end</th><td>51</td><td>18</td><td>26</td><td>74.22%</td><td>Guard failure</td></tr>
+                <tr><th scope="row">P4-half</th><td>45</td><td>15</td><td>25</td><td>66.41%</td><td>Reject</td></tr>
+                <tr><th scope="row">P3-half</th><td>45</td><td>6</td><td>15</td><td>51.56%</td><td>Reject</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The full science-pilot curve panel is retained at <code>provenance/science-tutor-20260919/results/pilot-loss-curves-v1/four-science-pilots.svg</code>. Development ranking was not reused as the final test.</p>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-evaluation">
+          <h2>Matched evaluation and winner rule</h2>
+          <p>The final roster was previous Muta, untouched Qwen, historical warm, untouched DeepSeek and P2-half. The sealed comparison combined held-out science, a 2,000-question practical battery, blinded tutoring review, the 100-prompt STEM screen and the known judges suite. The known judges score is a keyword screen; it is not a complete semantic grade.</p>
+          <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Final fine-tuning comparison" tabindex="0">
+            <table class="editorial-table gate-two-research-table gate-two-results-table">
+              <thead><tr><th>Model</th><th>Held-out science</th><th>Practical / 2,000</th><th>Tutor / 64</th><th>Judges / 100</th><th>STEM MC / 50</th></tr></thead>
+              <tbody>
+                <tr class="selected-row"><th scope="row"><strong>Previous Muta</strong></th><td><strong>83.565%</strong></td><td><strong>41.325</strong></td><td><strong>22</strong></td><td>57</td><td>32</td></tr>
+                <tr><th scope="row">P2-half</th><td>83.565%</td><td>39.850</td><td>12</td><td>50</td><td>32</td></tr>
+                <tr><th scope="row">Untouched Qwen</th><td>82.554%</td><td>38.425</td><td>17</td><td><strong>61</strong></td><td><strong>35</strong></td></tr>
+                <tr><th scope="row">Historical warm</th><td>83.375%</td><td>12.500</td><td>8</td><td>57</td><td>30</td></tr>
+                <tr class="muted-row"><th scope="row">Untouched DeepSeek</th><td>Delivery failure</td><td>0.200</td><td>15</td><td>Failed gate</td><td>Failed gate</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The preregistered conservative rule required a challenger to show a tutoring advantage without a material practical or known-suite regression. P2 tied the incumbent on held-out science but lost on the practical battery and tutor quality. The evidence therefore supports retaining the incumbent, not promoting P2. The full decision receipt is <code>provenance/science-tutor-20260919/results/final-winner-decision-v1/decision.json</code>.</p>
+          <div class="gate-two-selection">
+            <p class="placeholder-label">Final Gate 2 decision</p>
+            <h3>Retain Muta Tutor Qwen2.5-1.5B</h3>
+            <p>No full-data challenger was promoted and the default deployment file was not swapped. The result is a practical evidence-based hold, not a claim that further verified data work cannot improve STEM tutoring.</p>
+          </div>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-loss">
+          <h2>Loss curves and reproducibility record</h2>
+          <p>The repository preserves loss curves for the eight 20K pilots, the three full-data runs, the four science pilots, the five compared model histories and the original Muta training. Use the <a href="#g2-exp-pilots">pilot table</a>, <a href="#g2-exp-full">full-run table</a> and <a href="#g2-exp-science">science-pilot table</a> with the raw provenance paths rather than comparing loss across different datasets or hosts as though it were accuracy.</p>
+          <div class="gate-two-protocol-grid">
+            <div><h3>All histories</h3><p><code>provenance/results/all-training-loss-curves-20260919/index.html</code> and its five-model/original-Muta panels.</p></div>
+            <div><h3>Eight pilots</h3><p><code>provenance/results/all-training-loss-curves-20260919/eight-pilots.svg</code>.</p></div>
+            <div><h3>Science pilots</h3><p><code>provenance/science-tutor-20260919/results/pilot-loss-curves-v1/four-science-pilots.svg</code>.</p></div>
+            <div><h3>Execution record</h3><p>Training scripts, configs, row counts, adapter/base/GGUF hashes, failures and source/licence notes remain in <code>provenance/</code>.</p></div>
+          </div>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-packaging">
+          <h2>Post-selection packaging</h2>
+          <p>After the model decision, the Qwen3.5-style judge template in <code>muta-iq/opt/templates/qwen35_judge_hybrid.jinja</code> was embedded as GGUF metadata in a separate tensor-identical packaging variant. The original incumbent remained unchanged.</p>
+          <div class="table-wrap editorial-table-wrap gate-two-table-wrap" role="region" aria-label="Chat template packaging evidence" tabindex="0">
+            <table class="editorial-table gate-two-research-table gate-two-results-table">
+              <thead><tr><th>Artifact</th><th>Digest</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Original incumbent</th><td><code>a750d00d…e1eb</code></td><td>Unchanged deployment file</td></tr>
+                <tr><th scope="row">Template sibling</th><td><code>ac512cc3…e3c</code></td><td>Metadata-only packaging variant</td></tr>
+                <tr><th scope="row">Template bytes</th><td><code>4844a94d…c3f6</code></td><td>Embedded Qwen3.5-style hybrid template</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The sibling passed single- and multi-turn smoke tests and was uploaded to the existing Hugging Face repository as a separate file. This was not a new fine-tune, and it was not silently made the winner.</p>
+        </div>
+
+        <div class="gate-two-research-section" id="g2-exp-provenance">
+          <h2>What remains reproducible</h2>
+          <p>The Gate 2 record keeps raw outputs, failed attempts, executed scripts, loss curves, exact row counts, adapter/base/GGUF hashes, model/config joins, and private-safe source/licence descriptions. The private training text is not copied into this public report. GPU timing is not called an ADTC CPU score; CPU qualification remains a separate deployment measurement.</p>
+          <p>For the concise experiment history, use the <a href="https://muta-iq.vercel.app/#g2-exp-overview">overview</a>, <a href="https://muta-iq.vercel.app/#g2-exp-pilots">pilot sweep</a>, <a href="https://muta-iq.vercel.app/#g2-exp-full">full-data runs</a>, <a href="https://muta-iq.vercel.app/#g2-exp-science">science-tutor pilots</a>, <a href="https://muta-iq.vercel.app/#g2-exp-evaluation">matched decision</a>, and <a href="https://muta-iq.vercel.app/#g2-exp-loss">loss record</a> above.</p>
         </div>
       </section>
 
-      <section class="gate-two-page" id="gate-2-validation" data-gate-two-number="04" data-gate-two-title="Validation" hidden>
+      <section class="gate-two-page" id="gate-2-validation" data-gate-two-number="04" data-gate-two-title="Improving Accuracy while maximizing performance and efficiency" hidden>
         <p class="gate-two-eyebrow">Gate 2 · Chapter 4</p>
-        <h1 tabindex="-1">Validation</h1>
-        <p class="gate-two-dek">This chapter will test whether screened gains persist under larger samples and the physical submission constraints.</p>
+        <h1 tabindex="-1">Improving Accuracy while maximizing performance and efficiency</h1>
+        <p class="gate-two-dek">This chapter tests whether accuracy gains persist while speed, memory, and the physical submission constraints remain within budget.</p>
         <div class="gate-two-placeholder">
-          <p class="placeholder-label">Validation placeholder</p>
-          <h2>Separate screening from confirmation</h2>
-          <p>The candidate screen uses ARC-Easy-500 and retained behavior suites, but physical-target validation has not yet been completed. This chapter will hold repeated laptop measurements, temperature, multilingual checks, and post-training confirmation.</p>
+          <p class="placeholder-label">Accuracy · performance · efficiency</p>
+          <h2>Confirm the trade-off on target hardware</h2>
+          <p>The candidate screen uses ARC-Easy-500 and retained behavior suites. This chapter holds repeated laptop measurements, temperature, multilingual checks, and post-training confirmation so an accuracy improvement does not hide a performance or efficiency regression.</p>
         </div>
       </section>
 

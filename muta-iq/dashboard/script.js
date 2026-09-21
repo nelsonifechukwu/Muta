@@ -22,8 +22,8 @@ const state = {
 const GATE_TWO_CHAPTERS = [
   { id: "gate-2-overview", title: "Model research" },
   { id: "gate-2-audit", title: "Model evaluation and ranking" },
-  { id: "gate-2-experiments", title: "Experiments" },
-  { id: "gate-2-validation", title: "Validation" },
+  { id: "gate-2-experiments", title: "Improving Accuracy: Model fine-tuning" },
+  { id: "gate-2-validation", title: "Improving Accuracy while maximizing performance and efficiency" },
   { id: "gate-2-review", title: "Reviewer questions" },
   { id: "gate-2-decision", title: "Decision" },
 ];
