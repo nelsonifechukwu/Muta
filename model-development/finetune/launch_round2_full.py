@@ -13,11 +13,13 @@ from pathlib import Path
 from typing import Any
 
 from build_round2_promotions import validate_promotion_config
-from campaign_io import sha256_file
+from campaign_io import inventory_tree, sha256_file, verify_dataset_manifest
 from compile_round2_pilots import PilotResultError
 
 
-def load_frozen_config(path: Path) -> tuple[dict[str, Any], str]:
+def load_frozen_config(
+    path: Path, *, expected_sha256: str | None = None
+) -> tuple[dict[str, Any], str]:
     path = path.resolve()
     digest_path = path.with_suffix(path.suffix + ".sha256")
     try:
@@ -30,6 +32,8 @@ def load_frozen_config(path: Path) -> tuple[dict[str, Any], str]:
         raise PilotResultError("promotion config receipt mismatch")
     if not isinstance(payload, dict):
         raise PilotResultError("promotion config root is not an object")
+    if payload.get("schema_version") == 3 and expected_sha256 != observed:
+        raise PilotResultError("v3 requires the externally frozen exact config byte SHA256")
     validate_promotion_config(payload)
     return payload, observed
 
@@ -46,6 +50,75 @@ def select_candidate(
     if candidate_index is None or not 0 <= candidate_index < len(candidates):
         raise PilotResultError(f"candidate index is outside 0..{len(candidates) - 1}")
     return candidates[candidate_index]
+
+
+def verify_runtime_inputs(args: argparse.Namespace, config: dict, candidate: dict) -> dict:
+    """Join supplied runtime paths to frozen content authorities before Popen."""
+    authority = config.get("runtime_input_authority")
+    if authority is None and config.get("schema_version") == 1:
+        return {"mode": "legacy_trainer_validation"}
+    if not isinstance(authority, dict):
+        raise PilotResultError("frozen runtime input authority is missing")
+    receipts: dict[str, Any] = {}
+    selected = candidate["lineage"]
+    for lineage in sorted({"clean", selected}):
+        model = args.clean_base if lineage == "clean" else args.warm_base
+        receipt_path = args.clean_lineage if lineage == "clean" else args.warm_lineage
+        expected = authority["lineages"][lineage]
+        if (
+            receipt_path.is_symlink()
+            or sha256_file(receipt_path) != expected["lineage_receipt_sha256"]
+        ):
+            raise PilotResultError(f"{lineage} lineage receipt differs from frozen authority")
+        observed = inventory_tree(model)
+        if observed["tree_sha256"] != expected["base_tree_sha256"]:
+            raise PilotResultError(f"{lineage} base differs from frozen authority")
+        lineage_data = json.loads(receipt_path.read_text())
+        if (
+            lineage_data.get("lineage") != lineage
+            or lineage_data.get("training_base", {}).get("tree_sha256") != observed["tree_sha256"]
+        ):
+            raise PilotResultError(f"{lineage} lineage/base join failed")
+        receipts[lineage] = {
+            "base_tree_sha256": observed["tree_sha256"],
+            "lineage_receipt_sha256": sha256_file(receipt_path),
+        }
+    tokenizer = authority["tokenizer"]
+    if (
+        receipts["clean"]["base_tree_sha256"] != tokenizer["base_tree_sha256"]
+        or receipts["clean"]["lineage_receipt_sha256"] != tokenizer["lineage_receipt_sha256"]
+    ):
+        raise PilotResultError("tokenizer lineage/base differs from frozen authority")
+    for name, expected in tokenizer["files"].items():
+        path = args.clean_base / name
+        if path.stat().st_size != expected["bytes"] or sha256_file(path) != expected["sha256"]:
+            raise PilotResultError(f"tokenizer file differs from frozen authority: {name}")
+    for name, path in (
+        ("dataset", args.dataset_manifest),
+        ("validation", args.validation_manifest),
+    ):
+        expected = authority[name]
+        if sha256_file(path) != expected["manifest_sha256"]:
+            raise PilotResultError(f"{name} manifest differs from frozen authority")
+        observed_data = verify_dataset_manifest(path)
+        if (
+            observed_data.fingerprint != expected["fingerprint_sha256"]
+            or observed_data.row_count != expected["rows"]
+        ):
+            raise PilotResultError(f"{name} data differs from frozen authority")
+        receipts[name] = observed_data.receipt()
+    initial = getattr(args, "initial_adapter", None)
+    expected_initial = candidate.get("initial_adapter_tree_sha256")
+    if bool(initial) != bool(expected_initial):
+        raise PilotResultError(
+            "initial adapter must be supplied only for the continuation treatment"
+        )
+    if initial is not None:
+        adapter = inventory_tree(initial)
+        if adapter["tree_sha256"] != expected_initial:
+            raise PilotResultError("initial adapter differs from frozen pilot authority")
+        receipts["initial_adapter"] = adapter
+    return receipts
 
 
 def build_command(
@@ -134,12 +207,24 @@ def build_command(
     ]
     if args.resume_from_checkpoint:
         command.extend(["--resume-from-checkpoint", str(args.resume_from_checkpoint)])
+    if candidate.get("initial_adapter_tree_sha256"):
+        if getattr(args, "initial_adapter", None) is None:
+            raise PilotResultError("continuation requires --initial-adapter")
+        command.extend(
+            [
+                "--initial-adapter",
+                str(args.initial_adapter),
+                "--expected-initial-adapter-tree-sha256",
+                candidate["initial_adapter_tree_sha256"],
+            ]
+        )
     return command
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--expected-config-sha256")
     choice = parser.add_mutually_exclusive_group(required=True)
     choice.add_argument("--candidate-id")
     choice.add_argument("--candidate-index", type=int)
@@ -154,6 +239,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--eval-batch-size", type=int)
     parser.add_argument("--dataloader-workers", type=int, default=8)
     parser.add_argument("--resume-from-checkpoint", type=Path)
+    parser.add_argument("--initial-adapter", type=Path)
     args = parser.parse_args(argv)
     if args.eval_batch_size is not None and args.eval_batch_size < 1:
         parser.error("--eval-batch-size must be positive")
@@ -162,12 +248,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    config, config_sha256 = load_frozen_config(args.config)
+    config, config_sha256 = load_frozen_config(
+        args.config, expected_sha256=args.expected_config_sha256
+    )
     candidate = select_candidate(
         config,
         candidate_id=args.candidate_id,
         candidate_index=args.candidate_index,
     )
+    runtime_receipts = verify_runtime_inputs(args, config, candidate)
     command = build_command(args, config, candidate, config_sha256=config_sha256)
     output = (args.output_root / candidate["id"]).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -177,6 +266,7 @@ def main(argv: list[str] | None = None) -> None:
         "config": str(args.config.resolve()),
         "config_bytes": args.config.stat().st_size,
         "config_sha256": config_sha256,
+        "verified_runtime_inputs": runtime_receipts,
     }
     launch_receipts = output / "launch-receipts"
     launch_receipts.mkdir(exist_ok=True)

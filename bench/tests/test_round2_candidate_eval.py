@@ -11,8 +11,11 @@ from bench.judges_prompt_report import evaluate, load_names, read_jsonl
 from bench.round2_candidate_eval import (
     EvaluationInputError,
     GenerationResult,
+    GGUFBackend,
     file_identity,
+    gpu_offload_observation,
     load_candidate_manifest,
+    require_gpu_offload,
     run_campaign,
     select_prompts,
     tree_identity,
@@ -31,7 +34,9 @@ class FakeBackend:
         return None
 
     def generate(self, prompt, *, max_new_tokens):
-        answer = f"{self.candidate['id']} exact answer for {prompt.id}"
+        # Exact duplicate prompts must produce exact duplicate text under greedy
+        # decoding, regardless of their distinct fixture IDs.
+        answer = f"{self.candidate['id']} exact answer for {prompt.text}"
         raw = f"RAW::{self.candidate['id']}::{prompt.id}::{answer}".encode()
         return GenerationResult(
             answer=answer,
@@ -56,6 +61,34 @@ class InvalidGenerationResult(FakeBackend):
         result = super().generate(prompt, max_new_tokens=max_new_tokens)
         return GenerationResult(
             answer=None,
+            reasoning_content=result.reasoning_content,
+            finish_reason=result.finish_reason,
+            generated_tokens=result.generated_tokens,
+            raw_bytes=result.raw_bytes,
+            raw_media_type=result.raw_media_type,
+            backend_details=result.backend_details,
+        )
+
+
+class EmptyAnswer(FakeBackend):
+    def generate(self, prompt, *, max_new_tokens):
+        result = super().generate(prompt, max_new_tokens=max_new_tokens)
+        return GenerationResult(
+            answer=" \n\t",
+            reasoning_content="hidden reasoning is not the delivered answer",
+            finish_reason=result.finish_reason,
+            generated_tokens=result.generated_tokens,
+            raw_bytes=b"RAW::empty-delivered-answer",
+            raw_media_type=result.raw_media_type,
+            backend_details=result.backend_details,
+        )
+
+
+class DuplicatePromptDiverges(FakeBackend):
+    def generate(self, prompt, *, max_new_tokens):
+        result = super().generate(prompt, max_new_tokens=max_new_tokens)
+        return GenerationResult(
+            answer=f"{result.answer}::{prompt.id}",
             reasoning_content=result.reasoning_content,
             finish_reason=result.finish_reason,
             generated_tokens=result.generated_tokens,
@@ -133,6 +166,7 @@ def test_campaign_saves_exact_outputs_and_is_directly_consumable_by_judge_report
     assert first["server_sha256"] == file_identity(tmp_path / "llama-server")["sha256"]
     raw_path = output / "candidates" / first["candidate_id"] / first["raw_output"]["path"]
     assert raw_path.read_bytes().startswith(b"RAW::candidate-0::automated_01")
+    assert json.loads((output / "run.json").read_text())["settings"]["gguf_prompt_cache"] is False
 
     names = load_names(output / "artifacts.csv")
     gate1_summary, details = evaluate(rows, names)
@@ -141,6 +175,159 @@ def test_campaign_saves_exact_outputs_and_is_directly_consumable_by_judge_report
     assert all(row["status"] == "complete" for row in gate1_summary)
     with (output / "gate1-rubric.csv").open(newline="", encoding="utf-8") as handle:
         assert len(list(csv.DictReader(handle))) == 2
+    summary_markdown = (output / "summary.md").read_text()
+    assert "All candidates use exact quantized GGUF artifacts" in summary_markdown
+    assert "HF/PEFT candidates run in BF16" not in summary_markdown
+    runtime_receipt = json.loads((output / "backend-runtime-observations.json").read_text())
+    assert len(runtime_receipt["candidates"]) == 2
+    assert {row["verification_status"] for row in runtime_receipt["candidates"]} == {"missing"}
+    inventory = json.loads((output / "artifact-inventory.json").read_text())
+    assert "backend-runtime-observations.json" in {row["path"] for row in inventory["files"]}
+
+
+def test_gguf_backend_disables_prompt_cache(tmp_path):
+    manifest = load_candidate_manifest(_gguf_manifest(tmp_path, count=1))
+    candidate = manifest["candidates"][0]
+    backend = candidate_eval.GGUFBackend(
+        candidate,
+        tmp_path / "candidate",
+        port=18180,
+        gpu_layers=99,
+        threads=2,
+        context_size=4096,
+    )
+
+    assert "--no-cache-prompt" in backend.command
+    verbosity_index = backend.command.index("--verbosity")
+    assert backend.command[verbosity_index + 1] == "4"
+
+
+def test_gpu_request_fails_after_fake_cpu_server_reports_ready(tmp_path, monkeypatch):
+    manifest = load_candidate_manifest(_gguf_manifest(tmp_path, count=1))
+    candidate = manifest["candidates"][0]
+    candidate_dir = tmp_path / "candidate"
+    candidate_dir.mkdir()
+
+    class FakeProcess:
+        pid = 424242
+        returncode = None
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout):
+            self.returncode = 0
+            return 0
+
+    def fake_popen(_command, *, stdout, **_kwargs):
+        stdout.write(b"model loaded\nlistening on http://127.0.0.1\n")
+        stdout.flush()
+        return FakeProcess()
+
+    monkeypatch.setattr(candidate_eval.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(candidate_eval, "request_bytes", lambda *_args: b'{"status":"ok"}')
+    monkeypatch.setattr(candidate_eval.os, "killpg", lambda *_args: None)
+    backend = GGUFBackend(
+        candidate,
+        candidate_dir,
+        port=18180,
+        gpu_layers=99,
+        threads=2,
+        context_size=4096,
+    )
+
+    with pytest.raises(RuntimeError, match="logged no 'offloaded X/Y layers to GPU' proof"):
+        backend.__enter__()
+    receipt = json.loads((candidate_dir / "backend-runtime.json").read_text())
+    assert receipt["verification_status"] == "failed"
+    assert receipt["actual_offloaded_layers"] is None
+
+
+def test_gpu_offload_receipt_requires_full_offload_for_ngl99():
+    complete = gpu_offload_observation(
+        b"ggml_cuda_init: found 1 CUDA device\nload_tensors: offloaded 29/29 layers to GPU\n",
+        99,
+    )
+    require_gpu_offload(complete)
+    assert complete["verification_status"] == "passed"
+    assert complete["fully_offloaded"] is True
+
+    partial = gpu_offload_observation(b"offloaded 20/29 layers to GPU\n", 99)
+    with pytest.raises(RuntimeError, match="only 20/29"):
+        require_gpu_offload(partial)
+
+
+def test_gguf_response_receipts_actual_runtime_observation(tmp_path, monkeypatch):
+    candidate = load_candidate_manifest(_gguf_manifest(tmp_path, count=1))["candidates"][0]
+    backend = GGUFBackend(
+        candidate,
+        tmp_path / "candidate",
+        port=18180,
+        gpu_layers=99,
+        threads=2,
+        context_size=4096,
+    )
+    observation = gpu_offload_observation(b"offloaded 29/29 layers to GPU\n", 99)
+    backend.runtime_observation = observation
+    raw = json.dumps(
+        {
+            "choices": [
+                {
+                    "message": {"content": "Delivered answer", "reasoning_content": ""},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"completion_tokens": 2},
+        }
+    ).encode()
+    monkeypatch.setattr(candidate_eval, "request_bytes", lambda *_args: raw)
+
+    result = backend.generate(select_prompts("judges", None)[0], max_new_tokens=32)
+
+    assert result.backend_details["runtime"] == observation
+    assert result.backend_details["runtime"]["actual_offloaded_layers"] == 29
+
+
+def test_cpu_request_does_not_require_gpu_offload_marker():
+    observation = gpu_offload_observation(b"model loaded on CPU\n", 0)
+    require_gpu_offload(observation)
+    assert observation["verification_status"] == "not_required"
+
+
+def test_negative_gpu_layers_cannot_bypass_offload_guard(tmp_path):
+    with pytest.raises(SystemExit):
+        candidate_eval.parse_args(
+            [
+                "--candidates",
+                str(tmp_path / "candidates.json"),
+                "--output",
+                str(tmp_path / "output"),
+                "--gpu-layers",
+                "-1",
+            ]
+        )
+
+
+def test_identical_prompt_divergence_fails_candidate_closed(tmp_path):
+    manifest = _gguf_manifest(tmp_path, count=1)
+    output = tmp_path / "evaluation"
+
+    summaries = run_campaign(
+        manifest,
+        output,
+        suite="judges",
+        prompt_ids=["automated_01", "human_04"],
+        max_new_tokens=16,
+        port=18180,
+        gpu_layers=0,
+        threads=1,
+        context_size=512,
+        backend_factory=DuplicatePromptDiverges,
+    )
+
+    assert summaries[0]["status"] == "failed"
+    assert "identical prompt determinism mismatch" in summaries[0]["error"]
+    assert (output / "FAILED.json").is_file()
 
 
 def test_existing_output_directory_is_never_appended_or_reused(tmp_path):
@@ -230,6 +417,36 @@ def test_invalid_backend_result_is_a_receipted_candidate_failure(tmp_path):
     assert summaries[0]["status"] == "failed"
     assert "answer is not text" in summaries[0]["error"]
     assert (output / "FAILED.json").is_file()
+
+
+def test_empty_delivered_answer_fails_candidate_and_terminal(tmp_path):
+    manifest = _gguf_manifest(tmp_path, count=1)
+    output = tmp_path / "evaluation"
+    summaries = run_campaign(
+        manifest,
+        output,
+        suite="judges",
+        prompt_ids=["automated_01", "automated_02"],
+        max_new_tokens=16,
+        port=18180,
+        gpu_layers=0,
+        threads=1,
+        context_size=512,
+        backend_factory=EmptyAnswer,
+    )
+
+    assert summaries[0]["status"] == "failed"
+    assert summaries[0]["nonempty"] == 0
+    assert "generation answer is empty for prompt(s): automated_01, automated_02" in summaries[0][
+        "error"
+    ]
+    rows = read_jsonl(output / "candidates/candidate-0/responses.jsonl")
+    assert len(rows) == 2
+    for row in rows:
+        raw_path = output / "candidates/candidate-0" / row["raw_output"]["path"]
+        assert raw_path.read_bytes() == b"RAW::empty-delivered-answer"
+    assert (output / "FAILED.json").is_file()
+    assert not (output / "COMPLETED.json").exists()
 
 
 def test_requires_two_unique_known_prompts():

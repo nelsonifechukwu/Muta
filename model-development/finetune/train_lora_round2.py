@@ -13,6 +13,7 @@ import math
 import os
 import platform
 import random
+import re
 import subprocess
 import time
 import traceback
@@ -32,6 +33,15 @@ from campaign_io import (
 from train_lora import common_prefix_length, message_content, normalize_token_ids
 
 PRIVATE_SOURCES = frozenset({"waec_elearning", "cheetahwaec"})
+LORA_TARGET_MODULES = (
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj",
+)
 
 
 def parse_milestone_steps(value: str) -> tuple[int, ...]:
@@ -136,6 +146,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=3407)
     parser.add_argument("--resume-from-checkpoint", type=Path)
+    parser.add_argument("--initial-adapter", type=Path)
+    parser.add_argument("--expected-initial-adapter-tree-sha256")
     parser.add_argument("--dataloader-workers", type=int, default=4)
     args = parser.parse_args(argv)
     if args.max_length < 64:
@@ -181,6 +193,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "expected_dataset_fingerprint",
         "expected_validation_fingerprint",
         "expected_campaign_config_sha256",
+        "expected_initial_adapter_tree_sha256",
     ):
         value = getattr(args, name)
         if value is not None and (
@@ -193,6 +206,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         )
     if args.lora_alpha is None:
         args.lora_alpha = args.rank
+    if (args.initial_adapter is None) != (args.expected_initial_adapter_tree_sha256 is None):
+        parser.error(
+            "--initial-adapter and --expected-initial-adapter-tree-sha256 must be supplied together"
+        )
     if args.save_steps is None:
         args.save_steps = args.eval_steps
     return args
@@ -219,6 +236,15 @@ def _exclusive_run_lock(output: Path):
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise RuntimeError(f"another trainer owns this run directory: {output}") from exc
+        # DataLoader/Dataset workers fork after this point. FD_CLOEXEC does not
+        # protect a flock from fork inheritance: an orphan worker could retain
+        # the parent's open-file-description lock after the trainer is killed.
+        # Close only the child's reference; LOCK_UN would also unlock the parent.
+        def close_in_forked_worker():
+            if not handle.closed:
+                handle.close()
+
+        os.register_at_fork(after_in_child=close_in_forked_worker)
         yield
 
 
@@ -315,6 +341,190 @@ def _verify_tokenizer(path: Path, *, lineage_path: Path) -> dict[str, Any]:
     return {
         "lineage_receipt_sha256": sha256_file(lineage_path),
         "files": observed,
+    }
+
+
+def _verify_initial_adapter(
+    args: argparse.Namespace, *, lineage: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Bind a new-stage initializer to a completed pilot and its unmerged parent."""
+    if args.initial_adapter is None:
+        return None
+    path = args.initial_adapter
+    if path.is_symlink() or path.name != "adapter":
+        raise CampaignInputError("initial adapter must be a completed run's adapter directory")
+    observed = inventory_tree(path)
+    if observed["tree_sha256"] != args.expected_initial_adapter_tree_sha256:
+        raise CampaignInputError("initial adapter tree SHA-256 mismatch")
+    root = path.parent
+    manifest_path, completion_path = root / "training-manifest.json", root / "COMPLETED.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        completion = json.loads(completion_path.read_text(encoding="utf-8"))
+        config = json.loads((path / "adapter_config.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise CampaignInputError("initial adapter needs complete pilot provenance/config") from exc
+    if completion.get("training_manifest_sha256") != sha256_file(manifest_path):
+        raise CampaignInputError("initial adapter training-manifest receipt mismatch")
+    if completion.get("run_name") != manifest.get("run_name"):
+        raise CampaignInputError("initial adapter completion run identity mismatch")
+    expected = manifest.get("adapter", {})
+    for key in ("tree_sha256", "files", "bytes", "file_count"):
+        if expected.get(key) != observed[key]:
+            raise CampaignInputError(f"initial adapter manifest inventory mismatch: {key}")
+    prior_base = manifest.get("base_lineage", {}).get("observed", {})
+    if (
+        prior_base.get("tree_sha256") != lineage["observed"]["tree_sha256"]
+        or manifest.get("lineage") != args.lineage
+        or config.get("base_model_name_or_path") != prior_base.get("root")
+        or (args.model / "adapter_config.json").exists()
+    ):
+        raise CampaignInputError("initial adapter base lineage mismatch or stacked adapter base")
+    if (
+        config.get("r") != args.rank
+        or config.get("lora_alpha") != args.lora_alpha
+        or manifest.get("rank") != args.rank
+        or manifest.get("lora_alpha") != args.lora_alpha
+    ):
+        raise CampaignInputError("initial adapter rank/alpha mismatch")
+    if (
+        config.get("peft_type") != "LORA"
+        or config.get("task_type") != "CAUSAL_LM"
+        or set(config.get("target_modules") or ()) != set(LORA_TARGET_MODULES)
+        or set(manifest.get("target_modules") or ()) != set(LORA_TARGET_MODULES)
+        or config.get("bias") != "none"
+        or config.get("lora_dropout") != 0
+    ):
+        raise CampaignInputError("initial adapter type/modules/dropout/bias mismatch")
+    for key in (
+        "rank_pattern",
+        "alpha_pattern",
+        "modules_to_save",
+        "use_dora",
+        "use_rslora",
+        "use_qalora",
+        "use_bdlora",
+        "lora_bias",
+        "fan_in_fan_out",
+        "layer_replication",
+        "layers_pattern",
+        "layers_to_transform",
+        "target_parameters",
+        "exclude_modules",
+        "trainable_token_indices",
+        "alora_invocation_tokens",
+        "arrow_config",
+        "corda_config",
+        "eva_config",
+        "loftq_config",
+        "lora_ga_config",
+        "monteclora_config",
+        "velora_config",
+        "megatron_config",
+        "ensure_weight_tying",
+    ):
+        if config.get(key):
+            raise CampaignInputError(f"unsupported initial adapter configuration: {key}")
+    if not (path / "adapter_model.safetensors").is_file():
+        raise CampaignInputError("initial adapter must have adapter_model.safetensors")
+    return {
+        "kind": "completed_pilot_adapter_new_stage",
+        "optimizer_and_schedule": "fresh; own-stage checkpoints alone may resume state",
+        "inventory": observed,
+        "config": config,
+        "training_manifest_sha256": sha256_file(manifest_path),
+        "completion_sha256": sha256_file(completion_path),
+        "source_run_name": manifest["run_name"],
+        "training_base_tree_sha256": prior_base["tree_sha256"],
+        "prior_training_rows": manifest.get("tokenization", {}).get("train", {}).get("rows"),
+        "prior_trainer_global_step": manifest.get("trainer_global_step"),
+    }
+
+
+def _adapter_tensor_digest(state: dict, torch_module) -> str:
+    digest = hashlib.sha256()
+    for name, value in sorted(state.items()):
+        value = value.detach().cpu().contiguous()
+        header = json.dumps(
+            [name, str(value.dtype), list(value.shape)], separators=(",", ":")
+        ).encode("utf-8")
+        digest.update(len(header).to_bytes(8, "big"))
+        digest.update(header)
+        digest.update(value.view(torch_module.uint8).numpy().tobytes())
+    return digest.hexdigest()
+
+
+def _copy_initial_adapter_state(model, state: dict, *, torch_module) -> dict[str, Any]:
+    """Copy (never merge) the exact adapter tensor set into the single trainable slot."""
+    if set(model.peft_config) != {"default"} or model.active_adapters != ["default"]:
+        raise CampaignInputError("initialization requires exactly one active default adapter")
+    expected = {}
+    for name, parameter in model.named_parameters():
+        match = re.fullmatch(r"(.+)\.(lora_[AB])\.default\.weight", name)
+        if match:
+            if not parameter.requires_grad:
+                raise CampaignInputError(f"initial adapter tensor is not trainable: {name}")
+            expected[f"{match[1]}.{match[2]}.weight"] = parameter
+        elif parameter.requires_grad or ".lora_" in name:
+            raise CampaignInputError(f"unexpected trainable or adapter parameter: {name}")
+    for module in model.modules():
+        if (
+            getattr(module, "merged_adapters", ())
+            or getattr(module, "disable_adapters", False) is True
+        ):
+            raise CampaignInputError("initialization refuses merged or disabled adapters")
+    if not expected or set(state) != set(expected):
+        raise CampaignInputError(
+            "initial adapter tensor keys mismatch: "
+            f"missing={sorted(set(expected) - set(state))}, "
+            f"unexpected={sorted(set(state) - set(expected))}"
+        )
+    for name, parameter in expected.items():
+        value = state[name]
+        if value.shape != parameter.shape or value.dtype != parameter.dtype:
+            raise CampaignInputError(f"initial adapter shape/dtype mismatch: {name}")
+        if not bool(torch_module.isfinite(value).all()):
+            raise CampaignInputError(f"nonfinite initial adapter tensor: {name}")
+    before = _adapter_tensor_digest(expected, torch_module)
+    source = _adapter_tensor_digest(state, torch_module)
+    with torch_module.no_grad():
+        for name, parameter in expected.items():
+            parameter.copy_(state[name])
+    loaded = _adapter_tensor_digest(expected, torch_module)
+    if loaded != source:
+        raise CampaignInputError("initial adapter loaded tensor values do not match source")
+    return {
+        "operation": "copy_exact_adapter_tensors_once_no_merge",
+        "tensor_count": len(expected),
+        "trainable_parameters": sum(parameter.numel() for parameter in expected.values()),
+        "tensor_keys": sorted(expected),
+        "before_tensor_sha256": before,
+        "source_tensor_sha256": source,
+        "loaded_tensor_sha256": loaded,
+        "exact_source_values_loaded": True,
+    }
+
+
+def _initialize_adapter(model, *, args, receipt, torch_module) -> dict[str, Any] | None:
+    if receipt is None:
+        return None
+    # Resume restores this stage's adapter, optimizer and schedule through Trainer.
+    # Never replace the resumed checkpoint with the original pilot initializer.
+    if args.resume_from_checkpoint is not None:
+        return {"operation": "defer_to_own_stage_checkpoint", "pilot_weights_loaded": False}
+    from safetensors.torch import load_file
+
+    expected_sha = receipt["inventory"]["tree_sha256"]
+    if inventory_tree(args.initial_adapter)["tree_sha256"] != expected_sha:
+        raise CampaignInputError("initial adapter changed before loading")
+    state = load_file(str(args.initial_adapter / "adapter_model.safetensors"), device="cpu")
+    loaded = _copy_initial_adapter_state(model, state, torch_module=torch_module)
+    if inventory_tree(args.initial_adapter)["tree_sha256"] != expected_sha:
+        raise CampaignInputError("initial adapter changed during loading")
+    return {
+        **loaded,
+        "source_tree_sha256_before": expected_sha,
+        "source_tree_sha256_after": expected_sha,
     }
 
 
@@ -495,6 +705,7 @@ def _resume_signature(
     campaign_config: dict[str, Any] | None,
     script_dir: Path,
     packages: dict[str, str],
+    initial_adapter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     treatment = {
         "run_name": args.run_name,
@@ -507,6 +718,7 @@ def _resume_signature(
         "validation_manifest_sha256": validation.manifest_sha256,
         "validation_fingerprint_sha256": validation.fingerprint,
         "campaign_config_sha256": campaign_config["sha256"] if campaign_config else None,
+        "initial_adapter": initial_adapter,
         "max_length": args.max_length,
         "epochs": args.epochs,
         "learning_rate": args.learning_rate,
@@ -644,6 +856,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         model_path=args.model,
     )
     tokenizer_receipt = _verify_tokenizer(args.tokenizer, lineage_path=args.tokenizer_lineage)
+    initial_adapter = _verify_initial_adapter(args, lineage=lineage)
     packages = _package_versions()
     resume_signature = _resume_signature(
         args=args,
@@ -654,6 +867,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         campaign_config=campaign_config,
         script_dir=script_dir,
         packages=packages,
+        initial_adapter=initial_adapter,
     )
     resume_step = None
     retry_from_scratch = False
@@ -728,6 +942,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "resume_checkpoint_step": resume_step,
             "lineage_receipt_sha256": lineage["receipt_sha256"],
             "tokenizer": tokenizer_receipt,
+            "initial_adapter_receipt": initial_adapter,
             "script_sha256": sha256_file(Path(__file__)),
             "campaign_io_sha256": sha256_file(script_dir / "campaign_io.py"),
             "git": _git_receipt(repo),
@@ -801,15 +1016,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     model = FastLanguageModel.get_peft_model(
         model,
         r=args.rank,
-        target_modules=[
-            "q_proj",
-            "k_proj",
-            "v_proj",
-            "o_proj",
-            "gate_proj",
-            "up_proj",
-            "down_proj",
-        ],
+        target_modules=list(LORA_TARGET_MODULES),
         lora_alpha=args.lora_alpha,
         lora_dropout=0,
         bias="none",
@@ -817,6 +1024,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         random_state=args.seed,
         max_seq_length=args.max_length,
     )
+    initial_adapter_load = _initialize_adapter(
+        model, args=args, receipt=initial_adapter, torch_module=torch
+    )
+    if initial_adapter_load is not None:
+        _json_write(
+            output / "initialization-sessions" / f"adapter-load-{time.time_ns()}.json",
+            {
+                "initial_adapter_receipt": initial_adapter,
+                "load": initial_adapter_load,
+                "resume_checkpoint_step": resume_step,
+                "trainer_sha256": sha256_file(Path(__file__)),
+            },
+        )
     features = Features(
         {
             "id": Value("string"),
@@ -1049,6 +1269,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "run_name": args.run_name,
         "lineage": args.lineage,
         "base_lineage": lineage,
+        "initial_adapter_receipt": initial_adapter,
+        "initial_adapter_load": initial_adapter_load,
         "tokenizer": tokenizer_receipt,
         "campaign_config": campaign_config,
         "seed": args.seed,
@@ -1061,15 +1283,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "lora_alpha": args.lora_alpha,
         "training_method": "lora_bf16",
         "completion_only_loss": True,
-        "target_modules": [
-            "q_proj",
-            "k_proj",
-            "v_proj",
-            "o_proj",
-            "gate_proj",
-            "up_proj",
-            "down_proj",
-        ],
+        "target_modules": list(LORA_TARGET_MODULES),
         "dataset": dataset.receipt(),
         "private_policy": args.private_policy,
         "source_counts_before_policy": dict(sorted(source_counts_before.items())),

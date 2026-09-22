@@ -52,6 +52,10 @@ from bench.stem_prompt_suite import prompts as stem_prompts
 SCHEMA_VERSION = 1
 SEED = 3407
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+GPU_OFFLOAD_RE = re.compile(
+    r"offloaded\s+(?P<actual>\d+)\s*/\s*(?P<total>\d+)\s+layers\s+to\s+GPU",
+    re.IGNORECASE,
+)
 
 
 class EvaluationInputError(ValueError):
@@ -416,6 +420,50 @@ def request_bytes(url: str, payload: dict[str, Any] | None, timeout: float) -> b
         return response.read()
 
 
+def gpu_offload_observation(log_bytes: bytes, requested_gpu_layers: int) -> dict[str, Any]:
+    """Parse and fail-close a llama-server GPU-offload startup receipt."""
+
+    text = log_bytes.decode("utf-8", errors="replace")
+    evidence_lines = [
+        line
+        for line in text.splitlines()
+        if re.search(r"(?:CUDA|GPU|offload|device)", line, re.IGNORECASE)
+    ][-64:]
+    matches = list(GPU_OFFLOAD_RE.finditer(text))
+    actual = int(matches[-1].group("actual")) if matches else None
+    total = int(matches[-1].group("total")) if matches else None
+    required = requested_gpu_layers > 0
+    error = None
+    if required and (actual is None or total is None):
+        error = "GPU offload requested but llama-server logged no 'offloaded X/Y layers to GPU' proof"
+    elif required and actual <= 0:
+        error = "GPU offload requested but llama-server reported zero offloaded layers"
+    elif required and requested_gpu_layers >= total and actual != total:
+        error = (
+            "full GPU offload requested but llama-server reported only "
+            f"{actual}/{total} layers offloaded"
+        )
+    return {
+        "schema_version": "muta-gguf-offload-observation-v1",
+        "requested_gpu_layers": requested_gpu_layers,
+        "verification_required": required,
+        "verification_status": "failed" if error else "passed" if required else "not_required",
+        "actual_offloaded_layers": actual,
+        "total_model_layers": total,
+        "fully_offloaded": actual == total if actual is not None and total is not None else None,
+        "evidence_regex": GPU_OFFLOAD_RE.pattern,
+        "evidence_lines": evidence_lines,
+        "startup_log_prefix_bytes": len(log_bytes),
+        "startup_log_prefix_sha256": sha256_bytes(log_bytes),
+        "error": error,
+    }
+
+
+def require_gpu_offload(observation: dict[str, Any]) -> None:
+    if observation["verification_status"] == "failed":
+        raise RuntimeError(str(observation["error"]))
+
+
 class GGUFBackend:
     def __init__(
         self,
@@ -430,9 +478,11 @@ class GGUFBackend:
         self.candidate = candidate
         self.candidate_dir = candidate_dir
         self.port = port
+        self.gpu_layers = gpu_layers
         self.base_url = f"http://127.0.0.1:{port}"
         self.process: subprocess.Popen[bytes] | None = None
         self.log_handle: Any = None
+        self.runtime_observation: dict[str, Any] | None = None
         self.command = [
             candidate["server"],
             "--model",
@@ -453,6 +503,9 @@ class GGUFBackend:
             "1",
             "--cache-ram",
             "256",
+            "--no-cache-prompt",
+            "--verbosity",
+            "4",
             "--jinja",
         ]
 
@@ -473,6 +526,15 @@ class GGUFBackend:
                 try:
                     payload = json.loads(request_bytes(f"{self.base_url}/health", None, 2))
                     if payload.get("status") in {"ok", "no slot available"}:
+                        log_path = self.candidate_dir / "backend.log"
+                        observation = gpu_offload_observation(
+                            log_path.read_bytes(), self.gpu_layers
+                        )
+                        self.runtime_observation = observation
+                        write_json_exclusive(
+                            self.candidate_dir / "backend-runtime.json", observation
+                        )
+                        require_gpu_offload(observation)
                         return self
                 except (OSError, TimeoutError, json.JSONDecodeError):
                     pass
@@ -521,7 +583,11 @@ class GGUFBackend:
             generated_tokens=int(usage.get("completion_tokens") or 0),
             raw_bytes=raw,
             raw_media_type="application/json; source=llama-server-http-body",
-            backend_details={"request": request, "command": self.command},
+            backend_details={
+                "request": request,
+                "command": self.command,
+                "runtime": self.runtime_observation,
+            },
         )
 
 
@@ -805,6 +871,37 @@ def response_row(
     return row
 
 
+def validate_duplicate_prompt_determinism(
+    prompts: list[EvalPrompt], rows: list[dict[str, Any]]
+) -> None:
+    """Fail closed when greedy decoding changes for byte-identical prompts."""
+
+    first_by_text: dict[str, tuple[str, tuple[Any, ...]]] = {}
+    for prompt, row in zip(prompts, rows, strict=True):
+        signature = (
+            row["answer"],
+            row["reasoning_content"],
+            row["finish_reason"],
+            row["generated_tokens"],
+        )
+        previous = first_by_text.get(prompt.text)
+        if previous is None:
+            first_by_text[prompt.text] = (prompt.id, signature)
+            continue
+        previous_id, previous_signature = previous
+        if signature != previous_signature:
+            raise RuntimeError(
+                "identical prompt determinism mismatch: "
+                f"{previous_id} and {prompt.id} produced different outputs"
+            )
+
+
+def validate_nonempty_answers(prompts: list[EvalPrompt], rows: list[dict[str, Any]]) -> None:
+    empty_ids = [prompt.id for prompt, row in zip(prompts, rows, strict=True) if not row["answer"].strip()]
+    if empty_ids:
+        raise ValueError(f"generation answer is empty for prompt(s): {', '.join(empty_ids)}")
+
+
 def summarize_candidate(
     candidate: dict[str, Any],
     prompts: list[EvalPrompt],
@@ -814,7 +911,12 @@ def summarize_candidate(
 ) -> dict[str, Any]:
     expected_ids = [prompt.id for prompt in prompts]
     captured_ids = [row["prompt"]["id"] for row in rows]
-    complete = captured_ids == expected_ids and len(rows) >= 2 and error is None
+    complete = (
+        captured_ids == expected_ids
+        and len(rows) >= 2
+        and all(row["answer"].strip() for row in rows)
+        and error is None
+    )
     judge_score = ""
     judge_max = ""
     stem_mc_correct = ""
@@ -923,6 +1025,16 @@ def write_summary(output: Path, rows: list[dict[str, Any]], suite: str) -> None:
             f"{row['status']} | {row['prompts']}/{row['expected_prompts']} | {score(row)} | "
             f"{int(row['prompts']) - int(row['nonempty'])} | {row['truncated']} |"
         )
+    backend_note = (
+        "All candidates use exact quantized GGUF artifacts under one server runtime; "
+        "concurrent wall time remains diagnostic and is not a selection criterion."
+        if {row["backend"] for row in rows} == {"gguf"}
+        else (
+            "HF/PEFT candidates run in BF16 while the incumbent control is its exact "
+            "quantized GGUF; wall time is diagnostic, not an apples-to-apples "
+            "performance comparison."
+        )
+    )
     lines.extend(
         [
             "",
@@ -930,11 +1042,7 @@ def write_summary(output: Path, rows: list[dict[str, Any]], suite: str) -> None:
                 "Scores are screening aids. Judge keyword-rubric scores require manual "
                 "adjudication; written STEM responses are retained ungraded."
             ),
-            (
-                "HF/PEFT candidates run in BF16 while the incumbent control is its exact "
-                "quantized GGUF; wall time is diagnostic, not an apples-to-apples "
-                "performance comparison."
-            ),
+            backend_note,
             "",
         ]
     )
@@ -1004,6 +1112,13 @@ def run_campaign(
                 "gguf_gpu_layers": gpu_layers,
                 "gguf_threads": threads,
                 "gguf_port": port,
+                "gguf_prompt_cache": False,
+                "gguf_server_log_verbosity": 4,
+                "gguf_gpu_offload_verification": {
+                    "required_when_gpu_layers_positive": True,
+                    "evidence_regex": GPU_OFFLOAD_RE.pattern,
+                    "require_full_when_request_covers_all_model_layers": True,
+                },
                 "enable_thinking": False,
             },
             "runtime": runtime_receipt,
@@ -1012,6 +1127,7 @@ def run_campaign(
 
     summaries = []
     all_responses: list[dict[str, Any]] = []
+    runtime_observations: list[dict[str, Any]] = []
     for candidate_index, candidate in enumerate(manifest["candidates"]):
         candidate_dir = output / "candidates" / candidate["id"]
         candidate_dir.mkdir(parents=True)
@@ -1067,6 +1183,8 @@ def run_campaign(
                         os.fsync(responses.fileno())
                         rows.append(row)
                         all_responses.append(row)
+                    validate_nonempty_answers(prompts, rows)
+                    validate_duplicate_prompt_determinism(prompts, rows)
             except Exception as exc:  # noqa: BLE001 - retain all candidate failure evidence
                 error = f"{type(exc).__name__}: {exc}"
                 write_json_exclusive(
@@ -1083,6 +1201,19 @@ def run_campaign(
         )
         write_json_exclusive(candidate_dir / "result.json", summary)
         summaries.append(summary)
+        runtime_path = candidate_dir / "backend-runtime.json"
+        if candidate["backend"] == "gguf":
+            observation = (
+                json.loads(runtime_path.read_text(encoding="utf-8"))
+                if runtime_path.is_file()
+                else {
+                    "verification_status": "missing",
+                    "error": "backend runtime observation was not created",
+                }
+            )
+            runtime_observations.append(
+                {"candidate_id": candidate["id"], "backend": "gguf", **observation}
+            )
 
     summaries = rank_summaries(summaries, suite)
     write_summary(output, summaries, suite)
@@ -1110,6 +1241,14 @@ def run_campaign(
             },
         )
         write_judge_csv(output / "gate1-rubric.csv", judge_summary)
+    write_json_exclusive(
+        output / "backend-runtime-observations.json",
+        {
+            "schema_version": "muta-backend-runtime-observations-v1",
+            "requested_gpu_layers": gpu_layers,
+            "candidates": runtime_observations,
+        },
+    )
     write_json_exclusive(output / "artifact-inventory.json", output_inventory(output))
     terminal = (
         "COMPLETED.json" if all(row["status"] == "complete" for row in summaries) else "FAILED.json"
@@ -1144,6 +1283,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--max-new-tokens must be positive")
     if args.context_size < args.max_new_tokens:
         parser.error("--context-size must be at least --max-new-tokens")
+    if args.gpu_layers < 0:
+        parser.error("--gpu-layers must be non-negative; use an explicit positive count")
     return args
 
 
