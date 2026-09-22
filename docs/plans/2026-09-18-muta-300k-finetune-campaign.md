@@ -65,9 +65,13 @@ stacked onto weights that already contain it.
 9. Rank pilots using representative dev loss plus matched correctness and
    tutoring outputs. Loss alone cannot promote a model.
 10. Promote the best clean and best warm pilot to one full epoch over all
-    300,350 rows. Preserve the best and final checkpoints. Also retain one
-    300,000-row Muta/DeepMind-only candidate as the distribution-safe ablation;
-    the 350 private exam rows must stay explicitly labelled private-use.
+    300,350 rows. Preserve the best and final checkpoints. The previously planned
+    300,000-row exclusion ablation was cancelled by the user on 18 September;
+    replace it with a third treatment continuing the selected warm pilot, as
+    subsequently approved by the user. All three use 300,350 rows in their new
+    stage; the continuation retains additional prior pilot training history.
+    The 350 private exam rows must stay explicitly labelled private-use. See
+    the full-data promotion addendum for current selections and launch gates.
 11. Merge each promoted adapter, convert through a pinned llama.cpp checkout,
     quantize to Q4_K_M, and verify loadability and chat-template behavior.
 12. Evaluate the clean base, incumbent Muta, and promoted candidates with the

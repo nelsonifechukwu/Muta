@@ -33,7 +33,7 @@ The clean-r32-lr1e5 pilot was merged and exported to Q4_K_M on Oracle. Its
 
 SHA-256: `ce82fdf54bc46e737f92f90e6788b9d6f777eb3e94185d624d042763cdb533fb`.
 The export receipt is `provenance/exports/pilot-clean-r32-lr1e5/quantization-manifest.json`.
-The large GGUF remains remote; this receipt is not a local copy of the model.
+The GGUF has now also been downloaded to the Mac under `models/round2/`.
 
 Both GGUFs loaded successfully and returned complete responses to the same two
 Gate 1 prompts with greedy decoding and CPU-only inference. Manual inspection:
@@ -61,3 +61,38 @@ Original adapter/checkpoint roots:
 CSD3 execution evidence is in `provenance/hosts/csd3/`; job 35754294 completed
 with exit code 0. Each original run's `training-manifest.json`, `COMPLETED.json`,
 metrics, adapter, and checkpoint files remain the authoritative receipts.
+
+## All eight pilot GGUFs downloaded
+
+All eight completed pilots have been exported as separate Q4_K_M GGUFs and
+downloaded to `models/round2/` on the Mac. Each is 986,047,968 bytes; the total is
+7,888,383,744 bytes. An independent local full-file SHA-256 pass matched every
+export manifest and `models/round2/SHA256SUMS`; all eight have GGUF v3 headers
+and distinct hashes. No duplicate copy of the incumbent was downloaded.
+
+The complete model index is `models/round2/README.md`. Local verification is
+recorded in `provenance/exports/round2-pilot-mac-downloads.json`; each export's
+merge log and quantization manifest are under
+`provenance/exports/pilot-<candidate>/`.
+
+These remain 20,000-row pilot exports, not completed full-data treatments.
+Download/checksum verification is not evidence of answer-quality improvement;
+the two-prompt GGUF smoke result above applies only to clean-r32-lr1e5.
+
+## Completed matched GGUF comparison
+
+All eight pilot GGUFs and the previous Muta have now completed the same judges10
+and STEM100 screen: 990 nonempty responses, with eight token-capped answers
+preserved and flagged. Full raw outputs, per-answer semantic reviews, exact
+runtime/model identities and a validated results table are retained.
+
+The provisional leading new pilot is **warm-r16-lr5e6**: judges 56/96 versus
+53/96, written core 33/50 versus 28/50, written complete 23/50 versus 20/50.
+Reviewed MC falls from 38/50 to 37/50, and MC explanation passes from 37/50 to
+35/50. This is a benchmark-specific trade-off, not a decisive universal upgrade.
+The default model is unchanged; no full 300,350-row treatment has run.
+
+See [the reviewed comparison](all-gguf-cuda-comparison-20260918/README.md) and
+[complete table](all-gguf-cuda-comparison-20260918/comparison.csv).
+This GPU correctness screen does not certify target CPU performance or an
+official ADTC score. Four Yorùbá-dependent rubric points remain unverified.
