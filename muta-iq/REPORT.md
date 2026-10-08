@@ -7,7 +7,27 @@
 > profiler here: secure cloud-VM audit mode and `min(TPS/15, 1)·100`. AVX2 results remain
 > deployment evidence only.
 
-## Current result — eight-model architecture screen (supersedes the campaign below where they conflict)
+## Gate 2 report model of record — artifact receipt pending
+
+The Gate 2 decision surface advances the proposed filename
+**`Muta-Tutor-Qwen2.5-1.5B-Q4_K_M-vocab32k.gguf`** to artifact verification. It is the report's
+model of record, not yet a verified packaged submission: this repository does not contain its
+hash, size, build receipt, or download pointer. Operational submission metadata therefore
+continues to name the receipted Qwen3.5 file until those facts exist.
+
+The separate vocabulary/QAT research chain remains an **efficiency-first variant**, not the
+model advanced here and not evidence that QAT dominates the base. No controlled QAT campaign or
+Qwen vocabulary-pruning result is claimed by this decision.
+
+In the matched final comparison it completed 6/10 synthetic-judge cases, decoded at 5.28 tok/s
+under the scalar record, peaked at 896 MiB RSS, and scored 60.24 on the internal development
+proxy. The predecessor control completed 4/10, decoded at 4.71 tok/s, peaked at 1,073 MiB, and
+scored 47.74. These are supplied Gate 2 decision values; their raw harness receipt is not checked
+in, and the proxy is not an official competition score. Physical-target temperature,
+end-to-end behaviour, and artifact provenance remain release checks. Earlier recommendations
+below are historical campaign records, not competing current report decisions.
+
+## Historical result — eight-model architecture screen
 
 We define two CPU configurations once, here, and use only these two names below: the **scalar
 configuration** is the supplied profiler build, with the wider vector extensions disabled for the
@@ -480,10 +500,11 @@ beside a browser and a classroom server on that laptop.
 
 ---
 
-## 20 August 2026 model search and current submission recommendation
+## 20 August 2026 model search and historical submission recommendation
 
-This section supersedes the earlier model choice above; we keep the earlier experiments as a
-record of how we got here.
+At that checkpoint, this section superseded the earlier model choice above. We retain the earlier
+experiments as a historical record; the current Gate 2 report candidate and artifact-receipt
+caveat are stated at the top.
 
 ### Measurement boundary
 
@@ -622,7 +643,7 @@ Qwen answers hit the 256-token limit. We record this as a quality limitation, no
 
 ### Submission decision
 
-Our current recommendation is:
+The recommendation at that historical campaign checkpoint was:
 
 `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`
 

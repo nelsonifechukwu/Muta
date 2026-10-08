@@ -282,6 +282,45 @@ def test_gate_two_research_precedes_the_remaining_placeholders() -> None:
     assert "Continue with fine-tuned Muta Tutor Qwen2.5 1.5B Q4_K_M" in gate_two
 
 
+def test_gate_two_model_of_record_is_consistent_and_has_no_decision_placeholders() -> None:
+    html = (DASHBOARD / "index.html").read_text()
+    report = (REPOSITORY / "muta-iq/REPORT.md").read_text()
+    metadata = json.loads((REPOSITORY / "muta-iq/metadata.json").read_text())
+    submission = json.loads((REPOSITORY / "muta-iq/submission.json").read_text())
+    model = "Muta-Tutor-Qwen2.5-1.5B-Q4_K_M-vocab32k.gguf"
+    chapter_four = html.split('id="gate-2-validation"', 1)[1].split('id="gate-2-review"', 1)[0]
+    chapter_six = html.split('id="gate-2-decision"', 1)[1].split("</div>", 1)[0]
+
+    assert model in html.split('id="contents-winner"', 1)[1].split("</span>", 1)[0]
+    assert model in chapter_four
+    assert model in chapter_six
+    assert model in report.split("## Historical result", 1)[0]
+    for value in (
+        "6/10",
+        "5.28 tok/s",
+        "896 MiB",
+        "60.24",
+        "4/10",
+        "4.71 tok/s",
+        "1,073 MiB",
+        "47.74",
+    ):
+        assert value in chapter_four
+        assert value in chapter_six
+    assert "efficiency-first variant" in chapter_four
+    assert "not the model advanced here" in chapter_four
+    assert "raw harness receipt is not checked in" in chapter_four
+    assert "not yet the operational submission pointer" in chapter_six
+    assert metadata["model"]["name"] == "muta-tutor-qwen3.5-0.8b-q4_0"
+    assert submission["submission"]["model"]["name"] == "muta-tutor-qwen3.5-0.8b-q4_0"
+    assert "The model we deliver" not in chapter_four
+    assert "Deliver <code>" not in chapter_six
+    assert "current submission recommendation" not in report
+    assert "Our current recommendation is" not in report
+    assert "gate-two-placeholder" not in chapter_four
+    assert "Decision placeholder" not in chapter_six
+
+
 def test_gate_two_campaign_reports_complete_field_and_protocol_boundaries() -> None:
     html = (DASHBOARD / "index.html").read_text()
     script = (DASHBOARD / "script.js").read_text()
