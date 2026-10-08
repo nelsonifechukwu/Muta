@@ -99,7 +99,14 @@ _BOXED_ANY = re.compile(r"\\boxed\s*\{(.*)\}", re.DOTALL)
 
 def normalise(text: str) -> str:
     """Turn a model's answer string into something SymPy's parser accepts."""
-    out = str(text).strip()
+    out = (
+        str(text)
+        .strip()
+        .replace("−", "-")
+        .replace("–", "-")
+        .replace("×", "*")
+        .replace("÷", "/")
+    )
     # A boxed value REPLACES the string rather than being substituted into it: "The answer
     # is \boxed{-3}" must normalise to "-3", not to "The answer is -3", which parses as
     # nothing and quietly degrades the whole check to a string comparison.
@@ -186,7 +193,7 @@ def _equivalent(a, b, tolerance: float = 0.0) -> bool:
             return True
         if verdict is False:
             return False
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - simplify below is the deliberate safe fallback
         pass
     try:
         return bool(sympy.simplify(a - b) == 0)
@@ -289,6 +296,27 @@ def op_simplify(req: dict) -> dict:
 
     expr = _parse(normalise(str(req.get("expression", ""))))
     return {"simplified": str(sympy.simplify(expr)), "latex": sympy.latex(sympy.simplify(expr))}
+
+
+def op_solve_equation(req: dict) -> dict:
+    """Solve one bounded single-variable equation for withholding/student-work checks."""
+    import sympy
+
+    equation = normalise(str(req.get("equation", "")))
+    relation = _as_relation(equation)
+    if relation is None:
+        raise ValueError("expected exactly one equation")
+    symbols = sorted(relation.free_symbols, key=str)
+    if len(symbols) != 1:
+        raise ValueError("expected one unknown")
+    variable = symbols[0]
+    solutions = sympy.solve(relation, variable)
+    if not isinstance(solutions, list) or len(solutions) > 8:
+        raise ValueError("equation does not have a small finite solution set")
+    return {
+        "variable": str(variable),
+        "solutions": [str(sympy.simplify(value)) for value in solutions],
+    }
 
 
 # --- rendering ----------------------------------------------------------------------------
@@ -403,6 +431,7 @@ HANDLERS = {
     "ping": lambda _req: {"pong": True},
     "verify": op_verify,
     "simplify": op_simplify,
+    "solve_equation": op_solve_equation,
     "render": op_render,
     "_test": op_test,
 }

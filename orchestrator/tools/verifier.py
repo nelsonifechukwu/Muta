@@ -17,8 +17,9 @@ failure mode has to be a working tutor, never an error.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from orchestrator.tools.sandbox import VERIFIER_LIMITS, SandboxResult, WorkerPool, run_once
 
@@ -117,6 +118,14 @@ class VerifyOutcome:
         return self.checked and not self.verified
 
 
+@dataclass(frozen=True)
+class EquationSolution:
+    checked: bool = False
+    variable: str = ""
+    solutions: tuple[str, ...] = ()
+    detail: str = ""
+
+
 class AnswerVerifier:
     """SymPy equivalence behind the sandbox. Uses a warm pool when given one (§7.5)."""
 
@@ -205,6 +214,26 @@ class AnswerVerifier:
             else run_once("simplify", payload, VERIFIER_LIMITS)
         )
         return (result.value or {}).get("simplified") if result.ok else None
+
+    def solve_equation(self, equation: str) -> EquationSolution:
+        payload = {"equation": equation}
+        result = (
+            self.pool.submit("solve_equation", payload)
+            if self.pool is not None
+            else run_once("solve_equation", payload, VERIFIER_LIMITS)
+        )
+        if not result.ok:
+            return EquationSolution(detail=result.error or "solver unavailable")
+        value = result.value or {}
+        variable = value.get("variable")
+        solutions = value.get("solutions")
+        if not isinstance(variable, str) or not isinstance(solutions, list):
+            return EquationSolution(detail="solver returned an invalid result")
+        return EquationSolution(
+            checked=True,
+            variable=variable,
+            solutions=tuple(str(item) for item in solutions),
+        )
 
 
 def verify_with_retry(

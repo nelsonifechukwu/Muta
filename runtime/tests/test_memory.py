@@ -68,6 +68,16 @@ def test_pinned_conversations_persist_sort_first_and_remain_owner_scoped(
     assert bool(store.get_conversation(older)["pinned"]) is False
 
 
+def test_conversation_teaching_context_updates_without_crossing_owners(store: ConversationStore):
+    cid = store.create_conversation("alice", mode="socratic", persona="teacher")
+
+    assert store.update_conversation_context(cid, owner_id="alice", mode="hints", language="en")
+    assert not store.update_conversation_context(cid, owner_id="bob", mode="subgoal")
+    conversation = store.get_conversation(cid)
+    assert conversation["mode"] == "hints"
+    assert conversation["persona"] == "teacher"
+
+
 def test_persists_across_reconnect(store: ConversationStore):
     cid = store.create_conversation("s1", title="t")
     store.add_message(cid, "user", "remember me")

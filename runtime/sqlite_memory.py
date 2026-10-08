@@ -252,6 +252,26 @@ class SQLiteConversationStore:
             )
         return cur.rowcount > 0
 
+    def update_conversation_context(
+        self,
+        conversation_id: str,
+        *,
+        owner_id: str,
+        mode: str | None = None,
+        persona: str | None = None,
+        subject: str | None = None,
+        language: str | None = None,
+    ) -> bool:
+        """Persist request context for an existing learner-owned conversation."""
+        with self._lock, self._conn:
+            cur = self._conn.execute(
+                "UPDATE conversations SET mode = COALESCE(?, mode), "
+                "persona = COALESCE(?, persona), subject = COALESCE(?, subject), "
+                "language = COALESCE(?, language) WHERE id = ? AND student_id = ?",
+                (mode, persona, subject, language, conversation_id, owner_id),
+            )
+        return cur.rowcount > 0
+
     def set_title(self, conversation_id: str, title: str) -> None:
         with self._lock, self._conn:
             self._conn.execute(

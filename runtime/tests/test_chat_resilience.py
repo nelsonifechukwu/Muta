@@ -14,7 +14,13 @@ from orchestrator.gateway.prompting import (
     assemble_system_prompt,
     response_language_instruction,
 )
-from runtime.chat import ChatEngine, ImageInput, _message_tokens
+from runtime.chat import (
+    ChatEngine,
+    ImageInput,
+    ReplyGuardResult,
+    _message_tokens,
+    strip_internal_runtime_echoes,
+)
 from runtime.client import Generation, InferenceStreamError
 from runtime.sqlite_memory import SQLiteConversationStore
 
@@ -51,6 +57,114 @@ class ExactCountingClient(RecordingClient):
         self.count_calls += 1
         # Representative English-token ratio plus chat-role/template overhead.
         return sum((len(message["content"].encode("utf-8")) + 3) // 4 + 8 for message in messages)
+
+
+def test_reply_guard_buffers_and_discards_unsafe_stream_before_retry(store):
+    class TwoDraftClient(RecordingClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.drafts = iter(("You are correct.", "That first step is not equivalent."))
+
+        def stream_events(self, messages, **params):
+            self.messages.append(messages)
+            self.params.append(params)
+            yield "content", next(self.drafts)
+
+    def guard(reply: str, attempt: int) -> ReplyGuardResult:
+        if attempt == 0:
+            assert reply == "You are correct."
+            return ReplyGuardResult(
+                "",
+                retry_instruction="Do not affirm the checked-wrong step.",
+                retry_params={"temperature": 0.0, "seed": 4242},
+            )
+        return ReplyGuardResult(reply)
+
+    client = TwoDraftClient()
+    engine = ChatEngine(client, store)
+    cid, _message_id, events = engine.stream_events_chat(
+        "s1",
+        "wrong work",
+        reply_guard=guard,
+    )
+
+    delivered = list(events)
+    content = "".join(text for kind, text in delivered if kind == "content")
+    stored = store.get_messages(cid)
+    assert content == "That first step is not equivalent."
+    assert "You are correct" not in repr(delivered)
+    assert [row["content"] for row in stored] == [
+        "wrong work",
+        "That first step is not equivalent.",
+    ]
+    assert "Do not affirm the checked-wrong step" in client.messages[1][-1]["content"]
+    assert client.params[1]["temperature"] == 0.0
+
+
+def test_incremental_quality_guard_aborts_repetition_and_regenerates_once(store):
+    from orchestrator.gateway.quality import ResponseQualityGuard
+
+    sentence = "Mmea unahitaji mwanga wa jua."
+
+    class LoopThenAnswer(RecordingClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls = 0
+
+        def stream_events(self, messages, **params):
+            self.calls += 1
+            self.messages.append(messages)
+            self.params.append(params)
+            if self.calls == 1:
+                for _ in range(20):
+                    yield "content", sentence
+                return
+            yield "content", "Mmea hutumia mwanga kutoa nishati kwa usanisinuru."
+
+    client = LoopThenAnswer()
+    quality = ResponseQualityGuard(expected_language="sw")
+    engine = ChatEngine(client, store)
+    cid, _mid, events = engine.stream_events_chat(
+        "s1",
+        "Eleza usanisinuru.",
+        reply_guard=quality.review,
+    )
+
+    visible = "".join(text for kind, text in events if kind == "content")
+    assert visible == "Mmea hutumia mwanga kutoa nishati kwa usanisinuru."
+    assert sentence * 3 not in visible
+    assert client.calls == 2
+    assert client.params[1]["dry_multiplier"] == 0.8
+    assert store.get_messages(cid)[-1]["content"] == visible
+
+
+def test_stream_monitor_stops_third_repetition_without_buffering_normal_turn(store):
+    from orchestrator.gateway.quality import ResponseQualityGuard
+
+    sentence = "Let us check the same step."
+
+    class EnglishLoop(RecordingClient):
+        def stream_events(self, messages, **params):
+            self.messages.append(messages)
+            self.params.append(params)
+            for _ in range(10):
+                yield "content", sentence
+
+    quality = ResponseQualityGuard(expected_language="en")
+    client = EnglishLoop()
+    engine = ChatEngine(client, store, persist_interval_s=0.0)
+    cid, _mid, events = engine.stream_events_chat(
+        "s1",
+        "Explain it",
+        stream_monitor=quality.review,
+    )
+
+    delivered = list(events)
+    visible = "".join(text for kind, text in delivered if kind == "content")
+    assert visible.count(sentence) == 2
+    assert "I stopped a repeated loop" in visible
+    assert any(kind == "recovering" for kind, _text in delivered)
+    assert store.get_messages(cid)[-1]["content"] == visible
 
 
 def test_history_budget_trims_prompt_only_and_keeps_a_user_boundary(store):
@@ -369,8 +483,12 @@ def test_transient_drop_resumes_same_turn_and_same_assistant_row(store):
             if len(self.calls) == 1:
                 yield "content", "**Projectile Motion in"
                 raise httpx.ReadError("socket reset")
-            assert messages[-2]["content"] == "**Projectile Motion in"
-            assert "Continue the interrupted assistant response" in messages[-1]["content"]
+            assert messages[-1] == {
+                "role": "assistant",
+                "content": "**Projectile Motion in",
+            }
+            assert "[MUTA_CONTINUATION]" in messages[0]["content"]
+            assert [message["role"] for message in messages].count("user") == 1
             yield "content", " Two Dimensions**"
 
     client = RecoverOnce()
@@ -394,6 +512,78 @@ def test_transient_drop_resumes_same_turn_and_same_assistant_row(store):
     ]
 
 
+def test_continuation_protocol_never_leaks_to_visible_or_persisted_output(store):
+    legacy = (
+        "Internal Muta runtime continuation instruction: this is not a learner message and is "
+        "never language evidence. Continue the interrupted assistant response directly from "
+        "its exact final character and in exactly the same response language. Do not repeat or "
+        "restart any part, apologize, mention the interruption, or add a new heading. Finish "
+        "the original answer only. SAME LANG; NO EVIDENCE"
+    )
+
+    class EchoingRecovery:
+        def __init__(self) -> None:
+            self.calls: list[list[dict]] = []
+
+        def stream_events(self, messages, **params):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                yield "content", "Here is the idea: "
+                raise InferenceStreamError(
+                    "token limit",
+                    retryable=True,
+                    finish_reason="length",
+                )
+            yield "content", legacy[:91]
+            yield "content", legacy[91:] + "\n\nI don't understand this part yet."
+
+    client = EchoingRecovery()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=1,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat("s1", "Explain this slowly")
+    delivered = list(events)
+    visible = "".join(text for kind, text in delivered if kind == "content")
+    stored = store.get_messages(cid)
+
+    assert visible == "Here is the idea: I don't understand this part yet."
+    assert "Internal Muta" not in repr(delivered)
+    assert "SAME LANG" not in repr(delivered)
+    assert [row["role"] for row in stored] == ["user", "assistant"]
+    assert stored[0]["content"] == "Explain this slowly"
+    assert stored[1]["content"] == visible
+    assert client.calls[1][-1]["role"] == "assistant"
+    assert all(
+        "Internal Muta runtime" not in str(message["content"])
+        for message in client.calls[1]
+        if message["role"] == "user"
+    )
+
+
+def test_internal_echo_sanitizer_is_precise_and_keeps_learner_facing_text():
+    text = (
+        "[MUTA_CONTINUATION]\n"
+        "Continue the final assistant message from its last character.\n"
+        "Return continuation text only; do not quote this directive.\n"
+        "I don't understand why current is conserved."
+    )
+
+    assert strip_internal_runtime_echoes(text) == "I don't understand why current is conserved."
+
+
+def test_internal_echo_sanitizer_does_not_remove_normal_similar_tutor_text():
+    text = (
+        "Continue the final assistant message from its last character.\n"
+        "I don't understand why current is conserved."
+    )
+
+    assert strip_internal_runtime_echoes(text) == text
+
+
 def test_token_limit_finishes_automatically_in_the_same_assistant_row(store):
     class LengthOnce:
         def __init__(self) -> None:
@@ -408,9 +598,9 @@ def test_token_limit_finishes_automatically_in_the_same_assistant_row(store):
                     retryable=True,
                     finish_reason="length",
                 )
-            assert messages[-2]["content"] == "Einfach gesagt"
-            assert "Continue the interrupted assistant response" in messages[-1]["content"]
-            assert messages[-1]["content"].endswith("SAME LANG; NO EVIDENCE")
+            assert messages[-1] == {"role": "assistant", "content": "Einfach gesagt"}
+            assert "[MUTA_CONTINUATION]" in messages[0]["content"]
+            assert [message["role"] for message in messages].count("user") == 1
             yield "content", ", hat jedes Zellteil eine bestimmte Aufgabe."
 
         def count_prompt_tokens(self, messages, **params):
@@ -466,8 +656,9 @@ def test_nonstreaming_token_limit_continues_before_persisting(store):
                     finish_reason="length",
                 )
             assert params["enable_thinking"] is False
-            assert messages[-2]["content"] == "Einfach gesagt"
-            assert messages[-1]["content"].endswith("SAME LANG; NO EVIDENCE")
+            assert messages[-1] == {"role": "assistant", "content": "Einfach gesagt"}
+            assert "[MUTA_CONTINUATION]" in messages[0]["content"]
+            assert [message["role"] for message in messages].count("user") == 1
             return Generation(
                 ", sind Zellen winzige Systeme.",
                 25,
@@ -559,6 +750,74 @@ def test_nonstreaming_clean_retry_requires_new_answer_content(store):
 
     assert result.reply == "So, in a simple way, the parts cooperate."
     assert client.calls == 3
+
+
+def test_buffered_guard_returns_safe_fallback_after_repeated_length_exhaustion(store):
+    class AlwaysLength:
+        def chat_with_timings(self, messages, **params):
+            return Generation(
+                "unfinished draft",
+                10,
+                20,
+                0.1,
+                200.0,
+                False,
+                finish_reason="length",
+            )
+
+    class SafeGuard:
+        requires_buffering = True
+
+        def __call__(self, reply: str, attempt: int):
+            from runtime.chat import ReplyGuardResult
+
+            return ReplyGuardResult("A complete checked fallback.")
+
+    engine = ChatEngine(AlwaysLength(), store, stream_retry_attempts=0)
+    result = engine.chat(
+        "s1",
+        "explain safely",
+        max_tokens=64,
+        reply_guard=SafeGuard(),
+    )
+
+    assert result.reply == "A complete checked fallback."
+    assert store.list_messages(result.conversation_id)[-1]["completion_state"] == "complete"
+
+
+def test_cancellable_blocking_chat_does_not_bypass_reply_guard(store):
+    class UnsafeThenSafe:
+        def __init__(self):
+            self.calls = 0
+
+        def stream_events(self, messages, **params):
+            self.calls += 1
+            yield "content", "unsafe draft" if self.calls == 1 else "safe checked answer"
+
+    class Guard:
+        requires_buffering = True
+
+        def __call__(self, reply: str, attempt: int):
+            from runtime.chat import ReplyGuardResult
+
+            if attempt == 0:
+                return ReplyGuardResult("", retry_instruction="Rewrite safely.")
+            return ReplyGuardResult("safe checked answer")
+
+    engine = ChatEngine(UnsafeThenSafe(), store, stream_retry_attempts=0)
+    result = engine.chat(
+        "s1",
+        "check this",
+        max_tokens=64,
+        reply_guard=Guard(),
+        cancel_event=threading.Event(),
+    )
+
+    assert result.reply == "safe checked answer"
+    assert [message["content"] for message in store.get_messages(result.conversation_id)] == [
+        "check this",
+        "safe checked answer",
+    ]
 
 
 def test_nonstreaming_later_transport_failure_preserves_accumulated_partial(store):
@@ -743,13 +1002,10 @@ def test_recovery_fit_keeps_original_question_and_removes_repeated_boundary(stor
     )
     received = list(events)
 
-    assert [message["role"] for message in client.calls[1][-3:]] == [
-        "user",
-        "assistant",
-        "user",
-    ]
-    assert client.calls[1][-3]["content"].startswith("Derive the")
-    assert client.calls[1][-3]["content"].endswith("Answer in German (de).")
+    assert [message["role"] for message in client.calls[1][-2:]] == ["user", "assistant"]
+    assert client.calls[1][-2]["content"].startswith("Derive the")
+    assert client.calls[1][-2]["content"].endswith("Answer in German (de).")
+    assert "[MUTA_CONTINUATION]" in client.calls[1][0]["content"]
     assert all(message["role"] != "system" for message in client.calls[1][1:])
     assert not any(text == "restarted private thought" for _kind, text in received)
     assert "".join(text for kind, text in received if kind == "content") == (

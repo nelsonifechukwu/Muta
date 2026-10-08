@@ -32,7 +32,13 @@ def test_conversational_paths_sample(name):
 
 def test_the_tdd_table_values():
     d = PROFILES["tutor-dialogue"]
-    assert (d.temperature, d.top_p, d.top_k, d.min_p, d.repeat_penalty) == (0.7, 0.95, 40, 0.05, 1.05)
+    assert (d.temperature, d.top_p, d.top_k, d.min_p, d.repeat_penalty) == (
+        0.7,
+        0.95,
+        40,
+        0.05,
+        1.05,
+    )
     s = PROFILES["worked-solution"]
     assert (s.temperature, s.top_p) == (0.3, 0.90)
     h = PROFILES["hint"]
@@ -43,6 +49,11 @@ def test_params_are_ready_for_the_inference_client():
     params = PROFILES["tutor-dialogue"].params()
     assert params["temperature"] == 0.7 and params["seed"] == -1
     assert params["max_tokens"] == DEFAULT_MAX_TOKENS  # §8.2 fairness cap
+    assert params["repeat_last_n"] == 128
+    assert params["dry_multiplier"] == 0.6
+    assert params["dry_base"] == 1.75
+    assert params["dry_allowed_length"] == 2
+    assert params["dry_penalty_last_n"] == 128
 
 
 def test_structured_profiles_refuse_to_run_without_a_schema():

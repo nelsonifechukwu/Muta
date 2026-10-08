@@ -175,6 +175,23 @@ def test_follow_up_replays_the_owned_image_on_its_original_user_turn(store):
     assert client.seen[1][-1]["content"] == "What was the second item?"
 
 
+def test_follow_up_persists_the_latest_teaching_context(store):
+    engine, _client, store = _engine(store)
+    first = engine.chat("s1", "Guide me", mode="socratic", persona="teacher")
+
+    engine.chat(
+        "s1",
+        "A hint please",
+        conversation_id=first.conversation_id,
+        mode="hints",
+        persona="teacher",
+    )
+
+    conversation = store.get_conversation(first.conversation_id)
+    assert conversation["mode"] == "hints"
+    assert conversation["persona"] == "teacher"
+
+
 def test_a_new_image_drops_an_older_visual_exchange_when_both_cannot_fit(store):
     engine, client, store = _engine(
         store,
@@ -679,11 +696,12 @@ def test_transient_stream_drop_resumes_in_the_same_assistant_row(store):
             if len(self.calls) == 1:
                 yield "content", "**Projectile Motion in"
                 raise httpx.ReadError("socket reset")
-            assert messages[-2] == {
+            assert messages[-1] == {
                 "role": "assistant",
                 "content": "**Projectile Motion in",
             }
-            assert "Continue the interrupted assistant response" in messages[-1]["content"]
+            assert "[MUTA_CONTINUATION]" in messages[0]["content"]
+            assert [message["role"] for message in messages].count("user") == 1
             yield "content", " Two Dimensions**"
 
     client = RecoverOnce()

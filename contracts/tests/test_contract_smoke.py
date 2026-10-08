@@ -57,6 +57,13 @@ class _FakeStore:
         self.pinned.append((cid, pinned))
         return True
 
+    def update_conversation_context(self, cid, *, owner_id, **context):
+        convo = self.conversations.get(cid)
+        if convo is None or convo["student_id"] != owner_id:
+            return False
+        convo.update({key: value for key, value in context.items() if value is not None})
+        return True
+
     def list_messages(self, cid):
         return [
             {
@@ -110,11 +117,13 @@ PUBLIC_PATHS = [
     "/v1/conversations",
     "/v1/conversations/{conversation_id}/messages",
     "/v1/conversations/{conversation_id}/pin",
+    "/v1/conversations/{conversation_id}/style",
     "/v1/conversations/{conversation_id}",
     "/v1/attachments/{attachment_id}",
     "/v1/diagnose",
     "/v1/generate_question",
     "/v1/mastery/{student_id}",
+    "/v1/units/checkpoint",
     "/v1/verify",
 ]
 
@@ -311,6 +320,35 @@ def test_conversation_pin_is_owner_scoped(override_engine):
     )
     assert response.status_code == 404
     assert engine.store.pinned == []
+
+
+def test_conversation_style_is_validated_persisted_and_owner_scoped(override_engine):
+    engine = _FakeEngine()
+    override_engine(engine)
+
+    response = client.put(
+        "/v1/conversations/conv-123/style",
+        json={"mode": "analogy"},
+        headers=_AUTH_S1,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"id": "conv-123", "mode": "analogy"}
+    assert engine.store.conversations["conv-123"]["mode"] == "analogy"
+
+    hidden = client.put(
+        "/v1/conversations/conv-123/style",
+        json={"mode": "hints"},
+        headers={"Authorization": "Bearer mallory"},
+    )
+    assert hidden.status_code == 404
+    assert engine.store.conversations["conv-123"]["mode"] == "analogy"
+
+    invalid = client.put(
+        "/v1/conversations/conv-123/style",
+        json={"mode": "marking"},
+        headers=_AUTH_S1,
+    )
+    assert invalid.status_code == 422
 
 
 def test_attachment_requires_auth(override_engine):

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from orchestrator.pedagogy.twin import MAX_SUMMARIES, LearningTwin, TwinStore
+from orchestrator.pedagogy.twin import MAX_SUMMARIES, SCHEMA_VERSION, LearningTwin, TwinStore
 
 
 def test_mastery_updates_are_smoothed_not_replaced():
@@ -76,6 +76,9 @@ def test_round_trip(tmp_path):
     twin.record_error("sign-error")
     twin.bump("minutes", 12.5)
     twin.add_summary("Factorised three quadratics unaided.")
+    twin.record_preference("style", "examples")
+    twin.record_misconception("distribution_error")
+    twin.remember_strategy("distribution_error", "area model")
     store.save(twin)
 
     loaded = store.load("ada")
@@ -83,6 +86,9 @@ def test_round_trip(tmp_path):
     assert loaded.error_counts == {"sign-error": 1}
     assert loaded.pace == {"minutes": 12.5}
     assert loaded.summaries == twin.summaries
+    assert loaded.preferences == {"style": "examples"}
+    assert loaded.misconception_counts == {"distribution_error": 1}
+    assert loaded.last_strategy == {"distribution_error": "area model"}
 
 
 def test_unknown_student_gets_a_blank_twin_not_an_error(tmp_path):
@@ -134,6 +140,31 @@ def test_unknown_fields_from_a_future_schema_are_ignored(tmp_path):
     store = TwinStore(tmp_path / "twins")
     store.path_for("ada").write_text(json.dumps({"mastery": {"a": 1.0}, "invented_field": 42}))
     assert store.load("ada").mastery == {"a": 1.0}
+
+
+def test_v1_twin_loads_with_v2_defaults_and_migrates_on_save(tmp_path):
+    store = TwinStore(tmp_path / "twins")
+    store.path_for("ada").write_text(
+        json.dumps({"version": 1, "mastery": {"algebra": 0.4}, "summaries": ["old"]})
+    )
+
+    twin = store.load("ada")
+    assert twin.version == SCHEMA_VERSION
+    assert twin.mastery == {"algebra": 0.4}
+    assert twin.preferences == {}
+    assert twin.misconception_counts == {}
+    store.save(twin)
+    assert json.loads(store.path_for("ada").read_text())["version"] == SCHEMA_VERSION
+
+
+def test_adaptation_facts_are_bounded():
+    twin = LearningTwin("bounded")
+    for index in range(40):
+        twin.record_preference(f"preference-{index}", "value")
+        twin.record_misconception(f"error-{index}")
+
+    assert len(twin.preferences) == 12
+    assert len(twin.misconception_counts) == 24
 
 
 def test_student_ids_cannot_escape_the_twin_directory(tmp_path):

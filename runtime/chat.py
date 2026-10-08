@@ -10,16 +10,19 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import re
 import threading
 import time
-from collections.abc import Iterator
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass, field
 
 import httpx
 
 from runtime.client import Generation, InferenceClient, InferenceStreamError, Message
 from runtime.memory import ConversationStore
+
+log = logging.getLogger("muta.runtime.chat")
 
 _MESSAGE_OVERHEAD_TOKENS = 8
 _MIN_REPLY_TOKENS = 64
@@ -27,12 +30,31 @@ _DEFAULT_IMAGE_TOKENS = 2048
 _PER_STUDENT_CONTEXT = "--- per-student context (variable — keep last) ---".encode()
 _LIVE_CONTEXT = b"\n[MUTA-LIVE]\n"
 _TURN_INSTRUCTION = "\n\n[MUTA RUNTIME INSTRUCTION — not part of the learner's message]\n"
-_RESUME_PROMPT = (
+_LEGACY_RESUME_PROMPT = (
     "Internal Muta runtime continuation instruction: this is not a learner message and is never "
     "language evidence. Continue the interrupted assistant response directly from its exact "
     "final character and in exactly the same response language. Do not repeat or restart any "
     "part, apologize, mention the interruption, or add a new heading. Finish the original "
     "answer only. SAME LANG; NO EVIDENCE"
+)
+_CONTINUATION_DIRECTIVE = (
+    "[MUTA_CONTINUATION]\nContinue the final assistant message from its last character. "
+    "Return continuation text only; do not quote this directive, restart, or apologize. "
+    "Preserve the response language already in use."
+)
+_INTERNAL_ECHO_PREFIX = re.compile(
+    r"(?im)^.*(?:\[MUTA_CONTINUATION\]|Internal Muta runtime continuation instruction:)"
+    r"[^\n]*(?:\n|$)"
+)
+_INTERNAL_ECHO_FOLLOWUP = re.compile(
+    r"(?i)^\s*(?:"
+    r"continue\s+(?:the\s+)?(?:interrupted|final)\s+assistant\s+(?:response|message)\b|"
+    r"return\s+continuation\s+text\s+only\b|"
+    r"preserve\s+the\s+response\s+language\b|"
+    r"do\s+not\s+(?:repeat|quote|restart)\b|"
+    r"finish\s+the\s+original\s+answer\s+only\b|"
+    r"same\s+lang\s*;\s*no\s+evidence\b"
+    r")"
 )
 _MAX_RESUME_OVERLAP = 512
 _MIN_RESUME_OVERLAP = 8
@@ -58,14 +80,33 @@ _VIZ_MARKED_JSON_TAIL = re.compile(
 )
 
 
+def strip_internal_runtime_echoes(text: str) -> str:
+    """Remove only private continuation protocol text from a model-authored reply."""
+    original = str(text or "")
+    had_private_marker = bool(_INTERNAL_ECHO_PREFIX.search(original))
+    cleaned = original.replace(_LEGACY_RESUME_PROMPT, "").replace(
+        _CONTINUATION_DIRECTIVE, ""
+    )
+    cleaned = _INTERNAL_ECHO_PREFIX.sub("", cleaned)
+    if had_private_marker:
+        cleaned = "\n".join(
+            line for line in cleaned.splitlines() if not _INTERNAL_ECHO_FOLLOWUP.match(line)
+        )
+    if cleaned == original:
+        return original
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.lstrip("\r\n").rstrip()
+
+
 def strip_model_visualization_blocks(text: str) -> str:
     """Remove every complete model-authored visualization protocol block.
 
     The gateway alone owns durable visualization artifacts. This persistence-boundary helper does
     not parse or trust the body: valid, invalid, V1, and V2 model blocks are all untrusted. A
-    partial reserved-protocol tail is removed fail-closed so it cannot consume a later trusted fence.
+    partial reserved-protocol tail is removed fail-closed so it cannot consume a later trusted
+    fence.
     """
-    cleaned = str(text or "")
+    cleaned = strip_internal_runtime_echoes(text)
     for pattern in (_VIZ_FENCE, _VIZ_MARKED_JSON_FENCE):
         cleaned = pattern.sub(lambda match: match.group(1), cleaned)
     for pattern in (_VIZ_FENCE_TAIL, _VIZ_MARKED_JSON_TAIL):
@@ -169,6 +210,40 @@ def _append_content_text(content: object, suffix: str) -> str | list[dict]:
             return parts
     parts.insert(0, {"type": "text", "text": suffix})
     return parts
+
+
+def _continuation_messages(messages: list[Message], partial: str) -> list[Message]:
+    """Trusted continuation context: system suffix + assistant prefill, never a user turn."""
+    resumed = [dict(message) for message in messages]
+    if resumed:
+        system = _content_text(resumed[0].get("content", ""))
+        boundaries = tuple(
+            token.decode() for token in (_PER_STUDENT_CONTEXT, _LIVE_CONTEXT)
+        )
+        boundary = next((token for token in boundaries if token in system), "")
+        if boundary:
+            head, tail = system.split(boundary, 1)
+            system = (
+                head
+                + boundary
+                + "\n"
+                + _CONTINUATION_DIRECTIVE
+                + "\n"
+                + tail.lstrip("\r\n")
+            )
+        else:
+            system += (
+                "\n\n"
+                + _PER_STUDENT_CONTEXT.decode()
+                + "\n"
+                + _CONTINUATION_DIRECTIVE
+            )
+        resumed[0] = {
+            **resumed[0],
+            "content": system,
+        }
+    resumed.append({"role": "assistant", "content": partial})
+    return resumed
 
 
 def _estimate_tokens(text: str) -> int:
@@ -304,6 +379,18 @@ class ChatResult:
     user_message_id: int | None = None
     # Exact assistant row for durable citations and other turn-owned metadata.
     assistant_message_id: int | None = None
+
+
+@dataclass(frozen=True)
+class ReplyGuardResult:
+    """Decision returned by an optional deterministic pre-persistence reply guard."""
+
+    text: str
+    retry_instruction: str = ""
+    retry_params: dict = field(default_factory=dict)
+
+
+ReplyGuard = Callable[[str, int], ReplyGuardResult]
 
 
 class _ReplyWriter:
@@ -508,6 +595,12 @@ class ChatEngine:
             if conversation is not None and conversation.get("student_id") != student_id:
                 raise PermissionError("conversation belongs to another learner")
             if conversation is not None:
+                update_context = getattr(self.store, "update_conversation_context", None)
+                if callable(update_context):
+                    context = {
+                        key: meta.get(key) for key in ("mode", "persona", "subject", "language")
+                    }
+                    update_context(conversation_id, owner_id=student_id, **context)
                 return conversation_id
         if not create:
             raise ValueError("regenerate requires an existing conversation")
@@ -869,10 +962,12 @@ class ChatEngine:
                     # resumes, then the normal UI transition settles it.
                     if attempt and kind == "reasoning":
                         continue
-                    if structured and kind == "content":
+                    if (structured or attempt > 0) and kind == "content":
                         # A schema-root JSON document cannot be continued by appending another
                         # freshly generated root. Buffer until the attempt terminates cleanly;
                         # a failed attempt is discarded and regenerated from the original prompt.
+                        # Continuation attempts are also buffered so a model echo of the private
+                        # recovery directive can be removed before any resumed text is visible.
                         if text:
                             buffered_content.append(text)
                             attempt_content_progress = True
@@ -884,11 +979,6 @@ class ChatEngine:
                     if kind == "content" and text:
                         attempt_content_progress = True
                     yield kind, text
-                if deduplicator is not None:
-                    tail = deduplicator.finish()
-                    if tail:
-                        attempt_content_progress = True
-                        yield "content", tail
                 if not attempt_content_progress:
                     # Reasoning-only is not an answer. Some small thinking models can exhaust a
                     # turn (or emit a clean stop) before producing any content; treating that as
@@ -901,14 +991,16 @@ class ChatEngine:
                     )
                 if structured:
                     yield from (("content", text) for text in buffered_content)
+                elif attempt > 0:
+                    resumed = strip_internal_runtime_echoes("".join(buffered_content))
+                    if deduplicator is not None:
+                        resumed = deduplicator.feed(resumed) + deduplicator.finish()
+                    if resumed:
+                        yield "content", resumed
                 return
             except Exception as exc:
                 if cancel_event is not None and cancel_event.is_set():
                     return
-                if deduplicator is not None:
-                    tail = deduplicator.finish()
-                    if tail:
-                        yield "content", tail
                 if not _retryable_stream_error(exc) or attempt >= self.stream_retry_attempts:
                     raise
                 attempt += 1
@@ -943,13 +1035,10 @@ class ChatEngine:
                     request_messages = messages
                     protected_tail = min(3, max(1, len(messages) - 1))
                 elif partial:
-                    request_messages = [
-                        *messages,
-                        {"role": "assistant", "content": partial},
-                        {"role": "user", "content": _RESUME_PROMPT},
-                    ]
-                    # Original user turn + partial assistant + continuation instruction.
-                    protected_tail = 3
+                    request_messages = _continuation_messages(messages, partial)
+                    # Original user turn + assistant prefill. The trusted instruction lives in
+                    # messages[0], never in a synthetic user message.
+                    protected_tail = 2
                 else:
                     request_messages = messages
                     protected_tail = 1
@@ -1002,7 +1091,7 @@ class ChatEngine:
                         str(exc) or "inference continuation failed",
                         retryable=_retryable_stream_error(exc),
                         finish_reason=getattr(exc, "finish_reason", None),
-                        partial_text=reply,
+                        partial_text=strip_internal_runtime_echoes(reply),
                     ) from exc
                 raise
             attempts.append(generation)
@@ -1020,13 +1109,14 @@ class ChatEngine:
                 awaiting_completion_progress and not made_progress
             )
             if not needs_retry:
-                return self._merge_generations(reply, attempts)
+                public_reply = strip_internal_runtime_echoes(reply)
+                return self._merge_generations(public_reply, attempts)
             if attempt_index >= self.stream_retry_attempts:
                 raise InferenceStreamError(
                     "inference repeatedly reached its token limit before completion",
                     retryable=False,
                     finish_reason="length",
-                    partial_text="" if structured else reply,
+                    partial_text="" if structured else strip_internal_runtime_echoes(reply),
                 )
             awaiting_completion_progress = True
             retry_params["enable_thinking"] = False
@@ -1034,18 +1124,220 @@ class ChatEngine:
                 request_messages = messages
                 protected_tail = min(3, max(1, len(messages) - 1))
             else:
-                request_messages = [
-                    *messages,
-                    {"role": "assistant", "content": reply},
-                    {"role": "user", "content": _RESUME_PROMPT},
-                ]
-                protected_tail = 3
+                request_messages = _continuation_messages(messages, reply)
+                protected_tail = 2
             request_messages, request_params = self._fit_request(
                 request_messages,
                 retry_params,
                 protected_tail_messages=protected_tail,
             )
         raise AssertionError("unreachable length-recovery loop")
+
+    @staticmethod
+    def _with_guard_instruction(
+        messages: list[Message], instruction: str
+    ) -> list[Message]:
+        """Add a trusted, request-only retry directive without mutating stored learner text."""
+        guarded = [dict(message) for message in messages]
+        if guarded and instruction:
+            guarded[-1] = {
+                **guarded[-1],
+                "content": _append_content_text(
+                    guarded[-1]["content"], _TURN_INSTRUCTION + instruction
+                ),
+            }
+        return guarded
+
+    @staticmethod
+    def _review_reply(reply_guard: ReplyGuard, reply: str, attempt: int) -> ReplyGuardResult:
+        try:
+            decision = reply_guard(reply, attempt)
+            if not isinstance(decision, ReplyGuardResult):
+                raise TypeError("reply guard returned an invalid decision")
+            return decision
+        except Exception:  # a guard failure must degrade, never crash a turn
+            log.warning("reply guard failed", exc_info=True)
+            return ReplyGuardResult(
+                "I couldn't safely check that response. Let's verify your working together, "
+                "one step at a time."
+            )
+
+    @staticmethod
+    def _guard_should_abort(reply_guard: ReplyGuard, partial: str) -> bool:
+        checker = getattr(reply_guard, "should_abort", None)
+        if not callable(checker):
+            owner = getattr(reply_guard, "__self__", None)
+            checker = getattr(owner, "should_abort", None)
+        if not callable(checker):
+            return False
+        try:
+            return bool(checker(partial))
+        except Exception:
+            log.warning("reply guard incremental check failed", exc_info=True)
+            return False
+
+    def _chat_with_reply_guard(
+        self,
+        messages: list[Message],
+        params: dict,
+        reply_guard: ReplyGuard,
+    ) -> Generation:
+        attempts: list[Generation] = []
+        request_messages = messages
+        request_params = dict(params)
+        final_text = ""
+        for attempt in range(2):
+            try:
+                generation = self._chat_with_length_recovery(request_messages, request_params)
+            except InferenceStreamError:
+                # A deterministic safety/quality guard can still produce a complete safe answer
+                # when the small local model exhausts its cap. Do not turn a known, bounded
+                # recovery into the user-facing "couldn't finish" error. Ordinary unguarded
+                # answers retain the existing partial-save + 503 semantics.
+                if not bool(getattr(reply_guard, "requires_buffering", False)):
+                    raise
+                if attempt == 0:
+                    request_messages = self._with_guard_instruction(
+                        messages,
+                        "The draft ended before completion. Rewrite once, directly and "
+                        "concisely, while obeying every safety and tutoring constraint.",
+                    )
+                    request_params = {
+                        **params,
+                        "enable_thinking": False,
+                        "temperature": min(float(params.get("temperature", 0.3)), 0.2),
+                    }
+                    request_messages, request_params = self._fit_request(
+                        request_messages,
+                        request_params,
+                        protected_tail_messages=min(3, max(1, len(request_messages) - 1)),
+                    )
+                    continue
+                decision = self._review_reply(reply_guard, "", attempt)
+                final_text = decision.text or (
+                    "Let's check that response together, one step at a time."
+                )
+                break
+            attempts.append(generation)
+            decision = self._review_reply(reply_guard, generation.text, attempt)
+            if not decision.retry_instruction or attempt == 1:
+                final_text = decision.text or (
+                    "Let's check that response together, one step at a time."
+                )
+                break
+            request_messages = self._with_guard_instruction(
+                messages, decision.retry_instruction
+            )
+            request_params = {**params, **decision.retry_params}
+            request_messages, request_params = self._fit_request(
+                request_messages,
+                request_params,
+                protected_tail_messages=min(3, max(1, len(request_messages) - 1)),
+            )
+        if not attempts:
+            return Generation(final_text, 0, 0, 0.0, 0.0, True, finish_reason="stop")
+        return self._merge_generations(final_text, attempts)
+
+    def _guarded_events(
+        self,
+        messages: list[Message],
+        params: dict,
+        writer: _ReplyWriter,
+        reply_guard: ReplyGuard,
+        cancel_event: threading.Event | None,
+    ) -> Iterator[tuple[str, str]]:
+        """Buffer risky output, retry once, then persist/emit only the validated candidate."""
+        yield "recovering", "Muta is checking the response before showing it…"
+        request_messages = messages
+        request_params = dict(params)
+        final_text = ""
+        for attempt in range(2):
+            parts: list[str] = []
+            attempt_writer = _ReplyWriter(self.store, writer.cid, 3600)
+            attempt_events = self._events_with_recovery(
+                request_messages, request_params, attempt_writer, cancel_event
+            )
+            incomplete = False
+            try:
+                for kind, text in attempt_events:
+                    if cancel_event is not None and cancel_event.is_set():
+                        return
+                    # Provenance and recovery status are safe to expose. Reasoning/content stay
+                    # private until the deterministic checks accept the complete answer.
+                    if kind in {"source", "recovering"}:
+                        yield kind, text
+                    elif kind == "content":
+                        parts.append(text)
+                        # Recovery uses writer.text to append after a transient/length stop. Keep
+                        # that state in memory without calling add()/flush(), which would persist
+                        # the unvalidated candidate.
+                        attempt_writer.chunks.append(text)
+                        if self._guard_should_abort(reply_guard, "".join(parts)):
+                            close = getattr(attempt_events, "close", None)
+                            if callable(close):
+                                close()
+                            break
+            except InferenceStreamError:
+                incomplete = True
+            if cancel_event is not None and cancel_event.is_set():
+                return
+            candidate = "".join(parts)
+            if incomplete and attempt == 0:
+                decision = ReplyGuardResult(
+                    "",
+                    retry_instruction=(
+                        "The draft ended before completion. Rewrite once, directly and "
+                        "concisely, while obeying every safety and tutoring constraint."
+                    ),
+                    retry_params={"enable_thinking": False, "temperature": 0.2},
+                )
+            else:
+                # An empty second review deliberately selects the guard's deterministic safe
+                # fallback rather than persisting a truncated or unchecked model fragment.
+                decision = self._review_reply(
+                    reply_guard, "" if incomplete else candidate, attempt
+                )
+            if not decision.retry_instruction or attempt == 1:
+                final_text = decision.text or (
+                    "Let's check that response together, one step at a time."
+                )
+                break
+            yield "recovering", "Muta found a problem and is checking once more…"
+            request_messages = self._with_guard_instruction(
+                messages, decision.retry_instruction
+            )
+            request_params = {**params, **decision.retry_params}
+            request_messages, request_params = self._fit_request(
+                request_messages,
+                request_params,
+                protected_tail_messages=min(3, max(1, len(request_messages) - 1)),
+            )
+        if final_text:
+            writer.add(final_text)
+            yield "content", final_text
+
+    def _monitored_events(
+        self,
+        messages: list[Message],
+        params: dict,
+        writer: _ReplyWriter,
+        reply_guard: ReplyGuard,
+        cancel_event: threading.Event | None,
+    ) -> Iterator[tuple[str, str]]:
+        """Stream normal turns, but cut a third-repeat loop before that chunk is exposed."""
+        source = self._events_with_recovery(messages, params, writer, cancel_event)
+        for kind, text in source:
+            if kind == "content" and self._guard_should_abort(reply_guard, writer.text + text):
+                close = getattr(source, "close", None)
+                if callable(close):
+                    close()
+                yield "recovering", "The tutor stopped a repeated loop."
+                yield (
+                    "content",
+                    "\n\nI stopped a repeated loop. Please ask me to explain it another way.",
+                )
+                return
+            yield kind, text
 
     def chat(
         self,
@@ -1065,6 +1357,7 @@ class ChatEngine:
         images: list[ImageInput] | None = None,
         attachment_ids: list[int] | None = None,
         include_history: bool = True,
+        reply_guard: ReplyGuard | None = None,
         **params,
     ) -> ChatResult:
         cid = self._open(
@@ -1097,10 +1390,21 @@ class ChatEngine:
         if cancel_event is not None:
             writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
             try:
-                for kind, text in self._events_with_recovery(
-                    messages, request_params, writer, cancel_event
-                ):
-                    if kind == "content":
+                source = (
+                    self._guarded_events(
+                        messages,
+                        request_params,
+                        writer,
+                        reply_guard,
+                        cancel_event,
+                    )
+                    if reply_guard is not None
+                    else self._events_with_recovery(
+                        messages, request_params, writer, cancel_event
+                    )
+                )
+                for kind, text in source:
+                    if kind == "content" and reply_guard is None:
                         writer.add(text)
             except Exception:
                 writer.set_completion("stopped" if cancel_event.is_set() else "failed")
@@ -1117,12 +1421,16 @@ class ChatEngine:
             writer.set_completion("complete")
             return ChatResult(
                 conversation_id=cid,
-                reply=writer.text,
+                reply=strip_internal_runtime_echoes(writer.text),
                 user_message_id=user_message_id,
                 assistant_message_id=writer.message_id,
             )
         try:
-            generation = self._chat_with_length_recovery(messages, request_params)
+            generation = (
+                self._chat_with_reply_guard(messages, request_params, reply_guard)
+                if reply_guard is not None
+                else self._chat_with_length_recovery(messages, request_params)
+            )
         except InferenceStreamError as exc:
             if exc.partial_text:
                 message_id = self.store.add_message(
@@ -1132,15 +1440,16 @@ class ChatEngine:
                 if callable(setter):
                     setter(message_id, "failed")
             raise
-        assistant_message_id = self.store.add_message(
-            cid, "assistant", strip_model_visualization_blocks(generation.text)
-        )
+        public_reply = strip_model_visualization_blocks(generation.text)
+        if public_reply != generation.text:
+            generation = self._merge_generations(public_reply, [generation])
+        assistant_message_id = self.store.add_message(cid, "assistant", public_reply)
         setter = getattr(self.store, "set_message_completion", None)
         if callable(setter):
             setter(assistant_message_id, "complete")
         return ChatResult(
             conversation_id=cid,
-            reply=generation.text,
+            reply=public_reply,
             generation=generation,
             user_message_id=user_message_id,
             assistant_message_id=assistant_message_id,
@@ -1232,6 +1541,8 @@ class ChatEngine:
         images: list[ImageInput] | None = None,
         attachment_ids: list[int] | None = None,
         include_history: bool = True,
+        reply_guard: ReplyGuard | None = None,
+        stream_monitor: ReplyGuard | None = None,
         **params,
     ) -> tuple[str, int | None, Iterator[tuple[str, str]]]:
         """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
@@ -1272,10 +1583,31 @@ class ChatEngine:
 
         def _gen() -> Iterator[tuple[str, str]]:
             try:
-                for kind, text in self._events_with_recovery(
-                    messages, request_params, writer, cancel_event
-                ):
-                    if kind == "content":
+                source = (
+                    self._guarded_events(
+                        messages,
+                        request_params,
+                        writer,
+                        reply_guard,
+                        cancel_event,
+                    )
+                    if reply_guard is not None
+                    else (
+                        self._monitored_events(
+                            messages,
+                            request_params,
+                            writer,
+                            stream_monitor,
+                            cancel_event,
+                        )
+                        if stream_monitor is not None
+                        else self._events_with_recovery(
+                            messages, request_params, writer, cancel_event
+                        )
+                    )
+                )
+                for kind, text in source:
+                    if kind == "content" and reply_guard is None:
                         writer.add(text)
                     yield kind, text
             finally:

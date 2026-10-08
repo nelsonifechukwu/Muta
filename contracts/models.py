@@ -13,13 +13,18 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field, StringConstraints
 
 ResourceId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{32}$")]
+CourseId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{32}$")]
+ClassPostId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{32}$")]
+ClassReplyId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{32}$")]
 
 
 class TutoringMode(str, Enum):
-    """The two MVP tutoring modes (ROADMAP 14 Jul scope)."""
+    """Learner- and teacher-selectable tutoring modes."""
 
     socratic = "socratic"
     subgoal = "subgoal"
+    analogy = "analogy"
+    hints = "hints"
 
 
 class Persona(str, Enum):
@@ -209,6 +214,13 @@ class ChatRequest(BaseModel):
         max_length=32,
         description="Previously-uploaded attachments to link to this message.",
     )
+    course_id: CourseId | None = Field(
+        None,
+        description=(
+            "Optional Muta Share course. The gateway resolves its teacher policy server-side; "
+            "a locked course overrides the request mode."
+        ),
+    )
 
 
 class ResourceCitation(BaseModel):
@@ -284,6 +296,23 @@ class UserSettings(BaseModel):
         description=(
             "Use battery-aware response limits for this learner when the host is discharging. "
             "Memory, thermal and critical host safeguards cannot be disabled."
+        ),
+    )
+    preferred_style: TutoringMode = Field(
+        TutoringMode.socratic,
+        description=(
+            "Teaching strategy used for a new conversation. Existing conversations retain "
+            "their own mode."
+        ),
+    )
+    study_country: str | None = Field(
+        None,
+        min_length=2,
+        max_length=2,
+        pattern=r"^[A-Z]{2}$",
+        description=(
+            "Optional ISO 3166-1 alpha-2 African study country used only for locally relevant "
+            "currency and exam framing. It never changes factual or mathematical truth."
         ),
     )
 
@@ -371,6 +400,86 @@ class ShareUserAction(BaseModel):
     id: str
     status: Literal["approved", "rejected", "removed"]
     erased: dict[str, int] = Field(default_factory=dict)
+
+
+CourseTeachingStyle = Literal["socratic", "subgoal", "analogy", "hints"]
+
+
+class ShareCourseWrite(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    teaching_style: CourseTeachingStyle = "socratic"
+    lock_style: bool = False
+    withhold_final_answers: bool = False
+    teacher_note: str = Field("", max_length=400)
+
+
+class ShareCourse(ShareCourseWrite):
+    id: CourseId
+    created_at: str
+    updated_at: str
+
+
+class ShareCourseList(BaseModel):
+    courses: list[ShareCourse] = Field(default_factory=list)
+
+
+class ShareCourseDeleted(BaseModel):
+    id: CourseId
+    deleted: bool = True
+
+
+class ShareClassAuthor(BaseModel):
+    id: str
+    username: str
+
+
+class ShareClassPostCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+    addressed_to_teacher: bool = False
+
+
+class ShareClassReplyCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+
+
+class ShareClassReplyVerification(BaseModel):
+    verified: bool = True
+
+
+class ShareClassReply(BaseModel):
+    id: ClassReplyId
+    post_id: ClassPostId
+    author: ShareClassAuthor
+    body: str
+    teacher_verified: bool = False
+    verified_at: str | None = None
+    created_at: str
+    updated_at: str
+
+
+class ShareClassPost(BaseModel):
+    id: ClassPostId
+    author: ShareClassAuthor
+    body: str
+    addressed_to_teacher: bool = False
+    reply_count: int = Field(0, ge=0)
+    verified_reply_count: int = Field(0, ge=0)
+    created_at: str
+    updated_at: str
+
+
+class ShareClassPostList(BaseModel):
+    posts: list[ShareClassPost] = Field(default_factory=list)
+
+
+class ShareClassThread(BaseModel):
+    post: ShareClassPost
+    replies: list[ShareClassReply] = Field(default_factory=list)
+
+
+class ShareClassPostDeleted(BaseModel):
+    id: ClassPostId
+    deleted: bool = True
 
 
 class PowerStatus(BaseModel):
@@ -564,6 +673,44 @@ class ExamAnswerRequest(BaseModel):
     tolerance: float = Field(0.0, ge=0.0, le=1.0)
 
 
+class UnitCheckpointRequest(BaseModel):
+    """Answers for one server-known offline learning unit."""
+
+    student_id: str = Field(max_length=128)
+    unit_id: str = Field(min_length=1, max_length=128, pattern=r"^[a-z0-9][a-z0-9-]*$")
+    answers: dict[str, Annotated[str, StringConstraints(max_length=4096)]] = Field(
+        min_length=1,
+        max_length=20,
+        description=(
+            "Question id to learner answer. The server re-scores every value against its "
+            "allowlisted unit copy and never trusts browser-supplied answer keys."
+        ),
+    )
+
+
+class UnitQuestionResult(BaseModel):
+    question_id: str
+    verified: bool
+    checked: bool
+    detail: str = ""
+
+
+class UnitCheckpointResponse(BaseModel):
+    unit_id: str
+    topic: str
+    score: float = Field(ge=0.0, le=1.0)
+    mastery: float = Field(ge=0.0, le=1.0)
+    checked: bool
+    progress_saved: bool = Field(
+        True,
+        description=(
+            "Whether the verified checkpoint result was recorded on the learner twin. "
+            "A false value preserves the checked score while progress storage degrades."
+        ),
+    )
+    results: list[UnitQuestionResult] = Field(default_factory=list)
+
+
 class RenderRequest(BaseModel):
     kind: Literal["matplotlib", "svg"] = "matplotlib"
     code: str = Field(max_length=8192)
@@ -646,7 +793,11 @@ class ConversationOut(BaseModel):
     id: str
     student_id: str
     title: str | None = None
+    # Historical tutor conversations also store TutorMode values such as
+    # "dialogue" and "marking". Keep the read model open while new style
+    # writes are constrained by ConversationStyleRequest.
     mode: str | None = None
+    persona: Persona | None = None
     pinned: bool = False
     created_at: str
     updated_at: str
@@ -658,6 +809,8 @@ class ConversationList(BaseModel):
 
 class MessageList(BaseModel):
     conversation_id: str
+    mode: str | None = None
+    persona: Persona | None = None
     messages: list[MessageOut] = Field(default_factory=list)
 
 
@@ -673,6 +826,15 @@ class ConversationPinRequest(BaseModel):
 class ConversationPinned(BaseModel):
     id: str
     pinned: bool
+
+
+class ConversationStyleRequest(BaseModel):
+    mode: TutoringMode
+
+
+class ConversationStyleResponse(BaseModel):
+    id: str
+    mode: TutoringMode
 
 
 # --- auth & data-subject rights (additive) ---------------------------------------------

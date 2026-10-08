@@ -112,6 +112,8 @@ def assemble_system_prompt(
     language: str = "en",
     subject: str | None = None,
     twin_summary: str = "",
+    adaptation_directive: str = "",
+    local_context: str = "",
     web_lines: str = "",
     rag_block: str = "",
 ) -> str:
@@ -125,6 +127,10 @@ def assemble_system_prompt(
         blocks.append(directive)
     if twin_summary.strip():
         blocks.append("Student context (from their learning record): " + twin_summary.strip())
+    if adaptation_directive.strip():
+        blocks.append("Adaptation for this turn: " + adaptation_directive.strip())
+    if local_context.strip():
+        blocks.append("Local study context: " + local_context.strip())
     if rag_block.strip():
         blocks.append(rag_block.strip())
     if web_lines.strip():

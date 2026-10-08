@@ -175,7 +175,7 @@ def _persisted_share_runtime(
         )
         candidate = probe.candidate_config(
             os.environ.get(
-                "MUTA_SHARE_COMPETITION_MODEL_ID", "muta-tutor-qwen3.5-0.8b-q4_0"
+                "MUTA_SHARE_COMPETITION_MODEL_ID", "qwen2.5-1.5b-instruct-q4_k_m"
             )
         )
         profile = planner.plan(mode, candidate)

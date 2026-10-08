@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import html
 import os
 import re
 import secrets
@@ -38,6 +39,13 @@ _SESSION_IDLE = timedelta(hours=24)
 _SESSION_ABSOLUTE = timedelta(days=30)
 _ENROLLMENT_LIFETIME = timedelta(hours=24)
 _MAX_PENDING = 100
+_COURSE_STYLES = frozenset({"socratic", "subgoal", "analogy", "hints"})
+_MAX_BOARD_BODY = 4000
+_MAX_BOARD_REPLIES = 200
+_MAX_BOARD_POSTS_TOTAL = 1000
+_MAX_BOARD_POSTS_PER_MEMBER = 250
+_MAX_BOARD_REPLIES_TOTAL = 10_000
+_MAX_BOARD_REPLIES_PER_MEMBER = 2000
 
 
 def _now() -> datetime:
@@ -65,6 +73,84 @@ def normalize_username(value: str) -> tuple[str, str]:
     if not all(ch.isalnum() or ch in "._-" for ch in display):
         raise ValueError("username may contain letters, numbers, dots, dashes and underscores")
     return display.casefold(), display
+
+
+def sanitize_course_name(value: str) -> str:
+    candidate = unicodedata.normalize("NFKC", str(value or ""))
+    candidate = "".join(
+        " " if unicodedata.category(char).startswith("C") else char for char in candidate
+    )
+    candidate = " ".join(candidate.split())
+    if not 1 <= len(candidate) <= 80:
+        raise ValueError("course name must be between 1 and 80 characters")
+    return candidate
+
+
+def sanitize_teacher_note(value: str) -> str:
+    candidate = html.unescape(unicodedata.normalize("NFKC", str(value or "")))
+    candidate = re.sub(r"<[^>]*>", " ", candidate)
+    candidate = "".join(
+        " " if unicodedata.category(char).startswith("C") else char for char in candidate
+    )
+    candidate = " ".join(candidate.split())
+    if len(candidate) > 400:
+        raise ValueError("teacher note must be 400 characters or fewer")
+    return candidate
+
+
+def sanitize_board_body(value: str) -> str:
+    candidate = unicodedata.normalize("NFKC", str(value or ""))
+    candidate = candidate.replace("\r\n", "\n").replace("\r", "\n")
+    candidate = "".join(
+        char
+        if char in {"\n", "\t"} or not unicodedata.category(char).startswith("C")
+        else " "
+        for char in candidate
+    ).strip()
+    if not candidate:
+        raise ValueError("write a question or reply first")
+    if len(candidate) > _MAX_BOARD_BODY:
+        raise ValueError(f"class board messages must be {_MAX_BOARD_BODY} characters or fewer")
+    return candidate
+
+
+def _course_dict(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "teaching_style": row["teaching_style"],
+        "lock_style": bool(row["lock_style"]),
+        "withhold_final_answers": bool(row["withhold_final_answers"]),
+        "teacher_note": row["teacher_note"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _post_dict(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"],
+        "author": {"id": row["author_id"], "username": row["author_username"]},
+        "body": row["body"],
+        "addressed_to_teacher": bool(row["addressed_to_teacher"]),
+        "reply_count": int(row["reply_count"]),
+        "verified_reply_count": int(row["verified_reply_count"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _reply_dict(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"],
+        "post_id": row["post_id"],
+        "author": {"id": row["author_id"], "username": row["author_username"]},
+        "body": row["body"],
+        "teacher_verified": bool(row["teacher_verified"]),
+        "verified_at": row["verified_at"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
 
 
 def _validate_password(password: str) -> bytes:
@@ -196,6 +282,45 @@ CREATE TABLE IF NOT EXISTS share_enrollments (
     updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_share_enrollments_user ON share_enrollments(user_id, status);
+
+CREATE TABLE IF NOT EXISTS share_courses (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 80),
+    teaching_style TEXT NOT NULL
+        CHECK (teaching_style IN ('socratic', 'subgoal', 'analogy', 'hints')),
+    lock_style INTEGER NOT NULL DEFAULT 0 CHECK (lock_style IN (0, 1)),
+    withhold_final_answers INTEGER NOT NULL DEFAULT 0
+        CHECK (withhold_final_answers IN (0, 1)),
+    teacher_note TEXT NOT NULL DEFAULT '' CHECK (length(teacher_note) <= 400),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_share_courses_name ON share_courses(name COLLATE NOCASE, id);
+
+CREATE TABLE IF NOT EXISTS share_class_posts (
+    id TEXT PRIMARY KEY,
+    author_user_id TEXT NOT NULL REFERENCES share_users(id) ON DELETE CASCADE,
+    body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 4000),
+    addressed_to_teacher INTEGER NOT NULL DEFAULT 0
+        CHECK (addressed_to_teacher IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_share_class_posts_activity
+    ON share_class_posts(updated_at DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS share_class_replies (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL REFERENCES share_class_posts(id) ON DELETE CASCADE,
+    author_user_id TEXT NOT NULL REFERENCES share_users(id) ON DELETE CASCADE,
+    body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 4000),
+    teacher_verified INTEGER NOT NULL DEFAULT 0 CHECK (teacher_verified IN (0, 1)),
+    verified_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_share_class_replies_post
+    ON share_class_replies(post_id, created_at, id);
 """
 
 
@@ -258,6 +383,246 @@ class SharingService:
                     (_iso(),),
                 )
         return self.settings()
+
+    # --- teacher courses ------------------------------------------------------------
+    def courses(self) -> list[dict]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM share_courses ORDER BY name COLLATE NOCASE, id"
+            ).fetchall()
+        return [_course_dict(row) for row in rows]
+
+    def course(self, course_id: str) -> dict | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT * FROM share_courses WHERE id = ?", (str(course_id),)
+            ).fetchone()
+        return _course_dict(row) if row is not None else None
+
+    def create_course(
+        self,
+        *,
+        name: str,
+        teaching_style: str,
+        lock_style: bool,
+        withhold_final_answers: bool,
+        teacher_note: str,
+    ) -> dict:
+        if teaching_style not in _COURSE_STYLES:
+            raise ValueError("unknown teaching style")
+        now = _iso()
+        course_id = uuid.uuid4().hex
+        values = (
+            course_id,
+            sanitize_course_name(name),
+            teaching_style,
+            int(bool(lock_style)),
+            int(bool(withhold_final_answers)),
+            sanitize_teacher_note(teacher_note),
+            now,
+            now,
+        )
+        with self._lock, self._conn:
+            self._conn.execute(
+                "INSERT INTO share_courses "
+                "(id, name, teaching_style, lock_style, withhold_final_answers, teacher_note, "
+                "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                values,
+            )
+            row = self._conn.execute(
+                "SELECT * FROM share_courses WHERE id = ?", (course_id,)
+            ).fetchone()
+        return _course_dict(row)
+
+    def update_course(
+        self,
+        course_id: str,
+        *,
+        name: str,
+        teaching_style: str,
+        lock_style: bool,
+        withhold_final_answers: bool,
+        teacher_note: str,
+    ) -> dict:
+        if teaching_style not in _COURSE_STYLES:
+            raise ValueError("unknown teaching style")
+        values = (
+            sanitize_course_name(name),
+            teaching_style,
+            int(bool(lock_style)),
+            int(bool(withhold_final_answers)),
+            sanitize_teacher_note(teacher_note),
+            _iso(),
+            str(course_id),
+        )
+        with self._lock, self._conn:
+            changed = self._conn.execute(
+                "UPDATE share_courses SET name = ?, teaching_style = ?, lock_style = ?, "
+                "withhold_final_answers = ?, teacher_note = ?, updated_at = ? WHERE id = ?",
+                values,
+            ).rowcount
+            if not changed:
+                raise LookupError("unknown course")
+            row = self._conn.execute(
+                "SELECT * FROM share_courses WHERE id = ?", (str(course_id),)
+            ).fetchone()
+        return _course_dict(row)
+
+    def delete_course(self, course_id: str) -> bool:
+        with self._lock, self._conn:
+            changed = self._conn.execute(
+                "DELETE FROM share_courses WHERE id = ?", (str(course_id),)
+            ).rowcount
+        return bool(changed)
+
+    # --- host-local class board -----------------------------------------------------
+    def _require_active_member_locked(self, user_id: str) -> None:
+        row = self._conn.execute(
+            "SELECT status FROM share_users WHERE id = ?", (str(user_id),)
+        ).fetchone()
+        if row is None or row["status"] != "approved" or not self.settings()["enabled"]:
+            raise AuthenticationError("this account can no longer use the class board")
+
+    def _require_post_capacity_locked(self, user_id: str) -> None:
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS total, "
+            "SUM(CASE WHEN author_user_id = ? THEN 1 ELSE 0 END) AS owned "
+            "FROM share_class_posts",
+            (str(user_id),),
+        ).fetchone()
+        if int(row["total"] or 0) >= _MAX_BOARD_POSTS_TOTAL:
+            raise ValueError("the class board is full; ask the teacher to remove an old question")
+        if int(row["owned"] or 0) >= _MAX_BOARD_POSTS_PER_MEMBER:
+            raise ValueError("you have reached the class-board question limit")
+
+    def _require_reply_capacity_locked(self, user_id: str) -> None:
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS total, "
+            "SUM(CASE WHEN author_user_id = ? THEN 1 ELSE 0 END) AS owned "
+            "FROM share_class_replies",
+            (str(user_id),),
+        ).fetchone()
+        if int(row["total"] or 0) >= _MAX_BOARD_REPLIES_TOTAL:
+            raise ValueError("class-board replies are full; ask the teacher to remove an old thread")
+        if int(row["owned"] or 0) >= _MAX_BOARD_REPLIES_PER_MEMBER:
+            raise ValueError("you have reached the class-board reply limit")
+
+    @staticmethod
+    def _class_post_select() -> str:
+        return (
+            "SELECT p.id, p.author_user_id AS author_id, u.username AS author_username, "
+            "p.body, p.addressed_to_teacher, p.created_at, p.updated_at, "
+            "COUNT(r.id) AS reply_count, "
+            "COALESCE(SUM(CASE WHEN r.teacher_verified = 1 THEN 1 ELSE 0 END), 0) "
+            "AS verified_reply_count FROM share_class_posts p "
+            "JOIN share_users u ON u.id = p.author_user_id "
+            "LEFT JOIN share_class_replies r ON r.post_id = p.id "
+        )
+
+    def class_posts(self, *, limit: int = 50) -> list[dict]:
+        bounded = max(1, min(int(limit), 100))
+        with self._lock:
+            rows = self._conn.execute(
+                self._class_post_select()
+                + "GROUP BY p.id ORDER BY p.updated_at DESC, p.id DESC LIMIT ?",
+                (bounded,),
+            ).fetchall()
+        return [_post_dict(row) for row in rows]
+
+    def class_thread(self, post_id: str) -> dict | None:
+        with self._lock:
+            post = self._conn.execute(
+                self._class_post_select() + "WHERE p.id = ? GROUP BY p.id",
+                (str(post_id),),
+            ).fetchone()
+            if post is None:
+                return None
+            replies = self._conn.execute(
+                "SELECT r.id, r.post_id, r.author_user_id AS author_id, "
+                "u.username AS author_username, r.body, r.teacher_verified, r.verified_at, "
+                "r.created_at, r.updated_at FROM share_class_replies r "
+                "JOIN share_users u ON u.id = r.author_user_id "
+                "WHERE r.post_id = ? ORDER BY r.created_at DESC, r.id DESC LIMIT ?",
+                (str(post_id), _MAX_BOARD_REPLIES),
+            ).fetchall()
+        # Fetch the newest bounded window, then display that window in conversational order.
+        replies = list(reversed(replies))
+        return {"post": _post_dict(post), "replies": [_reply_dict(row) for row in replies]}
+
+    def create_class_post(
+        self, user_id: str, *, body: str, addressed_to_teacher: bool = False
+    ) -> dict:
+        post_id = uuid.uuid4().hex
+        now = _iso()
+        clean_body = sanitize_board_body(body)
+        with self._lock, self._conn:
+            self._require_active_member_locked(user_id)
+            self._require_post_capacity_locked(user_id)
+            self._conn.execute(
+                "INSERT INTO share_class_posts "
+                "(id, author_user_id, body, addressed_to_teacher, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (post_id, user_id, clean_body, int(bool(addressed_to_teacher)), now, now),
+            )
+        thread = self.class_thread(post_id)
+        return thread["post"]
+
+    def create_class_reply(self, post_id: str, user_id: str, *, body: str) -> dict:
+        reply_id = uuid.uuid4().hex
+        now = _iso()
+        clean_body = sanitize_board_body(body)
+        with self._lock, self._conn:
+            self._require_active_member_locked(user_id)
+            post = self._conn.execute(
+                "SELECT id FROM share_class_posts WHERE id = ?", (str(post_id),)
+            ).fetchone()
+            if post is None:
+                raise LookupError("unknown class post")
+            self._require_reply_capacity_locked(user_id)
+            self._conn.execute(
+                "INSERT INTO share_class_replies "
+                "(id, post_id, author_user_id, body, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (reply_id, str(post_id), user_id, clean_body, now, now),
+            )
+            self._conn.execute(
+                "UPDATE share_class_posts SET updated_at = ? WHERE id = ?",
+                (now, str(post_id)),
+            )
+            row = self._conn.execute(
+                "SELECT r.id, r.post_id, r.author_user_id AS author_id, "
+                "u.username AS author_username, r.body, r.teacher_verified, r.verified_at, "
+                "r.created_at, r.updated_at FROM share_class_replies r "
+                "JOIN share_users u ON u.id = r.author_user_id WHERE r.id = ?",
+                (reply_id,),
+            ).fetchone()
+        return _reply_dict(row)
+
+    def verify_class_reply(self, reply_id: str, *, verified: bool) -> dict:
+        now = _iso()
+        with self._lock, self._conn:
+            changed = self._conn.execute(
+                "UPDATE share_class_replies SET teacher_verified = ?, verified_at = ?, "
+                "updated_at = ? WHERE id = ?",
+                (int(bool(verified)), now if verified else None, now, str(reply_id)),
+            ).rowcount
+            if not changed:
+                raise LookupError("unknown class reply")
+            row = self._conn.execute(
+                "SELECT r.id, r.post_id, r.author_user_id AS author_id, "
+                "u.username AS author_username, r.body, r.teacher_verified, r.verified_at, "
+                "r.created_at, r.updated_at FROM share_class_replies r "
+                "JOIN share_users u ON u.id = r.author_user_id WHERE r.id = ?",
+                (str(reply_id),),
+            ).fetchone()
+        return _reply_dict(row)
+
+    def delete_class_post(self, post_id: str) -> bool:
+        with self._lock, self._conn:
+            changed = self._conn.execute(
+                "DELETE FROM share_class_posts WHERE id = ?", (str(post_id),)
+            ).rowcount
+        return bool(changed)
 
     # --- enrollment and password authentication ------------------------------------
     def _reap_expired_pending_locked(self, now: datetime) -> int:

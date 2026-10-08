@@ -27,6 +27,33 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-10-06 — v4 adaptive tutoring and offline STEM learning experience
+
+**Scope:** application behavior and package composition, not an inference optimization.
+This change adds four per-conversation teaching methods, teacher-owned course policy,
+answer-withholding and work-verification guards, deterministic stuck-learner adaptation,
+class-board fallback, local-context and language-quality safeguards, and four authored
+offline STEM learning units. The interface now uses the compact Muta book symbol and explains
+the pedagogy behind each teaching method.
+
+**Package policy:** review builds contain exactly one tutor GGUF,
+`Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf`. Speech and retrieval resources remain;
+additional tutor models are user-added through `model-pack/models/custom`.
+
+| Gate | Result |
+|---|---|
+| Selected Python contract, orchestrator, runtime, desktop, i18n and packaging suites | **PASS** |
+| Browser/UI Node tests | **157/157 PASS** |
+| Shipped Qwen2.5 five-question judge battery | **5/5 on each of three consecutive runs** |
+| STEM shelf | Mathematics, Physics, Chemistry and Biology units with bounded diagrams and checked answer keys |
+
+No tok/s, RSS, thermal or total-score delta is claimed: the inference model and engine are
+unchanged, and package/interaction gates are the measurements relevant to this release.
+Evidence: `bench/.artifacts/v4-final-model/`,
+`docs/demo/2026-10-06-pitch-demo-runbook.md`, and the automated suites named above.
+
+---
+
 ## 2026-08-20 — overnight model, quantization and template search
 
 **Current recommendation:** `Muta-Tutor-Qwen3.5-0.8B-Q4_0-final.gguf`, 507,156,160 bytes,

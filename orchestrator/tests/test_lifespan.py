@@ -84,7 +84,7 @@ def test_persisted_competition_host_selects_safe_model_before_engine_start(monke
 
     class Manager:
         def candidate_config(self, model_id):
-            assert model_id == "muta-tutor-qwen3.5-0.8b-q4_0"
+            assert model_id == "qwen2.5-1.5b-instruct-q4_k_m"
             return small
 
     monkeypatch.setattr(main_mod, "CapacityPlanner", Planner)

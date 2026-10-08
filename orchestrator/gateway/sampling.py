@@ -33,6 +33,8 @@ class SamplingProfile:
     seed: int  # -1 = random per request
     requires_schema: bool = False  # emits JSON under a grammar (§7.4)
     max_tokens: int = DEFAULT_MAX_TOKENS
+    repeat_last_n: int = 128
+    dry_multiplier: float = 0.0
 
     @property
     def is_greedy(self) -> bool:
@@ -42,7 +44,9 @@ class SamplingProfile:
     def is_reproducible(self) -> bool:
         return self.is_greedy and self.seed >= 0
 
-    def params(self, *, json_schema: dict[str, Any] | None = None, max_tokens: int | None = None) -> dict[str, Any]:
+    def params(
+        self, *, json_schema: dict[str, Any] | None = None, max_tokens: int | None = None
+    ) -> dict[str, Any]:
         """Keyword arguments for `runtime.client.InferenceClient` (OpenAI-compatible)."""
         params: dict[str, Any] = {
             "temperature": self.temperature,
@@ -50,9 +54,19 @@ class SamplingProfile:
             "top_k": self.top_k,
             "min_p": self.min_p,
             "repeat_penalty": self.repeat_penalty,
+            "repeat_last_n": self.repeat_last_n,
             "seed": self.seed,
             "max_tokens": max_tokens or self.max_tokens,
         }
+        if self.dry_multiplier > 0:
+            params.update(
+                {
+                    "dry_multiplier": self.dry_multiplier,
+                    "dry_base": 1.75,
+                    "dry_allowed_length": 2,
+                    "dry_penalty_last_n": 128,
+                }
+            )
         if json_schema is not None:
             params["response_format"] = {"type": "json_schema", "json_schema": json_schema}
         elif self.requires_schema:
@@ -65,13 +79,23 @@ class SamplingProfile:
 
 
 PROFILES: dict[str, SamplingProfile] = {
-    "tutor-dialogue": SamplingProfile("tutor-dialogue", 0.7, 0.95, 40, 0.05, 1.05, -1),
-    "worked-solution": SamplingProfile("worked-solution", 0.3, 0.90, 40, 0.05, 1.05, -1),
+    "tutor-dialogue": SamplingProfile(
+        "tutor-dialogue", 0.7, 0.95, 40, 0.05, 1.05, -1, dry_multiplier=0.6
+    ),
+    "worked-solution": SamplingProfile(
+        "worked-solution", 0.3, 0.90, 40, 0.05, 1.05, -1, dry_multiplier=0.5
+    ),
     # Scored/verified paths: greedy, fixed seed, schema-constrained.
-    "marking": SamplingProfile("marking", 0.0, 1.0, 1, 0.0, 1.0, REPRODUCIBLE_SEED, requires_schema=True),
-    "tool-call": SamplingProfile("tool-call", 0.0, 1.0, 1, 0.0, 1.0, REPRODUCIBLE_SEED, requires_schema=True, max_tokens=512),
+    "marking": SamplingProfile(
+        "marking", 0.0, 1.0, 1, 0.0, 1.0, REPRODUCIBLE_SEED, requires_schema=True
+    ),
+    "tool-call": SamplingProfile(
+        "tool-call", 0.0, 1.0, 1, 0.0, 1.0, REPRODUCIBLE_SEED, requires_schema=True, max_tokens=512
+    ),
     # Hint mode runs on the draft model when D2-b is active (§7.6); short by construction.
-    "hint": SamplingProfile("hint", 0.8, 0.95, 40, 0.05, 1.1, -1, max_tokens=256),
+    "hint": SamplingProfile(
+        "hint", 0.8, 0.95, 40, 0.05, 1.1, -1, max_tokens=256, dry_multiplier=0.8
+    ),
 }
 
 #: Public `mode` values (contract) → sampling profile. The contract's vocabulary is about
@@ -81,6 +105,8 @@ MODE_TO_PROFILE: dict[str, str] = {
     "dialogue": "tutor-dialogue",
     "socratic": "tutor-dialogue",
     "subgoal": "worked-solution",
+    "analogy": "tutor-dialogue",
+    "hints": "hint",
     "solution": "worked-solution",
     "marking": "marking",
     "hint": "hint",
@@ -124,7 +150,9 @@ def for_mode(mode: str) -> SamplingProfile:
     return PROFILES[MODE_TO_PROFILE.get(mode, "tutor-dialogue")]
 
 
-def params_for_mode(mode: str, *, json_schema: dict[str, Any] | None = None, **kw) -> dict[str, Any]:
+def params_for_mode(
+    mode: str, *, json_schema: dict[str, Any] | None = None, **kw
+) -> dict[str, Any]:
     """Sampling parameters for a public mode, with the default grammar filled in where the
     profile demands one."""
     profile = for_mode(mode)

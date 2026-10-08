@@ -21,8 +21,10 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_SUMMARIES = 5  # the last N, because this text goes into every prompt
+MAX_PREFERENCES = 12
+MAX_MISCONCEPTIONS = 24
 
 
 @dataclass
@@ -35,6 +37,12 @@ class LearningTwin:
     #: rolling stats: turns, minutes, questions answered
     pace: dict[str, float] = field(default_factory=dict)
     summaries: list[str] = field(default_factory=list)
+    #: explicit learner statements only; never inferred demographic traits
+    preferences: dict[str, str] = field(default_factory=dict)
+    #: stable misconception/error tag -> observed count
+    misconception_counts: dict[str, int] = field(default_factory=dict)
+    #: misconception/error tag -> last explanation strategy used
+    last_strategy: dict[str, str] = field(default_factory=dict)
     version: int = SCHEMA_VERSION
 
     # --- updates ----------------------------------------------------------------------
@@ -62,6 +70,29 @@ class LearningTwin:
         self.pace[key] = round(self.pace.get(key, 0.0) + amount, 3)
         return self.pace[key]
 
+    def record_preference(self, key: str, value: str) -> None:
+        key, value = key.strip()[:48], value.strip()[:120]
+        if not key or not value:
+            return
+        self.preferences[key] = value
+        while len(self.preferences) > MAX_PREFERENCES:
+            self.preferences.pop(next(iter(self.preferences)))
+
+    def record_misconception(self, tag: str) -> int:
+        tag = tag.strip()[:80]
+        if not tag:
+            return 0
+        self.misconception_counts[tag] = self.misconception_counts.get(tag, 0) + 1
+        while len(self.misconception_counts) > MAX_MISCONCEPTIONS:
+            oldest = next(iter(self.misconception_counts))
+            self.misconception_counts.pop(oldest, None)
+            self.last_strategy.pop(oldest, None)
+        return self.misconception_counts[tag]
+
+    def remember_strategy(self, tag: str, strategy: str) -> None:
+        if tag and strategy:
+            self.last_strategy[tag[:80]] = strategy[:80]
+
     # --- reads ------------------------------------------------------------------------
     def weakest(self, n: int = 3) -> list[str]:
         return [node for node, _ in sorted(self.mastery.items(), key=lambda kv: kv[1])[:n]]
@@ -77,6 +108,18 @@ class LearningTwin:
             parts.append("Working on: " + ", ".join(weak) + ".")
         if errors := self.top_errors():
             parts.append("Recurring slips: " + ", ".join(errors) + ".")
+        if self.preferences:
+            facts = [f"{key}={value}" for key, value in self.preferences.items()]
+            parts.append("Learner preferences: " + ", ".join(facts) + ".")
+        repeated = [
+            tag
+            for tag, count in sorted(
+                self.misconception_counts.items(), key=lambda item: -item[1]
+            )
+            if count >= 2
+        ][:3]
+        if repeated:
+            parts.append("Repeated misconceptions: " + ", ".join(repeated) + ".")
         if self.summaries:
             parts.append("Last session: " + self.summaries[-1])
         text = " ".join(parts)
@@ -104,6 +147,9 @@ class TwinStore:
             path.rename(path.with_suffix(".json.corrupt"))
             return LearningTwin(student_id=student_id)
         raw.pop("student_id", None)
+        # V1 files omitted the bounded adaptation fields. Dataclass defaults fill them, and
+        # the next atomic save writes V2 without a separate migration step.
+        raw["version"] = SCHEMA_VERSION
         known = {f for f in LearningTwin.__dataclass_fields__ if f != "student_id"}
         return LearningTwin(student_id=student_id, **{k: v for k, v in raw.items() if k in known})
 

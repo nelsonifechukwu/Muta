@@ -1349,6 +1349,8 @@ def test_settings_default_on_and_round_trip_privately(wired):
     defaults = {
         "allow_parallel_chats": True,
         "power_optimization_enabled": True,
+        "preferred_style": "socratic",
+        "study_country": None,
     }
     assert client.get("/v1/settings", headers=ada).json() == defaults
 
@@ -1359,7 +1361,14 @@ def test_settings_default_on_and_round_trip_privately(wired):
     assert power_off.json() == {
         "allow_parallel_chats": False,
         "power_optimization_enabled": False,
+        "preferred_style": "socratic",
+        "study_country": None,
     }
+    styled = client.put("/v1/settings", headers=ada, json={"preferred_style": "analogy"})
+    assert styled.json()["preferred_style"] == "analogy"
+    located = client.put("/v1/settings", headers=ada, json={"study_country": "NG"})
+    assert located.status_code == 200 and located.json()["study_country"] == "NG"
+    assert client.put("/v1/settings", headers=ada, json={"study_country": "ng"}).status_code == 422
     assert client.get("/v1/settings", headers={"Authorization": "Bearer bimpe"}).json() == defaults
 
 

@@ -957,6 +957,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/conversations/{conversation_id}/style:
+    put:
+      tags:
+      - conversations
+      summary: Conversation Style
+      description: Change one conversation's teaching strategy without changing the learner default.
+      operationId: conversation_style_v1_conversations__conversation_id__style_put
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Conversation Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationStyleRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationStyleResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/attachments/{attachment_id}:
     get:
       tags:
@@ -1209,6 +1258,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MasteryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/units/checkpoint:
+    post:
+      tags:
+      - tutor
+      summary: Unit Checkpoint
+      description: Verify a complete built-in checkpoint and record one mastery observation.
+      operationId: unit_checkpoint_v1_units_checkpoint_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitCheckpointRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitCheckpointResponse'
         '422':
           description: Validation Error
           content:
@@ -1819,6 +1911,479 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/courses:
+    get:
+      tags:
+      - sharing
+      summary: Share Courses
+      operationId: share_courses_v1_share_courses_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareCourseList'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/courses:
+    post:
+      tags:
+      - sharing
+      summary: Create Share Course
+      operationId: create_share_course_v1_share_host_courses_post
+      parameters:
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareCourseWrite'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareCourse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/courses/{course_id}:
+    put:
+      tags:
+      - sharing
+      summary: Update Share Course
+      operationId: update_share_course_v1_share_host_courses__course_id__put
+      parameters:
+      - name: course_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Course Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareCourseWrite'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareCourse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - sharing
+      summary: Delete Share Course
+      operationId: delete_share_course_v1_share_host_courses__course_id__delete
+      parameters:
+      - name: course_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Course Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareCourseDeleted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/class/posts:
+    get:
+      tags:
+      - sharing
+      summary: Class Posts
+      operationId: class_posts_v1_share_class_posts_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareClassPostList'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - sharing
+      summary: Create Class Post
+      operationId: create_class_post_v1_share_class_posts_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareClassPostCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareClassPost'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/class/posts/{post_id}:
+    get:
+      tags:
+      - sharing
+      summary: Class Thread
+      operationId: class_thread_v1_share_class_posts__post_id__get
+      parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Post Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareClassThread'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/class/posts/{post_id}/replies:
+    post:
+      tags:
+      - sharing
+      summary: Create Class Reply
+      operationId: create_class_reply_v1_share_class_posts__post_id__replies_post
+      parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Post Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareClassReplyCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareClassReply'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/class/replies/{reply_id}/verification:
+    put:
+      tags:
+      - sharing
+      summary: Verify Class Reply
+      operationId: verify_class_reply_v1_share_host_class_replies__reply_id__verification_put
+      parameters:
+      - name: reply_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Reply Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareClassReplyVerification'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareClassReply'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/share/host/class/posts/{post_id}:
+    delete:
+      tags:
+      - sharing
+      summary: Delete Class Post
+      operationId: delete_class_post_v1_share_host_class_posts__post_id__delete
+      parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Post Id
+      - name: X-Muta-CSRF
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Muta-Csrf
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareClassPostDeleted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/share/host:
     get:
       tags:
@@ -2423,6 +2988,14 @@ components:
           maxItems: 32
           title: Attachment Ids
           description: Previously-uploaded attachments to link to this message.
+        course_id:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{32}$
+          - type: 'null'
+          title: Course Id
+          description: Optional Muta Share course. The gateway resolves its teacher policy server-side;
+            a locked course overrides the request mode.
       type: object
       required:
       - student_id
@@ -2549,6 +3122,10 @@ components:
           - type: string
           - type: 'null'
           title: Mode
+        persona:
+          anyOf:
+          - $ref: '#/components/schemas/Persona'
+          - type: 'null'
         pinned:
           type: boolean
           title: Pinned
@@ -2588,6 +3165,26 @@ components:
       - id
       - pinned
       title: ConversationPinned
+    ConversationStyleRequest:
+      properties:
+        mode:
+          $ref: '#/components/schemas/TutoringMode'
+      type: object
+      required:
+      - mode
+      title: ConversationStyleRequest
+    ConversationStyleResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        mode:
+          $ref: '#/components/schemas/TutoringMode'
+      type: object
+      required:
+      - id
+      - mode
+      title: ConversationStyleResponse
     DiagnoseRequest:
       properties:
         student_id:
@@ -2973,6 +3570,15 @@ components:
         conversation_id:
           type: string
           title: Conversation Id
+        mode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Mode
+        persona:
+          anyOf:
+          - $ref: '#/components/schemas/Persona'
+          - type: 'null'
         messages:
           items:
             $ref: '#/components/schemas/MessageOut'
@@ -3444,6 +4050,269 @@ components:
       - action
       - ok
       title: SessionActionResponse
+    ShareClassAuthor:
+      properties:
+        id:
+          type: string
+          title: Id
+        username:
+          type: string
+          title: Username
+      type: object
+      required:
+      - id
+      - username
+      title: ShareClassAuthor
+    ShareClassPost:
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        author:
+          $ref: '#/components/schemas/ShareClassAuthor'
+        body:
+          type: string
+          title: Body
+        addressed_to_teacher:
+          type: boolean
+          title: Addressed To Teacher
+          default: false
+        reply_count:
+          type: integer
+          minimum: 0.0
+          title: Reply Count
+          default: 0
+        verified_reply_count:
+          type: integer
+          minimum: 0.0
+          title: Verified Reply Count
+          default: 0
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - id
+      - author
+      - body
+      - created_at
+      - updated_at
+      title: ShareClassPost
+    ShareClassPostCreate:
+      properties:
+        body:
+          type: string
+          maxLength: 4000
+          minLength: 1
+          title: Body
+        addressed_to_teacher:
+          type: boolean
+          title: Addressed To Teacher
+          default: false
+      type: object
+      required:
+      - body
+      title: ShareClassPostCreate
+    ShareClassPostDeleted:
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        deleted:
+          type: boolean
+          title: Deleted
+          default: true
+      type: object
+      required:
+      - id
+      title: ShareClassPostDeleted
+    ShareClassPostList:
+      properties:
+        posts:
+          items:
+            $ref: '#/components/schemas/ShareClassPost'
+          type: array
+          title: Posts
+      type: object
+      title: ShareClassPostList
+    ShareClassReply:
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        post_id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Post Id
+        author:
+          $ref: '#/components/schemas/ShareClassAuthor'
+        body:
+          type: string
+          title: Body
+        teacher_verified:
+          type: boolean
+          title: Teacher Verified
+          default: false
+        verified_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Verified At
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - id
+      - post_id
+      - author
+      - body
+      - created_at
+      - updated_at
+      title: ShareClassReply
+    ShareClassReplyCreate:
+      properties:
+        body:
+          type: string
+          maxLength: 4000
+          minLength: 1
+          title: Body
+      type: object
+      required:
+      - body
+      title: ShareClassReplyCreate
+    ShareClassReplyVerification:
+      properties:
+        verified:
+          type: boolean
+          title: Verified
+          default: true
+      type: object
+      title: ShareClassReplyVerification
+    ShareClassThread:
+      properties:
+        post:
+          $ref: '#/components/schemas/ShareClassPost'
+        replies:
+          items:
+            $ref: '#/components/schemas/ShareClassReply'
+          type: array
+          title: Replies
+      type: object
+      required:
+      - post
+      title: ShareClassThread
+    ShareCourse:
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Name
+        teaching_style:
+          type: string
+          enum:
+          - socratic
+          - subgoal
+          - analogy
+          - hints
+          title: Teaching Style
+          default: socratic
+        lock_style:
+          type: boolean
+          title: Lock Style
+          default: false
+        withhold_final_answers:
+          type: boolean
+          title: Withhold Final Answers
+          default: false
+        teacher_note:
+          type: string
+          maxLength: 400
+          title: Teacher Note
+          default: ''
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - name
+      - id
+      - created_at
+      - updated_at
+      title: ShareCourse
+    ShareCourseDeleted:
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        deleted:
+          type: boolean
+          title: Deleted
+          default: true
+      type: object
+      required:
+      - id
+      title: ShareCourseDeleted
+    ShareCourseList:
+      properties:
+        courses:
+          items:
+            $ref: '#/components/schemas/ShareCourse'
+          type: array
+          title: Courses
+      type: object
+      title: ShareCourseList
+    ShareCourseWrite:
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Name
+        teaching_style:
+          type: string
+          enum:
+          - socratic
+          - subgoal
+          - analogy
+          - hints
+          title: Teaching Style
+          default: socratic
+        lock_style:
+          type: boolean
+          title: Lock Style
+          default: false
+        withhold_final_answers:
+          type: boolean
+          title: Withhold Final Answers
+          default: false
+        teacher_note:
+          type: string
+          maxLength: 400
+          title: Teacher Note
+          default: ''
+      type: object
+      required:
+      - name
+      title: ShareCourseWrite
     ShareCredentials:
       properties:
         username:
@@ -3898,8 +4767,100 @@ components:
       enum:
       - socratic
       - subgoal
+      - analogy
+      - hints
       title: TutoringMode
-      description: The two MVP tutoring modes (ROADMAP 14 Jul scope).
+      description: Learner- and teacher-selectable tutoring modes.
+    UnitCheckpointRequest:
+      properties:
+        student_id:
+          type: string
+          maxLength: 128
+          title: Student Id
+        unit_id:
+          type: string
+          maxLength: 128
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9-]*$
+          title: Unit Id
+        answers:
+          additionalProperties:
+            type: string
+            maxLength: 4096
+          type: object
+          maxProperties: 20
+          minProperties: 1
+          title: Answers
+          description: Question id to learner answer. The server re-scores every value against its allowlisted
+            unit copy and never trusts browser-supplied answer keys.
+      type: object
+      required:
+      - student_id
+      - unit_id
+      - answers
+      title: UnitCheckpointRequest
+      description: Answers for one server-known offline learning unit.
+    UnitCheckpointResponse:
+      properties:
+        unit_id:
+          type: string
+          title: Unit Id
+        topic:
+          type: string
+          title: Topic
+        score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Score
+        mastery:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Mastery
+        checked:
+          type: boolean
+          title: Checked
+        progress_saved:
+          type: boolean
+          title: Progress Saved
+          description: Whether the verified checkpoint result was recorded on the learner twin. A false
+            value preserves the checked score while progress storage degrades.
+          default: true
+        results:
+          items:
+            $ref: '#/components/schemas/UnitQuestionResult'
+          type: array
+          title: Results
+      type: object
+      required:
+      - unit_id
+      - topic
+      - score
+      - mastery
+      - checked
+      title: UnitCheckpointResponse
+    UnitQuestionResult:
+      properties:
+        question_id:
+          type: string
+          title: Question Id
+        verified:
+          type: boolean
+          title: Verified
+        checked:
+          type: boolean
+          title: Checked
+        detail:
+          type: string
+          title: Detail
+          default: ''
+      type: object
+      required:
+      - question_id
+      - verified
+      - checked
+      title: UnitQuestionResult
     UserSettings:
       properties:
         allow_parallel_chats:
@@ -3914,6 +4875,21 @@ components:
           description: Use battery-aware response limits for this learner when the host is discharging.
             Memory, thermal and critical host safeguards cannot be disabled.
           default: true
+        preferred_style:
+          $ref: '#/components/schemas/TutoringMode'
+          description: Teaching strategy used for a new conversation. Existing conversations retain their
+            own mode.
+          default: socratic
+        study_country:
+          anyOf:
+          - type: string
+            maxLength: 2
+            minLength: 2
+            pattern: ^[A-Z]{2}$
+          - type: 'null'
+          title: Study Country
+          description: Optional ISO 3166-1 alpha-2 African study country used only for locally relevant
+            currency and exam framing. It never changes factual or mathematical truth.
       type: object
       title: UserSettings
       description: Learner-facing product preferences stored with the existing private user record.

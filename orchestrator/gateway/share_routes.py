@@ -7,10 +7,22 @@ from __future__ import annotations
 import contextlib
 import os
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import Response as RawResponse
 
 from contracts.models import (
+    ShareClassPost,
+    ShareClassPostCreate,
+    ShareClassPostDeleted,
+    ShareClassPostList,
+    ShareClassReply,
+    ShareClassReplyCreate,
+    ShareClassReplyVerification,
+    ShareClassThread,
+    ShareCourse,
+    ShareCourseDeleted,
+    ShareCourseList,
+    ShareCourseWrite,
     ShareCredentials,
     ShareEnrollmentExchange,
     ShareEnrollmentResponse,
@@ -122,6 +134,35 @@ def verify_host_csrf(principal: AuthPrincipal, csrf: str | None) -> None:
         raise HTTPException(status_code=403, detail="invalid host request token")
 
 
+def _share_reader(
+    request: Request,
+    principal: AuthPrincipal = Depends(require_principal),
+) -> AuthPrincipal:
+    if principal.auth_kind != "share" or principal.role not in {"host", "member"}:
+        raise HTTPException(status_code=403, detail="Muta Share access is required")
+    if principal.role == "host" and not is_operator_request(request):
+        raise HTTPException(status_code=403, detail="host access is local only")
+    return principal
+
+
+def _board_reader(principal: AuthPrincipal = Depends(_share_reader)) -> AuthPrincipal:
+    if not get_sharing_service().settings()["enabled"]:
+        raise HTTPException(status_code=409, detail="turn on Host mode to use the class board")
+    return principal
+
+
+def _board_member(principal: AuthPrincipal = Depends(_board_reader)) -> AuthPrincipal:
+    if principal.role != "member":
+        raise HTTPException(status_code=403, detail="only class members can post")
+    return principal
+
+
+def _host_board_write(principal: AuthPrincipal = Depends(_host_write)) -> AuthPrincipal:
+    if not get_sharing_service().settings()["enabled"]:
+        raise HTTPException(status_code=409, detail="turn on Host mode to use the class board")
+    return principal
+
+
 @router.get("/share/status", response_model=ShareStatus, tags=["sharing"])
 def share_status(request: Request) -> ShareStatus:
     service = get_sharing_service()
@@ -216,6 +257,141 @@ def share_me(principal: AuthPrincipal = Depends(require_principal)) -> ShareSess
         username=principal.username or "",
         expires_at="",
     )
+
+
+@router.get("/share/courses", response_model=ShareCourseList, tags=["sharing"])
+def share_courses(_principal: AuthPrincipal = Depends(_share_reader)) -> ShareCourseList:
+    # Teacher notes are trusted instructions, not secrets. The host UI explicitly warns against
+    # putting private information in them because a tutor may repeat an instruction to a learner.
+    return ShareCourseList(courses=get_sharing_service().courses())
+
+
+@router.post("/share/host/courses", response_model=ShareCourse, tags=["sharing"])
+def create_share_course(
+    req: ShareCourseWrite,
+    _principal: AuthPrincipal = Depends(_host_write),
+) -> ShareCourse:
+    try:
+        record = get_sharing_service().create_course(**req.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ShareCourse.model_validate(record)
+
+
+@router.put("/share/host/courses/{course_id}", response_model=ShareCourse, tags=["sharing"])
+def update_share_course(
+    course_id: str,
+    req: ShareCourseWrite,
+    _principal: AuthPrincipal = Depends(_host_write),
+) -> ShareCourse:
+    try:
+        record = get_sharing_service().update_course(course_id, **req.model_dump())
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ShareCourse.model_validate(record)
+
+
+@router.delete(
+    "/share/host/courses/{course_id}", response_model=ShareCourseDeleted, tags=["sharing"]
+)
+def delete_share_course(
+    course_id: str,
+    _principal: AuthPrincipal = Depends(_host_write),
+) -> ShareCourseDeleted:
+    if not get_sharing_service().delete_course(course_id):
+        raise HTTPException(status_code=404, detail="unknown course")
+    return ShareCourseDeleted(id=course_id)
+
+
+@router.get("/share/class/posts", response_model=ShareClassPostList, tags=["sharing"])
+def class_posts(
+    limit: int = Query(50, ge=1, le=100),
+    _principal: AuthPrincipal = Depends(_board_reader),
+) -> ShareClassPostList:
+    return ShareClassPostList(posts=get_sharing_service().class_posts(limit=limit))
+
+
+@router.post("/share/class/posts", response_model=ShareClassPost, tags=["sharing"])
+def create_class_post(
+    req: ShareClassPostCreate,
+    principal: AuthPrincipal = Depends(_board_member),
+) -> ShareClassPost:
+    service = get_sharing_service()
+    try:
+        with service.member_write(principal.subject):
+            record = service.create_class_post(principal.subject, **req.model_dump())
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ShareClassPost.model_validate(record)
+
+
+@router.get(
+    "/share/class/posts/{post_id}", response_model=ShareClassThread, tags=["sharing"]
+)
+def class_thread(
+    post_id: str,
+    _principal: AuthPrincipal = Depends(_board_reader),
+) -> ShareClassThread:
+    record = get_sharing_service().class_thread(post_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="unknown class post")
+    return ShareClassThread.model_validate(record)
+
+
+@router.post(
+    "/share/class/posts/{post_id}/replies", response_model=ShareClassReply, tags=["sharing"]
+)
+def create_class_reply(
+    post_id: str,
+    req: ShareClassReplyCreate,
+    principal: AuthPrincipal = Depends(_board_member),
+) -> ShareClassReply:
+    service = get_sharing_service()
+    try:
+        with service.member_write(principal.subject):
+            record = service.create_class_reply(post_id, principal.subject, **req.model_dump())
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ShareClassReply.model_validate(record)
+
+
+@router.put(
+    "/share/host/class/replies/{reply_id}/verification",
+    response_model=ShareClassReply,
+    tags=["sharing"],
+)
+def verify_class_reply(
+    reply_id: str,
+    req: ShareClassReplyVerification,
+    _principal: AuthPrincipal = Depends(_host_board_write),
+) -> ShareClassReply:
+    try:
+        record = get_sharing_service().verify_class_reply(reply_id, verified=req.verified)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return ShareClassReply.model_validate(record)
+
+
+@router.delete(
+    "/share/host/class/posts/{post_id}",
+    response_model=ShareClassPostDeleted,
+    tags=["sharing"],
+)
+def delete_class_post(
+    post_id: str,
+    _principal: AuthPrincipal = Depends(_host_board_write),
+) -> ShareClassPostDeleted:
+    if not get_sharing_service().delete_class_post(post_id):
+        raise HTTPException(status_code=404, detail="unknown class post")
+    return ShareClassPostDeleted(id=post_id)
 
 
 def _host_payload(service: SharingService) -> ShareHostStatus:

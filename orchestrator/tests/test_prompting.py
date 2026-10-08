@@ -102,3 +102,12 @@ def test_layers_only_appear_when_present():
 def test_subject_focus_added_for_non_math():
     assert "physics" in persona_language_directive("teacher", "en", subject="physics")
     assert "working on" not in persona_language_directive("teacher", "en", subject="math")
+
+
+def test_adaptation_is_variable_suffix_not_shared_prefix():
+    directive = "Switch from the balance analogy to a substitution check."
+    out = assemble_system_prompt(BASE, adaptation_directive=directive)
+
+    assert out.startswith(BASE)
+    assert out.index("Adaptation for this turn") > out.index("per-student context")
+    assert directive in out

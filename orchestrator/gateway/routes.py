@@ -42,6 +42,8 @@ from contracts.models import (
     ConversationOut,
     ConversationPinned,
     ConversationPinRequest,
+    ConversationStyleRequest,
+    ConversationStyleResponse,
     DiagnoseRequest,
     DiagnoseResponse,
     ExamAnswerRequest,
@@ -74,6 +76,9 @@ from contracts.models import (
     TelemetrySnapshot,
     TutorMode,
     TutorReply,
+    UnitCheckpointRequest,
+    UnitCheckpointResponse,
+    UnitQuestionResult,
     UserSettings,
     VerifyRequest,
     VerifyResponse,
@@ -91,6 +96,14 @@ from orchestrator.gateway.auth import (
     request_token,
     require_caller,
     resolve_principal,
+)
+from orchestrator.gateway.course_policy import (
+    CourseAccessError,
+    CourseNotFoundError,
+    ResolvedCoursePolicy,
+    append_course_context,
+    course_turn_instruction,
+    resolve_course_policy,
 )
 from orchestrator.gateway.deps import (
     get_capacity_controller,
@@ -120,10 +133,12 @@ from orchestrator.gateway.generations import (
 )
 from orchestrator.gateway.images import MAX_UPLOAD_BYTES as MAX_IMAGE_UPLOAD_BYTES
 from orchestrator.gateway.images import ImageRejected, prepare_image
+from orchestrator.gateway.integrity import IntegrityGuard, build_integrity_guard
 from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.preamble import with_preamble
 from orchestrator.gateway.prompting import assemble_system_prompt, response_language_instruction
+from orchestrator.gateway.quality import CombinedReplyGuard, build_response_guard
 from orchestrator.gateway.resource_citations import (
     finalize_resource_reply,
     retain_persisted_resource_sources,
@@ -141,6 +156,8 @@ from orchestrator.gateway.visualizations import (
     wants_live_visual,
 )
 from orchestrator.gateway.websearch import fetch_snippets
+from orchestrator.pedagogy.adaptation import TurnAdaptation, plan_turn_adaptation
+from orchestrator.pedagogy.local_context import context_from_settings
 from orchestrator.retrieval.resources import (
     ResourceNotFound,
     ResourceSelectionRequired,
@@ -165,6 +182,7 @@ from runtime.ttft import PreambleWriter
 from runtime.vision import VisionManager
 
 router = APIRouter()
+_twin_write_lock = threading.Lock()
 
 log = logging.getLogger("muta.gateway.routes")
 
@@ -596,6 +614,94 @@ def _touch_twin(student_id: str, subject: str, message: str) -> None:
         log.warning("twin update failed for %s", student_id, exc_info=True)
 
 
+def _withhold_requested(request_model: object) -> bool:
+    """Contract-independent hook for hints mode and server-resolved course policy."""
+    mode = getattr(getattr(request_model, "mode", None), "value", "")
+    return mode in {"hint", "hints"} or bool(
+        getattr(request_model, "withhold_final_answers", False)
+    )
+
+
+def _turn_integrity(student_id: str, message: str, *, withhold: bool) -> IntegrityGuard:
+    """Best-effort plan: a checker outage loses a badge, never the learner's turn."""
+    try:
+        guard = build_integrity_guard(get_verifier(), message, withhold=withhold)
+    except Exception:
+        log.warning("integrity plan failed for %s", student_id, exc_info=True)
+        return IntegrityGuard(withhold=withhold)
+    if guard.override_languages:
+        try:
+            store = get_twin_store()
+            twin = store.load(student_id)
+            twin.record_error("override_attempt")
+            store.save(twin)
+        except Exception:
+            log.warning("override event could not be stored for %s", student_id, exc_info=True)
+    return guard
+
+
+def _trusted_turn_instruction(
+    message: str,
+    language: str,
+    guard: IntegrityGuard | CombinedReplyGuard,
+    course_policy: ResolvedCoursePolicy | None = None,
+) -> str:
+    parts = [
+        turn_instruction(message, response_language_instruction(language)),
+        course_turn_instruction(course_policy) if course_policy is not None else "",
+        guard.directive,
+    ]
+    return "\n\n".join(part for part in parts if part)
+
+
+def _turn_adaptation(
+    student_id: str,
+    message: str,
+    *,
+    subject: str,
+    mode: str,
+    guard: IntegrityGuard,
+) -> TurnAdaptation:
+    """Persist explicit preferences and observed friction without blocking a tutor turn."""
+    try:
+        store = get_twin_store()
+        twin = store.load(student_id)
+        adaptation = plan_turn_adaptation(
+            twin,
+            message,
+            subject=subject,
+            mode=mode,
+            finding=guard.finding,
+        )
+        store.save(twin)
+        return adaptation
+    except Exception:
+        log.warning("turn adaptation failed for %s", student_id, exc_info=True)
+        return TurnAdaptation()
+
+
+def _local_context_directive(engine: ChatEngine, student_id: str) -> str:
+    """Read future/additive country keys without widening the frozen settings contract."""
+    try:
+        context = context_from_settings(engine.store.get_settings(student_id))
+        return context.directive if context is not None else ""
+    except Exception:
+        log.warning("local context unavailable for %s", student_id, exc_info=True)
+        return ""
+
+
+def _work_check_payload(guard: IntegrityGuard) -> dict | None:
+    finding = guard.finding
+    if not finding.checked:
+        return None
+    return {
+        "checked": True,
+        "verified": finding.equivalent,
+        "wrong_step": finding.wrong_step,
+        "error_class": finding.error_class,
+    }
+
+
 #: Extended thinking widens the answer's token room so a longer trace + answer isn't clipped.
 _EXTENDED_MAX_TOKENS = 3000
 
@@ -898,6 +1004,21 @@ def resource_content(
     return Response(content=bytes(row["data"]), media_type="application/pdf", headers=_PDF_HEADERS)
 
 
+def _request_course_policy(req: ChatRequest, request: Request) -> ResolvedCoursePolicy:
+    """Resolve every teacher-owned course field on the server, never from browser data."""
+    try:
+        return resolve_course_policy(
+            requested_mode=req.mode.value,
+            course_id=req.course_id,
+            principal=principal_from_request(request),
+            service=get_sharing_service(),
+        )
+    except CourseAccessError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.post("/chat", response_model=ChatResponse, tags=["tutor"])
 def chat(
     req: ChatRequest,
@@ -918,6 +1039,8 @@ def chat(
         raise HTTPException(status_code=401, detail="sign in to continue")
     if caller is not None and caller != req.student_id:
         raise HTTPException(status_code=403, detail="you can only chat as yourself")
+    course_policy = _request_course_policy(req, request)
+    effective_mode = course_policy.effective_mode
     _await_local_tutor()
     # Fast refusal: an unsupported image turn should not wait behind valid generations or
     # have a full queue mask the actionable model error. `_run_chat` repeats this check inside
@@ -940,13 +1063,36 @@ def chat(
             req, owner_id=caller, service=get_resource_service()
         )
     visual_requested = wants_live_visual(req.message)
-    system_prompt = assemble_system_prompt(
-        load_prompt(req.mode.value),
-        persona=req.persona.value,
-        language=req.language,
+    integrity = _turn_integrity(
+        req.student_id,
+        req.message,
+        withhold=_withhold_requested(req) or course_policy.withhold_final_answers,
+    )
+    adaptation = _turn_adaptation(
+        req.student_id,
+        req.message,
         subject=req.subject.value,
-        twin_summary="" if req.use_rag else _twin_summary(req.student_id),
-        rag_block=resource_block,
+        mode=effective_mode,
+        guard=integrity,
+    )
+    response_guard = build_response_guard(
+        integrity,
+        language=req.language,
+        message=req.message,
+        series_strategy=adaptation.strategy,
+    )
+    system_prompt = append_course_context(
+        assemble_system_prompt(
+            load_prompt(effective_mode),
+            persona=req.persona.value,
+            language=req.language,
+            subject=req.subject.value,
+            twin_summary="" if req.use_rag else _twin_summary(req.student_id),
+            adaptation_directive=adaptation.directive,
+            local_context=_local_context_directive(engine, req.student_id),
+            rag_block=resource_block,
+        ),
+        course_policy,
     )
 
     def _run_chat():
@@ -966,10 +1112,10 @@ def chat(
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
-            turn_instruction=turn_instruction(
-                req.message, response_language_instruction(req.language)
+            turn_instruction=_trusted_turn_instruction(
+                req.message, req.language, response_guard, course_policy
             ),
-            mode=req.mode.value,
+            mode=effective_mode,
             persona=req.persona.value,
             subject=req.subject.value,
             language=req.language,
@@ -979,8 +1125,9 @@ def chat(
             images=image_inputs,
             attachment_ids=req.attachment_ids,
             include_history=not req.use_rag,
+            reply_guard=response_guard,
             **_sampling_for_request(
-                req.mode.value,
+                effective_mode,
                 req.thinking,
                 power=power,
                 power_enabled=_power_enabled(engine, req.student_id),
@@ -1088,7 +1235,7 @@ def chat(
     return ChatResponse(
         student_id=req.student_id,
         conversation_id=result.conversation_id,
-        mode=req.mode,
+        mode=effective_mode,
         reply=reply,
         verified=bool(verified),
         resource_citations=final_resource_sources,
@@ -1106,6 +1253,7 @@ def _start_chat_generation(
     allow_parallel: bool,
     power: PowerGovernor,
     power_enabled: bool,
+    course_policy: ResolvedCoursePolicy,
 ) -> GenerationJob:
     """Prepare one turn and hand its iterator to the process-owned generation registry.
 
@@ -1181,18 +1329,42 @@ def _start_chat_generation(
                 )
 
     visual_requested = wants_live_visual(req.message)
-    system_prompt = assemble_system_prompt(
-        load_prompt(req.mode.value),
-        persona=req.persona.value,
-        language=req.language,
+    effective_mode = course_policy.effective_mode
+    integrity = _turn_integrity(
+        req.student_id,
+        req.message,
+        withhold=_withhold_requested(req) or course_policy.withhold_final_answers,
+    )
+    adaptation = _turn_adaptation(
+        req.student_id,
+        req.message,
         subject=req.subject.value,
-        twin_summary="" if req.use_rag else _twin_summary(req.student_id),
-        web_lines=web_lines,
-        rag_block=resource_block,
+        mode=effective_mode,
+        guard=integrity,
+    )
+    response_guard = build_response_guard(
+        integrity,
+        language=req.language,
+        message=req.message,
+        series_strategy=adaptation.strategy,
+    )
+    system_prompt = append_course_context(
+        assemble_system_prompt(
+            load_prompt(effective_mode),
+            persona=req.persona.value,
+            language=req.language,
+            subject=req.subject.value,
+            twin_summary="" if req.use_rag else _twin_summary(req.student_id),
+            adaptation_directive=adaptation.directive,
+            local_context=_local_context_directive(engine, req.student_id),
+            web_lines=web_lines,
+            rag_block=resource_block,
+        ),
+        course_policy,
     )
     cancel_event = threading.Event()
     sampling_params = _sampling_for_request(
-        req.mode.value,
+        effective_mode,
         req.thinking,
         power=power,
         power_enabled=power_enabled,
@@ -1206,10 +1378,10 @@ def _start_chat_generation(
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
-            turn_instruction=turn_instruction(
-                req.message, response_language_instruction(req.language)
+            turn_instruction=_trusted_turn_instruction(
+                req.message, req.language, response_guard, course_policy
             ),
-            mode=req.mode.value,
+            mode=effective_mode,
             persona=req.persona.value,
             subject=req.subject.value,
             language=req.language,
@@ -1219,6 +1391,8 @@ def _start_chat_generation(
             images=image_inputs,
             attachment_ids=req.attachment_ids,
             include_history=not req.use_rag,
+            reply_guard=response_guard if response_guard.requires_buffering else None,
+            stream_monitor=response_guard if not response_guard.requires_buffering else None,
             # §6.5 sampling profiles apply to the UI's primary path too — without them the
             # stream ran at llama-server defaults with NO max_tokens (an unbounded turn is one
             # student holding a slot indefinitely, and with thinking on it filled the context).
@@ -1436,6 +1610,11 @@ def _start_chat_generation(
                     # null otherwise; check_note carries a friendly caution on a contradiction.
                     "verified": verified,
                     "check_note": check_note,
+                    # Deterministic learner-work evidence. Kept as additive SSE metadata so
+                    # older clients ignore it and the UI lane can render the requested chip.
+                    "student_work": _work_check_payload(integrity),
+                    "answer_withheld": integrity.withhold,
+                    "adaptation": adaptation.metadata(),
                     # Admission/degradation state, so the UI can show "you're next" and a
                     # reduced-capacity notice under classroom load.
                     "queued": False,
@@ -1501,6 +1680,7 @@ def _job_stream(job: GenerationJob, *, after: int = 0) -> StreamingResponse:
 )
 def chat_stream(
     req: ChatRequest,
+    request: Request,
     engine: ChatEngine = Depends(get_engine),
     sessions: SessionManager = Depends(get_sessions),
     ladder: DegradationLadder = Depends(get_ladder),
@@ -1512,6 +1692,7 @@ def chat_stream(
     """Backwards-compatible streaming start; disconnecting no longer cancels inference."""
     if caller != req.student_id:
         raise HTTPException(status_code=403, detail="you can only start your own generation")
+    course_policy = _request_course_policy(req, request)
     _await_local_tutor()
     job = _start_chat_generation(
         req,
@@ -1523,6 +1704,7 @@ def chat_stream(
         allow_parallel=False,
         power=power,
         power_enabled=_power_enabled(engine, caller),
+        course_policy=course_policy,
     )
     return _job_stream(job)
 
@@ -1535,6 +1717,7 @@ def chat_stream(
 )
 def generation_start(
     req: ChatRequest,
+    request: Request,
     engine: ChatEngine = Depends(get_engine),
     sessions: SessionManager = Depends(get_sessions),
     ladder: DegradationLadder = Depends(get_ladder),
@@ -1546,6 +1729,7 @@ def generation_start(
     """Start a durable browser turn and return its ids before subscribing to tokens."""
     if caller != req.student_id:
         raise HTTPException(status_code=403, detail="you can only start your own generation")
+    course_policy = _request_course_policy(req, request)
     _await_local_tutor()
     job = _start_chat_generation(
         req,
@@ -1557,6 +1741,7 @@ def generation_start(
         allow_parallel=engine.store.get_settings(caller).get("allow_parallel_chats", True),
         power=power,
         power_enabled=_power_enabled(engine, caller),
+        course_policy=course_policy,
     )
     snapshot = job.snapshot()
     return GenerationStarted(
@@ -1692,6 +1877,7 @@ def conversations(
                 student_id=r["student_id"],
                 title=_listed_conversation_title(r, engine.store),
                 mode=r.get("mode"),
+                persona=r.get("persona"),
                 pinned=bool(r.get("pinned", False)),
                 created_at=r["created_at"],
                 updated_at=r["updated_at"],
@@ -1719,6 +1905,8 @@ def conversation_messages(
     rows = engine.store.list_messages(conversation_id)
     return MessageList(
         conversation_id=conversation_id,
+        mode=convo.get("mode"),
+        persona=convo.get("persona"),
         messages=[
             MessageOut(
                 id=m["id"],
@@ -1835,6 +2023,27 @@ def conversation_pin(
     ):
         raise HTTPException(status_code=404, detail="unknown conversation")
     return ConversationPinned(id=conversation_id, pinned=request.pinned)
+
+
+@router.put(
+    "/conversations/{conversation_id}/style",
+    response_model=ConversationStyleResponse,
+    tags=["conversations"],
+)
+def conversation_style(
+    conversation_id: str,
+    request: ConversationStyleRequest,
+    engine: ChatEngine = Depends(get_engine),
+    caller: str = Depends(require_caller),
+) -> ConversationStyleResponse:
+    """Change one conversation's teaching strategy without changing the learner default."""
+    if not engine.store.update_conversation_context(
+        conversation_id,
+        owner_id=caller,
+        mode=request.mode.value,
+    ):
+        raise HTTPException(status_code=404, detail="unknown conversation")
+    return ConversationStyleResponse(id=conversation_id, mode=request.mode)
 
 
 @router.get(
@@ -1955,6 +2164,87 @@ def mastery(
     )
 
 
+@router.post("/units/checkpoint", response_model=UnitCheckpointResponse, tags=["tutor"])
+def unit_checkpoint(
+    request: Request,
+    req: UnitCheckpointRequest,
+    verifier: AnswerVerifier = Depends(get_verifier),
+    caller: str = Depends(require_caller),
+) -> UnitCheckpointResponse:
+    """Verify a complete built-in checkpoint and record one mastery observation."""
+    if req.student_id != caller:
+        raise HTTPException(status_code=403, detail="you can only submit your own answers")
+    from orchestrator.pedagogy.units import load_unit
+
+    try:
+        unit = load_unit(req.unit_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="unknown offline unit") from exc
+    except (OSError, ValueError) as exc:
+        log.exception("authoritative offline unit is unavailable: %s", req.unit_id)
+        raise HTTPException(
+            status_code=503,
+            detail="this offline unit could not be verified — no progress was changed",
+        ) from exc
+    questions = unit["checkpoint"]["questions"]
+    topic = unit["topic"]
+    expected_ids = {row["id"] for row in questions}
+    if set(req.answers) != expected_ids:
+        raise HTTPException(status_code=422, detail="submit one answer for every checkpoint item")
+
+    results: list[UnitQuestionResult] = []
+    for question in questions:
+        outcome = verifier.check_text(req.answers[question["id"]], question["expected"])
+        detail = "Correct." if outcome.verified else question["feedback"]
+        if not outcome.checked:
+            detail = outcome.detail or "This answer could not be checked; try a simpler form."
+        results.append(
+            UnitQuestionResult(
+                question_id=question["id"],
+                verified=outcome.verified,
+                checked=outcome.checked,
+                detail=detail,
+            )
+        )
+
+    all_checked = all(result.checked for result in results)
+    score = sum(result.verified for result in results) / len(results)
+    store = get_twin_store()
+    twin = store.load(req.student_id)
+    prior_mastery = twin.mastery.get(topic, 0.0)
+    mastery_value = prior_mastery
+    progress_saved = False
+    if all_checked:
+        write_principal = principal_from_request(request)
+        try:
+            # The gateway is a single deploy process. This lock also protects legacy/local
+            # principals, for whom the Host-mode membership lease is intentionally a no-op.
+            with _twin_write_lock, member_write_lease(write_principal):
+                # Reload inside the lease so concurrent, independently verified checkpoints
+                # cannot overwrite one another with a stale twin snapshot.
+                twin = store.load(req.student_id)
+                mastery_value = twin.record_mastery(topic, score)
+                for result in results:
+                    if not result.verified:
+                        twin.record_error(topic)
+                store.save(twin)
+                progress_saved = True
+        except AuthenticationError as exc:
+            raise HTTPException(status_code=403, detail="this account is being removed") from exc
+        except Exception:
+            log.warning("unit mastery update failed for %s", req.student_id, exc_info=True)
+            mastery_value = prior_mastery
+    return UnitCheckpointResponse(
+        unit_id=req.unit_id,
+        topic=topic,
+        score=score,
+        mastery=mastery_value,
+        checked=all_checked,
+        progress_saved=progress_saved,
+        results=results,
+    )
+
+
 @router.post("/exam/answer", response_model=AnswerCheckResponse, tags=["exam"])
 def exam_answer(
     request: Request,
@@ -1968,11 +2258,18 @@ def exam_answer(
     leaves the record untouched rather than punishing the student for the tool's limits."""
     if req.student_id != caller:
         raise HTTPException(status_code=403, detail="you can only submit your own answers")
+    from orchestrator.pedagogy.units import VERIFIED_UNIT_TOPICS
+
+    if req.topic in VERIFIED_UNIT_TOPICS:
+        raise HTTPException(
+            status_code=422,
+            detail="verified learning-unit topics must use the unit checkpoint",
+        )
     write_principal = principal_from_request(request)
     outcome = verifier.check_text(req.candidate, req.expected, tolerance=req.tolerance)
     if outcome.checked:
         try:
-            with member_write_lease(write_principal):
+            with _twin_write_lock, member_write_lease(write_principal):
                 store = get_twin_store()
                 twin = store.load(req.student_id)
                 twin.record_mastery(req.topic, 1.0 if outcome.verified else 0.0)
@@ -2051,6 +2348,24 @@ def tutor_chat(
     )
     if visual_requested:
         sampling_params["enable_thinking"] = False
+    integrity = _turn_integrity(
+        student_id,
+        turn.text,
+        withhold=turn.mode.value == "hint",
+    )
+    adaptation = _turn_adaptation(
+        student_id,
+        turn.text,
+        subject="math and science",
+        mode=turn.mode.value,
+        guard=integrity,
+    )
+    response_guard = build_response_guard(
+        integrity,
+        language=turn.lang,
+        message=turn.text,
+        series_strategy=adaptation.strategy,
+    )
 
     def _run_tutor_turn():
         chat_result = engine.chat(
@@ -2060,11 +2375,15 @@ def tutor_chat(
             system_prompt=assemble_system_prompt(
                 load_prompt(_prompt_for(turn.mode)),
                 language=turn.lang,
+                twin_summary=_twin_summary(student_id),
+                adaptation_directive=adaptation.directive,
+                local_context=_local_context_directive(engine, student_id),
             ),
-            turn_instruction=turn_instruction(turn.text, response_language_instruction(turn.lang)),
+            turn_instruction=_trusted_turn_instruction(turn.text, turn.lang, response_guard),
             mode=turn.mode.value,
             language=turn.lang,
             cancel_event=turn_cancel,
+            reply_guard=response_guard,
             **sampling_params,
         )
         sanitized_reply = strip_model_visualization_protocol(chat_result.reply)
@@ -2200,6 +2519,24 @@ def tutor_chat_stream(
     if visual_requested:
         sampling_params["enable_thinking"] = False
     structured_response = "response_format" in sampling_params
+    integrity = _turn_integrity(
+        student_id,
+        turn.text,
+        withhold=turn.mode.value == "hint",
+    )
+    adaptation = _turn_adaptation(
+        student_id,
+        turn.text,
+        subject="math and science",
+        mode=turn.mode.value,
+        guard=integrity,
+    )
+    response_guard = build_response_guard(
+        integrity,
+        language=turn.lang,
+        message=turn.text,
+        series_strategy=adaptation.strategy,
+    )
 
     try:
         cid, _user_message_id, events = engine.stream_events_chat(
@@ -2209,11 +2546,16 @@ def tutor_chat_stream(
             system_prompt=assemble_system_prompt(
                 load_prompt(_prompt_for(turn.mode)),
                 language=turn.lang,
+                twin_summary=_twin_summary(student_id),
+                adaptation_directive=adaptation.directive,
+                local_context=_local_context_directive(engine, student_id),
             ),
-            turn_instruction=turn_instruction(turn.text, response_language_instruction(turn.lang)),
+            turn_instruction=_trusted_turn_instruction(turn.text, turn.lang, response_guard),
             mode=turn.mode.value,
             language=turn.lang,
             cancel_event=turn_cancel,
+            reply_guard=response_guard if response_guard.requires_buffering else None,
+            stream_monitor=response_guard if not response_guard.requires_buffering else None,
             **sampling_params,
         )
     except Exception:
@@ -2312,6 +2654,9 @@ def tutor_chat_stream(
                     ),
                     "preamble_ttft_s": round(preamble_at - started, 3) if preamble_at else None,
                     "degradation_level": f"L{int(state.level)}",
+                    "student_work": _work_check_payload(integrity),
+                    "answer_withheld": integrity.withhold,
+                    "adaptation": adaptation.metadata(),
                 }
             )
             + "\n\n"
