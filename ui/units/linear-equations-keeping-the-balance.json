@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "id": "linear-equations-keeping-the-balance",
+  "topic": "linear_equations",
+  "title": "Linear equations — keeping the balance",
+  "summary": "Use the balance idea to undo operations on both sides, isolate the unknown, and check the result.",
+  "estimated_minutes": 18,
+  "sections": [
+    {
+      "id": "balance-rule",
+      "title": "1. Equality is a balance",
+      "markdown": "An equation says that two expressions have the same value. Imagine a balanced market scale: if you remove **3 kg from one pan**, you must remove **3 kg from the other** or the balance tips.\n\nFor $x + 3 = 8$, subtract 3 from both sides:\n\n$$x + 3 - 3 = 8 - 3$$\n\nso $x = 5$.",
+      "visualization": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Keep both sides balanced",
+        "aria_label": "A three-step process shows x plus 3 equals 8, subtracting 3 from both sides, and x equals 5.",
+        "text_fallback": "Start with x + 3 = 8. Subtract 3 from both sides. The balanced result is x = 5.",
+        "height": 360,
+        "controls": [{
+          "id": "balance_step", "label": "Emphasize the balance step", "type": "range",
+          "value": 1, "min": 0.75, "max": 1.25, "step": 0.25,
+          "binding": {"target_label": "subtract 3 from both sides", "effect": "scale"}
+        }],
+        "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30},
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {"type": "node", "id": "start", "x": 110, "y": 175, "width": 150, "height": 68, "label": "x + 3 = 8", "color": "teal"},
+            {"type": "node", "id": "same_move", "x": 350, "y": 175, "width": 190, "height": 68, "label": "subtract 3 from both sides", "color": "orange"},
+            {"type": "node", "id": "result", "x": 610, "y": 175, "width": 140, "height": 68, "label": "x = 5", "color": "green"},
+            {"type": "link", "from": "start", "to": "same_move", "arrow": true, "label": "same change"},
+            {"type": "link", "from": "same_move", "to": "result", "arrow": true, "label": "simplify"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "undo-operations",
+      "title": "2. Undo in reverse order",
+      "markdown": "To isolate $x$, undo the operations around it in reverse order. In $3x - 6 = 15$, first add 6 to both sides, then divide both sides by 3.\n\n$$3x - 6 + 6 = 15 + 6$$\n$$3x = 21$$\n$$x = 7$$\n\nThe same operation on both sides preserves equality.",
+      "visualization": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "concept_process",
+        "title": "Undo operations in reverse",
+        "aria_label": "A process moves from 3x minus 6 equals 15 through adding 6 and dividing by 3 to x equals 7.",
+        "text_fallback": "Add 6 to both sides of 3x - 6 = 15, then divide both sides by 3, giving x = 7.",
+        "height": 380,
+        "controls": [{
+          "id": "undo_step", "label": "Emphasize the division step", "type": "range",
+          "value": 1, "min": 0.75, "max": 1.5, "step": 0.25,
+          "binding": {"target_label": "divide both sides by 3", "effect": "scale"}
+        }],
+        "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30},
+        "scene": {
+          "coordinate_system": "screen",
+          "layers": [
+            {"type": "node", "id": "equation", "x": 80, "y": 185, "width": 130, "height": 68, "label": "3x - 6 = 15", "color": "teal"},
+            {"type": "node", "id": "add", "x": 245, "y": 185, "width": 145, "height": 68, "label": "add 6 to both sides", "color": "orange"},
+            {"type": "node", "id": "divide", "x": 450, "y": 185, "width": 170, "height": 68, "label": "divide both sides by 3", "color": "purple"},
+            {"type": "node", "id": "solution", "x": 635, "y": 185, "width": 110, "height": 68, "label": "x = 7", "color": "green"},
+            {"type": "link", "from": "equation", "to": "add", "arrow": true, "label": ""},
+            {"type": "link", "from": "add", "to": "divide", "arrow": true, "label": "3x = 21"},
+            {"type": "link", "from": "divide", "to": "solution", "arrow": true, "label": ""}
+          ]
+        }
+      }
+    },
+    {
+      "id": "check",
+      "title": "3. Check the solution",
+      "markdown": "Substitute your answer into the **original equation**. For $3x - 6 = 15$ and $x = 7$:\n\n$$3(7) - 6 = 21 - 6 = 15$$\n\nThe left side equals the right side, so the solution checks. If the two sides differ, revisit the first step where the balance changed."
+    }
+  ],
+  "checkpoint": {
+    "title": "Checkpoint",
+    "instructions": "Solve all five. You may enter a number or a short equation such as x = 5.",
+    "questions": [
+      {"id": "q1", "prompt": "Solve $x + 6 = 14$.", "feedback": "Subtract 6 from both sides."},
+      {"id": "q2", "prompt": "Solve $x - 9 = -13$.", "feedback": "Add 9 to both sides."},
+      {"id": "q3", "prompt": "Solve $4x = 20$.", "feedback": "Divide both sides by 4."},
+      {"id": "q4", "prompt": "Solve $2x + 5 = 11$.", "feedback": "Subtract 5 first, then divide by 2."},
+      {"id": "q5", "prompt": "Solve $3x - 6 = 15$.", "feedback": "Add 6 first, then divide by 3."}
+    ]
+  },
+  "citations": [
+    {
+      "title": "OpenStax Prealgebra 2e, §8.1 — addition and subtraction properties of equality",
+      "url": "https://openstax.org/books/prealgebra-2e/pages/8-1-solve-equations-using-the-subtraction-and-addition-properties-of-equality",
+      "note": "Reference for preserving equality by applying the same addition or subtraction to both sides."
+    },
+    {
+      "title": "OpenStax Prealgebra 2e, §8.2 — division and multiplication properties of equality",
+      "url": "https://openstax.org/books/prealgebra-2e/pages/8-2-solve-equations-using-the-division-and-multiplication-properties-of-equality",
+      "note": "Reference for preserving equality by multiplying or dividing both sides by the same nonzero quantity."
+    }
+  ]
+}

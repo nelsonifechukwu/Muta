@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "kind": "course",
+  "id": "mathematics-waec-jamb",
+  "title": "Mathematics — functions, graphs and exam reasoning",
+  "subject": "Mathematics",
+  "level": "Senior secondary · WAEC and JAMB foundation",
+  "description": "Read functions as input-output rules, connect equations to graphs, and practise the reasoning patterns common in senior-secondary exams.",
+  "estimated_minutes": 65,
+  "exams": ["WAEC-style", "JAMB-style"],
+  "author": {"name": "Muta Learning", "url": "https://github.com/nelsonifechukwu/Muta"},
+  "license": {"name": "CC BY 4.0", "url": "https://creativecommons.org/licenses/by/4.0/"},
+  "concepts": [
+    {"id": "function", "title": "Functions as input-output rules", "prerequisites": []},
+    {"id": "linear", "title": "Slope and linear graphs", "prerequisites": ["function"]},
+    {"id": "quadratic", "title": "Quadratic shape and roots", "prerequisites": ["linear"]},
+    {"id": "exam-reasoning", "title": "Selecting and checking a method", "prerequisites": ["linear", "quadratic"]}
+  ],
+  "chapters": [
+    {
+      "id": "input-output",
+      "title": "One input, one output",
+      "summary": "Use tables, equations and graphs as three views of the same function.",
+      "concept_ids": ["function", "linear"],
+      "blocks": [
+        {"type": "markdown", "text": "### A function links quantities\n\nA function assigns each allowed input exactly one output. For $f(x)=2x+1$, the input $3$ gives $f(3)=7$. A table lists examples; an equation gives a rule; a graph shows every pair $(x,f(x))$.\n\nFor a line $y=mx+c$, $m$ is the change in $y$ for one unit of $x$, while $c$ is the value of $y$ when $x=0$."},
+        {"type": "visualization", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "function_mapping", "title": "Three views of a linear function", "aria_label": "Input values flow through the rule two x plus one to output values.", "text_fallback": "Inputs are transformed by two x plus one to make outputs.", "height": 350, "controls": [], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "input", "x": 110, "y": 170, "width": 130, "height": 70, "label": "input x", "color": "teal"}, {"type": "node", "id": "rule", "x": 360, "y": 170, "width": 150, "height": 70, "label": "2x + 1", "color": "orange"}, {"type": "node", "id": "output", "x": 620, "y": 170, "width": 140, "height": 70, "label": "output y", "color": "green"}, {"type": "link", "from": "input", "to": "rule", "arrow": true, "label": "substitute"}, {"type": "link", "from": "rule", "to": "output", "arrow": true, "label": "evaluate"}]}}},
+        {"type": "activity", "activity_id": "math-q1"}
+      ]
+    },
+    {
+      "id": "shape-and-check",
+      "title": "Predict the shape, then check",
+      "summary": "Connect the algebraic form to intercepts, slope, turning points and roots.",
+      "concept_ids": ["quadratic", "exam-reasoning"],
+      "blocks": [
+        {"type": "markdown", "text": "### Let structure guide the method\n\nA quadratic $y=ax^2+bx+c$ forms a parabola. The sign of $a$ tells whether it opens upward or downward. Roots are the $x$-values where $y=0$; graphically, they are x-axis crossings.\n\nIn an exam, write the relationship first, substitute carefully, estimate what the answer should look like, and finally put the result back into the original relationship."},
+        {"type": "callout", "title": "Exam check", "text": "A method is not finished when a number appears. Check its sign, units, scale and whether it satisfies the original question."},
+        {"type": "activity", "activity_id": "math-q2"},
+        {"type": "activity", "activity_id": "math-q3"}
+      ]
+    }
+  ],
+  "activities": [
+    {"id": "math-q1", "type": "numeric", "concept_id": "linear", "prompt": "WAEC-style: If f(x) = 3x − 2, find f(5).", "answer": 13, "tolerance": 0, "explanation": "Substitute 5 for x: 3 × 5 − 2 = 13.", "exam_style": "WAEC-style", "difficulty": "Foundation"},
+    {"id": "math-q2", "type": "mcq", "concept_id": "quadratic", "prompt": "JAMB-style: Which statement is true for y = x² − 4?", "options": ["It crosses the x-axis at −2 and 2", "It has constant slope 2", "It crosses the y-axis at 4", "It has no real roots"], "answer": 0, "explanation": "Set y to zero: x² − 4 = 0, so (x − 2)(x + 2) = 0.", "exam_style": "JAMB-style", "difficulty": "Applied"},
+    {"id": "math-q3", "type": "mcq", "concept_id": "exam-reasoning", "prompt": "After solving an equation, which check is strongest?", "options": ["The answer looks familiar", "Substitute it into the original equation", "Repeat the last line", "Choose the largest option"], "answer": 1, "explanation": "Substitution tests whether the proposed value preserves the original relationship.", "exam_style": "Course practice", "difficulty": "Foundation"}
+  ],
+  "games": [{"id": "graph-shape-match", "type": "challenge", "title": "Graph shape match", "description": "Match an equation feature to what its graph must do.", "concept_id": "quadratic", "rounds": [{"prompt": "For y = 4x + 1, what is the y-intercept?", "options": ["1", "4", "−1", "0"], "answer": 0, "explanation": "At x = 0, y = 1."}, {"prompt": "If a quadratic has a negative leading coefficient, how does it open?", "options": ["Up", "Down", "Sideways", "It is always a line"], "answer": 1, "explanation": "A negative coefficient reflects the parent parabola across the x-axis."}, {"prompt": "A graph crosses the x-axis where…", "options": ["x = 0", "y = 0", "x = y", "the slope is always zero"], "answer": 1, "explanation": "Every point on the x-axis has y-coordinate zero."}]}],
+  "playgrounds": [{"id": "linear-slope-lab", "title": "Slope lab", "description": "Move the slope emphasis and compare rise with run for a line.", "concept_id": "linear", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "coordinate_geometry", "title": "Rise and run", "aria_label": "A right triangle on a coordinate grid labels run two and rise four.", "text_fallback": "A run of two and rise of four gives slope two.", "height": 390, "controls": [{"id": "rise_focus", "label": "Emphasize the rise", "type": "range", "value": 1, "min": 0.75, "max": 1.5, "step": 0.25, "binding": {"target_label": "rise = 4", "effect": "scale"}}], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "start", "x": 160, "y": 270, "width": 100, "height": 56, "label": "start", "color": "teal"}, {"type": "node", "id": "run", "x": 420, "y": 270, "width": 120, "height": 56, "label": "run = 2", "color": "orange"}, {"type": "node", "id": "rise", "x": 420, "y": 100, "width": 120, "height": 56, "label": "rise = 4", "color": "green"}, {"type": "link", "from": "start", "to": "run", "arrow": true, "label": "horizontal"}, {"type": "link", "from": "run", "to": "rise", "arrow": true, "label": "vertical"}]}}}],
+  "sources": [
+    {"title": "OpenStax Precalculus 2e — Functions and Function Notation", "url": "https://openstax.org/books/precalculus-2e/pages/1-1-functions-and-function-notation", "note": "Open reference for functions, graph interpretation and the vertical-line test.", "license": "CC BY 4.0"},
+    {"title": "OpenStax Precalculus 2e — Linear Functions", "url": "https://openstax.org/books/precalculus-2e/pages/2-key-concepts", "note": "Reference for slope, intercepts and linear graphs.", "license": "CC BY 4.0"}
+  ]
+}

@@ -104,6 +104,12 @@ function activateIdentity({ userId, role, username = null, token = "", csrf = nu
   const hostIdentity = role === "host";
   document.querySelector("#host-settings").hidden = role !== "host";
   document.querySelector(".model-selector").hidden = role === "member";
+  // Learners can only hold an approved Share session while Host mode is active. The local
+  // operator waits for the authoritative Host status before the board entry point appears.
+  document.querySelector("#class-open").hidden = role === "host";
+  document.querySelector("#class-post-form").hidden = role !== "member";
+  document.querySelector("#class-reply-form").hidden = role !== "member";
+  document.querySelector("#share-course-control").hidden = role !== "member";
   if (shareAuthWake) {
     shareAuthWake();
     shareAuthWake = null;
@@ -220,9 +226,39 @@ let voiceModeActive = false;
 // capable of parallel jobs, while this gate preserves today's one-chat product behaviour.
 let allowParallelChats = true;
 let powerOptimizationEnabled = true;
+const TEACHING_STYLE_KEYS = Object.freeze({
+  socratic: "style.guide",
+  subgoal: "style.show",
+  analogy: "style.examples",
+  hints: "style.hints",
+});
+const TEACHING_STYLE_METHODS = Object.freeze({
+  socratic: ["style.methodGuide", "style.descGuide"],
+  subgoal: ["style.methodShow", "style.descShow"],
+  analogy: ["style.methodExamples", "style.descExamples"],
+  hints: ["style.methodHints", "style.descHints"],
+});
+const conversationStyles = new Map();
+const conversationStyleVersions = new Map();
+const persistedConversationStyleVersions = new Map();
+const CONVERSATION_PERSONAS = new Set(["teacher", "friend", "professor", "exam"]);
+const conversationPersonas = new Map();
+let preferredStyle = localStorage.getItem("muta-preferred-style") || "socratic";
+if (!TEACHING_STYLE_KEYS[preferredStyle]) preferredStyle = "socratic";
+let newChatStyle = preferredStyle;
+let styleIntentVersion = 0;
+let styleSaveQueue = Promise.resolve();
 let latestPowerStatus = null;
 let pendingAttachments = []; // {id, kind, mime, name?, previewUrl, status?}
 let learningResources = [];
+let shareCourses = [];
+let selectedCourseId = localStorage.getItem("muta-share-course") || "";
+let editingCourseId = null;
+let classViewOpen = false;
+let activeClassPostId = null;
+let displayedClassPostId = null;
+let classThreadRequestVersion = 0;
+let classPollTimer = null;
 let resourceCatalogState = "loading"; // loading | ready | error
 let resourceLoadFailures = 0;
 let resourceLoadInFlight = null;
@@ -256,6 +292,170 @@ const inputEl = $("#input");
 const sendBtn = $("#btn-send");
 const emptyStateEl = $("#empty-state");
 const chatScroller = $("#chat-scroll");
+
+function styleForConversation(cid = conversationId) {
+  return cid ? (conversationStyles.get(cid) || preferredStyle) : newChatStyle;
+}
+
+function personaForConversation(cid = conversationId) {
+  return cid ? (conversationPersonas.get(cid) || "teacher") : "teacher";
+}
+
+function renderTeachingStyle() {
+  const mode = styleForConversation();
+  document.querySelectorAll("#teaching-style [data-mode]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
+  });
+  const pill = $("#style-pill");
+  pill.dataset.i18n = TEACHING_STYLE_KEYS[mode];
+  pill.textContent = t(TEACHING_STYLE_KEYS[mode]);
+  pill.title = pill.textContent;
+  const [methodKey, descriptionKey] = TEACHING_STYLE_METHODS[mode];
+  const method = $("#teaching-style-method");
+  const description = $("#teaching-style-description");
+  method.dataset.i18n = methodKey;
+  method.textContent = t(methodKey);
+  description.dataset.i18n = descriptionKey;
+  description.textContent = t(descriptionKey);
+}
+
+function persistTeachingStyle(mode, targetConversationId, targetVersion = 0) {
+  preferredStyle = mode;
+  localStorage.setItem("muta-preferred-style", mode);
+  // Serialize writes so a slower earlier selection can never land after the learner's latest
+  // choice. A failed save leaves the in-memory choice intact for this session and is retryable
+  // on the next selection.
+  styleSaveQueue = styleSaveQueue.catch(() => {}).then(async () => {
+    const requests = [fetch("/v1/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ preferred_style: mode }),
+    })];
+    if (targetConversationId) {
+      requests.push(fetch(`/v1/conversations/${targetConversationId}/style`, {
+        method: "PUT",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ mode }),
+      }));
+    }
+    const responses = await Promise.all(requests);
+    if (responses.some((response) => !response.ok)) throw new Error("style save failed");
+    if (
+      targetConversationId
+      && conversationStyleVersions.get(targetConversationId) === targetVersion
+    ) {
+      persistedConversationStyleVersions.set(targetConversationId, targetVersion);
+    }
+  }).catch(() => { toast(t("style.saveFailed")); });
+  return styleSaveQueue;
+}
+
+function updatePendingStyleMarker(targetConversationId, viewId, mode) {
+  for (let index = 0; index < sessionStorage.length; index += 1) {
+    const key = sessionStorage.key(index);
+    if (!key?.startsWith("muta-pending:")) continue;
+    try {
+      const marker = JSON.parse(sessionStorage.getItem(key) || "null");
+      const matchesPendingStart = targetConversationId == null
+        ? marker?.view_id === viewId
+        : marker?.view_id === viewId || marker?.conversation_id === targetConversationId;
+      if (matchesPendingStart) {
+        sessionStorage.setItem(key, JSON.stringify({ ...marker, mode }));
+      }
+    } catch {
+      /* Ignore legacy or corrupt recovery markers. */
+    }
+  }
+}
+
+function pendingStyleMarker(clientRequestId) {
+  try {
+    return JSON.parse(sessionStorage.getItem(`muta-pending:${clientRequestId}`) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function repairConversationStyle(conversationId, mode) {
+  const repairVersion = window.MutaTeachingStylePolicy.nextRepairVersion(
+    conversationStyleVersions.get(conversationId),
+  );
+  conversationStyleVersions.set(conversationId, repairVersion);
+  conversationStyles.set(conversationId, mode);
+  // A repair belongs only to the conversation that an older generation start overwrote. It must
+  // not roll back a newer global preference selected in another conversation.
+  const repair = styleSaveQueue.catch(() => {}).then(async () => {
+    const response = await fetch(`/v1/conversations/${conversationId}/style`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ mode }),
+    });
+    if (!response.ok) throw new Error("conversation style repair failed");
+    if (conversationStyleVersions.get(conversationId) === repairVersion) {
+      persistedConversationStyleVersions.set(conversationId, repairVersion);
+    }
+  });
+  styleSaveQueue = repair.catch(() => { toast(t("style.saveFailed")); });
+  return repair;
+}
+
+function reconcileAssignedConversationStyle(conversationId, requestedMode, latestMode) {
+  const assignedStyle = window.MutaTeachingStylePolicy.assignedConversationStyle(
+    requestedMode,
+    latestMode,
+  );
+  conversationStyles.set(conversationId, assignedStyle.mode);
+  let repair = null;
+  if (assignedStyle.needsConversationWrite) {
+    // This final write is deliberately queued after the generation POST has returned, so an
+    // older mode carried by that POST cannot land after the learner's newer picker choice.
+    repair = repairConversationStyle(conversationId, assignedStyle.mode);
+  }
+  return { mode: assignedStyle.mode, repair };
+}
+
+function retirePendingStyleMarker(clientRequestId, reconciliation) {
+  if (!reconciliation?.repair) {
+    sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+    return;
+  }
+  // Keep the marker durable until the repair is acknowledged. A reload between the accepted
+  // generation POST and its corrective PUT can then discover and retry the learner's choice.
+  void reconciliation.repair.then(() => {
+    sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+  }).catch(() => {});
+}
+
+document.querySelectorAll("#teaching-style [data-mode]").forEach((button, index, buttons) => {
+  button.addEventListener("click", () => {
+    const mode = button.dataset.mode;
+    const targetConversationId = conversationId;
+    styleIntentVersion += 1;
+    let targetVersion = 0;
+    if (conversationId) {
+      targetVersion = (conversationStyleVersions.get(conversationId) || 0) + 1;
+      conversationStyleVersions.set(conversationId, targetVersion);
+      conversationStyles.set(conversationId, mode);
+    } else newChatStyle = mode;
+    updatePendingStyleMarker(targetConversationId, currentViewId, mode);
+    renderTeachingStyle();
+    void persistTeachingStyle(mode, targetConversationId, targetVersion);
+  });
+  button.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    const step = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1;
+    buttons[(index + step + buttons.length) % buttons.length].focus();
+  });
+});
+renderTeachingStyle();
+$("#teaching-style-help").addEventListener("click", (event) => {
+  const explanation = $("#teaching-style-explanation");
+  const expanded = explanation.dataset.expanded !== "true";
+  explanation.dataset.expanded = String(expanded);
+  event.currentTarget.setAttribute("aria-expanded", String(expanded));
+});
+document.addEventListener("muta:localechange", renderTeachingStyle);
 
 // The composer is a real multiline textbox, but a native <textarea> cannot place a PDF
 // reference inside a sentence. Keep one plain-text model (placement markers count as one
@@ -839,6 +1039,382 @@ function renderCompletedReply(wrap, prose, text) {
   renderMarkdown(prose, extracted.markdown);
   window.MutaViz?.renderAll(wrap, extracted.visualizations);
 }
+
+// ---------------------------------------------------------------------------
+// Offline interactive units
+// ---------------------------------------------------------------------------
+const BUILT_IN_UNITS = Object.freeze([
+  { id: "linear-equations-keeping-the-balance", file: "linear-equations-keeping-the-balance.json", subject: "Mathematics", icon: "∑" },
+  { id: "forces-and-motion", file: "forces-and-motion.json", subject: "Physics", icon: "↗" },
+  { id: "balancing-chemical-equations", file: "balancing-chemical-equations.json", subject: "Chemistry", icon: "⚗" },
+  { id: "photosynthesis-energy-flow", file: "photosynthesis-energy-flow.json", subject: "Biology", icon: "☘" },
+]);
+const BUILT_IN_UNIT_IDS = new Set(BUILT_IN_UNITS.map((unit) => unit.id));
+const MAX_UNIT_FILE_BYTES = 256 * 1024;
+const unitModal = $("#unit-modal");
+const unitPanel = unitModal.querySelector(".unit-panel");
+const unitBody = $("#unit-body");
+const unitStatus = $("#unit-status");
+const unitFile = $("#file-unit");
+let unitOpener = null;
+let activeUnitPack = null;
+
+function boundedUnitText(value, maximum, { required = true } = {}) {
+  return typeof value === "string" && value.length <= maximum && (!required || value.length > 0);
+}
+
+function hasOnlyUnitKeys(value, allowed) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    && Object.keys(value).every((key) => allowed.includes(key));
+}
+
+function validUnitPack(pack) {
+  if (!pack || pack.version !== 1 || !/^[a-z0-9][a-z0-9-]*$/.test(pack.id || "")) return false;
+  if (!hasOnlyUnitKeys(pack, [
+    "version", "id", "topic", "title", "summary", "estimated_minutes", "sections",
+    "checkpoint", "citations",
+  ])) return false;
+  if (!/^[a-z0-9_]+$/.test(pack.topic || "")) return false;
+  if (
+    !Number.isInteger(pack.estimated_minutes)
+    || pack.estimated_minutes < 1
+    || pack.estimated_minutes > 180
+  ) return false;
+  if (!boundedUnitText(pack.title, 160) || !boundedUnitText(pack.summary, 500)) return false;
+  if (!Array.isArray(pack.sections) || !pack.sections.length || pack.sections.length > 20) {
+    return false;
+  }
+  if (!Array.isArray(pack.checkpoint?.questions) || pack.checkpoint.questions.length !== 5) {
+    return false;
+  }
+  if (
+    !hasOnlyUnitKeys(pack.checkpoint, ["title", "instructions", "questions"])
+    || !boundedUnitText(pack.checkpoint.title, 160)
+    || !boundedUnitText(pack.checkpoint.instructions, 1000)
+  ) return false;
+  const ids = new Set();
+  for (const question of pack.checkpoint.questions) {
+    if (
+      !hasOnlyUnitKeys(question, ["id", "prompt", "feedback"])
+      || !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(question?.id || "")
+      || !boundedUnitText(question.prompt, 1000)
+      || !boundedUnitText(question.feedback, 1000)
+      || ids.has(question.id)
+    ) return false;
+    ids.add(question.id);
+  }
+  if (!Array.isArray(pack.citations) || !pack.citations.length || pack.citations.length > 20) {
+    return false;
+  }
+  for (const citation of pack.citations) {
+    if (
+      !hasOnlyUnitKeys(citation, ["title", "url", "note"])
+      || !boundedUnitText(citation?.title, 300)
+      || !boundedUnitText(citation.note, 1000, { required: false })
+      || !boundedUnitText(citation.url, 2000)
+    ) return false;
+    try {
+      const url = new URL(citation.url);
+      if (url.protocol !== "https:") return false;
+    } catch {
+      return false;
+    }
+  }
+  const sectionIds = new Set();
+  return pack.sections.every((section) => {
+    const valid = (
+      hasOnlyUnitKeys(section, ["id", "title", "markdown", "visualization"])
+      && /^[a-z0-9][a-z0-9_-]{0,63}$/.test(section?.id || "")
+      && !sectionIds.has(section.id)
+      && boundedUnitText(section.title, 160)
+      && boundedUnitText(section.markdown, 10000, { required: false })
+      && (!section.visualization || window.MutaViz?.validateSpec(section.visualization).ok)
+    );
+    sectionIds.add(section?.id);
+    return valid;
+  });
+}
+
+function updateUnitMastery(value) {
+  const percent = Math.round(Math.max(0, Math.min(1, Number(value) || 0)) * 100);
+  $("#unit-mastery-fill").style.width = `${percent}%`;
+  $("#unit-mastery-value").textContent = `${percent}%`;
+  unitModal.querySelector("[role='progressbar']").setAttribute("aria-valuenow", String(percent));
+}
+
+async function loadUnitMastery(pack = activeUnitPack) {
+  if (!pack) return;
+  try {
+    const response = await fetch(`/v1/mastery/${encodeURIComponent(studentId)}?subject=math`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) return;
+    const body = await response.json();
+    updateUnitMastery(body.mastery?.[pack.topic] || 0);
+  } catch {
+    /* The lesson remains useful without its optional progress read. */
+  }
+}
+
+function renderUnitPack(pack, { trusted = false } = {}) {
+  const canVerify = trusted && BUILT_IN_UNIT_IDS.has(pack.id);
+  activeUnitPack = pack;
+  window.MutaViz?.cleanup(unitBody);
+  unitBody.replaceChildren();
+  $("#unit-title").textContent = pack.title;
+  $("#unit-library").hidden = true;
+  $("#unit-back").hidden = false;
+  $("#unit-toolbar").hidden = false;
+  $("#unit-import-help").hidden = false;
+  $("#unit-mastery-label").textContent = t("unit.masteryNamed", { title: pack.title });
+  updateUnitMastery(0);
+  void loadUnitMastery(pack);
+
+  const summary = document.createElement("p");
+  summary.className = "unit-summary";
+  summary.textContent = pack.summary;
+  unitBody.appendChild(summary);
+
+  for (const section of pack.sections) {
+    const card = document.createElement("section");
+    card.className = "unit-section";
+    const heading = document.createElement("h3");
+    heading.textContent = section.title;
+    const prose = document.createElement("div");
+    prose.className = "prose";
+    renderMarkdown(prose, section.markdown);
+    card.append(heading, prose);
+    if (section.visualization) {
+      const visualization = document.createElement("div");
+      visualization.className = "unit-visualization";
+      card.appendChild(visualization);
+      window.MutaViz.renderAll(visualization, [section.visualization]);
+    }
+    unitBody.appendChild(card);
+  }
+
+  const form = document.createElement("form");
+  form.className = "unit-checkpoint";
+  const checkpointTitle = document.createElement("h3");
+  checkpointTitle.textContent = pack.checkpoint.title;
+  const instructions = document.createElement("p");
+  instructions.textContent = pack.checkpoint.instructions;
+  form.append(checkpointTitle, instructions);
+  for (const [index, question] of pack.checkpoint.questions.entries()) {
+    const row = document.createElement("div");
+    row.className = "unit-question";
+    const label = document.createElement("label");
+    const inputId = `unit-answer-${question.id}`;
+    label.htmlFor = inputId;
+    renderMarkdown(label, `${index + 1}. ${question.prompt}`);
+    const input = document.createElement("input");
+    input.id = inputId;
+    input.name = question.id;
+    input.type = "text";
+    input.maxLength = 4096;
+    input.required = true;
+    input.autocomplete = "off";
+    input.disabled = !canVerify;
+    const result = document.createElement("p");
+    result.id = `${inputId}-result`;
+    result.className = "unit-question-result";
+    result.dataset.questionId = question.id;
+    result.setAttribute("role", "status");
+    result.setAttribute("aria-live", "polite");
+    input.setAttribute("aria-describedby", result.id);
+    row.append(label, input, result);
+    form.appendChild(row);
+  }
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.textContent = t("unit.submit");
+  if (!canVerify) {
+    submit.hidden = true;
+    submit.disabled = true;
+    const preview = document.createElement("p");
+    preview.className = "unit-status";
+    preview.textContent = t("unit.previewOnly");
+    form.appendChild(preview);
+  }
+  form.appendChild(submit);
+  if (!canVerify) form.addEventListener("submit", (event) => event.preventDefault());
+  if (canVerify) form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    unitStatus.textContent = "";
+    const answers = Object.fromEntries(new FormData(form).entries());
+    try {
+      const response = await fetch("/v1/units/checkpoint", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ student_id: studentId, unit_id: pack.id, answers }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      for (const result of body.results) {
+        const output = form.querySelector(`[data-question-id="${result.question_id}"]`);
+        output.textContent = result.detail;
+        output.classList.toggle("correct", result.verified);
+      }
+      updateUnitMastery(body.mastery);
+      unitStatus.textContent = body.checked
+        ? (
+            body.progress_saved === false
+              ? `${t("unit.score", { score: Math.round(body.score * 100) })} ${t("unit.progressNotSaved")}`
+              : t("unit.score", { score: Math.round(body.score * 100) })
+          )
+        : t("unit.unchecked");
+    } catch {
+      unitStatus.textContent = t("unit.submitFailed");
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  unitBody.appendChild(form);
+
+  const citations = document.createElement("section");
+  citations.className = "unit-citations";
+  const citationsTitle = document.createElement("h3");
+  citationsTitle.textContent = t("unit.sources");
+  const list = document.createElement("ol");
+  for (const citation of pack.citations) {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = citation.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = citation.title;
+    const note = document.createElement("small");
+    note.textContent = citation.note;
+    item.append(link, note);
+    list.appendChild(item);
+  }
+  citations.append(citationsTitle, list);
+  unitBody.appendChild(citations);
+  unitStatus.textContent = "";
+}
+
+async function loadBuiltInUnit(unitId) {
+  const unit = BUILT_IN_UNITS.find((candidate) => candidate.id === unitId);
+  if (!unit) {
+    unitStatus.textContent = t("unit.loadFailed");
+    return;
+  }
+  unitStatus.textContent = t("unit.loading");
+  try {
+    const response = await fetch(`units/${unit.file}`, { cache: "no-store" });
+    const pack = await response.json();
+    if (!response.ok || !validUnitPack(pack)) throw new Error("invalid unit");
+    renderUnitPack(pack, { trusted: true });
+  } catch {
+    unitStatus.textContent = t("unit.loadFailed");
+  }
+}
+
+async function showUnitLibrary() {
+  activeUnitPack = null;
+  window.MutaViz?.cleanup(unitBody);
+  unitBody.replaceChildren();
+  $("#unit-title").textContent = t("unit.libraryTitle");
+  $("#unit-back").hidden = true;
+  $("#unit-toolbar").hidden = true;
+  $("#unit-import-help").hidden = true;
+  unitStatus.textContent = "";
+  const library = $("#unit-library");
+  library.hidden = false;
+  library.replaceChildren();
+  for (const unit of BUILT_IN_UNITS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "unit-library-card";
+    button.dataset.unitId = unit.id;
+    const icon = document.createElement("span");
+    icon.className = "unit-library-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = unit.icon;
+    const subject = document.createElement("small");
+    subject.textContent = unit.subject;
+    const title = document.createElement("strong");
+    const summary = document.createElement("span");
+    try {
+      const response = await fetch(`units/${unit.file}`, { cache: "no-store" });
+      const pack = await response.json();
+      if (!response.ok || !validUnitPack(pack) || pack.id !== unit.id) throw new Error("invalid unit");
+      title.textContent = pack.title;
+      summary.textContent = t("unit.summaryMinutes", {
+        summary: pack.summary,
+        minutes: pack.estimated_minutes,
+      });
+      button.addEventListener("click", () => { void loadBuiltInUnit(unit.id); });
+    } catch {
+      title.textContent = unit.subject;
+      summary.textContent = t("unit.loadFailed");
+      button.disabled = true;
+    }
+    button.append(icon, subject, title, summary);
+    library.appendChild(button);
+  }
+}
+
+function setUnitOpen(open) {
+  if (open && window.MutaLearning) {
+    window.MutaLearning.open();
+    return;
+  }
+  unitModal.hidden = !open;
+  $("#app").inert = open;
+  if (open) {
+    unitOpener = document.activeElement;
+    $("#unit-close").focus();
+    void showUnitLibrary();
+  } else {
+    unitOpener?.focus();
+    unitOpener = null;
+  }
+}
+
+$("#unit-open").addEventListener("click", () => setUnitOpen(true));
+$("#unit-close").addEventListener("click", () => setUnitOpen(false));
+$("#unit-back").addEventListener("click", () => { void showUnitLibrary(); });
+$("#unit-import").addEventListener("click", () => unitFile.click());
+unitModal.addEventListener("click", (event) => {
+  if (event.target === unitModal) setUnitOpen(false);
+});
+unitModal.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") setUnitOpen(false);
+  if (event.key !== "Tab") return;
+  const focusable = [...unitPanel.querySelectorAll("button:not([disabled]), input:not([disabled]), a[href]")]
+    .filter((element) => !element.hidden);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault(); last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault(); first.focus();
+  }
+});
+unitFile.addEventListener("change", () => {
+  const file = unitFile.files?.[0];
+  unitFile.value = "";
+  if (!file) return;
+  if (file.size > MAX_UNIT_FILE_BYTES) {
+    unitStatus.textContent = t("unit.invalid");
+    return;
+  }
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const pack = JSON.parse(String(reader.result || ""));
+      if (!validUnitPack(pack)) throw new Error("invalid unit");
+      renderUnitPack(pack, { trusted: false });
+    } catch {
+      unitStatus.textContent = t("unit.invalid");
+    }
+  });
+  reader.addEventListener("error", () => { unitStatus.textContent = t("unit.invalid"); });
+  reader.readAsText(file);
+});
 
 // ---------------------------------------------------------------------------
 // Message rendering
@@ -2014,12 +2590,30 @@ function renderConversationRow(c) {
 }
 
 async function refreshSidebar() {
+  const styleVersionsAtStart = new Map(conversationStyleVersions);
+  const persistedStyleVersionsAtStart = new Map(persistedConversationStyleVersions);
   try {
     const r = await fetch(`/v1/conversations?student_id=${encodeURIComponent(studentId)}`, {
       headers: authHeaders(),
     });
     if (!r.ok) return false;
     const body = await r.json();
+    for (const conversation of body.conversations) {
+      const currentVersion = conversationStyleVersions.get(conversation.id) || 0;
+      if (
+        window.MutaTeachingStylePolicy.canApplyServerStyle({
+          currentVersion,
+          versionAtStart: styleVersionsAtStart.get(conversation.id) || 0,
+          persistedVersionAtStart: persistedStyleVersionsAtStart.get(conversation.id) || 0,
+        })
+        && TEACHING_STYLE_KEYS[conversation.mode]
+      ) {
+        conversationStyles.set(conversation.id, conversation.mode);
+      }
+      if (CONVERSATION_PERSONAS.has(conversation.persona)) {
+        conversationPersonas.set(conversation.id, conversation.persona);
+      }
+    }
     const list = $("#conversation-list");
     list.innerHTML = "";
     const pinned = body.conversations.filter((conversation) => conversation.pinned);
@@ -2067,6 +2661,7 @@ async function loadConversation(
     quietUnavailable = false,
   } = {},
 ) {
+  if (classViewOpen) setClassView(false, { restoreFocus: false });
   if (conversationRetryTarget && conversationRetryTarget !== cid) {
     clearTimeout(conversationRetryTimer);
     conversationRetryTimer = null;
@@ -2078,6 +2673,8 @@ async function loadConversation(
     return null;
   }
   const requestedNavigation = ++navigationVersion;
+  const styleVersionAtStart = conversationStyleVersions.get(cid) || 0;
+  const persistedStyleVersionAtStart = persistedConversationStyleVersions.get(cid) || 0;
   pendingConversationLoad = cid;
   // Keep a reference even if finishGeneration removes it from the Map while history is in
   // flight. That history snapshot may contain only a partial assistant row.
@@ -2129,11 +2726,23 @@ async function loadConversation(
   }
   closeTelemetry(0);
   conversationId = cid;
+  if (
+    window.MutaTeachingStylePolicy.canApplyServerStyle({
+      currentVersion: conversationStyleVersions.get(cid) || 0,
+      versionAtStart: styleVersionAtStart,
+      persistedVersionAtStart: persistedStyleVersionAtStart,
+    })
+    && TEACHING_STYLE_KEYS[body.mode]
+  ) {
+    conversationStyles.set(cid, body.mode);
+  }
+  if (CONVERSATION_PERSONAS.has(body.persona)) conversationPersonas.set(cid, body.persona);
   pendingConversationLoad = null;
   clearTimeout(conversationRetryTimer);
   conversationRetryTimer = null;
   conversationRetryTarget = null;
   currentViewId = newViewId();
+  renderTeachingStyle();
   setConversationLocation(cid, { mode: historyMode });
   window.MutaViz?.cleanup(messagesEl);
   messagesEl.replaceChildren();
@@ -2220,6 +2829,7 @@ function settleFailedGeneration(job, handle = job.handle) {
 }
 
 function newChat({ historyMode = "push" } = {}) {
+  if (classViewOpen) setClassView(false, { restoreFocus: false });
   clearTimeout(conversationRetryTimer);
   conversationRetryTimer = null;
   conversationRetryTarget = null;
@@ -2236,7 +2846,9 @@ function newChat({ historyMode = "push" } = {}) {
   }
   closeTelemetry(0);
   conversationId = null;
+  newChatStyle = preferredStyle;
   currentViewId = newViewId();
+  renderTeachingStyle();
   setConversationLocation(null, { mode: historyMode });
   pendingAttachments = [];
   renderChips();
@@ -2887,6 +3499,8 @@ async function dispatch(item, opts = {}) {
   const message = composeOutgoingMessage(mentionedText, item.attachments);
   const attachmentIds = item.attachments.map((a) => a.id).filter((id) => id != null);
   const startedIn = conversationOverride;
+  const teachingMode = styleForConversation(startedIn);
+  const teachingPersona = personaForConversation(startedIn);
   const startedView = viewOverride;
   const startKey = startKeyFor(startedIn, startedView);
   if (startingConversations.has(startKey) || jobForConversation(startedIn)) return;
@@ -2917,7 +3531,12 @@ async function dispatch(item, opts = {}) {
   // POST response during refresh just as easily as brand-new chats can.
   sessionStorage.setItem(
     `muta-pending:${clientRequestId}`,
-    JSON.stringify({ conversation_id: startedIn }),
+    JSON.stringify({
+      conversation_id: startedIn,
+      view_id: startedView,
+      requested_mode: teachingMode,
+      mode: teachingMode,
+    }),
   );
   if (startedIn == null && renderingHere) {
     setPendingLocation(clientRequestId);
@@ -2932,6 +3551,8 @@ async function dispatch(item, opts = {}) {
         student_id: studentId,
         message,
         conversation_id: startedIn,
+        mode: teachingMode,
+        persona: teachingPersona,
         client_request_id: clientRequestId,
         // Regeneration must resend the same image content even though it creates no new user
         // row. The gateway simply skips re-linking when user_message_id is null.
@@ -2946,6 +3567,7 @@ async function dispatch(item, opts = {}) {
         // Response-language preference is trusted request metadata. Never prefix or rewrite
         // `message`: the gateway puts this value in the system prompt instead.
         language: window.MutaI18n.responseLanguage,
+        ...window.MutaClassroom.courseChatMetadata(selectedShareCourse()),
       }),
     });
     if (!res.ok) {
@@ -3005,6 +3627,15 @@ async function dispatch(item, opts = {}) {
       return;
     }
     const started = await res.json();
+    const pendingStyle = pendingStyleMarker(clientRequestId);
+    const styleReconciliation = reconcileAssignedConversationStyle(
+      started.conversation_id,
+      teachingMode,
+      TEACHING_STYLE_KEYS[pendingStyle?.mode]
+        ? pendingStyle.mode
+        : styleForConversation(startedIn),
+    );
+    conversationPersonas.set(started.conversation_id, teachingPersona);
     const stillHere = currentViewId === startedView;
     const returnedToConversation =
       !stillHere &&
@@ -3017,7 +3648,7 @@ async function dispatch(item, opts = {}) {
       // tokens arrive, so even an instant refresh returns to the correct conversation.
       setConversationLocation(conversationId, { mode: "replace" });
     }
-    sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+    retirePendingStyleMarker(clientRequestId, styleReconciliation);
     job = {
       id: started.job_id,
       cid: started.conversation_id,
@@ -3250,11 +3881,39 @@ function decorateCompletedReply(job, ev) {
     last.appendChild(badge);
   }
   if (ev.check_note) {
-    const warn = document.createElement("div");
-    warn.className = "reply-incomplete";
-    warn.dataset.i18n = "badge.checkFailed";
-    warn.textContent = t("badge.checkFailed");
-    last.querySelector(".prose")?.appendChild(warn);
+    if (!last.querySelector(".reply-incomplete")) {
+      const warn = document.createElement("div");
+      warn.className = "reply-incomplete";
+      warn.dataset.i18n = "badge.checkFailed";
+      warn.textContent = t("badge.checkFailed");
+      last.querySelector(".prose")?.appendChild(warn);
+    }
+    if (authRole === "member" && !last.querySelector(".class-check-fallback")) {
+      const fallback = document.createElement("div");
+      fallback.className = "class-check-fallback";
+      const message = document.createElement("span");
+      message.textContent = featureT("class.verifyFallback");
+      const actions = document.createElement("span");
+      actions.className = "class-check-actions";
+      const draft = window.MutaClassroom.verificationFallbackDraft(
+        job.item?.typed,
+        job.content,
+      );
+      for (const [key, addressedToTeacher] of [
+        ["class.askTeacherAction", true],
+        ["class.askClassAction", false],
+      ]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = featureT(key);
+        button.addEventListener("click", () => {
+          window.MutaClassroom.openComposer?.(draft, addressedToTeacher);
+        });
+        actions.append(button);
+      }
+      fallback.append(message, actions);
+      last.append(fallback);
+    }
   } else if (ev.verified === true && !last.querySelector(".verified-badge")) {
     const badge = document.createElement("span");
     badge.className = "verified-badge";
@@ -3316,7 +3975,18 @@ async function recoverGenerations({ attempts = 6, delayMs = 400 } = {}) {
       const body = await response.json();
       for (const active of body.generations || []) {
         if (active.client_request_id) {
-          sessionStorage.removeItem(`muta-pending:${active.client_request_id}`);
+          const marker = pendingStyleMarker(active.client_request_id);
+          const requestedMode = marker?.requested_mode || marker?.mode;
+          if (TEACHING_STYLE_KEYS[requestedMode]) {
+            const styleReconciliation = reconcileAssignedConversationStyle(
+              active.conversation_id,
+              requestedMode,
+              TEACHING_STYLE_KEYS[marker?.mode] ? marker.mode : requestedMode,
+            );
+            retirePendingStyleMarker(active.client_request_id, styleReconciliation);
+          } else {
+            sessionStorage.removeItem(`muta-pending:${active.client_request_id}`);
+          }
         }
         if (generationJobs.has(active.job_id)) continue;
         const job = recoveredJob(active);
@@ -3350,6 +4020,22 @@ async function recoverPendingGeneration(
         const body = await response.json();
         const active = body.generations?.[0];
         if (active) {
+          // The learner may change style while this recovery poll is waiting. Read only now,
+          // when the server match is known, rather than retaining the first poll's stale value.
+          const pendingMarker = pendingStyleMarker(clientRequestId);
+          const requestedMode = pendingMarker?.requested_mode || pendingMarker?.mode;
+          if (TEACHING_STYLE_KEYS[requestedMode]) {
+            const styleReconciliation = reconcileAssignedConversationStyle(
+              active.conversation_id,
+              requestedMode,
+              TEACHING_STYLE_KEYS[pendingMarker?.mode]
+                ? pendingMarker.mode
+                : requestedMode,
+            );
+            retirePendingStyleMarker(clientRequestId, styleReconciliation);
+          } else {
+            sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
+          }
           let job = generationJobs.get(active.job_id);
           let created = false;
           if (!job) {
@@ -3357,7 +4043,6 @@ async function recoverPendingGeneration(
             generationJobs.set(job.id, job);
             created = true;
           }
-          sessionStorage.removeItem(`muta-pending:${clientRequestId}`);
           // Polling can last 20 seconds. Re-evaluate the view when the match arrives so an old
           // recovery cannot yank the student back from a chat they deliberately navigated to;
           // conversely, attach if they have since returned to this conversation.
@@ -3917,11 +4602,525 @@ $("#file-resource").addEventListener("change", (event) => {
   if (file) void uploadResource(file);
 });
 
+// --- Muta Share courses and class board ------------------------------------------------
+function selectedShareCourse() {
+  return shareCourses.find((course) => course.id === selectedCourseId) || null;
+}
+
+function courseStyleLabel(style) {
+  return featureT(`course.style.${style || "socratic"}`);
+}
+
+function syncCourseControl({ announceChange = false } = {}) {
+  const control = $("#share-course-control");
+  const select = $("#share-course-select");
+  const policy = $("#share-course-policy");
+  if (!control || !select || !policy) return;
+  control.hidden = authRole !== "member";
+  const before = select.value;
+  select.replaceChildren();
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = featureT("course.noCourse");
+  select.append(none);
+  for (const course of shareCourses) {
+    const option = document.createElement("option");
+    option.value = course.id;
+    option.textContent = course.name;
+    select.append(option);
+  }
+  if (!shareCourses.some((course) => course.id === selectedCourseId)) {
+    selectedCourseId = "";
+    localStorage.removeItem("muta-share-course");
+  }
+  select.value = selectedCourseId;
+  const course = selectedShareCourse();
+  const messages = [];
+  if (course?.lock_style) messages.push(featureT("course.setByTeacher"));
+  if (course) messages.push(courseStyleLabel(course.teaching_style));
+  if (course?.withhold_final_answers) messages.push(featureT("course.withholding"));
+  policy.textContent = messages.join(" · ");
+  policy.classList.toggle("locked", Boolean(course?.lock_style));
+  if (announceChange && before !== select.value) announce(policy.textContent || none.textContent);
+  document.dispatchEvent(new CustomEvent("muta:coursechange", { detail: { course } }));
+}
+
+function renderHostCourseList() {
+  const list = $("#host-course-list");
+  if (!list) return;
+  list.replaceChildren();
+  if (!shareCourses.length) {
+    const empty = document.createElement("p");
+    empty.className = "host-roster-empty";
+    empty.textContent = featureT("host.courseEmpty");
+    list.append(empty);
+    return;
+  }
+  for (const course of shareCourses) {
+    const row = document.createElement("div");
+    row.className = "host-course-row";
+    const copy = document.createElement("div");
+    const name = document.createElement("strong");
+    const detail = document.createElement("small");
+    name.textContent = course.name;
+    detail.textContent = [
+      courseStyleLabel(course.teaching_style),
+      course.lock_style ? featureT("host.courseLock") : "",
+      course.withhold_final_answers ? featureT("host.courseWithhold") : "",
+    ].filter(Boolean).join(" · ");
+    copy.append(name, detail);
+    const actions = document.createElement("div");
+    actions.className = "host-course-row-actions";
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.textContent = featureT("host.courseEdit");
+    edit.addEventListener("click", () => setHostCourseForm(true, course));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "danger";
+    remove.textContent = featureT("host.courseDelete");
+    remove.addEventListener("click", () => void deleteHostCourse(course, remove));
+    actions.append(edit, remove);
+    row.append(copy, actions);
+    list.append(row);
+  }
+}
+
+async function loadShareCourses({ quiet = false } = {}) {
+  if (!identityReady || !["host", "member"].includes(authRole)) return false;
+  try {
+    const response = await fetch("/v1/share/courses", {
+      headers: authHeaders(),
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("course.loadFailed")));
+    shareCourses = (payload.courses || [])
+      .map((course) => window.MutaClassroom.normalizeCourse(course))
+      .filter(Boolean);
+    syncCourseControl();
+    renderHostCourseList();
+    if (authRole === "host") $("#host-course-status").textContent = "";
+    return true;
+  } catch (error) {
+    if (authRole === "member") {
+      $("#share-course-policy").textContent = featureT("course.loadFailed");
+    } else if (authRole === "host") {
+      $("#host-course-status").textContent = featureT("host.courseLoadFailed");
+    }
+    if (!quiet) toast(error.message || featureT("course.loadFailed"));
+    return false;
+  }
+}
+
+function updateCourseNoteCount() {
+  const note = $("#host-course-note");
+  $("#host-course-note-help").textContent = featureT("host.courseNoteHelp", {
+    count: note.value.length,
+  });
+}
+
+function setHostCourseForm(open, course = null) {
+  const form = $("#host-course-form");
+  editingCourseId = open ? course?.id || null : null;
+  form.hidden = !open;
+  if (!open) return;
+  $("#host-course-form-title").textContent = featureT(
+    course ? "host.courseEdit" : "host.courseAdd",
+  );
+  $("#host-course-name").value = course?.name || "";
+  $("#host-course-style").value = course?.teaching_style || "socratic";
+  $("#host-course-lock").checked = course?.lock_style === true;
+  $("#host-course-withhold").checked = course?.withhold_final_answers === true;
+  $("#host-course-note").value = course?.teacher_note || "";
+  updateCourseNoteCount();
+  $("#host-course-name").focus();
+}
+
+async function deleteHostCourse(course, button) {
+  if (!globalThis.confirm(featureT("host.courseDeleteConfirm", { name: course.name }))) return;
+  button.disabled = true;
+  try {
+    const response = await fetch(`/v1/share/host/courses/${encodeURIComponent(course.id)}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("host.courseDeleteFailed")));
+    if (editingCourseId === course.id) setHostCourseForm(false);
+    await loadShareCourses({ quiet: true });
+  } catch (error) {
+    $("#host-course-status").textContent = error.message || featureT("host.courseDeleteFailed");
+    button.disabled = false;
+  }
+}
+
+function classTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString(window.MutaI18n.locale);
+}
+
+function scheduleClassRefresh() {
+  if (classPollTimer) window.clearTimeout(classPollTimer);
+  if (!classViewOpen) return;
+  classPollTimer = window.setTimeout(() => {
+    if (!classViewOpen) return;
+    if (activeClassPostId) void loadClassThread(activeClassPostId, { quiet: true });
+    else void loadClassPosts({ quiet: true });
+  }, 5000);
+}
+
+function setClassView(open, { prefill = "", addressedToTeacher = false, restoreFocus = true } = {}) {
+  classThreadRequestVersion += 1;
+  classViewOpen = open;
+  $("#class-board").hidden = !open;
+  $("#chat-scroll").hidden = open;
+  $("#composer-wrap").hidden = open;
+  $("#class-open").setAttribute("aria-current", open ? "page" : "false");
+  if (!open) {
+    if (classPollTimer) window.clearTimeout(classPollTimer);
+    classPollTimer = null;
+    if (restoreFocus) $("#class-open").focus();
+    return;
+  }
+  setDrawer(false);
+  activeClassPostId = null;
+  displayedClassPostId = null;
+  $("#class-list-view").hidden = false;
+  $("#class-thread-view").hidden = true;
+  if (authRole === "member") {
+    $("#class-post-body").value = String(prefill || "").slice(0, 4000);
+    $("#class-address-teacher").checked = addressedToTeacher;
+  }
+  void loadClassPosts();
+  (prefill && authRole === "member" ? $("#class-post-body") : $("#class-board-title")).focus();
+}
+
+function renderClassPosts(posts) {
+  const list = $("#class-post-list");
+  list.replaceChildren();
+  if (!posts.length) {
+    $("#class-list-status").hidden = false;
+    $("#class-list-status").textContent = featureT("class.empty");
+    return;
+  }
+  $("#class-list-status").hidden = true;
+  for (const post of posts) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "class-post-card";
+    card.setAttribute("role", "listitem");
+    const title = document.createElement("strong");
+    title.textContent = window.MutaClassroom.excerpt(post.body, 90);
+    const replies = document.createElement("span");
+    replies.className = "class-post-meta";
+    replies.textContent = featureT(
+      post.reply_count === 1 ? "class.replyCountOne" : "class.replyCount",
+      { count: post.reply_count },
+    );
+    const excerpt = document.createElement("p");
+    excerpt.textContent = window.MutaClassroom.excerpt(post.body, 180);
+    const meta = document.createElement("span");
+    meta.className = "class-post-meta";
+    meta.textContent = `${featureT("class.by", { name: post.author.username })} · ${classTime(post.updated_at)}`;
+    card.append(title, replies, excerpt, meta);
+    if (post.addressed_to_teacher) {
+      const badge = document.createElement("span");
+      badge.className = "class-board-badge";
+      badge.textContent = featureT("class.addressedTeacher");
+      card.append(badge);
+    }
+    if (post.verified_reply_count > 0) {
+      const badge = document.createElement("span");
+      badge.className = "class-board-badge verified";
+      badge.textContent = featureT("class.teacherVerified");
+      card.append(badge);
+    }
+    card.addEventListener("click", () => void loadClassThread(post.id));
+    list.append(card);
+  }
+}
+
+async function loadClassPosts({ quiet = false } = {}) {
+  if (!classViewOpen) return;
+  if (!quiet) {
+    $("#class-list-status").hidden = false;
+    $("#class-list-status").textContent = featureT("class.loading");
+  }
+  try {
+    const response = await fetch("/v1/share/class/posts?limit=50", {
+      headers: authHeaders(),
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("class.loadFailed")));
+    renderClassPosts(payload.posts || []);
+  } catch (error) {
+    $("#class-list-status").hidden = false;
+    $("#class-list-status").textContent = error.message || featureT("class.loadFailed");
+  } finally {
+    scheduleClassRefresh();
+  }
+}
+
+function classAuthor(author, createdAt) {
+  const line = document.createElement("div");
+  line.className = "class-author";
+  const name = document.createElement("strong");
+  const time = document.createElement("time");
+  name.textContent = author.username;
+  time.textContent = classTime(createdAt);
+  line.append(name, time);
+  return line;
+}
+
+function renderClassThread(thread) {
+  const postRoot = $("#class-thread-post");
+  postRoot.replaceChildren();
+  postRoot.append(classAuthor(thread.post.author, thread.post.created_at));
+  if (thread.post.addressed_to_teacher) {
+    const badge = document.createElement("span");
+    badge.className = "class-board-badge";
+    badge.textContent = featureT("class.addressedTeacher");
+    postRoot.append(badge);
+  }
+  const body = document.createElement("div");
+  body.className = "class-rich";
+  window.MutaClassroom.renderBoardMarkdown(body, thread.post.body);
+  postRoot.append(body);
+  const list = $("#class-reply-list");
+  list.replaceChildren();
+  for (const reply of thread.replies || []) {
+    const card = document.createElement("article");
+    card.className = `class-reply-card${reply.teacher_verified ? " verified" : ""}`;
+    const author = classAuthor(reply.author, reply.created_at);
+    if (reply.teacher_verified) {
+      const badge = document.createElement("span");
+      badge.className = "class-board-badge verified";
+      badge.textContent = featureT("class.teacherVerified");
+      author.append(badge);
+    }
+    const replyBody = document.createElement("div");
+    replyBody.className = "class-rich";
+    window.MutaClassroom.renderBoardMarkdown(replyBody, reply.body);
+    card.append(author, replyBody);
+    if (authRole === "host") {
+      const actions = document.createElement("div");
+      actions.className = "class-reply-actions";
+      const verify = document.createElement("button");
+      verify.type = "button";
+      verify.textContent = featureT(reply.teacher_verified ? "class.unverify" : "class.verify");
+      verify.addEventListener("click", () => void setClassReplyVerification(reply, verify));
+      actions.append(verify);
+      card.append(actions);
+    }
+    list.append(card);
+  }
+  $("#class-delete-post").hidden = authRole !== "host";
+  $("#class-reply-form").hidden = authRole !== "member";
+}
+
+async function loadClassThread(postId, { quiet = false } = {}) {
+  const requestVersion = ++classThreadRequestVersion;
+  activeClassPostId = postId;
+  displayedClassPostId = null;
+  $("#class-list-view").hidden = true;
+  $("#class-thread-view").hidden = false;
+  if (!quiet) $("#class-reply-status").textContent = featureT("class.loading");
+  try {
+    const response = await fetch(window.MutaClassroom.postEndpoint(postId), {
+      headers: authHeaders(),
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("class.loadFailed")));
+    if (!window.MutaClassroom.acceptsThreadResponse({
+      requestedPostId: postId,
+      activePostId: activeClassPostId,
+      payloadPostId: payload.post?.id,
+      requestVersion,
+      currentVersion: classThreadRequestVersion,
+    })) return;
+    displayedClassPostId = postId;
+    renderClassThread(payload);
+    $("#class-reply-status").textContent = "";
+  } catch (error) {
+    if (requestVersion !== classThreadRequestVersion || activeClassPostId !== postId) return;
+    $("#class-reply-status").textContent = error.message || featureT("class.loadFailed");
+  } finally {
+    if (requestVersion === classThreadRequestVersion && activeClassPostId === postId) {
+      scheduleClassRefresh();
+    }
+  }
+}
+
+async function setClassReplyVerification(reply, button) {
+  button.disabled = true;
+  try {
+    const response = await fetch(window.MutaClassroom.replyVerificationEndpoint(reply.id), {
+      method: "PUT",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ verified: !reply.teacher_verified }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("class.verifyFailed")));
+    if (activeClassPostId === reply.post_id) {
+      await loadClassThread(reply.post_id, { quiet: true });
+    }
+  } catch (error) {
+    $("#class-reply-status").textContent = error.message || featureT("class.verifyFailed");
+    button.disabled = false;
+  }
+}
+
+$("#share-course-select").addEventListener("change", (event) => {
+  selectedCourseId = event.target.value;
+  if (selectedCourseId) localStorage.setItem("muta-share-course", selectedCourseId);
+  else localStorage.removeItem("muta-share-course");
+  syncCourseControl({ announceChange: true });
+});
+$("#host-course-add").addEventListener("click", () => setHostCourseForm(true));
+$("#host-course-cancel").addEventListener("click", () => setHostCourseForm(false));
+$("#host-course-note").addEventListener("input", updateCourseNoteCount);
+$("#host-course-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("#host-course-save");
+  button.disabled = true;
+  $("#host-course-status").textContent = "";
+  const payload = {
+    name: $("#host-course-name").value,
+    teaching_style: $("#host-course-style").value,
+    lock_style: $("#host-course-lock").checked,
+    withhold_final_answers: $("#host-course-withhold").checked,
+    teacher_note: $("#host-course-note").value,
+  };
+  const endpoint = editingCourseId
+    ? `/v1/share/host/courses/${encodeURIComponent(editingCourseId)}`
+    : "/v1/share/host/courses";
+  try {
+    const response = await fetch(endpoint, {
+      method: editingCourseId ? "PUT" : "POST",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(body, featureT("host.courseSaveFailed")));
+    setHostCourseForm(false);
+    await loadShareCourses({ quiet: true });
+  } catch (error) {
+    $("#host-course-status").textContent = error.message || featureT("host.courseSaveFailed");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#class-open").addEventListener("click", () => setClassView(!classViewOpen));
+$("#class-refresh").addEventListener("click", () => {
+  if (activeClassPostId) void loadClassThread(activeClassPostId);
+  else void loadClassPosts();
+});
+$("#class-thread-back").addEventListener("click", () => {
+  classThreadRequestVersion += 1;
+  activeClassPostId = null;
+  displayedClassPostId = null;
+  $("#class-thread-view").hidden = true;
+  $("#class-list-view").hidden = false;
+  void loadClassPosts();
+  $("#class-board-title").focus();
+});
+$("#class-post-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("#class-post-submit");
+  button.disabled = true;
+  $("#class-post-status").textContent = featureT("class.posting");
+  try {
+    const response = await fetch("/v1/share/class/posts", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        body: $("#class-post-body").value,
+        addressed_to_teacher: $("#class-address-teacher").checked,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("class.writeFailed")));
+    $("#class-post-body").value = "";
+    $("#class-address-teacher").checked = false;
+    $("#class-post-status").textContent = featureT("class.posted");
+    await loadClassPosts({ quiet: true });
+    await loadClassThread(payload.id);
+  } catch (error) {
+    $("#class-post-status").textContent = error.message || featureT("class.writeFailed");
+  } finally {
+    button.disabled = false;
+  }
+});
+$("#class-reply-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const postId = displayedClassPostId;
+  if (!postId || postId !== activeClassPostId) return;
+  const button = $("#class-reply-submit");
+  button.disabled = true;
+  $("#class-reply-status").textContent = featureT("class.sendingReply");
+  try {
+    const response = await fetch(
+      `${window.MutaClassroom.postEndpoint(postId)}/replies`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ body: $("#class-reply-body").value }),
+      },
+    );
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("class.writeFailed")));
+    $("#class-reply-body").value = "";
+    $("#class-reply-status").textContent = featureT("class.replied");
+    if (activeClassPostId === postId) await loadClassThread(postId, { quiet: true });
+  } catch (error) {
+    $("#class-reply-status").textContent = error.message || featureT("class.writeFailed");
+  } finally {
+    button.disabled = false;
+  }
+});
+$("#class-delete-post").addEventListener("click", async () => {
+  const postId = displayedClassPostId;
+  if (
+    !postId
+    || postId !== activeClassPostId
+    || !globalThis.confirm(featureT("class.deleteConfirm"))
+  ) return;
+  const button = $("#class-delete-post");
+  button.disabled = true;
+  try {
+    const response = await fetch(
+      `/v1/share/host/class/posts/${encodeURIComponent(postId)}`,
+      { method: "DELETE", headers: authHeaders() },
+    );
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(shareDetail(payload, featureT("class.deleteFailed")));
+    classThreadRequestVersion += 1;
+    activeClassPostId = null;
+    displayedClassPostId = null;
+    $("#class-thread-view").hidden = true;
+    $("#class-list-view").hidden = false;
+    await loadClassPosts();
+  } catch (error) {
+    $("#class-reply-status").textContent = error.message || featureT("class.deleteFailed");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+window.MutaClassroom.openComposer = (body = "", addressedToTeacher = false) => {
+  setClassView(true, { prefill: body, addressedToTeacher });
+};
+
 // --- settings --------------------------------------------------------------------------
 const settingsModal = $("#settings-modal");
 const parallelChatsToggle = $("#setting-parallel-chats");
 const powerOptimizationToggle = $("#setting-power-optimization");
 const languageSelect = $("#setting-language");
+const studyCountrySelect = $("#setting-study-country");
 const themeSelect = $("#setting-theme");
 const hostEnabledToggle = $("#setting-host-enabled");
 const hostRemoveModal = $("#host-remove-modal");
@@ -3933,6 +5132,25 @@ let hostRosterSignature = "";
 let hostReadFailed = false;
 let hostSettingsSaving = false;
 const pendingHostUserActions = new Set();
+
+function populateStudyCountries() {
+  const current = studyCountrySelect.value;
+  studyCountrySelect.replaceChildren();
+  const unset = document.createElement("option");
+  unset.value = "";
+  unset.textContent = t("settings.studyCountryNone");
+  studyCountrySelect.appendChild(unset);
+  for (const country of window.MutaAfricaLanguages.countries) {
+    const option = document.createElement("option");
+    option.value = country.code;
+    option.textContent = country.name;
+    studyCountrySelect.appendChild(option);
+  }
+  studyCountrySelect.value = current;
+}
+
+populateStudyCountries();
+document.addEventListener("muta:localechange", populateStudyCountries);
 
 function syncThemeSetting() {
   themeSelect.value = globalThis.MutaTheme?.preference || "system";
@@ -3950,7 +5168,10 @@ function setSettingsOpen(open) {
   if (open) {
     void loadResources({ quiet: true });
     void refreshPowerStatus();
-    if (authRole === "host") void loadHostStatus();
+    if (authRole === "host") {
+      void loadHostStatus();
+      void loadShareCourses({ quiet: true });
+    }
     languageSelect.focus();
   } else {
     if (hostPollTimer) window.clearTimeout(hostPollTimer);
@@ -4002,6 +5223,10 @@ function hostUserRow(user) {
 function renderHostStatus(status, { clearReadFailure = true } = {}) {
   if (clearReadFailure) hostReadFailed = false;
   hostStatus = status;
+  $("#class-open").hidden = authRole !== "member" && !(authRole === "host" && status.enabled);
+  if (authRole === "host" && !status.enabled && classViewOpen) {
+    setClassView(false, { restoreFocus: false });
+  }
   hostEnabledToggle.checked = Boolean(status.enabled);
   for (const input of document.querySelectorAll('input[name="host-memory"]')) {
     input.checked = input.value === status.memory_mode;
@@ -4230,6 +5455,7 @@ async function loadSettings() {
   if (cachedPower != null) powerOptimizationEnabled = cachedPower === "true";
   parallelChatsToggle.checked = allowParallelChats;
   powerOptimizationToggle.checked = powerOptimizationEnabled;
+  const styleVersionAtStart = styleIntentVersion;
   try {
     const response = await fetch("/v1/settings", { headers: authHeaders() });
     if (!response.ok) return;
@@ -4237,6 +5463,17 @@ async function loadSettings() {
     const previousAllowParallel = allowParallelChats;
     allowParallelChats = settings.allow_parallel_chats !== false;
     powerOptimizationEnabled = settings.power_optimization_enabled !== false;
+    studyCountrySelect.value = settings.study_country || "";
+    studyCountrySelect.dataset.savedValue = studyCountrySelect.value;
+    if (
+      styleVersionAtStart === styleIntentVersion
+      && TEACHING_STYLE_KEYS[settings.preferred_style]
+    ) {
+      preferredStyle = settings.preferred_style;
+      localStorage.setItem("muta-preferred-style", preferredStyle);
+      if (!conversationId) newChatStyle = preferredStyle;
+      renderTeachingStyle();
+    }
     parallelChatsToggle.checked = allowParallelChats;
     powerOptimizationToggle.checked = powerOptimizationEnabled;
     localStorage.setItem("muta-parallel-chats", String(allowParallelChats));
@@ -4246,6 +5483,25 @@ async function loadSettings() {
     /* keep the local fallback */
   }
   await refreshPowerStatus();
+}
+
+async function saveStudyCountry(code) {
+  const previous = studyCountrySelect.dataset.savedValue || "";
+  studyCountrySelect.disabled = true;
+  try {
+    const response = await fetch("/v1/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ study_country: code || null }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    studyCountrySelect.dataset.savedValue = code;
+  } catch {
+    studyCountrySelect.value = previous;
+    toast(t("settings.saveFailed"));
+  } finally {
+    studyCountrySelect.disabled = false;
+  }
 }
 
 async function saveParallelChats(enabled) {
@@ -4433,6 +5689,9 @@ parallelChatsToggle.addEventListener("change", () => {
 powerOptimizationToggle.addEventListener("change", () => {
   void savePowerOptimization(powerOptimizationToggle.checked);
 });
+studyCountrySelect.addEventListener("change", () => {
+  void saveStudyCountry(studyCountrySelect.value);
+});
 $("#power-badge").addEventListener("click", () => setSettingsOpen(true));
 languageSelect.addEventListener("change", () => {
   window.MutaI18n.setLocale(languageSelect.value);
@@ -4494,6 +5753,8 @@ async function bootChat() {
   // llama-server maps the model. Saved conversations are database-backed and must remain
   // available during that independent warm-up.
   void refreshModelCatalog();
+  void loadShareCourses({ quiet: true });
+  if (authRole === "host") void loadHostStatus({ poll: false });
   syncComposerState();
   restoreMessageQueue();
   // Sidebar history, settings and resources have independent storage paths. Start all three
@@ -4967,11 +6228,24 @@ const rerenderDynamicLocalization = window.MutaDynamicLocalization.create({
 });
 
 window.MutaI18n.subscribe(() => {
+  renderTeachingStyle();
   applyThinkingLabel();
   renderChips();
   renderQueue();
   refreshSidebar();
   syncComposerState();
+  syncCourseControl();
+  renderHostCourseList();
+  if (!$("#host-course-form").hidden) {
+    $("#host-course-form-title").textContent = featureT(
+      editingCourseId ? "host.courseEdit" : "host.courseAdd",
+    );
+    updateCourseNoteCount();
+  }
+  if (classViewOpen) {
+    if (activeClassPostId) void loadClassThread(activeClassPostId, { quiet: true });
+    else void loadClassPosts({ quiet: true });
+  }
   rerenderDynamicLocalization();
   void refreshNetDot();
 });

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "kind": "course",
+  "id": "ai-foundations",
+  "title": "AI foundations — data, models and judgement",
+  "subject": "Artificial Intelligence",
+  "level": "Senior secondary to first-year university",
+  "description": "Understand what machine learning systems learn, how training differs from testing, and why confident output still needs evidence.",
+  "estimated_minutes": 55,
+  "exams": ["Course practice"],
+  "author": {"name": "Muta Learning", "url": "https://github.com/nelsonifechukwu/Muta"},
+  "license": {"name": "CC BY 4.0", "url": "https://creativecommons.org/licenses/by/4.0/"},
+  "concepts": [
+    {"id": "data", "title": "Examples and data", "prerequisites": []},
+    {"id": "model", "title": "Models and patterns", "prerequisites": ["data"]},
+    {"id": "evaluation", "title": "Training and evaluation", "prerequisites": ["model"]},
+    {"id": "bias", "title": "Bias, limits and human review", "prerequisites": ["evaluation"]}
+  ],
+  "chapters": [
+    {
+      "id": "examples-to-patterns",
+      "title": "From examples to a pattern",
+      "summary": "Follow the path from examples to a model and a prediction.",
+      "concept_ids": ["data", "model"],
+      "blocks": [
+        {"type": "markdown", "text": "### A model is a learned rule\n\nA machine-learning system receives **examples**. A training procedure adjusts a model so its outputs fit useful patterns in those examples. The model does not store truth itself; it stores parameters that produce outputs.\n\nImagine classifying messages as helpful or harmful. The examples, labels, collection method and missing cases all shape what the model can learn."},
+        {"type": "callout", "title": "Ask before trusting", "text": "Who collected the examples? What is missing? Does the new case look like the training cases?"},
+        {"type": "visualization", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "concept_process", "title": "How examples become a prediction", "aria_label": "Examples flow into training, a model and then a prediction that is checked.", "text_fallback": "Examples feed training. Training produces a model. The model produces a prediction. Evaluation checks it.", "height": 360, "controls": [], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "examples", "x": 90, "y": 170, "width": 120, "height": 64, "label": "examples", "color": "teal"}, {"type": "node", "id": "training", "x": 280, "y": 170, "width": 120, "height": 64, "label": "training", "color": "orange"}, {"type": "node", "id": "model", "x": 470, "y": 170, "width": 120, "height": 64, "label": "model", "color": "green"}, {"type": "node", "id": "check", "x": 660, "y": 170, "width": 130, "height": 64, "label": "evaluate", "color": "purple"}, {"type": "link", "from": "examples", "to": "training", "arrow": true, "label": "fit"}, {"type": "link", "from": "training", "to": "model", "arrow": true, "label": "parameters"}, {"type": "link", "from": "model", "to": "check", "arrow": true, "label": "test"}]}}},
+        {"type": "activity", "activity_id": "ai-q1"}
+      ]
+    },
+    {
+      "id": "test-before-trust",
+      "title": "Test before you trust",
+      "summary": "Separate training performance from evidence on unseen examples.",
+      "concept_ids": ["evaluation", "bias"],
+      "blocks": [
+        {"type": "markdown", "text": "### Training score is not enough\n\nA model can memorise details of its training set and still fail on new cases. A fair evaluation uses **held-out examples** that were not used to tune the model. The test should match the people and situations where the system will be used.\n\nFor a tutor, evaluation must test more than final-answer accuracy: it should test explanations, refusal to validate wrong work, language quality, latency and memory use."},
+        {"type": "callout", "title": "Human judgement remains part of the system", "text": "A checker can verify an equation. It cannot decide every historical interpretation or biological explanation. For those claims, expose sources, uncertainty and a route to a teacher."},
+        {"type": "activity", "activity_id": "ai-q2"},
+        {"type": "activity", "activity_id": "ai-q3"}
+      ]
+    }
+  ],
+  "activities": [
+    {"id": "ai-q1", "type": "mcq", "concept_id": "model", "prompt": "Which statement best describes a trained model?", "options": ["A database that contains every true answer", "A parameterised rule fitted to examples", "A person hidden inside a computer", "A guarantee that future predictions are correct"], "answer": 1, "explanation": "A trained model is a parameterised rule fitted to data. Its output still needs evaluation.", "exam_style": "Course practice", "difficulty": "Foundation"},
+    {"id": "ai-q2", "type": "mcq", "concept_id": "evaluation", "prompt": "Why should a final test set remain separate from training?", "options": ["To make the model file smaller", "To measure performance on examples not used for fitting", "To remove every source of bias", "To let the model browse the web"], "answer": 1, "explanation": "Held-out examples estimate how well the learned pattern transfers beyond the data used to fit it.", "exam_style": "Course practice", "difficulty": "Foundation"},
+    {"id": "ai-q3", "type": "mcq", "concept_id": "bias", "prompt": "A tutoring model is accurate in English but weak in Igbo. What is the strongest next step?", "options": ["Hide the language setting", "Claim equal performance anyway", "Evaluate with Igbo speakers, improve data and disclose the limitation", "Increase the font size"], "answer": 2, "explanation": "Measure the gap with relevant users, improve the evidence and be honest about remaining limits.", "exam_style": "Course practice", "difficulty": "Applied"}
+  ],
+  "games": [{"id": "ai-evidence-detective", "type": "challenge", "title": "Evidence detective", "description": "Decide which AI claims are supported by evidence.", "concept_id": "evaluation", "rounds": [{"prompt": "A model scores 99% on the examples used to train it. Is that enough to claim 99% real-world accuracy?", "options": ["Yes", "No"], "answer": 1, "explanation": "Training performance does not measure generalisation to unseen cases."}, {"prompt": "A tutor cites the exact textbook page supporting a factual claim. Which correctness layer is present?", "options": ["Source-backed", "Computed", "No evidence"], "answer": 0, "explanation": "A traceable source supports the claim, though readers can still inspect the source."}, {"prompt": "A language model says an equation is right, but a symbolic checker finds it false. Which result should control the badge?", "options": ["The more confident sentence", "The symbolic check", "A random choice"], "answer": 1, "explanation": "For a formal equation, the deterministic check outranks fluent model text."}]}],
+  "playgrounds": [{"id": "ai-pipeline", "title": "AI pipeline explorer", "description": "Use the control to focus each stage and trace where evidence and human review enter an AI system.", "concept_id": "evaluation", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "concept_process", "title": "Evidence through the AI pipeline", "aria_label": "Data, model, prediction and review are connected in sequence.", "text_fallback": "Data is used to fit a model. The model makes a prediction. Evidence and people review it.", "height": 390, "controls": [{"id": "review_focus", "label": "Emphasize human review", "type": "range", "value": 1, "min": 0.75, "max": 1.5, "step": 0.25, "binding": {"target_label": "review", "effect": "scale"}}], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "data", "x": 100, "y": 190, "width": 120, "height": 70, "label": "data", "color": "teal"}, {"type": "node", "id": "model", "x": 300, "y": 190, "width": 120, "height": 70, "label": "model", "color": "orange"}, {"type": "node", "id": "output", "x": 500, "y": 190, "width": 120, "height": 70, "label": "output", "color": "green"}, {"type": "node", "id": "review", "x": 700, "y": 190, "width": 120, "height": 70, "label": "review", "color": "purple"}, {"type": "link", "from": "data", "to": "model", "arrow": true, "label": ""}, {"type": "link", "from": "model", "to": "output", "arrow": true, "label": ""}, {"type": "link", "from": "output", "to": "review", "arrow": true, "label": ""}]}}}],
+  "sources": [
+    {"title": "UNESCO guidance for generative AI in education and research", "url": "https://unesdoc.unesco.org/ark:/48223/pf0000386693", "note": "Background on human-centred, transparent and evidence-aware use of generative AI in education.", "license": "UNESCO Open Access"},
+    {"title": "Google Machine Learning Crash Course", "url": "https://developers.google.com/machine-learning/crash-course", "note": "Open instructional reference for data, models, generalisation and evaluation.", "license": "Google Developers site terms"}
+  ]
+}

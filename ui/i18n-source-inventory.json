@@ -11,9 +11,11 @@
       "ui/app.js",
       "ui/audio.js",
       "ui/citations.js",
+      "ui/classroom.js",
       "ui/confirm-dialog.js",
       "ui/dynamic-localization.js",
       "ui/image-upload.js",
+      "ui/learning-platform.js",
       "ui/math.js",
       "ui/parallel-policy.js",
       "ui/popover-position.js",
@@ -23,6 +25,7 @@
       "ui/resource-mentions.js",
       "ui/startup.js",
       "ui/syntax.js",
+      "ui/teaching-style-policy.js",
       "ui/theme.js",
       "ui/visualizations.js",
       "ui/viz-frame-v2.js",
@@ -31,7 +34,7 @@
     ]
   },
   "catalog": {
-    "english_key_count": 367,
+    "english_key_count": 619,
     "english_keys": [
       "access.awaitApproval",
       "access.choosePassword",
@@ -83,6 +86,41 @@
       "badge.verified",
       "badge.verifiedTitle",
       "chat.conversation",
+      "class.addressedTeacher",
+      "class.askClassAction",
+      "class.askTeacher",
+      "class.askTeacherAction",
+      "class.back",
+      "class.by",
+      "class.delete",
+      "class.deleteConfirm",
+      "class.deleteFailed",
+      "class.description",
+      "class.empty",
+      "class.listLabel",
+      "class.loadFailed",
+      "class.loading",
+      "class.newQuestion",
+      "class.post",
+      "class.posted",
+      "class.posting",
+      "class.questionHint",
+      "class.questionLabel",
+      "class.refresh",
+      "class.replied",
+      "class.replyCount",
+      "class.replyCountOne",
+      "class.replyHint",
+      "class.replyLabel",
+      "class.sendReply",
+      "class.sendingReply",
+      "class.teacherVerified",
+      "class.title",
+      "class.unverify",
+      "class.verify",
+      "class.verifyFailed",
+      "class.verifyFallback",
+      "class.writeFailed",
       "code.copied",
       "code.copy",
       "code.copyFailed",
@@ -116,6 +154,15 @@
       "conversation.voiceChanging",
       "country.southAfrica",
       "country.zimbabwe",
+      "course.label",
+      "course.loadFailed",
+      "course.noCourse",
+      "course.setByTeacher",
+      "course.style.analogy",
+      "course.style.hints",
+      "course.style.socratic",
+      "course.style.subgoal",
+      "course.withholding",
       "drop.addFile",
       "empty.body",
       "empty.title",
@@ -136,6 +183,24 @@
       "host.copied",
       "host.copy",
       "host.copyFallback",
+      "host.courseAdd",
+      "host.courseCancel",
+      "host.courseDelete",
+      "host.courseDeleteConfirm",
+      "host.courseDeleteFailed",
+      "host.courseEdit",
+      "host.courseEmpty",
+      "host.courseLoadFailed",
+      "host.courseLock",
+      "host.courseName",
+      "host.courseNote",
+      "host.courseNoteHelp",
+      "host.courseSave",
+      "host.courseSaveFailed",
+      "host.courseStyle",
+      "host.courseWithhold",
+      "host.courses",
+      "host.coursesHelp",
       "host.decline",
       "host.description",
       "host.downloadCertificate",
@@ -164,6 +229,133 @@
       "host.tokensPerChat",
       "host.updateFailed",
       "host.waiting",
+      "learning.allExperiments",
+      "learning.allSubjects",
+      "learning.atGlance",
+      "learning.atGlanceHelp",
+      "learning.backGames",
+      "learning.buildsOn",
+      "learning.checkAnswer",
+      "learning.checked",
+      "learning.checkedAttempts",
+      "learning.close",
+      "learning.computed",
+      "learning.computedHelp",
+      "learning.continue",
+      "learning.coreConflict",
+      "learning.correct",
+      "learning.correctEvidence",
+      "learning.correctnessBoundary",
+      "learning.correctnessBoundaryTitle",
+      "learning.correctnessHelp",
+      "learning.correctnessTitle",
+      "learning.courseMeta",
+      "learning.coursePractice",
+      "learning.coursePracticeHelp",
+      "learning.coursePracticeTitle",
+      "learning.createWithTutor",
+      "learning.crossChecked",
+      "learning.crossCheckedHelp",
+      "learning.diagram",
+      "learning.diagramHelp",
+      "learning.evidenceAccuracy",
+      "learning.exams",
+      "learning.export",
+      "learning.fileTooLarge",
+      "learning.flashcards",
+      "learning.flashcardsHelp",
+      "learning.flashcardsModeHelp",
+      "learning.flashcardsTitle",
+      "learning.gameComplete",
+      "learning.gameResult",
+      "learning.gameScore",
+      "learning.gamesHelp",
+      "learning.gamesTitle",
+      "learning.graphHelp",
+      "learning.graphLabel",
+      "learning.graphTitle",
+      "learning.guidedLesson",
+      "learning.guidedLessonHelp",
+      "learning.import",
+      "learning.importLoadFailed",
+      "learning.imported",
+      "learning.importedStatus",
+      "learning.included",
+      "learning.infographic",
+      "learning.infographicHelp",
+      "learning.installedCourse",
+      "learning.interactiveExplanation",
+      "learning.invalidBundled",
+      "learning.invalidFile",
+      "learning.kicker",
+      "learning.libraryHelp",
+      "learning.libraryTitle",
+      "learning.minutes",
+      "learning.needsReview",
+      "learning.needsReviewHelp",
+      "learning.newTopic",
+      "learning.nextChapter",
+      "learning.nextRound",
+      "learning.noCourses",
+      "learning.noEvidence",
+      "learning.noTimeline",
+      "learning.notYet",
+      "learning.numericAnswer",
+      "learning.openCourse",
+      "learning.openExperiment",
+      "learning.play",
+      "learning.playgroundHelp",
+      "learning.playgroundTitle",
+      "learning.practiceHelp",
+      "learning.practiceQuiz",
+      "learning.practiceQuizHelp",
+      "learning.practiceTitle",
+      "learning.previousChapter",
+      "learning.readerChapter",
+      "learning.readerEmpty",
+      "learning.remove",
+      "learning.removeConfirm",
+      "learning.reviewConcept",
+      "learning.sections",
+      "learning.seeResult",
+      "learning.show",
+      "learning.sourceBacked",
+      "learning.sourceBackedHelp",
+      "learning.sourcesHelp",
+      "learning.sourcesTitle",
+      "learning.startingConcept",
+      "learning.storageUnavailable",
+      "learning.studioEvidence",
+      "learning.studioHelp",
+      "learning.studioPromptDiagram",
+      "learning.studioPromptFlashcards",
+      "learning.studioPromptInfographic",
+      "learning.studioPromptLesson",
+      "learning.studioPromptQuiz",
+      "learning.studioPromptSuffix",
+      "learning.studioTitle",
+      "learning.subjectAI",
+      "learning.subjectHistory",
+      "learning.subjectLife",
+      "learning.subjectMath",
+      "learning.subjectPhysical",
+      "learning.subtitle",
+      "learning.tabCorrectness",
+      "learning.tabGames",
+      "learning.tabLibrary",
+      "learning.tabPlayground",
+      "learning.tabPractice",
+      "learning.tabStudio",
+      "learning.tabTracker",
+      "learning.timeToday",
+      "learning.title",
+      "learning.todayHelp",
+      "learning.todayTitle",
+      "learning.topicPlaceholder",
+      "learning.topicsToday",
+      "learning.trackerHelp",
+      "learning.trackerTitle",
+      "learning.tryAgain",
       "model.checking",
       "model.choose",
       "model.chooseLocal",
@@ -192,8 +384,10 @@
       "model.textTutor",
       "model.unavailable",
       "nav.aboutMuta",
+      "nav.class",
       "nav.conversations",
       "nav.home",
+      "nav.learn",
       "nav.newChat",
       "nav.showConversations",
       "network.offline",
@@ -323,6 +517,7 @@
       "settings.appearance",
       "settings.close",
       "settings.general",
+      "settings.gettingStarted",
       "settings.interface",
       "settings.language",
       "settings.languageAuto",
@@ -333,10 +528,15 @@
       "settings.powerHelp",
       "settings.powerSection",
       "settings.saveFailed",
+      "settings.showTour",
+      "settings.studyCountry",
+      "settings.studyCountryHelp",
+      "settings.studyCountryNone",
       "settings.themeDark",
       "settings.themeLight",
       "settings.themeSystem",
       "settings.title",
+      "settings.tourHelp",
       "sidebar.hostLocal",
       "startup.connecting",
       "startup.failed",
@@ -352,6 +552,22 @@
       "startup.starting",
       "startup.tagline",
       "startup.verifying",
+      "style.descExamples",
+      "style.descGuide",
+      "style.descHints",
+      "style.descShow",
+      "style.examples",
+      "style.explain",
+      "style.guide",
+      "style.hints",
+      "style.label",
+      "style.methodExamples",
+      "style.methodGuide",
+      "style.methodHints",
+      "style.methodShow",
+      "style.saveFailed",
+      "style.saved",
+      "style.show",
       "telemetry.no",
       "telemetry.peak",
       "telemetry.peakTitle",
@@ -369,6 +585,45 @@
       "thinking.seconds",
       "thinking.warming",
       "thinking.warmingAnnouncement",
+      "tour.askCopy",
+      "tour.askTitle",
+      "tour.back",
+      "tour.deviceCopy",
+      "tour.deviceTitle",
+      "tour.finish",
+      "tour.initialStep",
+      "tour.intro",
+      "tour.learnCopy",
+      "tour.learnTitle",
+      "tour.modelCopy",
+      "tour.modelTitle",
+      "tour.next",
+      "tour.settingsCopy",
+      "tour.settingsTitle",
+      "tour.skip",
+      "tour.step",
+      "tour.styleCopy",
+      "tour.styleTitle",
+      "tour.welcome",
+      "unit.back",
+      "unit.close",
+      "unit.import",
+      "unit.importHelp",
+      "unit.invalid",
+      "unit.libraryTitle",
+      "unit.loadFailed",
+      "unit.loading",
+      "unit.mastery",
+      "unit.masteryNamed",
+      "unit.open",
+      "unit.previewOnly",
+      "unit.progressNotSaved",
+      "unit.score",
+      "unit.sources",
+      "unit.submit",
+      "unit.submitFailed",
+      "unit.summaryMinutes",
+      "unit.unchecked",
       "visualization.axisDomains",
       "visualization.controls",
       "visualization.dragRotate",
@@ -411,6 +666,48 @@
       "nav.newChat": [],
       "nav.home": [],
       "nav.aboutMuta": [],
+      "style.label": [],
+      "style.guide": [],
+      "style.show": [],
+      "style.examples": [],
+      "style.hints": [],
+      "style.saved": [],
+      "style.saveFailed": [],
+      "style.explain": [],
+      "style.methodGuide": [],
+      "style.descGuide": [],
+      "style.methodShow": [],
+      "style.descShow": [],
+      "style.methodExamples": [],
+      "style.descExamples": [],
+      "style.methodHints": [],
+      "style.descHints": [],
+      "unit.open": [],
+      "unit.libraryTitle": [],
+      "unit.back": [],
+      "unit.close": [],
+      "unit.import": [],
+      "unit.importHelp": [],
+      "unit.loading": [],
+      "unit.loadFailed": [],
+      "unit.invalid": [],
+      "unit.mastery": [],
+      "unit.masteryNamed": [
+        "{title}"
+      ],
+      "unit.summaryMinutes": [
+        "{minutes}",
+        "{summary}"
+      ],
+      "unit.submit": [],
+      "unit.submitFailed": [],
+      "unit.unchecked": [],
+      "unit.sources": [],
+      "unit.previewOnly": [],
+      "unit.score": [
+        "{score}"
+      ],
+      "unit.progressNotSaved": [],
       "settings.title": [],
       "settings.close": [],
       "settings.interface": [],
@@ -418,6 +715,9 @@
       "settings.languageAuto": [],
       "settings.languageHelp": [],
       "settings.general": [],
+      "settings.studyCountry": [],
+      "settings.studyCountryHelp": [],
+      "settings.studyCountryNone": [],
       "settings.parallel": [],
       "settings.parallelHelp": [],
       "settings.saveFailed": [],
@@ -869,7 +1169,268 @@
         "{x1}",
         "{y0}",
         "{y1}"
-      ]
+      ],
+      "nav.learn": [],
+      "learning.kicker": [],
+      "learning.title": [],
+      "learning.subtitle": [],
+      "learning.close": [],
+      "learning.sections": [],
+      "learning.tabLibrary": [],
+      "learning.tabStudio": [],
+      "learning.tabPractice": [],
+      "learning.tabGames": [],
+      "learning.tabPlayground": [],
+      "learning.tabTracker": [],
+      "learning.tabCorrectness": [],
+      "learning.show": [],
+      "learning.allSubjects": [],
+      "learning.subjectAI": [],
+      "learning.subjectMath": [],
+      "learning.subjectPhysical": [],
+      "learning.subjectLife": [],
+      "learning.subjectHistory": [],
+      "learning.import": [],
+      "learning.libraryTitle": [],
+      "learning.libraryHelp": [],
+      "learning.included": [],
+      "learning.imported": [],
+      "learning.courseMeta": [
+        "{chapters}",
+        "{exams}",
+        "{minutes}"
+      ],
+      "learning.exams": [
+        "{exams}"
+      ],
+      "learning.continue": [],
+      "learning.openCourse": [],
+      "learning.export": [],
+      "learning.remove": [],
+      "learning.removeConfirm": [
+        "{title}"
+      ],
+      "learning.noCourses": [],
+      "learning.storageUnavailable": [],
+      "learning.importLoadFailed": [],
+      "learning.invalidBundled": [
+        "{file}"
+      ],
+      "learning.coursePractice": [],
+      "learning.numericAnswer": [],
+      "learning.checkAnswer": [],
+      "learning.correct": [],
+      "learning.notYet": [],
+      "learning.checked": [],
+      "learning.tryAgain": [],
+      "learning.readerChapter": [
+        "{chapter}",
+        "{subject}",
+        "{total}"
+      ],
+      "learning.previousChapter": [],
+      "learning.nextChapter": [],
+      "learning.interactiveExplanation": [],
+      "learning.readerEmpty": [],
+      "learning.practiceTitle": [],
+      "learning.practiceHelp": [],
+      "learning.reviewConcept": [],
+      "learning.flashcardsTitle": [
+        "{title}"
+      ],
+      "learning.flashcardsHelp": [],
+      "learning.buildsOn": [
+        "{concepts}"
+      ],
+      "learning.startingConcept": [],
+      "learning.atGlance": [
+        "{title}"
+      ],
+      "learning.atGlanceHelp": [],
+      "learning.coursePracticeTitle": [
+        "{title}"
+      ],
+      "learning.coursePracticeHelp": [],
+      "learning.studioTitle": [],
+      "learning.studioHelp": [],
+      "learning.newTopic": [],
+      "learning.topicPlaceholder": [],
+      "learning.installedCourse": [],
+      "learning.guidedLesson": [],
+      "learning.guidedLessonHelp": [],
+      "learning.practiceQuiz": [],
+      "learning.practiceQuizHelp": [],
+      "learning.flashcards": [],
+      "learning.flashcardsModeHelp": [],
+      "learning.diagram": [],
+      "learning.diagramHelp": [],
+      "learning.infographic": [],
+      "learning.infographicHelp": [],
+      "learning.createWithTutor": [],
+      "learning.studioEvidence": [],
+      "learning.studioPromptLesson": [],
+      "learning.studioPromptQuiz": [],
+      "learning.studioPromptFlashcards": [],
+      "learning.studioPromptDiagram": [],
+      "learning.studioPromptInfographic": [],
+      "learning.studioPromptSuffix": [
+        "{request}",
+        "{topic}"
+      ],
+      "learning.gamesTitle": [],
+      "learning.gamesHelp": [],
+      "learning.play": [],
+      "learning.gameComplete": [],
+      "learning.gameResult": [
+        "{score}",
+        "{total}"
+      ],
+      "learning.backGames": [],
+      "learning.gameScore": [
+        "{round}",
+        "{score}",
+        "{total}"
+      ],
+      "learning.seeResult": [],
+      "learning.nextRound": [],
+      "learning.playgroundTitle": [],
+      "learning.playgroundHelp": [],
+      "learning.openExperiment": [],
+      "learning.allExperiments": [],
+      "learning.trackerTitle": [],
+      "learning.trackerHelp": [],
+      "learning.timeToday": [],
+      "learning.topicsToday": [],
+      "learning.checkedAttempts": [],
+      "learning.evidenceAccuracy": [],
+      "learning.noEvidence": [],
+      "learning.minutes": [
+        "{minutes}"
+      ],
+      "learning.graphTitle": [],
+      "learning.graphHelp": [],
+      "learning.todayTitle": [],
+      "learning.todayHelp": [],
+      "learning.correctEvidence": [],
+      "learning.needsReview": [],
+      "learning.noTimeline": [],
+      "learning.graphLabel": [],
+      "learning.correctnessTitle": [],
+      "learning.correctnessHelp": [],
+      "learning.computed": [],
+      "learning.computedHelp": [],
+      "learning.sourceBacked": [],
+      "learning.sourceBackedHelp": [],
+      "learning.crossChecked": [],
+      "learning.crossCheckedHelp": [],
+      "learning.needsReviewHelp": [],
+      "learning.correctnessBoundaryTitle": [],
+      "learning.correctnessBoundary": [],
+      "learning.sourcesTitle": [],
+      "learning.sourcesHelp": [],
+      "learning.fileTooLarge": [],
+      "learning.invalidFile": [],
+      "learning.coreConflict": [],
+      "learning.importedStatus": [
+        "{title}"
+      ],
+      "tour.initialStep": [],
+      "tour.step": [
+        "{step}",
+        "{total}"
+      ],
+      "tour.welcome": [],
+      "tour.intro": [],
+      "tour.skip": [],
+      "tour.back": [],
+      "tour.next": [],
+      "tour.finish": [],
+      "tour.deviceTitle": [],
+      "tour.deviceCopy": [],
+      "tour.modelTitle": [],
+      "tour.modelCopy": [],
+      "tour.styleTitle": [],
+      "tour.styleCopy": [],
+      "tour.learnTitle": [],
+      "tour.learnCopy": [],
+      "tour.settingsTitle": [],
+      "tour.settingsCopy": [],
+      "tour.askTitle": [],
+      "tour.askCopy": [],
+      "settings.gettingStarted": [],
+      "settings.tourHelp": [],
+      "settings.showTour": [],
+      "nav.class": [],
+      "course.label": [],
+      "course.noCourse": [],
+      "course.setByTeacher": [],
+      "course.withholding": [],
+      "course.loadFailed": [],
+      "course.style.socratic": [],
+      "course.style.subgoal": [],
+      "course.style.analogy": [],
+      "course.style.hints": [],
+      "host.courses": [],
+      "host.coursesHelp": [],
+      "host.courseAdd": [],
+      "host.courseEdit": [],
+      "host.courseName": [],
+      "host.courseStyle": [],
+      "host.courseLock": [],
+      "host.courseWithhold": [],
+      "host.courseNote": [],
+      "host.courseNoteHelp": [
+        "{count}"
+      ],
+      "host.courseSave": [],
+      "host.courseCancel": [],
+      "host.courseEmpty": [],
+      "host.courseLoadFailed": [],
+      "host.courseSaveFailed": [],
+      "host.courseDelete": [],
+      "host.courseDeleteConfirm": [
+        "{name}"
+      ],
+      "host.courseDeleteFailed": [],
+      "class.title": [],
+      "class.description": [],
+      "class.refresh": [],
+      "class.newQuestion": [],
+      "class.questionLabel": [],
+      "class.questionHint": [],
+      "class.askTeacher": [],
+      "class.post": [],
+      "class.posting": [],
+      "class.posted": [],
+      "class.listLabel": [],
+      "class.loading": [],
+      "class.empty": [],
+      "class.loadFailed": [],
+      "class.by": [
+        "{name}"
+      ],
+      "class.replyCount": [
+        "{count}"
+      ],
+      "class.replyCountOne": [],
+      "class.addressedTeacher": [],
+      "class.back": [],
+      "class.replyLabel": [],
+      "class.replyHint": [],
+      "class.sendReply": [],
+      "class.sendingReply": [],
+      "class.replied": [],
+      "class.teacherVerified": [],
+      "class.verify": [],
+      "class.unverify": [],
+      "class.verifyFailed": [],
+      "class.delete": [],
+      "class.deleteConfirm": [],
+      "class.deleteFailed": [],
+      "class.writeFailed": [],
+      "class.verifyFallback": [],
+      "class.askTeacherAction": [],
+      "class.askClassAction": []
     },
     "visible_locales": [
       {
@@ -987,1201 +1548,1597 @@
       "file": "ui/app.js",
       "line": 1025,
       "kind": "js:t",
-      "key": "thinking.label"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1035,
-      "kind": "js:t",
-      "key": "thinking.answerNow"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1059,
-      "kind": "js:t",
-      "key": "thinking.warming"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1111,
-      "kind": "js:t",
-      "key": "reply.preparing"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1112,
-      "kind": "js:t",
-      "key": "thinking.label"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1113,
-      "kind": "js:t",
-      "key": "reply.writing"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1114,
-      "kind": "js:t",
-      "key": "reply.diagram"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1115,
-      "kind": "js:t",
-      "key": "reply.working"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1224,
-      "kind": "js:t",
-      "key": "queue.slotFree"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1231,
-      "kind": "js:t",
-      "key": "queue.recovering"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1241,
-      "kind": "js:t",
-      "key": "thinking.warmingAnnouncement"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1350,
-      "kind": "js:t",
-      "key": "reply.connectionLost"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1356,
-      "kind": "js:releaseT",
-      "key": "reply.continue"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1380,
-      "kind": "js:t",
-      "key": "reply.stopped"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1506,
-      "kind": "js:featureT",
-      "key": "rag.sources"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1523,
-      "kind": "js:featureT",
-      "key": "rag.sources"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1556,
-      "kind": "js:featureT",
-      "key": "rag.openPage"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1568,
-      "kind": "js:featureT",
-      "key": "rag.sourceMeta"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1620,
-      "kind": "js:featureT",
-      "key": "rag.citation"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1626,
-      "kind": "js:featureT",
-      "key": "rag.previewLabel"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1627,
-      "kind": "js:featureT",
-      "key": "rag.sourceMeta"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1642,
-      "kind": "js:featureT",
-      "key": "rag.sources"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1644,
-      "kind": "js:featureT",
-      "key": "rag.sources"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1663,
-      "kind": "js:featureT",
-      "key": "rag.openPage"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1665,
-      "kind": "js:featureT",
-      "key": "rag.sourceMeta"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1669,
-      "kind": "js:featureT",
-      "key": "rag.citation"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1671,
-      "kind": "js:featureT",
-      "key": "rag.previewLabel"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1673,
-      "kind": "js:featureT",
-      "key": "rag.sourceMeta"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 174,
-      "kind": "js:t",
-      "key": "access.unreachable"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1740,
-      "kind": "js:t",
-      "key": "reply.stopped"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1747,
-      "kind": "js:releaseT",
-      "key": "reply.partialSaved"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1754,
-      "kind": "js:releaseT",
-      "key": "reply.continue"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1769,
-      "kind": "js:t",
-      "key": "telemetry.no"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1769,
-      "kind": "js:t",
-      "key": "telemetry.yes"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1779,
-      "kind": "js:t",
-      "key": "telemetry.peak"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1782,
-      "kind": "js:t",
-      "key": "telemetry.throttle"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1828,
-      "kind": "js:t",
-      "key": "conversation.deleteBody"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1880,
-      "kind": "js:t",
-      "key": "conversation.deleteBody"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1920,
-      "kind": "js:t",
-      "key": "conversation.deleteFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1954,
-      "kind": "js:t",
-      "key": "conversation.untitled"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1956,
-      "kind": "js:t",
-      "key": "conversation.open"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1962,
-      "kind": "js:t",
-      "key": "queue.waitingSlot"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1965,
-      "kind": "js:t",
-      "key": "conversation.background"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 1997,
-      "kind": "js:t",
-      "key": "conversation.pinFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2004,
-      "kind": "js:t",
-      "key": "conversation.delete"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2005,
-      "kind": "js:t",
-      "key": "conversation.delete"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2077,
-      "kind": "js:t",
-      "key": "conversation.voiceChanging"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2110,
-      "kind": "js:t",
-      "key": "conversation.unavailable"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2118,
-      "kind": "js:t",
-      "key": "conversation.notFound"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2191,
-      "kind": "js:releaseT",
-      "key": "reply.continuePrompt"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2212,
-      "kind": "js:releaseT",
-      "key": "reply.partialSaved"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2218,
-      "kind": "js:t",
-      "key": "reply.couldNotFinish"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2228,
-      "kind": "js:t",
-      "key": "conversation.voiceChanging"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2266,
-      "kind": "js:t",
-      "key": "model.loading"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2269,
-      "kind": "js:t",
-      "key": "attachment.chooseImageModel"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2294,
-      "kind": "js:t",
-      "key": "composer.attachImageTitle"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2309,
-      "kind": "js:releaseT",
-      "key": "reply.stopping"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2310,
-      "kind": "js:t",
-      "key": "composer.send"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2310,
-      "kind": "js:t",
-      "key": "composer.stop"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2313,
-      "kind": "js:releaseT",
-      "key": "reply.stopping"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2313,
-      "kind": "js:t",
-      "key": "composer.sendMessage"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2313,
-      "kind": "js:t",
-      "key": "composer.stop"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2367,
-      "kind": "js:t",
-      "key": "reply.stopped"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2373,
-      "kind": "js:t",
-      "key": "reply.stopFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2389,
-      "kind": "js:t",
-      "key": "attachment.preview"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2389,
-      "kind": "js:t",
-      "key": "attachment.previewNamed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2392,
-      "kind": "js:t",
-      "key": "attachment.audio"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2392,
-      "kind": "js:t",
-      "key": "attachment.file"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2397,
-      "kind": "js:t",
-      "key": "attachment.imageUploadFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2398,
-      "kind": "js:t",
-      "key": "attachment.uploading"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2406,
-      "kind": "js:t",
-      "key": "attachment.remove"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2407,
-      "kind": "js:t",
-      "key": "attachment.remove"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2423,
-      "kind": "js:t",
-      "key": "attachment.oneImage"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2459,
-      "kind": "js:t",
-      "key": "attachment.imageAttached"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2468,
-      "kind": "js:t",
-      "key": "attachment.transcribing"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2482,
-      "kind": "js:t",
-      "key": "attachment.speechUnavailable"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2485,
-      "kind": "js:t",
-      "key": "attachment.audioUploadFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2488,
-      "kind": "js:t",
-      "key": "attachment.audioUploadFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2499,
-      "kind": "js:t",
-      "key": "attachment.heardNothing"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2587,
-      "kind": "js:t",
-      "key": "attachment.unknownFile"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2686,
-      "kind": "js:featureT",
-      "key": "rag.document"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2687,
-      "kind": "js:t",
-      "key": "queue.fromImage"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2693,
-      "kind": "js:t",
-      "key": "queue.dontSend"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2694,
-      "kind": "js:t",
-      "key": "queue.dontSend"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2793,
-      "kind": "js:t",
-      "key": "reply.openingChats"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2795,
-      "kind": "js:t",
-      "key": "startup.loadingTutor"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2797,
-      "kind": "js:t",
-      "key": "reply.voiceTyped"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2799,
-      "kind": "js:t",
-      "key": "reply.modelLoading"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2802,
-      "kind": "js:t",
-      "key": "reply.imageUploading"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2823,
-      "kind": "js:t",
-      "key": "reply.previousStarting"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2827,
-      "kind": "js:featureT",
-      "key": "rag.maxFiles"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2871,
-      "kind": "js:t",
-      "key": "reply.parallelDisabled"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2898,
-      "kind": "js:t",
-      "key": "queue.fromImage"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2973,
-      "kind": "js:t",
-      "key": "reply.earlierRunning"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 2990,
-      "kind": "js:t",
-      "key": "reply.earlierFinishing"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3002,
-      "kind": "js:t",
-      "key": "reply.httpAnswerFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3044,
-      "kind": "js:t",
-      "key": "queue.automatic"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3058,
-      "kind": "js:t",
-      "key": "reply.startFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3105,
-      "kind": "js:t",
-      "key": "reply.reconnecting"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3190,
-      "kind": "js:t",
-      "key": "reply.tutorReplied"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3228,
-      "kind": "js:t",
-      "key": "badge.sources"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3249,
-      "kind": "js:t",
-      "key": "badge.cloud"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3256,
-      "kind": "js:t",
-      "key": "badge.checkFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3263,
-      "kind": "js:t",
-      "key": "badge.verified"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3264,
-      "kind": "js:t",
-      "key": "badge.verifiedTitle"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3403,
-      "kind": "js:t",
-      "key": "reply.didNotStart"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3605,
-      "kind": "js:featureT",
-      "key": "rag.pickerClosed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3626,
-      "kind": "js:featureT",
-      "key": "rag.maxFiles"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3646,
-      "kind": "js:featureT",
-      "key": "rag.maxFiles"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 370,
-      "kind": "js:featureT",
-      "key": "rag.document"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3712,
-      "kind": "js:featureT",
-      "key": "resources.pages"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3727,
-      "kind": "js:featureT",
-      "key": "rag.pickerResults"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3767,
-      "kind": "js:featureT",
-      "key": "resources.pages"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3775,
-      "kind": "js:featureT",
-      "key": "resources.retry"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3782,
-      "kind": "js:featureT",
-      "key": "resources.delete"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3837,
-      "kind": "js:featureT",
-      "key": "resources.loadFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3852,
-      "kind": "js:featureT",
-      "key": "resources.uploading"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3869,
-      "kind": "js:featureT",
-      "key": "resources.uploaded"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3873,
-      "kind": "js:featureT",
-      "key": "resources.uploadFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3882,
-      "kind": "js:featureT",
-      "key": "resources.uploadFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3891,
-      "kind": "js:featureT",
-      "key": "resources.deleteFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3975,
-      "kind": "js:releaseT",
-      "key": "host.waiting"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3976,
-      "kind": "js:releaseT",
-      "key": "host.removing"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3977,
-      "kind": "js:releaseT",
-      "key": "host.approved"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3977,
-      "kind": "js:releaseT",
-      "key": "host.approvedSignedIn"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 3994,
-      "kind": "js:releaseT",
-      "key": "host.remove"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4015,
-      "kind": "js:releaseT",
-      "key": "host.noFingerprint"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4022,
-      "kind": "js:releaseT",
-      "key": "host.simultaneousChats"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4023,
-      "kind": "js:releaseT",
-      "key": "host.tokensPerChat"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4024,
-      "kind": "js:releaseT",
-      "key": "host.ramCeiling"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4048,
-      "kind": "js:releaseT",
-      "key": "host.empty"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4057,
-      "kind": "js:releaseT",
-      "key": "host.readFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4070,
-      "kind": "js:releaseT",
-      "key": "host.readFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4086,
-      "kind": "js:releaseT",
-      "key": "host.apply"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4094,
-      "kind": "js:releaseT",
-      "key": "host.updateFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4101,
-      "kind": "js:releaseT",
-      "key": "host.updateFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4122,
-      "kind": "js:releaseT",
-      "key": "host.removePending"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4146,
-      "kind": "js:releaseT",
-      "key": "host.approveFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4147,
-      "kind": "js:releaseT",
-      "key": "host.rejectFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4148,
-      "kind": "js:releaseT",
-      "key": "host.removeFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4195,
-      "kind": "js:releaseT",
-      "key": "host.removeConfirm"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4217,
-      "kind": "js:releaseT",
-      "key": "host.copied"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4220,
-      "kind": "js:releaseT",
-      "key": "host.copyFallback"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4268,
-      "kind": "js:t",
-      "key": "settings.saveFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4297,
-      "kind": "js:powerText",
-      "key": "power.critical"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4298,
-      "kind": "js:powerText",
-      "key": "power.sensorGrace"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4304,
-      "kind": "js:powerText",
-      "key": "power.actions"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4308,
-      "kind": "js:powerText",
-      "key": "power.critical"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4312,
-      "kind": "js:powerText",
-      "key": "power.critical"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4312,
-      "kind": "js:powerText",
-      "key": "power.openSettings"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4312,
-      "kind": "js:powerText",
-      "key": "power.sensorGrace"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4316,
-      "kind": "js:powerText",
-      "key": "power.unavailable"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4317,
-      "kind": "js:powerText",
-      "key": "power.unavailableHelp"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4327,
-      "kind": "js:powerText",
-      "key": "power.connectedDraining"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4329,
-      "kind": "js:powerText",
-      "key": "power.plugged"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4332,
-      "kind": "js:powerText",
-      "key": "power.battery"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4336,
-      "kind": "js:powerText",
-      "key": "power.remaining"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4339,
-      "kind": "js:powerText",
-      "key": "power.rate"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4341,
-      "kind": "js:powerText",
-      "key": "power.checkingHelp"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4348,
-      "kind": "js:powerText",
-      "key": "power.actions"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4366,
-      "kind": "js:powerText",
-      "key": "power.battery"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4367,
-      "kind": "js:powerText",
-      "key": "power.openSettings"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4403,
-      "kind": "js:t",
-      "key": "settings.saveFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4617,
-      "kind": "js:t",
-      "key": "reason.changed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4716,
-      "kind": "js:t",
-      "key": "model.recommended"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4722,
-      "kind": "js:t",
-      "key": "model.imageInput"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4730,
-      "kind": "js:t",
-      "key": "model.unavailable"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4731,
-      "kind": "js:t",
-      "key": "model.localTutor"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4750,
-      "kind": "js:t",
-      "key": "model.switching"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4751,
-      "kind": "js:t",
-      "key": "model.choose"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4751,
-      "kind": "js:t",
-      "key": "model.currentLocal"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4752,
-      "kind": "js:t",
-      "key": "model.chooseLocal"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4754,
-      "kind": "js:t",
-      "key": "model.operatorOnly"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4758,
-      "kind": "js:t",
-      "key": "model.outsideRegistry"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4759,
-      "kind": "js:t",
-      "key": "model.noneInstalled"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4796,
-      "kind": "js:t",
-      "key": "model.checking"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4797,
-      "kind": "js:t",
-      "key": "model.switchUncertain"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4802,
-      "kind": "js:t",
-      "key": "model.localTutor"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4803,
-      "kind": "js:t",
-      "key": "model.registryFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4817,
-      "kind": "js:t",
-      "key": "model.stopBeforeChange"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4825,
-      "kind": "js:t",
-      "key": "model.loadingNamed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4827,
-      "kind": "js:t",
-      "key": "model.loadingNote"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4828,
-      "kind": "js:t",
-      "key": "model.switchingNamed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4845,
-      "kind": "js:t",
-      "key": "model.readyNew"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4846,
-      "kind": "js:t",
-      "key": "model.ready"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4850,
-      "kind": "js:t",
-      "key": "model.checking"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4851,
-      "kind": "js:t",
-      "key": "model.switchUncertain"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4852,
-      "kind": "js:t",
-      "key": "model.connectionDropped"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4858,
-      "kind": "js:t",
-      "key": "model.switchFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4919,
-      "kind": "js:t",
-      "key": "model.checking"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4920,
-      "kind": "js:t",
-      "key": "model.localTutor"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4932,
-      "kind": "js:t",
-      "key": "model.switchUncertain"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 4949,
-      "kind": "js:releaseT",
-      "key": "host.readFailed"
-    },
-    {
-      "file": "ui/app.js",
-      "line": 825,
-      "kind": "js:t",
       "key": "code.copy"
     },
     {
       "file": "ui/app.js",
-      "line": 826,
+      "line": 1026,
       "kind": "js:t",
       "key": "code.copied"
     },
     {
       "file": "ui/app.js",
-      "line": 827,
+      "line": 1027,
       "kind": "js:t",
       "key": "code.copyFailed"
     },
     {
       "file": "ui/app.js",
-      "line": 828,
+      "line": 1028,
       "kind": "js:t",
       "key": "code.plain"
     },
     {
       "file": "ui/app.js",
-      "line": 986,
+      "line": 1169,
+      "kind": "js:t",
+      "key": "unit.masteryNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1230,
+      "kind": "js:t",
+      "key": "unit.submit"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1236,
+      "kind": "js:t",
+      "key": "unit.previewOnly"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1263,
+      "kind": "js:t",
+      "key": "unit.progressNotSaved"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1263,
+      "kind": "js:t",
+      "key": "unit.score"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1264,
+      "kind": "js:t",
+      "key": "unit.score"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1266,
+      "kind": "js:t",
+      "key": "unit.unchecked"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1268,
+      "kind": "js:t",
+      "key": "unit.submitFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1278,
+      "kind": "js:t",
+      "key": "unit.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1300,
+      "kind": "js:t",
+      "key": "unit.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1303,
+      "kind": "js:t",
+      "key": "unit.loading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1310,
+      "kind": "js:t",
+      "key": "unit.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1318,
+      "kind": "js:t",
+      "key": "unit.libraryTitle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1344,
+      "kind": "js:t",
+      "key": "unit.summaryMinutes"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1351,
+      "kind": "js:t",
+      "key": "unit.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1402,
+      "kind": "js:t",
+      "key": "unit.invalid"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1412,
+      "kind": "js:t",
+      "key": "unit.invalid"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1415,
+      "kind": "js:t",
+      "key": "unit.invalid"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1562,
       "kind": "js:t",
       "key": "attachment.sent"
     },
     {
       "file": "ui/app.js",
-      "line": 986,
+      "line": 1562,
       "kind": "js:t",
       "key": "attachment.sentNamed"
     },
     {
       "file": "ui/app.js",
-      "line": 994,
+      "line": 1570,
       "kind": "js:t",
       "key": "attachment.audio"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1601,
+      "kind": "js:t",
+      "key": "thinking.label"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1611,
+      "kind": "js:t",
+      "key": "thinking.answerNow"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1635,
+      "kind": "js:t",
+      "key": "thinking.warming"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1687,
+      "kind": "js:t",
+      "key": "reply.preparing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1688,
+      "kind": "js:t",
+      "key": "thinking.label"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1689,
+      "kind": "js:t",
+      "key": "reply.writing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1690,
+      "kind": "js:t",
+      "key": "reply.diagram"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1691,
+      "kind": "js:t",
+      "key": "reply.working"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 180,
+      "kind": "js:t",
+      "key": "access.unreachable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1800,
+      "kind": "js:t",
+      "key": "queue.slotFree"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1807,
+      "kind": "js:t",
+      "key": "queue.recovering"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1817,
+      "kind": "js:t",
+      "key": "thinking.warmingAnnouncement"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1926,
+      "kind": "js:t",
+      "key": "reply.connectionLost"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1932,
+      "kind": "js:releaseT",
+      "key": "reply.continue"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 1956,
+      "kind": "js:t",
+      "key": "reply.stopped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2082,
+      "kind": "js:featureT",
+      "key": "rag.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2099,
+      "kind": "js:featureT",
+      "key": "rag.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2132,
+      "kind": "js:featureT",
+      "key": "rag.openPage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2144,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2196,
+      "kind": "js:featureT",
+      "key": "rag.citation"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2202,
+      "kind": "js:featureT",
+      "key": "rag.previewLabel"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2203,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2218,
+      "kind": "js:featureT",
+      "key": "rag.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2220,
+      "kind": "js:featureT",
+      "key": "rag.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2239,
+      "kind": "js:featureT",
+      "key": "rag.openPage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2241,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2245,
+      "kind": "js:featureT",
+      "key": "rag.citation"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2247,
+      "kind": "js:featureT",
+      "key": "rag.previewLabel"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2249,
+      "kind": "js:featureT",
+      "key": "rag.sourceMeta"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2316,
+      "kind": "js:t",
+      "key": "reply.stopped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2323,
+      "kind": "js:releaseT",
+      "key": "reply.partialSaved"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2330,
+      "kind": "js:releaseT",
+      "key": "reply.continue"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2345,
+      "kind": "js:t",
+      "key": "telemetry.no"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2345,
+      "kind": "js:t",
+      "key": "telemetry.yes"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2355,
+      "kind": "js:t",
+      "key": "telemetry.peak"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2358,
+      "kind": "js:t",
+      "key": "telemetry.throttle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2404,
+      "kind": "js:t",
+      "key": "conversation.deleteBody"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2456,
+      "kind": "js:t",
+      "key": "conversation.deleteBody"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2496,
+      "kind": "js:t",
+      "key": "conversation.deleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2530,
+      "kind": "js:t",
+      "key": "conversation.untitled"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2532,
+      "kind": "js:t",
+      "key": "conversation.open"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2538,
+      "kind": "js:t",
+      "key": "queue.waitingSlot"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2541,
+      "kind": "js:t",
+      "key": "conversation.background"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2573,
+      "kind": "js:t",
+      "key": "conversation.pinFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2580,
+      "kind": "js:t",
+      "key": "conversation.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2581,
+      "kind": "js:t",
+      "key": "conversation.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2672,
+      "kind": "js:t",
+      "key": "conversation.voiceChanging"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2707,
+      "kind": "js:t",
+      "key": "conversation.unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2715,
+      "kind": "js:t",
+      "key": "conversation.notFound"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2800,
+      "kind": "js:releaseT",
+      "key": "reply.continuePrompt"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2821,
+      "kind": "js:releaseT",
+      "key": "reply.partialSaved"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2827,
+      "kind": "js:t",
+      "key": "reply.couldNotFinish"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2838,
+      "kind": "js:t",
+      "key": "conversation.voiceChanging"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2878,
+      "kind": "js:t",
+      "key": "model.loading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2881,
+      "kind": "js:t",
+      "key": "attachment.chooseImageModel"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2906,
+      "kind": "js:t",
+      "key": "composer.attachImageTitle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2921,
+      "kind": "js:releaseT",
+      "key": "reply.stopping"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2922,
+      "kind": "js:t",
+      "key": "composer.send"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2922,
+      "kind": "js:t",
+      "key": "composer.stop"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2925,
+      "kind": "js:releaseT",
+      "key": "reply.stopping"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2925,
+      "kind": "js:t",
+      "key": "composer.sendMessage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2925,
+      "kind": "js:t",
+      "key": "composer.stop"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2979,
+      "kind": "js:t",
+      "key": "reply.stopped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 2985,
+      "kind": "js:t",
+      "key": "reply.stopFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3001,
+      "kind": "js:t",
+      "key": "attachment.preview"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3001,
+      "kind": "js:t",
+      "key": "attachment.previewNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3004,
+      "kind": "js:t",
+      "key": "attachment.audio"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3004,
+      "kind": "js:t",
+      "key": "attachment.file"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3009,
+      "kind": "js:t",
+      "key": "attachment.imageUploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3010,
+      "kind": "js:t",
+      "key": "attachment.uploading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3018,
+      "kind": "js:t",
+      "key": "attachment.remove"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3019,
+      "kind": "js:t",
+      "key": "attachment.remove"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3035,
+      "kind": "js:t",
+      "key": "attachment.oneImage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3071,
+      "kind": "js:t",
+      "key": "attachment.imageAttached"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3080,
+      "kind": "js:t",
+      "key": "attachment.transcribing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3094,
+      "kind": "js:t",
+      "key": "attachment.speechUnavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3097,
+      "kind": "js:t",
+      "key": "attachment.audioUploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3100,
+      "kind": "js:t",
+      "key": "attachment.audioUploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3111,
+      "kind": "js:t",
+      "key": "attachment.heardNothing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3199,
+      "kind": "js:t",
+      "key": "attachment.unknownFile"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3298,
+      "kind": "js:featureT",
+      "key": "rag.document"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3299,
+      "kind": "js:t",
+      "key": "queue.fromImage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3305,
+      "kind": "js:t",
+      "key": "queue.dontSend"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3306,
+      "kind": "js:t",
+      "key": "queue.dontSend"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3405,
+      "kind": "js:t",
+      "key": "reply.openingChats"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3407,
+      "kind": "js:t",
+      "key": "startup.loadingTutor"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3409,
+      "kind": "js:t",
+      "key": "reply.voiceTyped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3411,
+      "kind": "js:t",
+      "key": "reply.modelLoading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3414,
+      "kind": "js:t",
+      "key": "reply.imageUploading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3435,
+      "kind": "js:t",
+      "key": "reply.previousStarting"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3439,
+      "kind": "js:featureT",
+      "key": "rag.maxFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3483,
+      "kind": "js:t",
+      "key": "reply.parallelDisabled"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 349,
+      "kind": "js:t",
+      "key": "style.saveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3512,
+      "kind": "js:t",
+      "key": "queue.fromImage"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3595,
+      "kind": "js:t",
+      "key": "reply.earlierRunning"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3612,
+      "kind": "js:t",
+      "key": "reply.earlierFinishing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3624,
+      "kind": "js:t",
+      "key": "reply.httpAnswerFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3675,
+      "kind": "js:t",
+      "key": "queue.automatic"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3689,
+      "kind": "js:t",
+      "key": "reply.startFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3736,
+      "kind": "js:t",
+      "key": "reply.reconnecting"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3821,
+      "kind": "js:t",
+      "key": "reply.tutorReplied"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3859,
+      "kind": "js:t",
+      "key": "badge.sources"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3880,
+      "kind": "js:t",
+      "key": "badge.cloud"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3888,
+      "kind": "js:t",
+      "key": "badge.checkFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3895,
+      "kind": "js:featureT",
+      "key": "class.verifyFallback"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3922,
+      "kind": "js:t",
+      "key": "badge.verified"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 3923,
+      "kind": "js:t",
+      "key": "badge.verifiedTitle"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 398,
+      "kind": "js:t",
+      "key": "style.saveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4088,
+      "kind": "js:t",
+      "key": "reply.didNotStart"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4290,
+      "kind": "js:featureT",
+      "key": "rag.pickerClosed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4311,
+      "kind": "js:featureT",
+      "key": "rag.maxFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4331,
+      "kind": "js:featureT",
+      "key": "rag.maxFiles"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4397,
+      "kind": "js:featureT",
+      "key": "resources.pages"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4412,
+      "kind": "js:featureT",
+      "key": "rag.pickerResults"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4452,
+      "kind": "js:featureT",
+      "key": "resources.pages"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4460,
+      "kind": "js:featureT",
+      "key": "resources.retry"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4467,
+      "kind": "js:featureT",
+      "key": "resources.delete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4522,
+      "kind": "js:featureT",
+      "key": "resources.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4537,
+      "kind": "js:featureT",
+      "key": "resources.uploading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4554,
+      "kind": "js:featureT",
+      "key": "resources.uploaded"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4558,
+      "kind": "js:featureT",
+      "key": "resources.uploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4567,
+      "kind": "js:featureT",
+      "key": "resources.uploadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4576,
+      "kind": "js:featureT",
+      "key": "resources.deleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4624,
+      "kind": "js:featureT",
+      "key": "course.noCourse"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4639,
+      "kind": "js:featureT",
+      "key": "course.setByTeacher"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4641,
+      "kind": "js:featureT",
+      "key": "course.withholding"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4655,
+      "kind": "js:featureT",
+      "key": "host.courseEmpty"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4668,
+      "kind": "js:featureT",
+      "key": "host.courseLock"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4669,
+      "kind": "js:featureT",
+      "key": "host.courseWithhold"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4676,
+      "kind": "js:featureT",
+      "key": "host.courseEdit"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4681,
+      "kind": "js:featureT",
+      "key": "host.courseDelete"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4697,
+      "kind": "js:featureT",
+      "key": "course.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4707,
+      "kind": "js:featureT",
+      "key": "course.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4709,
+      "kind": "js:featureT",
+      "key": "host.courseLoadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4711,
+      "kind": "js:featureT",
+      "key": "course.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4718,
+      "kind": "js:featureT",
+      "key": "host.courseNoteHelp"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4741,
+      "kind": "js:featureT",
+      "key": "host.courseDeleteConfirm"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4749,
+      "kind": "js:featureT",
+      "key": "host.courseDeleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4753,
+      "kind": "js:featureT",
+      "key": "host.courseDeleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4804,
+      "kind": "js:featureT",
+      "key": "class.empty"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4825,
+      "kind": "js:featureT",
+      "key": "class.by"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4830,
+      "kind": "js:featureT",
+      "key": "class.addressedTeacher"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4836,
+      "kind": "js:featureT",
+      "key": "class.teacherVerified"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4848,
+      "kind": "js:featureT",
+      "key": "class.loading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4856,
+      "kind": "js:featureT",
+      "key": "class.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4860,
+      "kind": "js:featureT",
+      "key": "class.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4884,
+      "kind": "js:featureT",
+      "key": "class.addressedTeacher"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4900,
+      "kind": "js:featureT",
+      "key": "class.teacherVerified"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4929,
+      "kind": "js:featureT",
+      "key": "class.loading"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4936,
+      "kind": "js:featureT",
+      "key": "class.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4949,
+      "kind": "js:featureT",
+      "key": "class.loadFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4966,
+      "kind": "js:featureT",
+      "key": "class.verifyFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 4971,
+      "kind": "js:featureT",
+      "key": "class.verifyFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5007,
+      "kind": "js:featureT",
+      "key": "host.courseSaveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5011,
+      "kind": "js:featureT",
+      "key": "host.courseSaveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5035,
+      "kind": "js:featureT",
+      "key": "class.posting"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5046,
+      "kind": "js:featureT",
+      "key": "class.writeFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5049,
+      "kind": "js:featureT",
+      "key": "class.posted"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5053,
+      "kind": "js:featureT",
+      "key": "class.writeFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5064,
+      "kind": "js:featureT",
+      "key": "class.sendingReply"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5075,
+      "kind": "js:featureT",
+      "key": "class.writeFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5077,
+      "kind": "js:featureT",
+      "key": "class.replied"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5080,
+      "kind": "js:featureT",
+      "key": "class.writeFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5090,
+      "kind": "js:featureT",
+      "key": "class.deleteConfirm"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5100,
+      "kind": "js:featureT",
+      "key": "class.deleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5108,
+      "kind": "js:featureT",
+      "key": "class.deleteFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5141,
+      "kind": "js:t",
+      "key": "settings.studyCountryNone"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5196,
+      "kind": "js:releaseT",
+      "key": "host.waiting"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5197,
+      "kind": "js:releaseT",
+      "key": "host.removing"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5198,
+      "kind": "js:releaseT",
+      "key": "host.approved"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5198,
+      "kind": "js:releaseT",
+      "key": "host.approvedSignedIn"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5215,
+      "kind": "js:releaseT",
+      "key": "host.remove"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5240,
+      "kind": "js:releaseT",
+      "key": "host.noFingerprint"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5247,
+      "kind": "js:releaseT",
+      "key": "host.simultaneousChats"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5248,
+      "kind": "js:releaseT",
+      "key": "host.tokensPerChat"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5249,
+      "kind": "js:releaseT",
+      "key": "host.ramCeiling"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5273,
+      "kind": "js:releaseT",
+      "key": "host.empty"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5282,
+      "kind": "js:releaseT",
+      "key": "host.readFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5295,
+      "kind": "js:releaseT",
+      "key": "host.readFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5311,
+      "kind": "js:releaseT",
+      "key": "host.apply"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5319,
+      "kind": "js:releaseT",
+      "key": "host.updateFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5326,
+      "kind": "js:releaseT",
+      "key": "host.updateFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5347,
+      "kind": "js:releaseT",
+      "key": "host.removePending"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5371,
+      "kind": "js:releaseT",
+      "key": "host.approveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5372,
+      "kind": "js:releaseT",
+      "key": "host.rejectFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5373,
+      "kind": "js:releaseT",
+      "key": "host.removeFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5420,
+      "kind": "js:releaseT",
+      "key": "host.removeConfirm"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5442,
+      "kind": "js:releaseT",
+      "key": "host.copied"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5445,
+      "kind": "js:releaseT",
+      "key": "host.copyFallback"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5501,
+      "kind": "js:t",
+      "key": "settings.saveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5524,
+      "kind": "js:t",
+      "key": "settings.saveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5553,
+      "kind": "js:powerText",
+      "key": "power.critical"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5554,
+      "kind": "js:powerText",
+      "key": "power.sensorGrace"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5560,
+      "kind": "js:powerText",
+      "key": "power.actions"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5564,
+      "kind": "js:powerText",
+      "key": "power.critical"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5568,
+      "kind": "js:powerText",
+      "key": "power.critical"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5568,
+      "kind": "js:powerText",
+      "key": "power.openSettings"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5568,
+      "kind": "js:powerText",
+      "key": "power.sensorGrace"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5572,
+      "kind": "js:powerText",
+      "key": "power.unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5573,
+      "kind": "js:powerText",
+      "key": "power.unavailableHelp"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5583,
+      "kind": "js:powerText",
+      "key": "power.connectedDraining"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5585,
+      "kind": "js:powerText",
+      "key": "power.plugged"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5588,
+      "kind": "js:powerText",
+      "key": "power.battery"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5592,
+      "kind": "js:powerText",
+      "key": "power.remaining"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5595,
+      "kind": "js:powerText",
+      "key": "power.rate"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5597,
+      "kind": "js:powerText",
+      "key": "power.checkingHelp"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5604,
+      "kind": "js:powerText",
+      "key": "power.actions"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5622,
+      "kind": "js:powerText",
+      "key": "power.battery"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5623,
+      "kind": "js:powerText",
+      "key": "power.openSettings"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5659,
+      "kind": "js:t",
+      "key": "settings.saveFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 570,
+      "kind": "js:featureT",
+      "key": "rag.document"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5878,
+      "kind": "js:t",
+      "key": "reason.changed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5977,
+      "kind": "js:t",
+      "key": "model.recommended"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5983,
+      "kind": "js:t",
+      "key": "model.imageInput"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5991,
+      "kind": "js:t",
+      "key": "model.unavailable"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 5992,
+      "kind": "js:t",
+      "key": "model.localTutor"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6011,
+      "kind": "js:t",
+      "key": "model.switching"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6012,
+      "kind": "js:t",
+      "key": "model.choose"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6012,
+      "kind": "js:t",
+      "key": "model.currentLocal"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6013,
+      "kind": "js:t",
+      "key": "model.chooseLocal"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6015,
+      "kind": "js:t",
+      "key": "model.operatorOnly"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6019,
+      "kind": "js:t",
+      "key": "model.outsideRegistry"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6020,
+      "kind": "js:t",
+      "key": "model.noneInstalled"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6057,
+      "kind": "js:t",
+      "key": "model.checking"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6058,
+      "kind": "js:t",
+      "key": "model.switchUncertain"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6063,
+      "kind": "js:t",
+      "key": "model.localTutor"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6064,
+      "kind": "js:t",
+      "key": "model.registryFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6078,
+      "kind": "js:t",
+      "key": "model.stopBeforeChange"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6086,
+      "kind": "js:t",
+      "key": "model.loadingNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6088,
+      "kind": "js:t",
+      "key": "model.loadingNote"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6089,
+      "kind": "js:t",
+      "key": "model.switchingNamed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6106,
+      "kind": "js:t",
+      "key": "model.readyNew"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6107,
+      "kind": "js:t",
+      "key": "model.ready"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6111,
+      "kind": "js:t",
+      "key": "model.checking"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6112,
+      "kind": "js:t",
+      "key": "model.switchUncertain"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6113,
+      "kind": "js:t",
+      "key": "model.connectionDropped"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6119,
+      "kind": "js:t",
+      "key": "model.switchFailed"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6180,
+      "kind": "js:t",
+      "key": "model.checking"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6181,
+      "kind": "js:t",
+      "key": "model.localTutor"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6193,
+      "kind": "js:t",
+      "key": "model.switchUncertain"
+    },
+    {
+      "file": "ui/app.js",
+      "line": 6210,
+      "kind": "js:releaseT",
+      "key": "host.readFailed"
     },
     {
       "file": "ui/audio.js",
@@ -2239,759 +3196,1869 @@
     },
     {
       "file": "ui/index.html",
-      "line": 102,
-      "kind": "html:data-i18n",
-      "key": "model.loading"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 109,
-      "kind": "html:data-i18n",
-      "key": "model.choose"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 110,
-      "kind": "html:data-i18n",
-      "key": "model.runsLocal"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 113,
-      "kind": "html:data-i18n",
-      "key": "model.defaultRecommended"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 120,
-      "kind": "html:data-i18n",
-      "key": "startup.opening"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 121,
-      "kind": "html:data-i18n",
-      "key": "startup.retry"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 123,
-      "kind": "html:data-i18n-aria-label",
-      "key": "power.openSettings"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 125,
-      "kind": "html:data-i18n",
-      "key": "runtime.eco"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 129,
-      "kind": "html:data-i18n-aria-label",
-      "key": "nav.home"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 135,
-      "kind": "html:data-i18n",
-      "key": "startup.tagline"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 138,
-      "kind": "html:data-i18n",
-      "key": "empty.title"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 139,
-      "kind": "html:data-i18n",
-      "key": "empty.body"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 141,
-      "kind": "html:data-i18n-aria-label",
-      "key": "chat.conversation"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 147,
-      "kind": "html:data-i18n-title",
-      "key": "telemetry.ramTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 149,
-      "kind": "html:data-i18n-title",
-      "key": "telemetry.peakTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 151,
-      "kind": "html:data-i18n-title",
-      "key": "telemetry.tempTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 153,
-      "kind": "html:data-i18n-title",
-      "key": "telemetry.throttleTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 155,
-      "kind": "html:data-i18n-title",
-      "key": "telemetry.tpsTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 158,
-      "kind": "html:data-i18n-aria-label",
-      "key": "queue.messages"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 162,
-      "kind": "html:data-i18n-aria-label",
-      "key": "resources.learningResources"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 164,
-      "kind": "html:data-i18n-aria-label",
-      "key": "composer.placeholder"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 164,
-      "kind": "html:data-i18n-data-placeholder",
-      "key": "composer.placeholder"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 173,
-      "kind": "html:data-i18n-aria-label",
-      "key": "resources.attachPdf"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 173,
-      "kind": "html:data-i18n-title",
-      "key": "resources.attachPdf"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 176,
-      "kind": "html:data-i18n-aria-label",
-      "key": "composer.attachImage"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 176,
-      "kind": "html:data-i18n-title",
-      "key": "composer.attachImageTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 179,
-      "kind": "html:data-i18n-aria-label",
-      "key": "composer.attachAudio"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 179,
-      "kind": "html:data-i18n-title",
-      "key": "composer.attachAudioTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 182,
-      "kind": "html:data-i18n-aria-label",
-      "key": "voice.talk"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 182,
-      "kind": "html:data-i18n-title",
-      "key": "voice.talkTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 185,
-      "kind": "html:data-i18n-aria-label",
-      "key": "web.label"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 185,
-      "kind": "html:data-i18n-title",
-      "key": "web.title"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 189,
-      "kind": "html:data-i18n-title",
-      "key": "reason.title"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 191,
-      "kind": "html:data-i18n",
-      "key": "reason.auto"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 195,
-      "kind": "html:data-i18n-aria-label",
-      "key": "composer.sendMessage"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 195,
-      "kind": "html:data-i18n-title",
-      "key": "composer.send"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 201,
-      "kind": "html:data-i18n",
-      "key": "fineprint"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 208,
-      "kind": "html:data-i18n-aria-label",
-      "key": "reason.title"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 209,
-      "kind": "html:data-i18n",
-      "key": "reason.off"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 209,
-      "kind": "html:data-i18n",
-      "key": "reason.offHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 210,
-      "kind": "html:data-i18n",
-      "key": "reason.auto"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 210,
-      "kind": "html:data-i18n",
-      "key": "reason.autoHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 211,
-      "kind": "html:data-i18n",
-      "key": "reason.extended"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 211,
-      "kind": "html:data-i18n",
-      "key": "reason.extendedHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 217,
+      "line": 100,
       "kind": "html:data-i18n",
       "key": "settings.title"
     },
     {
       "file": "ui/index.html",
-      "line": 218,
-      "kind": "html:data-i18n-aria-label",
-      "key": "settings.close"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 221,
-      "kind": "html:data-i18n",
-      "key": "settings.interface"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 224,
-      "kind": "html:data-i18n",
-      "key": "settings.language"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 225,
-      "kind": "html:data-i18n",
-      "key": "settings.languageHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 231,
-      "kind": "html:data-i18n",
-      "key": "settings.appearance"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 233,
-      "kind": "html:data-i18n-aria-label",
-      "key": "settings.appearance"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 234,
-      "kind": "html:data-i18n",
-      "key": "settings.themeSystem"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 235,
-      "kind": "html:data-i18n",
-      "key": "settings.themeLight"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 236,
-      "kind": "html:data-i18n",
-      "key": "settings.themeDark"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 241,
-      "kind": "html:data-i18n",
-      "key": "settings.general"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 244,
-      "kind": "html:data-i18n",
-      "key": "settings.parallel"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 245,
-      "kind": "html:data-i18n",
-      "key": "settings.parallelHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 251,
-      "kind": "html:data-i18n",
-      "key": "settings.powerSection"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 254,
-      "kind": "html:data-i18n",
-      "key": "settings.power"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 255,
-      "kind": "html:data-i18n",
-      "key": "settings.powerHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 262,
-      "kind": "html:data-i18n",
-      "key": "power.checking"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 264,
-      "kind": "html:data-i18n",
-      "key": "power.checkingHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 271,
-      "kind": "html:data-release-i18n",
-      "key": "host.title"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 272,
-      "kind": "html:data-release-i18n",
-      "key": "host.description"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 275,
-      "kind": "html:data-release-i18n",
-      "key": "host.enable"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 281,
-      "kind": "html:data-release-i18n",
-      "key": "host.memoryLimit"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 282,
-      "kind": "html:data-release-i18n",
-      "key": "host.competition"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 282,
-      "kind": "html:data-release-i18n",
-      "key": "host.competitionHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 283,
-      "kind": "html:data-release-i18n",
-      "key": "host.system"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 283,
-      "kind": "html:data-release-i18n",
-      "key": "host.systemHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 287,
-      "kind": "html:data-i18n-alt",
-      "key": "host.qrAlt"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 289,
-      "kind": "html:data-release-i18n",
-      "key": "host.shareAddress"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 29,
-      "kind": "html:data-i18n",
-      "key": "access.connecting"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 290,
-      "kind": "html:data-release-i18n",
-      "key": "host.copy"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 290,
-      "kind": "html:data-release-i18n-aria-label",
-      "key": "host.joinUrl"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 291,
-      "kind": "html:data-release-i18n",
-      "key": "host.certificateHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 292,
-      "kind": "html:data-release-i18n",
-      "key": "host.downloadCertificate"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 298,
-      "kind": "html:data-release-i18n",
-      "key": "host.people"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 303,
-      "kind": "html:data-i18n",
-      "key": "privacy.heading"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 306,
-      "kind": "html:data-i18n",
-      "key": "settings.analyticsHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 315,
-      "kind": "html:data-i18n",
-      "key": "resources.heading"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 316,
-      "kind": "html:data-i18n",
-      "key": "resources.manageHelp"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 32,
-      "kind": "html:data-i18n",
-      "key": "access.sharedNearby"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 327,
-      "kind": "html:data-i18n",
-      "key": "conversation.deleteTitle"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 328,
-      "kind": "html:data-i18n",
-      "key": "conversation.deleteDefaultBody"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 33,
-      "kind": "html:data-i18n",
-      "key": "access.welcome"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 331,
-      "kind": "html:data-i18n",
-      "key": "conversation.cancel"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 332,
-      "kind": "html:data-i18n",
-      "key": "conversation.confirmDelete"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 34,
-      "kind": "html:data-i18n",
-      "key": "access.signInPrivate"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 340,
-      "kind": "html:data-release-i18n",
-      "key": "host.remove"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 344,
-      "kind": "html:data-i18n",
-      "key": "conversation.cancel"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 345,
-      "kind": "html:data-i18n",
-      "key": "conversation.confirmDelete"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 35,
-      "kind": "html:data-i18n",
-      "key": "access.openSecure"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 353,
-      "kind": "html:data-i18n",
-      "key": "privacy.eyebrow"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 354,
-      "kind": "html:data-i18n",
-      "key": "privacy.title"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 355,
-      "kind": "html:data-i18n",
-      "key": "privacy.description"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 357,
-      "kind": "html:data-i18n",
-      "key": "privacy.sends"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 358,
-      "kind": "html:data-i18n",
-      "key": "privacy.neverSends"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 359,
-      "kind": "html:data-i18n",
-      "key": "privacy.saved"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 36,
-      "kind": "html:data-i18n-aria-label",
-      "key": "access.dialog"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 360,
-      "kind": "html:data-i18n",
-      "key": "privacy.change"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 363,
-      "kind": "html:data-i18n",
-      "key": "privacy.keepPrivate"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 364,
-      "kind": "html:data-i18n",
-      "key": "privacy.shareActivity"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 37,
-      "kind": "html:data-i18n",
-      "key": "access.login"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 370,
-      "kind": "html:data-i18n",
-      "key": "drop.addFile"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 38,
-      "kind": "html:data-i18n",
-      "key": "access.signup"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 41,
-      "kind": "html:data-i18n",
-      "key": "access.username"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 43,
-      "kind": "html:data-i18n",
-      "key": "access.password"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 45,
-      "kind": "html:data-i18n",
-      "key": "access.login"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 48,
-      "kind": "html:data-i18n",
-      "key": "access.chooseUsername"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 50,
-      "kind": "html:data-i18n",
-      "key": "access.usernameRules"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 51,
-      "kind": "html:data-i18n",
-      "key": "access.choosePassword"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 53,
-      "kind": "html:data-i18n",
-      "key": "access.requestJoin"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 57,
-      "kind": "html:data-i18n",
-      "key": "access.requestSent"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 58,
-      "kind": "html:data-i18n",
-      "key": "access.awaitApproval"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 59,
-      "kind": "html:data-i18n",
-      "key": "access.otherAccount"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 67,
-      "kind": "html:data-i18n-aria-label",
-      "key": "nav.showConversations"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 73,
-      "kind": "html:data-i18n-aria-label",
-      "key": "nav.home"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 74,
-      "kind": "html:data-i18n",
-      "key": "nav.newChat"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 74,
-      "kind": "html:data-i18n-title",
-      "key": "nav.newChat"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 76,
-      "kind": "html:data-i18n-aria-label",
-      "key": "nav.conversations"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 82,
-      "kind": "html:data-i18n",
-      "key": "nav.aboutMuta"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 87,
-      "kind": "html:data-i18n",
-      "key": "settings.title"
-    },
-    {
-      "file": "ui/index.html",
-      "line": 91,
+      "line": 104,
       "kind": "html:data-release-i18n",
       "key": "sidebar.hostLocal"
     },
     {
       "file": "ui/index.html",
-      "line": 92,
+      "line": 105,
       "kind": "html:data-release-i18n",
       "key": "account.logout"
     },
     {
       "file": "ui/index.html",
-      "line": 94,
+      "line": 107,
       "kind": "html:data-i18n",
       "key": "runtime.offlineLocal"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 115,
+      "kind": "html:data-i18n",
+      "key": "model.loading"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 122,
+      "kind": "html:data-i18n",
+      "key": "model.choose"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 123,
+      "kind": "html:data-i18n",
+      "key": "model.runsLocal"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 126,
+      "kind": "html:data-i18n",
+      "key": "model.defaultRecommended"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 129,
+      "kind": "html:data-i18n",
+      "key": "style.guide"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 134,
+      "kind": "html:data-i18n",
+      "key": "startup.opening"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 135,
+      "kind": "html:data-i18n",
+      "key": "startup.retry"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 137,
+      "kind": "html:data-i18n-aria-label",
+      "key": "power.openSettings"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 139,
+      "kind": "html:data-i18n",
+      "key": "runtime.eco"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 143,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.home"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 148,
+      "kind": "html:data-i18n",
+      "key": "class.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 149,
+      "kind": "html:data-i18n",
+      "key": "class.description"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 151,
+      "kind": "html:data-i18n",
+      "key": "class.refresh"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 154,
+      "kind": "html:data-i18n",
+      "key": "class.newQuestion"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 155,
+      "kind": "html:data-i18n",
+      "key": "class.questionLabel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 157,
+      "kind": "html:data-i18n",
+      "key": "class.questionHint"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 160,
+      "kind": "html:data-i18n",
+      "key": "class.askTeacher"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 163,
+      "kind": "html:data-i18n",
+      "key": "class.post"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 168,
+      "kind": "html:data-i18n-aria-label",
+      "key": "class.listLabel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 169,
+      "kind": "html:data-i18n",
+      "key": "class.loading"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 173,
+      "kind": "html:data-i18n",
+      "key": "class.back"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 174,
+      "kind": "html:data-i18n",
+      "key": "class.delete"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 179,
+      "kind": "html:data-i18n",
+      "key": "class.replyLabel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 181,
+      "kind": "html:data-i18n",
+      "key": "class.replyHint"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 183,
+      "kind": "html:data-i18n",
+      "key": "class.sendReply"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 193,
+      "kind": "html:data-i18n",
+      "key": "startup.tagline"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 196,
+      "kind": "html:data-i18n",
+      "key": "empty.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 197,
+      "kind": "html:data-i18n",
+      "key": "empty.body"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 199,
+      "kind": "html:data-i18n-aria-label",
+      "key": "chat.conversation"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 205,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.ramTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 207,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.peakTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 209,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.tempTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 211,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.throttleTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 213,
+      "kind": "html:data-i18n-title",
+      "key": "telemetry.tpsTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 216,
+      "kind": "html:data-i18n-aria-label",
+      "key": "queue.messages"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 218,
+      "kind": "html:data-i18n-aria-label",
+      "key": "style.label"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 219,
+      "kind": "html:data-i18n",
+      "key": "style.label"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 219,
+      "kind": "html:data-i18n-aria-label",
+      "key": "style.explain"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 221,
+      "kind": "html:data-i18n",
+      "key": "style.guide"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 222,
+      "kind": "html:data-i18n",
+      "key": "style.show"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 223,
+      "kind": "html:data-i18n",
+      "key": "style.examples"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 224,
+      "kind": "html:data-i18n",
+      "key": "style.hints"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 227,
+      "kind": "html:data-i18n",
+      "key": "style.methodGuide"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 228,
+      "kind": "html:data-i18n",
+      "key": "style.descGuide"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 234,
+      "kind": "html:data-i18n",
+      "key": "course.label"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 239,
+      "kind": "html:data-i18n-aria-label",
+      "key": "resources.learningResources"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 241,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.placeholder"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 241,
+      "kind": "html:data-i18n-data-placeholder",
+      "key": "composer.placeholder"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 250,
+      "kind": "html:data-i18n-aria-label",
+      "key": "resources.attachPdf"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 250,
+      "kind": "html:data-i18n-title",
+      "key": "resources.attachPdf"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 253,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.attachImage"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 253,
+      "kind": "html:data-i18n-title",
+      "key": "composer.attachImageTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 256,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.attachAudio"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 256,
+      "kind": "html:data-i18n-title",
+      "key": "composer.attachAudioTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 259,
+      "kind": "html:data-i18n-aria-label",
+      "key": "voice.talk"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 259,
+      "kind": "html:data-i18n-title",
+      "key": "voice.talkTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 262,
+      "kind": "html:data-i18n-aria-label",
+      "key": "web.label"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 262,
+      "kind": "html:data-i18n-title",
+      "key": "web.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 266,
+      "kind": "html:data-i18n-title",
+      "key": "reason.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 268,
+      "kind": "html:data-i18n",
+      "key": "reason.auto"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 272,
+      "kind": "html:data-i18n-aria-label",
+      "key": "composer.sendMessage"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 272,
+      "kind": "html:data-i18n-title",
+      "key": "composer.send"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 278,
+      "kind": "html:data-i18n",
+      "key": "fineprint"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 287,
+      "kind": "html:data-i18n",
+      "key": "unit.open"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 288,
+      "kind": "html:data-i18n",
+      "key": "unit.libraryTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 290,
+      "kind": "html:data-i18n-aria-label",
+      "key": "unit.close"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 292,
+      "kind": "html:data-i18n",
+      "key": "unit.back"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 293,
+      "kind": "html:data-i18n-aria-label",
+      "key": "unit.libraryTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 296,
+      "kind": "html:data-i18n",
+      "key": "unit.mastery"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 30,
+      "kind": "html:data-i18n",
+      "key": "access.connecting"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 300,
+      "kind": "html:data-i18n",
+      "key": "unit.import"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 302,
+      "kind": "html:data-i18n",
+      "key": "unit.importHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 303,
+      "kind": "html:data-i18n",
+      "key": "unit.loading"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 312,
+      "kind": "html:data-i18n",
+      "key": "learning.kicker"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 313,
+      "kind": "html:data-i18n",
+      "key": "learning.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 314,
+      "kind": "html:data-i18n",
+      "key": "learning.subtitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 316,
+      "kind": "html:data-i18n-aria-label",
+      "key": "learning.close"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 320,
+      "kind": "html:data-i18n-aria-label",
+      "key": "learning.sections"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 321,
+      "kind": "html:data-i18n",
+      "key": "learning.tabLibrary"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 322,
+      "kind": "html:data-i18n",
+      "key": "learning.tabStudio"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 323,
+      "kind": "html:data-i18n",
+      "key": "learning.tabPractice"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 324,
+      "kind": "html:data-i18n",
+      "key": "learning.tabGames"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 325,
+      "kind": "html:data-i18n",
+      "key": "learning.tabPlayground"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 326,
+      "kind": "html:data-i18n",
+      "key": "learning.tabTracker"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 327,
+      "kind": "html:data-i18n",
+      "key": "learning.tabCorrectness"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 33,
+      "kind": "html:data-i18n",
+      "key": "access.sharedNearby"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 330,
+      "kind": "html:data-i18n",
+      "key": "learning.show"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 332,
+      "kind": "html:data-i18n",
+      "key": "learning.allSubjects"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 333,
+      "kind": "html:data-i18n",
+      "key": "learning.subjectAI"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 334,
+      "kind": "html:data-i18n",
+      "key": "learning.subjectMath"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 335,
+      "kind": "html:data-i18n",
+      "key": "learning.subjectPhysical"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 336,
+      "kind": "html:data-i18n",
+      "key": "learning.subjectLife"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 337,
+      "kind": "html:data-i18n",
+      "key": "learning.subjectHistory"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 34,
+      "kind": "html:data-i18n",
+      "key": "access.welcome"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 341,
+      "kind": "html:data-i18n",
+      "key": "learning.import"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 35,
+      "kind": "html:data-i18n",
+      "key": "access.signInPrivate"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 352,
+      "kind": "html:data-i18n",
+      "key": "tour.initialStep"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 353,
+      "kind": "html:data-i18n",
+      "key": "tour.welcome"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 354,
+      "kind": "html:data-i18n",
+      "key": "tour.intro"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 356,
+      "kind": "html:data-i18n",
+      "key": "tour.skip"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 358,
+      "kind": "html:data-i18n",
+      "key": "tour.back"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 359,
+      "kind": "html:data-i18n",
+      "key": "tour.next"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 36,
+      "kind": "html:data-i18n",
+      "key": "access.openSecure"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 366,
+      "kind": "html:data-i18n-aria-label",
+      "key": "reason.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 367,
+      "kind": "html:data-i18n",
+      "key": "reason.off"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 367,
+      "kind": "html:data-i18n",
+      "key": "reason.offHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 368,
+      "kind": "html:data-i18n",
+      "key": "reason.auto"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 368,
+      "kind": "html:data-i18n",
+      "key": "reason.autoHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 369,
+      "kind": "html:data-i18n",
+      "key": "reason.extended"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 369,
+      "kind": "html:data-i18n",
+      "key": "reason.extendedHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 37,
+      "kind": "html:data-i18n-aria-label",
+      "key": "access.dialog"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 375,
+      "kind": "html:data-i18n",
+      "key": "settings.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 376,
+      "kind": "html:data-i18n-aria-label",
+      "key": "settings.close"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 379,
+      "kind": "html:data-i18n",
+      "key": "settings.interface"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 38,
+      "kind": "html:data-i18n",
+      "key": "access.login"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 382,
+      "kind": "html:data-i18n",
+      "key": "settings.language"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 383,
+      "kind": "html:data-i18n",
+      "key": "settings.languageHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 389,
+      "kind": "html:data-i18n",
+      "key": "settings.appearance"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 39,
+      "kind": "html:data-i18n",
+      "key": "access.signup"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 391,
+      "kind": "html:data-i18n-aria-label",
+      "key": "settings.appearance"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 392,
+      "kind": "html:data-i18n",
+      "key": "settings.themeSystem"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 393,
+      "kind": "html:data-i18n",
+      "key": "settings.themeLight"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 394,
+      "kind": "html:data-i18n",
+      "key": "settings.themeDark"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 399,
+      "kind": "html:data-i18n",
+      "key": "settings.general"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 402,
+      "kind": "html:data-i18n",
+      "key": "settings.studyCountry"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 403,
+      "kind": "html:data-i18n",
+      "key": "settings.studyCountryHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 405,
+      "kind": "html:data-i18n-aria-label",
+      "key": "settings.studyCountry"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 409,
+      "kind": "html:data-i18n",
+      "key": "settings.parallel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 410,
+      "kind": "html:data-i18n",
+      "key": "settings.parallelHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 416,
+      "kind": "html:data-i18n",
+      "key": "settings.powerSection"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 419,
+      "kind": "html:data-i18n",
+      "key": "settings.power"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 42,
+      "kind": "html:data-i18n",
+      "key": "access.username"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 420,
+      "kind": "html:data-i18n",
+      "key": "settings.powerHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 427,
+      "kind": "html:data-i18n",
+      "key": "power.checking"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 429,
+      "kind": "html:data-i18n",
+      "key": "power.checkingHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 436,
+      "kind": "html:data-release-i18n",
+      "key": "host.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 437,
+      "kind": "html:data-release-i18n",
+      "key": "host.description"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 44,
+      "kind": "html:data-i18n",
+      "key": "access.password"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 440,
+      "kind": "html:data-release-i18n",
+      "key": "host.enable"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 446,
+      "kind": "html:data-release-i18n",
+      "key": "host.memoryLimit"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 447,
+      "kind": "html:data-release-i18n",
+      "key": "host.competition"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 447,
+      "kind": "html:data-release-i18n",
+      "key": "host.competitionHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 448,
+      "kind": "html:data-release-i18n",
+      "key": "host.system"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 448,
+      "kind": "html:data-release-i18n",
+      "key": "host.systemHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 452,
+      "kind": "html:data-i18n-alt",
+      "key": "host.qrAlt"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 454,
+      "kind": "html:data-release-i18n",
+      "key": "host.shareAddress"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 455,
+      "kind": "html:data-release-i18n",
+      "key": "host.copy"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 455,
+      "kind": "html:data-release-i18n-aria-label",
+      "key": "host.joinUrl"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 456,
+      "kind": "html:data-release-i18n",
+      "key": "host.certificateHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 457,
+      "kind": "html:data-release-i18n",
+      "key": "host.downloadCertificate"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 46,
+      "kind": "html:data-i18n",
+      "key": "access.login"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 463,
+      "kind": "html:data-release-i18n",
+      "key": "host.people"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 468,
+      "kind": "html:data-i18n",
+      "key": "host.courses"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 468,
+      "kind": "html:data-i18n",
+      "key": "host.coursesHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 469,
+      "kind": "html:data-i18n",
+      "key": "host.courseAdd"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 472,
+      "kind": "html:data-i18n",
+      "key": "host.courseAdd"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 473,
+      "kind": "html:data-i18n",
+      "key": "host.courseName"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 475,
+      "kind": "html:data-i18n",
+      "key": "host.courseStyle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 477,
+      "kind": "html:data-i18n",
+      "key": "course.style.socratic"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 478,
+      "kind": "html:data-i18n",
+      "key": "course.style.subgoal"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 479,
+      "kind": "html:data-i18n",
+      "key": "course.style.analogy"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 480,
+      "kind": "html:data-i18n",
+      "key": "course.style.hints"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 482,
+      "kind": "html:data-i18n",
+      "key": "host.courseLock"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 483,
+      "kind": "html:data-i18n",
+      "key": "host.courseWithhold"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 484,
+      "kind": "html:data-i18n",
+      "key": "host.courseNote"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 486,
+      "kind": "html:data-i18n",
+      "key": "host.courseNoteHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 488,
+      "kind": "html:data-i18n",
+      "key": "host.courseSave"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 489,
+      "kind": "html:data-i18n",
+      "key": "host.courseCancel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 49,
+      "kind": "html:data-i18n",
+      "key": "access.chooseUsername"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 497,
+      "kind": "html:data-i18n",
+      "key": "privacy.heading"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 500,
+      "kind": "html:data-i18n",
+      "key": "settings.analyticsHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 509,
+      "kind": "html:data-i18n",
+      "key": "resources.heading"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 51,
+      "kind": "html:data-i18n",
+      "key": "access.usernameRules"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 510,
+      "kind": "html:data-i18n",
+      "key": "resources.manageHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 518,
+      "kind": "html:data-i18n",
+      "key": "settings.gettingStarted"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 519,
+      "kind": "html:data-i18n",
+      "key": "settings.tourHelp"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 52,
+      "kind": "html:data-i18n",
+      "key": "access.choosePassword"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 521,
+      "kind": "html:data-i18n",
+      "key": "settings.showTour"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 530,
+      "kind": "html:data-i18n",
+      "key": "conversation.deleteTitle"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 531,
+      "kind": "html:data-i18n",
+      "key": "conversation.deleteDefaultBody"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 534,
+      "kind": "html:data-i18n",
+      "key": "conversation.cancel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 535,
+      "kind": "html:data-i18n",
+      "key": "conversation.confirmDelete"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 54,
+      "kind": "html:data-i18n",
+      "key": "access.requestJoin"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 543,
+      "kind": "html:data-release-i18n",
+      "key": "host.remove"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 547,
+      "kind": "html:data-i18n",
+      "key": "conversation.cancel"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 548,
+      "kind": "html:data-i18n",
+      "key": "conversation.confirmDelete"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 556,
+      "kind": "html:data-i18n",
+      "key": "privacy.eyebrow"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 557,
+      "kind": "html:data-i18n",
+      "key": "privacy.title"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 558,
+      "kind": "html:data-i18n",
+      "key": "privacy.description"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 560,
+      "kind": "html:data-i18n",
+      "key": "privacy.sends"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 561,
+      "kind": "html:data-i18n",
+      "key": "privacy.neverSends"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 562,
+      "kind": "html:data-i18n",
+      "key": "privacy.saved"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 563,
+      "kind": "html:data-i18n",
+      "key": "privacy.change"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 566,
+      "kind": "html:data-i18n",
+      "key": "privacy.keepPrivate"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 567,
+      "kind": "html:data-i18n",
+      "key": "privacy.shareActivity"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 573,
+      "kind": "html:data-i18n",
+      "key": "drop.addFile"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 58,
+      "kind": "html:data-i18n",
+      "key": "access.requestSent"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 59,
+      "kind": "html:data-i18n",
+      "key": "access.awaitApproval"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 60,
+      "kind": "html:data-i18n",
+      "key": "access.otherAccount"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 68,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.showConversations"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 74,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.home"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 75,
+      "kind": "html:data-i18n",
+      "key": "nav.newChat"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 75,
+      "kind": "html:data-i18n-title",
+      "key": "nav.newChat"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 77,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.conversations"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 78,
+      "kind": "html:data-i18n-aria-label",
+      "key": "nav.class"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 83,
+      "kind": "html:data-i18n",
+      "key": "nav.class"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 89,
+      "kind": "html:data-i18n",
+      "key": "nav.learn"
+    },
+    {
+      "file": "ui/index.html",
+      "line": 95,
+      "kind": "html:data-i18n",
+      "key": "nav.aboutMuta"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 191,
+      "kind": "js:learningText",
+      "key": "learning.storageUnavailable"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 239,
+      "kind": "js:learningText",
+      "key": "learning.invalidBundled"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 247,
+      "kind": "js:learningText",
+      "key": "learning.importLoadFailed"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 293,
+      "kind": "js:learningText",
+      "key": "learning.libraryHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 293,
+      "kind": "js:learningText",
+      "key": "learning.libraryTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 309,
+      "kind": "js:learningText",
+      "key": "learning.courseMeta"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 312,
+      "kind": "js:learningText",
+      "key": "learning.exams"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 319,
+      "kind": "js:learningText",
+      "key": "learning.export"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 320,
+      "kind": "js:learningText",
+      "key": "learning.remove"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 321,
+      "kind": "js:learningText",
+      "key": "learning.removeConfirm"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 327,
+      "kind": "js:learningText",
+      "key": "learning.noCourses"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 344,
+      "kind": "js:learningText",
+      "key": "learning.coursePractice"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 357,
+      "kind": "js:learningText",
+      "key": "learning.numericAnswer"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 360,
+      "kind": "js:learningText",
+      "key": "learning.checkAnswer"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 392,
+      "kind": "js:learningText",
+      "key": "learning.readerChapter"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 395,
+      "kind": "js:learningText",
+      "key": "learning.previousChapter"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 396,
+      "kind": "js:text",
+      "key": "learning.tabLibrary"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 397,
+      "kind": "js:learningText",
+      "key": "learning.nextChapter"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 402,
+      "kind": "js:learningText",
+      "key": "learning.interactiveExplanation"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 422,
+      "kind": "js:learningText",
+      "key": "learning.readerEmpty"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 431,
+      "kind": "js:learningText",
+      "key": "learning.practiceHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 431,
+      "kind": "js:learningText",
+      "key": "learning.practiceTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 449,
+      "kind": "js:learningText",
+      "key": "learning.studioPromptLesson"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 450,
+      "kind": "js:learningText",
+      "key": "learning.studioPromptQuiz"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 451,
+      "kind": "js:learningText",
+      "key": "learning.studioPromptFlashcards"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 452,
+      "kind": "js:learningText",
+      "key": "learning.studioPromptDiagram"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 453,
+      "kind": "js:learningText",
+      "key": "learning.studioPromptInfographic"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 455,
+      "kind": "js:learningText",
+      "key": "learning.studioPromptSuffix"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 475,
+      "kind": "js:learningText",
+      "key": "learning.reviewConcept"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 479,
+      "kind": "js:learningText",
+      "key": "learning.flashcardsHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 479,
+      "kind": "js:learningText",
+      "key": "learning.flashcardsTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 489,
+      "kind": "js:learningText",
+      "key": "learning.buildsOn"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 490,
+      "kind": "js:learningText",
+      "key": "learning.startingConcept"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 493,
+      "kind": "js:learningText",
+      "key": "learning.atGlance"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 493,
+      "kind": "js:learningText",
+      "key": "learning.atGlanceHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 504,
+      "kind": "js:learningText",
+      "key": "learning.coursePracticeHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 504,
+      "kind": "js:learningText",
+      "key": "learning.coursePracticeTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 518,
+      "kind": "js:learningText",
+      "key": "learning.studioHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 518,
+      "kind": "js:learningText",
+      "key": "learning.studioTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 520,
+      "kind": "js:learningText",
+      "key": "learning.newTopic"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 521,
+      "kind": "js:learningText",
+      "key": "learning.topicPlaceholder"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 522,
+      "kind": "js:learningText",
+      "key": "learning.installedCourse"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 527,
+      "kind": "js:learningText",
+      "key": "learning.guidedLesson"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 527,
+      "kind": "js:learningText",
+      "key": "learning.guidedLessonHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 528,
+      "kind": "js:learningText",
+      "key": "learning.practiceQuiz"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 528,
+      "kind": "js:learningText",
+      "key": "learning.practiceQuizHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 529,
+      "kind": "js:learningText",
+      "key": "learning.flashcards"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 529,
+      "kind": "js:learningText",
+      "key": "learning.flashcardsModeHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 530,
+      "kind": "js:learningText",
+      "key": "learning.diagram"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 530,
+      "kind": "js:learningText",
+      "key": "learning.diagramHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 531,
+      "kind": "js:learningText",
+      "key": "learning.infographic"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 531,
+      "kind": "js:learningText",
+      "key": "learning.infographicHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 538,
+      "kind": "js:learningText",
+      "key": "learning.createWithTutor"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 539,
+      "kind": "js:learningText",
+      "key": "learning.studioEvidence"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 548,
+      "kind": "js:learningText",
+      "key": "learning.gamesHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 548,
+      "kind": "js:learningText",
+      "key": "learning.gamesTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 554,
+      "kind": "js:learningText",
+      "key": "learning.play"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 568,
+      "kind": "js:learningText",
+      "key": "learning.gameComplete"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 568,
+      "kind": "js:learningText",
+      "key": "learning.gameResult"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 569,
+      "kind": "js:learningText",
+      "key": "learning.backGames"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 576,
+      "kind": "js:learningText",
+      "key": "learning.gameScore"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 598,
+      "kind": "js:learningText",
+      "key": "learning.playgroundHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 598,
+      "kind": "js:learningText",
+      "key": "learning.playgroundTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 604,
+      "kind": "js:learningText",
+      "key": "learning.openExperiment"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 614,
+      "kind": "js:learningText",
+      "key": "learning.allExperiments"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 626,
+      "kind": "js:learningText",
+      "key": "learning.trackerHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 626,
+      "kind": "js:learningText",
+      "key": "learning.trackerTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 634,
+      "kind": "js:learningText",
+      "key": "learning.checkedAttempts"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 634,
+      "kind": "js:learningText",
+      "key": "learning.evidenceAccuracy"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 634,
+      "kind": "js:learningText",
+      "key": "learning.minutes"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 634,
+      "kind": "js:learningText",
+      "key": "learning.noEvidence"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 634,
+      "kind": "js:learningText",
+      "key": "learning.timeToday"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 634,
+      "kind": "js:learningText",
+      "key": "learning.topicsToday"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 638,
+      "kind": "js:learningText",
+      "key": "learning.graphHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 638,
+      "kind": "js:learningText",
+      "key": "learning.graphTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 640,
+      "kind": "js:learningText",
+      "key": "learning.todayHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 640,
+      "kind": "js:learningText",
+      "key": "learning.todayTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 651,
+      "kind": "js:learningText",
+      "key": "learning.noTimeline"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 657,
+      "kind": "js:learningText",
+      "key": "learning.graphLabel"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 674,
+      "kind": "js:learningText",
+      "key": "learning.correctnessHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 674,
+      "kind": "js:learningText",
+      "key": "learning.correctnessTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 677,
+      "kind": "js:learningText",
+      "key": "learning.computed"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 677,
+      "kind": "js:learningText",
+      "key": "learning.computedHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 678,
+      "kind": "js:learningText",
+      "key": "learning.sourceBacked"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 678,
+      "kind": "js:learningText",
+      "key": "learning.sourceBackedHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 679,
+      "kind": "js:learningText",
+      "key": "learning.crossChecked"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 679,
+      "kind": "js:learningText",
+      "key": "learning.crossCheckedHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 680,
+      "kind": "js:learningText",
+      "key": "learning.needsReview"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 680,
+      "kind": "js:learningText",
+      "key": "learning.needsReviewHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 688,
+      "kind": "js:learningText",
+      "key": "learning.correctnessBoundaryTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 689,
+      "kind": "js:learningText",
+      "key": "learning.correctnessBoundary"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 691,
+      "kind": "js:learningText",
+      "key": "learning.sourcesHelp"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 691,
+      "kind": "js:learningText",
+      "key": "learning.sourcesTitle"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 715,
+      "kind": "js:learningText",
+      "key": "learning.fileTooLarge"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 718,
+      "kind": "js:learningText",
+      "key": "learning.invalidFile"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 719,
+      "kind": "js:learningText",
+      "key": "learning.invalidFile"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 720,
+      "kind": "js:learningText",
+      "key": "learning.coreConflict"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 722,
+      "kind": "js:learningText",
+      "key": "learning.importedStatus"
+    },
+    {
+      "file": "ui/learning-platform.js",
+      "line": 743,
+      "kind": "js:text",
+      "key": "tour.step"
     },
     {
       "file": "ui/product-analytics.js",
@@ -3034,6 +5101,12 @@
       "line": 81,
       "kind": "js:t",
       "key": "privacy.saveSettingFailed"
+    },
+    {
+      "file": "ui/startup.js",
+      "line": 121,
+      "kind": "js:text",
+      "key": "startup.progress"
     },
     {
       "file": "ui/viz-frame-v2.js",

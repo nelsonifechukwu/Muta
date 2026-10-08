@@ -36,6 +36,7 @@ require('./ui/locale-generated.js');
 process.stdout.write(JSON.stringify({
   catalogs: MutaI18n.catalogs,
   visible: MutaI18n.supportedDefinitions().map((locale) => locale.tag),
+  fallbackKeys: MutaI18n.ENGLISH_FALLBACK_KEYS,
 }));
 """
     result = subprocess.run(
@@ -138,6 +139,7 @@ def test_visible_locales_have_no_unreviewed_exact_english_fallbacks() -> None:
     runtime = _runtime_catalogs()
     english = runtime["catalogs"]["en"]
     allowed = json.loads(EQUIVALENTS_PATH.read_text())
+    fallback_keys = set(runtime["fallbackKeys"])
     actual: dict[str, dict[str, str]] = {}
     for tag in runtime["visible"]:
         if tag == "en":
@@ -146,12 +148,59 @@ def test_visible_locales_have_no_unreviewed_exact_english_fallbacks() -> None:
         identical = {
             key: allowed.get(tag, {}).get(key, "")
             for key, value in catalog.items()
-            if value == english[key]
+            if value == english[key] and key not in fallback_keys
         }
         if identical:
             actual[tag] = identical
     assert actual == allowed
     assert all(reason.strip() for entries in allowed.values() for reason in entries.values())
+    assert fallback_keys == {
+        "unit.open",
+        "unit.libraryTitle",
+        "unit.back",
+        "unit.close",
+        "unit.import",
+        "unit.importHelp",
+        "unit.loading",
+        "unit.loadFailed",
+        "unit.invalid",
+        "unit.mastery",
+        "unit.masteryNamed",
+        "unit.summaryMinutes",
+        "unit.submit",
+        "unit.submitFailed",
+        "unit.unchecked",
+        "unit.sources",
+        "unit.previewOnly",
+        "unit.score",
+        "unit.progressNotSaved",
+        "settings.studyCountry",
+        "settings.studyCountryHelp",
+        "settings.studyCountryNone",
+        "style.explain",
+        "style.methodGuide",
+        "style.descGuide",
+        "style.methodShow",
+        "style.descShow",
+        "style.methodExamples",
+        "style.descExamples",
+        "style.methodHints",
+        "style.descHints",
+    }
+    for tag in set(runtime["visible"]) - {"en"}:
+        assert all(runtime["catalogs"][tag][key] == english[key] for key in fallback_keys)
+        assert all(
+            runtime["catalogs"][tag][key] != english[key]
+            for key in (
+                "style.label",
+                "style.guide",
+                "style.show",
+                "style.examples",
+                "style.hints",
+                "style.saved",
+                "style.saveFailed",
+            )
+        )
 
 
 def test_every_changed_english_meaning_has_a_durable_visible_locale_override() -> None:

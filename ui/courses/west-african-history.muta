@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "kind": "course",
+  "id": "west-african-history-evidence-empires",
+  "title": "West African history — evidence, trade and empires",
+  "subject": "History",
+  "level": "Senior secondary · WAEC and JAMB foundation",
+  "description": "Build historical claims from sources and trace how geography, trade, government and scholarship shaped Ghana, Mali and Songhai.",
+  "estimated_minutes": 65,
+  "exams": ["WAEC-style", "JAMB-style"],
+  "author": {"name": "Muta Learning", "url": "https://github.com/nelsonifechukwu/Muta"},
+  "license": {"name": "CC BY 4.0", "url": "https://creativecommons.org/licenses/by/4.0/"},
+  "concepts": [
+    {"id": "historical-evidence", "title": "Sources, claims and corroboration", "prerequisites": []},
+    {"id": "trade", "title": "Trans-Saharan trade networks", "prerequisites": ["historical-evidence"]},
+    {"id": "mali", "title": "Mali: power, trade and learning", "prerequisites": ["trade"]},
+    {"id": "songhai", "title": "Songhai: expansion and administration", "prerequisites": ["mali"]}
+  ],
+  "chapters": [
+    {
+      "id": "evidence-first",
+      "title": "History begins with evidence",
+      "summary": "Distinguish a source from a claim and compare evidence before deciding what is well supported.",
+      "concept_ids": ["historical-evidence"],
+      "blocks": [
+        {"type": "markdown", "text": "### Ask how we know\n\nHistorians use oral traditions, archaeology, written accounts, language, art and material objects. Every source has a creator, purpose, time and audience. A source can be valuable without being complete or neutral.\n\nA strong historical explanation identifies its evidence, compares independent sources and marks uncertainty. A later account may preserve earlier memory, but it should be checked against other evidence where possible."},
+        {"type": "visualization", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "historical_reasoning", "title": "From sources to a supported claim", "aria_label": "Oral, written and archaeological sources are compared before forming a supported claim.", "text_fallback": "Multiple source types are compared and contextualised before a claim is accepted.", "height": 360, "controls": [], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "oral", "x": 90, "y": 95, "width": 125, "height": 58, "label": "oral source", "color": "teal"}, {"type": "node", "id": "written", "x": 90, "y": 180, "width": 125, "height": 58, "label": "written source", "color": "orange"}, {"type": "node", "id": "material", "x": 90, "y": 265, "width": 125, "height": 58, "label": "material source", "color": "purple"}, {"type": "node", "id": "compare", "x": 365, "y": 180, "width": 145, "height": 70, "label": "compare context", "color": "green"}, {"type": "node", "id": "claim", "x": 650, "y": 180, "width": 150, "height": 70, "label": "supported claim", "color": "teal"}, {"type": "link", "from": "oral", "to": "compare", "arrow": true, "label": ""}, {"type": "link", "from": "written", "to": "compare", "arrow": true, "label": ""}, {"type": "link", "from": "material", "to": "compare", "arrow": true, "label": ""}, {"type": "link", "from": "compare", "to": "claim", "arrow": true, "label": "corroborate"}]}}},
+        {"type": "activity", "activity_id": "history-q1"}
+      ]
+    },
+    {
+      "id": "trade-and-state",
+      "title": "Trade, geography and state power",
+      "summary": "Trace relationships among routes, taxation, cities, learning and political authority.",
+      "concept_ids": ["trade", "mali", "songhai"],
+      "blocks": [
+        {"type": "markdown", "text": "### Networks shaped opportunity\n\nWest African states grew in regions linking Saharan routes, savannah agriculture, river transport and resource zones. Gold and salt were important, but power also depended on administration, farming, tribute, security and control of routes.\n\nMali expanded from the thirteenth century and became renowned under rulers including Mansa Musa. Later, Songhai grew around the Niger bend and major centres such as Gao and Timbuktu. These empires overlapped in time and space; history is not a simple relay race."},
+        {"type": "callout", "title": "Avoid a single-cause answer", "text": "Trade mattered, but exam explanations are stronger when they connect geography, political organisation, military power, agriculture and scholarship."},
+        {"type": "activity", "activity_id": "history-q2"},
+        {"type": "activity", "activity_id": "history-q3"}
+      ]
+    }
+  ],
+  "activities": [
+    {"id": "history-q1", "type": "mcq", "concept_id": "historical-evidence", "prompt": "WAEC-style: Which method most strengthens a claim based on one oral tradition?", "options": ["Repeat it more loudly", "Compare it with archaeology and independent accounts", "Assume every detail is false", "Remove its date and speaker"], "answer": 1, "explanation": "Corroboration compares independent evidence while preserving the context of each source.", "exam_style": "WAEC-style", "difficulty": "Applied"},
+    {"id": "history-q2", "type": "mcq", "concept_id": "trade", "prompt": "JAMB-style: Why was control of trade routes politically valuable to medieval West African states?", "options": ["It guaranteed no conflict", "It enabled taxation, exchange and strategic influence", "It ended agriculture", "It removed the need for administration"], "answer": 1, "explanation": "Routes connected goods and people; controlling them could support revenue, security and political influence.", "exam_style": "JAMB-style", "difficulty": "Applied"},
+    {"id": "history-q3", "type": "mcq", "concept_id": "songhai", "prompt": "Which statement best compares Mali and Songhai?", "options": ["They occupied identical territory at exactly the same time", "Both benefited from regional trade, but had different rulers, institutions and periods of dominance", "Neither used river routes", "Both were European colonies in the fifteenth century"], "answer": 1, "explanation": "The empires shared parts of a regional trade world but differed in chronology, political organisation and territorial reach.", "exam_style": "Course practice", "difficulty": "Foundation"}
+  ],
+  "games": [{"id": "history-evidence-lab", "type": "challenge", "title": "Source detective", "description": "Judge which historical claim is best supported and which needs more evidence.", "concept_id": "historical-evidence", "rounds": [{"prompt": "Two independent sources agree on a date, while archaeology supports the same sequence. The claim is…", "options": ["better corroborated", "automatically perfect", "unsupported"], "answer": 0, "explanation": "Agreement among independent evidence strengthens a claim, though no source becomes infallible."}, {"prompt": "A court writer praises the ruler who employed him. What should a historian do?", "options": ["Ignore the source", "Accept every sentence", "Use it, but consider purpose and compare other evidence"], "answer": 2, "explanation": "Authorship and purpose affect interpretation; contextualise rather than discard automatically."}, {"prompt": "A single event has two conflicting accounts. The strongest response is to…", "options": ["hide the disagreement", "compare provenance, context and other evidence", "choose the shorter account"], "answer": 1, "explanation": "Conflict is evidence to investigate, not something to erase."}]}],
+  "playgrounds": [{"id": "empire-evidence-map", "title": "Evidence and empire map", "description": "Emphasize the supported-claim stage and trace how source comparison changes a historical explanation.", "concept_id": "historical-evidence", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "historical_reasoning", "title": "Build a historical claim", "aria_label": "Sources are contextualised, compared and turned into a qualified claim.", "text_fallback": "Source evidence is contextualised and corroborated before becoming a qualified claim.", "height": 390, "controls": [{"id": "claim_focus", "label": "Emphasize the qualified claim", "type": "range", "value": 1, "min": 0.75, "max": 1.5, "step": 0.25, "binding": {"target_label": "qualified claim", "effect": "scale"}}], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "source", "x": 100, "y": 190, "width": 130, "height": 70, "label": "source", "color": "teal"}, {"type": "node", "id": "context", "x": 310, "y": 190, "width": 140, "height": 70, "label": "context", "color": "orange"}, {"type": "node", "id": "compare", "x": 530, "y": 190, "width": 140, "height": 70, "label": "corroborate", "color": "purple"}, {"type": "node", "id": "claim", "x": 760, "y": 190, "width": 150, "height": 70, "label": "qualified claim", "color": "green"}, {"type": "link", "from": "source", "to": "context", "arrow": true, "label": ""}, {"type": "link", "from": "context", "to": "compare", "arrow": true, "label": ""}, {"type": "link", "from": "compare", "to": "claim", "arrow": true, "label": ""}]}}}],
+  "sources": [
+    {"title": "UNESCO General History of Africa", "url": "https://www.unesco.org/en/general-history-africa", "note": "Multi-volume scholarly reference foregrounding African perspectives and historical method.", "license": "UNESCO terms"},
+    {"title": "UNESCO General History of Africa, Volume IV", "url": "https://unesdoc.unesco.org/ark:/48223/pf0000184287", "note": "Reference for Africa from the twelfth to the sixteenth century.", "license": "UNESCO Open Access"}
+  ]
+}

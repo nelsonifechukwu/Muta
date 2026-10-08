@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "kind": "course",
+  "id": "physical-science-motion-matter",
+  "title": "Physical science — forces, motion and particles",
+  "subject": "Physical Science",
+  "level": "Senior secondary · WAEC and JAMB foundation",
+  "description": "Use vectors and particle models to explain motion, forces and changes of state through diagrams, practice and short experiments.",
+  "estimated_minutes": 60,
+  "exams": ["WAEC-style", "JAMB-style"],
+  "author": {"name": "Muta Learning", "url": "https://github.com/nelsonifechukwu/Muta"},
+  "license": {"name": "CC BY 4.0", "url": "https://creativecommons.org/licenses/by/4.0/"},
+  "concepts": [
+    {"id": "vectors", "title": "Magnitude and direction", "prerequisites": []},
+    {"id": "net-force", "title": "Net force", "prerequisites": ["vectors"]},
+    {"id": "acceleration", "title": "Force, mass and acceleration", "prerequisites": ["net-force"]},
+    {"id": "particles", "title": "Particle model of matter", "prerequisites": []}
+  ],
+  "chapters": [
+    {
+      "id": "forces-as-vectors",
+      "title": "Forces have direction",
+      "summary": "Combine force arrows to find the net force and predict acceleration.",
+      "concept_ids": ["vectors", "net-force", "acceleration"],
+      "blocks": [
+        {"type": "markdown", "text": "### Add direction, not only size\n\nA force is a vector: it has magnitude and direction. Choose a positive direction, attach a sign to each force, then add. If 8 N acts right and 5 N acts left, the net force is 3 N right.\n\nNewton's second law links the result to motion: $F_{net}=ma$. With the same mass, more net force gives more acceleration; with the same force, more mass gives less acceleration."},
+        {"type": "visualization", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "mechanics", "title": "Opposing forces on a cart", "aria_label": "An eight-newton rightward force opposes a five-newton leftward force, leaving three newtons to the right.", "text_fallback": "Eight newtons right minus five newtons left equals three newtons right.", "height": 350, "controls": [], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "left", "x": 120, "y": 170, "width": 120, "height": 60, "label": "5 N left", "color": "orange"}, {"type": "node", "id": "cart", "x": 360, "y": 170, "width": 130, "height": 76, "label": "cart", "color": "teal"}, {"type": "node", "id": "right", "x": 620, "y": 170, "width": 120, "height": 60, "label": "8 N right", "color": "green"}, {"type": "link", "from": "cart", "to": "left", "arrow": true, "label": "opposes"}, {"type": "link", "from": "cart", "to": "right", "arrow": true, "label": "net: 3 N right"}]}}},
+        {"type": "activity", "activity_id": "physics-q1"},
+        {"type": "activity", "activity_id": "physics-q2"}
+      ]
+    },
+    {
+      "id": "particle-model",
+      "title": "Matter as moving particles",
+      "summary": "Explain states and heating with spacing, motion and attraction.",
+      "concept_ids": ["particles"],
+      "blocks": [
+        {"type": "markdown", "text": "### A model explains what we cannot see directly\n\nIn a solid, particles stay close and vibrate around fixed positions. In a liquid, particles remain close but move past one another. In a gas, particles are much farther apart and move freely.\n\nHeating transfers energy to particles. A change of state happens when particle motion can overcome enough of the attractions holding the arrangement together."},
+        {"type": "callout", "title": "Do not confuse particles with the gaps", "text": "The particles themselves do not grow when matter is heated. Their average separation and motion change."},
+        {"type": "activity", "activity_id": "physics-q3"}
+      ]
+    }
+  ],
+  "activities": [
+    {"id": "physics-q1", "type": "numeric", "concept_id": "net-force", "prompt": "WAEC-style: 12 N acts right and 7 N acts left. Taking right as positive, find the net force in newtons.", "answer": 5, "tolerance": 0, "explanation": "Opposite directions subtract: 12 − 7 = 5 N to the right.", "exam_style": "WAEC-style", "difficulty": "Foundation"},
+    {"id": "physics-q2", "type": "numeric", "concept_id": "acceleration", "prompt": "JAMB-style: A 3 kg body experiences a net force of 18 N. Find its acceleration in m/s².", "answer": 6, "tolerance": 0, "explanation": "From F = ma, a = F/m = 18/3 = 6 m/s².", "exam_style": "JAMB-style", "difficulty": "Applied"},
+    {"id": "physics-q3", "type": "mcq", "concept_id": "particles", "prompt": "What changes most directly when a liquid is heated but has not yet boiled?", "options": ["Its particles become larger", "Its particles gain average kinetic energy", "New particles appear", "Every attraction disappears"], "answer": 1, "explanation": "Heating increases average particle kinetic energy; it does not enlarge or create particles.", "exam_style": "Course practice", "difficulty": "Foundation"}
+  ],
+  "games": [{"id": "force-or-particle", "type": "challenge", "title": "Predict the system", "description": "Choose the physical prediction supported by the model.", "concept_id": "net-force", "rounds": [{"prompt": "Equal opposite forces act on an object. The net force is…", "options": ["zero", "twice one force", "always upward"], "answer": 0, "explanation": "Equal vectors in opposite directions cancel."}, {"prompt": "For constant mass, doubling net force does what to acceleration?", "options": ["halves it", "doubles it", "leaves it unchanged"], "answer": 1, "explanation": "Since a = F/m, acceleration is proportional to net force for fixed mass."}, {"prompt": "Which state usually has particles farthest apart?", "options": ["solid", "liquid", "gas"], "answer": 2, "explanation": "Gas particles are generally far apart compared with their size."}]}],
+  "playgrounds": [{"id": "force-balance", "title": "Force balance", "description": "Change the visual emphasis of the rightward force and explain how the signed forces combine.", "concept_id": "net-force", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "mechanics", "title": "Net force explorer", "aria_label": "A cart has opposing left and right force arrows.", "text_fallback": "Compare the left and right force arrows to determine the net force.", "height": 390, "controls": [{"id": "right_force", "label": "Emphasize the rightward force", "type": "range", "value": 1, "min": 0.75, "max": 1.5, "step": 0.25, "binding": {"target_label": "8 N right", "effect": "scale"}}], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "left", "x": 120, "y": 190, "width": 120, "height": 60, "label": "5 N left", "color": "orange"}, {"type": "node", "id": "cart", "x": 360, "y": 190, "width": 130, "height": 76, "label": "cart", "color": "teal"}, {"type": "node", "id": "right", "x": 620, "y": 190, "width": 120, "height": 60, "label": "8 N right", "color": "green"}, {"type": "link", "from": "cart", "to": "left", "arrow": true, "label": ""}, {"type": "link", "from": "cart", "to": "right", "arrow": true, "label": ""}]}}}],
+  "sources": [
+    {"title": "OpenStax Physics — Force", "url": "https://openstax.org/books/physics/pages/4-1-force", "note": "Reference for force vectors, components and net force.", "license": "CC BY 4.0"},
+    {"title": "OpenStax College Physics 2e — Vectors and Scalars", "url": "https://openstax.org/books/college-physics-2e/pages/2-2-vectors-scalars-and-coordinate-systems", "note": "Reference for vector descriptions of displacement, velocity and force.", "license": "CC BY 4.0"}
+  ]
+}

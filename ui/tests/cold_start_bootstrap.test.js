@@ -27,6 +27,15 @@ function bootstrapContext({ selected = null, loadResult = true, stallIndependent
       events.push("models:start");
       return stallIndependent ? never : Promise.resolve(true);
     },
+    loadShareCourses: () => {
+      events.push("courses:start");
+      return stallIndependent ? never : Promise.resolve(true);
+    },
+    loadHostStatus: () => {
+      events.push("host:start");
+      return stallIndependent ? never : Promise.resolve(true);
+    },
+    authRole: "host",
     refreshSidebar: () => {
       events.push("sidebar");
       return stallIndependent ? never : Promise.resolve(true);
@@ -79,6 +88,8 @@ test("saved-chat bootstrap does not await model, settings, or resource discovery
   assert.deepEqual(events, [
     "auth",
     "models:start",
+    "courses:start",
+    "host:start",
     "composer",
     "queue",
     "sidebar",

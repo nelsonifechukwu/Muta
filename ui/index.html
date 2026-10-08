@@ -19,6 +19,7 @@
   <script src="locale-bootstrap.js?v=20260826-host-capacity-i18n-2"></script>
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
   <link rel="stylesheet" href="styles.css?v=20260826-host-capacity-i18n-2">
+  <link rel="stylesheet" href="learning-platform.css?v=20261006-learning-platform-1">
 </head>
 <body>
   <main id="share-auth" class="share-auth" aria-labelledby="share-auth-title">
@@ -70,11 +71,23 @@
     <div id="sidebar-backdrop" hidden></div>
     <aside id="sidebar">
       <div class="sidebar-head">
-        <a class="brand" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home"><span class="muta-logo muta-logo-wordmark" role="img" aria-label="Muta"><img class="muta-logo-light" src="brand/muta-wordmark-on-light.svg" alt=""><img class="muta-logo-dark" src="brand/muta-wordmark-on-dark.svg" alt=""></span></a>
+        <a class="brand" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home"><span class="muta-logo muta-logo-symbol" role="img" aria-label="Muta"><img class="muta-logo-light" src="brand/muta-symbol-on-light.svg" alt=""><img class="muta-logo-dark" src="brand/muta-symbol-on-dark.svg" alt=""></span></a>
         <button id="new-chat" class="ghost" title="New chat" data-i18n="nav.newChat" data-i18n-title="nav.newChat">+ New chat</button>
       </div>
       <nav id="conversation-list" aria-label="Conversations" data-i18n-aria-label="nav.conversations"></nav>
+      <nav class="class-nav" aria-label="Class" data-i18n-aria-label="nav.class">
+        <button id="class-open" class="class-open" type="button" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v12H7l-3 3V4Zm4 5h8M8 12h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span data-i18n="nav.class">Class</span>
+        </button>
+      </nav>
       <nav class="product-nav" aria-label="Muta">
+        <button id="unit-open" class="product-unit-link" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          <span data-i18n="nav.learn">Learn</span>
+        </button>
         <a class="product-home-link" href="/">
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
             <path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -113,6 +126,7 @@
             <p id="model-note" role="status" data-i18n="model.defaultRecommended">The recommended model is selected by default.</p>
           </div>
         </div>
+        <span id="style-pill" class="style-pill" aria-live="polite" data-i18n="style.guide">Guide me</span>
         <div id="startup-readiness" class="startup-readiness" role="status" aria-live="polite" aria-busy="true" hidden>
           <div id="startup-progress" class="startup-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5">
             <span id="startup-percent" aria-hidden="true">5%</span>
@@ -128,6 +142,50 @@
         </button>
         <a class="mobile-home-link" href="/" aria-label="Muta home" data-i18n-aria-label="nav.home"><span class="muta-logo muta-logo-wordmark" role="img" aria-label="Muta"><img class="muta-logo-light" src="brand/muta-wordmark-on-light.svg" alt=""><img class="muta-logo-dark" src="brand/muta-wordmark-on-dark.svg" alt=""></span></a>
       </header>
+      <section id="class-board" class="class-board" aria-labelledby="class-board-title" hidden>
+        <header class="class-board-header">
+          <div>
+            <h1 id="class-board-title" tabindex="-1" data-i18n="class.title">Class board</h1>
+            <p data-i18n="class.description">Ask classmates and your teacher when you want a second check.</p>
+          </div>
+          <button id="class-refresh" type="button" data-i18n="class.refresh">Refresh</button>
+        </header>
+        <form id="class-post-form" class="class-compose-card">
+          <h2 data-i18n="class.newQuestion">Ask the class</h2>
+          <label for="class-post-body" data-i18n="class.questionLabel">Your question</label>
+          <textarea id="class-post-body" maxlength="4000" rows="4" aria-describedby="class-question-help" required></textarea>
+          <small id="class-question-help" data-i18n="class.questionHint">Include the problem and the step you want checked.</small>
+          <label class="class-teacher-check" for="class-address-teacher">
+            <input id="class-address-teacher" type="checkbox">
+            <span data-i18n="class.askTeacher">Ask the teacher too</span>
+          </label>
+          <div class="class-form-actions">
+            <button id="class-post-submit" type="submit" data-i18n="class.post">Post question</button>
+            <span id="class-post-status" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+        <div id="class-list-view">
+          <div id="class-post-list" class="class-post-list" role="list" aria-label="Class questions" data-i18n-aria-label="class.listLabel"></div>
+          <p id="class-list-status" class="class-list-status" role="status" aria-live="polite" data-i18n="class.loading">Loading the class board…</p>
+        </div>
+        <article id="class-thread-view" class="class-thread" hidden>
+          <div class="class-thread-toolbar">
+            <button id="class-thread-back" type="button" data-i18n="class.back">Back to questions</button>
+            <button id="class-delete-post" class="danger" type="button" data-i18n="class.delete" hidden>Delete question</button>
+          </div>
+          <div id="class-thread-post" class="class-thread-post"></div>
+          <div id="class-reply-list" class="class-reply-list" aria-live="polite"></div>
+          <form id="class-reply-form" class="class-reply-form">
+            <label for="class-reply-body" data-i18n="class.replyLabel">Your reply</label>
+            <textarea id="class-reply-body" maxlength="4000" rows="3" aria-describedby="class-reply-help" required></textarea>
+            <small id="class-reply-help" data-i18n="class.replyHint">Explain the next step without taking over their work.</small>
+            <div class="class-form-actions">
+              <button id="class-reply-submit" type="submit" data-i18n="class.sendReply">Post reply</button>
+              <span id="class-reply-status" role="status" aria-live="polite"></span>
+            </div>
+          </form>
+        </article>
+      </section>
       <div id="chat-scroll">
         <div id="chat-column">
           <div id="startup-welcome" class="startup-welcome" hidden>
@@ -157,7 +215,26 @@
 
         <div id="queue" hidden aria-label="Queued messages" data-i18n-aria-label="queue.messages"></div>
 
+        <div id="teaching-style" class="teaching-style" role="group" aria-label="How should Muta teach?" data-i18n-aria-label="style.label">
+          <div class="teaching-style-heading"><span class="teaching-style-label" data-i18n="style.label">How should Muta teach?</span><button id="teaching-style-help" type="button" aria-expanded="false" aria-controls="teaching-style-explanation" aria-label="Explain teaching methods" data-i18n-aria-label="style.explain">?</button></div>
+          <div class="teaching-style-options">
+            <button type="button" data-mode="socratic" aria-pressed="true" data-i18n="style.guide">Guide me</button>
+            <button type="button" data-mode="subgoal" aria-pressed="false" data-i18n="style.show">Show me how</button>
+            <button type="button" data-mode="analogy" aria-pressed="false" data-i18n="style.examples">Everyday examples</button>
+            <button type="button" data-mode="hints" aria-pressed="false" data-i18n="style.hints">Hints only</button>
+          </div>
+          <div id="teaching-style-explanation" class="teaching-style-explanation" role="status" aria-live="polite" data-expanded="false">
+            <strong id="teaching-style-method" data-i18n="style.methodGuide">Socratic guidance</strong>
+            <span id="teaching-style-description" data-i18n="style.descGuide">Muta asks focused questions and checks your reasoning while you do the thinking.</span>
+          </div>
+        </div>
+
         <div id="composer">
+          <div id="share-course-control" class="share-course-control" hidden>
+            <label for="share-course-select" data-i18n="course.label">Course</label>
+            <select id="share-course-select"></select>
+            <span id="share-course-policy" class="share-course-policy" role="status"></span>
+          </div>
           <div id="attachment-chips"></div>
           <div id="resource-mention-menu" class="resource-mention-menu" role="listbox" aria-label="Learning resources" data-i18n-aria-label="resources.learningResources" hidden></div>
           <div id="resource-mention-status" class="sr-only" role="status" aria-live="polite"></div>
@@ -203,6 +280,87 @@
     </main>
   </div>
 
+  <div id="unit-modal" class="unit-modal" hidden>
+    <section class="unit-panel" role="dialog" aria-modal="true" aria-labelledby="unit-title">
+      <header class="unit-header">
+        <div>
+          <p class="unit-eyebrow" data-i18n="unit.open">STEM learning units</p>
+          <h2 id="unit-title" data-i18n="unit.libraryTitle">Learn across STEM</h2>
+        </div>
+        <button id="unit-close" type="button" aria-label="Close learning unit" data-i18n-aria-label="unit.close">✕</button>
+      </header>
+      <button id="unit-back" class="unit-back" type="button" hidden data-i18n="unit.back">← All STEM units</button>
+      <div id="unit-library" class="unit-library" aria-label="STEM learning units" data-i18n-aria-label="unit.libraryTitle"></div>
+      <div id="unit-toolbar" class="unit-toolbar" hidden>
+        <div class="unit-mastery">
+          <span id="unit-mastery-label" data-i18n="unit.mastery">Linear equations mastery</span>
+          <div class="unit-mastery-track" role="progressbar" aria-labelledby="unit-mastery-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="unit-mastery-fill"></span></div>
+          <strong id="unit-mastery-value">0%</strong>
+        </div>
+        <button id="unit-import" type="button" data-i18n="unit.import">Import unit</button>
+      </div>
+      <p id="unit-import-help" class="unit-import-help" data-i18n="unit.importHelp" hidden>Open a Muta unit JSON file from this device. No network is used.</p>
+      <p id="unit-status" class="unit-status" role="status" aria-live="polite" data-i18n="unit.loading">Opening unit…</p>
+      <div id="unit-body" class="unit-body"></div>
+    </section>
+  </div>
+
+  <div id="learning-center" class="learning-center" hidden>
+    <section class="learning-shell" role="dialog" aria-modal="true" aria-labelledby="learning-title">
+      <header class="learning-header">
+        <div class="learning-brand">
+          <span class="learning-kicker" data-i18n="learning.kicker">OFFLINE LEARNING LIBRARY</span>
+          <h2 id="learning-title" data-i18n="learning.title">Learn with Muta</h2>
+          <p data-i18n="learning.subtitle">Interactive books, practice, games and experiments—all saved on this device.</p>
+        </div>
+        <button id="learning-close" class="learning-icon-button" type="button" aria-label="Close Learn" data-i18n-aria-label="learning.close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <nav id="learning-tabs" class="learning-tabs" aria-label="Learn sections" data-i18n-aria-label="learning.sections">
+        <button type="button" data-learning-tab="library" aria-current="page" data-i18n="learning.tabLibrary">Library</button>
+        <button type="button" data-learning-tab="studio" data-i18n="learning.tabStudio">Study studio</button>
+        <button type="button" data-learning-tab="practice" data-i18n="learning.tabPractice">Practice</button>
+        <button type="button" data-learning-tab="games" data-i18n="learning.tabGames">Games</button>
+        <button type="button" data-learning-tab="playground" data-i18n="learning.tabPlayground">Playground</button>
+        <button type="button" data-learning-tab="tracker" data-i18n="learning.tabTracker">Tracker</button>
+        <button type="button" data-learning-tab="correctness" data-i18n="learning.tabCorrectness">Correctness</button>
+      </nav>
+      <div class="learning-actions">
+        <label class="learning-filter-label" for="learning-filter" data-i18n="learning.show">Show</label>
+        <select id="learning-filter">
+          <option value="all" data-i18n="learning.allSubjects">All subjects</option>
+          <option value="Artificial Intelligence" data-i18n="learning.subjectAI">AI</option>
+          <option value="Mathematics" data-i18n="learning.subjectMath">Mathematics</option>
+          <option value="Physical Science" data-i18n="learning.subjectPhysical">Physical science</option>
+          <option value="Life Science" data-i18n="learning.subjectLife">Life science</option>
+          <option value="History" data-i18n="learning.subjectHistory">History</option>
+        </select>
+        <button id="learning-import" class="learning-secondary" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 19h14"/></svg>
+          <span data-i18n="learning.import">Import .muta</span>
+        </button>
+        <p id="learning-status" role="status" aria-live="polite"></p>
+      </div>
+      <main id="learning-view" class="learning-view" tabindex="-1"></main>
+    </section>
+  </div>
+
+  <div id="muta-tour" class="muta-tour" hidden>
+    <div id="muta-tour-highlight" class="muta-tour-highlight" aria-hidden="true"></div>
+    <section class="muta-tour-card" role="dialog" aria-modal="true" aria-labelledby="muta-tour-title">
+      <span id="muta-tour-step" class="muta-tour-step" data-i18n="tour.initialStep">1 of 6</span>
+      <h2 id="muta-tour-title" data-i18n="tour.welcome">Welcome to Muta</h2>
+      <p id="muta-tour-copy" data-i18n="tour.intro">Let’s take a quick tour. Everything here works without internet.</p>
+      <div class="muta-tour-actions">
+        <button id="muta-tour-skip" type="button" data-i18n="tour.skip">Skip tour</button>
+        <span></span>
+        <button id="muta-tour-back" type="button" data-i18n="tour.back">Back</button>
+        <button id="muta-tour-next" class="primary" type="button" data-i18n="tour.next">Next</button>
+      </div>
+    </section>
+  </div>
+
   <!-- Popovers live outside #app's deliberately clipped layout regions. The reasoning trigger
        remains in the composer and positions this menu against its live viewport rectangle. -->
   <div id="think-menu" class="think-menu" role="menu" aria-label="Reasoning effort" data-i18n-aria-label="reason.title" hidden>
@@ -239,6 +397,13 @@
       </div>
       <div class="settings-section">
         <h3 data-i18n="settings.general">General</h3>
+        <label class="settings-row" for="setting-study-country">
+          <span>
+            <strong data-i18n="settings.studyCountry">Where do you study?</strong>
+            <small data-i18n="settings.studyCountryHelp">Uses local currency and exam examples when helpful.</small>
+          </span>
+          <select id="setting-study-country" aria-label="Where do you study?" data-i18n-aria-label="settings.studyCountry"></select>
+        </label>
         <label class="settings-row" for="setting-parallel-chats">
           <span>
             <strong data-i18n="settings.parallel">Generate in multiple chats</strong>
@@ -298,6 +463,35 @@
           <div class="host-roster-heading"><strong data-release-i18n="host.people">People</strong><span id="host-roster-count"></span></div>
           <div id="host-user-list" aria-live="polite"></div>
         </div>
+        <div id="host-courses" class="host-courses">
+          <div class="host-courses-heading">
+            <div><strong data-i18n="host.courses">Courses</strong><small data-i18n="host.coursesHelp">Set how Muta teaches in each class.</small></div>
+            <button id="host-course-add" type="button" data-i18n="host.courseAdd">Add course</button>
+          </div>
+          <form id="host-course-form" class="host-course-form" hidden>
+            <h4 id="host-course-form-title" data-i18n="host.courseAdd">Add course</h4>
+            <label for="host-course-name" data-i18n="host.courseName">Course name</label>
+            <input id="host-course-name" maxlength="80" required>
+            <label for="host-course-style" data-i18n="host.courseStyle">Teaching style</label>
+            <select id="host-course-style">
+              <option value="socratic" data-i18n="course.style.socratic">Guide me</option>
+              <option value="subgoal" data-i18n="course.style.subgoal">Show me how</option>
+              <option value="analogy" data-i18n="course.style.analogy">Everyday examples</option>
+              <option value="hints" data-i18n="course.style.hints">Hints only</option>
+            </select>
+            <label class="host-course-toggle" for="host-course-lock"><span data-i18n="host.courseLock">Lock style</span><input id="host-course-lock" type="checkbox" role="switch"></label>
+            <label class="host-course-toggle" for="host-course-withhold"><span data-i18n="host.courseWithhold">Withhold final answers</span><input id="host-course-withhold" type="checkbox" role="switch"></label>
+            <label for="host-course-note" data-i18n="host.courseNote">Teacher note</label>
+            <textarea id="host-course-note" maxlength="400" rows="3" aria-describedby="host-course-note-help"></textarea>
+            <small id="host-course-note-help" data-i18n="host.courseNoteHelp" data-i18n-vars='{"count":0}'>Muta may repeat this instruction; include no private information · 0/400</small>
+            <div class="host-course-form-actions">
+              <button id="host-course-save" type="submit" data-i18n="host.courseSave">Save course</button>
+              <button id="host-course-cancel" type="button" data-i18n="host.courseCancel">Cancel</button>
+            </div>
+          </form>
+          <p id="host-course-status" role="status" aria-live="polite"></p>
+          <div id="host-course-list" class="host-course-list"></div>
+        </div>
       </div>
       <div id="product-analytics-settings" class="settings-section" hidden>
         <h3 data-i18n="privacy.heading">Privacy</h3>
@@ -317,6 +511,15 @@
           </div>
         </div>
         <div id="resource-list" class="resource-list" aria-live="polite"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-heading">
+          <div>
+            <h3 data-i18n="settings.gettingStarted">Getting started</h3>
+            <p data-i18n="settings.tourHelp">Replay the guided tour of chat, learning tools and offline controls.</p>
+          </div>
+          <button id="replay-tour" type="button" data-i18n="settings.showTour">Show tour</button>
+        </div>
       </div>
     </section>
   </div>
@@ -375,6 +578,8 @@
   <input type="file" id="file-image" accept="image/jpeg,image/png,image/webp" hidden>
   <input type="file" id="file-audio" accept="audio/*" hidden>
   <input type="file" id="file-resource" accept="application/pdf,.pdf" hidden>
+  <input type="file" id="file-unit" accept="application/json,.json,.muta" hidden>
+  <input type="file" id="file-course" accept="application/vnd.muta.course+json,application/json,.muta" hidden>
 
   <script src="vendor/katex/katex.min.js"></script>
   <script src="vendor/marked.min.js"></script>
@@ -386,15 +591,18 @@
   <script src="math.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="syntax.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="visualizations.js?v=20260827-v2-51"></script>
+  <script src="learning-platform.js?v=20261006-learning-platform-1"></script>
   <script src="citations.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="resource-mentions.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="startup.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="parallel-policy.js?v=20260826-host-capacity-i18n-2"></script>
+  <script src="teaching-style-policy.js?v=20261006-adaptive-styles-1"></script>
   <script src="popover-position.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="image-upload.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="release-lifecycle.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="confirm-dialog.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="dynamic-localization.js?v=20260826-host-capacity-i18n-2"></script>
+  <script src="classroom.js?v=20261006-teacher-course-board-1"></script>
   <script src="app.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="product-analytics.js?v=20260826-host-capacity-i18n-2"></script>
   <script src="audio.js?v=20260826-host-capacity-i18n-2"></script>

@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "id": "balancing-chemical-equations",
+  "topic": "chemical_equations",
+  "title": "Chemical equations — conserving every atom",
+  "summary": "Count atoms on each side and change coefficients until matter is conserved.",
+  "estimated_minutes": 17,
+  "sections": [
+    {
+      "id": "conservation",
+      "title": "1. Atoms are rearranged, not lost",
+      "markdown": "A chemical equation must have the same number of each kind of atom before and after the reaction. In $2H_2 + O_2 → 2H_2O$, both sides contain 4 hydrogen atoms and 2 oxygen atoms.",
+      "visualization": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "chemistry_process",
+        "title": "Atoms before and after a reaction",
+        "aria_label": "Two hydrogen molecules and one oxygen molecule rearrange into two water molecules while atom counts stay equal.",
+        "text_fallback": "Reactants have four hydrogen and two oxygen atoms. Products have the same counts in two water molecules.",
+        "height": 350,
+        "controls": [{"id": "product_focus", "label": "Emphasize the products", "type": "range", "value": 1, "min": 0.75, "max": 1.5, "step": 0.25, "binding": {"target_label": "2H₂O", "effect": "scale"}}],
+        "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30},
+        "scene": {"coordinate_system": "screen", "layers": [
+          {"type": "node", "id": "hydrogen", "x": 100, "y": 170, "width": 125, "height": 68, "label": "2H₂", "color": "teal"},
+          {"type": "node", "id": "oxygen", "x": 285, "y": 170, "width": 125, "height": 68, "label": "O₂", "color": "orange"},
+          {"type": "node", "id": "water", "x": 590, "y": 170, "width": 140, "height": 68, "label": "2H₂O", "color": "green"},
+          {"type": "link", "from": "hydrogen", "to": "oxygen", "arrow": false, "label": "+"},
+          {"type": "link", "from": "oxygen", "to": "water", "arrow": true, "label": "rearrange"}
+        ]}
+      }
+    },
+    {
+      "id": "coefficients",
+      "title": "2. Change coefficients, never subscripts",
+      "markdown": "A **coefficient** changes how many molecules participate. A **subscript** changes the substance itself. Balance $N_2 + H_2 → NH_3$ as $N_2 + 3H_2 → 2NH_3$."
+    },
+    {
+      "id": "count-table",
+      "title": "3. Use an atom-count table",
+      "markdown": "List every element and count it on the left and right. Adjust one coefficient at a time, recount, and reduce the final coefficients to the smallest whole-number ratio."
+    }
+  ],
+  "checkpoint": {
+    "title": "Checkpoint",
+    "instructions": "Enter the requested coefficient or atom count as a whole number.",
+    "questions": [
+      {"id": "q1", "prompt": "In $2H_2 + O_2 → 2H_2O$, what is the coefficient of water?", "feedback": "Read the number immediately before H₂O."},
+      {"id": "q2", "prompt": "In the same equation, what is the coefficient of oxygen?", "feedback": "An omitted coefficient means 1."},
+      {"id": "q3", "prompt": "In $N_2 + 3H_2 → 2NH_3$, what is the coefficient of hydrogen?", "feedback": "Read the number before H₂."},
+      {"id": "q4", "prompt": "In that equation, what is the coefficient of ammonia?", "feedback": "Read the number before NH₃."},
+      {"id": "q5", "prompt": "How many carbon atoms are in one molecule of $C_3H_8$?", "feedback": "The carbon subscript gives the count."}
+    ]
+  },
+  "citations": [
+    {"title": "OpenStax Chemistry 2e — Writing and Balancing Chemical Equations", "url": "https://openstax.org/books/chemistry-2e/pages/4-1-writing-and-balancing-chemical-equations", "note": "Reference for conservation of matter and coefficient balancing."},
+    {"title": "OpenStax Chemistry 2e — Chemical Formulas", "url": "https://openstax.org/books/chemistry-2e/pages/2-4-chemical-formulas", "note": "Reference for formulas, subscripts, and atom counts."}
+  ]
+}

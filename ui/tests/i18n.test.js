@@ -95,13 +95,51 @@ test("release settings copy is canonical and translated in complete locale packs
     i18n.catalogs.en["settings.analyticsHelp"],
   );
   assert.equal(Object.hasOwn(i18n.catalogs.en, "settings.powerHelp"), true);
-  assert.deepEqual(i18n.additiveEnglishCatalog, {});
+  assert.equal(i18n.additiveEnglishCatalog["class.title"], "Class board");
+  assert.equal(i18n.additiveEnglishCatalog["course.style.hints"], "Hints only");
+  assert.equal(i18n.t("class.title", {}, "fr"), "Class board");
   assert.equal(Object.hasOwn(i18n.catalogs.fr, "settings.limits"), false);
   assert.equal(supported.length, 27);
 });
 
-test("release catalogs expose no English fallback allow-list", () => {
-  assert.deepEqual([...i18n.ENGLISH_FALLBACK_KEYS], []);
+test("release catalogs expose only the reviewed learning-experience and local-context fallback keys", () => {
+  assert.deepEqual([...i18n.ENGLISH_FALLBACK_KEYS], [
+    "unit.open",
+    "unit.libraryTitle",
+    "unit.back",
+    "unit.close",
+    "unit.import",
+    "unit.importHelp",
+    "unit.loading",
+    "unit.loadFailed",
+    "unit.invalid",
+    "unit.mastery",
+    "unit.masteryNamed",
+    "unit.summaryMinutes",
+    "unit.submit",
+    "unit.submitFailed",
+    "unit.unchecked",
+    "unit.sources",
+    "unit.previewOnly",
+    "unit.score",
+    "unit.progressNotSaved",
+    "settings.studyCountry",
+    "settings.studyCountryHelp",
+    "settings.studyCountryNone",
+    "style.explain",
+    "style.methodGuide",
+    "style.descGuide",
+    "style.methodShow",
+    "style.descShow",
+    "style.methodExamples",
+    "style.descExamples",
+    "style.methodHints",
+    "style.descHints",
+  ]);
+  for (const locale of i18n.supportedDefinitions()) {
+    if (locale.tag === "en") continue;
+    assert.notEqual(i18n.catalogs[locale.tag]["style.label"], i18n.catalogs.en["style.label"]);
+  }
 });
 
 test("machine-assisted packs retain provenance and hide every rejected registry tag", () => {
@@ -397,7 +435,8 @@ test("every translation key used by authored markup exists and localization load
   assert.ok(keys.length > 30);
   for (const key of keys) {
     assert.ok(
-      Object.hasOwn(i18n.catalogs.en, key),
+      Object.hasOwn(i18n.catalogs.en, key)
+        || Object.hasOwn(i18n.additiveEnglishCatalog, key),
       `missing ${key}`,
     );
   }

@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "id": "photosynthesis-energy-flow",
+  "topic": "photosynthesis",
+  "title": "Photosynthesis — following matter and energy",
+  "summary": "Trace carbon dioxide and water into glucose and oxygen while light supplies energy.",
+  "estimated_minutes": 15,
+  "sections": [
+    {
+      "id": "inputs-outputs",
+      "title": "1. Matter cycles; energy flows",
+      "markdown": "Plants use light energy to rearrange carbon dioxide and water into glucose and oxygen. The balanced overview is $6CO_2 + 6H_2O → C_6H_{12}O_6 + 6O_2$. Light provides energy but is not an atom in the products.",
+      "visualization": {
+        "version": 2,
+        "library": "d3",
+        "renderer": "svg",
+        "kind": "scene2d",
+        "family": "biology_process",
+        "title": "Matter and energy through a leaf",
+        "aria_label": "Carbon dioxide, water, and light enter a leaf; glucose and oxygen leave the photosynthesis process.",
+        "text_fallback": "Inputs are carbon dioxide, water, and light energy. Outputs are glucose and oxygen.",
+        "height": 360,
+        "controls": [{"id": "light_focus", "label": "Emphasize light energy", "type": "range", "value": 1, "min": 0.75, "max": 1.5, "step": 0.25, "binding": {"target_label": "light energy", "effect": "scale"}}],
+        "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30},
+        "scene": {"coordinate_system": "screen", "layers": [
+          {"type": "node", "id": "co2", "x": 95, "y": 130, "width": 125, "height": 60, "label": "6CO₂", "color": "orange"},
+          {"type": "node", "id": "water", "x": 95, "y": 230, "width": 125, "height": 60, "label": "6H₂O", "color": "teal"},
+          {"type": "node", "id": "light", "x": 360, "y": 70, "width": 150, "height": 58, "label": "light energy", "color": "orange"},
+          {"type": "node", "id": "leaf", "x": 360, "y": 190, "width": 150, "height": 82, "label": "leaf", "color": "green"},
+          {"type": "node", "id": "glucose", "x": 650, "y": 135, "width": 150, "height": 60, "label": "C₆H₁₂O₆", "color": "purple"},
+          {"type": "node", "id": "oxygen", "x": 650, "y": 235, "width": 125, "height": 60, "label": "6O₂", "color": "green"},
+          {"type": "link", "from": "co2", "to": "leaf", "arrow": true, "label": "carbon"},
+          {"type": "link", "from": "water", "to": "leaf", "arrow": true, "label": "hydrogen"},
+          {"type": "link", "from": "light", "to": "leaf", "arrow": true, "label": "energy"},
+          {"type": "link", "from": "leaf", "to": "glucose", "arrow": true, "label": "stored energy"},
+          {"type": "link", "from": "leaf", "to": "oxygen", "arrow": true, "label": "released"}
+        ]}
+      }
+    },
+    {
+      "id": "chloroplasts",
+      "title": "2. Chloroplasts capture light",
+      "markdown": "Photosynthesis occurs in chloroplasts. Chlorophyll absorbs light energy, which helps build energy-rich glucose. Cells can later release some of that stored chemical energy through cellular respiration."
+    },
+    {
+      "id": "conservation",
+      "title": "3. Check atoms on both sides",
+      "markdown": "The balanced equation contains 6 carbon, 12 hydrogen, and 18 oxygen atoms on each side. Counting atoms shows that matter is conserved even though the molecules change."
+    }
+  ],
+  "checkpoint": {
+    "title": "Checkpoint",
+    "instructions": "Use the balanced photosynthesis equation and enter a whole number.",
+    "questions": [
+      {"id": "q1", "prompt": "What is the coefficient of $CO_2$?", "feedback": "Look before carbon dioxide in the balanced equation."},
+      {"id": "q2", "prompt": "What is the coefficient of $H_2O$?", "feedback": "Look before water in the balanced equation."},
+      {"id": "q3", "prompt": "What is the coefficient of $O_2$?", "feedback": "Look before oxygen on the product side."},
+      {"id": "q4", "prompt": "How many carbon atoms are in one glucose molecule, $C_6H_{12}O_6$?", "feedback": "Read the subscript after C."},
+      {"id": "q5", "prompt": "How many hydrogen atoms are in one glucose molecule?", "feedback": "Read the subscript after H."}
+    ]
+  },
+  "citations": [
+    {"title": "OpenStax Biology 2e — Overview of Photosynthesis", "url": "https://openstax.org/books/biology-2e/pages/8-1-overview-of-photosynthesis", "note": "Reference for the overall photosynthesis equation and energy transformation."},
+    {"title": "OpenStax Biology 2e — The Light-Dependent Reactions", "url": "https://openstax.org/books/biology-2e/pages/8-2-the-light-dependent-reactions-of-photosynthesis", "note": "Reference for light capture in chloroplasts."}
+  ]
+}

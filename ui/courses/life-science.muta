@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "kind": "course",
+  "id": "life-science-cells-inheritance",
+  "title": "Life science — cells, division and inheritance",
+  "subject": "Life Science",
+  "level": "Senior secondary · WAEC and JAMB foundation",
+  "description": "Trace information from DNA through cell division and use evidence to distinguish growth, repair and inheritance.",
+  "estimated_minutes": 60,
+  "exams": ["WAEC-style", "JAMB-style"],
+  "author": {"name": "Muta Learning", "url": "https://github.com/nelsonifechukwu/Muta"},
+  "license": {"name": "CC BY 4.0", "url": "https://creativecommons.org/licenses/by/4.0/"},
+  "concepts": [
+    {"id": "cell", "title": "Cells as units of life", "prerequisites": []},
+    {"id": "dna", "title": "DNA, genes and chromosomes", "prerequisites": ["cell"]},
+    {"id": "cell-cycle", "title": "Cell cycle and mitosis", "prerequisites": ["dna"]},
+    {"id": "inheritance", "title": "Inheritance and variation", "prerequisites": ["dna"]}
+  ],
+  "chapters": [
+    {
+      "id": "information-in-cells",
+      "title": "Information inside a cell",
+      "summary": "Relate cells, nuclei, chromosomes, DNA and genes without treating them as synonyms.",
+      "concept_ids": ["cell", "dna"],
+      "blocks": [
+        {"type": "markdown", "text": "### Nested biological structure\n\nMany eukaryotic cells contain a nucleus. Inside are chromosomes made largely of DNA and proteins. A gene is a region of DNA that contributes to a functional product or regulation.\n\nThink in levels: organism → organ system → organ → tissue → cell → nucleus → chromosome → DNA. The levels are related, but each describes a different structure."},
+        {"type": "visualization", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "biology_hierarchy", "title": "From cell to gene", "aria_label": "A cell connects to a nucleus, chromosome, DNA and gene in sequence.", "text_fallback": "Cell contains nucleus; nucleus contains chromosomes; chromosomes contain DNA; genes are regions of DNA.", "height": 360, "controls": [], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "cell", "x": 80, "y": 170, "width": 105, "height": 62, "label": "cell", "color": "teal"}, {"type": "node", "id": "nucleus", "x": 240, "y": 170, "width": 110, "height": 62, "label": "nucleus", "color": "orange"}, {"type": "node", "id": "chromosome", "x": 420, "y": 170, "width": 130, "height": 62, "label": "chromosome", "color": "purple"}, {"type": "node", "id": "dna", "x": 600, "y": 170, "width": 110, "height": 62, "label": "DNA", "color": "green"}, {"type": "node", "id": "gene", "x": 760, "y": 170, "width": 100, "height": 62, "label": "gene", "color": "teal"}, {"type": "link", "from": "cell", "to": "nucleus", "arrow": true, "label": "contains"}, {"type": "link", "from": "nucleus", "to": "chromosome", "arrow": true, "label": "contains"}, {"type": "link", "from": "chromosome", "to": "dna", "arrow": true, "label": "made of"}, {"type": "link", "from": "dna", "to": "gene", "arrow": true, "label": "region"}]}}},
+        {"type": "activity", "activity_id": "bio-q1"}
+      ]
+    },
+    {
+      "id": "copy-separate-divide",
+      "title": "Copy, separate, divide",
+      "summary": "Use the cell cycle to explain how new cells receive genetic information.",
+      "concept_ids": ["cell-cycle", "inheritance"],
+      "blocks": [
+        {"type": "markdown", "text": "### Order matters\n\nBefore mitosis, DNA is replicated during interphase. During mitosis, duplicated chromosomes are organised and separated into two nuclei. Cytokinesis then divides the cytoplasm.\n\nMitosis supports growth and repair because the daughter cells normally receive equivalent chromosome sets. Meiosis is different: it creates gametes with half the chromosome number and introduces variation."},
+        {"type": "callout", "title": "Evidence check", "text": "A diagram of mitosis should show DNA copied before chromosomes separate—not new DNA appearing after the cell splits."},
+        {"type": "activity", "activity_id": "bio-q2"},
+        {"type": "activity", "activity_id": "bio-q3"}
+      ]
+    }
+  ],
+  "activities": [
+    {"id": "bio-q1", "type": "mcq", "concept_id": "dna", "prompt": "WAEC-style: Which statement best relates a gene and DNA?", "options": ["A gene is a region of DNA", "DNA is a region of a gene", "Genes exist only outside cells", "DNA and a chromosome are unrelated"], "answer": 0, "explanation": "A gene is a defined region of DNA; chromosomes contain long DNA molecules.", "exam_style": "WAEC-style", "difficulty": "Foundation"},
+    {"id": "bio-q2", "type": "mcq", "concept_id": "cell-cycle", "prompt": "JAMB-style: In the normal cell cycle, which event occurs before mitosis?", "options": ["DNA replication", "Cytokinesis only", "Gamete fusion", "Protein digestion"], "answer": 0, "explanation": "DNA is replicated during interphase before duplicated chromosomes separate in mitosis.", "exam_style": "JAMB-style", "difficulty": "Foundation"},
+    {"id": "bio-q3", "type": "mcq", "concept_id": "inheritance", "prompt": "Why is mitosis important in wound repair?", "options": ["It produces genetically similar replacement cells", "It halves chromosome number", "It changes every gene", "It stops protein synthesis"], "answer": 0, "explanation": "Mitosis generates replacement cells with equivalent chromosome sets under normal conditions.", "exam_style": "Course practice", "difficulty": "Applied"}
+  ],
+  "games": [{"id": "cell-sequence", "type": "challenge", "title": "Cell cycle sequence", "description": "Choose what must happen before the next biological event.", "concept_id": "cell-cycle", "rounds": [{"prompt": "Before chromosomes can be separated into daughter nuclei, DNA must be…", "options": ["replicated", "removed", "translated into lipids"], "answer": 0, "explanation": "Replication creates duplicated chromosome material before division."}, {"prompt": "Cytokinesis divides the…", "options": ["cytoplasm", "gene code", "food chain"], "answer": 0, "explanation": "Cytokinesis partitions the cell's cytoplasm."}, {"prompt": "Which process usually supports ordinary tissue growth?", "options": ["mitosis", "meiosis only", "fertilisation only"], "answer": 0, "explanation": "Mitosis adds genetically similar body cells for growth and repair."}]}],
+  "playgrounds": [{"id": "cell-cycle-map", "title": "Cell cycle map", "description": "Emphasize the DNA-copy stage and trace why it must come before chromosome separation.", "concept_id": "cell-cycle", "spec": {"version": 2, "library": "d3", "renderer": "svg", "kind": "scene2d", "family": "biology_process", "title": "Copy, separate and divide", "aria_label": "Growth leads to DNA copy, chromosome separation and cell division.", "text_fallback": "The cell grows, copies DNA, separates chromosomes, then divides.", "height": 390, "controls": [{"id": "copy_focus", "label": "Emphasize DNA copy", "type": "range", "value": 1, "min": 0.75, "max": 1.5, "step": 0.25, "binding": {"target_label": "copy DNA", "effect": "scale"}}], "budget": {"max_points": 256, "max_triangles": 32000, "max_fps": 30}, "scene": {"coordinate_system": "screen", "layers": [{"type": "node", "id": "grow", "x": 100, "y": 190, "width": 120, "height": 68, "label": "grow", "color": "teal"}, {"type": "node", "id": "copy", "x": 300, "y": 190, "width": 120, "height": 68, "label": "copy DNA", "color": "orange"}, {"type": "node", "id": "separate", "x": 510, "y": 190, "width": 140, "height": 68, "label": "separate", "color": "purple"}, {"type": "node", "id": "divide", "x": 730, "y": 190, "width": 120, "height": 68, "label": "divide", "color": "green"}, {"type": "link", "from": "grow", "to": "copy", "arrow": true, "label": ""}, {"type": "link", "from": "copy", "to": "separate", "arrow": true, "label": ""}, {"type": "link", "from": "separate", "to": "divide", "arrow": true, "label": ""}]}}}],
+  "sources": [
+    {"title": "OpenStax Biology 2e — Cell Division", "url": "https://openstax.org/books/biology-2e/pages/10-1-cell-division", "note": "Reference for genomes, chromosomes, genes and cell reproduction.", "license": "CC BY 4.0"},
+    {"title": "OpenStax Biology 2e — The Cell Cycle", "url": "https://openstax.org/books/biology-2e/pages/10-2-the-cell-cycle", "note": "Reference for interphase, mitosis and cytokinesis.", "license": "CC BY 4.0"}
+  ]
+}

@@ -65,7 +65,8 @@ def test_chat_shell_has_localized_routes_back_to_the_landing_page():
         "#e58c69",
     ):
         assert token in CSS
-    assert ".mobile-home-link { display: inline-flex; }" in CSS
+    assert ".mobile-home-link { display: none; }" in CSS
+    assert ".style-pill { display: block;" in CSS
 
 
 def test_loopback_host_opens_the_local_shell_without_the_shared_connection_gate():
@@ -160,13 +161,16 @@ def test_offline_dist_includes_the_release_english_catalog():
     assert '"release-english.js"' in builder
 
 
-def test_wordmark_uses_approved_light_and_dark_artwork_on_every_app_surface():
-    assert HTML.count('class="muta-logo muta-logo-wordmark" role="img" aria-label="Muta"') == 3
+def test_brand_marks_use_approved_light_and_dark_artwork_on_every_app_surface():
+    assert HTML.count('class="muta-logo muta-logo-wordmark" role="img" aria-label="Muta"') == 2
+    assert HTML.count('class="muta-logo muta-logo-symbol" role="img" aria-label="Muta"') == 1
     assert (
         'class="muta-logo muta-logo-stacked startup-wordmark" role="img" aria-label="Muta"' in HTML
     )
-    assert HTML.count('src="brand/muta-wordmark-on-light.svg"') == 3
-    assert HTML.count('src="brand/muta-wordmark-on-dark.svg"') == 3
+    assert HTML.count('src="brand/muta-wordmark-on-light.svg"') == 2
+    assert HTML.count('src="brand/muta-wordmark-on-dark.svg"') == 2
+    assert 'src="brand/muta-symbol-on-light.svg"' in HTML
+    assert 'src="brand/muta-symbol-on-dark.svg"' in HTML
     assert 'src="brand/muta-stacked-on-light.svg"' in HTML
     assert 'src="brand/muta-stacked-on-dark.svg"' in HTML
     assert "muta-wordmark-u" not in HTML
