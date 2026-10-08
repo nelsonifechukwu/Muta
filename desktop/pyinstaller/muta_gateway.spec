@@ -13,6 +13,10 @@ ROOT = Path(SPEC).resolve().parents[2]
 
 datas = [
     (str(ROOT / "orchestrator" / "prompts"), "orchestrator/prompts"),
+    (
+        str(ROOT / "orchestrator" / "pedagogy" / "data"),
+        "orchestrator/pedagogy/data",
+    ),
     (str(ROOT / "orchestrator" / "audio" / "audio.yaml"), "orchestrator/audio"),
     (
         str(ROOT / "orchestrator" / "exam" / "question_bank.json"),

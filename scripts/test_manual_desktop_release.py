@@ -96,11 +96,11 @@ def test_model_sync_copies_only_declared_product_inputs(tmp_path: Path) -> None:
                         "id": model_sync.PRODUCT_MODEL_IDS[0],
                         "path": product,
                     },
-                    {
-                        "id": model_sync.PRODUCT_MODEL_IDS[1],
-                        "path": secondary,
-                        "mmproj_path": projector,
-                    }
+                        {
+                            "id": "unbundled-secondary",
+                            "path": secondary,
+                            "mmproj_path": projector,
+                        }
                 ]
             }
         ),
@@ -118,8 +118,8 @@ def test_model_sync_copies_only_declared_product_inputs(tmp_path: Path) -> None:
     model_sync.sync(source, destination)
 
     assert (destination / product).read_text(encoding="utf-8") == product
-    assert (destination / secondary).read_text(encoding="utf-8") == secondary
-    assert (destination / projector).read_text(encoding="utf-8") == projector
+    assert not (destination / secondary).exists()
+    assert not (destination / projector).exists()
     assert not (destination / "runtime/model-catalog.json").exists()
 
 
@@ -137,8 +137,11 @@ def test_gateway_worker_uses_external_cargo_cache(tmp_path: Path) -> None:
     )
 
 
-def test_ui_cache_tracks_production_svg_assets() -> None:
+def test_ui_cache_tracks_production_assets_and_portable_courses() -> None:
     assert "ui/*.svg" in worker.UI_INPUTS
+    assert "ui/*.json" in worker.UI_INPUTS
+    assert "ui/courses/*" in worker.UI_INPUTS
+    assert "ui/units/*" in worker.UI_INPUTS
 
 
 def test_gateway_worker_does_not_resolve_venv_python_symlink(

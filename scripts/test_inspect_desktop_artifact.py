@@ -60,12 +60,10 @@ def test_core_model_inspection_binds_default_catalog_and_pack_hashes() -> None:
     with pytest.raises(RuntimeError, match="pinned release artifact"):
         verify_core_models(product, {"models": models}, pack)
     models[0]["sha256"] = CORE_MODELS[DEFAULT_MODEL_ID]["sha256"]
-    pack["files"] = [
-        item for item in files if item["path"] != CORE_MODELS["muta-tutor-qwen3.5-0.8b-q4_0"]["mmproj_path"]
-    ]
-    with pytest.raises(RuntimeError, match="projector is absent"):
+    models.append({"id": "unexpected", "kind": "local", "path": "models/core/extra.gguf"})
+    with pytest.raises(RuntimeError, match="exactly one tutor model"):
         verify_core_models(product, {"models": models}, pack)
-    pack["files"] = files
+    models.pop()
     pack["active_model_id"] = "muta-tutor-qwen3.5-0.8b-q4_0"
     with pytest.raises(RuntimeError, match="clean-start"):
         verify_core_models(product, {"models": models}, pack)

@@ -10,12 +10,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_MODEL_IDS = (
     "qwen2.5-1.5b-instruct-q4_k_m",
-    "muta-tutor-qwen3.5-0.8b-q4_0",
 )
 OPTIONAL_ARTIFACTS = {"asr", "vad", "tts", "embed"}
 REQUIRED_LICENSES = {
     "core.Apache-2.0.txt",
-    "mmproj.Apache-2.0.txt",
     "asr.MIT.txt",
     "vad.MIT.txt",
     "tts.CC0-1.0.txt",

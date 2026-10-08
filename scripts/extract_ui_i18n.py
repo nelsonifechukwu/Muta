@@ -93,7 +93,7 @@ COPY_ENTRY_RE = re.compile(
 JS_STRING_RE = re.compile(r"(?P<quote>[\"'`])(?P<value>(?:\\.|(?!\1).)*?)\1", re.DOTALL)
 CANONICAL_KEY_RE = re.compile(r"\bt\(\s*([\"'])(?P<key>[^\"']+)\1")
 LOCAL_KEY_RE = re.compile(
-    r"\b(?P<helper>featureT|powerText|releaseT)\(\s*([\"'])(?P<key>[^\"']+)\2"
+    r"\b(?P<helper>featureT|powerText|releaseT|learningText|text)\(\s*([\"'])(?P<key>[^\"']+)\2"
 )
 
 
@@ -282,6 +282,8 @@ def javascript_inventory(path: Path) -> tuple[list[dict[str, Any]], list[dict[st
         key = match.group("key")
         if match.group("helper") == "powerText":
             key = f"power.{key}"
+        elif match.group("helper") == "learningText":
+            key = f"learning.{key}"
         keys.append(
             {
                 "file": relative(path),
@@ -373,7 +375,7 @@ globalThis.window=globalThis;
 require('./ui/locale-fr.js');
 require('./ui/locales.js');
 require('./ui/locale-generated.js');
-const en=MutaI18n.catalogs.en;
+const en={...MutaI18n.catalogs.en, ...MutaI18n.additiveEnglishCatalog};
 const visible=MutaI18n.supportedDefinitions();
 process.stdout.write(JSON.stringify({
   english: en,
@@ -429,10 +431,11 @@ def build_inventory() -> dict[str, Any]:
         or (
             row["text"] not in known_keys
             and f"power.{row['text']}" not in known_keys
+            and f"learning.{row['text']}" not in known_keys
             and row["text"] not in HTML_TAG_NAMES
             and not any(
                 helper in row["text"]
-                for helper in ("${t(", "featureT(", "powerText(")
+                for helper in ("${t(", "featureT(", "powerText(", "learningText(", "text(")
             )
             and not re.fullmatch(r"[a-z][a-z0-9_-]*", row["text"])
             and not re.fullmatch(r"(?:http|https):", row["text"])

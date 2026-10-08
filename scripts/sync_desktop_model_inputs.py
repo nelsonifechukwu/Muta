@@ -12,7 +12,6 @@ from pathlib import Path
 
 PRODUCT_MODEL_IDS = (
     "qwen2.5-1.5b-instruct-q4_k_m",
-    "muta-tutor-qwen3.5-0.8b-q4_0",
 )
 MODEL_DIRECTORIES = ("models/asr", "models/tts", "models/embed", "models/LICENSES")
 MODEL_FILES = ("models/MANIFEST.json", "models/pins.lock.json")

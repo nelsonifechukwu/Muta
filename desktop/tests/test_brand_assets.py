@@ -43,8 +43,10 @@ def test_every_authored_product_surface_uses_supplied_logo_artwork() -> None:
     report = (ROOT / "muta-iq" / "dashboard" / "index.html").read_text(encoding="utf-8")
     splash = (DESKTOP / "splash" / "index.html").read_text(encoding="utf-8")
 
-    assert app.count("brand/muta-wordmark-on-light.svg") == 3
-    assert app.count("brand/muta-wordmark-on-dark.svg") == 3
+    assert app.count("brand/muta-wordmark-on-light.svg") == 2
+    assert app.count("brand/muta-wordmark-on-dark.svg") == 2
+    assert "brand/muta-symbol-on-light.svg" in app
+    assert "brand/muta-symbol-on-dark.svg" in app
     assert "brand/muta-stacked-on-light.svg" in app
     assert "brand/muta-stacked-on-dark.svg" in app
     assert landing.count("brand/muta-wordmark-on-light.svg") == 2
@@ -74,9 +76,14 @@ def test_runtime_brand_subset_matches_the_approved_kit() -> None:
         ROOT / "muta-iq" / "dashboard" / "brand",
     )
     for destination in destinations:
-        assert {path.name for path in destination.iterdir()} == set(source_pairs)
+        expected_names = set(source_pairs)
+        if destination == UI / "brand":
+            expected_names |= {"muta-symbol-on-light.svg", "muta-symbol-on-dark.svg"}
+        assert {path.name for path in destination.iterdir()} == expected_names
         for name, source in source_pairs.items():
             assert (destination / name).read_bytes() == source.read_bytes()
+    for name in ("muta-symbol-on-light.svg", "muta-symbol-on-dark.svg"):
+        assert (UI / "brand" / name).read_bytes() == (BRANDING / "logos" / name).read_bytes()
 
 
 def test_brand_assets_are_part_of_the_offline_ui_and_entry_pages() -> None:
@@ -85,7 +92,7 @@ def test_brand_assets_are_part_of_the_offline_ui_and_entry_pages() -> None:
     app = (UI / "index.html").read_text(encoding="utf-8")
     landing = (ROOT / "landing" / "index.html").read_text(encoding="utf-8")
 
-    assert 'UI_DIRECTORIES = ("brand",)' in builder
+    assert 'UI_DIRECTORIES = ("brand", "units", "courses")' in builder
     assert '"ui/brand/*"' in worker
     assert '<link rel="icon" href="muta-icon.svg" type="image/svg+xml">' in app
     assert '<link rel="icon" href="brand/muta-favicon-32.svg" type="image/svg+xml">' in landing

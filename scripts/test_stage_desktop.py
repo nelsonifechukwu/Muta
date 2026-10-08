@@ -50,7 +50,7 @@ def test_model_spec_rewrites_a_source_path_into_product_model_pack(tmp_path, mon
     assert "muta-iq" not in spec["path"]
 
 
-def test_desktop_defaults_name_both_core_models_and_select_qwen25():
+def test_desktop_defaults_ship_only_qwen25():
     args = stage_desktop._parser().parse_args(
         [
             "stage",
@@ -74,15 +74,13 @@ def test_desktop_defaults_name_both_core_models_and_select_qwen25():
     )
 
     assert args.model_id == "qwen2.5-1.5b-instruct-q4_k_m"
-    assert args.bundled_model_id == ["muta-tutor-qwen3.5-0.8b-q4_0"]
+    assert args.bundled_model_id == []
 
 
-def test_stage_writes_both_core_models_and_qwen25_clean_start(tmp_path, monkeypatch):
+def test_stage_writes_only_qwen25_clean_start(tmp_path, monkeypatch):
     root = tmp_path / "repo"
     qwen25 = root / "models-src/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf"
-    qwen35 = root / "models-src/muta-tutor-qwen3.5-0.8b-q4_0.gguf"
-    projector = root / "models-src/Qwen3.5-0.8B-mmproj-F16.gguf"
-    for path, body in ((qwen25, b"qwen25"), (qwen35, b"qwen35"), (projector, b"projector")):
+    for path, body in ((qwen25, b"qwen25"),):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
     catalog = {
@@ -96,18 +94,6 @@ def test_stage_writes_both_core_models_and_qwen25_clean_start(tmp_path, monkeypa
                 "size_bytes": qwen25.stat().st_size,
                 "sha256": hashlib.sha256(qwen25.read_bytes()).hexdigest(),
                 "recommended": True,
-            },
-            {
-                "id": stage_desktop.SECONDARY_CORE_MODEL_ID,
-                "label": "Qwen3.5",
-                "kind": "local",
-                "path": qwen35.relative_to(root).as_posix(),
-                "size_bytes": qwen35.stat().st_size,
-                "sha256": hashlib.sha256(qwen35.read_bytes()).hexdigest(),
-                "recommended": False,
-                "mmproj_path": projector.relative_to(root).as_posix(),
-                "mmproj_size_bytes": projector.stat().st_size,
-                "mmproj_sha256": hashlib.sha256(projector.read_bytes()).hexdigest(),
             },
         ],
     }
@@ -128,7 +114,7 @@ def test_stage_writes_both_core_models_and_qwen25_clean_start(tmp_path, monkeypa
         engine_dir=engine.parent,
         ffmpeg_bin=None,
         model_id=stage_desktop.DEFAULT_MODEL_ID,
-        bundled_model_id=[stage_desktop.SECONDARY_CORE_MODEL_ID],
+        bundled_model_id=[],
         model_file=None,
         mmproj_file=None,
         model_pack_id="test-pack",
@@ -149,14 +135,10 @@ def test_stage_writes_both_core_models_and_qwen25_clean_start(tmp_path, monkeypa
     pack = json.loads((model_output / "model-pack.json").read_text())
     assert product["active_model"]["id"] == stage_desktop.DEFAULT_MODEL_ID
     assert pack["active_model_id"] == stage_desktop.DEFAULT_MODEL_ID
-    assert [model["id"] for model in staged_catalog["models"]] == [
-        stage_desktop.DEFAULT_MODEL_ID,
-        stage_desktop.SECONDARY_CORE_MODEL_ID,
-    ]
-    assert {entry["path"] for entry in pack["files"]} >= {
-        "models/core/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf",
-        "models/core/muta-tutor-qwen3.5-0.8b-q4_0.gguf",
-    }
+    assert [model["id"] for model in staged_catalog["models"]] == [stage_desktop.DEFAULT_MODEL_ID]
+    assert {
+        entry["path"] for entry in pack["files"] if entry["path"].endswith(".gguf")
+    } == {"models/core/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf"}
 
 
 def test_safe_relative_rejects_parent_escape():

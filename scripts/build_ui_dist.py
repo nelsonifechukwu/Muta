@@ -27,11 +27,15 @@ UI_FILES = (
     "app.js",
     "audio.js",
     "citations.js",
+    "classroom.js",
+    "course-schema-v2.json",
     "confirm-dialog.js",
     "dynamic-localization.js",
     "i18n.js",
     "image-upload.js",
     "index.html",
+    "learning-platform.css",
+    "learning-platform.js",
     "locale-bootstrap.js",
     "locale-fr.js",
     "locale-generated.js",
@@ -48,6 +52,7 @@ UI_FILES = (
     "startup.js",
     "styles.css",
     "syntax.js",
+    "teaching-style-policy.js",
     "theme.js",
     "visualizations.js",
     "viz-frame.css",
@@ -57,7 +62,7 @@ UI_FILES = (
     "viz-theme.js",
     "worklet.js",
 )
-UI_DIRECTORIES = ("brand",)
+UI_DIRECTORIES = ("brand", "units", "courses")
 
 DOWNLOADS = {
     "katex.tar.gz": (

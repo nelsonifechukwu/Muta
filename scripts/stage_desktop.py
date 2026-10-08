@@ -22,7 +22,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CHUNK_SIZE = 8 * 1024 * 1024
 FORBIDDEN_PARTS = {".git", "bench", "muta-iq", "model-development", "__pycache__"}
 DEFAULT_MODEL_ID = "qwen2.5-1.5b-instruct-q4_k_m"
-SECONDARY_CORE_MODEL_ID = "muta-tutor-qwen3.5-0.8b-q4_0"
 
 
 class StageError(RuntimeError):
@@ -341,7 +340,8 @@ def _parser() -> argparse.ArgumentParser:
     stage_parser.add_argument("--ffmpeg-bin", type=Path)
     stage_parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
     stage_parser.add_argument(
-        "--bundled-model-id", action="append", default=[SECONDARY_CORE_MODEL_ID]
+        "--bundled-model-id", action="append", default=[],
+        help="development-only extra core model; release workers leave this empty",
     )
     stage_parser.add_argument("--model-file")
     stage_parser.add_argument("--mmproj-file")

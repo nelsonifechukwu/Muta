@@ -28,8 +28,6 @@ def test_model_cache_verifier_checks_product_and_optional_inputs(
 ) -> None:
     monkeypatch.setattr(models, "REPO_ROOT", tmp_path)
     product = _write(tmp_path, "muta-iq/model/product.gguf", b"product")
-    secondary = _write(tmp_path, "muta-iq/model/secondary.gguf", b"secondary")
-    projector = _write(tmp_path, "models/mmproj/projector.gguf", b"projector")
     catalog = {
         "models": [
             {
@@ -37,15 +35,6 @@ def test_model_cache_verifier_checks_product_and_optional_inputs(
                 "path": product["path"],
                 "size_bytes": product["bytes"],
                 "sha256": product["sha256"],
-            },
-            {
-                "id": models.PRODUCT_MODEL_IDS[1],
-                "path": secondary["path"],
-                "size_bytes": secondary["bytes"],
-                "sha256": secondary["sha256"],
-                "mmproj_path": projector["path"],
-                "mmproj_size_bytes": projector["bytes"],
-                "mmproj_sha256": projector["sha256"],
             }
         ]
     }
@@ -92,7 +81,7 @@ def test_cache_change_classifier_keeps_layers_independent() -> None:
     assert all(workflow.values())
 
 
-def test_workflows_cache_and_transfer_both_core_models() -> None:
+def test_workflows_cache_and_transfer_the_product_model() -> None:
     root = desktop_cache_key.REPO_ROOT
     qwen25 = "muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf"
     recipe = "muta-iq/fetch_qwen25.sh"

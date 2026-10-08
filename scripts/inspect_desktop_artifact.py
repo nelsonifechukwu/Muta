@@ -19,14 +19,6 @@ CORE_MODELS = {
         "size_bytes": 986_048_128,
         "sha256": "a750d00d458c6ab38925364ea1413db00648449180941e47025736d09922e1eb",
     },
-    "muta-tutor-qwen3.5-0.8b-q4_0": {
-        "path": "models/core/muta-tutor-qwen3.5-0.8b-q4_0.gguf",
-        "size_bytes": 512_977_376,
-        "sha256": "552de22f7ea6f161a458985900e2c961d7578baa1ea9c23018ae27151623ff26",
-        "mmproj_path": "models/core/Qwen3.5-0.8B-mmproj-F16.gguf",
-        "mmproj_size_bytes": 204_987_232,
-        "mmproj_sha256": "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453",
-    },
 }
 
 
@@ -58,6 +50,13 @@ def verify_core_models(product: dict, catalog: dict, pack: dict) -> None:
         fail("packaged Qwen2.5 active-model metadata is not the pinned release artifact")
     catalog_by_id = {str(item.get("id")): item for item in catalog.get("models", [])}
     files_by_path = {str(item.get("path")): item for item in pack.get("files", [])}
+    if set(catalog_by_id) != {DEFAULT_MODEL_ID}:
+        fail("the release catalog must contain exactly one tutor model: Muta Tutor Qwen2.5 1.5B")
+    packaged_core_ggufs = {
+        path for path in files_by_path if path.startswith("models/core/") and path.endswith(".gguf")
+    }
+    if packaged_core_ggufs != {CORE_MODELS[DEFAULT_MODEL_ID]["path"]}:
+        fail("the release model pack must contain exactly the Qwen2.5 tutor GGUF")
     for model_id, expected in CORE_MODELS.items():
         expected_path = expected["path"]
         model = catalog_by_id.get(model_id)
