@@ -27,6 +27,207 @@ checkpoint). Thinking on, `--reasoning-budget 512`.
 
 ---
 
+## 2026-10-09 — learner-file RAG: answer room, in-place continuation, Markdown/text, bge retrieval
+
+Design and rationale: [`docs/rag-resources.md`](docs/rag-resources.md). Hardware for every
+number here: **native — Apple M4 Pro (14-core), 24 GiB**, the review app's bundled
+`llama-server` (arm64, `602f828b4`) and model pack `muta-models-2026.08-582d2c4d…`
+(core `Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf`, embed `bge-small-en-v1.5-q8_0.gguf`).
+Not a Qwen3.5-4B or x86-target measurement.
+
+**Failure reproduced from the learner's database copy.** A question over a 68-page PDF ran
+in a 2,048-token lane (desktop `n_ctx 4096 / 2`). Every generation was capped at 64 tokens:
+llama-server logged prompt 1,792 = 2,048 − 192 safety − 64 minimum reply. The automatic
+continuation buffered each attempt's text and discarded it on the next cap, so the retries were
+byte-identical; the saved partial had no citations, and "Continue reply" sent a visible
+"continue" message with no document attached, so the model invented the rest.
+
+**Configuration changes.**
+
+| change | before | after |
+|---|---|---|
+| desktop `MUTA_RT_N_CTX` (`desktop/backend_entry.py`) | 4096 (2 × 2,048 lanes) | **8192 (2 × 4,096 lanes)** |
+| answer reserve when fitting (`_muta_min_reply_tokens`) | 64 tokens | **512** for grounded turns (≥256 if evidence needs it); lane/8 (256–512) otherwise; ≤ half the lane, ≤ `max_tokens` |
+| evidence sizing | five fixed 1,500-char passages, clipped by the fitter | measured room × 3.6 chars/token, whole passages in rank order |
+| PDF chunks | 1,500 chars / 220 overlap | **900 / 150**, running headers/footers and page numbers removed |
+| document embeddings | hashed bag-of-words (`hashing:384`) | **bge-small sidecar** (`--embeddings --pooling cls -c 1024 -np 2 -b 512 -ub 512`, spawn on use, 300 s idle reap); hashing/lexical fallback |
+| file types | PDF | PDF, **Markdown (.md/.markdown), plain text (.txt)** |
+| schema | v5 | **v6** (mime CHECK widened; `section` on `resource_chunks`, `message_sources`) |
+
+**Measured.**
+
+| measurement | 4096 total ctx | 8192 total ctx |
+|---|---|---|
+| idle engine RSS | 2,028 MiB | 2,136 MiB |
+| peak engine RSS, both lanes full (prompt = lane − 700 tokens each) | 2,053 MiB | 2,160 MiB (**+107 MiB**) |
+| prefill, two concurrent requests | 501 tok/s | 429 tok/s |
+| decode during that load | 73.8 tok/s | 49.9 tok/s |
+
+The decode drop is the cost of 3,396-token prompts rather than 1,348-token ones (attention over a
+longer context), not of the larger allocation; short chats are unchanged. KV per token for the
+1.5B model at q8_0-K/f16-V: 21,952 B (GGUF metadata), i.e. +86 MiB of KV for the extra 4,096
+tokens, consistent with the measured +107 MiB.
+
+The tutor system prompt is 4,311 bytes = **901 tokens** with the bundled tokenizer
+(4.8 bytes/token). In a 4,096-token lane a grounded turn now has ≈2,000 tokens of evidence room
+(six or seven 900-character passages) and keeps ≥512 tokens for the answer.
+
+Retrieval, 18 labelled questions over the same 68-page PDF (expected pages read off the
+document), `k = 6`:
+
+| index | chunks | top-1 | top-3 | top-6 | prepare | query |
+|---|---|---|---|---|---|---|
+| hashing, 1,500/220, no cleaning (before) | 87 | 9/18 | 15/18 | 17/18 | 0.47 s | 6.4 ms |
+| hashing, 900/150 + cleaning | 130 | 9/18 | 14/18 | 17/18 | 0.46 s | 7.1 ms |
+| bge, 1,500/220, no cleaning | 87 | 13/18 | 17/18 | 18/18 | 1.19 s | 17.8 ms |
+| **bge, 900/150 + cleaning (shipped)** | 130 | 12/18 | 17/18 | **18/18** | 0.95 s | 21.0 ms |
+
+bge score calibration: correct pages trail the best hit by ≤ 0.161 (window set to 0.20);
+off-topic questions ("capital of Kenya", "photosynthesis") top out at 0.465 / 0.574 against
+≥ 0.681 for answerable ones. Overview questions now draw Introduction (p. 6), Summary
+(pp. 66–67), Contents (pp. 3–4) and an even spread (pp. 7, 26, 46); before, similarity search
+returned the title page, acknowledgements and endnotes.
+
+**Upgrade checks.** SQLite v5 → v6 on a copy of the learner's database: 2 resources, 91 chunks,
+558 messages preserved; `foreign_keys` back on; `integrity_check` ok; both old indexes listed as
+stale for background re-indexing. Postgres v5 → v6 (local PostgreSQL 15): existing PDF kept,
+Markdown accepted, other types still rejected by the CHECK.
+
+**Adversarial review (fresh context) → fixes.** 13 findings; all high and medium ones fixed with
+regression tests: resumed `[R#]` markers deleted when pinned passages did not fit (pins now
+always citable; sources rewritten in final order); a deleted cited file re-pointing stored
+markers (markers removed instead); >400-char section labels breaking conversation loads
+(labels capped at 240); model `muta-viz` blocks persisted from failed grounded replies;
+evidence overflowing the prompt with images/dense text (render → re-measure → shrink loop);
+bge-scale window hiding hashing-indexed files; overview of several files favouring one;
+resumed prompts losing earlier turns; echo stripping gluing paragraphs; echo-only
+continuations marked complete; global 512 reserve squeezing 2,048-token lanes (now lane/8 for
+ordinary turns). Also found live: the engine echoes an assistant prefill verbatim, which
+duplicated half of every recovered answer — killed llama-server mid-answer before and after
+the fix: before, the reply repeated its opening and hit the loop guard; after, it completed
+with no repeated 60-character window. bge sidecar: **132 MiB RSS**, 0.31 s start from page
+cache (6.9 s cold disk).
+
+**Installed review app (frozen gateway, the learner's real database).** First launch migrated
+SQLite v5 → v6 with all 558 messages kept (backup: `muta.sqlite3.pre-v6-backup-2026-10-09`
+beside it), and re-indexed both PDFs with bge in the background (137 chunks; status stayed
+`ready`). The originally failing question, "what's the summary of this book" over the 68-page
+PDF, now returns a correct, complete summary (zero-/few-shot, system/role/context, step-back,
+CoT, self-consistency, best practices) instead of a 64-token answer built from the page-66
+template; engine launched with `--ctx-size 8192`.
+
+**Follow-ups the same day.** (1) In-app, 2 of 3 grounded answers carried no `[R#]` marker, so
+they showed no sources; such replies now keep their three strongest passages, listed as
+"Sources consulted" (`docs/rag-resources.md`). (2) Opening the rebuilt unsigned review app from
+`~/Desktop` through LaunchServices (double-click, `open`, `Muta.command`) left a blank window and
+no backend, while the same bundle opened from outside `~/Desktop` started in 5 s and direct exec
+always worked — consistent with macOS Desktop-folder privacy control re-prompting for each new
+ad-hoc code identity; after access was granted it starts normally (11–16 s; the extra ~6 s is
+re-verifying the sibling model pack). The shell now appends every startup failure to
+`logs/desktop-shell.log`; before, the only trace was the splash itself.
+
+(3) Returning to the chat from the About page showed "Loading models…" for ~3 s with the engine
+already warm: `/v1/models` re-planned every installed model and so re-parsed 16 GGUF headers
+(185–300 ms each, vocabulary arrays included). The planner now caches per-model KV/state costs
+by file identity (path, size, mtime, ctime, K-cache type) and warms the cache in the background at
+start: `/v1/models` 3,277 ms → 165 ms on the review app (native, 16 local models).
+
+(4) Inline citations for small models: unmarked claims are attributed after generation to the
+shown passage that supports them (bge cosine ≥ 0.70 and ≥ 30% content-word coverage). On the
+learner's real answers: step-back answer → p. 25 for both claims; summaries → 2 and 10 citations;
+four off-topic answers scored against the same passages → 0 citations.
+
+**Tests.** 1,825 Python passed, 11 skipped; Node UI 157/157. Two Postgres-only tests in
+`runtime/tests/test_chat.py` fail identically on a clean HEAD checkout (they expect a trailing
+space that `_ReplyWriter` has always trimmed); tracked separately, not changed here.
+
+---
+
+## 2026-10-09 — v5 interface redesign ("Bright"), review build 0.1.450
+
+**Scope:** interface only. The engine, flags, model pack, gateway code and `/v1` contract are
+unchanged. The review app reuses v4's frozen gateway and resources and swaps in the new
+`ui/dist`. Design rationale, palette and rejected alternatives:
+[`docs/design/muta-v5-bright.md`](docs/design/muta-v5-bright.md).
+
+A first look ("Adire & Loom", indigo-led) was rejected in review and replaced the same day.
+
+**What changed:**
+- **Tokens:** light and warm-graphite dark token set in `ui/styles.css`. Dark was chosen over
+  neutral, cool and soft charcoal after side-by-side renders.
+- **Logo colourway:** ink, white and Muta coral `#D9573A` / `#FF8A66`, regenerated from
+  `branding/source/build_assets.py`. Shapes and the speaking dot are unchanged. The kit,
+  favicons, native app icons, splash, landing and dashboard copies were all synced.
+- **Desktop shell:** the gateway prefers stable port 46871 (env override, random fallback when
+  taken). The web view origin no longer changes per launch, so the finished tour, the theme and
+  drafts persist. Rust tests: 12/12 pass. Verified with a native relaunch.
+- **Build caches:** the UI build cache inputs now include `ui/fonts/`. The CI change detector also
+  includes `ui/courses/` and `ui/units/`, which were previously missed. Both have tests.
+- **Brand-consistency audit:**
+  - every surface was checked in light and dark, plus a static sweep of all styles and scripts;
+  - fixes cover form-control fonts, coral labels, pill controls, hover states and on-fill
+    colours;
+  - visualization frames moved to the v5 palette and Onest, with pastel nodes, edge-clipped
+    links and auto-fit views;
+  - unused brand fonts were dropped from shipped bundles (−284 KB each);
+  - details are in `docs/design/muta-v5-bright.md`.
+- **About page (`landing/`):** restyled to v5. Its copy was rewritten from the v8 pitch
+  narration, using only cited numbers.
+- **Components:** a new component layer, `ui/v5.css`.
+- **Font:** Onest bundled as a subset variable WOFF2.
+- **Navigation and home:** rail reordered so Learn and Class sit above the chats, and pastel
+  home quick-starts added (`ui/home.js`).
+- **Learn:** `MutaLearning.open(tab)` lets a shortcut choose the starting section.
+- **Splash:** restyled.
+- **Fixes:**
+  - course-reader maths (a non-existent `renderMath` was called);
+  - unreadable answered game options;
+  - the first-launch tour stacking over the consent dialog;
+  - the tour card's hard-coded size clamp;
+  - undefined `--line`, `--ink` and `--panel` tokens.
+
+**Measured (native, M2 Pro, 1180×800 window):**
+
+| Item | v4 (0.1.449) | v5 review (0.1.450) |
+|---|---:|---|
+| Offline UI payload (`ui/dist`) | 6,236 KiB | ≈ 6,340 KiB |
+| Engine tree RSS during chat | — | 1.94 GB (telemetry strip) |
+| Engine RSS / tok/s | — | not re-measured; engine and flags unchanged |
+
+The UI payload adds Onest (64 KiB), `v5.css` (≈ 25 KiB) and `home.js` (2 KiB).
+
+**Tests:**
+- `ui/tests`: 106 Python and 157 Node tests pass.
+- Desktop and staging: `desktop/tests`, `scripts/test_stage_desktop.py` and
+  `scripts/test_export_native_linux.py` pass.
+- Palette, icon and landing pins were updated deliberately to the v5 values. The landing
+  accent-contrast check now pins dark text on mint, not white. The dark-mode contrast gates
+  are unchanged and pass.
+
+**Interactive checks:**
+- **Native review app, macOS:**
+  - startup in dark;
+  - Settings, including switching to light;
+  - home in light and dark;
+  - opening an existing conversation and streaming a new reply;
+  - new chat.
+- **Same build in the browser:**
+
+  | Area | What was exercised |
+  |---|---|
+  | Learn | All seven tabs, in light and dark. |
+  | Home | Practice quick-start. |
+  | Tour | All six steps in English and Arabic; phone bottom sheet. |
+  | Phone width (375 px) | Composer fit and drawer. |
+  | Languages | Yoruba diacritics; Arabic RTL chat. |
+  | Menus and dialogs | Model and reasoning menus; delete confirmation; host controls (viewed, not enabled); LAN sign-in. |
+- **Not exercised:**
+  - the voice loop (it needs the macOS microphone permission prompt);
+  - the image file picker;
+  - enabling Host mode.
+
+---
+
 ## 2026-10-06 — v4 adaptive tutoring and offline STEM learning experience
 
 **Scope:** application behavior and package composition, not an inference optimization.

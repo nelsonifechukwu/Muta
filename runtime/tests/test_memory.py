@@ -6,10 +6,17 @@ from runtime.memory import _MIGRATIONS, ConversationStore
 
 
 def test_release_schema_reconciliation_covers_both_version_four_lineages():
-    version, sql = _MIGRATIONS[-1]
-    assert version == 5
+    sql = dict(_MIGRATIONS)[5]
     assert "conversations ADD COLUMN IF NOT EXISTS pinned" in sql
     assert "messages ADD COLUMN IF NOT EXISTS completion_state" in sql
+
+
+def test_text_resource_migration_widens_mime_and_adds_section_locators():
+    version, sql = _MIGRATIONS[-1]
+    assert version == 6
+    assert "'text/markdown', 'text/plain'" in sql
+    assert "resource_chunks ADD COLUMN IF NOT EXISTS section" in sql
+    assert "message_sources ADD COLUMN IF NOT EXISTS section" in sql
 
 
 def test_messages_round_trip_in_order(store: ConversationStore):

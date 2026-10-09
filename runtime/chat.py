@@ -26,6 +26,17 @@ log = logging.getLogger("muta.runtime.chat")
 
 _MESSAGE_OVERHEAD_TOKENS = 8
 _MIN_REPLY_TOKENS = 64
+#: Private request hint: the reply room a caller needs kept free when the prompt is fitted.
+#: It rides in the params so every recovery refit honours it; clients strip `_muta_*` keys.
+REPLY_RESERVE_PARAM = "_muta_min_reply_tokens"
+#: Continuation text is held back until this much has arrived (and a line has ended), so an
+#: echo of the private continuation directive can be removed before anything is visible.
+_RESUME_ECHO_GATE_CHARS = 240
+_RESUME_ECHO_GATE_MAX_CHARS = 640
+#: Characters that can end a sentence or block, after which a resumed paragraph break is real.
+_BLOCK_END = frozenset(".!?:;)]\"”’`*|")
+#: Completion states whose assistant row is an unfinished answer a learner may continue.
+RESUMABLE_COMPLETION_STATES = frozenset({"failed", "stopped", "streaming"})
 _DEFAULT_IMAGE_TOKENS = 2048
 _PER_STUDENT_CONTEXT = "--- per-student context (variable — keep last) ---".encode()
 _LIVE_CONTEXT = b"\n[MUTA-LIVE]\n"
@@ -244,6 +255,11 @@ def _continuation_messages(messages: list[Message], partial: str) -> list[Messag
         }
     resumed.append({"role": "assistant", "content": partial})
     return resumed
+
+
+def with_turn_instruction(text: str, instruction: str | None) -> str:
+    """The request-only copy of a learner turn carrying a trusted gateway instruction."""
+    return text + _TURN_INSTRUCTION + instruction if instruction else text
 
 
 def _estimate_tokens(text: str) -> int:
@@ -478,9 +494,18 @@ class _ReplyEventStream(Iterator[tuple[str, str]]):
     their row with `last_message_id()`: another job can finish between generation and append.
     """
 
-    def __init__(self, iterator: Iterator[tuple[str, str]], writer: _ReplyWriter) -> None:
+    def __init__(
+        self,
+        iterator: Iterator[tuple[str, str]],
+        writer: _ReplyWriter,
+        *,
+        resumed_text: str = "",
+    ) -> None:
         self._iterator = iterator
         self._writer = writer
+        # The stored partial answer a `continue_reply` turn extends; "" for ordinary turns.
+        # Streamed content is only what follows it.
+        self.resumed_text = resumed_text
 
     @property
     def assistant_message_id(self) -> int | None:
@@ -502,18 +527,54 @@ class _ReplyEventStream(Iterator[tuple[str, str]]):
 
 
 class _ResumeDeduplicator:
-    """Remove an exact repeated boundary prefix without delaying unrelated continuation."""
+    """Remove an exact repeated boundary prefix without delaying unrelated continuation.
+
+    Two repeats are removed. A model may restate the last few words of the prefill (a short
+    boundary overlap, ≤ `_MAX_RESUME_OVERLAP`). And the pinned llama-server returns an
+    assistant prefill verbatim before its continuation (measured 2026-10-09: a 1.9 kB partial
+    came back whole, then the answer continued) — without stripping that echo, every resumed
+    answer contained its first half twice.
+    """
 
     def __init__(self, prior: str) -> None:
+        self.whole = prior
+        self.echo_possible = len(prior.strip()) >= _MIN_RESUME_OVERLAP
         self.prior = prior[-_MAX_RESUME_OVERLAP:]
         self.pending = ""
         self.min_overlap = min(_MIN_RESUME_OVERLAP, max(1, len(self.prior)))
         self.decided = not self.prior
 
+    def _strip_echo(self) -> bool | None:
+        """True once a whole-prefill echo was removed, False when there is none, None while
+        the pending text could still be one."""
+        if not self.echo_possible:
+            return False
+        trimmed = self.whole.rstrip()
+        for candidate in (self.whole, trimmed):
+            if self.pending.startswith(candidate):
+                rest = self.pending[len(candidate) :]
+                if candidate is trimmed and trimmed != self.whole:
+                    # The prefill's trailing space is already in the reply; do not double it.
+                    rest = rest.lstrip(" \t")
+                self.pending = rest
+                self.echo_possible = False
+                return True
+        if self.whole.startswith(self.pending) or trimmed.startswith(self.pending):
+            return None
+        self.echo_possible = False
+        return False
+
     def feed(self, text: str) -> str:
         if self.decided:
             return text
         self.pending += text
+        echo = self._strip_echo()
+        if echo is None:
+            return ""
+        if echo:
+            self.decided = True
+            output, self.pending = self.pending, ""
+            return output
         limit = min(len(self.prior), _MAX_RESUME_OVERLAP)
         possible_longer: list[int] = []
         full: list[int] = []
@@ -534,6 +595,14 @@ class _ResumeDeduplicator:
         if self.decided:
             output, self.pending = self.pending, ""
             return output
+        if self._strip_echo() is None:
+            # The attempt ended while still repeating the prefill: nothing new was produced.
+            self.decided = True
+            self.pending = ""
+            return ""
+        if not self.echo_possible and not self.pending:
+            self.decided = True
+            return ""
         limit = min(len(self.prior), len(self.pending), _MAX_RESUME_OVERLAP)
         overlap = max(
             (
@@ -606,14 +675,20 @@ class ChatEngine:
             raise ValueError("regenerate requires an existing conversation")
         return self.store.create_conversation(student_id, **meta)
 
-    def _history(self, conversation_id: str) -> list[dict]:
+    def _history(
+        self, conversation_id: str, *, drop_trailing_assistant: bool = False
+    ) -> list[dict]:
         list_messages = getattr(self.store, "list_messages", None)
         if callable(list_messages):
             history = list_messages(conversation_id)
+            if drop_trailing_assistant and history and history[-1].get("role") == "assistant":
+                history = history[:-1]
             if self.max_history_messages > 0:
                 history = history[-self.max_history_messages :]
         else:
             history = self.store.get_messages(conversation_id, limit=self.max_history_messages)
+            if drop_trailing_assistant and history and history[-1].get("role") == "assistant":
+                history = history[:-1]
         if self.history_token_budget <= 0:
             return history
         spent = 0
@@ -771,6 +846,119 @@ class ChatEngine:
             }
         return messages
 
+    def resume_target(self, conversation_id: str, student_id: str) -> dict:
+        """The interrupted assistant row a `continue_reply` turn extends, plus its question.
+
+        Raises ValueError when the conversation does not end in a resumable answer: a reply
+        can only be continued while it is still the latest message, which is also what keeps
+        the stored text and the model's prefill byte-identical.
+        """
+        conversation = self.store.get_conversation(conversation_id)
+        if conversation is None or conversation.get("student_id") != student_id:
+            raise PermissionError("conversation belongs to another learner")
+        history = self._history(conversation_id)
+        if (
+            len(history) < 2
+            or history[-1].get("role") != "assistant"
+            or history[-2].get("role") != "user"
+            or history[-1].get("completion_state") not in RESUMABLE_COMPLETION_STATES
+            or not str(history[-1].get("content") or "").strip()
+        ):
+            raise ValueError("there is no interrupted reply to continue in this conversation")
+        return {
+            "assistant_message_id": int(history[-1]["id"]),
+            "partial": str(history[-1]["content"]),
+            "question": str(history[-2].get("content") or ""),
+            "image_count": sum(
+                1 for ref in history[-2].get("attachments") or [] if ref.get("kind") == "image"
+            ),
+            "resource_citations": list(history[-1].get("resource_citations") or []),
+        }
+
+    def _assemble_resume(
+        self,
+        conversation_id: str,
+        student_id: str,
+        system_prompt: str | None,
+        turn_instruction: str | None = None,
+        include_history: bool = True,
+    ) -> list[Message]:
+        """Prompt that produced the interrupted answer: history through its question only.
+
+        The partial answer itself is supplied later as a trusted assistant prefill, so a
+        resumed turn adds no user message and the learner's transcript stays unchanged.
+        """
+        # The partial is replayed as the prefill, not as history: budgeting it here would spend
+        # the replay budget on the very text that is then removed, dropping earlier turns.
+        history = self._history(conversation_id, drop_trailing_assistant=True)
+        if not include_history:
+            history = history[-1:]
+        messages: list[Message] = [
+            {"role": "system", "content": system_prompt or self.default_system_prompt}
+        ]
+        messages += [
+            {"role": m["role"], "content": self._history_content(m, student_id)} for m in history
+        ]
+        if turn_instruction:
+            messages[-1] = {
+                **messages[-1],
+                "content": _append_content_text(
+                    messages[-1]["content"], _TURN_INSTRUCTION + turn_instruction
+                ),
+            }
+        return messages
+
+    def reply_reserve_tokens(self, params: dict | None = None) -> int:
+        """Reply room `_fit_request` keeps free: the caller's hint, bounded to half the lane.
+
+        A grounded answer needs hundreds of tokens, not the 64-token floor, but a hint must
+        never squeeze the prompt below half of a small serving profile's window.
+        """
+        params = params or {}
+        reserve = _MIN_REPLY_TOKENS
+        hint = params.get(REPLY_RESERVE_PARAM)
+        if isinstance(hint, int) and not isinstance(hint, bool) and hint > reserve:
+            usable = max(0, self.context_window_tokens - self.context_safety_tokens)
+            reserve = max(reserve, min(hint, usable // 2))
+            # Room beyond the answer's own cap would only evict context for nothing.
+            cap = params.get("max_tokens")
+            if isinstance(cap, int) and not isinstance(cap, bool) and cap > 0:
+                reserve = max(_MIN_REPLY_TOKENS, min(reserve, cap))
+        return reserve
+
+    def prompt_room_tokens(
+        self,
+        messages: list[Message],
+        *,
+        reply_reserve: int = _MIN_REPLY_TOKENS,
+        **params,
+    ) -> int | None:
+        """Tokens still free for optional system-prompt text (negative when already over), or
+        None for an unbounded engine.
+
+        The gateway uses this to size retrieved evidence *before* the request is fitted, so the
+        fitter never has to clip evidence mid-passage or squeeze the answer to its floor.
+        """
+        if self.context_window_tokens <= 0:
+            return None
+        used: int | None = None
+        counter = getattr(self.client, "count_prompt_tokens", None)
+        if callable(counter):
+            try:
+                counted = counter(messages, **params)
+                if isinstance(counted, int) and counted > 0:
+                    used = counted + sum(
+                        _image_part_count(message.get("content")) * self.image_token_budget
+                        for message in messages
+                    )
+            except Exception:  # noqa: BLE001 — optional engine probe; the estimate is safe
+                used = None
+        if used is None:
+            used = sum(_message_tokens(message, self.image_token_budget) for message in messages)
+        reserve = self.reply_reserve_tokens({**params, REPLY_RESERVE_PARAM: reply_reserve})
+        # Signed: negative means the envelope already overflows by that many tokens.
+        return self.context_window_tokens - self.context_safety_tokens - reserve - used
+
     def _fit_request(
         self,
         messages: list[Message],
@@ -784,9 +972,10 @@ class ChatEngine:
         if self.context_window_tokens <= 0 or not fitted:
             return fitted, fitted_params
 
+        reply_reserve = self.reply_reserve_tokens(fitted_params)
         prompt_limit = max(
             1,
-            self.context_window_tokens - self.context_safety_tokens - _MIN_REPLY_TOKENS,
+            self.context_window_tokens - self.context_safety_tokens - reply_reserve,
         )
         protected = max(1, min(protected_tail_messages, max(1, len(fitted) - 1)))
 
@@ -932,19 +1121,72 @@ class ChatEngine:
         params: dict,
         writer: _ReplyWriter,
         cancel_event: threading.Event | None = None,
+        *,
+        resuming: bool = False,
     ) -> Iterator[tuple[str, str]]:
+        """Stream one answer, continuing it in place after transient or length stops.
+
+        With ``resuming`` the writer already holds a stored partial answer and ``messages`` is
+        the prompt that produced it (no prefill): even the first request is a continuation.
+        """
         attempt = 0
         request_messages = messages
         request_params = params
         retry_params = dict(params)
         structured = "response_format" in params
         stream = self.client.stream_events
+        if resuming and not structured and writer.text:
+            request_messages, request_params = self._fit_request(
+                _continuation_messages(messages, writer.text),
+                params,
+                protected_tail_messages=2,
+            )
+        # Partial length at the last length-limited retry, and how many retries in a row made
+        # no visible progress. Sampling earns an identical request one more chance; a second
+        # empty repeat ends the turn with the partial answer saved instead of looping.
+        last_length_retry: int | None = None
+        stalled_length_retries = 0
         while True:
             if cancel_event is not None and cancel_event.is_set():
                 return
-            deduplicator = _ResumeDeduplicator(writer.text) if attempt and writer.text else None
+            continuing = (attempt > 0 or resuming) and not structured
+            deduplicator = _ResumeDeduplicator(writer.text) if continuing and writer.text else None
+            # Structured attempts buffer the whole schema root. Continuations hold back only
+            # their opening, long enough to strip an echo of the private directive.
             buffered_content: list[str] = []
+            gate_open = not continuing
             attempt_content_progress = False
+
+            # Defaults bind this attempt's state; each helper is only called within it.
+            def release(
+                text: str,
+                *,
+                final: bool = False,
+                deduplicator: _ResumeDeduplicator | None = deduplicator,
+            ) -> str:
+                if deduplicator is not None:
+                    text = deduplicator.feed(text)
+                    if final:
+                        text += deduplicator.finish()
+                return text
+
+            def release_held(*, final: bool, buffered_content: list[str] = buffered_content) -> str:
+                held = "".join(buffered_content)
+                buffered_content.clear()
+                cleaned = strip_internal_runtime_echoes(held)
+                if cleaned != held and cleaned:
+                    # Stripping an echoed directive also trims the whitespace around the real
+                    # text. Restore a line/paragraph break before it only where the saved text
+                    # ended a sentence; mid-sentence, the break belonged to the echo.
+                    start = held.find(cleaned[:40])
+                    prior = writer.text
+                    if start > 0 and prior and prior[-1] in _BLOCK_END:
+                        before = held[:start]
+                        cleaned = before[len(before.rstrip("\r\n")) :] + cleaned
+                    if not final:
+                        cleaned += held[len(held.rstrip()) :]
+                return release(cleaned, final=final)
+
             try:
                 stream_params = dict(request_params)
                 if cancel_event is not None:
@@ -960,25 +1202,44 @@ class ChatEngine:
                     # A restarted reasoning trace is neither persisted nor useful to append
                     # to the abandoned one. Keep the original trace visible until content
                     # resumes, then the normal UI transition settles it.
-                    if attempt and kind == "reasoning":
+                    if (attempt or resuming) and kind == "reasoning":
                         continue
-                    if (structured or attempt > 0) and kind == "content":
+                    if kind == "content" and structured:
                         # A schema-root JSON document cannot be continued by appending another
                         # freshly generated root. Buffer until the attempt terminates cleanly;
                         # a failed attempt is discarded and regenerated from the original prompt.
-                        # Continuation attempts are also buffered so a model echo of the private
-                        # recovery directive can be removed before any resumed text is visible.
                         if text:
                             buffered_content.append(text)
                             attempt_content_progress = True
                         continue
-                    if kind == "content" and deduplicator is not None:
-                        text = deduplicator.feed(text)
+                    if kind == "content" and not gate_open:
+                        # Progress is counted only once text survives echo/repeat removal: a
+                        # continuation that merely restates its prefill has added nothing.
+                        if text:
+                            buffered_content.append(text)
+                        held = "".join(buffered_content)
+                        line_ended = "\n" in held[_RESUME_ECHO_GATE_CHARS:]
+                        if len(held) < _RESUME_ECHO_GATE_MAX_CHARS and not (
+                            len(held) >= _RESUME_ECHO_GATE_CHARS and line_ended
+                        ):
+                            continue
+                        gate_open = True
+                        text = release_held(final=False)
+                        if text:
+                            attempt_content_progress = True
+                            yield "content", text
+                        continue
+                    if kind == "content":
+                        text = release(text)
                         if not text:
                             continue
-                    if kind == "content" and text:
                         attempt_content_progress = True
                     yield kind, text
+                if continuing:
+                    tail = release_held(final=True) if not gate_open else release("", final=True)
+                    if tail:
+                        attempt_content_progress = True
+                        yield "content", tail
                 if not attempt_content_progress:
                     # Reasoning-only is not an answer. Some small thinking models can exhaust a
                     # turn (or emit a clean stop) before producing any content; treating that as
@@ -991,16 +1252,19 @@ class ChatEngine:
                     )
                 if structured:
                     yield from (("content", text) for text in buffered_content)
-                elif attempt > 0:
-                    resumed = strip_internal_runtime_echoes("".join(buffered_content))
-                    if deduplicator is not None:
-                        resumed = deduplicator.feed(resumed) + deduplicator.finish()
-                    if resumed:
-                        yield "content", resumed
                 return
             except Exception as exc:
                 if cancel_event is not None and cancel_event.is_set():
                     return
+                if continuing:
+                    # Progress made before a stop is kept: it reaches the writer (and so the
+                    # store) now, and the next continuation resumes after it rather than
+                    # regenerating the same capped fragment from the previous boundary.
+                    progress = (
+                        release_held(final=True) if not gate_open else release("", final=True)
+                    )
+                    if progress:
+                        yield "content", progress
                 if not _retryable_stream_error(exc) or attempt >= self.stream_retry_attempts:
                     raise
                 attempt += 1
@@ -1012,6 +1276,14 @@ class ChatEngine:
                     # content. Retrying the identical thinking request repeats invisibly; a
                     # continuation/restart needs the direct answer now.
                     retry_params["enable_thinking"] = False
+                    if not structured:
+                        progress_mark = len(writer.text)
+                        stalled_length_retries = (
+                            stalled_length_retries + 1 if progress_mark == last_length_retry else 0
+                        )
+                        if stalled_length_retries >= 2:
+                            raise
+                        last_length_retry = progress_mark
                     yield "recovering", "The tutor is finishing the answer automatically…"
                     delay = 0.0
                 else:
@@ -1323,9 +1595,13 @@ class ChatEngine:
         writer: _ReplyWriter,
         reply_guard: ReplyGuard,
         cancel_event: threading.Event | None,
+        *,
+        resuming: bool = False,
     ) -> Iterator[tuple[str, str]]:
         """Stream normal turns, but cut a third-repeat loop before that chunk is exposed."""
-        source = self._events_with_recovery(messages, params, writer, cancel_event)
+        source = self._events_with_recovery(
+            messages, params, writer, cancel_event, resuming=resuming
+        )
         for kind, text in source:
             if kind == "content" and self._guard_should_abort(reply_guard, writer.text + text):
                 close = getattr(source, "close", None)
@@ -1543,6 +1819,7 @@ class ChatEngine:
         include_history: bool = True,
         reply_guard: ReplyGuard | None = None,
         stream_monitor: ReplyGuard | None = None,
+        continue_reply: bool = False,
         **params,
     ) -> tuple[str, int | None, Iterator[tuple[str, str]]]:
         """Like `stream_chat`, but yields ('reasoning' | 'content', text) chunks so a client
@@ -1550,18 +1827,57 @@ class ChatEngine:
         chain of thought is ephemeral, matching the non-streaming path which stores `content`.
 
         With ``regenerate`` the last stored user turn is re-answered and NO new user message is
-        added (the 'answer now' path re-runs the in-flight turn without the thinking phase)."""
+        added (the 'answer now' path re-runs the in-flight turn without the thinking phase).
+
+        With ``continue_reply`` the conversation's interrupted final answer is extended in
+        place: no user message is added, the same assistant row is updated, and the iterator
+        streams only the new text (its ``resumed_text`` is the stored prefix)."""
+        if continue_reply and regenerate:
+            raise ValueError("a turn cannot both regenerate and continue a reply")
+        if continue_reply and not conversation_id:
+            raise ValueError("continuing a reply requires an existing conversation")
+        if continue_reply and "response_format" in params:
+            raise ValueError("a structured answer cannot be continued; please ask again")
+        if continue_reply and reply_guard is not None:
+            # A buffered guard validates whole answers and never persists a partial one, so a
+            # resumable row was not produced under it; refusing keeps its guarantee intact.
+            raise ValueError("this reply cannot be continued; please ask the question again")
         cid = self._open(
             student_id,
             conversation_id,
-            create=not regenerate,
+            create=not (regenerate or continue_reply),
             mode=mode,
             persona=persona,
             subject=subject,
             language=language,
             title=title,
         )
-        if regenerate:
+        resumed_text = ""
+        writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
+        if continue_reply:
+            target = self.resume_target(cid, student_id)
+            messages = self._assemble_resume(
+                cid, student_id, system_prompt, turn_instruction, include_history
+            )
+            # Validate the request envelope now (oversized images fail closed here); the
+            # recovery loop refits the prefilled continuation itself.
+            self._fit_request(
+                _continuation_messages(messages, target["partial"]),
+                params,
+                protected_tail_messages=2,
+            )
+            request_params = dict(params)
+            user_message_id = None
+            resumed_text = target["partial"]
+            # Seed the writer with the stored row so new text extends it in place: the same
+            # serial id keeps its position in history and its citations stay attached.
+            writer.message_id = target["assistant_message_id"]
+            writer.chunks = [resumed_text]
+            writer._flushed_len = len(resumed_text)
+            setter = getattr(self.store, "set_message_completion", None)
+            if callable(setter):
+                setter(writer.message_id, "streaming")
+        elif regenerate:
             messages = self._assemble_history(
                 cid, student_id, system_prompt, turn_instruction, images, include_history
             )
@@ -1571,15 +1887,14 @@ class ChatEngine:
                 cid, student_id, system_prompt, message, turn_instruction, images, include_history
             )
             user_message_id = None
-        messages, request_params = self._fit_request(
-            messages,
-            params,
-            protected_tail_messages=min(3, max(1, len(messages) - 1)),
-        )
-        if not regenerate:
+        if not continue_reply:
+            messages, request_params = self._fit_request(
+                messages,
+                params,
+                protected_tail_messages=min(3, max(1, len(messages) - 1)),
+            )
+        if not (regenerate or continue_reply):
             user_message_id = self._persist_user_message(cid, student_id, message, attachment_ids)
-
-        writer = _ReplyWriter(self.store, cid, self.persist_interval_s)
 
         def _gen() -> Iterator[tuple[str, str]]:
             try:
@@ -1599,10 +1914,15 @@ class ChatEngine:
                             writer,
                             stream_monitor,
                             cancel_event,
+                            resuming=continue_reply,
                         )
                         if stream_monitor is not None
                         else self._events_with_recovery(
-                            messages, request_params, writer, cancel_event
+                            messages,
+                            request_params,
+                            writer,
+                            cancel_event,
+                            resuming=continue_reply,
                         )
                     )
                 )
@@ -1615,4 +1935,8 @@ class ChatEngine:
                 # turn abandoned during the thinking phase still stores nothing.
                 writer.flush()
 
-        return cid, user_message_id, _ReplyEventStream(_gen(), writer)
+        return (
+            cid,
+            user_message_id,
+            _ReplyEventStream(_gen(), writer, resumed_text=resumed_text),
+        )

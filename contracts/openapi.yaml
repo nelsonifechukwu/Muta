@@ -123,7 +123,7 @@ paths:
       tags:
       - resources
       summary: Resource Upload
-      description: Durably accept one PDF, then prepare it outside the request thread.
+      description: Durably accept one PDF, Markdown or plain-text file, then prepare it in the background.
       operationId: resource_upload_v1_resources_post
       parameters:
       - name: authorization
@@ -284,9 +284,53 @@ paths:
           title: Muta Share Session
       responses:
         '200':
-          description: Inline PDF
+          description: Inline PDF, or a Markdown/text resource as UTF-8 plain text
           content:
             application/pdf: {}
+            text/plain: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/resources/{resource_id}/sections:
+    get:
+      tags:
+      - resources
+      summary: Resource Sections
+      description: A Markdown/text resource split exactly as it was indexed, for the in-app reader.
+      operationId: resource_sections_v1_resources__resource_id__sections_get
+      parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Resource Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: muta_share_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Muta Share Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceSections'
         '422':
           description: Validation Error
           content:
@@ -2959,6 +3003,14 @@ components:
           description: Re-answer the current last user turn WITHOUT adding a new user message. Used by
             'answer now' to replace an in-flight reply (e.g. skip the thinking phase).
           default: false
+        continue_reply:
+          type: boolean
+          title: Continue Reply
+          description: Extend the conversation's interrupted final answer in place WITHOUT adding a user
+            message (streamed generations only; requires conversation_id). The stored question is re-used
+            for retrieval and `message` is ignored. The stream first sends a `replace` event carrying
+            the stored answer, then only the new text.
+          default: false
         use_web:
           type: boolean
           title: Use Web
@@ -3033,7 +3085,9 @@ components:
             $ref: '#/components/schemas/ResourceCitation'
           type: array
           title: Resource Citations
-          description: Structured, server-owned citations into uploaded learner resources.
+          description: Structured, server-owned citations into uploaded learner resources, numbered by
+            the reply's [R#] markers. When a grounded reply contains no marker, these are the strongest
+            passages it was grounded on (sources consulted), not inline citations.
       type: object
       required:
       - student_id
@@ -3506,7 +3560,10 @@ components:
           title: Name
         mime:
           type: string
-          const: application/pdf
+          enum:
+          - application/pdf
+          - text/markdown
+          - text/plain
           title: Mime
           default: application/pdf
         status:
@@ -3522,6 +3579,7 @@ components:
             minimum: 1.0
           - type: 'null'
           title: Page Count
+          description: PDF pages, or the number of sections in a Markdown/text resource.
         error:
           anyOf:
           - type: string
@@ -3986,7 +4044,8 @@ components:
           type: integer
           minimum: 1.0
           title: Page
-          description: One-based physical PDF page number.
+          description: One-based physical PDF page number; for Markdown/text resources, the one-based
+            section ordinal shown by GET /v1/resources/{id}/sections.
         chunk_index:
           type: integer
           minimum: 0.0
@@ -3995,6 +4054,14 @@ components:
           type: string
           maxLength: 500
           title: Excerpt
+        section:
+          anyOf:
+          - type: string
+            maxLength: 400
+          - type: 'null'
+          title: Section
+          description: 'Markdown/text resources only: the cited section''s heading path joined with ''
+            › '' (empty for an untitled passage). Null for PDF citations.'
       type: object
       required:
       - resource_id
@@ -4026,6 +4093,62 @@ components:
           title: Resources
       type: object
       title: ResourceList
+    ResourceSection:
+      properties:
+        ordinal:
+          type: integer
+          minimum: 1.0
+          title: Ordinal
+          description: Matches ResourceCitation.page for this resource.
+        path:
+          items:
+            type: string
+          type: array
+          title: Path
+          description: Heading path; empty for an untitled passage.
+        level:
+          type: integer
+          maximum: 6.0
+          minimum: 0.0
+          title: Level
+          description: Markdown heading level; 0 for a passage.
+        text:
+          type: string
+          title: Text
+          description: The section's source text (Markdown or plain text).
+      type: object
+      required:
+      - ordinal
+      - level
+      - text
+      title: ResourceSection
+    ResourceSections:
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+          title: Id
+        name:
+          type: string
+          title: Name
+        mime:
+          type: string
+          enum:
+          - text/markdown
+          - text/plain
+          title: Mime
+        sections:
+          items:
+            $ref: '#/components/schemas/ResourceSection'
+          type: array
+          title: Sections
+      type: object
+      required:
+      - id
+      - name
+      - mime
+      title: ResourceSections
+      description: A Markdown/text resource split exactly as it was indexed, for the in-app reader.
     SessionActionResponse:
       properties:
         session_id:

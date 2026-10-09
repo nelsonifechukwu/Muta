@@ -9,6 +9,7 @@ by physical CPU cores because RAM-rich but bandwidth-bound laptops do not gain f
 from __future__ import annotations
 
 import os
+import threading
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -24,6 +25,37 @@ from runtime.profiles import ServingProfile, physical_cores
 
 MiB = 1024**2
 GiB = 1024**3
+
+#: (KV bytes per token, recurrent bytes per slot) per model file identity and K-cache type.
+#: Parsing one GGUF header (its ~150k-entry vocabulary included) costs 40–300 ms; the model
+#: picker plans every installed model on each `/v1/models`, so 16 models took 2.9 s on every
+#: page load — "Loading models…" after merely returning from the About page. The key carries
+#: size and mtime/ctime, so a replaced or re-exported file is parsed again.
+_MODEL_COST_CACHE: dict[tuple[str, int, int, int, str], tuple[float, int]] = {}
+_MODEL_COST_LOCK = threading.Lock()
+
+
+def _model_costs(model_path: Path, cache_type_k: str) -> tuple[float, int]:
+    stat = model_path.stat()
+    key = (
+        str(model_path.resolve()),
+        stat.st_size,
+        stat.st_mtime_ns,
+        stat.st_ctime_ns,
+        str(cache_type_k),
+    )
+    with _MODEL_COST_LOCK:
+        cached = _MODEL_COST_CACHE.get(key)
+    if cached is not None:
+        return cached
+    md = read_metadata(model_path)
+    # server.py sets K explicitly and leaves V at llama.cpp's f16 default.
+    kv_per_token = KVCost.from_metadata(md, cache_type_k, "f16").bytes_per_token
+    recurrent = RecurrentStateCost.from_metadata(md)
+    costs = (float(kv_per_token), int(recurrent.bytes_per_slot) if recurrent else 0)
+    with _MODEL_COST_LOCK:
+        _MODEL_COST_CACHE[key] = costs
+    return costs
 _CGROUP_V2 = Path("/sys/fs/cgroup/memory.max")
 _CGROUP_V1 = Path("/sys/fs/cgroup/memory/memory.limit_in_bytes")
 
@@ -178,11 +210,7 @@ class CapacityPlanner:
         metadata_note = "fallback estimate (model metadata unavailable)"
         if model_path.is_file():
             try:
-                md = read_metadata(model_path)
-                # server.py sets K explicitly and leaves V at llama.cpp's f16 default.
-                kv_per_token = KVCost.from_metadata(md, cfg.cache_type_k, "f16").bytes_per_token
-                recurrent = RecurrentStateCost.from_metadata(md)
-                recurrent_per_slot = recurrent.bytes_per_slot if recurrent else 0
+                kv_per_token, recurrent_per_slot = _model_costs(model_path, cfg.cache_type_k)
                 metadata_note = f"GGUF metadata from {model_path.name}"
             except (OSError, ValueError, KeyError, GGUFError):
                 pass

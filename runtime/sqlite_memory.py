@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS learning_resources (
     id                  TEXT PRIMARY KEY,
     owner_id            TEXT NOT NULL,
     name                TEXT NOT NULL,
-    mime                TEXT NOT NULL CHECK (mime = 'application/pdf'),
+    mime                TEXT NOT NULL
+                        CHECK (mime IN ('application/pdf', 'text/markdown', 'text/plain')),
     data                BLOB NOT NULL,
     status              TEXT NOT NULL CHECK (status IN ('processing', 'ready', 'failed')),
     page_count          INTEGER,
@@ -75,6 +76,7 @@ CREATE TABLE IF NOT EXISTS resource_chunks (
     page_number     INTEGER NOT NULL,
     text            TEXT NOT NULL,
     embedding       TEXT NOT NULL,
+    section         TEXT,
     UNIQUE(resource_id, chunk_index)
 );
 CREATE INDEX IF NOT EXISTS idx_resource_chunks_resource
@@ -87,12 +89,30 @@ CREATE TABLE IF NOT EXISTS message_sources (
     page_number     INTEGER NOT NULL,
     chunk_index     INTEGER NOT NULL,
     excerpt         TEXT NOT NULL,
+    section         TEXT,
     UNIQUE(message_id, resource_id, page_number, chunk_index)
 );
 CREATE INDEX IF NOT EXISTS idx_message_sources_message ON message_sources(message_id, id);
 """
 
-_LATEST_SCHEMA_VERSION = 5
+_LATEST_SCHEMA_VERSION = 6
+
+_LEARNING_RESOURCES_V6 = """
+CREATE TABLE learning_resources_v6 (
+    id                  TEXT PRIMARY KEY,
+    owner_id            TEXT NOT NULL,
+    name                TEXT NOT NULL,
+    mime                TEXT NOT NULL
+                        CHECK (mime IN ('application/pdf', 'text/markdown', 'text/plain')),
+    data                BLOB NOT NULL,
+    status              TEXT NOT NULL CHECK (status IN ('processing', 'ready', 'failed')),
+    page_count          INTEGER,
+    embedder_identity   TEXT,
+    error               TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+)
+"""
 
 
 def _now() -> str:
@@ -164,7 +184,69 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
         conn.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)", (5, _now())
         )
+    if 6 not in applied:
+        _migrate_text_resources(conn)
     conn.commit()
+
+
+def _migrate_text_resources(conn: sqlite3.Connection) -> None:
+    """Version 6: Markdown/plain-text resources and section-addressed citations.
+
+    SQLite cannot alter a CHECK constraint, so an older ``learning_resources`` table is rebuilt
+    with the documented create-copy-drop-rename sequence. Foreign keys are suspended for the
+    rebuild: with them on, dropping the parent would cascade-delete every chunk and citation.
+    """
+    conn.commit()
+    # A database that recorded earlier versions without ever creating the resource tables (a
+    # preview lineage) gets them here, already in their current shape.
+    conn.executescript(_SCHEMA)
+    table_sql = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'learning_resources'"
+    ).fetchone()
+    rebuild = bool(table_sql and "text/markdown" not in table_sql[0])
+
+    def violations() -> int:
+        # Only the tables this migration touches: an unrelated pre-existing violation elsewhere
+        # must not stop the app from starting.
+        return sum(
+            len(conn.execute(f"PRAGMA foreign_key_check({table})").fetchall())
+            for table in ("resource_chunks", "message_sources")
+        )
+
+    before = violations()
+    conn.execute("PRAGMA foreign_keys=OFF")
+    try:
+        conn.execute("BEGIN")
+        if rebuild:
+            conn.execute(_LEARNING_RESOURCES_V6)
+            conn.execute(
+                "INSERT INTO learning_resources_v6 (id, owner_id, name, mime, data, status, "
+                "page_count, embedder_identity, error, created_at, updated_at) "
+                "SELECT id, owner_id, name, mime, data, status, page_count, embedder_identity, "
+                "error, created_at, updated_at FROM learning_resources"
+            )
+            conn.execute("DROP TABLE learning_resources")
+            conn.execute("ALTER TABLE learning_resources_v6 RENAME TO learning_resources")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_learning_resources_owner "
+                "ON learning_resources(owner_id, created_at DESC)"
+            )
+        for table in ("resource_chunks", "message_sources"):
+            columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if "section" not in columns:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN section TEXT")
+        broken = violations() - before
+        if broken > 0:
+            raise sqlite3.IntegrityError(f"resource migration broke {broken} references")
+        conn.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)", (6, _now())
+        )
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    finally:
+        conn.execute("PRAGMA foreign_keys=ON")
 
 
 class SQLiteConversationStore:
@@ -412,7 +494,7 @@ class SQLiteConversationStore:
             ).fetchall()
             sources = self._conn.execute(
                 "SELECT ms.message_id, ms.resource_id, ms.title, ms.page_number, "
-                "ms.chunk_index, ms.excerpt FROM message_sources ms "
+                "ms.chunk_index, ms.excerpt, ms.section FROM message_sources ms "
                 "JOIN messages m ON m.id = ms.message_id "
                 "WHERE m.conversation_id = ? ORDER BY ms.id ASC",
                 (conversation_id,),
@@ -431,6 +513,7 @@ class SQLiteConversationStore:
                     "page": row["page_number"],
                     "chunk_index": row["chunk_index"],
                     "excerpt": row["excerpt"],
+                    "section": row["section"],
                 }
             )
         result = []
@@ -477,14 +560,45 @@ class SQLiteConversationStore:
                 # than a foreign-key error during generation cleanup.
                 cursor = self._conn.execute(
                     "INSERT OR IGNORE INTO message_sources "
-                    "(message_id, resource_id, title, page_number, chunk_index, excerpt) "
-                    "SELECT ?, r.id, ?, ?, ?, ? FROM learning_resources r WHERE r.id = ?",
+                    "(message_id, resource_id, title, page_number, chunk_index, excerpt, "
+                    "section) "
+                    "SELECT ?, r.id, ?, ?, ?, ?, ? FROM learning_resources r WHERE r.id = ?",
                     (
                         message_id,
                         source["title"],
                         source["page"],
                         source["chunk_index"],
                         source["excerpt"],
+                        source.get("section"),
+                        source["resource_id"],
+                    ),
+                )
+                if cursor.rowcount:
+                    persisted.append(dict(source))
+        return persisted
+
+    def replace_message_sources(self, message_id: int, sources: list[dict]) -> list[dict]:
+        """Make a message's citations exactly ``sources``, in order (deleted resources skipped).
+
+        Stored order is what `[R#]` markers resolve against on reload, so a continued answer
+        rewrites its rows in final citation order instead of appending after stale ones.
+        """
+        persisted: list[dict] = []
+        with self._lock, self._conn:
+            self._conn.execute("DELETE FROM message_sources WHERE message_id = ?", (message_id,))
+            for source in sources:
+                cursor = self._conn.execute(
+                    "INSERT OR IGNORE INTO message_sources "
+                    "(message_id, resource_id, title, page_number, chunk_index, excerpt, "
+                    "section) "
+                    "SELECT ?, r.id, ?, ?, ?, ?, ? FROM learning_resources r WHERE r.id = ?",
+                    (
+                        message_id,
+                        source["title"],
+                        source["page"],
+                        source["chunk_index"],
+                        source["excerpt"],
+                        source.get("section"),
                         source["resource_id"],
                     ),
                 )
@@ -495,7 +609,7 @@ class SQLiteConversationStore:
     def get_message_sources(self, message_id: int) -> list[dict]:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT resource_id, title, page_number, chunk_index, excerpt "
+                "SELECT resource_id, title, page_number, chunk_index, excerpt, section "
                 "FROM message_sources WHERE message_id = ? ORDER BY id ASC",
                 (message_id,),
             ).fetchall()
@@ -506,6 +620,7 @@ class SQLiteConversationStore:
                 "page": row["page_number"],
                 "chunk_index": row["chunk_index"],
                 "excerpt": row["excerpt"],
+                "section": row["section"],
             }
             for row in rows
         ]
@@ -550,6 +665,17 @@ class SQLiteConversationStore:
                 (resource_id, owner_id),
             ).fetchone()
         return dict(row) if row else None
+
+    def list_stale_resources(self, identity: str) -> list[dict]:
+        """Ready resources indexed by another embedder or chunker than ``identity``."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, owner_id FROM learning_resources WHERE status = 'ready' "
+                "AND (embedder_identity IS NULL OR embedder_identity != ?) "
+                "ORDER BY created_at ASC",
+                (identity,),
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def list_processing_resources(self) -> list[dict]:
         with self._lock:
@@ -596,7 +722,8 @@ class SQLiteConversationStore:
             self._conn.execute("DELETE FROM resource_chunks WHERE resource_id = ?", (resource_id,))
             self._conn.executemany(
                 "INSERT INTO resource_chunks "
-                "(resource_id, chunk_index, page_number, text, embedding) VALUES (?, ?, ?, ?, ?)",
+                "(resource_id, chunk_index, page_number, text, embedding, section) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 [
                     (
                         resource_id,
@@ -604,6 +731,7 @@ class SQLiteConversationStore:
                         chunk["page"],
                         chunk["text"],
                         json.dumps(chunk["embedding"], separators=(",", ":")),
+                        chunk.get("section"),
                     )
                     for chunk in chunks
                 ],
@@ -622,8 +750,9 @@ class SQLiteConversationStore:
         marks = ",".join("?" for _ in resource_ids)
         with self._lock:
             rows = self._conn.execute(
-                "SELECT c.resource_id, r.name AS title, c.chunk_index, c.page_number, "
-                "c.text, c.embedding FROM resource_chunks c "
+                "SELECT c.resource_id, r.name AS title, r.mime, r.embedder_identity, "
+                "c.chunk_index, c.page_number, c.section, c.text, c.embedding "
+                "FROM resource_chunks c "
                 "JOIN learning_resources r ON r.id = c.resource_id "
                 f"WHERE r.owner_id = ? AND r.status = 'ready' AND c.resource_id IN ({marks}) "
                 "ORDER BY c.resource_id, c.chunk_index",
@@ -638,10 +767,34 @@ class SQLiteConversationStore:
 
     def delete_resource(self, resource_id: str, *, owner_id: str) -> bool:
         with self._lock, self._conn:
+            owned = self._conn.execute(
+                "SELECT 1 FROM learning_resources WHERE id = ? AND owner_id = ?",
+                (resource_id, owner_id),
+            ).fetchone()
+            if owned is None:
+                return False
+            # Citation numbers are positions in the complete source list. A cascading
+            # delete in the middle would make an old [R2] point at the former R3. Scrub
+            # affected answers and all their source rows atomically before the cascade.
+            from runtime.citation_integrity import without_resource_markers
+
+            messages = self._conn.execute(
+                "SELECT DISTINCT m.id, m.content FROM messages m "
+                "JOIN message_sources s ON s.message_id = m.id WHERE s.resource_id = ?",
+                (resource_id,),
+            ).fetchall()
             cur = self._conn.execute(
                 "DELETE FROM learning_resources WHERE id = ? AND owner_id = ?",
                 (resource_id, owner_id),
             )
+            for message in messages:
+                self._conn.execute(
+                    "UPDATE messages SET content = ? WHERE id = ?",
+                    (without_resource_markers(message["content"]), message["id"]),
+                )
+                self._conn.execute(
+                    "DELETE FROM message_sources WHERE message_id = ?", (message["id"],)
+                )
         return cur.rowcount > 0
 
     def add_attachment(

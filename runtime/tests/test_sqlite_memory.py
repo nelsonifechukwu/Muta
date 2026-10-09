@@ -25,6 +25,43 @@ def test_factory_selects_sqlite(store):
     assert store.ping() is True
 
 
+def test_deleting_middle_cited_resource_never_repoints_markers(store):
+    resources = [
+        store.create_resource("alice", f"chapter-{index}.txt", "text/plain", b"text")
+        for index in range(3)
+    ]
+    conversation = store.create_conversation("alice")
+    store.add_message(conversation, "user", "Explain the three chapters")
+    answer = store.add_message(
+        conversation,
+        "assistant",
+        "First [R1]. Second [R2]. Third [R3].",
+        completion_state="failed",
+    )
+    store.add_message_sources(
+        answer,
+        [
+            {
+                "resource_id": resource,
+                "title": f"chapter-{index}.txt",
+                "page": 1,
+                "chunk_index": 0,
+                "excerpt": "text",
+            }
+            for index, resource in enumerate(resources)
+        ],
+    )
+    assert not store.delete_resource(resources[1], owner_id="mallory")
+    assert "[R2]" in store.list_messages(conversation)[-1]["content"]
+
+    assert store.delete_resource(resources[1], owner_id="alice")
+    row = store.list_messages(conversation)[-1]
+    assert row["content"] == "First. Second. Third."
+    assert row["resource_citations"] == []
+    assert store.get_resource(resources[0], owner_id="alice") is not None
+    assert store.get_resource(resources[2], owner_id="alice") is not None
+
+
 def test_relative_and_absolute_dsn_paths(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert path_from_dsn("sqlite:///data/muta.sqlite3") == "data/muta.sqlite3"
@@ -191,3 +228,67 @@ test_student_deletion_removes_historical_cross_linked_uploads = (
 test_delete_conversation_owner_scoped = contract.test_delete_conversation_owner_scoped
 test_delete_student_erases_all_owned_data = contract.test_delete_student_erases_all_owned_data
 test_reap_orphan_attachments_only_unlinked = contract.test_reap_orphan_attachments_only_unlinked
+
+
+def test_migration_six_rebuilds_resources_without_losing_chunks_or_citations(tmp_path):
+    """Widening the mime CHECK rebuilds `learning_resources`; with foreign keys left on, the
+    DROP would cascade-delete every chunk and citation. The rows must survive, and the
+    cascades must still work afterwards."""
+    path = tmp_path / "v5.sqlite3"
+    store = ConversationStore(f"sqlite:///{path}")
+    store.close()
+    connection = sqlite3.connect(path)
+    connection.executescript(
+        """
+        PRAGMA foreign_keys=OFF;
+        DROP TABLE message_sources;
+        DROP TABLE resource_chunks;
+        DROP TABLE learning_resources;
+        CREATE TABLE learning_resources (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL,
+            mime TEXT NOT NULL CHECK (mime = 'application/pdf'), data BLOB NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('processing', 'ready', 'failed')),
+            page_count INTEGER, embedder_identity TEXT, error TEXT,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        CREATE TABLE resource_chunks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resource_id TEXT NOT NULL REFERENCES learning_resources(id) ON DELETE CASCADE,
+            chunk_index INTEGER NOT NULL, page_number INTEGER NOT NULL, text TEXT NOT NULL,
+            embedding TEXT NOT NULL, UNIQUE(resource_id, chunk_index)
+        );
+        CREATE TABLE message_sources (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+            resource_id TEXT NOT NULL REFERENCES learning_resources(id) ON DELETE CASCADE,
+            title TEXT NOT NULL, page_number INTEGER NOT NULL, chunk_index INTEGER NOT NULL,
+            excerpt TEXT NOT NULL, UNIQUE(message_id, resource_id, page_number, chunk_index)
+        );
+        DELETE FROM schema_migrations WHERE version = 6;
+        INSERT INTO conversations VALUES ('c', 'a', NULL, NULL, NULL, NULL, NULL, 't', 't', 0);
+        INSERT INTO messages (conversation_id, role, content, created_at)
+            VALUES ('c', 'assistant', 'answer [R1]', 't');
+        INSERT INTO learning_resources VALUES
+            ('r', 'a', 'book.pdf', 'application/pdf', x'25504446', 'ready', 3, 'hashing:384',
+             NULL, 't', 't');
+        INSERT INTO resource_chunks (resource_id, chunk_index, page_number, text, embedding)
+            VALUES ('r', 0, 2, 'Kinetic energy', '[0.5]');
+        INSERT INTO message_sources
+            (message_id, resource_id, title, page_number, chunk_index, excerpt)
+            VALUES (1, 'r', 'book.pdf', 2, 0, 'Kinetic energy');
+        """
+    )
+    connection.commit()
+    connection.close()
+
+    store = ConversationStore(f"sqlite:///{path}")
+    try:
+        assert store.get_resource_chunks(["r"], owner_id="a")[0]["section"] is None
+        assert store.get_message_sources(1)[0]["page"] == 2
+        assert store.create_resource("a", "notes.md", "text/markdown", b"# Notes")
+        assert store._conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+        assert store.delete_resource("r", owner_id="a")
+        assert store.get_resource_chunks(["r"], owner_id="a") == []
+        assert store.get_message_sources(1) == []
+    finally:
+        store.close()

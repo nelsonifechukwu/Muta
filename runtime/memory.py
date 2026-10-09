@@ -125,12 +125,23 @@ ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAU
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS completion_state TEXT;
 """
 
+# Markdown/plain-text resources and section-addressed citations. Postgres names an inline
+# column CHECK `<table>_<column>_check`, so the widened constraint replaces it in place.
+_MIGRATION_6_TEXT_RESOURCES = """
+ALTER TABLE learning_resources DROP CONSTRAINT IF EXISTS learning_resources_mime_check;
+ALTER TABLE learning_resources ADD CONSTRAINT learning_resources_mime_check
+    CHECK (mime IN ('application/pdf', 'text/markdown', 'text/plain'));
+ALTER TABLE resource_chunks ADD COLUMN IF NOT EXISTS section TEXT;
+ALTER TABLE message_sources ADD COLUMN IF NOT EXISTS section TEXT;
+"""
+
 _MIGRATIONS: list[tuple[int, str]] = [
     (1, _MIGRATION_1_BASE),
     (2, _MIGRATION_2_ATTACHMENT_OWNER),
     (3, _MIGRATION_3_LEARNING_RESOURCES),
     (4, _MIGRATION_4_PINNED_CONVERSATIONS),
     (5, _MIGRATION_5_RELEASE_SCHEMA_RECONCILIATION),
+    (6, _MIGRATION_6_TEXT_RESOURCES),
 ]
 
 
@@ -453,7 +464,7 @@ class ConversationStore:
             ).fetchall()
             sources = conn.execute(
                 "SELECT ms.message_id, ms.resource_id, ms.title, ms.page_number, "
-                "ms.chunk_index, ms.excerpt FROM message_sources ms "
+                "ms.chunk_index, ms.excerpt, ms.section FROM message_sources ms "
                 "JOIN messages m ON m.id = ms.message_id "
                 "WHERE m.conversation_id = %s ORDER BY ms.id ASC",
                 (conversation_id,),
@@ -472,6 +483,7 @@ class ConversationStore:
                     "page": row["page_number"],
                     "chunk_index": row["chunk_index"],
                     "excerpt": row["excerpt"],
+                    "section": row["section"],
                 }
             )
         out = []
@@ -514,8 +526,9 @@ class ConversationStore:
             for source in sources:
                 cursor = conn.execute(
                     "INSERT INTO message_sources "
-                    "(message_id, resource_id, title, page_number, chunk_index, excerpt) "
-                    "SELECT %s, r.id, %s, %s, %s, %s FROM learning_resources r "
+                    "(message_id, resource_id, title, page_number, chunk_index, excerpt, "
+                    "section) "
+                    "SELECT %s, r.id, %s, %s, %s, %s, %s FROM learning_resources r "
                     "WHERE r.id = %s ON CONFLICT DO NOTHING",
                     (
                         message_id,
@@ -523,6 +536,37 @@ class ConversationStore:
                         source["page"],
                         source["chunk_index"],
                         source["excerpt"],
+                        source.get("section"),
+                        source["resource_id"],
+                    ),
+                )
+                if cursor.rowcount:
+                    persisted.append(dict(source))
+        return persisted
+
+    def replace_message_sources(self, message_id: int, sources: list[dict]) -> list[dict]:
+        """Make a message's citations exactly ``sources``, in order (deleted resources skipped).
+
+        Stored order is what `[R#]` markers resolve against on reload, so a continued answer
+        rewrites its rows in final citation order instead of appending after stale ones.
+        """
+        persisted: list[dict] = []
+        with self._pool.connection() as conn, conn.transaction():
+            conn.execute("DELETE FROM message_sources WHERE message_id = %s", (message_id,))
+            for source in sources:
+                cursor = conn.execute(
+                    "INSERT INTO message_sources "
+                    "(message_id, resource_id, title, page_number, chunk_index, excerpt, "
+                    "section) "
+                    "SELECT %s, r.id, %s, %s, %s, %s, %s FROM learning_resources r "
+                    "WHERE r.id = %s ON CONFLICT DO NOTHING",
+                    (
+                        message_id,
+                        source["title"],
+                        source["page"],
+                        source["chunk_index"],
+                        source["excerpt"],
+                        source.get("section"),
                         source["resource_id"],
                     ),
                 )
@@ -534,7 +578,7 @@ class ConversationStore:
         """Return the source rows that still exist for one persisted assistant message."""
         with self._pool.connection() as conn:
             rows = conn.execute(
-                "SELECT resource_id, title, page_number, chunk_index, excerpt "
+                "SELECT resource_id, title, page_number, chunk_index, excerpt, section "
                 "FROM message_sources WHERE message_id = %s ORDER BY id ASC",
                 (message_id,),
             ).fetchall()
@@ -545,6 +589,7 @@ class ConversationStore:
                 "page": row["page_number"],
                 "chunk_index": row["chunk_index"],
                 "excerpt": row["excerpt"],
+                "section": row["section"],
             }
             for row in rows
         ]
@@ -589,6 +634,17 @@ class ConversationStore:
                 (resource_id, owner_id),
             ).fetchone()
         return dict(row) if row else None
+
+    def list_stale_resources(self, identity: str) -> list[dict]:
+        """Ready resources indexed by another embedder or chunker than ``identity``."""
+        with self._pool.connection() as conn:
+            rows = conn.execute(
+                "SELECT id, owner_id FROM learning_resources WHERE status = 'ready' "
+                "AND (embedder_identity IS NULL OR embedder_identity != %s) "
+                "ORDER BY created_at ASC",
+                (identity,),
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def list_processing_resources(self) -> list[dict]:
         with self._pool.connection() as conn:
@@ -636,14 +692,15 @@ class ConversationStore:
             for chunk in chunks:
                 conn.execute(
                     "INSERT INTO resource_chunks "
-                    "(resource_id, chunk_index, page_number, text, embedding) "
-                    "VALUES (%s, %s, %s, %s, %s)",
+                    "(resource_id, chunk_index, page_number, text, embedding, section) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
                     (
                         resource_id,
                         chunk["chunk_index"],
                         chunk["page"],
                         chunk["text"],
                         self._jsonb(chunk["embedding"]),
+                        chunk.get("section"),
                     ),
                 )
             conn.execute(
@@ -659,8 +716,9 @@ class ConversationStore:
             return []
         with self._pool.connection() as conn:
             rows = conn.execute(
-                "SELECT c.resource_id, r.name AS title, c.chunk_index, c.page_number, "
-                "c.text, c.embedding FROM resource_chunks c "
+                "SELECT c.resource_id, r.name AS title, r.mime, r.embedder_identity, "
+                "c.chunk_index, c.page_number, c.section, c.text, c.embedding "
+                "FROM resource_chunks c "
                 "JOIN learning_resources r ON r.id = c.resource_id "
                 "WHERE r.owner_id = %s AND r.status = 'ready' "
                 "AND c.resource_id = ANY(%s) ORDER BY c.resource_id, c.chunk_index",
@@ -669,11 +727,35 @@ class ConversationStore:
         return [dict(row) for row in rows]
 
     def delete_resource(self, resource_id: str, *, owner_id: str) -> bool:
-        with self._pool.connection() as conn:
+        from runtime.citation_integrity import without_resource_markers
+
+        with self._pool.connection() as conn, conn.transaction():
+            owned = conn.execute(
+                "SELECT 1 FROM learning_resources WHERE id = %s AND owner_id = %s",
+                (resource_id, owner_id),
+            ).fetchone()
+            if owned is None:
+                return False
+            messages = conn.execute(
+                "SELECT m.id, m.content FROM messages m "
+                "WHERE EXISTS (SELECT 1 FROM message_sources s "
+                "WHERE s.message_id = m.id AND s.resource_id = %s)",
+                (resource_id,),
+            ).fetchall()
+            # Lock the resource/cascade before touching assistant rows. Citation inserts
+            # take the same FK order, avoiding a resource↔message lock inversion.
             cur = conn.execute(
                 "DELETE FROM learning_resources WHERE id = %s AND owner_id = %s",
                 (resource_id, owner_id),
             )
+            if not cur.rowcount:
+                return False
+            for message in messages:
+                conn.execute(
+                    "UPDATE messages SET content = %s WHERE id = %s",
+                    (without_resource_markers(message["content"]), message["id"]),
+                )
+                conn.execute("DELETE FROM message_sources WHERE message_id = %s", (message["id"],))
         return cur.rowcount > 0
 
     # --- attachments ------------------------------------------------------------------

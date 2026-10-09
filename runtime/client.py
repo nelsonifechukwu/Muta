@@ -110,6 +110,9 @@ class InferenceClient:
         # sent to a strict cloud provider (which 400s on unknown fields — the same reason
         # chat_template_kwargs is gated below).
         reasoning_budget = params.pop("reasoning_budget_tokens", None)
+        # `_muta_*` keys are in-process planning hints (cancel events, reply reserves) that
+        # must survive request refits but never reach an engine or provider.
+        params = {key: value for key, value in params.items() if not key.startswith("_muta_")}
         payload = {
             "model": self.model,
             "messages": messages,

@@ -502,11 +502,22 @@ def core_vision_command(
     return Invocation(argv, describe="CORE-VISION (ephemeral, TTL 120s)")
 
 
-def embed_command(paths: BundlePaths | None = None) -> Invocation:
+def embed_command(
+    paths: BundlePaths | None = None,
+    *,
+    port_number: int | None = None,
+    ctx: int = 512,
+    slots: int = 2,
+    threads: int = 1,
+) -> Invocation:
     """EMBED — bge-small on its own server (TDD §6.7).
 
     `--pooling cls` is not optional: the BGE family is trained with CLS pooling and
     mean-pooling degrades retrieval *silently* — no error, just worse top-k.
+
+    The keyword overrides serve the gateway-managed sidecar for learner documents, which
+    needs bge's full 512-token window per slot (``ctx`` is divided across ``slots``) and a
+    free loopback port rather than the classroom server's fixed one.
     """
     paths = paths or BundlePaths.from_env()
     argv = [
@@ -521,17 +532,22 @@ def embed_command(paths: BundlePaths | None = None) -> Invocation:
         "--host",
         "127.0.0.1",
         "--port",
-        str(port("EMBED", 8083)),
+        str(port_number if port_number is not None else port("EMBED", 8083)),
         "-c",
-        "512",
+        str(ctx),
         "-np",
-        "2",
+        str(slots),
         "--threads",
-        "1",
+        str(threads),
         "--no-webui",
         "--log-file",
         str(paths.log_dir / "embed.jsonl"),
     ]
+    if ctx // max(1, slots) > 512:
+        raise ValueError("bge-small accepts at most 512 tokens per sequence")
+    if ctx // max(1, slots) >= 512:
+        # Non-causal embedding models must take a whole input in one micro-batch.
+        argv += ["-b", "512", "-ub", "512"]
     key = paths.api_key_file
     if key.is_file():
         argv += ["--api-key", key.read_text().strip()]

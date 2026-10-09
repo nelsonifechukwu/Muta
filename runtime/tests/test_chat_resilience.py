@@ -1159,3 +1159,302 @@ def test_context_error_is_permanent_and_not_retried(store):
     with pytest.raises(InferenceStreamError, match="Context size"):
         list(events)
     assert client.calls == 1
+
+
+# --- reply reserve, progress-keeping recovery, and in-place continuation (2026-10-09) ----
+
+
+def test_reply_reserve_hint_keeps_answer_room_and_never_reaches_the_engine(store):
+    from runtime.chat import REPLY_RESERVE_PARAM
+    from runtime.client import InferenceClient
+
+    client = ExactCountingClient()
+    engine = ChatEngine(client, store, context_window_tokens=2048, context_safety_tokens=192)
+    huge = "evidence sentence " * 2000
+    _fitted, params = engine._fit_request(
+        [{"role": "system", "content": huge}, {"role": "user", "content": "question"}],
+        {"max_tokens": 1200, REPLY_RESERVE_PARAM: 512},
+    )
+    # The 64-token floor would leave a 64-token answer; the hint keeps ~512 free.
+    assert params["max_tokens"] >= 512
+    # Bounded to half the usable lane and to the answer's own cap.
+    assert engine.reply_reserve_tokens({REPLY_RESERVE_PARAM: 5000}) == (2048 - 192) // 2
+    assert engine.reply_reserve_tokens({REPLY_RESERVE_PARAM: 512, "max_tokens": 256}) == 256
+    assert engine.reply_reserve_tokens({}) == 64
+
+    payload = InferenceClient("http://engine")._payload(
+        [{"role": "user", "content": "hi"}], True, **params, _muta_cancel_event=object()
+    )
+    assert not [key for key in payload if key.startswith("_muta_")]
+
+
+def test_prompt_room_reports_free_tokens_after_the_reply_reserve(store):
+    client = ExactCountingClient()
+    engine = ChatEngine(client, store, context_window_tokens=2048, context_safety_tokens=192)
+    probe = [{"role": "system", "content": "s" * 400}, {"role": "user", "content": "q" * 40}]
+    used = client.count_prompt_tokens(probe)
+    assert engine.prompt_room_tokens(probe, reply_reserve=512) == 2048 - 192 - 512 - used
+    unbounded = ChatEngine(client, store)
+    assert unbounded.prompt_room_tokens(probe, reply_reserve=512) is None
+
+
+def test_capped_continuations_keep_their_progress_instead_of_repeating(store):
+    """Regression: continuation text was buffered and discarded on every length stop, so each
+    retry re-sent the identical prompt and the answer never advanced (message 684)."""
+
+    class CappedEveryTime:
+        def __init__(self) -> None:
+            self.prefills: list[str] = []
+            self.calls = 0
+
+        def stream_events(self, messages, **params):
+            self.calls += 1
+            if messages[-1]["role"] == "assistant":
+                self.prefills.append(messages[-1]["content"])
+            if self.calls <= 3:
+                yield "content", f"Part {self.calls} of the explanation. "
+                raise InferenceStreamError(
+                    "inference reached its token limit before completion",
+                    retryable=True,
+                    finish_reason="length",
+                )
+            yield "content", "Done."
+
+    client = CappedEveryTime()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=5,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat("s1", "explain", max_tokens=64)
+    received = "".join(text for kind, text in events if kind == "content")
+
+    expected = (
+        "Part 1 of the explanation. Part 2 of the explanation. Part 3 of the explanation. Done."
+    )
+    assert received == expected
+    assert store.get_messages(cid)[-1]["content"] == expected
+    # Every continuation resumed after the newest saved text, never an identical prompt.
+    assert client.prefills == [
+        "Part 1 of the explanation. ",
+        "Part 1 of the explanation. Part 2 of the explanation. ",
+        "Part 1 of the explanation. Part 2 of the explanation. Part 3 of the explanation. ",
+    ]
+
+
+def test_identical_capped_retries_stop_with_the_partial_saved(store):
+    class NeverAdvances:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def stream_events(self, messages, **params):
+            self.calls += 1
+            if self.calls == 1:
+                yield "content", "The first step is "
+            raise InferenceStreamError(
+                "inference reached its token limit before completion",
+                retryable=True,
+                finish_reason="length",
+            )
+
+    client = NeverAdvances()
+    engine = ChatEngine(
+        client,
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=5,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat("s1", "explain", max_tokens=64)
+    with pytest.raises(InferenceStreamError):
+        for _ in events:
+            pass
+    # One sampled second chance, then stop: 1 original + 2 continuation requests, not 6.
+    assert client.calls == 3
+    assert store.get_messages(cid)[-1]["content"] == "The first step is"
+
+
+def test_continue_reply_extends_the_interrupted_row_without_a_user_message(store):
+    class Resumes:
+        def __init__(self) -> None:
+            self.messages: list[list[dict]] = []
+
+        def stream_events(self, messages, **params):
+            self.messages.append(messages)
+            # Models often repeat the boundary; the overlap is removed before it is shown.
+            yield "content", "the parts cooperate, so the cell survives."
+
+    store_cid = store.create_conversation("s1")
+    store.add_message(store_cid, "user", "How do cells work?")
+    partial_id = store.add_message(
+        store_cid, "assistant", "In a simple way, the parts cooperate,", completion_state="failed"
+    )
+    client = Resumes()
+    engine = ChatEngine(client, store, persist_interval_s=0.0)
+    cid, user_message_id, events = engine.stream_events_chat(
+        "s1", "Continue", conversation_id=store_cid, continue_reply=True
+    )
+    assert events.resumed_text == "In a simple way, the parts cooperate,"
+    streamed = "".join(text for kind, text in events if kind == "content")
+    events.set_completion("complete")
+
+    assert cid == store_cid and user_message_id is None
+    assert streamed == " so the cell survives."
+    rows = store.list_messages(store_cid)
+    assert [row["role"] for row in rows] == ["user", "assistant"]
+    assert rows[-1]["id"] == partial_id
+    assert rows[-1]["content"] == "In a simple way, the parts cooperate, so the cell survives."
+    assert rows[-1]["completion_state"] == "complete"
+    request = client.messages[0]
+    # Trusted prefill of the stored answer after the original question; no synthetic user turn.
+    assert request[-1] == {"role": "assistant", "content": "In a simple way, the parts cooperate,"}
+    assert request[-2]["role"] == "user" and request[-2]["content"].startswith("How do cells")
+    assert "[MUTA_CONTINUATION]" in request[0]["content"]
+
+
+def test_continue_reply_requires_a_resumable_final_answer(store):
+    engine = ChatEngine(RecordingClient(), store)
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "Q")
+    done = store.add_message(cid, "assistant", "A complete answer.", completion_state="complete")
+    assert done
+    with pytest.raises(ValueError, match="no interrupted reply"):
+        engine.stream_events_chat("s1", "Continue", conversation_id=cid, continue_reply=True)
+    with pytest.raises(PermissionError):
+        engine.resume_target(cid, "someone-else")
+    with pytest.raises(ValueError):
+        engine.stream_events_chat(
+            "s1", "Continue", conversation_id=cid, continue_reply=True, regenerate=True
+        )
+
+
+def test_continuation_echo_is_stripped_before_resumed_text_streams(store):
+    class EchoesDirective:
+        def stream_events(self, messages, **params):
+            yield "content", "[MUTA_CONTINUATION]\n"
+            yield "content", "Continue the final assistant message from its last character.\n"
+            yield "content", "so the cell survives." + " It keeps going." * 30
+
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "How do cells work?")
+    store.add_message(cid, "assistant", "The parts cooperate,", completion_state="stopped")
+    engine = ChatEngine(EchoesDirective(), store, persist_interval_s=0.0)
+    _cid, _mid, events = engine.stream_events_chat(
+        "s1", "Continue", conversation_id=cid, continue_reply=True
+    )
+    streamed = "".join(text for kind, text in events if kind == "content")
+    assert "MUTA_CONTINUATION" not in streamed
+    assert "Continue the final assistant message" not in streamed
+    assert streamed.startswith("so the cell survives.")
+
+
+class _EchoingPrefillEngine:
+    """Models the pinned llama-server: an assistant prefill comes back verbatim first."""
+
+    def __init__(self, continuation: str, first: str | None = None) -> None:
+        self.continuation = continuation
+        self.first = first
+        self.calls = 0
+
+    def stream_events(self, messages, **params):
+        self.calls += 1
+        if self.first is not None and self.calls == 1:
+            yield "content", self.first
+            raise InferenceStreamError(
+                "connection reset", retryable=True, finish_reason=None
+            )
+        prefill = messages[-1]["content"] if messages[-1]["role"] == "assistant" else ""
+        for start in range(0, len(prefill), 37):
+            yield "content", prefill[start : start + 37]
+        yield "content", self.continuation
+
+
+def test_recovery_strips_an_engine_echo_of_the_whole_prefill(store):
+    """Regression (2026-10-09, engine killed mid-answer): the resumed stream repeated the
+    whole first half of the answer before continuing, then tripped the loop guard."""
+    first = "Step 1: light is absorbed by chlorophyll. " * 30 + "Step 2 uses the"
+    engine = ChatEngine(
+        _EchoingPrefillEngine(" energy stored in ATP.", first=first),
+        store,
+        persist_interval_s=0.0,
+        stream_retry_attempts=2,
+        stream_retry_backoff_s=0.0,
+    )
+    cid, _mid, events = engine.stream_events_chat("s1", "explain", max_tokens=1200)
+    streamed = "".join(text for kind, text in events if kind == "content")
+    assert streamed == first + " energy stored in ATP."
+    assert store.get_messages(cid)[-1]["content"] == first + " energy stored in ATP."
+
+
+def test_continue_reply_strips_an_engine_echo_of_the_stored_answer(store):
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "How do cells work?")
+    partial = "Cells are the basic unit of life. " * 40 + "The nucleus holds"
+    store.add_message(cid, "assistant", partial, completion_state="failed")
+    engine = ChatEngine(_EchoingPrefillEngine(" the DNA."), store, persist_interval_s=0.0)
+    _cid, _mid, events = engine.stream_events_chat(
+        "s1", "Continue", conversation_id=cid, continue_reply=True
+    )
+    streamed = "".join(text for kind, text in events if kind == "content")
+    events.set_completion("complete")
+    assert streamed == " the DNA."
+    assert store.list_messages(cid)[-1]["content"] == partial + " the DNA."
+
+
+def test_continue_reply_replays_earlier_turns_not_just_the_question(store):
+    """Review finding: the replay budget was spent on the long partial (then removed), so the
+    resumed prompt lost the turns that give "the second one" its meaning."""
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "List two laws of motion.")
+    store.add_message(cid, "assistant", "1. Inertia. 2. F = ma.", completion_state="complete")
+    store.add_message(cid, "user", "Explain the second one in depth.")
+    store.add_message(cid, "assistant", "Force equals " + "mass times acceleration. " * 200,
+                      completion_state="failed")
+    client = RecordingClient()
+    engine = ChatEngine(client, store, persist_interval_s=0.0, history_token_budget=1200)
+    messages = engine._assemble_resume(cid, "s1", "SYS")
+    assert [m["role"] for m in messages] == ["system", "user", "assistant", "user"]
+    assert messages[1]["content"] == "List two laws of motion."
+
+
+def test_a_continuation_that_only_repeats_itself_is_not_marked_complete(store):
+    """Review finding: an echo-only resume streamed nothing new yet ended "complete", which
+    removed the learner's Continue button while the answer was still cut short."""
+    cid = store.create_conversation("s1")
+    store.add_message(cid, "user", "How do cells work?")
+    partial = "A long stored answer about cells that ends mid"
+    store.add_message(cid, "assistant", partial, completion_state="failed")
+    engine = ChatEngine(
+        _EchoingPrefillEngine(""), store, persist_interval_s=0.0, stream_retry_attempts=2,
+        stream_retry_backoff_s=0.0,
+    )
+    _cid, _mid, events = engine.stream_events_chat(
+        "s1", "Continue", conversation_id=cid, continue_reply=True
+    )
+    with pytest.raises(InferenceStreamError):
+        for _ in events:
+            pass
+    assert store.list_messages(cid)[-1]["content"] == partial
+
+
+def test_echo_stripping_keeps_a_real_paragraph_break(store):
+    class Echo:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def stream_events(self, messages, **params):
+            self.calls += 1
+            if self.calls == 1:
+                yield "content", "First paragraph ends here."
+                raise InferenceStreamError("cap", retryable=True, finish_reason="length")
+            yield "content", "[MUTA_CONTINUATION]\n\nSecond paragraph starts here." + " x" * 150
+
+    engine = ChatEngine(Echo(), store, persist_interval_s=0.0, stream_retry_attempts=1,
+                        stream_retry_backoff_s=0.0)
+    cid, _mid, events = engine.stream_events_chat("s1", "explain", max_tokens=64)
+    "".join(text for kind, text in events if kind == "content")
+    assert store.get_messages(cid)[-1]["content"].startswith(
+        "First paragraph ends here.\n\nSecond paragraph starts here."
+    )

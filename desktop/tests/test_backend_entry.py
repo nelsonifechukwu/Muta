@@ -69,6 +69,8 @@ def test_configure_forces_offline_absolute_desktop_paths(tmp_path):
     assert values["MUTA_OFFLINE"] == "1"
     assert values["MUTA_ALLOW_MODEL_SWITCH"] == "1"
     assert values["MUTA_RT_AUTO_DOWNLOAD"] == "0"
+    # Two 4,096-token chat lanes: room for the tutor prompt, document evidence and an answer.
+    assert values["MUTA_RT_N_CTX"] == "8192"
     assert values["MUTA_RT_MODEL_DIR"] == str(model.parent)
     assert values["MUTA_MODEL_ROOT"] == str(model_root)
     assert values["MUTA_MODEL_SELECTION_PATH"] == str(state / "model-selection.json")

@@ -33,6 +33,7 @@ UI_INPUTS = (
     "ui/*.svg",
     "ui/brand/*",
     "ui/courses/*",
+    "ui/fonts/*",
     "ui/units/*",
     "ui/vendor/viz/*",
 )

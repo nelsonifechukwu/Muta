@@ -21,6 +21,8 @@ import threading
 import time
 import unicodedata
 import uuid
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from functools import lru_cache
 
 import httpx
@@ -69,6 +71,7 @@ from contracts.models import (
     RenderResponse,
     ResourceDeleted,
     ResourceList,
+    ResourceSections,
     SessionActionResponse,
     StudentErased,
     Subject,
@@ -97,6 +100,7 @@ from orchestrator.gateway.auth import (
     require_caller,
     resolve_principal,
 )
+from orchestrator.gateway.citation_attribution import attribute_claims
 from orchestrator.gateway.course_policy import (
     CourseAccessError,
     CourseNotFoundError,
@@ -158,6 +162,13 @@ from orchestrator.gateway.visualizations import (
 from orchestrator.gateway.websearch import fetch_snippets
 from orchestrator.pedagogy.adaptation import TurnAdaptation, plan_turn_adaptation
 from orchestrator.pedagogy.local_context import context_from_settings
+from orchestrator.retrieval.documents import (
+    MAX_TEXT_RESOURCE_BYTES,
+    PDF_MIME,
+    TEXT_MIMES,
+    classify_upload,
+    decode_text,
+)
 from orchestrator.retrieval.resources import (
     ResourceNotFound,
     ResourceSelectionRequired,
@@ -169,10 +180,12 @@ from orchestrator.telemetry import get_hub
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.verifier import AnswerVerifier
 from runtime.chat import (
+    REPLY_RESERVE_PARAM,
     AttachmentPersistenceError,
     ChatEngine,
     ImageInput,
     strip_visualization_protocol,
+    with_turn_instruction,
 )
 from runtime.client import Generation, InferenceStreamError
 from runtime.config import RuntimeConfig
@@ -304,6 +317,24 @@ _SAFE_ATTACHMENT_MIME = {
 }
 
 _MAX_RESOURCE_BYTES = 32 * 1024 * 1024
+#: Declared upload types a browser or curl may send for the supported documents. The bytes and
+#: filename decide the stored type (`classify_upload`); this only rejects obvious mismatches.
+_RESOURCE_UPLOAD_TYPES = {
+    "application/pdf",
+    "application/octet-stream",
+    "text/markdown",
+    "text/x-markdown",
+    "text/plain",
+    "",
+}
+#: Markdown is served as UTF-8 text/plain + nosniff: a browser displays it, never renders or
+#: executes it. The in-app reader renders sections through the sanitized Markdown pipeline.
+_TEXT_RESOURCE_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Content-Disposition": "inline",
+    "Cache-Control": "private, no-store",
+    "Referrer-Policy": "no-referrer",
+}
 _PDF_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Content-Disposition": "inline",
@@ -325,32 +356,271 @@ def _resource_model(row: dict) -> LearningResource:
     )
 
 
-def _resource_grounding(
-    req: ChatRequest, *, owner_id: str, service: ResourceService
-) -> tuple[str, list[dict]]:
+#: Answer room every chat turn keeps free when its prompt is fitted. The 64-token engine floor
+#: let a full lane cap a grounded answer at 64 tokens, which then looped through identical
+#: continuation retries (RESULTS.md 2026-10-09). `_fit_request` bounds it to half the lane
+#: and to the turn's own max_tokens.
+_REPLY_RESERVE_TOKENS = 512
+#: Planning ratio for converting free prompt tokens into evidence characters. The tutor
+#: prompt measures ~4.8 bytes/token on the bundled tokenizer; extracted PDF text (formulas,
+#: code, ligatures) is denser, so plan conservatively and let the exact fitter have the last word.
+_EVIDENCE_CHARS_PER_TOKEN = 3.6
+#: Slack for request text the probe cannot see (a resumed turn's continuation directive).
+_EVIDENCE_MARGIN_TOKENS = 64
+#: A grounded answer may give up reply room, down to this, so one passage fits a small lane.
+_MIN_GROUNDED_REPLY_TOKENS = 256
+#: Roughly one useful passage; below this the evidence is not worth a slot.
+_MIN_EVIDENCE_TOKENS = 160
+
+
+@dataclass
+class _ResourceEvidence:
+    """Retrieved candidates for one turn; rendered only once the prompt's free room is known."""
+
+    hits: list[dict]
+    selected: list[dict]
+    #: Leading hits a resumed answer already cites as [R1]..[Rk]; they stay citable even
+    #: when the prompt has no room to show them again.
+    pinned: int = 0
+
+
+def _resource_candidates(
+    req: ChatRequest,
+    *,
+    owner_id: str,
+    service: ResourceService,
+    query: str | None = None,
+    pinned: list[dict] | None = None,
+) -> _ResourceEvidence | None:
     if not req.use_rag:
-        return "", []
+        return None
     try:
         selected = service.preflight(owner_id, req.resource_ids)
-        hits = service.search(owner_id, req.resource_ids, req.message)
+        hits = service.search(owner_id, req.resource_ids, query or req.message)
+        if pinned:
+            hits = service.pin_sources(owner_id, req.resource_ids, pinned, hits)
+            pinned_count = len({(str(p.get("resource_id")), p.get("chunk_index")) for p in pinned})
+        else:
+            pinned_count = 0
     except ResourceSelectionRequired as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ResourceUnavailable as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ResourceNotFound as exc:
         raise HTTPException(status_code=404, detail="unknown resource") from exc
-    citations = [
+    return _ResourceEvidence(hits=hits, selected=selected, pinned=pinned_count)
+
+
+def _resource_citations(hits: list[dict]) -> list[dict]:
+    return [
         {
             "kind": "resource",
             "resource_id": hit["resource_id"],
             "title": hit["title"],
             "page": hit["page"],
             "chunk_index": hit["chunk_index"],
+            "section": hit.get("section"),
             "excerpt": hit["excerpt"],
         }
         for hit in hits
     ]
-    return service.render_context(hits, selected), citations
+
+
+_RESUMED_MARKER = re.compile(r"\[\s*R([1-9]\d*)\s*\]", re.IGNORECASE)
+
+
+def _align_resumed_citations(engine: ChatEngine, resume: dict) -> dict:
+    """Keep a resumed answer's [R#] markers only while its stored citations can back them.
+
+    Markers resolve against the row's citations in stored order. Deleting a cited file
+    cascades its row away, after which "[R2]" would silently point at the next passage. When
+    the markers outnumber the surviving citations the mapping is unknowable, so the markers
+    are removed from the saved text (the passages stay listed) rather than mis-cite.
+    """
+    numbers = {int(number) for number in _RESUMED_MARKER.findall(resume["partial"])}
+    cited = resume.get("resource_citations") or []
+    if not numbers or max(numbers) <= len(cited):
+        return resume
+    stripped = re.sub(r"[ \t]*\[\s*R[1-9]\d*\s*\]", "", resume["partial"])
+    log.info("resumed answer had %d markers for %d citations; markers removed", len(numbers), len(cited))
+    engine.store.update_message(resume["assistant_message_id"], stripped)
+    return {**resume, "partial": stripped, "resource_citations": []}
+
+
+def _reply_reserve_tokens(engine: ChatEngine, *, grounded: bool) -> int:
+    """Answer room a turn keeps free when fitted (see `_REPLY_RESERVE_TOKENS`).
+
+    Grounded turns always ask for 512. Ordinary turns ask for an eighth of the lane (256 on
+    a 2,048-token classroom lane, 512 from 4,096 up) so small lanes keep their history.
+    """
+    if grounded:
+        return _REPLY_RESERVE_TOKENS
+    lane = int(getattr(engine, "context_window_tokens", 0) or 0)
+    if lane <= 0:
+        return _REPLY_RESERVE_TOKENS
+    return max(_MIN_GROUNDED_REPLY_TOKENS, min(_REPLY_RESERVE_TOKENS, lane // 8))
+
+
+def _grounded_system_prompt(
+    build: Callable[[str], str],
+    evidence: _ResourceEvidence | None,
+    *,
+    engine: ChatEngine,
+    user_text: str,
+    params: dict,
+    prefill: str = "",
+    image_count: int = 0,
+) -> tuple[str, list[dict], list[str]]:
+    """Assemble the system prompt with as much ranked evidence as the lane can carry.
+
+    Evidence is sized against the turn's real envelope (system prompt, learner turn with its
+    trusted instruction, images, any resumed answer) while keeping the reply reserve free,
+    then re-measured with the engine's tokenizer and shrunk until it truly fits. Citations
+    are exactly the passages the model was shown, plus a resumed answer's pinned passages.
+    May lower this turn's reply reserve (in ``params``) so one passage fits a small lane.
+    Also returns the passage texts exactly as shown, numbered R1.., for claim attribution.
+    """
+    if evidence is None:
+        return build(""), [], []
+    service = get_resource_service()
+    measure = getattr(engine, "prompt_room_tokens", None)
+    image_tokens = image_count * int(getattr(engine, "image_token_budget", 0) or 0)
+
+    def room_for(system: str) -> int | None:
+        if not callable(measure):
+            return None
+        probe: list[dict] = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_text},
+        ]
+        if prefill:
+            probe.append({"role": "assistant", "content": prefill})
+        free = measure(
+            probe,
+            reply_reserve=int(params.get(REPLY_RESERVE_PARAM) or _REPLY_RESERVE_TOKENS),
+            **{key: value for key, value in params.items() if key != REPLY_RESERVE_PARAM},
+        )
+        return None if free is None else free - image_tokens - _EVIDENCE_MARGIN_TOKENS
+
+    header = build(service.render_context([], evidence.selected))
+    room = room_for(header)
+    if room is not None and room < _MIN_EVIDENCE_TOKENS and evidence.hits:
+        # Give up some answer room (never below 256) rather than answer from no evidence.
+        reserve = int(params.get(REPLY_RESERVE_PARAM) or _REPLY_RESERVE_TOKENS)
+        lowered = max(_MIN_GROUNDED_REPLY_TOKENS, reserve - (_MIN_EVIDENCE_TOKENS - room))
+        if lowered < reserve:
+            params[REPLY_RESERVE_PARAM] = lowered
+            room = room_for(header)
+    hits: list[dict] = []
+    if room is None:
+        hits = service.fit_evidence(evidence.hits, None)
+    elif room >= _MIN_EVIDENCE_TOKENS // 2 and evidence.hits:
+        max_chars = int(room * _EVIDENCE_CHARS_PER_TOKEN)
+        for _ in range(4):
+            hits = service.fit_evidence(evidence.hits, max_chars)
+            if not hits:
+                break
+            left = room_for(build(service.render_context(hits, evidence.selected)))
+            if left is None or left >= 0:
+                break
+            # Over by `-left` tokens: rescale using the chars/token this evidence measured.
+            used = max(1, room - left)
+            shown = sum(len(str(hit["text"])) for hit in hits)
+            max_chars = int(room * (shown / used) * 0.95)
+        else:
+            hits = []
+    if evidence.hits and len(hits) < len(evidence.hits):
+        log.info(
+            "rag: %d of %d passages fit the %s-token evidence room",
+            len(hits),
+            len(evidence.hits),
+            room,
+        )
+    # `fit_evidence` selects by rank but displays overviews in reading order. Persist the
+    # same order the model actually saw, while keeping previously cited continuation pins
+    # in their original R1..Rk slots even if the prompt cannot show all of them again.
+    pins = evidence.hits[: evidence.pinned]
+    pinned_keys = {(hit["resource_id"], hit["chunk_index"]) for hit in pins}
+    citable = pins + [
+        hit for hit in hits if (hit["resource_id"], hit["chunk_index"]) not in pinned_keys
+    ]
+    shown = [str(hit["text"]) for hit in hits]
+    if evidence.hits and not hits:
+        system = build(service.render_context([], evidence.selected, overflow=True))
+        return system, _resource_citations(citable), shown
+    system = build(service.render_context(hits, evidence.selected))
+    return system, _resource_citations(citable), shown
+
+
+#: Passages kept as "sources consulted" when a grounded answer carries no [R#] marker.
+_CONSULTED_SOURCES = 3
+
+
+def _consulted_fallback(
+    reply: str, cited: list[dict], resource_sources: list[dict]
+) -> tuple[list[dict], bool]:
+    """Sources to keep for a grounded reply, and whether they are only "consulted".
+
+    Small local models often answer correctly from the evidence yet write no [R#] marker,
+    which used to leave the reply with no sources at all. When the finalized reply has no
+    marker, keep the strongest passages the model was shown (in rank order). A reply without
+    markers resolves none, so clients label these "consulted", never as inline citations.
+    """
+    if cited or not resource_sources or _RESUMED_MARKER.search(reply):
+        return cited, False
+    return [dict(source) for source in resource_sources[:_CONSULTED_SOURCES]], True
+
+
+def _attribution_embed() -> Callable[[list[str]], list[list[float]]] | None:
+    """bge for claim attribution when the managed embedder is active; else lexical-only."""
+    try:
+        embedder = get_resource_service().embedder
+    except Exception:  # noqa: BLE001 — attribution must never fail a reply
+        return None
+    if getattr(embedder, "identity", "").startswith("hashing:"):
+        return None
+    return embedder.embed
+
+
+def _persist_resource_reply(
+    engine: ChatEngine,
+    events: object,
+    raw_reply: str,
+    resource_sources: list[dict],
+    passages: Sequence[str] = (),
+) -> tuple[str, list[dict]]:
+    """Canonicalize a grounded reply's markers and durably attach the passages it cites.
+
+    Used for completed and interrupted answers alike. The row's citations are rewritten in
+    final marker order (not appended), because reload resolves [R#] against stored order: a
+    continued answer must not leave stale rows ahead of its new ones. Model-authored
+    visualization blocks are stripped here too; only the gateway may persist one.
+
+    Claims the model left unmarked are attributed to the passage that supports them first
+    (`citation_attribution`), so a small model's grounded answer still carries inline numbers.
+    """
+    reply = strip_model_visualization_protocol(raw_reply)
+    if passages:
+        reply = attribute_claims(reply, passages, embed=_attribution_embed())
+    finalized_reply, cited = finalize_resource_reply(reply, resource_sources)
+    cited, consulted = _consulted_fallback(finalized_reply, cited, resource_sources)
+    assistant_message_id = getattr(events, "assistant_message_id", None)
+    if assistant_message_id is None:
+        if cited and not consulted:
+            return retain_persisted_resource_sources(finalized_reply, cited, [])
+        return finalized_reply, cited
+    replace = getattr(engine.store, "replace_message_sources", None)
+    if callable(replace):
+        replace(assistant_message_id, cited)
+    else:
+        engine.store.add_message_sources(assistant_message_id, cited)
+    persisted = engine.store.get_message_sources(assistant_message_id)
+    if consulted:
+        engine.store.update_message(assistant_message_id, finalized_reply)
+        return finalized_reply, persisted
+    finalized_reply, cited = retain_persisted_resource_sources(finalized_reply, cited, persisted)
+    engine.store.update_message(assistant_message_id, finalized_reply)
+    return finalized_reply, cited
 
 
 def _close_events(events) -> None:
@@ -464,6 +734,17 @@ def models(request: Request) -> ModelCatalogResponse:
         and (not strict_share_security() or (principal and principal.role == "host"))
     )
     return ModelCatalogResponse.model_validate(status)
+
+
+def warm_model_catalog() -> None:
+    """Plan every installed model once in the background so the first `/v1/models` is fast."""
+    manager = get_model_manager()
+    if manager is None:
+        return
+    try:
+        _apply_model_capacity(manager.status(), manager)
+    except Exception:  # noqa: BLE001 — a warm-up must never affect startup
+        log.warning("model catalog warm-up failed", exc_info=True)
 
 
 def _model_memory_mode() -> str:
@@ -622,14 +903,16 @@ def _withhold_requested(request_model: object) -> bool:
     )
 
 
-def _turn_integrity(student_id: str, message: str, *, withhold: bool) -> IntegrityGuard:
+def _turn_integrity(
+    student_id: str, message: str, *, withhold: bool, record: bool = True
+) -> IntegrityGuard:
     """Best-effort plan: a checker outage loses a badge, never the learner's turn."""
     try:
         guard = build_integrity_guard(get_verifier(), message, withhold=withhold)
     except Exception:
         log.warning("integrity plan failed for %s", student_id, exc_info=True)
         return IntegrityGuard(withhold=withhold)
-    if guard.override_languages:
+    if guard.override_languages and record:
         try:
             store = get_twin_store()
             twin = store.load(student_id)
@@ -661,6 +944,7 @@ def _turn_adaptation(
     subject: str,
     mode: str,
     guard: IntegrityGuard,
+    persist: bool = True,
 ) -> TurnAdaptation:
     """Persist explicit preferences and observed friction without blocking a tutor turn."""
     try:
@@ -673,7 +957,8 @@ def _turn_adaptation(
             mode=mode,
             finding=guard.finding,
         )
-        store.save(twin)
+        if persist:
+            store.save(twin)
         return adaptation
     except Exception:
         log.warning("turn adaptation failed for %s", student_id, exc_info=True)
@@ -934,10 +1219,13 @@ async def resource_upload(
     service: ResourceService = Depends(get_resource_service),
     caller: str = Depends(require_caller),
 ) -> LearningResource:
-    """Durably accept one PDF, then prepare it outside the request thread."""
+    """Durably accept one PDF, Markdown or plain-text file, then prepare it in the background."""
     write_principal = principal_from_request(request)
-    if file.content_type not in {"application/pdf", "application/octet-stream"}:
-        raise HTTPException(status_code=415, detail="only PDF resources are supported")
+    declared = (file.content_type or "").split(";", 1)[0].strip().lower()
+    if declared not in _RESOURCE_UPLOAD_TYPES:
+        raise HTTPException(
+            status_code=415, detail="only PDF, Markdown (.md) and text (.txt) files are supported"
+        )
     payload = bytearray()
     while True:
         block = await file.read(1024 * 1024)
@@ -945,15 +1233,28 @@ async def resource_upload(
             break
         payload.extend(block)
         if len(payload) > _MAX_RESOURCE_BYTES:
-            raise HTTPException(status_code=413, detail="PDFs must be 32 MB or smaller")
-    if not bytes(payload[:5]).startswith(b"%PDF-"):
-        raise HTTPException(status_code=422, detail="this file is not a valid PDF")
+            raise HTTPException(status_code=413, detail="files must be 32 MB or smaller")
+    mime = classify_upload(file.filename, declared, bytes(payload[:8]))
+    if mime is None:
+        detail = (
+            "this file is not a valid PDF"
+            if declared == "application/pdf" or (file.filename or "").lower().endswith(".pdf")
+            else "only PDF, Markdown (.md) and text (.txt) files are supported"
+        )
+        raise HTTPException(status_code=422, detail=detail)
+    if mime in TEXT_MIMES:
+        if len(payload) > MAX_TEXT_RESOURCE_BYTES:
+            raise HTTPException(status_code=413, detail="text files must be 4 MB or smaller")
+        try:
+            decode_text(bytes(payload))
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         with member_write_lease(write_principal):
             resource_id = engine.store.create_resource(
                 caller,
                 safe_resource_name(file.filename),
-                "application/pdf",
+                mime,
                 bytes(payload),
             )
     except AuthenticationError as exc:
@@ -991,7 +1292,12 @@ def resource_delete(
     "/resources/{resource_id}/content",
     response_class=Response,
     tags=["resources"],
-    responses={200: {"content": {"application/pdf": {}}, "description": "Inline PDF"}},
+    responses={
+        200: {
+            "content": {"application/pdf": {}, "text/plain": {}},
+            "description": "Inline PDF, or a Markdown/text resource as UTF-8 plain text",
+        }
+    },
 )
 def resource_content(
     resource_id: str,
@@ -1001,7 +1307,33 @@ def resource_content(
     row = engine.store.get_resource(resource_id, owner_id=caller, include_data=True)
     if row is None:
         raise HTTPException(status_code=404, detail="unknown resource")
+    if (row.get("mime") or PDF_MIME) in TEXT_MIMES:
+        return Response(
+            content=bytes(row["data"]),
+            media_type="text/plain; charset=utf-8",
+            headers=_TEXT_RESOURCE_HEADERS,
+        )
     return Response(content=bytes(row["data"]), media_type="application/pdf", headers=_PDF_HEADERS)
+
+
+@router.get(
+    "/resources/{resource_id}/sections",
+    response_model=ResourceSections,
+    tags=["resources"],
+)
+def resource_sections(
+    resource_id: str,
+    service: ResourceService = Depends(get_resource_service),
+    caller: str = Depends(require_caller),
+) -> ResourceSections:
+    """A Markdown/text resource split exactly as it was indexed, for the in-app reader."""
+    try:
+        sections = service.sections(resource_id, caller)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if sections is None:
+        raise HTTPException(status_code=404, detail="unknown resource")
+    return ResourceSections(**sections)
 
 
 def _request_course_policy(req: ChatRequest, request: Request) -> ResolvedCoursePolicy:
@@ -1045,21 +1377,25 @@ def chat(
     # Fast refusal: an unsupported image turn should not wait behind valid generations or
     # have a full queue mask the actionable model error. `_run_chat` repeats this check inside
     # the lifecycle barrier to close the model-switch race.
-    _resolve_image_inputs(
+    preflight_images = _resolve_image_inputs(
         engine,
         req.attachment_ids,
         owner_id=req.student_id,
         conversation_id=None if req.use_rag else req.conversation_id,
     )
-    resource_block = ""
-    resource_sources: list[dict] = []
+    if req.continue_reply:
+        raise HTTPException(
+            status_code=422,
+            detail="continuing a reply is available on streamed generations only",
+        )
+    resource_evidence: _ResourceEvidence | None = None
     final_resource_sources: list[dict] = []
     if req.use_rag:
         if caller is None:
             raise HTTPException(status_code=401, detail="sign in to use private resources")
         if caller != req.student_id:
             raise HTTPException(status_code=403, detail="you can only use your own resources")
-        resource_block, resource_sources = _resource_grounding(
+        resource_evidence = _resource_candidates(
             req, owner_id=caller, service=get_resource_service()
         )
     visual_requested = wants_live_visual(req.message)
@@ -1081,18 +1417,42 @@ def chat(
         message=req.message,
         series_strategy=adaptation.strategy,
     )
-    system_prompt = append_course_context(
-        assemble_system_prompt(
-            load_prompt(effective_mode),
-            persona=req.persona.value,
-            language=req.language,
-            subject=req.subject.value,
-            twin_summary="" if req.use_rag else _twin_summary(req.student_id),
-            adaptation_directive=adaptation.directive,
-            local_context=_local_context_directive(engine, req.student_id),
-            rag_block=resource_block,
-        ),
-        course_policy,
+    twin_summary = "" if req.use_rag else _twin_summary(req.student_id)
+    local_context = _local_context_directive(engine, req.student_id)
+
+    def _build_system_prompt(rag_block: str) -> str:
+        return append_course_context(
+            assemble_system_prompt(
+                load_prompt(effective_mode),
+                persona=req.persona.value,
+                language=req.language,
+                subject=req.subject.value,
+                twin_summary=twin_summary,
+                adaptation_directive=adaptation.directive,
+                local_context=local_context,
+                rag_block=rag_block,
+            ),
+            course_policy,
+        )
+
+    turn_instruction = _trusted_turn_instruction(
+        req.message, req.language, response_guard, course_policy
+    )
+    sampling_params = _sampling_for_request(
+        effective_mode,
+        req.thinking,
+        power=power,
+        power_enabled=_power_enabled(engine, req.student_id),
+        visualizations=visual_requested,
+    )
+    sampling_params[REPLY_RESERVE_PARAM] = _reply_reserve_tokens(engine, grounded=req.use_rag)
+    system_prompt, resource_sources, resource_passages = _grounded_system_prompt(
+        _build_system_prompt,
+        resource_evidence,
+        engine=engine,
+        user_text=with_turn_instruction(req.message, turn_instruction),
+        params=sampling_params,
+        image_count=len(preflight_images or []),
     )
 
     def _run_chat():
@@ -1112,9 +1472,7 @@ def chat(
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
-            turn_instruction=_trusted_turn_instruction(
-                req.message, req.language, response_guard, course_policy
-            ),
+            turn_instruction=turn_instruction,
             mode=effective_mode,
             persona=req.persona.value,
             subject=req.subject.value,
@@ -1126,22 +1484,23 @@ def chat(
             attachment_ids=req.attachment_ids,
             include_history=not req.use_rag,
             reply_guard=response_guard,
-            **_sampling_for_request(
-                effective_mode,
-                req.thinking,
-                power=power,
-                power_enabled=_power_enabled(engine, req.student_id),
-                visualizations=visual_requested,
-            ),
+            **sampling_params,
         )
         sanitized_reply = strip_model_visualization_protocol(chat_result.reply)
         if sanitized_reply != chat_result.reply:
             chat_result.reply = sanitized_reply
             if chat_result.assistant_message_id is not None:
                 engine.store.update_message(chat_result.assistant_message_id, sanitized_reply)
+        consulted_only = False
         if req.use_rag:
             chat_result.reply, final_resource_sources = finalize_resource_reply(
-                chat_result.reply, resource_sources
+                attribute_claims(
+                    chat_result.reply, resource_passages, embed=_attribution_embed()
+                ),
+                resource_sources,
+            )
+            final_resource_sources, consulted_only = _consulted_fallback(
+                chat_result.reply, final_resource_sources, resource_sources
             )
             if chat_result.assistant_message_id is not None:
                 engine.store.update_message(chat_result.assistant_message_id, chat_result.reply)
@@ -1161,7 +1520,14 @@ def chat(
         # drains this operation before deleting the account, so nothing can recreate data
         # after the erase barrier.
         with member_write_lease(write_principal):
-            if final_resource_sources and chat_result.assistant_message_id is not None:
+            if consulted_only and chat_result.assistant_message_id is not None:
+                engine.store.add_message_sources(
+                    chat_result.assistant_message_id, final_resource_sources
+                )
+                final_resource_sources = engine.store.get_message_sources(
+                    chat_result.assistant_message_id
+                )
+            elif final_resource_sources and chat_result.assistant_message_id is not None:
                 candidate_sources = final_resource_sources
                 persisted_sources = engine.store.add_message_sources(
                     chat_result.assistant_message_id, final_resource_sources
@@ -1176,7 +1542,7 @@ def chat(
                     chat_result.reply, candidate_sources, persisted_sources
                 )
                 engine.store.update_message(chat_result.assistant_message_id, chat_result.reply)
-            elif final_resource_sources:
+            elif final_resource_sources and not consulted_only:
                 chat_result.reply, final_resource_sources = retain_persisted_resource_sources(
                     chat_result.reply, final_resource_sources, []
                 )
@@ -1266,14 +1632,34 @@ def _start_chat_generation(
         if conversation is None or conversation.get("student_id") != req.student_id:
             raise HTTPException(status_code=404, detail="unknown conversation")
 
+    # A continued reply re-answers its stored question: retrieval, integrity and the trusted
+    # turn instruction all key on that text, never on the request's placeholder message.
+    resume: dict | None = None
+    if req.continue_reply:
+        if req.regenerate or not req.conversation_id:
+            raise HTTPException(
+                status_code=422,
+                detail="continuing a reply needs an existing conversation and no regenerate",
+            )
+        try:
+            resume = engine.resume_target(req.conversation_id, req.student_id)
+        except PermissionError as exc:
+            raise HTTPException(status_code=404, detail="unknown conversation") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if resume is not None and req.use_rag:
+        resume = _align_resumed_citations(engine, resume)
+    question = resume["question"] if resume is not None else req.message
+
     # Private-resource readiness/ownership is checked before reserving capacity or writing a
     # turn. A preparing book therefore cannot consume a classroom slot or create a ghost row.
-    if req.use_rag:
-        resource_block, resource_sources = _resource_grounding(
-            req, owner_id=req.student_id, service=get_resource_service()
-        )
-    else:
-        resource_block, resource_sources = "", []
+    resource_evidence = _resource_candidates(
+        req,
+        owner_id=req.student_id,
+        service=get_resource_service(),
+        query=question,
+        pinned=resume["resource_citations"] if resume is not None else None,
+    )
     # Preflight before reservation for an immediate ownership/capability error. The second
     # resolution below is deliberate: only it runs behind the replacement barrier.
     _resolve_image_inputs(
@@ -1319,7 +1705,7 @@ def _start_chat_generation(
         from orchestrator.gateway.connectivity import get_connectivity
 
         if get_connectivity().online() is True:
-            snippets = fetch_snippets(req.message, base_url=search_url)
+            snippets = fetch_snippets(question, base_url=search_url)
             if snippets:
                 web_lines = "\n".join(
                     f"[{i}] {s.title} — {s.snippet}" for i, s in enumerate(snippets, start=1)
@@ -1328,40 +1714,49 @@ def _start_chat_generation(
                     {"title": snippet.title, "url": snippet.url} for snippet in snippets
                 )
 
-    visual_requested = wants_live_visual(req.message)
+    visual_requested = wants_live_visual(question)
     effective_mode = course_policy.effective_mode
+    # A continuation is the same turn, not a new one: plan its guard and adaptation from the
+    # stored question without recording the learner's activity a second time.
     integrity = _turn_integrity(
         req.student_id,
-        req.message,
+        question,
         withhold=_withhold_requested(req) or course_policy.withhold_final_answers,
+        record=resume is None,
     )
     adaptation = _turn_adaptation(
         req.student_id,
-        req.message,
+        question,
         subject=req.subject.value,
         mode=effective_mode,
         guard=integrity,
+        persist=resume is None,
     )
     response_guard = build_response_guard(
         integrity,
         language=req.language,
-        message=req.message,
+        message=question,
         series_strategy=adaptation.strategy,
     )
-    system_prompt = append_course_context(
-        assemble_system_prompt(
-            load_prompt(effective_mode),
-            persona=req.persona.value,
-            language=req.language,
-            subject=req.subject.value,
-            twin_summary="" if req.use_rag else _twin_summary(req.student_id),
-            adaptation_directive=adaptation.directive,
-            local_context=_local_context_directive(engine, req.student_id),
-            web_lines=web_lines,
-            rag_block=resource_block,
-        ),
-        course_policy,
-    )
+    twin_summary = "" if req.use_rag else _twin_summary(req.student_id)
+    local_context = _local_context_directive(engine, req.student_id)
+
+    def _build_system_prompt(rag_block: str) -> str:
+        return append_course_context(
+            assemble_system_prompt(
+                load_prompt(effective_mode),
+                persona=req.persona.value,
+                language=req.language,
+                subject=req.subject.value,
+                twin_summary=twin_summary,
+                adaptation_directive=adaptation.directive,
+                local_context=local_context,
+                web_lines=web_lines,
+                rag_block=rag_block,
+            ),
+            course_policy,
+        )
+
     cancel_event = threading.Event()
     sampling_params = _sampling_for_request(
         effective_mode,
@@ -1371,6 +1766,25 @@ def _start_chat_generation(
         visualizations=visual_requested,
     )
     structured_response = "response_format" in sampling_params
+    sampling_params[REPLY_RESERVE_PARAM] = _reply_reserve_tokens(engine, grounded=req.use_rag)
+    turn_instruction = _trusted_turn_instruction(
+        question, req.language, response_guard, course_policy
+    )
+    try:
+        system_prompt, resource_sources, resource_passages = _grounded_system_prompt(
+            _build_system_prompt,
+            resource_evidence,
+            engine=engine,
+            user_text=with_turn_instruction(question, turn_instruction),
+            params=sampling_params,
+            prefill=resume["partial"] if resume is not None else "",
+            image_count=(
+                int(resume.get("image_count", 0)) if resume is not None else len(image_inputs or [])
+            ),
+        )
+    except Exception:
+        generations.cancel_reservation(reservation_id)
+        raise
 
     try:
         cid, _user_message_id, events = engine.stream_events_chat(
@@ -1378,15 +1792,14 @@ def _start_chat_generation(
             message=req.message,
             conversation_id=req.conversation_id,
             system_prompt=system_prompt,
-            turn_instruction=_trusted_turn_instruction(
-                req.message, req.language, response_guard, course_policy
-            ),
+            turn_instruction=turn_instruction,
             mode=effective_mode,
             persona=req.persona.value,
             subject=req.subject.value,
             language=req.language,
             title=_conversation_title(req.message),
             regenerate=req.regenerate,  # 'answer now' re-runs this turn without a new user msg
+            continue_reply=resume is not None,
             cancel_event=cancel_event,
             images=image_inputs,
             attachment_ids=req.attachment_ids,
@@ -1430,6 +1843,12 @@ def _start_chat_generation(
             # Keep the leading id inside the cleanup boundary: Stop can land after this first
             # yield, and closing there must still release telemetry and the physical slot.
             yield f"data: {json.dumps({'conversation_id': cid})}\n\n"
+            resumed_text = str(getattr(events, "resumed_text", "") or "")
+            if resumed_text:
+                # A continued answer streams only its new text. Every client (and every replay
+                # after a refresh) first receives the stored prefix as the bubble's body.
+                reply_parts.append(resumed_text)
+                yield f"data: {json.dumps({'replace': resumed_text})}\n\n"
             for kind, text in streamed:
                 now = time.monotonic()
                 if kind == "source":
@@ -1465,27 +1884,10 @@ def _start_chat_generation(
                 yield f"data: {json.dumps({key: text})}\n\n"
             if req.use_rag and reply_parts and not cancel_event.is_set():
                 raw_reply = "".join(reply_parts)
-                finalized_reply, final_resource_sources = finalize_resource_reply(
-                    raw_reply, resource_sources
+                finalized_reply, final_resource_sources = _persist_resource_reply(
+                    engine, events, raw_reply, resource_sources, resource_passages
                 )
-                candidate_sources = final_resource_sources
                 reply_parts[:] = [finalized_reply]
-                assistant_message_id = getattr(events, "assistant_message_id", None)
-                if assistant_message_id is not None:
-                    persisted_sources = engine.store.add_message_sources(
-                        assistant_message_id, candidate_sources
-                    )
-                    persisted_sources = engine.store.get_message_sources(assistant_message_id)
-                    finalized_reply, final_resource_sources = retain_persisted_resource_sources(
-                        finalized_reply, candidate_sources, persisted_sources
-                    )
-                    reply_parts[:] = [finalized_reply]
-                    engine.store.update_message(assistant_message_id, finalized_reply)
-                elif candidate_sources:
-                    finalized_reply, final_resource_sources = retain_persisted_resource_sources(
-                        finalized_reply, candidate_sources, []
-                    )
-                    reply_parts[:] = [finalized_reply]
                 if finalized_reply != raw_reply:
                     # Streaming deltas are append-only until this authoritative final pass.
                     # The browser replaces the provisional body so raw (R5)/R3 syntax and
@@ -1505,7 +1907,7 @@ def _start_chat_generation(
                 yield f"data: {json.dumps({'phase': 'visualization'})}\n\n"
                 spec = generate_visualization(
                     engine,
-                    req.message,
+                    question,
                     prose_reply,
                     conversation_id=cid,
                     cancel_event=cancel_event,
@@ -1524,6 +1926,22 @@ def _start_chat_generation(
         except (httpx.HTTPError, InferenceStreamError) as e:
             log.warning("engine error mid-stream at /chat/stream: %r", e)
             partial_saved = bool(reply_parts)
+            partial_sources: list[dict] = []
+            if req.use_rag and partial_saved:
+                # A grounded answer that stops early still cites real passages. Keep them on
+                # its row (and canonical markers in its text) so the saved partial stays
+                # auditable and a later "Continue reply" can resume with the same numbering.
+                try:
+                    # The engine's write-through already flushed this row while the error
+                    # propagated out of its generator, so the update below is the last write.
+                    raw_reply = "".join(reply_parts)
+                    finalized_reply, partial_sources = _persist_resource_reply(
+                        engine, events, raw_reply, resource_sources, resource_passages
+                    )
+                    if finalized_reply != raw_reply:
+                        yield f"data: {json.dumps({'replace': finalized_reply})}\n\n"
+                except Exception:
+                    log.warning("partial resource sources were not saved", exc_info=True)
             error = {
                 "error": _incomplete_stream_message(partial_saved=partial_saved),
                 # A subscriber/socket loss never reaches this branch: the process-owned job
@@ -1534,6 +1952,8 @@ def _start_chat_generation(
                 "partial_saved": partial_saved,
                 "recoverable": partial_saved,
             }
+            if partial_sources:
+                error["sources"] = partial_sources
             yield f"data: {json.dumps(error)}\n\n"
             return
         finally:
@@ -1581,7 +2001,8 @@ def _start_chat_generation(
         # latency to a token and never blocks the event loop. `verified` is null when nothing
         # was checkable — the UI shows a "✓ checked" badge only on a real True.
         verified, check_note = _run_self_check("".join(reply_parts))
-        _touch_twin(req.student_id, req.subject.value, req.message)
+        if resume is None:
+            _touch_twin(req.student_id, req.subject.value, req.message)
         yield (
             "data: "
             + json.dumps(

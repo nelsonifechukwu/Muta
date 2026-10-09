@@ -168,6 +168,11 @@ def configure(
         "TUTOR_LLAMA_SERVER_BIN": str(llama),
         "MUTA_RT_SERVER_HOST": "127.0.0.1",
         "MUTA_RT_SERVER_PORT": str(engine_port),
+        # Two lanes x 4,096 tokens. At the 4,096 generic default each chat got 2,048: the
+        # ~900-token tutor prompt plus a 512-token answer reserve left almost no room for a
+        # learner's document passages. Measured +107 MiB peak engine RSS on the bundled 1.5B
+        # model with both lanes full (RESULTS.md 2026-10-09).
+        "MUTA_RT_N_CTX": "8192",
         "MUTA_LLAMA_SERVER_URL": f"http://127.0.0.1:{engine_port}",
         "MUTA_OPERATOR_ID_FILE": str(data / "operator-student-id"),
         "MUTA_DESKTOP_HOST": args.host,

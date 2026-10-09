@@ -25,6 +25,7 @@ from orchestrator.gateway.ladder import DegradationLadder
 from orchestrator.gateway.power import PowerGovernor
 from orchestrator.gateway.sessions import SessionManager
 from orchestrator.pedagogy.twin import TwinStore
+from orchestrator.retrieval.embed_server import EmbeddingManager, ManagedServerEmbedder
 from orchestrator.retrieval.resources import ResourceService
 from orchestrator.tools.renderer import DiagramRenderer
 from orchestrator.tools.sandbox import ToolPools
@@ -322,8 +323,20 @@ def get_engine() -> ChatEngine:
 
 @lru_cache(maxsize=1)
 def get_resource_service() -> ResourceService:
-    """One bounded worker/search service over the engine's durable private resource store."""
-    return ResourceService(get_engine().store)
+    """One bounded worker/search service over the engine's durable private resource store.
+
+    Uploaded documents are indexed with the bundled bge-small through a managed sidecar when
+    the model pack provides it; otherwise (dev checkouts, tests) with the hashing baseline.
+    """
+    manager = get_embedding_manager()
+    embedder = ManagedServerEmbedder(manager) if manager.available else None
+    return ResourceService(get_engine().store, embedder=embedder)
+
+
+@lru_cache(maxsize=1)
+def get_embedding_manager() -> EmbeddingManager:
+    """Spawn-on-demand bge sidecar for learner documents; reaped by the gateway's idle tick."""
+    return EmbeddingManager()
 
 
 @lru_cache(maxsize=1)

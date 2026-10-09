@@ -150,11 +150,15 @@ def _start_engine_thread(
 
 async def _vision_reaper() -> None:
     """Tick the CORE-VISION idle reaper: without it the ~3.3 GB ephemeral vision instance
-    lives forever after the first image."""
+    lives forever after the first image. The document embedder shares the tick."""
     while True:
         await asyncio.sleep(VISION_REAP_INTERVAL_S)
         with contextlib.suppress(Exception):
             get_vision().reap_if_idle()
+        with contextlib.suppress(Exception):
+            from orchestrator.gateway.deps import get_embedding_manager
+
+            get_embedding_manager().reap_if_idle()
 
 
 def _persisted_share_runtime(
@@ -293,6 +297,10 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
         assert engine_server is not None
         set_model_manager(engine_server)
         _, engine_stop = _start_engine_thread(engine_server, engine_log)
+        # Reading 16 GGUF headers takes ~3 s; do it once now, off the request path.
+        from orchestrator.gateway.routes import warm_model_catalog
+
+        threading.Thread(target=warm_model_catalog, name="model-catalog-warm", daemon=True).start()
         reaper_task = asyncio.create_task(_vision_reaper())
 
     if startup_profile is not None and share_listener_requested:
@@ -327,6 +335,10 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
 
             get_resource_service().shutdown()
             get_resource_service.cache_clear()
+        with contextlib.suppress(Exception):
+            from orchestrator.gateway.deps import get_embedding_manager
+
+            get_embedding_manager().stop()
         with contextlib.suppress(Exception):
             get_connectivity().stop()
         if analytics_service is not None:

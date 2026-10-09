@@ -81,6 +81,17 @@ def test_cache_change_classifier_keeps_layers_independent() -> None:
     assert all(workflow.values())
 
 
+def test_ui_assets_beyond_html_css_js_invalidate_the_ui_cache() -> None:
+    # Bundled fonts and the offline course/unit packs ship inside ui/dist; changing only them
+    # must still rebuild the UI layer.
+    for path in (
+        "ui/fonts/Onest-Variable.woff2",
+        "ui/courses/life-science.muta",
+        "ui/units/x.json",
+    ):
+        assert desktop_cache_changes.classify([path])["ui"] is True, path
+
+
 def test_workflows_cache_and_transfer_the_product_model() -> None:
     root = desktop_cache_key.REPO_ROOT
     qwen25 = "muta-iq/model/Muta-Tutor-Qwen2.5-1.5B-Finetuned-Q4_K_M.gguf"

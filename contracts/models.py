@@ -186,6 +186,15 @@ class ChatRequest(BaseModel):
             "'answer now' to replace an in-flight reply (e.g. skip the thinking phase)."
         ),
     )
+    continue_reply: bool = Field(
+        False,
+        description=(
+            "Extend the conversation's interrupted final answer in place WITHOUT adding a user "
+            "message (streamed generations only; requires conversation_id). The stored question "
+            "is re-used for retrieval and `message` is ignored. The stream first sends a "
+            "`replace` event carrying the stored answer, then only the new text."
+        ),
+    )
     use_web: bool = Field(
         False,
         description=(
@@ -226,9 +235,23 @@ class ChatRequest(BaseModel):
 class ResourceCitation(BaseModel):
     resource_id: ResourceId
     title: str
-    page: int = Field(ge=1, description="One-based physical PDF page number.")
+    page: int = Field(
+        ge=1,
+        description=(
+            "One-based physical PDF page number; for Markdown/text resources, the one-based "
+            "section ordinal shown by GET /v1/resources/{id}/sections."
+        ),
+    )
     chunk_index: int = Field(ge=0)
     excerpt: str = Field(max_length=500)
+    section: str | None = Field(
+        None,
+        max_length=400,
+        description=(
+            "Markdown/text resources only: the cited section's heading path joined with ' › ' "
+            "(empty for an untitled passage). Null for PDF citations."
+        ),
+    )
 
 
 class ChatResponse(BaseModel):
@@ -249,7 +272,11 @@ class ChatResponse(BaseModel):
     citations: list[str] = Field(default_factory=list, description="RAG source references.")
     resource_citations: list[ResourceCitation] = Field(
         default_factory=list,
-        description="Structured, server-owned citations into uploaded learner resources.",
+        description=(
+            "Structured, server-owned citations into uploaded learner resources, numbered by "
+            "the reply's [R#] markers. When a grounded reply contains no marker, these are the "
+            "strongest passages it was grounded on (sources consulted), not inline citations."
+        ),
     )
 
 
@@ -745,9 +772,13 @@ class SystemStatus(BaseModel):
 class LearningResource(BaseModel):
     id: ResourceId
     name: str
-    mime: Literal["application/pdf"] = "application/pdf"
+    mime: Literal["application/pdf", "text/markdown", "text/plain"] = "application/pdf"
     status: Literal["processing", "ready", "failed"]
-    page_count: int | None = Field(None, ge=1)
+    page_count: int | None = Field(
+        None,
+        ge=1,
+        description="PDF pages, or the number of sections in a Markdown/text resource.",
+    )
     error: str | None = None
     created_at: str
     updated_at: str
@@ -755,6 +786,24 @@ class LearningResource(BaseModel):
 
 class ResourceList(BaseModel):
     resources: list[LearningResource] = Field(default_factory=list)
+
+
+class ResourceSection(BaseModel):
+    ordinal: int = Field(ge=1, description="Matches ResourceCitation.page for this resource.")
+    path: list[str] = Field(
+        default_factory=list, description="Heading path; empty for an untitled passage."
+    )
+    level: int = Field(ge=0, le=6, description="Markdown heading level; 0 for a passage.")
+    text: str = Field(description="The section's source text (Markdown or plain text).")
+
+
+class ResourceSections(BaseModel):
+    """A Markdown/text resource split exactly as it was indexed, for the in-app reader."""
+
+    id: ResourceId
+    name: str
+    mime: Literal["text/markdown", "text/plain"]
+    sections: list[ResourceSection] = Field(default_factory=list)
 
 
 class ResourceDeleted(BaseModel):
