@@ -416,7 +416,7 @@
       const py = (y) => height - pad - (y / yMax) * plotHeight;
 
       ctx.save();
-      ctx.strokeStyle = "rgba(188,181,197,.12)";
+      ctx.strokeStyle = "rgba(175,169,159,.14)";
       ctx.lineWidth = 1;
       for (let x = 0; x <= xMax; x += 1) {
         ctx.beginPath();
@@ -431,20 +431,20 @@
         ctx.stroke();
       }
 
-      ctx.strokeStyle = "rgba(248,243,233,.46)";
+      ctx.strokeStyle = "rgba(243,240,234,.46)";
       ctx.beginPath();
       ctx.moveTo(px(0), py(yMax));
       ctx.lineTo(px(0), py(0));
       ctx.lineTo(px(xMax), py(0));
       ctx.stroke();
 
-      ctx.fillStyle = "rgba(188,181,197,.7)";
+      ctx.fillStyle = "rgba(175,169,159,.78)";
       ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
       ctx.fillText("0", px(0) - 12, py(0) + 15);
       ctx.fillText("x", px(xMax) - 2, py(0) + 15);
       ctx.fillText("y", px(0) - 15, py(yMax) + 5);
 
-      ctx.strokeStyle = "#bd5d3a";
+      ctx.strokeStyle = "#ff8a66";
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let i = 0; i <= 100; i += 1) {
@@ -462,7 +462,7 @@
       ctx.beginPath();
       ctx.rect(px(0), py(yMax), plotWidth, plotHeight);
       ctx.clip();
-      ctx.strokeStyle = "#efb76c";
+      ctx.strokeStyle = "#ffd25e";
       ctx.lineWidth = 2;
       ctx.setLineDash([7, 6]);
       ctx.beginPath();
@@ -472,15 +472,15 @@
       ctx.restore();
 
       ctx.setLineDash([]);
-      ctx.fillStyle = "#f8f3e9";
+      ctx.fillStyle = "#f3f0ea";
       ctx.beginPath();
       ctx.arc(px(pointX), py(pointY), 7, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#efb76c";
+      ctx.strokeStyle = "#ffd25e";
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      ctx.fillStyle = "#efb76c";
+      ctx.fillStyle = "#ffd25e";
       ctx.font = "600 11px ui-monospace, SFMono-Regular, Menlo, monospace";
       ctx.fillText(`slope ${slope.toFixed(1)}`, Math.min(px(pointX) + 12, width - 92), Math.max(py(pointY) - 12, 18));
       ctx.restore();

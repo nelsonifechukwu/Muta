@@ -15,10 +15,13 @@ from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.boundsPen import BoundsPen
 
 ROOT = Path(__file__).resolve().parents[1]
-PALETTE = dict(forest='#1D251F', ink='#171C18', ivory='#F5F1E7', paper='#FAF9F5', terracotta='#AD4F31', terracottaLight='#E58C69')
+# v5 "Bright" colourway (docs/design/muta-v5-bright.md): ink cover, white page and Muta coral.
+# Coral replaced terracotta because terracotta read brown beside the v5 pastels; #D9573A keeps
+# the speaking dot legible at favicon size (3.9:1 on white). Geometry is unchanged.
+PALETTE = dict(night='#181715', ink='#17181A', ivory='#F3F0EA', page='#FFFFFF', paper='#F7F5F0', coral='#D9573A', coralLight='#FF8A66')
 THEMES = {
-    'on-light': dict(cover=PALETTE['forest'], left=PALETTE['ivory'], right=PALETTE['terracotta'], dot=PALETTE['terracotta'], ink=PALETTE['ink']),
-    'on-dark': dict(cover=PALETTE['ivory'], left=PALETTE['ivory'], right=PALETTE['terracottaLight'], dot=PALETTE['terracottaLight'], ink=PALETTE['ivory']),
+    'on-light': dict(cover=PALETTE['ink'], left=PALETTE['page'], right=PALETTE['coral'], dot=PALETTE['coral'], ink=PALETTE['ink']),
+    'on-dark': dict(cover=PALETTE['ivory'], left=PALETTE['ivory'], right=PALETTE['coralLight'], dot=PALETTE['coralLight'], ink=PALETTE['ivory']),
     'black': dict.fromkeys(['cover','left','right','dot','ink'], '#000000'),
     'white': dict.fromkeys(['cover','left','right','dot','ink'], '#FFFFFF'),
 }
@@ -30,7 +33,7 @@ def svg(width, height, content, title, background=None):
 def nested(x,y,width,height,viewbox,content):
     return f'<svg x="{x}" y="{y}" width="{width}" height="{height}" viewBox="{viewbox}" overflow="visible">{content}</svg>'
 
-def dot(x=236, y=427, size=40, color='#AD4F31', tail=True):
+def dot(x=236, y=427, size=40, color='#D9573A', tail=True):
     # Body stays square and optically centered. Tail is 0.18 of body height and
     # remains inside the body's horizontal footprint.
     tailpart = 'H10L0 47.2V3' if tail else 'H3Q0 40 0 37V3'
@@ -44,7 +47,7 @@ def book(theme='on-light', include_dot=True):
     leftpage='M76 64C145 69 207 92 243 126Q252 135 252 149V382C205 342 143 318 76 322Q68 322 68 314V72Q68 63 76 64Z'
     rightpage='M269 126C313 88 376 63 436 56Q444 55 444 64V314Q444 322 436 322C369 320 307 342 260 382V149Q260 135 269 126Z'
     parts=[f'<path d="{leftcover}" fill="{c["cover"]}"/>', f'<path d="{rightcover}" fill="{c["cover"]}"/>']
-    # A dark contour keeps the ivory leaf visible on a light canvas. Inner page
+    # A dark contour keeps the white leaf visible on a light canvas. Inner page
     # areas are solid color and the two broad leaves remain clear.
     monochrome = theme in ('black', 'white')
     outline = f' stroke="{c["cover"]}" stroke-width="{6 if monochrome else 2}" stroke-linejoin="round"' if monochrome or theme=='on-light' else ''
@@ -92,7 +95,7 @@ def mark(kind,theme='on-light'):
     raise ValueError(kind)
 
 def app_icon(theme='on-dark',rounded=False):
-    bg=PALETTE['forest'] if theme=='on-dark' else PALETTE['paper']
+    bg=PALETTE['night'] if theme=='on-dark' else PALETTE['paper']
     tile=f'<rect width="512" height="512" rx="{112 if rounded else 0}" fill="{bg}"/>'
     return tile+f'<g transform="translate(28 22) scale(.89)">{book(theme)}</g>'
 
@@ -100,15 +103,15 @@ def optical_icon(size=32):
     # Dedicated 16-unit version: omit the cover layer and speech nib so these
     # cannot become accidental noise. Retain two leaves and the square body.
     if size==16:
-        body='<rect width="16" height="16" rx="3.3" fill="#1D251F"/>'
-        body+='<path d="M3 3.3C5 3.4 6.5 4 7.4 4.9V11.2C6.1 10.4 4.6 10 3 10.1Z" fill="#F5F1E7"/>'
-        body+='<path d="M8.6 4.9C9.8 3.9 11.4 3.3 13 3.1V10.1C11.4 10 9.9 10.4 8.6 11.2Z" fill="#E58C69"/>'
-        body+='<rect x="7" y="13" width="2" height="2" fill="#E58C69"/>'
+        body=f'<rect width="16" height="16" rx="3.3" fill="{PALETTE["night"]}"/>'
+        body+=f'<path d="M3 3.3C5 3.4 6.5 4 7.4 4.9V11.2C6.1 10.4 4.6 10 3 10.1Z" fill="{PALETTE["ivory"]}"/>'
+        body+=f'<path d="M8.6 4.9C9.8 3.9 11.4 3.3 13 3.1V10.1C11.4 10 9.9 10.4 8.6 11.2Z" fill="{PALETTE["coralLight"]}"/>'
+        body+=f'<rect x="7" y="13" width="2" height="2" fill="{PALETTE["coralLight"]}"/>'
         return 16,body
-    body='<rect width="32" height="32" rx="6.6" fill="#1D251F"/>'
-    body+='<path d="M5 6C8.8 6.1 11.8 7.2 14.8 9.6V22.5C11.9 20.6 8.7 19.8 5 20Z" fill="#F5F1E7"/>'
-    body+='<path d="M17.2 9.6C20.2 7.2 23.2 6.1 27 5.6V20C23.3 19.8 20.1 20.6 17.2 22.5Z" fill="#E58C69"/>'
-    body+=dot(14,25,4,'#E58C69')
+    body=f'<rect width="32" height="32" rx="6.6" fill="{PALETTE["night"]}"/>'
+    body+=f'<path d="M5 6C8.8 6.1 11.8 7.2 14.8 9.6V22.5C11.9 20.6 8.7 19.8 5 20Z" fill="{PALETTE["ivory"]}"/>'
+    body+=f'<path d="M17.2 9.6C20.2 7.2 23.2 6.1 27 5.6V20C23.3 19.8 20.1 20.6 17.2 22.5Z" fill="{PALETTE["coralLight"]}"/>'
+    body+=dot(14,25,4,PALETTE['coralLight'])
     return 32,body
 
 def save_svg(relative,width,height,content,title,background=None,png_width=None):
@@ -129,13 +132,13 @@ def build_preview():
     body+='<path d="M70 92H1430" stroke="#d6d8ce"/>'
     w,h,content=mark('stacked')
     body+=nested(70,160,760,783,f'0 0 {w} {h}',content)
-    body+='<rect x="920" y="150" width="510" height="480" fill="#1D251F"/>'
+    body+=f'<rect x="920" y="150" width="510" height="480" fill="{p["night"]}"/>'
     body+=nested(1018,185,315,315,'0 0 512 512',book('on-dark'))
     body+=text_path('The standalone mark',987,579,19,p['ivory'])
     w,h,content=mark('horizontal','black')
     body+=nested(930,690,500,148,f'0 0 {w} {h}',content)
     body+=text_path('Single-color master',949,859,16,p['ink'])
-    for i,key in enumerate(['forest','ivory','terracotta','terracottaLight']):
+    for i,key in enumerate(['night','ivory','coral','coralLight']):
         body+=f'<rect x="{920+i*127.5}" y="922" width="127.5" height="68" fill="{p[key]}"/>'
     body+='<path d="M70 1038H1430" stroke="#d6d8ce"/>'
     body+=text_path('Vector logos / App icons / Social graphics / Brand guide',70,1071,16,p['ink'])
@@ -148,7 +151,7 @@ def main():
             w,h,body=mark(kind,theme)
             save_svg(f'logos/muta-{kind}-{theme}.svg',w,h,body,f'Muta {kind} logo — {theme}',png_width=2000 if kind in ['stacked','horizontal','wordmark'] else 1024 if kind=='symbol' else 256)
     save_svg('icons/muta-app-master.svg',512,512,app_icon(), 'Muta full-bleed application icon',png_width=1024)
-    for theme,label in [('on-dark','forest'),('on-light','paper')]:
+    for theme,label in [('on-dark','night'),('on-light','paper')]:
         save_svg(f'icons/muta-avatar-{label}.svg',512,512,app_icon(theme,True),f'Muta rounded avatar on {label}',png_width=512)
     for size in [16,24,32,48,64]:
         v,body=optical_icon(size)

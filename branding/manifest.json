@@ -19,13 +19,13 @@
     "Social export dimensions",
     "Opaque app PNGs",
     "Exact optical ICO frame matches",
-    "105 local gallery/document/font links"
+    "106 local gallery/document/font links"
   ],
   "files": [
     {
       "path": "BRAND-GUIDE.md",
-      "bytes": 8499,
-      "sha256": "e7f282735abc88d0a42d0780c6a4b2a7af74ca3287f48ea06445cb3c9f8f2e92"
+      "bytes": 8882,
+      "sha256": "284b368bd117d11623cc71610a35c52548404b0356e2dd835d8f7210fbc1d2d0"
     },
     {
       "path": "README.md",
@@ -34,8 +34,8 @@
     },
     {
       "path": "brand-board.png",
-      "bytes": 88358,
-      "sha256": "3756eca1a976aca0595032b4559ffea807c945b39cda50c4ebe7eb5baf418a56",
+      "bytes": 88293,
+      "sha256": "cd07f49003296d57c502389f23694ff9c479a77dadb1394facc8d86f10084a71",
       "width": 1500,
       "height": 1100,
       "mode": "RGB",
@@ -44,7 +44,7 @@
     {
       "path": "brand-board.svg",
       "bytes": 64896,
-      "sha256": "b79029a0dbfed92ec8ac6e167cd9608943c8f52c12e3b60371c6b8ec28ced6af",
+      "sha256": "8c007cbbb7aedf4fadbc3a8f2252e7daec6348bf06635c1b9503fd67b40c7507",
       "viewBox": "0 0 1500 1100",
       "live_text": false,
       "external_dependencies": false
@@ -76,8 +76,8 @@
     },
     {
       "path": "icons/favicon.ico",
-      "bytes": 3649,
-      "sha256": "be4ac76be6a257f959585198aeedf89f8eb6183cefdeee3dac777dc1615d5fa5",
+      "bytes": 3638,
+      "sha256": "b16f43b010eb028000b17358afbe04caeb077b9b47c436fbc70f16bb44c4170a",
       "sizes": [
         [
           16,
@@ -99,8 +99,8 @@
     },
     {
       "path": "icons/muta-android-192.png",
-      "bytes": 4454,
-      "sha256": "1e1f3119f93a69a28191b43db327d099bb0c5dde2c42b065a4265c85452f8762",
+      "bytes": 4465,
+      "sha256": "93fefa45f7cf64aff08913625a0f8779c66584dc14555334f67739c6ffa4feca",
       "width": 192,
       "height": 192,
       "mode": "RGB",
@@ -108,8 +108,8 @@
     },
     {
       "path": "icons/muta-android-512.png",
-      "bytes": 12531,
-      "sha256": "13306f207d8603dd3a784da1a55b93dd006ecd813d72c11a3043627b2400a289",
+      "bytes": 12541,
+      "sha256": "fae42bdbf7a01b62b0f2deb1ff3c389b2db48349a8d6b530495bea3d55445a75",
       "width": 512,
       "height": 512,
       "mode": "RGB",
@@ -117,8 +117,8 @@
     },
     {
       "path": "icons/muta-app-master.png",
-      "bytes": 27057,
-      "sha256": "fd7ac7fd5e2110d316cbde323650c7adc3e7b899c630c5860977cfd25299096e",
+      "bytes": 27024,
+      "sha256": "78cb90452c5c44e425a800e82487cf59847bcaed25089689e56c8d78d6380120",
       "width": 1024,
       "height": 1024,
       "mode": "RGB",
@@ -127,32 +127,32 @@
     {
       "path": "icons/muta-app-master.svg",
       "bytes": 956,
-      "sha256": "27a532112708e4221a9d992bcb7f330c417b352639e3794b5e0660c1900beac7",
+      "sha256": "6a76afb0bc748e9a376174a14876b5ee1104206adcc022f9a0c0581bab2559fd",
       "viewBox": "0 0 512 512",
       "live_text": false,
       "external_dependencies": false
     },
     {
-      "path": "icons/muta-avatar-forest.png",
-      "bytes": 18739,
-      "sha256": "77eb63f1f45cfc31bffe19522605618d285705a5287f4db1a254d7b95b08ebed",
+      "path": "icons/muta-avatar-night.png",
+      "bytes": 18653,
+      "sha256": "d2ddd266c9cac4a17fedb223e10e5c631b0c1b0eeb85a4c81cb4b3a13f6e0605",
       "width": 512,
       "height": 512,
       "mode": "RGBA",
       "transparent": true
     },
     {
-      "path": "icons/muta-avatar-forest.svg",
-      "bytes": 952,
-      "sha256": "2e676593c59ad9bad55a1bcecf865f136d75973d07b9fef21f2db22a8bb4330f",
+      "path": "icons/muta-avatar-night.svg",
+      "bytes": 950,
+      "sha256": "66e96c54d6bcf62937d80f3cc41f76872fefdf338904bafd60370183a165d995",
       "viewBox": "0 0 512 512",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "icons/muta-avatar-paper.png",
-      "bytes": 20848,
-      "sha256": "6c919a532b21528522b38ef2e648e2721c7a0c5ca9b20b09928d068924867ade",
+      "bytes": 20790,
+      "sha256": "55e273ca035ab7938693d976bba4b721de3b8696f9d209fb07bca34dd79c7970",
       "width": 512,
       "height": 512,
       "mode": "RGBA",
@@ -161,15 +161,15 @@
     {
       "path": "icons/muta-avatar-paper.svg",
       "bytes": 1008,
-      "sha256": "22fbcf3452555f63bb1974580a9ee90c77b76b1490caf5d67b94fef7d3fe81e9",
+      "sha256": "e8a14d24b408e5c5ef4b556858c212ba0f8b3a155a47e0041b597cf07ddad8f8",
       "viewBox": "0 0 512 512",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "icons/muta-favicon-16.png",
-      "bytes": 386,
-      "sha256": "f38445d76e043cde56590853fa0975a6d6b1a0689039ed0f8bbcc6ea3b851367",
+      "bytes": 388,
+      "sha256": "942d4f8441a8540572b6c65e6799acd066e9f42dbcfbe82c7794c401ffdabde5",
       "width": 16,
       "height": 16,
       "mode": "RGBA",
@@ -178,15 +178,15 @@
     {
       "path": "icons/muta-favicon-16.svg",
       "bytes": 463,
-      "sha256": "0082de440ca7f5378a301238f2a23679579f21df818d51c2656339c4fef3823e",
+      "sha256": "1db363d32e33aca84c1454bfa9c53d52226e8b1a4bc178b27367a0eda019442b",
       "viewBox": "0 0 16 16",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "icons/muta-favicon-24.png",
-      "bytes": 625,
-      "sha256": "988f986e869e7e0280c039bede17db149a0d95663a511ad8325f6afd54ef158a",
+      "bytes": 623,
+      "sha256": "fa09053557f6d6e414d9067c745062f7fac04d879ace7e1921804d0237fe1e67",
       "width": 24,
       "height": 24,
       "mode": "RGBA",
@@ -195,15 +195,15 @@
     {
       "path": "icons/muta-favicon-24.svg",
       "bytes": 536,
-      "sha256": "0af4e3c44c70a7dd0fd5b2a1539e7c206b427c18b7a4769a2dc0f59020ab2a01",
+      "sha256": "4e67fd08c179297d2eeec27565def989befea695cc5d6305482a85c3f84b3d31",
       "viewBox": "0 0 32 32",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "icons/muta-favicon-32.png",
-      "bytes": 753,
-      "sha256": "a25b8469b5408bcd3b4e2d54564e09deaa94aa23117a378e517c2afb0aa4e5a7",
+      "bytes": 741,
+      "sha256": "3969f0a6fd49f95b66565ec3cbce1d43b04c51810d24d43cc4c2d27a6082d95f",
       "width": 32,
       "height": 32,
       "mode": "RGBA",
@@ -212,15 +212,15 @@
     {
       "path": "icons/muta-favicon-32.svg",
       "bytes": 536,
-      "sha256": "775135c3c44f6f52ca9fafdad2a21616da5a44c07b03a6d89adce00c68572bd4",
+      "sha256": "187aecab0447d83b6baa54b086188d779238f52a9e5f636e03ddf898efc4ebd2",
       "viewBox": "0 0 32 32",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "icons/muta-favicon-48.png",
-      "bytes": 1109,
-      "sha256": "280eef60dc187200cf02623a6f5dfdddd3fb59943cc745f426c6793adf70bcde",
+      "bytes": 1131,
+      "sha256": "af9a5c7896f0265bcc9358c79cc91a5b49b4660b144aa4b80ac98c98bdcf0e63",
       "width": 48,
       "height": 48,
       "mode": "RGBA",
@@ -229,15 +229,15 @@
     {
       "path": "icons/muta-favicon-48.svg",
       "bytes": 536,
-      "sha256": "0dade78e84fa4a56099921bcbf3398c69b84d3451df4a806ef9f6d5d41945f5d",
+      "sha256": "a2fea725d859a6c099bc1b11cf55fa0b1cd4c6c6a9d126277c88b768114e3afb",
       "viewBox": "0 0 32 32",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "icons/muta-favicon-64.png",
-      "bytes": 1467,
-      "sha256": "fb9e74a1a1844287aed3fbc222969b101ae02a71f6364344c4205c62940bb9fc",
+      "bytes": 1456,
+      "sha256": "9a1d5f1d76c5570d3611680a4582527561adc9f2ae8385ea5adaf633a70cd246",
       "width": 64,
       "height": 64,
       "mode": "RGBA",
@@ -246,15 +246,15 @@
     {
       "path": "icons/muta-favicon-64.svg",
       "bytes": 536,
-      "sha256": "87acab5def45afb912ddc41eca1483fcc9848d0a95f49369a0aa76e2ca01d887",
+      "sha256": "9974c952a8590fee87588d06e7c94f9908f196847b7e61d7863bc6bb33efbffc",
       "viewBox": "0 0 32 32",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "icons/muta-touch.png",
-      "bytes": 4187,
-      "sha256": "f1195b7b17298c4cd2b6b0d1caf6e6c40ca22e7281d9ebe701b1575bf9ad6b40",
+      "bytes": 4191,
+      "sha256": "b5b7f0d8c710f8ce151fd1366333c0981aacda5dee6f631556c6f4a6ea09637b",
       "width": 180,
       "height": 180,
       "mode": "RGB",
@@ -262,8 +262,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 19201,
-      "sha256": "5f71100d404506165297d76bd985a083cbdb538cef81a1a9a784b5fb92ee6d56"
+      "bytes": 19209,
+      "sha256": "575805acc58767e4f8c57efbe62ad248ddd90775335d3465dc0bae3c764a0e1d"
     },
     {
       "path": "logos/muta-dot-black.png",
@@ -284,8 +284,8 @@
     },
     {
       "path": "logos/muta-dot-on-dark.png",
-      "bytes": 1558,
-      "sha256": "c2a0e4304cd7fce3689ec442c0956307ca39c805b4e71365502fc55a2012d03f",
+      "bytes": 1498,
+      "sha256": "a61e648e8bce57631091af04b43f047869de947e67376d933dedb1e91f81c5ef",
       "width": 256,
       "height": 256,
       "mode": "RGBA",
@@ -294,7 +294,7 @@
     {
       "path": "logos/muta-dot-on-dark.svg",
       "bytes": 299,
-      "sha256": "df1f9d926a7f59275d7a02ba16eece28916f91e22a7ed87abba533e2b82736a4",
+      "sha256": "bb6dd371ca7816a0672fdf3a1281cf8ec82ff568569807e271c338e53480a4a6",
       "viewBox": "0 0 64 64",
       "live_text": false,
       "external_dependencies": false
@@ -302,7 +302,7 @@
     {
       "path": "logos/muta-dot-on-light.png",
       "bytes": 1541,
-      "sha256": "d229ba97f92bd62feb636a884842e3eda306cc965dfa814985ab3e90e79bceff",
+      "sha256": "c38a91a52ac4a3866dd55657a3b988d296e35f78d28c4a3fc9ddb0e5ccf24b75",
       "width": 256,
       "height": 256,
       "mode": "RGBA",
@@ -311,7 +311,7 @@
     {
       "path": "logos/muta-dot-on-light.svg",
       "bytes": 301,
-      "sha256": "c775e1959141d389712e351426a1faddd4fa57cde0ee46b858b87e78a3e42268",
+      "sha256": "fe86390a106a0ce057832d36c48acce4e904b7af0e365b16a793de2959e7ddcb",
       "viewBox": "0 0 64 64",
       "live_text": false,
       "external_dependencies": false
@@ -352,8 +352,8 @@
     },
     {
       "path": "logos/muta-horizontal-on-dark.png",
-      "bytes": 51894,
-      "sha256": "b46bb0ec081ce765d0ea2296258d74a69feb5ffd60d845b98e6982e6df186e39",
+      "bytes": 51488,
+      "sha256": "db7580f68e2aba51a4fe7627520d5dda0029864ab34dcd96eda785597718efd5",
       "width": 2000,
       "height": 590,
       "mode": "RGBA",
@@ -362,15 +362,15 @@
     {
       "path": "logos/muta-horizontal-on-dark.svg",
       "bytes": 3930,
-      "sha256": "2d8bb5434f61f7f602d351f27648635fc8cab2b81173354af05b58a8a2606af9",
+      "sha256": "26b1a79cb60c9b78524c726a68bbb3615bcf5abdbae32e1ee01643a93bf2bbdf",
       "viewBox": "0 0 1120 330",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "logos/muta-horizontal-on-light.png",
-      "bytes": 55439,
-      "sha256": "62611e09f1b2a69f8fcf063657819b502160538f5d56af6264e7400dbdf1b3bf",
+      "bytes": 54739,
+      "sha256": "7f35b2d4b471758aa739880ebc647544069831ab94db886252453f50a3ac3166",
       "width": 2000,
       "height": 590,
       "mode": "RGBA",
@@ -379,7 +379,7 @@
     {
       "path": "logos/muta-horizontal-on-light.svg",
       "bytes": 3990,
-      "sha256": "815e833d7a9972fb5c63eb6609278bbcaf1935b883fbc4e04fdf6d854e043d56",
+      "sha256": "08ed6d267637a62b369a9caa1cd021c66e80d82b039978dea1c75a8c58e26075",
       "viewBox": "0 0 1120 330",
       "live_text": false,
       "external_dependencies": false
@@ -420,8 +420,8 @@
     },
     {
       "path": "logos/muta-stacked-on-dark.png",
-      "bytes": 102647,
-      "sha256": "afa5725ecf8a1eb73b6e77eef88dff8ac7bd35510faa2cc99c3c08a215462df1",
+      "bytes": 101805,
+      "sha256": "1a6eff30e44cb5b6caebfbd7e6f218a9856fe29294a23a84582dc51e114b3cd1",
       "width": 2000,
       "height": 2060,
       "mode": "RGBA",
@@ -430,15 +430,15 @@
     {
       "path": "logos/muta-stacked-on-dark.svg",
       "bytes": 3928,
-      "sha256": "2e7cfc4c3976dca11dd081c9462bf944189bab9a6dc3ce45b6370e5d05c3e134",
+      "sha256": "56b1a21ae811037415201c1d94cd4476fc1c9c0c7098587f0564de562c5da521",
       "viewBox": "0 0 1000 1030",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "logos/muta-stacked-on-light.png",
-      "bytes": 111432,
-      "sha256": "64cc714ccf6d6b85542b0569b67a92da4d29a715a3d7b24a10d53a435f0ed914",
+      "bytes": 109614,
+      "sha256": "3c6aee51b9bffe898d7e5e70adc593bd823575e3d4d2425f98dabac0f67c3ad8",
       "width": 2000,
       "height": 2060,
       "mode": "RGBA",
@@ -447,7 +447,7 @@
     {
       "path": "logos/muta-stacked-on-light.svg",
       "bytes": 3988,
-      "sha256": "ebf9e600682a08d8e633bdc1a68fa16e3ed7fb841917e2f8ce1f11c7c7357abc",
+      "sha256": "7417da277791b0a614c7f2daa3c84005c8af10737d480748ccc9417491fff366",
       "viewBox": "0 0 1000 1030",
       "live_text": false,
       "external_dependencies": false
@@ -488,8 +488,8 @@
     },
     {
       "path": "logos/muta-symbol-on-dark.png",
-      "bytes": 27861,
-      "sha256": "cfeacb3911a044451ff35fa9a4f06ee09d585ee3e8561dcb52556f165832d013",
+      "bytes": 27284,
+      "sha256": "4f2e07e43edf4f5924e7af7709c328bdebc20919bf95c366843047d2a9cedaee",
       "width": 1024,
       "height": 1024,
       "mode": "RGBA",
@@ -498,15 +498,15 @@
     {
       "path": "logos/muta-symbol-on-dark.svg",
       "bytes": 847,
-      "sha256": "a68a9cefc9af710eeb46bd74a3c6b88622ebaa3f1e11c06321bb0e0cfdd73a1b",
+      "sha256": "3ba1de48e45671c6cfc4fb6bce6c7ab9a33186244efbf125e014c5fb9ef95e88",
       "viewBox": "0 0 512 512",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "logos/muta-symbol-on-light.png",
-      "bytes": 34133,
-      "sha256": "6134dca24ebf5611266c282b0e2f3121982386378a70b397e6c4fc06afa8c483",
+      "bytes": 33705,
+      "sha256": "d43439a6d6a6edbc0cd545558640b8004d7c76728e69a2a95e3112dffc2b39b1",
       "width": 1024,
       "height": 1024,
       "mode": "RGBA",
@@ -515,7 +515,7 @@
     {
       "path": "logos/muta-symbol-on-light.svg",
       "bytes": 907,
-      "sha256": "45a5bf6bfad4a37e6c14f4baf267d10961603aef37f5a434204c7718544641c8",
+      "sha256": "c2690a90ecaf521f17b86cc60b78f69fcdae98f4f8b0f50604e4bb2fb60689ad",
       "viewBox": "0 0 512 512",
       "live_text": false,
       "external_dependencies": false
@@ -556,8 +556,8 @@
     },
     {
       "path": "logos/muta-wordmark-on-dark.png",
-      "bytes": 56306,
-      "sha256": "0929d9af1e52c731efba555d7c9cffe596a007179ed1ee1a86699a08b406cb79",
+      "bytes": 56144,
+      "sha256": "347c192fa8eda3ad8cb3bccde729d847eb7e18abdd06d238d23035a0b0615fb7",
       "width": 2000,
       "height": 780,
       "mode": "RGBA",
@@ -566,15 +566,15 @@
     {
       "path": "logos/muta-wordmark-on-dark.svg",
       "bytes": 3209,
-      "sha256": "d5f880389bc1f22c264c201697fd02a0f3f99d55d9ddee1f7cc9dd1c972ad425",
+      "sha256": "60f761d292e76e71488e7fd9886579d62aafc5206ca909a6c8777d66f4dc9bfd",
       "viewBox": "0 0 1000 390",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "logos/muta-wordmark-on-light.png",
-      "bytes": 55765,
-      "sha256": "f4251d56e2b49bb55ffc399f417bd98e32b3012d01e513d64b56d677c4f83b69",
+      "bytes": 55614,
+      "sha256": "793ef3125c611158e0db25b9f03e69052f6424e7d0b8ede8ebc7af3fe60eaec4",
       "width": 2000,
       "height": 780,
       "mode": "RGBA",
@@ -583,7 +583,7 @@
     {
       "path": "logos/muta-wordmark-on-light.svg",
       "bytes": 3211,
-      "sha256": "58fac378b0e9c6a641e50c9ca3eae8226435543b0cf5c15416141c0de5f88a35",
+      "sha256": "05ba6e0a2fcd4b2491abda3decd31f0ba5d0f215f6068b21192b0fb5f71c6faa",
       "viewBox": "0 0 1000 390",
       "live_text": false,
       "external_dependencies": false
@@ -616,8 +616,8 @@
     },
     {
       "path": "social/header-1500x500.png",
-      "bytes": 33582,
-      "sha256": "eaec5274e54c1dd8c54b37dd5009d33ca7348f480b55c61b6d7d1e44039a83df",
+      "bytes": 33648,
+      "sha256": "5862b514565afc4c4dcadcf3d3d686f4c6bbfcac9c4270429349e1a792278e6d",
       "width": 1500,
       "height": 500,
       "mode": "RGB",
@@ -626,15 +626,15 @@
     {
       "path": "social/header-1500x500.svg",
       "bytes": 19223,
-      "sha256": "9eb96633336ba574bea60f509470be0c846f0e9469febedbda9f00d3da743f1b",
+      "sha256": "1396e0d7551ce682686ac040f58ccd4a3e1946153dcf417c53d8b2ce3c56d753",
       "viewBox": "0 0 1500 500",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "social/share-card-1200x630.png",
-      "bytes": 45187,
-      "sha256": "71df357bb486f74cea1c9ef3020896b4d953478e894b3760bbb866facf364f42",
+      "bytes": 45264,
+      "sha256": "7abcb1ccd7aa75a7e692670f1acb989e0f1fe2109f5ef0c3c9edb959e74857ea",
       "width": 1200,
       "height": 630,
       "mode": "RGB",
@@ -643,15 +643,15 @@
     {
       "path": "social/share-card-1200x630.svg",
       "bytes": 31347,
-      "sha256": "0fcfce770f940ae652ac977b10b0256034925e3a67eedf3e3934fc399cc93f8e",
+      "sha256": "34ed57f26ad2d21d08fdbb3912e6f4418e33f6e86a1b59f66f467944746ed6ce",
       "viewBox": "0 0 1200 630",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "social/social-square-1080x1080.png",
-      "bytes": 45921,
-      "sha256": "c3fd3abffeca64961392a8fe6d6e4c7efa619d0bc0b5cc817e1ea5381ddd8f54",
+      "bytes": 45687,
+      "sha256": "96989a9e9c0892457d256aaa81edb7c2ab8fb62066dca726b9424401d0590a47",
       "width": 1080,
       "height": 1080,
       "mode": "RGB",
@@ -660,15 +660,15 @@
     {
       "path": "social/social-square-1080x1080.svg",
       "bytes": 16717,
-      "sha256": "d04bdc434b5d8669f4975af0481786a7eb2c9332cba3a375b958d0c13a2f0b31",
+      "sha256": "29a881d0513236495830ccdedce05e0b2dac8d72c9b4049b28904ef88f5c645d",
       "viewBox": "0 0 1080 1080",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "social/title-background-1920x1080.png",
-      "bytes": 34276,
-      "sha256": "b82423f8015c586630d3a905290c730b4e6b90ad123af2277b0983aba1979abc",
+      "bytes": 34243,
+      "sha256": "f7aa31b40349a255bd61bedeb4e7bfdcd4b5fd9ad98692c370d2f43a81f951a9",
       "width": 1920,
       "height": 1080,
       "mode": "RGB",
@@ -677,20 +677,20 @@
     {
       "path": "social/title-background-1920x1080.svg",
       "bytes": 19995,
-      "sha256": "ddfbf695e79ae50f4d9ddfa19d257bada5ed6034f39e5bddc91c5fdddf07d521",
+      "sha256": "c922966bd9e3a7e27a87718f9877224bce8685d04b85655326a0abaec86ac0cd",
       "viewBox": "0 0 1920 1080",
       "live_text": false,
       "external_dependencies": false
     },
     {
       "path": "source/build_assets.py",
-      "bytes": 10542,
-      "sha256": "a723253bed5be3b19d4ede4f9e3ff6067ce6d10b5b0ed1da1be48794d5e14d63"
+      "bytes": 10901,
+      "sha256": "f534df247b04f095b37e98777027a8a3163686168b9f4ae427f79160f8728558"
     },
     {
       "path": "source/build_collateral.py",
-      "bytes": 3900,
-      "sha256": "fdba6a8372f8a94cadce8b6281f4d4882c84dbe22bde547dfee108987a832556"
+      "bytes": 3889,
+      "sha256": "768f8a1c89e1d0c59044e824528f49ff1ae2fcf5d00b244479e5dbe1fb7b95ee"
     },
     {
       "path": "source/build_manifest.py",
@@ -699,13 +699,13 @@
     },
     {
       "path": "tokens.css",
-      "bytes": 296,
-      "sha256": "8f97d904ca7791eff40a4a18b04c0f81aa7360252976bbb490bbc884f105eb76"
+      "bytes": 309,
+      "sha256": "35c8731af5eeada6e5324a344318981ed01b05a046f58c6f358c7d9ae3c5ae44"
     },
     {
       "path": "tokens.json",
-      "bytes": 456,
-      "sha256": "e79e8547e96d30bf0a21316f4e5b13b72dffb70fbfc8d0087b041be968e2397b"
+      "bytes": 468,
+      "sha256": "9427938ed04bd89ca67c71545e309146ca6aa95eb014bc5558c34c11d3baa82e"
     }
   ]
 }

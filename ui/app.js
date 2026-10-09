@@ -69,6 +69,31 @@ function settleStartupRouting() {
 const attachmentUrl = (id) => `/v1/attachments/${id}`;
 const resourcePageUrl = (id, page) =>
   `/v1/resources/${encodeURIComponent(id)}/content#page=${Math.max(1, Number(page) || 1)}`;
+// Markdown/text citations carry a `section` (a heading path, or "" for an untitled passage)
+// and open in the in-app reader at that section; PDF citations (section null) open the PDF.
+const isTextSource = (source) => source?.section !== undefined && source?.section !== null;
+const READER_HASH = "#muta-reader=";
+const resourceReaderUrl = (id, ordinal) =>
+  `${READER_HASH}${encodeURIComponent(id)}:${Math.max(1, Number(ordinal) || 1)}`;
+const sourceHref = (source) => isTextSource(source)
+  ? resourceReaderUrl(source.resource_id, source.page)
+  : resourcePageUrl(source.resource_id, source.page);
+const sourceLocation = (source) => source.section
+  ? `§ ${source.section}`
+  : featureT("rag.passage", { page: source.page });
+const sourceMeta = (source) => isTextSource(source)
+  ? featureT("rag.sectionMeta", { section: sourceLocation(source) })
+  : featureT("rag.sourceMeta", { page: source.page });
+const sourceOpenLabel = (source) => isTextSource(source)
+  ? featureT("rag.openSection", { title: source.title, section: sourceLocation(source) })
+  : featureT("rag.openPage", { title: source.title, page: source.page });
+const sourceCitationLabel = (source, number) => isTextSource(source)
+  ? featureT("rag.citationSection", {
+      number,
+      title: source.title,
+      section: sourceLocation(source),
+    })
+  : featureT("rag.citation", { number, title: source.title, page: source.page });
 
 function syncIdentityCopy() {
   const hostIdentity = authRole === "host";
@@ -1457,15 +1482,17 @@ function resourcePdfIcon(className = "") {
   const fold = document.createElementNS("http://www.w3.org/2000/svg", "path");
   fold.setAttribute("d", "M11.1 1.95V6.5h4.45");
   fold.setAttribute("fill", "none");
+  fold.setAttribute("class", "resource-glyph-fold");
   fold.setAttribute("stroke", "rgba(255,255,255,.78)");
   fold.setAttribute("stroke-width", "1.1");
   fold.setAttribute("stroke-linejoin", "round");
   const pdf = document.createElementNS("http://www.w3.org/2000/svg", "text");
   pdf.setAttribute("x", "10");
   pdf.setAttribute("y", "13.7");
+  pdf.setAttribute("class", "resource-glyph-label");
   pdf.setAttribute("fill", "white");
   pdf.setAttribute("font-size", "4.2");
-  pdf.setAttribute("font-family", "Arial, sans-serif");
+  pdf.setAttribute("font-family", "Onest, Arial, sans-serif");
   pdf.setAttribute("font-weight", "700");
   pdf.setAttribute("text-anchor", "middle");
   pdf.textContent = "PDF";
@@ -1868,6 +1895,11 @@ function beginAssistantMessage(onAnswerNow) {
       full = text;
       renderedLen = -1;
       prose.replaceChildren();
+      // A continued reply opens with its stored answer; show it before new text arrives.
+      if (full) {
+        clearQueuedNotice();
+        scheduleRender();
+      }
     },
     showPhase(phase) {
       clearQueuedNotice();
@@ -2071,15 +2103,32 @@ function setResourceSourcesExpanded(box, expanded) {
   if (!resourceCitationRail.matches) scrollToBottom();
 }
 
-function renderResourceSources(container, sources) {
+/**
+ * Canonical answer text plus the sources to show. A grounded answer whose text carries no
+ * [R#] marker keeps the passages it was given as "consulted" sources: listed, never numbered
+ * inline, because the reply does not say which sentence came from which passage.
+ */
+function groundedSources(text, records, options = {}) {
+  const available = (Array.isArray(records) ? records : []).filter((record) => record?.resource_id);
+  if (!available.length || !globalThis.MutaCitations?.normalizeReferences) {
+    return { text, records: available, consulted: false };
+  }
+  const grounded = globalThis.MutaCitations.normalizeReferences(text, available, options);
+  if (grounded.records.length) return { ...grounded, consulted: false };
+  return { text: grounded.text, records: available, consulted: true };
+}
+
+function renderResourceSources(container, sources, { consulted = false } = {}) {
   const records = (Array.isArray(sources) ? sources : []).filter(
     (source) => source && source.resource_id && Number(source.page) >= 1,
   );
   if (!records.length || container.querySelector(".resource-sources")) return;
+  const headingKey = consulted ? "rag.sourcesConsulted" : "rag.sources";
   const box = document.createElement("aside");
   box.className = "resource-sources";
   box.dataset.sourceCount = String(records.length);
-  box.setAttribute("aria-label", featureT("rag.sources"));
+  if (consulted) box.dataset.consulted = "true";
+  box.setAttribute("aria-label", featureT(headingKey));
   container.classList.add("has-resource-sources");
 
   const trigger = document.createElement("button");
@@ -2096,7 +2145,7 @@ function renderResourceSources(container, sources) {
   book.appendChild(bookPath);
   const heading = document.createElement("span");
   heading.className = "resource-sources-heading";
-  heading.textContent = featureT("rag.sources");
+  heading.textContent = featureT(headingKey);
   const count = document.createElement("span");
   count.className = "resource-sources-count";
   count.textContent = featureT(records.length === 1 ? "rag.sourceCountOne" : "rag.sourceCount", {
@@ -2120,16 +2169,15 @@ function renderResourceSources(container, sources) {
   list.id = listId;
   list.className = "resource-sources-list";
   records.forEach((source, index) => {
-    const variables = { title: source.title, page: source.page };
     const item = document.createElement("li");
     item.className = "resource-source-item";
     item.dataset.resourceCitation = String(index + 1);
     const link = document.createElement("a");
     link.className = "resource-source";
-    link.href = resourcePageUrl(source.resource_id, source.page);
+    link.href = sourceHref(source);
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.setAttribute("aria-label", featureT("rag.openPage", variables));
+    link.setAttribute("aria-label", sourceOpenLabel(source));
     const number = document.createElement("span");
     number.className = "resource-source-index";
     number.setAttribute("aria-hidden", "true");
@@ -2141,7 +2189,7 @@ function renderResourceSources(container, sources) {
     title.textContent = source.title;
     const meta = document.createElement("span");
     meta.className = "resource-source-meta";
-    meta.textContent = featureT("rag.sourceMeta", { page: source.page });
+    meta.textContent = sourceMeta(source);
     copy.append(title, meta);
     if (source.excerpt) {
       const excerpt = document.createElement("span");
@@ -2191,21 +2239,21 @@ function renderResourceSources(container, sources) {
   box.append(trigger, list);
   container.appendChild(box);
   setResourceSourcesExpanded(box, resourceCitationRail.matches);
-  const markers = window.MutaCitations?.decorate(container.querySelector(".prose"), records, {
-    hrefFor: (source) => resourcePageUrl(source.resource_id, source.page),
-    labelFor: (source, number) => featureT("rag.citation", {
-      number,
-      title: source.title,
-      page: source.page,
-    }),
-    copy: {
-      previewLabel: (number) => featureT("rag.previewLabel", { number }),
-      meta: (page) => featureT("rag.sourceMeta", { page }),
+  const markers = consulted ? [] : window.MutaCitations?.decorate(
+    container.querySelector(".prose"),
+    records,
+    {
+      hrefFor: sourceHref,
+      labelFor: sourceCitationLabel,
+      copy: {
+        previewLabel: (number) => featureT("rag.previewLabel", { number }),
+        meta: (page, source) => (source ? sourceMeta(source) : featureT("rag.sourceMeta", { page })),
+      },
+      onActive: setActive,
     },
-    onActive: setActive,
-  }) || [];
+  ) || [];
   const firstMarker = markers[0];
-  resourceSourcesOwners.set(box, { container, marker: firstMarker || null, records });
+  resourceSourcesOwners.set(box, { container, marker: firstMarker || null, records, consulted });
   syncResourceSourcesLayout(box);
 }
 renderResourceSources.sequence = 0;
@@ -2215,9 +2263,10 @@ function localizeResourceSources() {
     const owner = resourceSourcesOwners.get(box);
     const records = owner?.records || [];
     const count = records.length;
-    box.setAttribute("aria-label", featureT("rag.sources"));
+    const headingKey = owner?.consulted ? "rag.sourcesConsulted" : "rag.sources";
+    box.setAttribute("aria-label", featureT(headingKey));
     const heading = box.querySelector(".resource-sources-heading");
-    if (heading) heading.textContent = featureT("rag.sources");
+    if (heading) heading.textContent = featureT(headingKey);
     const countLabel = box.querySelector(".resource-sources-count");
     if (countLabel) {
       countLabel.textContent = featureT(count === 1 ? "rag.sourceCountOne" : "rag.sourceCount", {
@@ -2234,19 +2283,18 @@ function localizeResourceSources() {
     }
     records.forEach((source, index) => {
       const number = index + 1;
-      const variables = { title: source.title, page: source.page };
       const item = box.querySelector(`.resource-source-item[data-resource-citation="${number}"]`);
-      item?.querySelector("a")?.setAttribute("aria-label", featureT("rag.openPage", variables));
+      item?.querySelector("a")?.setAttribute("aria-label", sourceOpenLabel(source));
       const meta = item?.querySelector(".resource-source-meta");
-      if (meta) meta.textContent = featureT("rag.sourceMeta", { page: source.page });
+      if (meta) meta.textContent = sourceMeta(source);
       for (const marker of owner.container.querySelectorAll(
         `.resource-citation-marker[data-resource-citation="${number}"]`,
       )) {
-        marker.setAttribute("aria-label", featureT("rag.citation", { number, ...variables }));
+        marker.setAttribute("aria-label", sourceCitationLabel(source, number));
         const preview = marker.querySelector(".resource-citation-preview-label");
         if (preview) preview.textContent = featureT("rag.previewLabel", { number });
         const previewMeta = marker.querySelector(".resource-citation-preview span:not([class])");
-        if (previewMeta) previewMeta.textContent = featureT("rag.sourceMeta", { page: source.page });
+        if (previewMeta) previewMeta.textContent = sourceMeta(source);
       }
     });
   }
@@ -2280,10 +2328,15 @@ document.addEventListener("muta:localechange", () => {
   syncResourceSourcesLayout(document.querySelector(".resource-sources"));
 });
 
+// The question the most recently rendered history answer replied to. "Continue reply" re-uses
+// its file mentions when the interrupted answer had not cited a passage yet.
+let lastHistoryQuestion = "";
+
 function renderHistoryMessage(m) {
   if (m.role === "user") {
     // Historical MessageOut rows do not yet carry their selected resource ids. Render the
     // mention treatment, but keep it inert instead of linking a re-uploaded same-name PDF.
+    lastHistoryQuestion = String(m.content || "");
     addUserMessage(m.content, m.attachments || []);
   } else if (m.role === "assistant") {
     hideEmptyState();
@@ -2293,21 +2346,35 @@ function renderHistoryMessage(m) {
     prose.className = "prose";
     prose.dir = "auto";
     wrap.appendChild(prose);
-    const grounded = m.resource_citations?.length && globalThis.MutaCitations?.normalizeReferences
-      ? globalThis.MutaCitations.normalizeReferences(
-          m.content,
-          m.resource_citations,
-          { legacyNumeric: true },
-        )
-      : { text: m.content, records: m.resource_citations };
+    const grounded = groundedSources(m.content, m.resource_citations, { legacyNumeric: true });
     renderCompletedReply(wrap, prose, grounded.text);
-    renderResourceSources(wrap, grounded.records);
-    decorateHistoricalCompletion(wrap, prose, m, conversationId);
+    renderResourceSources(wrap, grounded.records, { consulted: grounded.consulted });
+    decorateHistoricalCompletion(wrap, prose, m, conversationId, lastHistoryQuestion);
     messagesEl.appendChild(wrap);
   }
 }
 
-function decorateHistoricalCompletion(wrap, prose, message, cid) {
+/** Ready files an interrupted answer was grounded on: its cited files, then its mentions. */
+function continuationResources(citations, question) {
+  const cited = [];
+  const seen = new Set();
+  for (const source of Array.isArray(citations) ? citations : []) {
+    const id = source?.resource_id;
+    if (typeof id !== "string" || seen.has(id)) continue;
+    const known = learningResources.find((resource) => resource.id === id);
+    if (!known || known.status !== "ready") continue;
+    seen.add(id);
+    cited.push({ id, name: window.MutaResourceMentions.nameFor(known) });
+  }
+  return window.MutaResourceMentions.resolveResources(
+    String(question || ""),
+    cited,
+    learningResources,
+    MAX_SELECTED_RAG_RESOURCES,
+  );
+}
+
+function decorateHistoricalCompletion(wrap, prose, message, cid, question = "") {
   const state = message.completion_state;
   if (state === "stopped") {
     const stopped = document.createElement("div");
@@ -2315,13 +2382,18 @@ function decorateHistoricalCompletion(wrap, prose, message, cid) {
     stopped.dataset.i18n = "reply.stopped";
     stopped.textContent = t("reply.stopped");
     prose.appendChild(stopped);
+  }
+  // A stopped answer can be continued too: the server resumes any interrupted final reply,
+  // and a Stop during a continuation must not leave the answer permanently cut short.
+  if (!["failed", "streaming", "stopped"].includes(state) || !String(message.content || "").trim()) {
     return;
   }
-  if (!["failed", "streaming"].includes(state) || !String(message.content || "").trim()) return;
-  const warning = document.createElement("div");
-  warning.className = "reply-incomplete";
-  warning.textContent = releaseT("reply.partialSaved");
-  prose.appendChild(warning);
+  if (state !== "stopped") {
+    const warning = document.createElement("div");
+    warning.className = "reply-incomplete";
+    warning.textContent = releaseT("reply.partialSaved");
+    prose.appendChild(warning);
+  }
   const recovery = document.createElement("div");
   recovery.className = "reply-recovery";
   const button = document.createElement("button");
@@ -2330,7 +2402,11 @@ function decorateHistoricalCompletion(wrap, prose, message, cid) {
   button.textContent = releaseT("reply.continue");
   button.addEventListener("click", () => {
     button.disabled = true;
-    continueIncompleteReply({ cid });
+    void continueIncompleteReply({
+      cid,
+      element: wrap,
+      ragResources: continuationResources(message.resource_citations, question),
+    });
   }, { once: true });
   recovery.appendChild(button);
   wrap.appendChild(recovery);
@@ -2793,17 +2869,40 @@ function reattachJob(job) {
   }
 }
 
-function continueIncompleteReply(job) {
+async function continueIncompleteReply(job) {
   if (!job?.cid || jobForConversation(job.cid)) return;
+  // The server extends the stored answer in place: no learner message is added, and the
+  // same files ground the rest of the answer so its [R#] references keep their meaning.
+  let ragResources = job.ragResources || job.item?.ragResources || null;
+  if (!ragResources) {
+    // A job recovered after a reload has no composer item; read its files from history.
+    ragResources = [];
+    try {
+      const response = await fetch(`/v1/conversations/${job.cid}/messages`, {
+        headers: authHeaders(),
+      });
+      const messages = response.ok ? (await response.json()).messages || [] : [];
+      const last = messages[messages.length - 1];
+      const question = [...messages].reverse().find((message) => message.role === "user");
+      if (last?.role === "assistant") {
+        ragResources = continuationResources(last.resource_citations, question?.content);
+      }
+    } catch {
+      /* Without history the answer still continues, ungrounded, as before. */
+    }
+  }
+  if (jobForConversation(job.cid)) return;
   dispatch(
     {
       typed: releaseT("reply.continuePrompt"),
       attachments: [],
-      ragResources: [],
+      ragResources: ragResources.slice(0, MAX_SELECTED_RAG_RESOURCES),
       useWeb: false,
     },
     {
       thinking: "off",
+      continueReply: true,
+      replaceElement: job.element || job.handle?.element || null,
       conversationOverride: job.cid,
       viewOverride: conversationId === job.cid ? currentViewId : newViewId(),
     },
@@ -2821,7 +2920,7 @@ function settleFailedGeneration(job, handle = job.handle) {
       releaseT("reply.partialSaved"),
       null,
       {},
-      { onContinue: () => continueIncompleteReply(job) },
+      { onContinue: () => void continueIncompleteReply(job) },
     );
   } else {
     handle.fail(t("reply.couldNotFinish"), "reply.couldNotFinish");
@@ -3165,6 +3264,10 @@ window.addEventListener("dragend", hideDropHint);
 window.addEventListener("blur", hideDropHint);
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    if (!resourceReader.hidden) {
+      closeResourceReader();
+      return;
+    }
     if (!settingsModal.hidden) return;
     if (appEl?.classList.contains("sidebar-open")) {
       setDrawer(false);
@@ -3193,7 +3296,7 @@ window.addEventListener("drop", (e) => {
   for (const file of e.dataTransfer.files) {
     if (file.type.startsWith("image/")) addImage(file);
     else if (file.type.startsWith("audio/")) addAudio(file);
-    else if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+    else if (isResourceFile(file)) {
       void uploadResource(file);
     }
     else toast(t("attachment.unknownFile", { file: file.name }));
@@ -3489,6 +3592,8 @@ function send(steer = false) {
 async function dispatch(item, opts = {}) {
   const {
     regenerate = false,
+    continueReply = false,
+    replaceElement = null,
     thinking = thinkingLevel,
     conversationOverride = conversationId,
     viewOverride = currentViewId,
@@ -3508,7 +3613,7 @@ async function dispatch(item, opts = {}) {
   // A regenerate ("answer now") re-answers the turn already on screen, so it neither adds a
   // new user bubble nor re-links attachments — the backend re-runs the last user turn.
   const renderingHere = currentViewId === startedView;
-  if (!regenerate && renderingHere) {
+  if (!regenerate && !continueReply && renderingHere) {
     addUserMessage(mentionedText || t("queue.fromImage"), item.attachments, item.ragResources);
   }
   // "Answer now" is offered while the tutor is thinking: it cancels this stream and asks for
@@ -3518,13 +3623,24 @@ async function dispatch(item, opts = {}) {
   let startRejected = false;
   const assistant = renderingHere
     ? beginAssistantMessage(
-        regenerate ? null : () => {
+        regenerate || continueReply ? null : () => {
           if (!job) return;
           job.pendingRegen = item;
           stopGeneration(job);
         },
       )
     : null;
+  // The continued answer streams into a fresh bubble that opens with the stored text, so the
+  // interrupted copy steps aside now and is restored by a history reload if the start fails.
+  const replaced = continueReply && renderingHere ? replaceElement : null;
+  if (replaced) replaced.hidden = true;
+  const restoreContinuation = async (message) => {
+    assistant?.remove();
+    if (currentViewId === startedView) {
+      await loadConversation(startedIn, { historyMode: "none" });
+    }
+    if (message) toast(message, 5000);
+  };
   startingConversations.add(startKey);
   // Every start is idempotently discoverable by client_request_id. Keep the marker until a
   // definitive response or successful recovery — existing-conversation starts can lose their
@@ -3564,6 +3680,7 @@ async function dispatch(item, opts = {}) {
           .map((resource) => resource.id),
         thinking,
         regenerate,
+        continue_reply: continueReply,
         // Response-language preference is trusted request metadata. Never prefix or rewrite
         // `message`: the gateway puts this value in the system prompt instead.
         language: window.MutaI18n.responseLanguage,
@@ -3576,6 +3693,14 @@ async function dispatch(item, opts = {}) {
       // The page may have missed recovery during a transient startup failure. If the gateway
       // says this thread is already replying, adopt that server job and retain this follow-up
       // instead of rendering a dead-end error or asking the student to type "continue" again.
+      if (continueReply) {
+        await restoreContinuation(
+          typeof detail === "string"
+            ? detail
+            : t("reply.httpAnswerFailed", { status: res.status }),
+        );
+        return;
+      }
       if (
         res.status === 409 &&
         startedIn &&
@@ -3670,6 +3795,7 @@ async function dispatch(item, opts = {}) {
       queuePosition: started.queue_position || 0,
     };
     generationJobs.set(job.id, job);
+    replaced?.remove();
     if (job.state === "queued") {
       job.handle?.showQueued(job.queuePosition);
       toast(t("queue.automatic"), 5000);
@@ -3685,7 +3811,9 @@ async function dispatch(item, opts = {}) {
       fallbackConversation: startedIn,
       expectedViewId: startedView,
     });
-    if (!recovered && assistant) {
+    if (!recovered && continueReply) {
+      await restoreContinuation(t("reply.startFailed"));
+    } else if (!recovered && assistant) {
       assistant.fail(t("reply.startFailed"), "reply.startFailed");
     }
   } finally {
@@ -3809,9 +3937,16 @@ async function pumpSse(res, job) {
             partialSaved: ev.partial_saved === true,
             recoverable: ev.recoverable === true,
           };
+          // An interrupted grounded answer keeps its cited passages; show them now, not only
+          // after a reload.
+          if (Array.isArray(ev.sources)) job.partialSources = ev.sources;
         } else if (ev.done) {
           job.terminal = true;
-          job.terminalEvent = { ...ev, source: ev.source || job.source };
+          job.terminalEvent = {
+            ...ev,
+            source: ev.source || job.source,
+            sources: Array.isArray(ev.sources) ? ev.sources : job.partialSources,
+          };
           if (ev.failed) job.failed = true;
           if (ev.stopped && job.pendingRegen) job.handle?.remove();
           else if (ev.stopped) job.handle?.stop();
@@ -3840,17 +3975,13 @@ function decorateCompletedReply(job, ev) {
   const last = job.handle?.element;
   if (!last) return;
   const allSources = Array.isArray(ev.sources) ? ev.sources : [];
-  let resourceSources = allSources.filter((source) => source?.resource_id);
   const webSources = allSources.filter((source) => source?.url && !source?.resource_id);
-  if (resourceSources.length && globalThis.MutaCitations?.normalizeReferences) {
-    const grounded = globalThis.MutaCitations.normalizeReferences(job.content, resourceSources);
-    resourceSources = grounded.records;
-    if (grounded.text !== job.content) {
-      job.content = grounded.text;
-      job.handle?.replace(job.content);
-    }
+  const grounded = groundedSources(job.content, allSources);
+  if (grounded.records.length && grounded.text !== job.content) {
+    job.content = grounded.text;
+    job.handle?.replace(job.content);
   }
-  renderResourceSources(last, resourceSources);
+  renderResourceSources(last, grounded.records, { consulted: grounded.consulted });
   if (webSources.length && !last.querySelector(".sources")) {
     const box = document.createElement("div");
     box.className = "sources";
@@ -4394,7 +4525,7 @@ function renderMentionMenu() {
       name.textContent = window.MutaResourceMentions.nameFor(resource);
       const detail = document.createElement("small");
       detail.textContent = resource.page_count
-        ? featureT("resources.pages", { count: resource.page_count })
+        ? featureT(resourceUnitsKey(resource), { count: resource.page_count })
         : resource.error || resourceStatusLabel(resource);
       const status = document.createElement("span");
       status.className = `resource-status ${resource.status}`;
@@ -4449,7 +4580,7 @@ function renderResourceList() {
     name.textContent = window.MutaResourceMentions.nameFor(resource);
     const detail = document.createElement("small");
     detail.textContent = resource.page_count
-      ? `${resourceStatusLabel(resource)} · ${featureT("resources.pages", { count: resource.page_count })}`
+      ? `${resourceStatusLabel(resource)} · ${featureT(resourceUnitsKey(resource), { count: resource.page_count })}`
       : resource.error || resourceStatusLabel(resource);
     const actions = document.createElement("div");
     actions.className = "resource-actions";
@@ -4529,6 +4660,105 @@ async function loadResources({ quiet = false } = {}) {
     resourceLoadInFlight = null;
     scheduleResourcePoll();
   }
+}
+
+// ---------------------------------------------------------------------------
+// In-app reader for Markdown/text sources
+// ---------------------------------------------------------------------------
+const resourceReader = $("#resource-reader");
+const resourceReaderTitle = $("#resource-reader-title");
+const resourceReaderBody = $("#resource-reader-body");
+let resourceReaderOpener = null;
+let resourceReaderRequest = 0;
+let resourceReaderAppWasInert = false;
+
+/** Open a Markdown/text resource at the cited section (its ordinal is the citation's page). */
+async function openResourceReader(resourceId, ordinal, opener = document.activeElement) {
+  const request = ++resourceReaderRequest;
+  resourceReaderOpener = opener;
+  const known = learningResources.find((resource) => resource.id === resourceId);
+  resourceReaderTitle.textContent = known ? window.MutaResourceMentions.nameFor(known) : "";
+  const loading = document.createElement("p");
+  loading.className = "resource-reader-status";
+  loading.textContent = featureT("reader.loading");
+  resourceReaderBody.replaceChildren(loading);
+  if (resourceReader.hidden) resourceReaderAppWasInert = $("#app").inert;
+  resourceReader.hidden = false;
+  $("#app").inert = true;
+  $("#resource-reader-close").focus();
+  try {
+    const response = await fetch(`/v1/resources/${encodeURIComponent(resourceId)}/sections`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) throw new Error(String(response.status));
+    const body = await response.json();
+    if (request !== resourceReaderRequest || resourceReader.hidden) return;
+    resourceReaderTitle.textContent = window.MutaResourceMentions.nameFor({ name: body.name });
+    const markdown = body.mime === "text/markdown";
+    const fragments = (body.sections || []).map((section) => {
+      const block = document.createElement("section");
+      block.className = `reader-section${markdown ? "" : " reader-plain"}`;
+      block.id = `reader-section-${section.ordinal}`;
+      block.dataset.ordinal = String(section.ordinal);
+      if (markdown) renderMarkdown(block, String(section.text || ""));
+      else block.textContent = String(section.text || "");
+      return block;
+    });
+    resourceReaderBody.replaceChildren(...fragments);
+    const target = resourceReaderBody.querySelector(`#reader-section-${Number(ordinal) || 1}`);
+    if (target) {
+      target.classList.add("is-cited");
+      target.scrollIntoView({ block: "start" });
+    }
+  } catch {
+    if (request !== resourceReaderRequest) return;
+    const failed = document.createElement("p");
+    failed.className = "resource-reader-status";
+    failed.textContent = featureT("reader.failed");
+    resourceReaderBody.replaceChildren(failed);
+  }
+}
+
+function closeResourceReader() {
+  if (resourceReader.hidden) return;
+  resourceReaderRequest += 1;
+  resourceReader.hidden = true;
+  resourceReaderBody.replaceChildren();
+  // Restore what was there: another dialog (settings, a unit) may still own the page.
+  $("#app").inert = resourceReaderAppWasInert;
+  const opener = resourceReaderOpener;
+  resourceReaderOpener = null;
+  if (opener?.isConnected) opener.focus();
+}
+
+$("#resource-reader-close").addEventListener("click", closeResourceReader);
+resourceReader.addEventListener("click", (event) => {
+  if (event.target === resourceReader) closeResourceReader();
+});
+// Citation markers and source rows for text resources link to `#muta-reader=<id>:<ordinal>`;
+// one capturing handler turns every such link into the reader instead of a navigation.
+document.addEventListener("click", (event) => {
+  const link = event.target instanceof Element
+    ? event.target.closest(`a[href^="${READER_HASH}"]`)
+    : null;
+  if (!link) return;
+  event.preventDefault();
+  const [rawId, rawOrdinal] = link.getAttribute("href").slice(READER_HASH.length).split(":");
+  void openResourceReader(decodeURIComponent(rawId || ""), Number(rawOrdinal) || 1, link);
+}, true);
+
+/** PDF, Markdown and plain-text files become private resources; the server checks bytes. */
+function isResourceFile(file) {
+  const name = String(file?.name || "").toLowerCase();
+  return ["application/pdf", "text/markdown", "text/x-markdown", "text/plain"].includes(file?.type)
+    || [".pdf", ".md", ".markdown", ".txt"].some((suffix) => name.endsWith(suffix));
+}
+
+/** "12 PDF pages" or "6 sections" — a text resource counts the sections it was split into. */
+function resourceUnitsKey(resource) {
+  return resource.mime === "text/markdown" || resource.mime === "text/plain"
+    ? "resources.sections"
+    : "resources.pages";
 }
 
 async function uploadResource(file) {

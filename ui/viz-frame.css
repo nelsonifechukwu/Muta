@@ -1,32 +1,48 @@
+/* v5 "Bright" (docs/design/muta-v5-bright.md): white drawing surface, ink text, and series colours
+   from the v5 hues deepened to stay legible as lines and labels (at least 3:1 on white). */
+@font-face {
+  font-family: "Onest";
+  src: url("fonts/Onest-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
-  --viz-bg: #fbfaf6;
-  --viz-panel: #f3efe5;
-  --viz-text: #302d24;
-  --viz-muted: #686259;
-  --viz-border: #d7d3c9;
-  --viz-1: #ad4f31;
-  --viz-2: #397f78;
-  --viz-3: #647d35;
-  --viz-4: #7867a8;
-  --viz-5: #c1872d;
-  --viz-6: #4e6f9f;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --viz-bg: #ffffff;
+  --viz-panel: #f7f5f0;
+  --viz-text: #17181a;
+  --viz-muted: #5d6066;
+  /* Geometry colour for axes and grids (not a card edge): kept strong enough to read. */
+  --viz-border: #d4cfc5;
+  --viz-edge: #e5e1d8; /* container edges only (cards, panels) */
+  --viz-1: #d9573a; /* coral */
+  --viz-2: #0b8a72; /* mint, deepened */
+  --viz-3: #6e4ff2; /* lilac, deepened */
+  --viz-4: #2479d6; /* sky, deepened */
+  --viz-5: #b87400; /* sun, deepened */
+  --viz-6: #c73b74; /* pink */
+  --viz-7: #d9661c; /* orange (named colour) */
+  --viz-8: #1e8a4c; /* green (named colour) */
+  font-family: "Onest", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --viz-bg: #1d1c19;
-  --viz-panel: #292722;
-  --viz-text: #f3efe7;
-  --viz-muted: #beb6aa;
-  --viz-border: #bdb5a8;
-  --viz-1: #e08a68;
-  --viz-2: #67b7ae;
-  --viz-3: #9db96c;
-  --viz-4: #a999d5;
-  --viz-5: #e2ad55;
-  --viz-6: #83a8dc;
+  --viz-bg: #242220;
+  --viz-panel: #1d1c1a;
+  --viz-text: #f3f0ea;
+  --viz-muted: #afa99f;
+  --viz-border: #c3bdb3; /* axes 8.5:1, 55% grid blend 3.6:1 on #242220 */
+  --viz-edge: #383530;
+  --viz-1: #ff8a66;
+  --viz-2: #4fd6ba;
+  --viz-3: #a996ff;
+  --viz-4: #7cbfff;
+  --viz-5: #f5c64c;
+  --viz-6: #ff8fbc;
+  --viz-7: #ffa45c;
+  --viz-8: #5ccf8e;
 }
 
 * { box-sizing: border-box; }
@@ -54,8 +70,8 @@ body { background: var(--viz-bg); color: var(--viz-text); }
   min-width: 0;
   min-height: 180px;
   overflow: hidden;
-  border: 1px solid var(--viz-border);
-  border-radius: 10px;
+  border: 1px solid var(--viz-edge);
+  border-radius: 14px;
   background: color-mix(in srgb, var(--viz-panel) 38%, transparent);
 }
 
@@ -71,7 +87,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
   gap: 2px;
   max-width: calc(100% - 16px);
   padding: 6px 8px;
-  border: 1px solid var(--viz-border);
+  border: 1px solid var(--viz-edge);
   border-radius: 8px;
   background: color-mix(in srgb, var(--viz-bg) 90%, transparent);
   color: var(--viz-text);
@@ -164,6 +180,8 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 .viz-color-probe-4 { color: var(--viz-4); }
 .viz-color-probe-5 { color: var(--viz-5); }
 .viz-color-probe-6 { color: var(--viz-6); }
+.viz-color-probe-7 { color: var(--viz-7); }
+.viz-color-probe-8 { color: var(--viz-8); }
 
 #viz-stage svg text { fill: var(--viz-text); font-size: 12px; }
 #viz-stage svg .axis path,
@@ -196,7 +214,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 
 .viz-tooltip {
   position: absolute; z-index: 5; pointer-events: none; max-width: 16rem;
-  padding: 5px 7px; border: 1px solid var(--viz-border); border-radius: 7px;
+  padding: 5px 7px; border: 1px solid var(--viz-edge); border-radius: 7px;
   background: var(--viz-panel); color: var(--viz-text); font-size: 11px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
 }
@@ -210,7 +228,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 .viz-3d-notes {
   position: absolute; inset: auto auto 10px 10px; z-index: 3; pointer-events: none;
   display: grid; gap: 2px; max-width: calc(100% - 130px); padding: 6px 8px;
-  border: 1px solid var(--viz-border); border-radius: 7px;
+  border: 1px solid var(--viz-edge); border-radius: 7px;
   background: color-mix(in srgb, var(--viz-bg) 90%, transparent);
   color: var(--viz-text); font-size: 11px; line-height: 1.35;
 }
@@ -220,7 +238,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 .viz-surface-equation {
   position: absolute; inset: 9px auto auto 10px; z-index: 4; pointer-events: none;
   display: grid; gap: 3px; max-width: calc(100% - 20px); padding: 7px 9px;
-  border: 1px solid var(--viz-border); border-radius: 8px;
+  border: 1px solid var(--viz-edge); border-radius: 8px;
   background: color-mix(in srgb, var(--viz-bg) 91%, transparent);
   color: var(--viz-text); font-size: 12px; line-height: 1.35;
 }
@@ -230,7 +248,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
 
 .viz-surface-controls {
   position: absolute; inset: auto auto 8px 8px; z-index: 7;
-  display: flex; gap: 6px; padding: 4px; border: 1px solid var(--viz-border);
+  display: flex; gap: 6px; padding: 4px; border: 1px solid var(--viz-edge);
   border-radius: 10px; background: color-mix(in srgb, var(--viz-bg) 94%, transparent);
 }
 
@@ -255,7 +273,7 @@ body { background: var(--viz-bg); color: var(--viz-text); }
   gap: 6px;
   max-width: calc(100% - 16px);
   padding: 4px;
-  border: 1px solid var(--viz-border);
+  border: 1px solid var(--viz-edge);
   border-radius: 10px;
   background: color-mix(in srgb, var(--viz-bg) 94%, transparent);
 }

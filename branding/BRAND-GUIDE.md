@@ -4,7 +4,7 @@ This kit develops the selected open-book and speaking-dot identity into reusable
 
 ## The identity
 
-The book is a natural open book: two clear pages, a central fold and a curved cover beneath them. Its silhouette can quietly suggest an M, but it should read as a book without anyone needing that explanation. The ivory and terracotta pages give it warmth; the forest cover gives it definition.
+The book is a natural open book: two clear pages, a central fold and a curved cover beneath them. Its silhouette can quietly suggest an M, but it should read as a book without anyone needing that explanation. The white and coral pages give it warmth; the ink cover gives it definition.
 
 The square beneath the `u` matters. The user explained that it carries pronunciation significance in the Igbo name, so its relationship to the `u` is preserved. A small attached tail adds a second reading: conversation with a tutor. The square body remains the dominant shape. This guide records the intended brand treatment; it does not prescribe an exact Igbo spelling or make a linguistic claim about the square's shape.
 
@@ -27,12 +27,12 @@ Every logo arrangement is supplied in four treatments:
 
 | Suffix | Background and appearance |
 |---|---|
-| `on-light` | Forest/ink, ivory and terracotta artwork for paper, ivory or white backgrounds. |
-| `on-dark` | Ivory and lighter terracotta artwork for forest or similarly dark backgrounds. |
+| `on-light` | Ink, white and coral artwork for paper, ivory or white backgrounds. |
+| `on-dark` | Ivory and light coral artwork for night or similarly dark backgrounds. |
 | `black` | Single-color black artwork for light backgrounds and single-ink work. |
 | `white` | Single-color white artwork for dark backgrounds and reversed work. |
 
-Logo SVGs and PNGs have transparent surroundings. White artwork may appear blank on a white preview. The app master includes an opaque forest background; avatar previews include their indicated backgrounds.
+Logo SVGs and PNGs have transparent surroundings. White artwork may appear blank on a white preview. The app master includes an opaque night background; avatar previews include their indicated backgrounds.
 
 ## Spacing and size
 
@@ -55,18 +55,28 @@ Preserve the aspect ratio. Do not crop the pages or tail, move the square away f
 
 ## Color
 
-| Color | Hex | RGB | Role |
-|---|---|---|---|
-| Forest | `#1D251F` | 29, 37, 31 | Dark surfaces, book cover, primary brand field. |
-| Ink | `#171C18` | 23, 28, 24 | Wordmark and text on light surfaces. |
-| Ivory | `#F5F1E7` | 245, 241, 231 | Light page and reversed artwork. |
-| Paper | `#FAF9F5` | 250, 249, 245 | Main light background. |
-| Terracotta | `#AD4F31` | 173, 79, 49 | Page and speaking dot on light surfaces. |
-| Terracotta light | `#E58C69` | 229, 140, 105 | Page and speaking dot on dark surfaces. |
+The v5 colourway (2026-10-09) keeps every shape and the speaking dot exactly as approved and
+changes only colour, so the mark sits naturally beside the v5 app's mint action colour and pastel
+tints. The earlier terracotta read as brown at small sizes beside those pastels; Muta coral is its
+brighter sibling, and remains legible as a tiny dot (3.9:1 on white). See
+[`docs/design/muta-v5-bright.md`](../docs/design/muta-v5-bright.md).
 
-Use the lighter terracotta on forest to preserve the small mark's visibility. Keep the page colors flat. Gradients, textures and highlights in earlier concept images are not part of these vector masters.
+| Color | Hex | Role |
+|---|---|---|
+| Ink | `#17181A` | Book cover, wordmark and text on light surfaces. |
+| Page | `#FFFFFF` | The left page on light surfaces (with an ink contour). |
+| Muta coral | `#D9573A` | Right page and speaking dot on light surfaces. |
+| Ivory | `#F3F0EA` | Cover, pages and lettering on dark surfaces. |
+| Light coral | `#FF8A66` | Right page and speaking dot on dark surfaces. |
+| Night | `#181715` | App-icon tile and dark brand fields (matches the app's dark mode). |
+| Paper | `#F7F5F0` | Main light background (matches the app's light canvas). |
 
-[tokens.json](tokens.json) and [tokens.css](tokens.css) hold the reusable color values. Treat this brand palette as a starting point for product styling, not a complete set of UI state colors. Check text and control contrast in the actual interface, and do not use color alone to communicate feedback.
+Keep the page colors flat. Gradients, textures and highlights are not part of the vector masters.
+[tokens.json](tokens.json) and [tokens.css](tokens.css) hold the reusable values. Check text and
+control contrast in the actual interface, and do not use color alone to communicate feedback.
+
+The previous colourway (forest `#1D251F`, ivory `#F5F1E7`, terracotta `#AD4F31`, light terracotta
+`#E58C69`) is preserved in git history.
 
 ## Typography
 
@@ -94,7 +104,7 @@ Muta's voice is clear, patient and curious. Prefer concrete language about learn
 
 SVG is the preferred source for layout and export. Its curves and outlined lettering remain sharp at any scale. PNG is a convenient fallback for systems that do not accept SVG. The app master is square and opaque; platform packaging or masking remains a separate integration step.
 
-The supplied vector colors are RGB and raster exports are intended for screen use. For print, give the printer the vector artwork and agree on a proof using the actual paper and process. CMYK conversions and spot-color matches can shift ivory and terracotta, so this kit does not invent untested print values. Use the single-color artwork when a single ink, engraving or embossing is required.
+The supplied vector colors are RGB and raster exports are intended for screen use. For print, give the printer the vector artwork and agree on a proof using the actual paper and process. CMYK conversions and spot-color matches can shift ivory and coral, so this kit does not invent untested print values. Use the single-color artwork when a single ink, engraving or embossing is required.
 
 The vector artwork is a clean optical redraw of the [approved concept](reference/approved-concept.png), with controlled curves, outlined typography and consistent colors. The concept image and its prompts remain in the [design exploration](../docs/design-reviews/muta-book-m-sweep-2026-09-12/).
 

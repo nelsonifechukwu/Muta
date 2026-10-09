@@ -87,7 +87,8 @@ def test_landing_dark_palette_meets_text_contrast_baselines() -> None:
     assert _contrast(tokens["ink-soft"], tokens["paper"]) >= 4.5
     assert _contrast(tokens["terracotta"], tokens["paper"]) >= 4.5
     assert _contrast(tokens["ink"], tokens["card"]) >= 4.5
-    assert _contrast("#ffffff", tokens["accent-fill"]) >= 4.5
+    # v5: the mint action fill carries dark ink, never white (docs/design/muta-v5-bright.md).
+    assert _contrast(tokens["on-accent"], tokens["accent-fill"]) >= 4.5
     assert _contrast("#ffffff", tokens["green-fill"]) >= 4.5
 
 

@@ -554,7 +554,18 @@
     "class.writeFailed": "Couldn’t post that yet.",
     "class.verifyFallback": "Muta couldn’t verify this one.",
     "class.askTeacherAction": "Ask your teacher",
-    "class.askClassAction": "Ask your class"
+    "class.askClassAction": "Ask your class",
+    "resources.sections": "{count} sections",
+    "resources.attachDocument": "Attach a PDF, Markdown or text file",
+    "rag.passage": "passage {page}",
+    "rag.sectionMeta": "Notes · {section}",
+    "rag.openSection": "Open {title} at {section}",
+    "rag.citationSection": "Citation {number}: {title}, {section}",
+    "reader.kicker": "From your files",
+    "reader.close": "Close reader",
+    "reader.loading": "Opening…",
+    "reader.failed": "Couldn’t open this file.",
+    "rag.sourcesConsulted": "Sources consulted"
   });
 
   function safeStorageGet(key) {

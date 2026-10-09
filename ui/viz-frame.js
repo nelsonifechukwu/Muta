@@ -54,6 +54,17 @@
   }
 
   const palette = [1, 2, 3, 4, 5, 6].map((index) => resolvedColor(index));
+  // Course and model specs name colours in words ("teal", "purple"). Raw CSS keywords are
+  // off-brand and harsh, so words resolve to the v5 visualization slots; hex values pass through.
+  const NAMED_SLOTS = Object.freeze({
+    red: 1, coral: 1, teal: 2, mint: 2, cyan: 2, turquoise: 2, aqua: 2,
+    purple: 3, violet: 3, lilac: 3, indigo: 3, magenta: 3, lavender: 3,
+    blue: 4, sky: 4, navy: 4, yellow: 5, amber: 5, gold: 5, pink: 6, rose: 6,
+    orange: 7, green: 8, lime: 8,
+  });
+  const named = Object.freeze(Object.fromEntries(
+    Object.entries(NAMED_SLOTS).map(([name, slot]) => [name, resolvedColor(slot)]),
+  ));
   const neutral = resolvedColor("text");
   const border = resolvedColor("border");
 
@@ -86,7 +97,8 @@
   }
 
   function color(value, index = 0) {
-    return typeof value === "string" ? value : palette[index % palette.length];
+    if (typeof value !== "string") return palette[index % palette.length];
+    return named[value.trim().toLowerCase()] || value;
   }
 
   function paddedDomain(values) {
@@ -359,7 +371,7 @@
     canvas.height = 64;
     const context = canvas.getContext("2d");
     context.clearRect(0, 0, canvas.width, canvas.height);
-    context.font = "28px sans-serif";
+    context.font = "600 28px Onest, system-ui, sans-serif";
     context.fillStyle = fill;
     context.fillText(String(label).slice(0, 40), 4, 38);
     const texture = new THREE.CanvasTexture(canvas);
@@ -889,6 +901,7 @@
         await window.MutaVizV2.render(spec, {
           stage,
           palette,
+          named,
           neutral,
           border,
           t,

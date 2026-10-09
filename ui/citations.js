@@ -412,7 +412,7 @@
     title.dir = "auto";
     title.textContent = record.title;
     const meta = global.document.createElement("span");
-    meta.textContent = copy.meta(record.page);
+    meta.textContent = copy.meta(record.page, record);
     tooltip.append(eyebrow, title, meta);
     if (record.excerpt) {
       const excerpt = global.document.createElement("span");

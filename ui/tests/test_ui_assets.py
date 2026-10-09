@@ -54,15 +54,17 @@ def test_chat_shell_has_localized_routes_back_to_the_landing_page():
     assert "Ask about any subject" in HTML
     assert "maths or science question" not in HTML
 
+    # v5 "Bright" palette (docs/design/muta-v5-bright.md): off-white canvas, white cards,
+    # ink, warm-graphite dark surfaces, Muta mint and the logo's coral.
     for token in (
-        "#faf9f5",
-        "#f1ede3",
-        "#302d24",
-        "#191815",
-        "#211f1b",
-        "#292621",
-        "#ad4f31",
-        "#e58c69",
+        "#f7f5f0",
+        "#ffffff",
+        "#17181a",
+        "#181715",
+        "#1d1c1a",
+        "#242220",
+        "#3fcfb4",
+        "#d9573a",
     ):
         assert token in CSS
     assert ".mobile-home-link { display: none; }" in CSS
@@ -496,7 +498,15 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
 
     assert 'src="citations.js?v=' in HTML
     assert HTML.index('src="citations.js?v=') < HTML.index('src="app.js?v=')
-    assert 'window.MutaCitations?.decorate(container.querySelector(".prose")' in js
+    assert "window.MutaCitations?.decorate(\n    container.querySelector(\".prose\")," in js
+    # A grounded reply without [R#] markers lists its evidence as "consulted": no inline
+    # numbers are invented, and the list does not number them either.
+    assert "const markers = consulted ? [] : window.MutaCitations?.decorate(" in js
+    assert '"rag.sourcesConsulted"' in js
+    assert "return { text: grounded.text, records: available, consulted: true };" in js
+    v5 = (UI / "v5.css").read_text()
+    assert '.resource-sources[data-consulted="true"] .resource-source-index { display: none; }' in v5
+    assert "grid-template-columns: minmax(0, 1fr) 18px;" in v5
     assert js.count("renderResourceSources(") == 3, "history and live replies must share citations"
     assert 'window.matchMedia("(min-width: 1580px)")' in js
     assert 'trigger.setAttribute("aria-expanded", String(expanded))' in js
@@ -520,7 +530,12 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "resourceSourcesOwners.get(box).container.style.minHeight" in js
     assert "style.minHeight = `${" not in js, "the margin rail must not stretch a chat turn"
     assert "if (!resourceCitationRail.matches) scrollToBottom();" in js
-    assert "link.href = resourcePageUrl(source.resource_id, source.page)" in js
+    # PDF sources open the page; Markdown/text sources open the in-app reader at the section.
+    assert "link.href = sourceHref(source)" in js
+    assert "? resourceReaderUrl(source.resource_id, source.page)" in js
+    assert ": resourcePageUrl(source.resource_id, source.page)" in js
+    assert 'event.target.closest(`a[href^="${READER_HASH}"]`)' in js
+    assert "renderMarkdown(block, String(section.text" in js
 
     # Model text is never trusted to invent destinations: decoration is post-sanitize and the
     # parser only promotes a reference that maps to a server-owned record.
@@ -531,7 +546,7 @@ def test_resource_citations_use_safe_inline_links_and_a_responsive_source_rail()
     assert "job.handle?.replace(job.content)" in js
     assert 'Object.prototype.hasOwnProperty.call(ev, "replace")' in js
     assert "{ legacyNumeric: true }" in js
-    assert "job.terminalEvent = { ...ev" in js
+    assert "job.terminalEvent = {\n            ...ev," in js
     assert "decorateCompletedReply(job, job.terminalEvent" in js
     assert "addFallbackMarkers(root, records, explicitAssignments, options, markers)" in citations
     assert "evidence.exact && evidence.tokenCount >= 3" in citations
@@ -1059,8 +1074,9 @@ def test_pdf_upload_is_a_labelled_composer_control_not_a_settings_action():
     settings = html[html.index('<div id="settings-modal"') : html.index('<div id="toast"')]
 
     assert 'id="btn-resource"' in composer
-    assert 'aria-label="Attach a PDF"' in composer
-    assert 'title="Attach a PDF"' in composer
+    assert 'aria-label="Attach a PDF, Markdown or text file"' in composer
+    assert 'title="Attach a PDF, Markdown or text file"' in composer
+    assert 'accept="application/pdf,.pdf,text/markdown,.md,.markdown,text/plain,.txt"' in html
     assert 'id="resource-upload"' not in settings
     assert '$("#btn-resource").addEventListener("click"' in js
     assert '$("#file-resource").click()' in js
@@ -1235,8 +1251,27 @@ def test_partial_failure_and_stop_have_distinct_recoverable_terminal_lifecycles(
     assert 'releaseT("reply.continuePrompt")' in js
     assert "failed && partial" in lifecycle
     assert "message.completion_state" in js
-    assert '["failed", "streaming"].includes(state)' in js
-    assert "decorateHistoricalCompletion(wrap, prose, m, conversationId)" in js
+    assert '["failed", "streaming", "stopped"].includes(state)' in js
+    assert (
+        "decorateHistoricalCompletion(wrap, prose, m, conversationId, lastHistoryQuestion)" in js
+    )
+    # Continue reply extends the stored answer in place with its original files: no visible
+    # learner message, the same grounding, and the interrupted bubble replaced, not duplicated.
+    resume = js[
+        js.index("async function continueIncompleteReply(") : js.index(
+            "function settleFailedGeneration("
+        )
+    ]
+    assert "continueReply: true" in resume
+    assert "job.item?.ragResources" in resume
+    assert "ragResources: []" not in resume
+    assert "continue_reply: continueReply" in js
+    assert "!regenerate && !continueReply && renderingHere" in js
+    assert "continuationResources(message.resource_citations, question)" in js
+    # A job recovered after a reload has no composer item: its files come from history.
+    assert "continuationResources(last.resource_citations, question?.content)" in resume
+    assert "sources: Array.isArray(ev.sources) ? ev.sources : job.partialSources" in js
+    assert '$("#app").inert = resourceReaderAppWasInert;' in js
 
     stop = js[js.index("async function stopGeneration(") : js.index("function renderChips()")]
     assert "if (job.stopPromise) return job.stopPromise" in stop
@@ -1446,3 +1481,19 @@ def test_display_math_cannot_widen_the_conversation_column():
     inline = "".join(_blocks(".prose .math-source.inline-math"))
     assert re.search(r"max-width\s*:\s*100%", inline)
     assert re.search(r"overflow-x\s*:\s*auto", inline)
+
+
+def test_stop_is_a_neutral_control_and_red_stays_for_destructive_states():
+    """Stopping a reply is not destructive: it uses the selected-pill ink, while the recording
+    mic and Delete keep the danger red (platform guidance reserves red for those)."""
+    v5 = (UI / "v5.css").read_text()
+    assert "button.send.stop, button.send.stop:hover { background: var(--selected);" in v5
+    assert "color: var(--on-selected); }" in v5
+    assert "button.send.stop, button.send.stop:hover { background: var(--danger-fill)" not in v5
+    assert "button.icon.recording, button.icon.recording:hover { background: var(--danger-fill);" in v5
+
+
+def test_send_and_stop_icons_are_centred_in_the_round_button():
+    v5 = (UI / "v5.css").read_text()
+    assert "button.send { display: inline-flex; align-items: center; justify-content: center;" in v5
+    assert "button.send .icon-send { transform: translateX(1.5px); }" in v5

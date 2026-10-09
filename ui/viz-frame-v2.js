@@ -40,7 +40,41 @@
   }
 
   function paletteValue(context, value, index = 0) {
-    return typeof value === "string" ? value : context.palette[index % context.palette.length];
+    if (typeof value !== "string") return context.palette[index % context.palette.length];
+    return context.named?.[value.trim().toLowerCase()] || value;
+  }
+
+  // The frame's CSP forbids inline style attributes, so node tints are computed here: a pastel
+  // of the node colour over the frame background, like the app's tinted tiles.
+  function parseRgb(value) {
+    const text = String(value || "").trim();
+    const hex = text.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hex) {
+      const digits = hex[1].length === 3 ? hex[1].split("").map((d) => d + d).join("") : hex[1];
+      return [0, 2, 4].map((offset) => parseInt(digits.slice(offset, offset + 2), 16));
+    }
+    const rgb = text.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+    return rgb ? rgb.slice(1, 4).map(Number) : null;
+  }
+
+  function tint(color, amount) {
+    const foreground = parseRgb(color);
+    const background = parseRgb(getComputedStyle(document.body).backgroundColor) || [255, 255, 255];
+    if (!foreground) return color;
+    const mixed = foreground.map((channel, index) => Math.round(channel * amount + background[index] * (1 - amount)));
+    return `rgb(${mixed.join(", ")})`;
+  }
+
+  // Where a straight link from a node's centre leaves its rounded box (plus a small gap), so
+  // connectors and arrowheads meet the box edge instead of crossing the node's label.
+  function boxEdgePoint(center, toward, gap = 4) {
+    const dx = toward.x - center.x; const dy = toward.y - center.y;
+    const halfWidth = Number(center.width) / 2; const halfHeight = Number(center.height) / 2;
+    if (!(halfWidth > 0 && halfHeight > 0) || (!dx && !dy)) return { x: center.x, y: center.y };
+    const scaleToEdge = Math.min(dx ? halfWidth / Math.abs(dx) : Infinity, dy ? halfHeight / Math.abs(dy) : Infinity);
+    const length = Math.hypot(dx, dy);
+    const along = Math.min(1, scaleToEdge + gap / length);
+    return { x: center.x + dx * along, y: center.y + dy * along };
   }
 
   function stateNumber(values, id, fallback) {
@@ -1905,8 +1939,14 @@
     const stage = context.stage;
     const drawing = html("div", "viz-v2-drawing");
     const height = Math.max(260, spec.height - 104);
+    // Authored scenes use a 720-wide screen space, but some place nodes past its edges. Widen
+    // the view to every node's box (plus a margin) so no node or label is clipped.
+    const nodeBoxes = (spec.scene?.layers || []).filter((layer) => layer.type === "node"
+      && Number.isFinite(Number(layer.x)) && Number.isFinite(Number(layer.width)));
+    const viewLeft = Math.min(0, ...nodeBoxes.map((layer) => Number(layer.x) - Number(layer.width) / 2 - 12));
+    const viewRight = Math.max(720, ...nodeBoxes.map((layer) => Number(layer.x) + Number(layer.width) / 2 + 12));
     const svg = element("svg", {
-      viewBox: `0 0 720 ${height}`,
+      viewBox: `${viewLeft} 0 ${viewRight - viewLeft} ${height}`,
       preserveAspectRatio: "xMidYMid meet",
       role: "img",
       "aria-label": spec.aria_label,
@@ -2065,8 +2105,8 @@
             : stateControl && nodeIndex === activeNode;
           node = element("g", { class: "viz-v2-layer", tabindex: 0, role: "group", "aria-label": displayed.label, "data-active": selected ? "true" : "false" });
           const revealed = !spec.scene.animation || nodeIndex <= Math.floor(animationProgress * Math.max(0, nodes.length - 1));
-          node.append(element("rect", { x: displayed.x - displayed.width / 2, y: displayed.y - displayed.height / 2, width: displayed.width, height: displayed.height, rx: 12, fill: displayedColor, opacity: revealed ? (displayed.opacity ?? (selected ? 1 : 0.86)) : 0.16, stroke: selected ? context.neutral : "none", "stroke-width": selected ? 4 : 0 }));
-          node.append(element("text", { x: displayed.x, y: displayed.y + 5, "text-anchor": "middle", fill: "white", "font-weight": 700 }, displayed.label));
+          node.append(element("rect", { x: displayed.x - displayed.width / 2, y: displayed.y - displayed.height / 2, width: displayed.width, height: displayed.height, rx: 12, fill: tint(displayedColor, selected ? 0.42 : 0.22), opacity: revealed ? (displayed.opacity ?? 1) : 0.16, stroke: selected ? context.neutral : displayedColor, "stroke-width": selected ? 3 : 2 }));
+          node.append(element("text", { x: displayed.x, y: displayed.y + 5, "text-anchor": "middle", fill: context.neutral, "font-weight": 700 }, displayed.label));
           const labelSignature = displayed.label.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0);
           geometrySignature += (nodeIndex + 1) * Math.round(displayed.x * 17 + displayed.y * 31 + displayed.width * 13 + displayed.height * 7 + labelSignature + (selected ? 101 : 0) + (revealed ? 503 : 0));
           nodeRecords.set(layer.id, displayed);
@@ -2137,8 +2177,9 @@
             linkDash = delocalized ? "7 4" : "";
             displayedLabel = bondIndex === 0 ? (delocalized ? "delocalized equal π bonds" : "localized alternating bonds") : "";
           }
-          node.append(element("line", { x1: from.x, y1: from.y, x2: to.x, y2: to.y, stroke: linkColor, "stroke-width": linkWidth, "stroke-dasharray": linkDash, "marker-end": layer.arrow ? "url(#v2-arrow)" : "" }));
-          if (displayedLabel) node.append(element("text", { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 7, "text-anchor": "middle", fill: context.neutral, "font-weight": 700 }, displayedLabel));
+          const start = boxEdgePoint(from, to); const end = boxEdgePoint(to, from, layer.arrow ? 7 : 4);
+          node.append(element("line", { x1: start.x, y1: start.y, x2: end.x, y2: end.y, stroke: linkColor, "stroke-width": linkWidth, "stroke-dasharray": linkDash, "marker-end": layer.arrow ? "url(#v2-arrow)" : "" }));
+          if (displayedLabel) node.append(element("text", { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 9, "text-anchor": "middle", fill: context.neutral, "fill-opacity": 0.72, "font-size": 12, "font-weight": 600 }, displayedLabel));
           const numericLabel = Number(displayedLabel);
           const linkLabelSignature = Number.isFinite(numericLabel)
             ? numericLabel * 13
@@ -2359,8 +2400,8 @@
           const yy = top + (bottom - top) * grid / 5;
           ctx.beginPath(); ctx.moveTo(left, yy); ctx.lineTo(right, yy); ctx.stroke();
         }
-        ctx.fillStyle = context.neutral; ctx.font = "600 13px system-ui"; ctx.fillText(panel.title, rect.x + 8, rect.y + 17);
-        ctx.font = "11px system-ui"; ctx.fillText(panel.x_label, Math.max(left, (left + right) / 2 - ctx.measureText(panel.x_label).width / 2), rect.y + rect.height - 8);
+        ctx.fillStyle = context.neutral; ctx.font = "600 13px Onest, system-ui, sans-serif"; ctx.fillText(panel.title, rect.x + 8, rect.y + 17);
+        ctx.font = "11px Onest, system-ui, sans-serif"; ctx.fillText(panel.x_label, Math.max(left, (left + right) / 2 - ctx.measureText(panel.x_label).width / 2), rect.y + rect.height - 8);
         ctx.save(); ctx.translate(rect.x + 12, (top + bottom) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(panel.y_label, -ctx.measureText(panel.y_label).width / 2, 0); ctx.restore();
         panelHeatmaps.forEach((layer, heatmapIndex) => {
           const heatValues = controlledHeatmap(spec.family, layer, values);
@@ -2380,7 +2421,7 @@
           const layer = polylines[index]; ctx.beginPath();
           controlled[index].forEach((point, pointIndex) => { const px = mapX(point[0]); const py = mapY(point[1]); if (pointIndex) ctx.lineTo(px, py); else ctx.moveTo(px, py); screenGeometrySignature += Math.round((px * 17 + py * 31) * (pointIndex + 1)); });
           ctx.strokeStyle = paletteValue(context, layer.color, index); ctx.lineWidth = 2.5; ctx.stroke();
-          ctx.fillStyle = ctx.strokeStyle; ctx.font = "10px system-ui"; ctx.fillText(layer.label, left + 4, top + 11 + legendIndex * 12);
+          ctx.fillStyle = ctx.strokeStyle; ctx.font = "10px Onest, system-ui, sans-serif"; ctx.fillText(layer.label, left + 4, top + 11 + legendIndex * 12);
         });
         particleIndices.forEach((index) => {
           const layer = particleLayers[index]; ctx.fillStyle = paletteValue(context, layer.color, index + polylines.length);
@@ -2751,7 +2792,7 @@
     const context = canvas.getContext("2d");
     canvas.width = 256;
     canvas.height = 64;
-    context.font = "600 26px system-ui";
+    context.font = "600 26px Onest, system-ui, sans-serif";
     context.fillStyle = color;
     context.textAlign = "center";
     context.textBaseline = "middle";

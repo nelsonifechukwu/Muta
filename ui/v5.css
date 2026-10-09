@@ -1,0 +1,631 @@
+/* Muta v5 — "Bright".
+ *
+ * The component layer that gives Muta its own look. Tokens live in styles.css; this file is
+ * loaded last and restyles the shell, home, chat, composer, dialogs and Learn.
+ *
+ * Principles (docs/design/muta-v5-bright.md):
+ *  - Light, airy and friendly first: warm off-white canvas, white cards, generous space.
+ *  - One action colour — Muta mint — always carrying dark text; selected state is a black pill.
+ *  - Pastel tints (sun, lilac, peach, sky, mint) make subjects and shortcuts easy to tell
+ *    apart; the name or label always sits beside the colour.
+ *  - Bold, rounded, near-black Onest headings; nothing loads from a CDN.
+ *  - Dark mode is a warm-graphite twin with the same mint and bright pastel chips.
+ */
+
+@font-face {
+  font-family: "Onest";
+  src: url("fonts/Onest-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Form controls do not inherit the page font by default (they fell back to Arial 13.3px). */
+button, input, select, textarea, output { font-family: inherit; }
+
+body {
+  font-family: var(--sans);
+  font-size: 15.5px;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: color-mix(in srgb, var(--accent-strong) 35%, transparent); }
+
+/* --- shared buttons ---------------------------------------------------------------------- */
+.course-open, .reader-primary, .practice-submit, .tour-primary, .muta-tour-actions .primary,
+.product-consent-primary, .share-primary, .share-primary-link,
+.class-form-actions button[type="submit"], #host-course-save {
+  border: 0; border-radius: 999px;
+  background: var(--accent-strong); color: var(--on-accent); font-weight: 700;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.course-open:hover, .reader-primary:hover, .practice-submit:hover, .tour-primary:hover,
+.muta-tour-actions .primary:hover, .product-consent-primary:hover, .share-primary:hover,
+.share-primary-link:hover, .class-form-actions button[type="submit"]:hover, #host-course-save:hover {
+  background: color-mix(in srgb, var(--accent-strong) 86%, var(--text)); filter: none;
+}
+.course-open:active, .reader-primary:active, .practice-submit:active, .muta-tour-actions .primary:active,
+.product-consent-primary:active, .share-primary:active { transform: scale(0.98); }
+/* Fills on red keep white text; --on-accent is dark for the mint fill. */
+.confirm-delete, button.icon.recording { color: var(--on-danger); }
+.confirm-delete { border-radius: 999px; }
+
+/* --- sidebar --------------------------------------------------------------------------- */
+#sidebar {
+  width: 268px;
+  background: var(--sidebar);
+  border-inline-end: 1px solid var(--border);
+}
+.sidebar-head {
+  display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 14px;
+  padding: 18px 14px 12px;
+}
+.brand {
+  width: 44px; height: 44px; border-radius: 14px;
+  background: var(--card); box-shadow: var(--soft-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.brand .muta-logo { width: 28px; }
+.brand:hover { background: var(--card); transform: translateY(-1px); box-shadow: var(--popover-shadow); }
+#new-chat {
+  justify-self: stretch;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 44px; padding: 10px 16px;
+  border: 0; border-radius: 999px;
+  background: var(--accent-strong); color: var(--on-accent);
+  font: 700 0.9rem/1 var(--sans);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+#new-chat:hover { background: color-mix(in srgb, var(--accent-strong) 86%, var(--text)); }
+#new-chat:active { transform: scale(0.98); }
+#new-chat:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+.class-nav, .product-nav { padding: 0 10px; border-top: 0; }
+.product-nav { padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.class-open, .product-unit-link, .product-home-link, .settings-open {
+  min-height: 42px; padding: 8px 10px; border-radius: 12px;
+  color: var(--text); font: 600 0.88rem/1.2 var(--sans);
+}
+/* Learn and Class get pastel icon tiles so the two learning spaces stand out from chats. */
+.product-unit-link svg, .class-open svg {
+  box-sizing: content-box; flex: 0 0 16px; padding: 6px; border-radius: 9px;
+  color: var(--text);
+}
+.product-unit-link svg { background: color-mix(in srgb, var(--sun) 70%, var(--card)); }
+.class-open svg { background: color-mix(in srgb, var(--sky) 70%, var(--card)); }
+.class-open:hover, .product-unit-link:hover, .product-home-link:hover, .settings-open:hover {
+  background: var(--hover-soft); color: var(--text);
+}
+.class-open[aria-current="page"] { background: var(--chip); color: var(--text); }
+
+#conversation-list { padding: 8px 10px; }
+.conv-group-label {
+  margin: 14px 10px 6px; color: var(--muted);
+  font: 700 0.68rem/1 var(--sans); letter-spacing: 0.06em;
+}
+.conv-item { min-height: 40px; padding: 8px 10px; border-radius: 12px; font-size: 0.86rem; }
+.conv-item.active { background: var(--chip); font-weight: 600; }
+.conv-pin:hover { color: var(--accent); background: var(--hover-soft); }
+
+.sidebar-utility { padding: 6px 10px 0; border-top: 1px solid var(--border); }
+.product-home-link { width: 100%; margin: 0; }
+.settings-open { width: calc(100% - 20px); margin: 0 10px 8px; }
+
+/* --- top bar ----------------------------------------------------------------------------- */
+.chat-header { gap: 10px; background: color-mix(in srgb, var(--bg) 92%, transparent); }
+@media (min-width: 721px) {
+  .chat-header { padding-inline: 20px; }
+}
+.model-trigger {
+  min-height: 38px; padding: 6px 12px 6px 14px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--card);
+  font: 650 0.85rem/1.2 var(--sans); box-shadow: var(--soft-shadow);
+}
+.model-trigger:hover:not(:disabled), .model-trigger[aria-expanded="true"] {
+  background: var(--card); border-color: color-mix(in srgb, var(--text) 25%, var(--border));
+}
+.model-menu { border-radius: var(--radius); }
+.model-option { border-radius: 12px; }
+.model-badge { background: color-mix(in srgb, var(--sun) 55%, var(--card)); color: var(--text); }
+/* The teaching control below already shows the active method; this header pill duplicated it.
+   It stays in the DOM as the polite live region that announces style changes to screen readers. */
+.style-pill, .style-pill[class] {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.power-badge { border-radius: 999px; }
+.startup-progress {
+  background: conic-gradient(var(--accent-strong) var(--startup-progress), var(--border) 0);
+}
+
+/* --- home -------------------------------------------------------------------------------- */
+#empty-state {
+  margin: clamp(24px, 9vh, 92px) auto 12px; max-width: 46rem;
+  text-align: center; color: var(--muted);
+}
+.home-hero { position: relative; padding: 8px 12px 6px; }
+/* Soft pastel blobs behind the welcome, in the spirit of MyTutor's organic shapes. */
+.home-hero::before, .home-hero::after {
+  content: ""; position: absolute; z-index: -1; border-radius: 50%; filter: blur(28px);
+  pointer-events: none; opacity: 0.75;
+}
+.home-hero::before {
+  width: 190px; height: 150px; top: -10px; inset-inline-start: 10%;
+  background: color-mix(in srgb, var(--sun) 55%, transparent);
+}
+.home-hero::after {
+  width: 170px; height: 140px; top: 40px; inset-inline-end: 10%;
+  background: color-mix(in srgb, var(--lilac) 50%, transparent);
+}
+/* Yellow and peach turn olive/brown at low luminance, so dark mode glows in mint and lilac. */
+:root[data-theme="dark"] .home-hero::before { background: color-mix(in srgb, var(--mint) 22%, transparent); }
+:root[data-theme="dark"] .home-hero::after { background: color-mix(in srgb, var(--lilac) 24%, transparent); }
+#chat-column { position: relative; z-index: 0; }
+.home-mark {
+  display: inline-grid; place-items: center; width: 64px; height: 64px; margin-bottom: 18px;
+  border-radius: 20px; background: var(--card); box-shadow: var(--soft-shadow);
+}
+.home-mark .muta-logo { width: 40px; }
+#empty-state h1 {
+  max-width: 34rem; margin: 0 auto 10px;
+  font: 800 clamp(1.9rem, 4vw, 2.75rem)/1.08 var(--display);
+  letter-spacing: -0.035em; color: var(--text);
+}
+#empty-state p { max-width: 30rem; margin: 0 auto; font-size: 1.02rem; line-height: 1.55; }
+.home-actions {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+  margin-top: 30px; text-align: start;
+}
+.home-card {
+  --tone: var(--lilac);
+  display: grid; align-content: space-between; gap: 22px; min-width: 0; min-height: 124px;
+  padding: 16px; border: 1px solid color-mix(in srgb, var(--tone) 45%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--tone) var(--tint), var(--card));
+  color: var(--text); font: 700 0.92rem/1.25 var(--sans); cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.home-card[data-tone="leaf"] { --tone: var(--mint); }
+.home-card[data-tone="lilac"] { --tone: var(--lilac); }
+.home-card[data-tone="ochre"] { --tone: var(--sun); }
+.home-card[data-tone="clay"] { --tone: var(--peach); }
+.home-card:hover:not(:disabled) { transform: translateY(-3px); box-shadow: var(--soft-shadow); }
+.home-card:active:not(:disabled) { transform: translateY(0); }
+.home-card:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.home-card:disabled { cursor: default; opacity: 0.5; }
+.home-card strong { font-weight: 700; overflow-wrap: anywhere; }
+.home-card-icon {
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px;
+  background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+/* Dark mode: faint tile tints and a tone border; the colour lives in a bright icon chip. */
+:root[data-theme="dark"] .home-card { border-color: color-mix(in srgb, var(--tone) 32%, var(--border)); }
+:root[data-theme="dark"] .home-card-icon { background: var(--tone); color: #17181a; }
+.home-card-icon svg {
+  width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+.startup-welcome { gap: 22px; }
+.startup-welcome p { color: var(--muted); font-size: 0.98rem; }
+.startup-welcome::after {
+  content: ""; justify-self: center; width: 54px; height: 10px;
+  background:
+    radial-gradient(circle, var(--accent-strong) 4px, transparent 4.5px) 0 0 / 18px 10px repeat-x;
+  animation: muta-bounce 1.2s ease-in-out infinite;
+}
+@keyframes muta-bounce { 50% { opacity: 0.35; } }
+
+/* --- conversation ------------------------------------------------------------------------ */
+#chat-column { max-width: 47rem; padding-block: 22px 10px; }
+.msg { margin: 22px 0; }
+.msg.user .bubble {
+  background: var(--bubble); color: var(--bubble-text);
+  border: 0; border-radius: 22px 22px 6px 22px; padding: 11px 16px;
+  font-size: 0.97rem; line-height: 1.55;
+}
+html[dir="rtl"] .msg.user .bubble { border-radius: 22px 22px 22px 6px; }
+.msg.assistant { position: relative; padding-inline-start: 44px; }
+.msg.assistant::before {
+  content: ""; position: absolute; top: -2px; inset-inline-start: 0;
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--card) url("brand/muta-symbol-on-light.svg") center / 20px no-repeat;
+  box-shadow: var(--soft-shadow);
+}
+:root[data-theme="dark"] .msg.assistant::before {
+  background-image: url("brand/muta-symbol-on-dark.svg");
+}
+.msg.assistant .prose { font-family: var(--sans); font-size: 1rem; line-height: 1.72; }
+.prose h1, .prose h2, .prose h3 { font-family: var(--sans); font-weight: 750; letter-spacing: -0.015em; }
+.prose strong { font-weight: 700; }
+.prose blockquote {
+  border-inline-start: 4px solid var(--sun); font-style: normal; border-radius: 0;
+  background: color-mix(in srgb, var(--sun) var(--tint), var(--card));
+  padding: 10px 14px; border-start-end-radius: 12px; border-end-end-radius: 12px;
+}
+.prose .code-block, .prose table, .muta-visualization { border-radius: 16px; }
+.prose a { color: var(--accent); text-decoration-thickness: 1.5px; }
+details.thinking { border-radius: 14px; background: var(--card); }
+.think-dot { background: var(--accent-strong); }
+.answer-now { color: var(--text); }
+.verified-badge { padding: 2px 9px 2px 7px; border-radius: 999px; font-weight: 700; }
+.verified-badge::before { content: "✓ "; }
+.generation-status[data-phase="visualization"] { color: var(--accent); }
+
+/* --- composer ---------------------------------------------------------------------------- */
+#composer-wrap { max-width: 50rem; }
+.teaching-style {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+  column-gap: 14px; row-gap: 2px; margin-bottom: 10px;
+}
+.teaching-style-heading { grid-column: 1; grid-row: 1; align-self: end; gap: 6px; justify-content: flex-start; }
+.teaching-style-heading .teaching-style-label { margin: 0; max-width: 9rem; line-height: 1.25; }
+.teaching-style-options { grid-column: 2; grid-row: 1 / span 2; }
+/* Collapsed: just the method name, directly under the question it answers. */
+.teaching-style-explanation {
+  grid-column: 1; grid-row: 2; align-self: start; margin: 0; max-width: 11rem;
+  font: 750 0.72rem/1.3 var(--sans);
+}
+.teaching-style-explanation strong { color: var(--text); font-weight: 750; }
+/* Expanded ("?"): the description joins the method name as a note attached under the control. */
+.teaching-style-explanation[data-expanded="true"] {
+  grid-column: 1 / -1; grid-row: 3; max-width: none; display: block;
+  margin-top: 8px; padding: 9px 12px; border-radius: 14px;
+  background: var(--chip); color: var(--muted); font: 500 0.78rem/1.45 var(--sans);
+}
+.teaching-style-explanation[data-expanded="true"] strong { margin-inline-end: 6px; }
+.teaching-style-heading button[aria-expanded="true"] { background: var(--selected); color: var(--on-selected); border-color: transparent; }
+.teaching-style-label { color: var(--muted); font: 700 0.7rem/1.2 var(--sans); }
+/* Segmented control: a soft track with the chosen method as a black pill (Brilliant-style). */
+.teaching-style-options {
+  gap: 4px; padding: 4px; border: 0; border-radius: 999px; background: var(--chip);
+}
+.teaching-style-options button {
+  min-height: 38px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--muted); font: 650 0.78rem/1.2 var(--sans);
+}
+.teaching-style-options button:hover { background: var(--hover-soft); color: var(--text); }
+.teaching-style-options button[aria-pressed="true"] {
+  background: var(--selected); color: var(--on-selected);
+}
+.teaching-style-options button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#composer {
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--soft-shadow);
+}
+#composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent-strong) 70%, var(--border));
+  box-shadow: var(--soft-shadow), 0 0 0 4px color-mix(in srgb, var(--accent-strong) 18%, transparent);
+}
+@media (min-width: 401px) {
+  #composer { padding: 12px 12px 10px 16px; }
+  button.send { min-width: 44px; min-height: 44px; }
+}
+#input { font-size: 16px; line-height: 1.55; }
+button.icon { border-radius: 12px; }
+button.icon:hover { background: var(--hover-soft); color: var(--text); }
+button.send { border-radius: 999px; background: var(--accent-strong); color: var(--on-accent); }
+button.send:hover:not(:disabled):not(.stop) { background: color-mix(in srgb, var(--accent-strong) 86%, var(--text)); }
+/* Stop is neutral, not destructive: the selected-pill ink (off-white in dark mode), never
+   mint on hover. Red stays for the recording mic and Delete, where it means something. */
+button.send.stop, button.send.stop:hover { background: var(--selected); color: var(--on-selected); }
+button.send.stop:hover { background: color-mix(in srgb, var(--selected) 84%, var(--bg)); }
+button.icon.recording, button.icon.recording:hover { background: var(--danger-fill); color: var(--on-danger); }
+button.send svg { width: 18px; height: 18px; }
+/* Icons sit at the button's true centre: flex centring, not inline text flow (the stop
+   square used to be a left-aligned block, 3px off). The send arrow is a right-pointing
+   triangle whose visual weight sits 1.8px left of its box at this size, so it is nudged
+   1.5px right — the usual optical correction for play/send glyphs. */
+button.send { display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+button.send .icon-send { transform: translateX(1.5px); }
+.chip, .queued { border-radius: 14px; }
+.fineprint { margin-top: 9px; font-size: 0.72rem; }
+
+/* --- dialogs ----------------------------------------------------------------------------- */
+.settings-panel, .confirm-card, .product-consent-card, .muta-tour-card, .share-auth-card {
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.settings-panel { padding: 24px 22px 22px; width: min(36rem, 100%); }
+.settings-panel h2, .confirm-card h2, .product-consent-card h2, .muta-tour-card h2,
+.share-auth h1, .share-pending h2 {
+  font-family: var(--display); font-weight: 800; letter-spacing: -0.03em;
+}
+.settings-panel h2 { font-size: 1.4rem; }
+.confirm-card h2 { font-size: 1.3rem; }
+.product-consent-card h2 { font-size: clamp(1.4rem, 4vw, 1.85rem); line-height: 1.15; }
+.settings-panel header button {
+  width: 40px; height: 40px; border-radius: 999px; background: var(--chip); color: var(--text);
+}
+.settings-section h3 { color: var(--muted); letter-spacing: 0.06em; font-weight: 750; }
+.settings-section { margin-top: 24px; }
+.settings-row select, .host-url-row input, .share-auth-form input, .studio-builder input,
+.studio-builder select, .learning-actions select {
+  border-radius: 12px;
+}
+.settings-row input:checked, .host-switch input:checked { background: var(--accent-strong); }
+.power-status, .host-share-card, .host-memory-options > label { border-radius: 14px; }
+.confirm-actions button, .product-consent-actions button { border-radius: 999px; }
+.confirm-cancel, .product-consent-secondary { background: var(--chip); border-color: transparent; }
+#replay-tour, .host-courses-heading button, .host-course-form-actions button,
+.host-url-row button, .host-user-actions button, .resource-action {
+  min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--card); color: var(--text); font: 650 0.8rem/1 var(--sans); cursor: pointer;
+}
+#replay-tour:hover, .host-courses-heading button:hover, .host-course-form-actions button:hover,
+.host-url-row button:hover, .host-user-actions button:hover, .resource-action:hover {
+  background: var(--chip);
+}
+#host-course-save { min-height: 40px; padding: 0 16px; }
+.share-auth { background: radial-gradient(circle at 18% 12%, var(--share-glow), transparent 34rem), var(--bg); }
+.share-auth-tabs button[aria-selected="true"] { background: var(--selected); color: var(--on-selected); }
+#toast { border-radius: 999px; font-weight: 600; box-shadow: var(--popover-shadow); }
+#drop-overlay > div {
+  border: 2px dashed var(--accent-strong); border-radius: var(--radius-lg);
+  background: var(--card); font: 700 1.15rem/1.3 var(--sans); color: var(--text);
+}
+
+/* --- Learn ------------------------------------------------------------------------------- */
+.learning-header { padding-bottom: 18px; border-bottom: 0; }
+.learning-kicker { letter-spacing: 0.1em; }
+.learning-brand h2 {
+  font: 800 clamp(1.7rem, 3vw, 2.4rem)/1.08 var(--display); letter-spacing: -0.035em;
+}
+.learning-icon-button { border-radius: 999px; background: var(--chip); border-color: transparent; }
+.learning-tabs { border-bottom: 0; padding-block: 4px 12px; }
+/* Tabs as one segmented track, the chosen section a black pill. */
+.learning-tabs {
+  width: fit-content; max-width: calc(100% - 2 * clamp(20px, 4vw, 58px));
+  margin-inline: clamp(20px, 4vw, 58px); padding: 4px; gap: 2px;
+  border-radius: 999px; background: var(--chip);
+}
+.learning-tabs button {
+  min-height: 38px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--muted); font: 650 0.8rem/1 var(--sans);
+}
+.learning-tabs button:hover { background: var(--hover-soft); color: var(--text); }
+.learning-tabs button[aria-current="page"] {
+  background: var(--selected); color: var(--on-selected); border-color: transparent;
+}
+.learning-actions { margin-top: 12px; background: transparent; border-bottom: 1px solid var(--border); }
+.learning-secondary { border-radius: 999px; }
+.learning-section-heading h3, .reader-prose h3 {
+  font: 800 clamp(1.4rem, 2.4vw, 1.9rem)/1.15 var(--display); letter-spacing: -0.03em;
+}
+.reader-prose div h3 { margin: 0 0 10px; font: 700 1.15rem/1.3 var(--sans); letter-spacing: -0.01em; }
+.course-card h4, .practice-card h4, .game-card h4, .playground-card h4, .correctness-card h4,
+.studio-infographic h4, .reader-prose h4 {
+  font-family: var(--sans); font-weight: 750; letter-spacing: -0.01em;
+}
+.learning-stat-card strong { font-family: var(--sans); font-weight: 800; letter-spacing: -0.03em; }
+.studio-flashcard { font-family: var(--sans); font-weight: 650; }
+
+/* Subject tints. The subject's name is always printed on the card beside its colour. */
+.course-card {
+  --subject: var(--lilac);
+  border-radius: var(--radius-lg); box-shadow: none;
+  border-color: color-mix(in srgb, var(--subject) 40%, var(--border));
+  background:
+    linear-gradient(color-mix(in srgb, var(--subject) var(--tint), var(--card)) 0 0) top / 100% 76px no-repeat,
+    var(--card);
+}
+.course-card[data-subject="Mathematics"] { --subject: var(--lilac); }
+.course-card[data-subject="Physical Science"] { --subject: var(--sky); }
+.course-card[data-subject="Life Science"] { --subject: var(--mint); }
+.course-card[data-subject="History"] { --subject: var(--peach); }
+.course-card[data-subject="Artificial Intelligence"] { --subject: var(--sun); }
+.course-card:hover, .course-card:focus-within {
+  border-color: color-mix(in srgb, var(--subject) 70%, var(--border));
+  background:
+    linear-gradient(color-mix(in srgb, var(--subject) var(--tint), var(--card)) 0 0) top / 100% 76px no-repeat,
+    var(--card);
+  box-shadow: var(--soft-shadow); transform: translateY(-2px);
+}
+.course-symbol {
+  border-radius: 14px; background: var(--card); color: var(--text);
+  font-weight: 800; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="dark"] .course-symbol { background: var(--subject); color: #17181a; }
+.course-subject { color: var(--text); }
+.course-origin { color: var(--muted); }
+.course-progress { height: 8px; background: var(--chip); }
+.course-progress span { background: var(--accent-strong); }
+.course-export, .course-remove, .reader-secondary, .muta-tour-actions button {
+  border-radius: 999px;
+}
+.reader-book, .reader-stage, .practice-card, .learning-stat-card, .correctness-card,
+.game-card, .playground-card, .game-prompt, .playground-description, .playground-canvas,
+.studio-builder, .studio-mode-card, .studio-flashcard, .studio-infographic article,
+.knowledge-graph {
+  border-radius: var(--radius);
+}
+.practice-option { border-radius: 14px; }
+.reader-callout {
+  border-left: 0; border-inline-start: 4px solid var(--sun); border-radius: 0;
+  border-start-end-radius: 12px; border-end-end-radius: 12px;
+  background: color-mix(in srgb, var(--sun) var(--tint), var(--card));
+}
+.practice-meta, .reader-toolbar small, .studio-infographic article > span { color: var(--accent); }
+.practice-option:has(input:checked) {
+  border-color: var(--accent-strong); background: color-mix(in srgb, var(--mint) var(--tint), var(--card));
+}
+.practice-feedback.correct::before { content: "✓ "; font-weight: 800; }
+.practice-feedback.incorrect::before { content: "✗ "; font-weight: 800; }
+.studio-mode-card:hover, .studio-mode-card:focus-visible {
+  border-color: var(--accent-strong); background: color-mix(in srgb, var(--mint) var(--tint), var(--card));
+}
+.studio-flashcard[data-revealed="true"] {
+  border-color: var(--lilac); background: color-mix(in srgb, var(--lilac) var(--tint), var(--card));
+}
+.learning-timeline-dot { background: var(--accent-strong); }
+.tracker-grid, .correctness-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.learning-stat-card { --tone: var(--lilac); background: color-mix(in srgb, var(--tone) var(--tint), var(--card)); }
+.learning-stat-card:nth-child(2) { --tone: var(--sun); }
+.learning-stat-card:nth-child(3) { --tone: var(--mint); }
+.learning-stat-card:nth-child(4) { --tone: var(--peach); }
+.correctness-tier-index { border-color: transparent; background: var(--selected); color: var(--on-selected); }
+.correctness-warning { border-color: var(--sun); background: color-mix(in srgb, var(--sun) var(--tint), var(--card)); }
+.game-option { border-radius: 999px; }
+/* Answered game options keep readable ink on their tint and say right/wrong with a mark. */
+.game-option.correct, .game-option.incorrect { color: var(--text); }
+.game-option.correct::before { content: "✓ "; color: var(--success); font-weight: 800; }
+.game-option.incorrect::before { content: "✗ "; color: var(--danger); font-weight: 800; }
+.game-option:disabled { cursor: default; }
+
+/* --- tour ------------------------------------------------------------------------------------ */
+.muta-tour::before { background: var(--modal-scrim); }
+.muta-tour-highlight { border-color: var(--accent-strong); border-radius: 16px; }
+.muta-tour-card { padding: 22px 20px 20px; }
+
+/* --- responsive -------------------------------------------------------------------------- */
+@media (max-width: 980px) {
+  .home-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  #sidebar { width: min(300px, 86vw); }
+  /* The fixed hamburger occupies the drawer's leading corner; the logo takes the other. */
+  .sidebar-head .brand { justify-self: end; }
+  /* Keep styles.css's clearance for the fixed hamburger and its safe-area header height. */
+  .chat-header {
+    padding-inline-start: max(62px, calc(env(safe-area-inset-left) + 58px));
+    padding-inline-end: max(12px, env(safe-area-inset-right));
+  }
+  .menu-toggle { border-radius: 999px; box-shadow: var(--soft-shadow); }
+  #empty-state { margin-top: 12px; }
+  .home-mark { width: 52px; height: 52px; margin-bottom: 12px; border-radius: 16px; }
+  .home-actions { gap: 8px; margin-top: 20px; }
+  .home-card {
+    grid-template-columns: auto minmax(0, 1fr); align-items: center; align-content: center;
+    gap: 10px; min-height: 60px; padding: 10px 12px; font-size: 0.84rem;
+  }
+  .home-card-icon { width: 34px; height: 34px; border-radius: 11px; }
+  .home-card-icon svg { width: 19px; height: 19px; }
+  .msg.assistant { padding-inline-start: 0; }
+  .msg.assistant::before { position: static; display: block; margin-bottom: 10px; }
+  .teaching-style { grid-template-columns: minmax(0, 1fr); }
+  .teaching-style-heading { grid-row: 1; justify-content: space-between; }
+  .teaching-style-heading .teaching-style-label { max-width: none; }
+  .teaching-style-explanation { grid-row: 2; max-width: none; margin-bottom: 6px; }
+  .teaching-style-options { grid-column: 1; grid-row: 3; }
+  .teaching-style-explanation[data-expanded="true"] { grid-row: 4; margin: 8px 0 0; }
+  .teaching-style-options { border-radius: 20px; }
+  .learning-tabs { border-radius: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-card, #new-chat, button.send, .course-open, .reader-primary, .practice-submit,
+  .muta-tour-actions .primary, .course-card { transition: none; }
+  .home-card:hover:not(:disabled), .course-card:hover { transform: none; }
+  .startup-welcome::after { animation: none; }
+}
+
+/* --- brand-consistency pass (audit 2026-10-09) ----------------------------------------------- */
+/* Small uppercase labels are coral with a square that echoes the logo's speaking dot — the same
+   treatment as the About page's eyebrows. */
+.learning-kicker, .product-consent-eyebrow, .share-eyebrow, .muta-tour-step, .unit-eyebrow {
+  color: var(--brand-text);
+}
+.learning-kicker::before, .product-consent-eyebrow::before, .share-eyebrow::before,
+.muta-tour-step::before, .unit-eyebrow::before {
+  content: ""; display: inline-block; width: 0.42rem; height: 0.42rem; margin-inline-end: 0.5rem;
+  border-radius: 0.12rem; background: var(--brand); vertical-align: 0.05em;
+}
+/* Every segmented control sits on the same warm-grey track. */
+.share-auth-tabs { background: var(--chip); border-color: transparent; border-radius: 999px; }
+.share-auth-tabs button { border-radius: 999px; }
+/* Secondary actions are pills with a quiet outline, like the rest of v5. */
+.reply-continue, .class-check-actions button, #class-refresh, #class-thread-back,
+#class-delete-post, .class-reply-actions button, .startup-readiness button {
+  border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--text);
+}
+.reply-continue:hover, .class-check-actions button:hover, #class-refresh:hover,
+#class-thread-back:hover, .class-reply-actions button:hover { background: var(--chip); }
+#class-delete-post { color: var(--danger); }
+/* Class board: the same headline and card language as Learn and Settings. */
+.class-board-header h1 { font: 800 clamp(1.7rem, 4vw, 2.3rem)/1.1 var(--display); letter-spacing: -0.035em; }
+.class-compose-card h2 { font: 750 1.15rem/1.3 var(--sans); }
+.class-compose-card, .class-post-card, .class-thread-post, .class-reply-card { border-radius: var(--radius); }
+.class-compose-card textarea, .class-reply-form textarea { border-radius: 14px; }
+.class-post-card:hover { border-color: var(--border); background: var(--card); box-shadow: var(--soft-shadow); }
+
+/* Tour actions: Skip and Back are quiet pills; Next is the mint primary (styled above). */
+.muta-tour-actions button {
+  min-height: 42px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--chip); color: var(--text); font: 650 0.85rem/1 var(--sans); cursor: pointer;
+}
+.muta-tour-actions button:disabled { opacity: 0.45; cursor: default; }
+.muta-tour-actions .primary { border-color: transparent; }
+/* Uppercase meta labels in Learn follow the same coral label rule. */
+.practice-meta, .studio-infographic article > span { color: var(--brand-text); }
+/* Remaining headings join the v5 type scale. */
+.host-course-form h4 { font: 750 1rem/1.3 var(--sans); }
+.unit-header h2 { font: 800 clamp(1.55rem, 4vw, 2.3rem)/1.1 var(--display); letter-spacing: -0.035em; }
+.unit-section h3, .unit-checkpoint h3, .unit-citations h3 { font: 750 1.2rem/1.25 var(--sans); }
+/* Links inside Learn cards use the accent, never the browser's default blue. */
+.correctness-card a, .unit-citations a, .reader-prose a { color: var(--accent); text-underline-offset: 2px; }
+/* Learn progress and mastery speak mint; secure knowledge nodes are filled mint. */
+.unit-mastery-track span { background: var(--accent-strong); }
+.knowledge-graph line { stroke: var(--border); }
+.knowledge-graph circle { stroke: var(--accent-strong); }
+.knowledge-graph circle.secure { fill: var(--mint); stroke: var(--accent-strong); }
+/* The chosen reasoning level is a neutral chip with a tick, like the model menu. */
+.think-menu button.active { background: var(--chip); color: var(--text); }
+.think-menu button.active::after { color: var(--accent); }
+/* The PDF badge sits on --brand coral: white on #d9573a, ink on dark mode's lighter #ff8a66. */
+:root[data-theme="dark"] .resource-glyph-label { fill: #17181a; }
+:root[data-theme="dark"] .resource-glyph-fold { stroke: rgba(23, 24, 26, 0.6); }
+
+/* --- in-app reader for Markdown/text sources ------------------------------------------- */
+.resource-reader { z-index: 75; }
+.resource-reader-panel {
+  display: flex; flex-direction: column; width: min(46rem, 100%);
+  max-height: min(48rem, calc(var(--app-height, 100dvh) - 40px));
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--card); box-shadow: var(--panel-shadow); overflow: hidden;
+}
+.resource-reader-panel header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 20px 22px 14px; border-bottom: 1px solid var(--border);
+}
+.resource-reader-panel header > span { display: grid; gap: 4px; min-width: 0; }
+.resource-reader-kicker {
+  display: inline-flex; align-items: center; gap: 8px; color: var(--brand-text);
+  font: 750 0.72rem/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.resource-reader-kicker::before {
+  content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--brand);
+}
+.resource-reader-panel h2 {
+  margin: 0; font-family: var(--display); font-weight: 800; font-size: 1.3rem;
+  letter-spacing: -0.03em; overflow-wrap: anywhere;
+}
+.resource-reader-panel header button {
+  flex: none; width: 40px; height: 40px; border: 0; border-radius: 999px;
+  background: var(--chip); color: var(--text); font: inherit; cursor: pointer;
+}
+.resource-reader-panel header button:hover { background: var(--hover-soft); }
+.resource-reader-body {
+  overflow-y: auto; padding: 8px 22px 24px; line-height: 1.65; overscroll-behavior: contain;
+}
+.resource-reader-body:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; }
+.resource-reader-status { color: var(--muted); }
+.reader-section {
+  margin: 12px -12px 0; padding: 4px 12px; border-left: 3px solid transparent;
+  border-radius: 0 12px 12px 0; scroll-margin-top: 12px;
+}
+.reader-section.is-cited {
+  border-left-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 8%, transparent);
+}
+.reader-section.reader-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
+.reader-section h1, .reader-section h2, .reader-section h3 {
+  font-family: var(--display); letter-spacing: -0.02em;
+}
+@media (max-width: 640px) {
+  .resource-reader-panel { max-height: calc(var(--app-height, 100dvh) - 24px); }
+  .resource-reader-panel header { padding: 16px 16px 12px; }
+  .resource-reader-body { padding: 4px 16px 20px; }
+}
+
+/* Consulted sources are not numbered in the answer, so the list does not number them. */
+.resource-sources[data-consulted="true"] .resource-source-index { display: none; }
+.resource-sources[data-consulted="true"] .resource-source {
+  grid-template-columns: minmax(0, 1fr) 18px;
+}

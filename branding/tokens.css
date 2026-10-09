@@ -1,10 +1,11 @@
 :root {
-  --muta-forest: #1D251F;
-  --muta-ink: #171C18;
-  --muta-ivory: #F5F1E7;
-  --muta-paper: #FAF9F5;
-  --muta-terracotta: #AD4F31;
-  --muta-terracottaLight: #E58C69;
+  --muta-night: #181715;
+  --muta-ink: #17181A;
+  --muta-ivory: #F3F0EA;
+  --muta-page: #FFFFFF;
+  --muta-paper: #F7F5F0;
+  --muta-coral: #D9573A;
+  --muta-coralLight: #FF8A66;
   --muta-font-display: "Libre Baskerville", Georgia, serif;
   --muta-font-body: "Instrument Sans", system-ui, sans-serif;
 }

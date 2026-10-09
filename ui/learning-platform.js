@@ -226,9 +226,14 @@
   }
 
   function renderMarkdown(target, markdown) {
+    // Course prose is TeX-bearing ($f(x)=2x+1$). Use the chat's math-aware renderer, which
+    // shields TeX from Markdown before KaTeX runs; there was never a global renderMath.
+    if (global.MutaMath?.render) {
+      global.MutaMath.render(target, String(markdown || ""));
+      return;
+    }
     const raw = global.marked?.parse(String(markdown || ""), { breaks: true }) || String(markdown || "");
     target.innerHTML = global.DOMPurify?.sanitize(raw, { USE_PROFILES: { html: true } }) || "";
-    global.renderMath?.(target);
   }
 
   async function loadCourses() {
@@ -295,7 +300,7 @@
     const filter = $("#learning-filter")?.value || "all";
     const courses = state.courses.filter((course) => filter === "all" || course.subject === filter);
     for (const course of courses) {
-      const card = document.createElement("article"); card.className = "course-card";
+      const card = document.createElement("article"); card.className = "course-card"; card.dataset.subject = course.subject;
       const top = document.createElement("div"); top.className = "course-card-top";
       const symbol = document.createElement("span"); symbol.className = "course-symbol"; symbol.textContent = course._symbol || SUBJECT_SYMBOLS[course.subject];
       const labels = document.createElement("div");
@@ -722,11 +727,28 @@
     setTab("library"); status(learningText("importedStatus", { title: course.title }));
   }
 
-  function setOpen(open) {
+  let learningOpener = null;
+  const LEARNING_TABS = new Set(["library", "studio", "practice", "games", "playground", "tracker", "correctness"]);
+
+  // `tab` lets a shortcut (the home Practice card) land on a section. It is applied only after
+  // the courses load, because every section renders from them.
+  function setOpen(open, tab = "library") {
     const center = $("#learning-center"); center.hidden = !open;
     const app = $("#app"); if (app) app.inert = open;
-    if (open) { loadCourses().then(() => setTab("library")).catch((error) => status(error.message)); $("#learning-close")?.focus(); }
-    else { global.MutaViz?.cleanup(view()); $("#unit-open")?.focus(); }
+    const initialTab = LEARNING_TABS.has(tab) ? tab : "library";
+    if (open) {
+      // Return focus to whatever opened Learn (a home card, or the rail link). On phones the
+      // rail link lives in a closed drawer, where focus would be invisible.
+      const active = document.activeElement;
+      learningOpener = active && active !== document.body && !center.contains(active) ? active : null;
+      loadCourses().then(() => setTab(initialTab)).catch((error) => status(error.message)); $("#learning-close")?.focus();
+    } else {
+      global.MutaViz?.cleanup(view());
+      const target = learningOpener?.isConnected && learningOpener.getClientRects().length
+        && !learningOpener.closest("[inert]") ? learningOpener : $("#unit-open");
+      learningOpener = null;
+      target?.focus();
+    }
   }
 
   const TOUR_STEPS = Object.freeze([
@@ -746,7 +768,10 @@
     if (!target) { highlight.hidden = true; card.style.left = "50%"; card.style.top = "50%"; return; }
     const rect = target.getBoundingClientRect(); const pad = 7; highlight.hidden = false;
     Object.assign(highlight.style, { left: `${Math.max(4, rect.left - pad)}px`, top: `${Math.max(4, rect.top - pad)}px`, width: `${rect.width + pad * 2}px`, height: `${rect.height + pad * 2}px` });
-    const left = Math.min(global.innerWidth - 380, Math.max(14, rect.right + 18)); const top = Math.min(global.innerHeight - 250, Math.max(14, rect.top));
+    // Clamp with the card's measured size: copy length varies by language and the card's type.
+    const cardWidth = card.offsetWidth || 366; const cardHeight = card.offsetHeight || 250;
+    const left = Math.min(global.innerWidth - cardWidth - 14, Math.max(14, rect.right + 18));
+    const top = Math.min(global.innerHeight - cardHeight - 14, Math.max(14, rect.top));
     Object.assign(card.style, { left: `${left}px`, top: `${top}px` });
   }
   function startTour({ replay = false } = {}) {
@@ -783,7 +808,7 @@
   }
 
   global.MutaLearning = Object.freeze({
-    open: () => setOpen(true), close: () => setOpen(false), startTour,
+    open: (tab) => setOpen(true, tab), close: () => setOpen(false), startTour,
     validateCourse: validCourse, canonicalCourse, importFile,
     _state: state,
   });
@@ -791,6 +816,9 @@
   bind();
   let tourStartChecks = 0;
   const waitForReadyTour = global.setInterval(() => {
+    // First launch can also ask for analytics consent. Let the learner answer that dialog
+    // before the tour dims the screen over it; time spent deciding does not use up the window.
+    if ($("#product-consent-modal")?.hidden === false) return;
     tourStartChecks += 1;
     const app = $("#app");
     if (app && !app.hidden && !app.inert) {

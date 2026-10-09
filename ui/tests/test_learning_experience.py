@@ -126,7 +126,7 @@ def test_unit_ui_uses_offline_import_server_verifier_mastery_and_reduced_motion(
     assert "input.disabled = !canVerify" in js
     assert 'if (!canVerify) form.addEventListener("submit"' in js
     assert 'if (canVerify) form.addEventListener("submit"' in js
-    assert 'UI_DIRECTORIES = ("brand", "units", "courses")' in build
+    assert 'UI_DIRECTORIES = ("brand", "fonts", "units", "courses")' in build
     assert "@media (max-width: 540px)" in css
     assert ".unit-panel { max-height: 100dvh; min-height: 100dvh;" in css
     assert ".unit-mastery-track span { transition: none; }" in css
@@ -155,7 +155,7 @@ def test_portable_learning_platform_ships_five_valid_source_backed_courses() -> 
     assert '"learning-platform.css"' in builder
     assert '"learning-platform.js"' in builder
     assert '"course-schema-v2.json"' in builder
-    assert 'UI_DIRECTORIES = ("brand", "units", "courses")' in builder
+    assert 'UI_DIRECTORIES = ("brand", "fonts", "units", "courses")' in builder
     assert "MAX_FILE_BYTES = 2 * 1024 * 1024" in platform
     assert "noExecutableMarkup" in platform
     assert "indexedDB" in platform

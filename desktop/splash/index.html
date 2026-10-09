@@ -7,24 +7,32 @@
   <title>Starting Muta</title>
   <style>
     :root { color-scheme: light dark; font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f1e7; color: #1d251f; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f7f5f0; color: #17181a; }
     main { width: min(520px, calc(100vw - 48px)); text-align: center; }
     .logo { display: inline-grid; width: min(190px, 44vw); line-height: 0; }
     .logo img { grid-area: 1 / 1; display: block; width: 100%; height: auto; }
     .logo-dark { display: none !important; }
-    p { max-width: 480px; margin: 28px auto 0; color: #5f665f; }
+    /* v5 "Bright": three mint dots that breathe while Muta starts. */
+    .dots { display: flex; justify-content: center; gap: 8px; margin-top: 28px; }
+    .dots span { width: 9px; height: 9px; border-radius: 50%; background: #3fcfb4; animation: breathe 1.2s ease-in-out infinite; }
+    .dots span:nth-child(2) { animation-delay: 0.15s; } .dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes breathe { 50% { opacity: 0.3; transform: translateY(-3px); } }
+    p { max-width: 480px; margin: 22px auto 0; color: #5d6066; }
     #error { margin-top: 18px; padding: 12px; border-radius: 12px; color: #8b241c; background: #f7d8d4; text-align: left; white-space: pre-wrap; }
     @media (prefers-color-scheme: dark) {
-      body { background: #191815; color: #f5f1e7; }
-      p { color: #b9b3a8; }
+      body { background: #181715; color: #f3f0ea; }
+      p { color: #afa99f; }
+      #error { color: #ffaaa0; background: #3d211e; }
       .logo-light { display: none !important; }
       .logo-dark { display: block !important; }
     }
+    @media (prefers-reduced-motion: reduce) { .dots span { animation: none; } }
   </style>
 </head>
 <body>
   <main>
     <span class="logo" role="img" aria-label="Muta"><img class="logo-light" src="brand/muta-stacked-on-light.svg" alt=""><img class="logo-dark" src="brand/muta-stacked-on-dark.svg" alt=""></span>
+    <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
     <p id="status" role="status">the personal education companion for every student at every level. powered by AI.</p>
     <div id="error" role="alert" hidden></div>
   </main>

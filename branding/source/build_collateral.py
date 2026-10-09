@@ -8,12 +8,12 @@ to make future variants; do not distort or separately redraw the logo.
 from build_assets import PALETTE, mark, nested, save_svg, text_path
 
 
-F = PALETTE['forest']
+F = PALETTE['night']
 I = PALETTE['ivory']
 P = PALETTE['paper']
 K = PALETTE['ink']
-T = PALETTE['terracotta']
-L = PALETTE['terracottaLight']
+T = PALETTE['coral']
+L = PALETTE['coralLight']
 
 
 def logo(kind, theme, x, y, width):

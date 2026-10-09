@@ -1,70 +1,95 @@
+/* Muta landing — v5 "Bright" (docs/design/muta-v5-bright.md): the same warm canvas, ink type,
+   Muta mint actions (always dark text on them), Muta coral accents and pastel tints as the app,
+   with a warm-graphite dark twin. The interactive lesson band is the app's dark "stage". */
+@font-face {
+  font-family: "Onest";
+  src: url("fonts/Onest-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
-  --paper: #faf9f5;
-  --paper-deep: #f1ede3;
-  --paper-warm: #f5e8dc;
-  --card: #fffefb;
-  --ink: #302d24;
-  --ink-soft: #625f57;
-  --line: #dfddd4;
-  --terracotta: #ad4f31;
-  --terracotta-dark: #9d472b;
-  --terracotta-pale: #f4ddd2;
-  --green: #497363;
-  --green-fill: #497363;
-  --green-pale: #dce9e2;
-  --night: #211e2a;
-  --night-card: #2a2635;
-  --night-line: #464052;
-  --night-text: #f8f3e9;
-  --night-muted: #bcb5c5;
-  --sun: #efb76c;
-  --on-accent: #ffffff;
-  --accent-fill: #ad4f31;
-  --accent-fill-hover: #9d472b;
-  --udo-bg: #9d472b;
-  --window-dot: #c8c4ba;
-  --status-dot: #579377;
-  --method-bg: #fbf1ec;
-  --visual-label-bg: rgba(255, 255, 255, 0.55);
-  --class-bg: #e6eee9;
-  --button-shadow: 0 .65rem 1.6rem rgba(128, 55, 31, .14);
-  --menu-shadow: 0 1.2rem 2.5rem rgba(48, 45, 36, .1);
-  --demo-shadow: 0 2.3rem 5rem -2.4rem rgba(48, 45, 36, .35), 0 .2rem .7rem rgba(48, 45, 36, .05);
-  --soft-shadow: 0 .45rem 1.4rem rgba(48, 45, 36, .07);
-  --serif: Iowan Old Style, Baskerville, "Times New Roman", Times, serif;
-  --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --paper: #f7f5f0;
+  --paper-deep: #efece5;
+  --paper-warm: #fdebe3;
+  --card: #ffffff;
+  --ink: #17181a;
+  --ink-soft: #5d6066;
+  --line: #e5e1d8;
+  /* Historical names: --terracotta is now the Muta-coral accent text colour. */
+  --terracotta: #b8462c;
+  --terracotta-dark: #a03d26;
+  --terracotta-pale: #fde3da;
+  /* The logo's Muta coral: eyebrow squares echo its speaking dot. */
+  --brand: #d9573a;
+  --green: #0b7a66;
+  --green-fill: #0b7a66;
+  --green-pale: #d5f5ee;
+  --night: #181715;
+  --night-card: #242220;
+  --night-line: #383530;
+  --night-text: #f3f0ea;
+  --night-muted: #afa99f;
+  --sun: #ffd25e;
+  --lilac: #c6b6ff;
+  --mint: #8ee3cf;
+  --peach: #ffb98f;
+  --sky: #9fd2ff;
+  --on-accent: #0a2b24;
+  --accent-fill: #3fcfb4;
+  --accent-fill-hover: #36bca3;
+  --udo-bg: #a33f27;
+  --window-dot: #d8d4cb;
+  --status-dot: #3fcfb4;
+  --method-bg: #e9faf5;
+  --visual-label-bg: rgba(255, 255, 255, 0.7);
+  --class-bg: #e6f8f3;
+  --bubble: #ebe5ff;
+  --button-shadow: 0 .4rem 1.2rem rgba(23, 24, 26, .08);
+  --menu-shadow: 0 1.2rem 2.5rem rgba(23, 24, 26, .1);
+  --demo-shadow: 0 2rem 4.5rem -2rem rgba(23, 24, 26, .28), 0 .2rem .7rem rgba(23, 24, 26, .05);
+  --soft-shadow: 0 .4rem 1.4rem rgba(23, 24, 26, .06);
+  --serif: "Onest", ui-sans-serif, system-ui, sans-serif;
+  --sans: "Onest", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   --shell: 76rem;
   --gutter: clamp(1.25rem, 4vw, 3rem);
-  --radius: 1.35rem;
+  --radius: 1.5rem;
   --ease: cubic-bezier(.16, 1, .3, 1);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #191815;
-  --paper-deep: #211f1b;
-  --paper-warm: #2e241f;
-  --card: #292621;
-  --ink: #f3efe7;
-  --ink-soft: #bdb5a8;
-  --line: #4b463e;
-  --terracotta: #e58c69;
-  --terracotta-dark: #f0a080;
-  --terracotta-pale: #44271f;
-  --green: #8fc2a8;
-  --green-fill: #497363;
-  --green-pale: #263a31;
-  --accent-fill: #a94f31;
-  --accent-fill-hover: #914127;
-  --udo-bg: #713624;
-  --window-dot: #6c665c;
-  --status-dot: #83c99b;
-  --method-bg: #33251f;
-  --visual-label-bg: rgba(25, 24, 21, 0.68);
-  --class-bg: #22302a;
-  --button-shadow: 0 .75rem 1.8rem rgba(0, 0, 0, .32);
+  --paper: #181715;
+  --paper-deep: #1d1c1a;
+  --paper-warm: #2c221d;
+  --card: #242220;
+  --ink: #f3f0ea;
+  --ink-soft: #afa99f;
+  --line: #383530;
+  --terracotta: #ff8a66;
+  --terracotta-dark: #ffa385;
+  --terracotta-pale: #3d2620;
+  --brand: #ff8a66;
+  --green: #6fe0c8;
+  --green-fill: #17705e;
+  --green-pale: #1d3a33;
+  --night: #121110;
+  --night-card: #1d1c1a;
+  --night-line: #33302c;
+  --on-accent: #0a2b24;
+  --accent-fill: #4fd6ba;
+  --accent-fill-hover: #66dcc4;
+  --udo-bg: #8e3a25;
+  --window-dot: #5a5650;
+  --status-dot: #4fd6ba;
+  --method-bg: #1d3a33;
+  --visual-label-bg: rgba(24, 23, 21, 0.7);
+  --class-bg: #1d332e;
+  --bubble: #2f2b3b;
+  --button-shadow: 0 .6rem 1.6rem rgba(0, 0, 0, .3);
   --menu-shadow: 0 1.25rem 2.8rem rgba(0, 0, 0, .45);
   --demo-shadow: 0 2.5rem 5.5rem -2.2rem rgba(0, 0, 0, .7), 0 .2rem .8rem rgba(0, 0, 0, .3);
   --soft-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .3);
@@ -609,7 +634,7 @@ h3 { letter-spacing: -.018em; }
 .lesson-rhythm span, .lesson-rhythm strong { display: block; }
 .lesson-rhythm span { margin-bottom: .45rem; color: var(--sun); font: 700 .61rem/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
 .lesson-rhythm strong { max-width: 25rem; color: var(--night-text); font: 600 1rem/1.5 var(--sans); }
-.lesson-track-list { max-width: 27rem; margin: 0; color: #9891a2; font: .62rem/1.6 var(--mono); }
+.lesson-track-list { max-width: 27rem; margin: 0; color: var(--night-muted); font: .62rem/1.6 var(--mono); }
 
 .carousel-controls { display: flex; gap: .55rem; margin-top: 1.65rem; }
 .carousel-control {
@@ -623,7 +648,7 @@ h3 { letter-spacing: -.018em; }
   cursor: pointer;
 }
 
-.carousel-control:hover { border-color: #7b718b; background: rgba(255,255,255,.08); }
+.carousel-control:hover { border-color: var(--night-muted); background: rgba(255,255,255,.08); }
 .carousel-toggle { display: inline-flex; align-items: center; gap: .45rem; min-width: 5.9rem; font: 650 .68rem/1 var(--mono); }
 .carousel-toggle[hidden] { display: none; }
 .carousel-toggle > span:first-child { color: var(--sun); font-size: .76rem; }
@@ -656,7 +681,7 @@ h3 { letter-spacing: -.018em; }
 }
 
 .track-tabs button:last-child { border-right: 0; }
-.track-tabs button > span { grid-row: 1 / 3; color: #827a8c; font: 650 .64rem/1.4 var(--mono); }
+.track-tabs button > span { grid-row: 1 / 3; color: var(--night-muted); font: 650 .64rem/1.4 var(--mono); }
 .track-tabs strong { color: inherit; font: 650 .94rem/1.2 var(--sans); }
 .track-tabs small { overflow: hidden; font-size: .65rem; text-overflow: ellipsis; white-space: nowrap; }
 .track-tabs button:hover { color: var(--night-text); background: rgba(255,255,255,.035); }
@@ -667,8 +692,8 @@ h3 { letter-spacing: -.018em; }
 .lesson-viewport { overflow: hidden; overflow: clip; border-radius: 1.3rem; }
 .lesson-track { display: flex; align-items: stretch; transition: transform 760ms var(--ease); will-change: transform; }
 .learning-slide { --track-accent: var(--sun); flex: 0 0 100%; min-width: 0; }
-.learning-slide[data-category="humanities"] { --track-accent: #d9b3f2; }
-.learning-slide[data-category="business"] { --track-accent: #8ccca9; }
+.learning-slide[data-category="humanities"] { --track-accent: var(--lilac); }
+.learning-slide[data-category="business"] { --track-accent: var(--mint); }
 
 .lab-panel { display: flex; flex-direction: column; min-width: 0; min-height: 31.5rem; height: 100%; padding: 1rem; border: 1px solid var(--night-line); border-radius: 1.3rem; background: var(--night-card); box-shadow: 0 2rem 5rem rgba(0,0,0,.22); }
 
@@ -687,7 +712,7 @@ h3 { letter-spacing: -.018em; }
   touch-action: none;
   border: 1px solid var(--night-line);
   border-radius: .9rem;
-  background: #1b1823;
+  background: #151413;
   cursor: ew-resize;
 }
 
@@ -708,18 +733,18 @@ h3 { letter-spacing: -.018em; }
   padding: clamp(1.2rem, 3vw, 2rem);
   border: 1px solid var(--night-line);
   border-radius: .9rem;
-  background: #211d2a;
+  background: #151413;
 }
 
 .passage-card > span { color: var(--track-accent); font: 700 .63rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 .passage-card blockquote { max-width: 32rem; margin: 1.25rem 0 1.4rem; color: var(--night-text); font: 500 clamp(1.3rem, 2.6vw, 1.8rem)/1.38 var(--serif); }
 .language-clues { display: flex; flex-wrap: wrap; gap: .45rem; }
-.language-clues span { padding: .35rem .55rem; color: #e8d8f1; border: 1px solid #584864; border-radius: 999px; background: rgba(217,179,242,.07); font: .58rem/1 var(--mono); }
+.language-clues span { padding: .35rem .55rem; color: #e6defe; border: 1px solid #514a6b; border-radius: 999px; background: rgba(198,182,255,.08); font: .58rem/1 var(--mono); }
 
 .perspective-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin: .9rem 0 .7rem; padding: 0; border: 0; }
 .perspective-choices legend { grid-column: 1 / -1; width: 100%; margin: 0 0 .05rem; color: var(--night-muted); font: .62rem/1 var(--mono); }
 .perspective-choices button { min-height: 2.65rem; padding: .6rem; color: var(--night-muted); border: 1px solid var(--night-line); border-radius: .65rem; background: rgba(255,255,255,.025); font-size: .72rem; cursor: pointer; }
-.perspective-choices button[aria-pressed="true"] { color: #201b26; border-color: var(--track-accent); background: var(--track-accent); font-weight: 750; }
+.perspective-choices button[aria-pressed="true"] { color: #17181a; border-color: var(--track-accent); background: var(--track-accent); font-weight: 750; }
 
 .lab-feedback { min-height: 2.7em; margin: .5rem .2rem 0; color: var(--night-muted); font-size: .74rem; line-height: 1.45; }
 
@@ -736,9 +761,9 @@ h3 { letter-spacing: -.018em; }
 .money-bars span { color: var(--night-muted); font: .58rem/1 var(--mono); }
 .money-bars i { display: block; height: .55rem; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.07); }
 .money-bars b { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--track-accent); transition: width 260ms var(--ease); }
-.money-bars > div:nth-child(2) b { background: #d0a36d; }
+.money-bars > div:nth-child(2) b { background: var(--peach); }
 
-.business-controls { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem 1.1rem; padding: .9rem; border: 1px solid var(--night-line); border-radius: .8rem; background: #211d2a; }
+.business-controls { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem 1.1rem; padding: .9rem; border: 1px solid var(--night-line); border-radius: .8rem; background: #151413; }
 .business-controls label { display: flex; justify-content: space-between; gap: .75rem; color: var(--night-muted); font-size: .65rem; }
 .business-controls output { color: var(--night-text); font: 650 .66rem/1 var(--mono); }
 .business-controls input { width: 100%; margin: .25rem 0 .45rem; accent-color: var(--track-accent); cursor: ew-resize; }
@@ -962,3 +987,119 @@ h3 { letter-spacing: -.018em; }
   :root:not([data-theme="dark"]) { --line: #77736a; --ink-soft: #45423a; }
   :root[data-theme="dark"] { --line: #8b8478; --ink-soft: #ded7cb; }
 }
+
+/* ------------------------------------------------------------------------------------------
+   v5 "Bright" layer — matches the app (ui/v5.css): Onest ExtraBold headings, sans eyebrows,
+   pill buttons with mint fills, lilac student bubbles, pastel tiles, coral accents.
+   ------------------------------------------------------------------------------------------ */
+h1, h2 { font-family: var(--serif); font-weight: 800; letter-spacing: -.04em; }
+h3 { font-weight: 750; }
+.eyebrow { font: 750 .74rem/1.2 var(--sans); letter-spacing: .08em; }
+.eyebrow::before { border-radius: .14rem; background: var(--brand); }
+.eyebrow-light::before { background: currentColor; }
+
+.button { border-radius: 999px; font-weight: 700; }
+.button:hover { transform: translateY(-1px); }
+.button-solid { color: var(--on-accent); }
+.button-outline { border-color: var(--line); background: var(--card); }
+.button-outline:hover { border-color: color-mix(in srgb, var(--ink) 25%, var(--line)); background: var(--card); }
+.button-text:hover { color: var(--ink); }
+.theme-toggle { border-radius: 999px; }
+
+.hero h1 { max-width: 15ch; font-size: clamp(3rem, 5.6vw, 5rem); line-height: 1.02; }
+.hero-footnote { font-family: var(--sans); font-weight: 600; }
+.status-dot { box-shadow: 0 0 0 .22rem color-mix(in srgb, var(--accent-fill) 30%, transparent); background: var(--accent-fill); }
+.product-demo { border-radius: 1.6rem; }
+.product-demo::before { background: var(--lilac); opacity: .35; }
+.demo-chrome { background: var(--card); }
+.demo-title { font-family: var(--sans); font-weight: 750; }
+.demo-local { font-family: var(--sans); }
+.demo-message span { font-family: var(--sans); letter-spacing: .06em; }
+.demo-muta { border: 1px solid var(--line); background: var(--card); border-radius: 1.1rem 1.1rem 1.1rem .35rem; }
+.demo-student { background: var(--bubble); border-radius: 1.1rem 1.1rem .35rem 1.1rem; }
+.inline-action { color: var(--green); }
+.checked-note { font-family: var(--sans); }
+.checked-note > span:first-child { color: var(--on-accent); background: var(--accent-fill); }
+.demo-composer { border-radius: 1.2rem; }
+.demo-composer b { border-radius: 999px; }
+.demo-modes { background: var(--card); }
+.demo-modes button { border-radius: 999px; }
+.demo-modes button[aria-selected="true"] { color: var(--card); background: var(--ink); }
+
+.proof-strip { background: var(--card); }
+.proof-grid strong { font-size: .9rem; }
+.proof-grid span { font-size: .78rem; }
+
+/* Why Muta: three cited facts on pastel tiles. Every number carries its source. */
+.why-section { padding: clamp(5rem, 9vw, 8rem) 0 clamp(2rem, 4vw, 3rem); }
+.why-heading { margin-bottom: 2.6rem; }
+.why-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.why-stats figure {
+  --tone: var(--peach);
+  display: grid; align-content: start; gap: .7rem; margin: 0; padding: 1.5rem 1.4rem 1.3rem;
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, var(--line)); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--tone) 22%, var(--card));
+}
+.why-stats figure:nth-child(2) { --tone: var(--lilac); }
+.why-stats figure:nth-child(3) { --tone: var(--sun); }
+.why-stats strong { font: 800 clamp(2.4rem, 4.5vw, 3.4rem)/1 var(--sans); letter-spacing: -.04em; }
+.why-stats figcaption { font-size: 1rem; line-height: 1.45; font-weight: 600; }
+.why-stats cite { color: var(--ink-soft); font: normal .7rem/1.45 var(--sans); }
+:root[data-theme="dark"] .why-stats figure { background: color-mix(in srgb, var(--tone) 8%, var(--card)); }
+
+.step-number, .capability-index, .roadmap-top > span { font-family: var(--sans); font-weight: 800; }
+.teaching-loop { border-top-color: var(--line); }
+.method-name { color: var(--green); border-color: transparent; background: var(--method-bg); font-family: var(--sans); font-weight: 700; }
+
+.inside-section { background: var(--card); }
+.capability-ledger { border-top-color: var(--line); }
+.availability { font-family: var(--sans); font-weight: 700; color: var(--green); }
+.availability::before { background: var(--accent-fill); }
+.text-link { color: var(--green); }
+
+.roadmap-card { border-radius: var(--radius); }
+.roadmap-top em { font-family: var(--sans); font-weight: 650; }
+.roadmap-visual { border-radius: 1.1rem; }
+.visual-exam { background: color-mix(in srgb, var(--sun) 28%, var(--card)); }
+.visual-exam b { font-family: var(--sans); font-weight: 800; color: var(--ink); }
+.visual-exam i::after { background: var(--accent-fill); }
+.visual-exam i:nth-of-type(3)::after { background: var(--lilac); }
+.visual-exam span { font-family: var(--sans); }
+.visual-class { background: color-mix(in srgb, var(--mint) 30%, var(--card)); }
+.visual-class b, .visual-class span { border-color: color-mix(in srgb, var(--mint) 70%, var(--ink)); border-radius: .8rem; }
+.visual-class b { font-family: var(--sans); font-weight: 800; box-shadow: 0 0 0 .45rem color-mix(in srgb, var(--accent-fill) 22%, transparent); }
+.visual-lab b { border-top-color: #ff8a66; }
+
+/* Team */
+.team-section { padding: clamp(4.5rem, 8vw, 7rem) 0; border-top: 1px solid var(--line); }
+.team-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 2.5rem 4rem; align-items: start; }
+.team-grid h2 { margin: .85rem 0 0; font-size: clamp(2.2rem, 4vw, 3.4rem); line-height: 1.04; }
+.team-cards { display: grid; gap: 1rem; }
+.team-cards article { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr); gap: 1rem; align-items: start; padding: 1.3rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.team-initial { display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 1rem; background: var(--lilac); color: #17181a; font: 800 1.2rem/1 var(--sans); }
+.team-cards article:nth-child(2) .team-initial { background: var(--mint); }
+.team-cards h3 { margin: .15rem 0 .3rem; font-size: 1.1rem; }
+.team-cards p { margin: 0; color: var(--ink-soft); font-size: .92rem; line-height: 1.55; }
+
+/* UDO band in deep Muta coral (#a33f27): white 6.4:1, body copy 5.8:1, labels 5.1:1. */
+.udo-copy blockquote { font-family: var(--sans); font-style: normal; font-weight: 700; }
+.journey span { font-family: var(--sans); font-weight: 700; }
+
+.closing-inner h2 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 1; }
+.footer-note { font-family: var(--sans); }
+
+@media (max-width: 780px) {
+  .why-stats { grid-template-columns: 1fr; }
+  .team-grid { grid-template-columns: 1fr; }
+  .hero h1 { max-width: 15ch; font-size: clamp(2.6rem, 11vw, 4rem); }
+}
+.udo-copy > p, .journey small { color: #fff1ea; }
+.journey span { color: #ffe3ad; }
+.journey i { color: #f6c3b2; }
+/* Yellow turns olive at low luminance (see the app's dark tiles): dark mode keeps tints faint. */
+:root[data-theme="dark"] .visual-exam { background: color-mix(in srgb, var(--sun) 9%, var(--card)); }
+:root[data-theme="dark"] .visual-class { background: color-mix(in srgb, var(--mint) 12%, var(--card)); }
+/* Three rows of phones must fit the 12rem visual (they were clipped top and bottom). */
+.visual-class { gap: .7rem 1.05rem; }
+.visual-class b, .visual-class span { height: 3rem; }
+.visual-class span::after { box-shadow: 0 .7rem 0 -.2rem var(--green-pale); }
