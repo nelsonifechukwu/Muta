@@ -15,9 +15,9 @@ def test_native_icon_is_the_approved_book_and_speaking_dot() -> None:
 
     assert master == approved
     for fragment in (
-        'rx="112" fill="#1D251F"',
-        'fill="#F5F1E7"',
-        'fill="#E58C69"',
+        'rx="112" fill="#181715"',
+        'fill="#F3F0EA"',
+        'fill="#FF8A66"',
         'd="M3 0H37Q40 0 40 3V37',
     ):
         assert fragment in native
@@ -32,9 +32,9 @@ def test_browser_icon_is_the_approved_optical_favicon() -> None:
     assert browser.read_bytes() == approved.read_bytes()
     body = browser.read_text(encoding="utf-8")
     assert 'viewBox="0 0 32 32"' in body
-    assert 'fill="#1D251F"' in body
-    assert 'fill="#F5F1E7"' in body
-    assert 'fill="#E58C69"' in body
+    assert 'fill="#181715"' in body
+    assert 'fill="#F3F0EA"' in body
+    assert 'fill="#FF8A66"' in body
 
 
 def test_every_authored_product_surface_uses_supplied_logo_artwork() -> None:
@@ -57,12 +57,10 @@ def test_every_authored_product_surface_uses_supplied_logo_artwork() -> None:
 
 
 def test_runtime_brand_subset_matches_the_approved_kit() -> None:
+    # v5 product surfaces render live text in bundled Onest (ui/fonts, landing/fonts); the
+    # brand kit's Instrument Sans / Libre Baskerville stay in branding/fonts for regenerating
+    # outlined artwork only, so they are not shipped in the runtime brand subset.
     source_pairs = {
-        "InstrumentSans-Regular.ttf": BRANDING / "fonts" / "InstrumentSans-Regular.ttf",
-        "InstrumentSans-Bold.ttf": BRANDING / "fonts" / "InstrumentSans-Bold.ttf",
-        "LibreBaskerville-Regular.ttf": BRANDING / "fonts" / "LibreBaskerville-Regular.ttf",
-        "InstrumentSans-OFL.txt": BRANDING / "fonts" / "InstrumentSans-OFL.txt",
-        "LibreBaskerville-OFL.txt": BRANDING / "fonts" / "LibreBaskerville-OFL.txt",
         "muta-wordmark-on-light.svg": BRANDING / "logos" / "muta-wordmark-on-light.svg",
         "muta-wordmark-on-dark.svg": BRANDING / "logos" / "muta-wordmark-on-dark.svg",
         "muta-stacked-on-light.svg": BRANDING / "logos" / "muta-stacked-on-light.svg",
@@ -92,7 +90,7 @@ def test_brand_assets_are_part_of_the_offline_ui_and_entry_pages() -> None:
     app = (UI / "index.html").read_text(encoding="utf-8")
     landing = (ROOT / "landing" / "index.html").read_text(encoding="utf-8")
 
-    assert 'UI_DIRECTORIES = ("brand", "units", "courses")' in builder
+    assert 'UI_DIRECTORIES = ("brand", "fonts", "units", "courses")' in builder
     assert '"ui/brand/*"' in worker
     assert '<link rel="icon" href="muta-icon.svg" type="image/svg+xml">' in app
     assert '<link rel="icon" href="brand/muta-favicon-32.svg" type="image/svg+xml">' in landing
@@ -103,14 +101,20 @@ def test_brand_artwork_sits_on_the_established_neutral_product_theme() -> None:
     landing_css = (ROOT / "landing" / "styles.css").read_text(encoding="utf-8")
     report_css = (ROOT / "muta-iq" / "dashboard" / "style.css").read_text(encoding="utf-8")
 
+    # v5 "Bright" logo colourway: Muta coral replaced terracotta (docs/design/muta-v5-bright.md).
     for css in (chat_css, landing_css, report_css):
-        assert "#ad4f31" in css.lower()
+        assert "#d9573a" in css.lower()
         assert 'font-family: "Instrument Sans"' not in css
         assert 'font-family: "Libre Baskerville"' not in css
 
+    # The landing page shares the app's v5 palette: warm-graphite dark surfaces and Muta coral.
+    for color in ("#181715", "#1d1c1a", "#242220", "#f3f0ea", "#ff8a66", "#3fcfb4"):
+        assert color in landing_css.lower()
+    # The v5 app shell is the bright, mint-led theme (docs/design/muta-v5-bright.md) and carries
+    # the logo's coral pair as its brand token.
+    for color in ("#181715", "#1d1c1a", "#242220", "#f3f0ea", "#3fcfb4", "#d9573a", "#ff8a66"):
+        assert color in chat_css.lower()
     for css in (chat_css, landing_css):
-        for color in ("#191815", "#211f1b", "#292621", "#f3efe7", "#ad4f31", "#e58c69"):
-            assert color in css.lower()
         for green_wash in ("--bg: #1d251f", "--paper: #1d251f", "--card: #273129"):
             assert green_wash not in css.lower()
 

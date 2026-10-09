@@ -18,6 +18,11 @@ use std::os::windows::io::AsRawHandle;
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(240);
 const READY_POLL_INTERVAL: Duration = Duration::from_millis(350);
+// The web view keeps storage per origin (http://127.0.0.1:<port>): the finished tour, the
+// appearance choice and composer drafts. A fresh random port every launch made every launch a
+// new origin and forgot all of it, so the gateway prefers one stable loopback port and falls
+// back to a random free port only when that one is taken. MUTA_DESKTOP_GATEWAY_PORT overrides.
+const PREFERRED_GATEWAY_PORT: u16 = 46871;
 
 #[derive(Debug, Deserialize)]
 struct ProductManifest {
@@ -174,6 +179,25 @@ fn startup_snapshot(status: tauri::State<'_, StartupStatus>) -> StartupSnapshot 
             failed: true,
             retryable: true,
         })
+}
+
+fn preferred_gateway_port() -> u16 {
+    std::env::var("MUTA_DESKTOP_GATEWAY_PORT")
+        .ok()
+        .and_then(|value| value.trim().parse::<u16>().ok())
+        .filter(|port| *port != 0)
+        .unwrap_or(PREFERRED_GATEWAY_PORT)
+}
+
+fn gateway_port_from(preferred: u16) -> Result<u16, String> {
+    // Probe-and-release, exactly like available_port(): the gateway binds the port itself.
+    match TcpListener::bind(("127.0.0.1", preferred)) {
+        Ok(listener) => {
+            drop(listener);
+            Ok(preferred)
+        }
+        Err(_) => available_port(),
+    }
 }
 
 fn available_port() -> Result<u16, String> {
@@ -814,7 +838,7 @@ fn launch(app: tauri::AppHandle) -> Result<(), String> {
         if app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
             return Err("Muta is closing".to_string());
         }
-        let gateway_port = available_port()?;
+        let gateway_port = gateway_port_from(preferred_gateway_port())?;
         let mut engine_port = available_port()?;
         while engine_port == gateway_port {
             engine_port = available_port()?;
@@ -981,6 +1005,30 @@ fn monitor_backend(app: tauri::AppHandle, process_id: u32) {
     });
 }
 
+/// The splash shows a failed start, but nothing else did: a support report (or a window that
+/// never painted) left no trace. Append each failure to `logs/desktop-shell.log` beside the
+/// backend's own log. Best effort: logging must never mask the original error.
+fn record_startup_error(app: &tauri::AppHandle, error: &str) {
+    let Ok(data_root) = app.path().app_local_data_dir() else {
+        return;
+    };
+    let logs = data_root.join("logs");
+    if fs::create_dir_all(&logs).is_err() {
+        return;
+    }
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(logs.join("desktop-shell.log"))
+    {
+        let seconds = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_secs())
+            .unwrap_or(0);
+        let _ = writeln!(file, "{seconds} startup failed: {error}");
+    }
+}
+
 fn start_launch(app: tauri::AppHandle) -> bool {
     if app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
         return false;
@@ -996,6 +1044,7 @@ fn start_launch(app: tauri::AppHandle) -> bool {
     thread::spawn(move || {
         if let Err(error) = launch(app.clone()) {
             if !app.state::<ShutdownState>().0.load(Ordering::SeqCst) {
+                record_startup_error(&app, &error);
                 let stage = app
                     .state::<StartupStatus>()
                     .0
@@ -1073,6 +1122,21 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gateway_prefers_its_stable_port_when_free() {
+        let free = available_port().unwrap();
+        assert_eq!(gateway_port_from(free).unwrap(), free);
+    }
+
+    #[test]
+    fn gateway_falls_back_to_a_free_port_when_the_stable_one_is_taken() {
+        let held = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let taken = held.local_addr().unwrap().port();
+        let chosen = gateway_port_from(taken).unwrap();
+        assert_ne!(chosen, taken);
+        assert!(TcpListener::bind(("127.0.0.1", chosen)).is_ok());
+    }
 
     #[test]
     fn readiness_requires_json_true_not_only_http_200() {
