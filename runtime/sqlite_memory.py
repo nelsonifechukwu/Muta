@@ -775,7 +775,8 @@ class SQLiteConversationStore:
                 return False
             # Citation numbers are positions in the complete source list. A cascading
             # delete in the middle would make an old [R2] point at the former R3. Scrub
-            # affected answers and all their source rows atomically before the cascade.
+            # affected answers and all their source rows in the same transaction as the
+            # cascade, so no caller can observe a compacted citation list.
             from runtime.citation_integrity import without_resource_markers
 
             messages = self._conn.execute(

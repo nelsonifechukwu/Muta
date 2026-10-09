@@ -207,10 +207,10 @@ passage, so none are invented. A reply with any marker keeps exactly the passage
   in document order. The persisted citation list follows that displayed order, not the ranking
   order, so an `[R2]` in the prompt, answer and reloaded Sources list always means one passage.
 - **Deleting a cited file fails closed.** Both database backends atomically remove inline
-  `[R#]` markers and clear the full source list of each affected answer before deleting the
-  file. A middle citation disappearing must never compact the list and re-point an old marker
-  at a different document. The answer prose remains for the learner, without a misleading
-  citation; a later continuation can ground new text against the remaining files.
+  `[R#]` markers and clear the full source list of each affected answer in the same transaction
+  as the file deletion. A middle citation disappearing must never compact the list and re-point
+  an old marker at a different document. The answer prose remains for the learner, without a
+  misleading citation; a later continuation can ground new text against the remaining files.
 - **The engine echoes the prefill.** The pinned llama-server returns an assistant prefill
   verbatim before continuing it (a 1.9 kB partial came back whole). `_ResumeDeduplicator`
   strips that echo as well as a short restated boundary; without it every recovered answer
